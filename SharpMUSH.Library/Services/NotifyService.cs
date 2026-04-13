@@ -19,6 +19,7 @@ namespace SharpMUSH.Library.Services;
 public class NotifyService(
 	IMessageBus publishEndpoint,
 	IConnectionService connections,
+	ILocalizationService localizationService,
 	IListenerRoutingService? listenerRoutingService = null,
 	IMediator? mediator = null) : INotifyService
 {
@@ -292,5 +293,26 @@ public class NotifyService(
 		}
 
 		return new CallState(errorReturn);
+	}
+
+	public async ValueTask NotifyLocalized(DBRef who, string key, params object[] args)
+	{
+		await foreach (var conn in connections.Get(who))
+		{
+			conn.Metadata.TryGetValue("Locale", out var locale);
+			var message = localizationService.Format(key, locale, args);
+			await Notify(conn.Handle, message, sender: null);
+		}
+	}
+
+	public ValueTask NotifyLocalized(AnySharpObject who, string key, params object[] args)
+		=> NotifyLocalized(who.Object().DBRef, key, args);
+
+	public async ValueTask NotifyLocalized(long handle, string key, params object[] args)
+	{
+		var conn = connections.Get(handle);
+		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
+		var message = localizationService.Format(key, locale, args);
+		await Notify(handle, message, sender: null);
 	}
 }

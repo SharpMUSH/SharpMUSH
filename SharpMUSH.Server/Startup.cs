@@ -116,6 +116,7 @@ var logger = sp.GetRequiredService<ILogger<NatsConnectionStateStore>>();
 return NatsConnectionStateStore.CreateAsync(natsUrl, logger).GetAwaiter().GetResult();
 });
 
+services.AddSingleton<ILocalizationService, LocalizationService>();
 services.AddSingleton<INotifyService, NotifyService>();
 services.AddSingleton<ILocateService, LocateService>();
 services.AddSingleton<IMoveService, MoveService>();

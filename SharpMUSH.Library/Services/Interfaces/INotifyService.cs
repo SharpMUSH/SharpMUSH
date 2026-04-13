@@ -59,4 +59,21 @@ public interface INotifyService
 		string errorReturn,
 		string notifyMessage,
 		bool shouldNotify);
+
+	/// <summary>
+	/// Sends a locale-aware notification to all connections for a DBRef.
+	/// The message is looked up from the resource file by <paramref name="key"/>,
+	/// formatted with <paramref name="args"/>, and translated per each connection's locale.
+	/// </summary>
+	ValueTask NotifyLocalized(DBRef who, string key, params object[] args);
+
+	/// <summary>
+	/// Sends a locale-aware notification to all connections for an object.
+	/// </summary>
+	ValueTask NotifyLocalized(AnySharpObject who, string key, params object[] args);
+
+	/// <summary>
+	/// Sends a locale-aware notification to a single connection handle.
+	/// </summary>
+	ValueTask NotifyLocalized(long handle, string key, params object[] args);
 }

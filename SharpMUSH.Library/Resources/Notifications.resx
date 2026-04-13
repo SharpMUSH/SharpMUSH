@@ -1,0 +1,2372 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Object and matching notifications -->
+  <data name="BadObjectName" xml:space="preserve">
+    <value>I don't understand that object name.</value>
+  </data>
+  <data name="InvalidNameThing" xml:space="preserve">
+    <value>Invalid name for a thing.</value>
+  </data>
+  <data name="NoMatch" xml:space="preserve">
+    <value>I don't see that here.</value>
+  </data>
+  <data name="CantSeeThat" xml:space="preserve">
+    <value>I can't see that here.</value>
+  </data>
+  <data name="NoSuchObject" xml:space="preserve">
+    <value>I can't find that.</value>
+  </data>
+  <data name="CouldNotFind" xml:space="preserve">
+    <value>Could not find that.</value>
+  </data>
+  <data name="CouldNotFindPlayer" xml:space="preserve">
+    <value>Could not find that player.</value>
+  </data>
+  <data name="CantFindThatPlayer" xml:space="preserve">
+    <value>I can't find that player</value>
+  </data>
+  <data name="AmbiguousMatch" xml:space="preserve">
+    <value>I don't know which one you mean.</value>
+  </data>
+  <data name="DontKnowWhichYouMean" xml:space="preserve">
+    <value>I don't know which {0} you mean!</value>
+  </data>
+  <data name="DontSeeWhatYouWantToLock" xml:space="preserve">
+    <value>I don't see what you want to lock!</value>
+  </data>
+  <data name="DontKnowWhichOneToLock" xml:space="preserve">
+    <value>I don't know which one you want to lock!</value>
+  </data>
+  <data name="DontSeeThatHere" xml:space="preserve">
+    <value>I don't see that here.</value>
+  </data>
+  <data name="DontSeeThatHereFormat" xml:space="preserve">
+    <value>I don't see {0} here.</value>
+  </data>
+  <data name="DontKnowWhoYouMean" xml:space="preserve">
+    <value>I don't know who you mean!</value>
+  </data>
+
+  <!-- Object type notifications -->
+  <data name="NotARoom" xml:space="preserve">
+    <value>That's not a room.</value>
+  </data>
+  <data name="NotAnExit" xml:space="preserve">
+    <value>That's not an exit.</value>
+  </data>
+  <data name="NotAThing" xml:space="preserve">
+    <value>That's not a thing.</value>
+  </data>
+  <data name="NotAPlayer" xml:space="preserve">
+    <value>That's not a player.</value>
+  </data>
+  <data name="MustBePlayer" xml:space="preserve">
+    <value>New owner must be a player.</value>
+  </data>
+  <data name="InvalidDestinationExit" xml:space="preserve">
+    <value>Invalid destination for exit.</value>
+  </data>
+  <data name="HomeMustBeRoom" xml:space="preserve">
+    <value>Home must be a room.</value>
+  </data>
+  <data name="DropToMustBeRoom" xml:space="preserve">
+    <value>Drop-to must be a room.</value>
+  </data>
+  <data name="InvalidObjectTypeForLinking" xml:space="preserve">
+    <value>Invalid object type for linking.</value>
+  </data>
+  <data name="InvalidObjectTypeGeneric" xml:space="preserve">
+    <value>Invalid object type.</value>
+  </data>
+  <data name="CannotClonePlayers" xml:space="preserve">
+    <value>You cannot clone players.</value>
+  </data>
+  <data name="CannotCloneThisObjectType" xml:space="preserve">
+    <value>Cannot clone this object type.</value>
+  </data>
+  <data name="NotMarkedForDestruction" xml:space="preserve">
+    <value>That object is not marked for destruction.</value>
+  </data>
+
+  <!-- Permission notifications -->
+  <data name="PermissionDenied" xml:space="preserve">
+    <value>Permission denied.</value>
+  </data>
+  <data name="NoPermission" xml:space="preserve">
+    <value>You don't have permission to do that.</value>
+  </data>
+  <data name="YouDoNotControlThatObject" xml:space="preserve">
+    <value>You do not control that object.</value>
+  </data>
+
+  <!-- General -->
+  <data name="EmptyLine" xml:space="preserve">
+    <value></value>
+  </data>
+  <data name="CantLinkToThat" xml:space="preserve">
+    <value>You can't link to that.</value>
+  </data>
+  <data name="DontPassLinkLock" xml:space="preserve">
+    <value>You don't pass the link lock.</value>
+  </data>
+  <data name="FailedToTransferOwnership" xml:space="preserve">
+    <value>Failed to transfer ownership.</value>
+  </data>
+  <data name="PermissionDeniedCannotZoneTo" xml:space="preserve">
+    <value>Permission denied: You cannot zone to that object.</value>
+  </data>
+  <data name="PermissionDeniedSetAttribute" xml:space="preserve">
+    <value>Permission denied to set attribute on {0}.</value>
+  </data>
+  <data name="LackSpoofingPermissions" xml:space="preserve">
+    <value>Permission denied: You lack spoofing permissions.</value>
+  </data>
+  <data name="AttributeCannotBeChanged" xml:space="preserve">
+    <value>That attribute cannot be changed by you.</value>
+  </data>
+  <data name="AttributePermissionsCannotBeChanged" xml:space="preserve">
+    <value>That attribute's permissions cannot be changed.</value>
+  </data>
+  <data name="NoPermissionToChown" xml:space="preserve">
+    <value>You don't have the permission to chown that.</value>
+  </data>
+  <data name="CantRemakeWorld" xml:space="preserve">
+    <value>You can't remake the world in your image.</value>
+  </data>
+  <data name="CannotDoWhileGagged" xml:space="preserve">
+    <value>You cannot do that while gagged.</value>
+  </data>
+  <data name="CantTeleportToNothing" xml:space="preserve">
+    <value>You can't teleport to nothing!</value>
+  </data>
+  <data name="HavenFlagSet" xml:space="preserve">
+    <value>You are set HAVEN and cannot receive pages.</value>
+  </data>
+
+  <!-- Argument and validation notifications -->
+  <data name="InvalidArgument" xml:space="preserve">
+    <value>Invalid argument.</value>
+  </data>
+  <data name="InvalidArguments" xml:space="preserve">
+    <value>Invalid arguments to {0}.</value>
+  </data>
+  <data name="InvalidDbref" xml:space="preserve">
+    <value>That's not a valid object reference.</value>
+  </data>
+  <data name="DontUnderstandThosePermissions" xml:space="preserve">
+    <value>I don't understand those permissions.</value>
+  </data>
+  <data name="DontUnderstandThatKey" xml:space="preserve">
+    <value>I don't understand that key.</value>
+  </data>
+  <data name="DontUnderstandListOfTypes" xml:space="preserve">
+    <value>I don't understand the list of types.</value>
+  </data>
+  <data name="DontUnderstandSwitch" xml:space="preserve">
+    <value>I don't understand switch '{0}'.</value>
+  </data>
+  <data name="DontUnderstandWhatYouWantToList" xml:space="preserve">
+    <value>I don't understand what you want to @list.</value>
+  </data>
+  <data name="DontUnderstandWhatYouWantToDo" xml:space="preserve">
+    <value>I don't understand what you want to do.</value>
+  </data>
+  <data name="DontKnowThat" xml:space="preserve">
+    <value>I don't know that {0}.</value>
+  </data>
+  <data name="DontKnowThatAttribute" xml:space="preserve">
+    <value>I don't know that attribute.</value>
+  </data>
+
+  <!-- Name and alias notifications -->
+  <data name="PlayerNameInUse" xml:space="preserve">
+    <value>That player name is already in use.</value>
+  </data>
+  <data name="PlayerAliasInUse" xml:space="preserve">
+    <value>That player alias is already in use.</value>
+  </data>
+
+  <!-- Function notifications -->
+  <data name="RecursionLimit" xml:space="preserve">
+    <value>That caused too much recursion.</value>
+  </data>
+  <data name="FunctionDisabled" xml:space="preserve">
+    <value>That function is disabled.</value>
+  </data>
+
+  <!-- Operation result notifications -->
+  <data name="Created" xml:space="preserve">
+    <value>Created {0} ({1}).</value>
+  </data>
+  <data name="CreatedObject" xml:space="preserve">
+    <value>Created: Object {0}.</value>
+  </data>
+  <data name="WipedAttributes" xml:space="preserve">
+    <value>Wiped attributes matching {0}.</value>
+  </data>
+  <data name="CouldNotFindNewOwner" xml:space="preserve">
+    <value>Could not find new owner.</value>
+  </data>
+  <data name="CouldNotFindDestination" xml:space="preserve">
+    <value>Could not find destination: {0}</value>
+  </data>
+
+  <!-- Channel notifications -->
+  <data name="DontRecognizeThatChannel" xml:space="preserve">
+    <value>CHAT: I don't recognize that channel.</value>
+  </data>
+  <data name="DontKnowWhichChannel" xml:space="preserve">
+    <value>CHAT: I don't know which channel you mean.</value>
+  </data>
+
+  <!-- Mail and communication notifications -->
+  <data name="DontThinkWantsToHearFrom" xml:space="preserve">
+    <value>I don't think #{0} wants to hear from {1}.</value>
+  </data>
+  <data name="DontThinkWantsMail" xml:space="preserve">
+    <value>I don't think #{0} wants {1}'s mail.</value>
+  </data>
+
+  <!-- Economic notifications -->
+  <data name="NotEnoughMoneyToLink" xml:space="preserve">
+    <value>You don't have enough {0} to link.</value>
+  </data>
+  <data name="CantBuyThingsByTakingMoney" xml:space="preserve">
+    <value>You can't buy things by taking money.</value>
+  </data>
+
+  <!-- Administrative notifications -->
+  <data name="DontLookLikeGod" xml:space="preserve">
+    <value>You don't look like God.</value>
+  </data>
+  <data name="NotAnAdmin" xml:space="preserve">
+    <value>You don't look like an admin to me.</value>
+  </data>
+  <data name="CantAliasCommandToThat" xml:space="preserve">
+    <value>I can't alias a command to that!</value>
+  </data>
+  <data name="CantMakeMultipleRequests" xml:space="preserve">
+    <value>You can't make multiple requests at the same time!</value>
+  </data>
+
+  <!-- HTTP/Network notifications -->
+  <data name="CannotSetContentLengthHeader" xml:space="preserve">
+    <value>You cannot set Content-Length header.</value>
+  </data>
+
+  <!-- Destruction edge-case notifications -->
+  <data name="GuestCantDestroy" xml:space="preserve">
+    <value>I'm sorry, Dave, I'm afraid I can't do that.</value>
+  </data>
+  <data name="AlreadyDestroyed" xml:space="preserve">
+    <value>Destroying that again is hardly necessary.</value>
+  </data>
+  <data name="DestroyGodBlasphemous" xml:space="preserve">
+    <value>Destroying God would be blasphemous.</value>
+  </data>
+  <data name="TooSpecialToDestroy" xml:space="preserve">
+    <value>That is too special to be destroyed.</value>
+  </data>
+
+  <!-- Movement default notifications -->
+  <data name="DefaultOLeave" xml:space="preserve">
+    <value>has left.</value>
+  </data>
+  <data name="DefaultOEnter" xml:space="preserve">
+    <value>has arrived.</value>
+  </data>
+  <data name="HomeNoPlaceLikeHome" xml:space="preserve">
+    <value>There's no place like home...</value>
+  </data>
+  <data name="HomeGoesHome" xml:space="preserve">
+    <value>{0} goes home.</value>
+  </data>
+  <data name="AmbiguousExitDirection" xml:space="preserve">
+    <value>I don't know which way you mean!</value>
+  </data>
+
+  <!-- Speech lock enforcement -->
+  <data name="MayNotSpeakHere" xml:space="preserve">
+    <value>You may not speak here!</value>
+  </data>
+
+  <!-- @force guardrails -->
+  <data name="CantForceGod" xml:space="preserve">
+    <value>You can't force God!</value>
+  </data>
+
+  <!-- Admin / Wizard guardrails -->
+  <data name="CantBootOtherPeople" xml:space="preserve">
+    <value>You can't boot other people!</value>
+  </data>
+  <data name="CantTeleportRooms" xml:space="preserve">
+    <value>You can't teleport rooms.</value>
+  </data>
+  <data name="TeleportsNotAllowed" xml:space="preserve">
+    <value>Teleports are not allowed in this room.</value>
+  </data>
+  <data name="NoZoneTeleport" xml:space="preserve">
+    <value>You may not teleport out of the zone from this room.</value>
+  </data>
+  <data name="InTheVoid" xml:space="preserve">
+    <value>You're in the Void. This is not a good thing.</value>
+  </data>
+  <data name="VoidSendingHome" xml:space="preserve">
+    <value>You're in the void - sending you home.</value>
+  </data>
+  <data name="TooManyContainers" xml:space="preserve">
+    <value>You're in too many containers.</value>
+  </data>
+  <data name="CantGrantPowersUnregistered" xml:space="preserve">
+    <value>You can't grant powers to unregistered players.</value>
+  </data>
+  <data name="CantMakeAdminGuests" xml:space="preserve">
+    <value>You can't make admin into guests.</value>
+  </data>
+  <data name="WhoDoYouThinkYouAre" xml:space="preserve">
+    <value>Who do you think you are, GOD?</value>
+  </data>
+  <data name="NoPowerOverBodyAndMind" xml:space="preserve">
+    <value>You do not have the power over body and mind!</value>
+  </data>
+
+  <!-- GAME: broadcast notifications -->
+  <data name="GameShutdownBy" xml:space="preserve">
+    <value>GAME: Shutdown by {0}</value>
+  </data>
+  <data name="GameShutdownExternal" xml:space="preserve">
+    <value>GAME: Shutdown by external signal</value>
+  </data>
+  <data name="GameSavingDatabase" xml:space="preserve">
+    <value>GAME: Saving database. Game may freeze for a few moments.</value>
+  </data>
+  <data name="GameSaveComplete" xml:space="preserve">
+    <value>GAME: Save complete.</value>
+  </data>
+  <data name="GameSaveIn1Minute" xml:space="preserve">
+    <value>GAME: Database save in 1 minute.</value>
+  </data>
+  <data name="GameSaveIn5Minutes" xml:space="preserve">
+    <value>GAME: Database save in 5 minutes.</value>
+  </data>
+  <data name="GameHasConnected" xml:space="preserve">
+    <value>has connected.</value>
+  </data>
+  <data name="GameHasReconnected" xml:space="preserve">
+    <value>has reconnected.</value>
+  </data>
+  <data name="GameHasDisconnected" xml:space="preserve">
+    <value>has disconnected.</value>
+  </data>
+  <data name="GameHasPartiallyDisconnected" xml:space="preserve">
+    <value>has partially disconnected.</value>
+  </data>
+  <data name="GameRebootBy" xml:space="preserve">
+    <value>GAME: Reboot w/o disconnect by {0}, please wait.</value>
+  </data>
+  <data name="GameRebootFinished" xml:space="preserve">
+    <value>GAME: Reboot finished.</value>
+  </data>
+  <data name="GameRebootFailed" xml:space="preserve">
+    <value>GAME: Reboot failed.</value>
+  </data>
+  <data name="GameDbSaveFailed" xml:space="preserve">
+    <value>GAME: ERROR! Database save failed!</value>
+  </data>
+  <data name="GameDbConsistencyCheck" xml:space="preserve">
+    <value>GAME: Performing database consistency check.</value>
+  </data>
+  <data name="GameDbConsistencyDone" xml:space="preserve">
+    <value>GAME: Database consistency check complete.</value>
+  </data>
+  <data name="GameSuspectCreated" xml:space="preserve">
+    <value>GAME: Suspect {0} created.</value>
+  </data>
+
+  <!-- Reboot / shutdown broadcast -->
+  <data name="GameRebootNoDisconnect" xml:space="preserve">
+    <value>GAME: Reboot w/o disconnect from game account, please wait.</value>
+  </data>
+
+  <!-- Pueblo protocol (value includes trailing CRLF per protocol spec) -->
+  <data name="PuebloHello" xml:space="preserve">
+    <value>This world is Pueblo 1.10 Enhanced.&#xD;&#xA;</value>
+  </data>
+
+  <!-- OUTPUTPREFIX / OUTPUTSUFFIX -->
+  <data name="OutputPrefixSet" xml:space="preserve">
+    <value>OUTPUTPREFIX set.</value>
+  </data>
+  <data name="OutputSuffixSet" xml:space="preserve">
+    <value>OUTPUTSUFFIX set.</value>
+  </data>
+  <data name="OutputPrefixCleared" xml:space="preserve">
+    <value>OUTPUTPREFIX cleared.</value>
+  </data>
+  <data name="OutputSuffixCleared" xml:space="preserve">
+    <value>OUTPUTSUFFIX cleared.</value>
+  </data>
+
+  <!-- Movement messages -->
+  <data name="ExitDestinationInvalid" xml:space="preserve">
+    <value>Exit destination is invalid.</value>
+  </data>
+  <data name="CantSeemToDropThingsHere" xml:space="preserve">
+    <value>You can't seem to drop things here.</value>
+  </data>
+  <data name="CantEmptyThatFromHere" xml:space="preserve">
+    <value>You can't empty that from here.</value>
+  </data>
+  <data name="DontHaveThat" xml:space="preserve">
+    <value>You don't have that!</value>
+  </data>
+
+  <!-- Destruction SAFE messages -->
+  <data name="SafeObjectMustUnset" xml:space="preserve">
+    <value>That object is set SAFE. You must set it !SAFE before destroying it.</value>
+  </data>
+  <data name="SafeObjectUseNuke" xml:space="preserve">
+    <value>That object is marked SAFE. Use @nuke to destroy it.</value>
+  </data>
+
+  <!-- Zone messages -->
+  <data name="ZoneChanged" xml:space="preserve">
+    <value>Zone changed.</value>
+  </data>
+  <data name="CantMakeCircularZones" xml:space="preserve">
+    <value>You can't make circular zones!</value>
+  </data>
+
+  <!-- Channel messages (CHAT: prefix) - note angle brackets require XML escaping -->
+  <data name="ChatNotOnChannel" xml:space="preserve">
+    <value>CHAT: You are not on channel &lt;{0}&gt;.</value>
+  </data>
+  <data name="ChatChannelDescSet" xml:space="preserve">
+    <value>CHAT: Channel &lt;{0}&gt; description set.</value>
+  </data>
+  <data name="ChatChannelDescCleared" xml:space="preserve">
+    <value>CHAT: Channel &lt;{0}&gt; description cleared.</value>
+  </data>
+  <data name="ChatResizingBuffer" xml:space="preserve">
+    <value>CHAT: Resizing buffer of channel &lt;{0}&gt;</value>
+  </data>
+  <data name="ChatGuestsCantModify" xml:space="preserve">
+    <value>CHAT: Guests may not modify channels.</value>
+  </data>
+
+  <!-- Lock/Unlock messages -->
+  <data name="ObjectLocked" xml:space="preserve">
+    <value>{0}(#{1}) - {2} locked.</value>
+  </data>
+  <data name="ObjectUnlocked" xml:space="preserve">
+    <value>{0}(#{1}) - {2} unlocked.</value>
+  </data>
+
+  <!-- Link/Unlink messages -->
+  <data name="LinkedExitToRoom" xml:space="preserve">
+    <value>Linked exit #{0} to #{1}</value>
+  </data>
+  <data name="UnlinkedExit" xml:space="preserve">
+    <value>Unlinked exit #{0}.</value>
+  </data>
+  <data name="OpenedExit" xml:space="preserve">
+    <value>Opened exit {0}</value>
+  </data>
+
+  <!-- Flag/Power messages -->
+  <data name="FlagSet" xml:space="preserve">
+    <value>{0} - {1} set.</value>
+  </data>
+  <data name="FlagAlreadySet" xml:space="preserve">
+    <value>{0} - {1} (already) set.</value>
+  </data>
+  <data name="FlagReset" xml:space="preserve">
+    <value>{0} - {1} reset.</value>
+  </data>
+  <data name="FlagAlreadyReset" xml:space="preserve">
+    <value>{0} - {1} (already) reset.</value>
+  </data>
+  <data name="DontRecognizeFlag" xml:space="preserve">
+    <value>{0} - I don't recognize that flag.</value>
+  </data>
+  <data name="DontRecognizePower" xml:space="preserve">
+    <value>{0} - I don't recognize that power.</value>
+  </data>
+  <data name="PowerSet" xml:space="preserve">
+    <value>{0} - {1} set.</value>
+  </data>
+  <data name="PowerAlreadySet" xml:space="preserve">
+    <value>{0} - {1} (already) set.</value>
+  </data>
+
+  <!-- Attribute set messages -->
+  <data name="AttributeSet" xml:space="preserve">
+    <value>{0}/{1} - Set.</value>
+  </data>
+  <data name="AttributeCleared" xml:space="preserve">
+    <value>{0}/{1} - Cleared.</value>
+  </data>
+
+  <!-- Connection lifecycle -->
+  <data name="Connected" xml:space="preserve">
+    <value>Connected!</value>
+  </data>
+  <data name="WelcomeBackFormat" xml:space="preserve">
+    <value>Welcome back, {0}!</value>
+  </data>
+
+  <!-- Name / Password -->
+  <data name="CannotNameObjectFormat" xml:space="preserve">
+    <value>You cannot name that object {0}.</value>
+  </data>
+  <data name="InvalidPasswordText" xml:space="preserve">
+    <value>That password is not a valid password.</value>
+  </data>
+  <data name="InvalidPasswordForCommand" xml:space="preserve">
+    <value>Invalid password.</value>
+  </data>
+  <data name="OnlyPlayersHavePasswords" xml:space="preserve">
+    <value>Only players have passwords.</value>
+  </data>
+
+  <!-- Parent / Zone -->
+  <data name="ParentLoopCannotAdd" xml:space="preserve">
+    <value>Cannot add parent to loop.</value>
+  </data>
+  <data name="ParentSet" xml:space="preserve">
+    <value>Parent set.</value>
+  </data>
+  <data name="ZoneCycleCannotAdd" xml:space="preserve">
+    <value>Cannot add zone: would create a cycle.</value>
+  </data>
+  <data name="ZoneSet" xml:space="preserve">
+    <value>Zone set.</value>
+  </data>
+  <data name="ZoneCleared" xml:space="preserve">
+    <value>Zone cleared.</value>
+  </data>
+  <data name="ClearedPowersFromFormat" xml:space="preserve">
+    <value>Cleared {0} power(s) from {1}.</value>
+  </data>
+
+  <!-- Attribute operations -->
+  <data name="NeedObjectAttributePair" xml:space="preserve">
+    <value>You need to give an object/attribute pair.</value>
+  </data>
+  <data name="AttributeIsLocked" xml:space="preserve">
+    <value>That attribute is locked.</value>
+  </data>
+  <data name="AttributeIsUnlocked" xml:space="preserve">
+    <value>That attribute is unlocked.</value>
+  </data>
+  <data name="InvalidArgumentsToCommandFormat" xml:space="preserve">
+    <value>Invalid arguments to {0}.</value>
+  </data>
+  <data name="InvalidSourceFormat" xml:space="preserve">
+    <value>Invalid source format. Use: object/attribute</value>
+  </data>
+  <data name="AttributeNotFoundOnSourceFormat" xml:space="preserve">
+    <value>Attribute {0} not found on source object.</value>
+  </data>
+  <data name="InvalidDestinationFormat" xml:space="preserve">
+    <value>Invalid destination format: {0}</value>
+  </data>
+  <data name="FailedToCopyAttributeToFormat" xml:space="preserve">
+    <value>Failed to copy attribute to {0}: {1}</value>
+  </data>
+  <data name="AttributeCopiedToDestinationsFormat" xml:space="preserve">
+    <value>Attribute copied to {0} {1}.</value>
+  </data>
+  <data name="FailedToCopyAttributeAny" xml:space="preserve">
+    <value>Failed to copy attribute to any destinations.</value>
+  </data>
+  <data name="AttributeLocked" xml:space="preserve">
+    <value>Attribute locked.</value>
+  </data>
+  <data name="AttributeUnlocked" xml:space="preserve">
+    <value>Attribute unlocked.</value>
+  </data>
+  <data name="AttributeMovedFailedRemoveFormat" xml:space="preserve">
+    <value>Attribute moved to {0} {1} but failed to remove source: {2}</value>
+  </data>
+  <data name="AttributeMovedToFormat" xml:space="preserve">
+    <value>Attribute moved to {0} {1}.</value>
+  </data>
+  <data name="FailedToMoveAttributeAny" xml:space="preserve">
+    <value>Failed to move attribute to any destinations.</value>
+  </data>
+  <data name="AttributeNotFound" xml:space="preserve">
+    <value>No such attribute.</value>
+  </data>
+  <data name="CanOnlyChownToYourself" xml:space="preserve">
+    <value>You can only chown an attribute to yourself.</value>
+  </data>
+  <data name="FailedToChangeOwnershipFormat" xml:space="preserve">
+    <value>Failed to change ownership: {0}</value>
+  </data>
+  <data name="AttributeOwnerChanged" xml:space="preserve">
+    <value>Attribute owner changed.</value>
+  </data>
+  <data name="WipeWhat" xml:space="preserve">
+    <value>Wipe what?</value>
+  </data>
+  <data name="ObjectIsProtectedSafe" xml:space="preserve">
+    <value>That object is protected (SAFE).</value>
+  </data>
+  <data name="AttributesWiped" xml:space="preserve">
+    <value>Attributes wiped.</value>
+  </data>
+
+  <!-- Building / Creating -->
+  <data name="Destroyed" xml:space="preserve">
+    <value>Destroyed.</value>
+  </data>
+  <data name="LinkedToHome" xml:space="preserve">
+    <value>Linked to home.</value>
+  </data>
+  <data name="LinkedToVariable" xml:space="preserve">
+    <value>Linked to variable.</value>
+  </data>
+  <data name="HomeSet" xml:space="preserve">
+    <value>Home set.</value>
+  </data>
+  <data name="DropToSet" xml:space="preserve">
+    <value>Drop-to set.</value>
+  </data>
+  <data name="DropToRemoved" xml:space="preserve">
+    <value>Drop-to removed.</value>
+  </data>
+  <data name="SparedFromDestructionFormat" xml:space="preserve">
+    <value>Spared from destruction: {0}</value>
+  </data>
+  <data name="SourceMustBeARoom" xml:space="preserve">
+    <value>Source must be a room.</value>
+  </data>
+  <data name="LinkedToNameFormat" xml:space="preserve">
+    <value>Linked to {0}.</value>
+  </data>
+  <data name="ClonedNewObjectFormat" xml:space="preserve">
+    <value>Cloned. New object: #{0}.</value>
+  </data>
+  <data name="MonikerCleared" xml:space="preserve">
+    <value>Moniker cleared.</value>
+  </data>
+  <data name="MonikerSet" xml:space="preserve">
+    <value>Moniker set.</value>
+  </data>
+  <data name="DigWhat" xml:space="preserve">
+    <value>Dig what?</value>
+  </data>
+  <data name="RoomCreatedWithNumberFormat" xml:space="preserve">
+    <value>{0} created with room number {1}.</value>
+  </data>
+  <data name="TryingToLink" xml:space="preserve">
+    <value>Trying to link...</value>
+  </data>
+
+  <!-- Navigation -->
+  <data name="CantGoThatWay" xml:space="preserve">
+    <value>You can't go that way.</value>
+  </data>
+  <data name="ExitNoValidLocation" xml:space="preserve">
+    <value>That exit doesn't go to a valid location.</value>
+  </data>
+  <data name="CantGoThatWayContainmentLoop" xml:space="preserve">
+    <value>You can't go that way - it would create a containment loop.</value>
+  </data>
+  <data name="YouHaveBeenTeleported" xml:space="preserve">
+    <value>You have been teleported.</value>
+  </data>
+
+  <!-- General game operations -->
+  <data name="DontYouHaveAnythingToSay" xml:space="preserve">
+    <value>Don't you have anything to say?</value>
+  </data>
+  <data name="HuhTypeHelp" xml:space="preserve">
+    <value>Huh?  (Type "help" for help.)</value>
+  </data>
+  <data name="AllObjectsHalted" xml:space="preserve">
+    <value>All objects halted.</value>
+  </data>
+  <data name="Halted" xml:space="preserve">
+    <value>Halted.</value>
+  </data>
+  <data name="Notified" xml:space="preserve">
+    <value>Notified.</value>
+  </data>
+  <data name="YouDoNotHavePermissionToSpoofEmits" xml:space="preserve">
+    <value>You do not have permission to spoof emits.</value>
+  </data>
+  <data name="NoSuchCommandAtLogin" xml:space="preserve">
+    <value>No such command available at login.</value>
+  </data>
+  <data name="InvalidRoomSpecified" xml:space="preserve">
+    <value>Invalid room specified.</value>
+  </data>
+  <data name="YouMustProvideMatchString" xml:space="preserve">
+    <value>You must provide a string to match when using /match.</value>
+  </data>
+  <data name="YouMustSpecifyObjectToDecompile" xml:space="preserve">
+    <value>You must specify an object to decompile.</value>
+  </data>
+  <data name="AllObjectsRestarted" xml:space="preserve">
+    <value>All objects restarted.</value>
+  </data>
+  <data name="YouMustSpecifyObjectToRestart" xml:space="preserve">
+    <value>You must specify an object to restart.</value>
+  </data>
+  <data name="AmbiguousChannelNameFormat" xml:space="preserve">
+    <value>Ambiguous channel name '{0}'. Please be more specific.</value>
+  </data>
+  <data name="AmbiguousChannelNameMatchesFormat" xml:space="preserve">
+    <value>Ambiguous channel name '{0}'. Matches: {1}</value>
+  </data>
+  <data name="UsageAtCommandFormat" xml:space="preserve">
+    <value>Usage: @{0} &lt;object&gt;=&lt;value&gt;</value>
+  </data>
+  <data name="ErrorDetailFormat" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+
+  <!-- Channel management (addcom/delcom/comtitle) -->
+  <data name="ChatAlreadyExists" xml:space="preserve">
+    <value>CHAT: Channel already exists.</value>
+  </data>
+  <data name="ChatInvalidChannelNameShort" xml:space="preserve">
+    <value>CHAT: Invalid channel name.</value>
+  </data>
+  <data name="ChatChannelCreated" xml:space="preserve">
+    <value>Channel has been created.</value>
+  </data>
+  <data name="ChatYesOrNoOnly" xml:space="preserve">
+    <value>CHAT: Yes or No are the only valid options.</value>
+  </data>
+  <data name="ChatNotMemberFormat" xml:space="preserve">
+    <value>CHAT: You are not a member of {0}.</value>
+  </data>
+  <data name="ChatCombinedChannelsOnFormat" xml:space="preserve">
+    <value>CHAT: Combined channels turned on for {0}.</value>
+  </data>
+  <data name="ChatCombinedChannelsOffFormat" xml:space="preserve">
+    <value>CHAT: Combined channels turned off for {0}.</value>
+  </data>
+  <data name="ChatAlreadyInGagStateFormat" xml:space="preserve">
+    <value>CHAT: You are already in that gag state on {0}.</value>
+  </data>
+  <data name="ChatGaggedOnFormat" xml:space="preserve">
+    <value>CHAT: You have been gagged on {0}.</value>
+  </data>
+  <data name="ChatUngaggedOnFormat" xml:space="preserve">
+    <value>CHAT: You have been ungagged on {0}.</value>
+  </data>
+  <data name="ChatAlreadyInHideStateFormat" xml:space="preserve">
+    <value>CHAT: You are already in that hide state on {0}.</value>
+  </data>
+  <data name="ChatHiddenOnChannelFormat" xml:space="preserve">
+    <value>CHAT: You have been hidden on {0}.</value>
+  </data>
+  <data name="ChatUnhiddenOnChannelFormat" xml:space="preserve">
+    <value>CHAT: You have been unhidden on {0}.</value>
+  </data>
+  <data name="ChatPlayerRemovedFromChannelFormat" xml:space="preserve">
+    <value>CHAT: {0} has been removed from {1}.</value>
+  </data>
+  <data name="ChatPlayerAddedToChannelFormat" xml:space="preserve">
+    <value>CHAT: {0} has been added to {1}.</value>
+  </data>
+  <data name="ChatChannelRenamed" xml:space="preserve">
+    <value>CHAT: Renamed channel.</value>
+  </data>
+  <data name="UsageAddcom" xml:space="preserve">
+    <value>Usage: addcom &lt;alias&gt;=&lt;channel&gt;</value>
+  </data>
+  <data name="AliasNameCannotBeEmpty" xml:space="preserve">
+    <value>Alias name cannot be empty.</value>
+  </data>
+  <data name="ErrorSettingAliasFormat" xml:space="preserve">
+    <value>Error setting alias: {0}</value>
+  </data>
+  <data name="AliasAddedForChannelFormat" xml:space="preserve">
+    <value>Alias '{0}' added for channel {1}.</value>
+  </data>
+  <data name="UsageDelcom" xml:space="preserve">
+    <value>Usage: delcom &lt;alias&gt;</value>
+  </data>
+  <data name="AliasNotFoundFormat" xml:space="preserve">
+    <value>Alias '{0}' not found.</value>
+  </data>
+  <data name="ErrorReadingAliasFormat" xml:space="preserve">
+    <value>Error reading alias: {0}</value>
+  </data>
+  <data name="ErrorDeletingAliasFormat" xml:space="preserve">
+    <value>Error deleting alias: {0}</value>
+  </data>
+  <data name="AliasDeletedFormat" xml:space="preserve">
+    <value>Alias '{0}' deleted.</value>
+  </data>
+  <data name="UsageComtitle" xml:space="preserve">
+    <value>Usage: comtitle &lt;alias&gt;=&lt;title&gt;</value>
+  </data>
+  <data name="TitleSetForAliasChannelFormat" xml:space="preserve">
+    <value>Title set to '{0}' for alias '{1}' (channel {2}).</value>
+  </data>
+  <data name="ErrorReadingAliasesFormat" xml:space="preserve">
+    <value>Error reading aliases: {0}</value>
+  </data>
+  <data name="YouHaveNoChannelAliases" xml:space="preserve">
+    <value>You have no channel aliases.</value>
+  </data>
+
+  <!-- News / Help system -->
+  <data name="NewsSystemNotInitialized" xml:space="preserve">
+    <value>News system not initialized.</value>
+  </data>
+  <data name="NewsNoTopicAvailable" xml:space="preserve">
+    <value>No news available. Type 'news &lt;topic&gt;' for news on a specific topic.</value>
+  </data>
+  <data name="NewsNoEntriesFoundContaining" xml:space="preserve">
+    <value>No news entries found containing '{0}'.</value>
+  </data>
+  <data name="NewsEntriesContaining" xml:space="preserve">
+    <value>News entries containing '{0}':</value>
+  </data>
+  <data name="NewsNoNewsForTopic" xml:space="preserve">
+    <value>No news available for '{0}'.</value>
+  </data>
+  <data name="NewsTopicsMatchingFormat" xml:space="preserve">
+    <value>News topics matching '{0}':</value>
+  </data>
+  <data name="NewsTryPattern" xml:space="preserve">
+    <value>Try 'news &lt;pattern&gt;' with wildcards (*) or 'news/search &lt;text&gt;' to search news content.</value>
+  </data>
+  <data name="AdminCommandOnly" xml:space="preserve">
+    <value>Permission denied. This command is for administrators only.</value>
+  </data>
+  <data name="AhelpSystemNotInitialized" xml:space="preserve">
+    <value>Admin help system not initialized.</value>
+  </data>
+  <data name="AhelpNoHelpAvailable" xml:space="preserve">
+    <value>No admin help available. Type 'ahelp &lt;topic&gt;' for help on a specific topic.</value>
+  </data>
+  <data name="AhelpNoEntriesFoundContaining" xml:space="preserve">
+    <value>No admin help entries found containing '{0}'.</value>
+  </data>
+  <data name="AhelpEntriesContaining" xml:space="preserve">
+    <value>Admin help entries containing '{0}':</value>
+  </data>
+  <data name="AhelpNoHelpForTopic" xml:space="preserve">
+    <value>No admin help available for '{0}'.</value>
+  </data>
+  <data name="AhelpTopicsMatchingFormat" xml:space="preserve">
+    <value>Admin help topics matching '{0}':</value>
+  </data>
+  <data name="AhelpTryPattern" xml:space="preserve">
+    <value>Try 'ahelp &lt;pattern&gt;' with wildcards (*) or 'ahelp/search &lt;text&gt;' to search admin help.</value>
+  </data>
+
+  <!-- Wizard admin - flag management -->
+  <data name="AllObjectsHaltedWithCountFormat" xml:space="preserve">
+    <value>All objects halted. {0} objects processed.</value>
+  </data>
+  <data name="FlagAddRequiresNameAndSymbol" xml:space="preserve">
+    <value>@FLAG/ADD requires flag name and symbol.</value>
+  </data>
+  <data name="FlagNameAndSymbolCannotBeEmpty" xml:space="preserve">
+    <value>Flag name and symbol cannot be empty.</value>
+  </data>
+  <data name="FlagAlreadyExistsFormat" xml:space="preserve">
+    <value>Flag '{0}' already exists.</value>
+  </data>
+  <data name="FlagCreatedWithSymbolFormat" xml:space="preserve">
+    <value>Flag '{0}' created with symbol '{1}'.</value>
+  </data>
+  <data name="FailedToCreateFlagFormat" xml:space="preserve">
+    <value>Failed to create flag '{0}'.</value>
+  </data>
+  <data name="FlagDeleteRequiresName" xml:space="preserve">
+    <value>@FLAG/DELETE requires a flag name.</value>
+  </data>
+  <data name="FlagNameCannotBeEmpty" xml:space="preserve">
+    <value>Flag name cannot be empty.</value>
+  </data>
+  <data name="FlagNotFoundFormat" xml:space="preserve">
+    <value>Flag '{0}' not found.</value>
+  </data>
+  <data name="CannotDeleteSystemFlagFormat" xml:space="preserve">
+    <value>Cannot delete system flag '{0}'.</value>
+  </data>
+  <data name="FlagDeletedFormat" xml:space="preserve">
+    <value>Flag '{0}' deleted.</value>
+  </data>
+  <data name="FailedToDeleteFlagFormat" xml:space="preserve">
+    <value>Failed to delete flag '{0}'.</value>
+  </data>
+  <data name="FlagLetterRequiresNameAndSymbol" xml:space="preserve">
+    <value>@FLAG/LETTER requires flag name and new symbol.</value>
+  </data>
+  <data name="FlagNameAndSymbolEmptyError" xml:space="preserve">
+    <value>Flag name and symbol cannot be empty.</value>
+  </data>
+  <data name="FlagSymbolChangedFormat" xml:space="preserve">
+    <value>Flag '{0}' symbol changed to '{1}'.</value>
+  </data>
+  <data name="FailedToUpdateFlagFormat" xml:space="preserve">
+    <value>Failed to update flag '{0}'.</value>
+  </data>
+  <data name="FlagTypeRequiresNameAndTypes" xml:space="preserve">
+    <value>@FLAG/TYPE requires flag name and type restrictions.</value>
+  </data>
+  <data name="FlagNameAndTypesCannotBeEmpty" xml:space="preserve">
+    <value>Flag name and types cannot be empty.</value>
+  </data>
+  <data name="FlagTypeUpdatedFormat" xml:space="preserve">
+    <value>Flag '{0}' type restrictions updated to: {1}.</value>
+  </data>
+  <data name="FlagAliasRequiresNameAndAliases" xml:space="preserve">
+    <value>@FLAG/ALIAS requires flag name and aliases.</value>
+  </data>
+  <data name="FlagAliasesSetFormat" xml:space="preserve">
+    <value>Flag '{0}' aliases set to: {1}.</value>
+  </data>
+  <data name="FlagRestrictRequiresNameAndPermissions" xml:space="preserve">
+    <value>@FLAG/RESTRICT requires flag name and permissions.</value>
+  </data>
+  <data name="FlagNameAndPermissionsCannotBeEmpty" xml:space="preserve">
+    <value>Flag name and permissions cannot be empty.</value>
+  </data>
+  <data name="FlagPermissionsUpdatedFormat" xml:space="preserve">
+    <value>Flag '{0}' permissions updated to: {1}.</value>
+  </data>
+  <data name="FlagDecompileRequiresName" xml:space="preserve">
+    <value>@FLAG/DECOMPILE requires a flag name.</value>
+  </data>
+  <data name="FlagDisabledFormat" xml:space="preserve">
+    <value>Flag '{0}' disabled.</value>
+  </data>
+  <data name="FlagEnabledFormat" xml:space="preserve">
+    <value>Flag '{0}' enabled.</value>
+  </data>
+  <data name="FailedToDisableFlagFormat" xml:space="preserve">
+    <value>Failed to disable flag '{0}'.</value>
+  </data>
+  <data name="FailedToEnableFlagFormat" xml:space="preserve">
+    <value>Failed to enable flag '{0}'.</value>
+  </data>
+
+  <!-- Wizard admin - power management -->
+  <data name="PowerAddRequiresNameAndAlias" xml:space="preserve">
+    <value>@POWER/ADD requires power name and alias.</value>
+  </data>
+  <data name="PowerNameAndAliasCannotBeEmpty" xml:space="preserve">
+    <value>Power name and alias cannot be empty.</value>
+  </data>
+  <data name="PowerCreatedWithAliasFormat" xml:space="preserve">
+    <value>Power '{0}' created with alias '{1}'.</value>
+  </data>
+  <data name="FailedToCreatePowerFormat" xml:space="preserve">
+    <value>Failed to create power '{0}'.</value>
+  </data>
+  <data name="PowerDeleteRequiresName" xml:space="preserve">
+    <value>@POWER/DELETE requires a power name.</value>
+  </data>
+  <data name="PowerNameCannotBeEmpty" xml:space="preserve">
+    <value>Power name cannot be empty.</value>
+  </data>
+  <data name="PowerNotFoundFormat" xml:space="preserve">
+    <value>Power '{0}' not found.</value>
+  </data>
+  <data name="CannotDeleteSystemPowerFormat" xml:space="preserve">
+    <value>Cannot delete system power '{0}'.</value>
+  </data>
+  <data name="PowerDeletedFormat" xml:space="preserve">
+    <value>Power '{0}' deleted.</value>
+  </data>
+  <data name="FailedToDeletePowerFormat" xml:space="preserve">
+    <value>Failed to delete power '{0}'.</value>
+  </data>
+  <data name="PowerAliasRequiresNameAndAlias" xml:space="preserve">
+    <value>@POWER/ALIAS requires power name and new alias.</value>
+  </data>
+  <data name="PowerAliasChangedFormat" xml:space="preserve">
+    <value>Power '{0}' alias changed to '{1}'.</value>
+  </data>
+  <data name="FailedToUpdatePowerFormat" xml:space="preserve">
+    <value>Failed to update power '{0}'.</value>
+  </data>
+
+  <!-- Wizard admin - log / quota / dark -->
+  <data name="NoLogEntriesForCategoryFormat" xml:space="preserve">
+    <value>No log entries found for category '{0}'.</value>
+  </data>
+  <data name="LogUsage" xml:space="preserve">
+    <value>Usage: @log[/&lt;switch&gt;] &lt;message&gt; or @log/recall[/&lt;switch&gt;] [&lt;number&gt;]</value>
+  </data>
+  <data name="MessageLoggedToCategoryFormat" xml:space="preserve">
+    <value>Message logged to {0} log.</value>
+  </data>
+  <data name="PoorUsage" xml:space="preserve">
+    <value>Usage: @poor &lt;player&gt;</value>
+  </data>
+  <data name="QuotaSystemDisabled" xml:space="preserve">
+    <value>The quota system is disabled on this server.</value>
+  </data>
+  <data name="PlayerSetToPoorFormat" xml:space="preserve">
+    <value>{0} has been set to poor status (quota: 0).</value>
+  </data>
+  <data name="YourQuotaSetToZeroByFormat" xml:space="preserve">
+    <value>Your building quota has been set to 0 by {0}.</value>
+  </data>
+  <data name="QuotaSystemDisabledMessage" xml:space="preserve">
+    <value>Quota system disabled.</value>
+  </data>
+  <data name="QuotaStatusFormat" xml:space="preserve">
+    <value>Quota: {0}/{1}</value>
+  </data>
+  <data name="AllQuotaUsage" xml:space="preserve">
+    <value>Usage: @allquota &lt;amount&gt;</value>
+  </data>
+  <data name="QuotaAmountMustBeNumber" xml:space="preserve">
+    <value>Quota amount must be a number.</value>
+  </data>
+  <data name="SetQuotaForPlayersFormat" xml:space="preserve">
+    <value>Set quota to {0} for {1} players.</value>
+  </data>
+  <data name="NotSupportedForSharpMUSH" xml:space="preserve">
+    <value>Not Supported for SharpMUSH.</value>
+  </data>
+  <data name="ErrorDarkFlagNotFound" xml:space="preserve">
+    <value>Error: DARK flag not found in database.</value>
+  </data>
+  <data name="NowHiddenFromWho" xml:space="preserve">
+    <value>You are now hidden from the WHO list.</value>
+  </data>
+  <data name="NoLongerHiddenFromWho" xml:space="preserve">
+    <value>You are no longer hidden from the WHO list.</value>
+  </data>
+  <data name="AlreadyHiddenFromWho" xml:space="preserve">
+    <value>You are already hidden from the WHO list.</value>
+  </data>
+  <data name="AlreadyVisibleOnWho" xml:space="preserve">
+    <value>You are already visible on the WHO list.</value>
+  </data>
+  <data name="NeedAnnouncePower" xml:space="preserve">
+    <value>Permission denied. You need the Announce power.</value>
+  </data>
+  <data name="MotdClearedFormat" xml:space="preserve">
+    <value>{0} MOTD cleared.</value>
+  </data>
+  <data name="MotdUsage" xml:space="preserve">
+    <value>Usage: @motd[/&lt;type&gt;] &lt;message&gt;</value>
+  </data>
+  <data name="MotdSetFormat" xml:space="preserve">
+    <value>{0} MOTD set.</value>
+  </data>
+
+  <!-- Building / destroy -->
+  <data name="NoSuicideAllowed" xml:space="preserve">
+    <value>Sorry, no suicide allowed.</value>
+  </data>
+  <data name="EvenYouCantDoThat" xml:space="preserve">
+    <value>Even you can't do that!</value>
+  </data>
+  <data name="MayNotDestroyConnectedPlayer" xml:space="preserve">
+    <value>How gruesome. You may not destroy players who are connected.</value>
+  </data>
+  <data name="MustUseNukeToDestroyPlayer" xml:space="preserve">
+    <value>You must use @nuke to destroy a player.</value>
+  </data>
+  <data name="ObjectAndPossessionsScheduledDestroyedFormat" xml:space="preserve">
+    <value>{0} and their possessions are scheduled to be destroyed.</value>
+  </data>
+  <data name="ObjectScheduledDestroyedFormat" xml:space="preserve">
+    <value>{0} is scheduled to be destroyed.</value>
+  </data>
+
+  <!-- Softcode functions -->
+  <data name="DefaultHomeLocationInvalid" xml:space="preserve">
+    <value>Default home location is invalid.</value>
+  </data>
+  <data name="MoneyFunctionNotSupported" xml:space="preserve">
+    <value>The money() function is not supported. SharpMUSH does not track money or pennies.</value>
+  </data>
+  <data name="MessageSentToRecipientsFormat" xml:space="preserve">
+    <value>Message sent to {0} recipient(s).</value>
+  </data>
+
+  <!-- @map command -->
+  <data name="MapMustSpecifyAttribute" xml:space="preserve">
+    <value>You must specify an attribute to map.</value>
+  </data>
+  <data name="MapInvalidObjectAttributePath" xml:space="preserve">
+    <value>Invalid object/attribute path format.</value>
+  </data>
+  <data name="MapWouldIterateFormat" xml:space="preserve">
+    <value>@map: Would iterate over {0} elements and execute {1}/{2}</value>
+  </data>
+  <data name="MapModeInline" xml:space="preserve">
+    <value>  Mode: Inline execution</value>
+  </data>
+  <data name="MapWillQueueNotify" xml:space="preserve">
+    <value>  Will queue @notify after completion</value>
+  </data>
+  <data name="MapWillClearRegisters" xml:space="preserve">
+    <value>  Will clear Q-registers</value>
+  </data>
+  <data name="MapWillLocalizeRegisters" xml:space="preserve">
+    <value>  Will localize Q-registers</value>
+  </data>
+  <data name="MapAttributeNotFoundOnObjectFormat" xml:space="preserve">
+    <value>Attribute {0} not found on {1}.</value>
+  </data>
+
+  <!-- @dolist command -->
+  <data name="DoListWhatToDoWithList" xml:space="preserve">
+    <value>What do you want to do with the list?</value>
+  </data>
+
+  <!-- goto / teleport -->
+  <data name="ExitNoValidLocationDetail" xml:space="preserve">
+    <value>That exit doesn't go to a valid location.</value>
+  </data>
+  <data name="ExitNameToDestFormat" xml:space="preserve">
+    <value>{0} to {1}</value>
+  </data>
+  <data name="TeleportedPlayerNotified" xml:space="preserve">
+    <value>You have been teleported.</value>
+  </data>
+
+  <!-- @find command -->
+  <data name="FindSearchingFormat" xml:space="preserve">
+    <value>@find: Searching for objects{0}...</value>
+  </data>
+  <data name="FindSearchMatchingFormat" xml:space="preserve">
+    <value> matching '{0}'</value>
+  </data>
+  <data name="FindRangeFormat" xml:space="preserve">
+    <value>Range: {0} to {1}</value>
+  </data>
+  <data name="FindObjectResultFormat" xml:space="preserve">
+    <value>  #{0} ({1})</value>
+  </data>
+  <data name="FindFoundMatchingFormat" xml:space="preserve">
+    <value>Found {0} matching objects.</value>
+  </data>
+
+  <!-- @halt command -->
+  <data name="HaltMustSpecifyPid" xml:space="preserve">
+    <value>You must specify a process ID.</value>
+  </data>
+  <data name="HaltInvalidPidFormat" xml:space="preserve">
+    <value>Invalid process ID format.</value>
+  </data>
+  <data name="HaltTaskHaltedFormat" xml:space="preserve">
+    <value>Task {0} halted.</value>
+  </data>
+  <data name="HaltNoTaskWithPidFormat" xml:space="preserve">
+    <value>No task found with PID {0}.</value>
+  </data>
+  <data name="HaltMustSpecifyTarget" xml:space="preserve">
+    <value>You must specify a target object.</value>
+  </data>
+  <data name="HaltedPlayerAndObjectsFormat" xml:space="preserve">
+    <value>Halted {0} and all their objects.</value>
+  </data>
+  <data name="HaltedObjectWithActionsFormat" xml:space="preserve">
+    <value>Halted {0} with replacement actions.</value>
+  </data>
+  <data name="HaltedObjectFormat" xml:space="preserve">
+    <value>Halted {0}.</value>
+  </data>
+
+  <!-- @notify command (semaphore) -->
+  <data name="NotifyMustSpecifySemaphoreObject" xml:space="preserve">
+    <value>You must specify an object to use for the semaphore.</value>
+  </data>
+  <data name="NotifyMustSpecifyValidObjectAttribute" xml:space="preserve">
+    <value>You must specify a valid object with an optional valid attribute to use for the semaphore.</value>
+  </data>
+  <data name="NotifyMustSpecifyQregAssignments" xml:space="preserve">
+    <value>You must specify Q-register assignments.</value>
+  </data>
+  <data name="NotifyQregAssignmentsMustBePairs" xml:space="preserve">
+    <value>Q-register assignments must be in pairs: qreg,value[,qreg,value...]</value>
+  </data>
+  <data name="NotifyInvalidNumber" xml:space="preserve">
+    <value>Invalid number specified.</value>
+  </data>
+  <data name="NotifyNoTaskWaitingOnSemaphore" xml:space="preserve">
+    <value>No task is waiting on that semaphore.</value>
+  </data>
+
+  <!-- @nsprompt / @prompt -->
+  <data name="ObjectDoesNotWantToHearFromYouFormat" xml:space="preserve">
+    <value>{0} does not want to hear from you.</value>
+  </data>
+  <data name="YouPromptedFormat" xml:space="preserve">
+    <value>You prompted {0}.</value>
+  </data>
+
+  <!-- @switch -->
+  <data name="SwitchInvalidRegexpFormat" xml:space="preserve">
+    <value>Invalid regexp: {0}: {1}</value>
+  </data>
+
+  <!-- @wait command -->
+  <data name="WaitCommandListMissing" xml:space="preserve">
+    <value>Command list missing</value>
+  </data>
+  <data name="WaitPermissionDenied" xml:space="preserve">
+    <value>Permission Denied.</value>
+  </data>
+  <data name="WaitInvalidTimeArgumentFormat" xml:space="preserve">
+    <value>Invalid time argument format</value>
+  </data>
+  <data name="WaitInvalidFirstArgumentFormat" xml:space="preserve">
+    <value>Invalid first argument format</value>
+  </data>
+  <data name="WaitInvalidPidSpecified" xml:space="preserve">
+    <value>Invalid PID specified.</value>
+  </data>
+  <data name="WaitWhatToDoWithProcess" xml:space="preserve">
+    <value>What do you want to do with the process?</value>
+  </data>
+  <data name="WaitInvalidTimeSpecified" xml:space="preserve">
+    <value>Invalid time specified.</value>
+  </data>
+
+  <!-- @command command -->
+  <data name="CommandMustSpecifyName" xml:space="preserve">
+    <value>You must specify a command name.</value>
+  </data>
+  <data name="CommandAddNotImplementedFormat" xml:space="preserve">
+    <value>@command/add: Dynamic command creation not yet implemented.</value>
+  </data>
+  <data name="CommandMustSpecifyAlias" xml:space="preserve">
+    <value>You must specify an alias name.</value>
+  </data>
+  <data name="CommandAliasNotImplementedFormat" xml:space="preserve">
+    <value>@command/alias: Dynamic command aliasing not yet implemented.</value>
+  </data>
+  <data name="CommandMustSpecifyCloneName" xml:space="preserve">
+    <value>You must specify a clone name.</value>
+  </data>
+  <data name="CommandCloneNotImplementedFormat" xml:space="preserve">
+    <value>@command/clone: Command cloning not yet implemented.</value>
+  </data>
+  <data name="CommandOnlyGodCanDelete" xml:space="preserve">
+    <value>Only God can delete commands.</value>
+  </data>
+  <data name="CommandDeleteNotImplementedFormat" xml:space="preserve">
+    <value>@command/delete: Command deletion not yet implemented.</value>
+  </data>
+  <data name="CommandDisableNotImplementedFormat" xml:space="preserve">
+    <value>@command/disable: Command disabling not yet implemented.</value>
+  </data>
+  <data name="CommandEnableNotImplementedFormat" xml:space="preserve">
+    <value>@command/enable: Command enabling not yet implemented.</value>
+  </data>
+  <data name="CommandRestrictNotImplementedFormat" xml:space="preserve">
+    <value>@command/restrict: Command restriction not yet implemented.</value>
+  </data>
+  <data name="CommandLibraryUnavailable" xml:space="preserve">
+    <value>Command library unavailable.</value>
+  </data>
+  <data name="CommandNotFoundFormat" xml:space="preserve">
+    <value>Command '{0}' not found.</value>
+  </data>
+  <data name="CommandInfoNameFormat" xml:space="preserve">
+    <value>Command: {0}</value>
+  </data>
+  <data name="CommandInfoTypeFormat" xml:space="preserve">
+    <value>  Type: {0}</value>
+  </data>
+  <data name="CommandInfoMinArgsFormat" xml:space="preserve">
+    <value>  Min Args: {0}</value>
+  </data>
+  <data name="CommandInfoMaxArgsFormat" xml:space="preserve">
+    <value>  Max Args: {0}</value>
+  </data>
+  <data name="CommandInfoSwitchesFormat" xml:space="preserve">
+    <value>  Switches: {0}</value>
+  </data>
+  <data name="CommandInfoBehaviorFormat" xml:space="preserve">
+    <value>  Behavior: {0}</value>
+  </data>
+  <data name="CommandInfoLockFormat" xml:space="preserve">
+    <value>  Lock: {0}</value>
+  </data>
+
+  <!-- @drain command -->
+  <data name="DrainInvalidNumber" xml:space="preserve">
+    <value>Invalid number specified.</value>
+  </data>
+  <data name="DrainCannotSpecifyBothAnyAndAttribute" xml:space="preserve">
+    <value>You may not specify both /any and a specific attribute.</value>
+  </data>
+  <data name="DrainCannotSpecifyBothAllAndNumber" xml:space="preserve">
+    <value>You may not specify both /all and a number.</value>
+  </data>
+
+  <!-- @force command -->
+  <data name="ForcePermissionDeniedDoNotControl" xml:space="preserve">
+    <value>Permission denied. You do not control the target.</value>
+  </data>
+  <data name="ForceThemToDoWhat" xml:space="preserve">
+    <value>Force them to do what?</value>
+  </data>
+
+  <!-- @nsemit / @oemit / @emit / @nsoemit -->
+  <data name="YouDoNotHavePermissionToSpoofEmitsDetail" xml:space="preserve">
+    <value>You do not have permission to spoof emits.</value>
+  </data>
+
+  <!-- @nsremit / @lemit / @nslemit / @nszemit / @zemit / @oemit / @remit / @nspemit -->
+  <data name="DontYouHaveAnythingToSayDetail" xml:space="preserve">
+    <value>Don't you have anything to say?</value>
+  </data>
+  <data name="InvalidRoomSpecifiedDetail" xml:space="preserve">
+    <value>Invalid room specified.</value>
+  </data>
+
+  <!-- @ps command -->
+  <data name="PsMustSpecifyPid" xml:space="preserve">
+    <value>You must specify a process ID.</value>
+  </data>
+  <data name="PsInvalidPidFormat" xml:space="preserve">
+    <value>Invalid process ID format.</value>
+  </data>
+  <data name="PsNoTaskWithPidFormat" xml:space="preserve">
+    <value>No task found with PID {0}.</value>
+  </data>
+  <data name="PsDebugTaskFormat" xml:space="preserve">
+    <value>@ps/debug: Task {0}</value>
+  </data>
+  <data name="PsDebugOwnerFormat" xml:space="preserve">
+    <value>  Owner: {0}</value>
+  </data>
+  <data name="PsDebugSemaphoreFormat" xml:space="preserve">
+    <value>  Semaphore: {0}</value>
+  </data>
+  <data name="PsDebugCommandFormat" xml:space="preserve">
+    <value>  Command: {0}</value>
+  </data>
+  <data name="PsDebugDelayFormat" xml:space="preserve">
+    <value>  Delay: {0}s</value>
+  </data>
+  <data name="PsSummaryHeader" xml:space="preserve">
+    <value>@ps/summary: Queue totals</value>
+  </data>
+  <data name="PsCommandQueueFormat" xml:space="preserve">
+    <value>  Command queue: {0}</value>
+  </data>
+  <data name="PsWaitQueueFormat" xml:space="preserve">
+    <value>  Wait queue: {0}</value>
+  </data>
+  <data name="PsSemaphoreQueueFormat" xml:space="preserve">
+    <value>  Semaphore queue: {0}</value>
+  </data>
+  <data name="PsLoadAverageZero" xml:space="preserve">
+    <value>  Load average: 0.0, 0.0, 0.0</value>
+  </data>
+  <data name="PsQuickHeader" xml:space="preserve">
+    <value>@ps/quick: Your queue totals</value>
+  </data>
+  <data name="PsAllHeader" xml:space="preserve">
+    <value>@ps/all: All queued tasks</value>
+  </data>
+  <data name="PsAllGroupFormat" xml:space="preserve">
+    <value>Group: {0} ({1} tasks)</value>
+  </data>
+  <data name="PsQueueForTargetFormat" xml:space="preserve">
+    <value>@ps: Queue for {0}</value>
+  </data>
+  <data name="PsSemaphoreTasksHeader" xml:space="preserve">
+    <value>Semaphore tasks:</value>
+  </data>
+  <data name="PsSemaphoreTaskEntryFormat" xml:space="preserve">
+    <value>  [{0}] {1} ({2}): {3}</value>
+  </data>
+  <data name="PsAndMoreFormat" xml:space="preserve">
+    <value>  ... and {0} more</value>
+  </data>
+  <data name="PsWaitQueueHeader" xml:space="preserve">
+    <value>Wait queue tasks:</value>
+  </data>
+  <data name="PsWaitTaskEntryFormat" xml:space="preserve">
+    <value>  [{0}] (delayed)</value>
+  </data>
+  <data name="PsQueueManagementNotImplemented" xml:space="preserve">
+    <value>Note: Queue management not yet implemented.</value>
+  </data>
+
+  <!-- @select command -->
+  <data name="SelectMustSpecifyTestString" xml:space="preserve">
+    <value>You must specify a test string.</value>
+  </data>
+  <data name="SelectTestingStringFormat" xml:space="preserve">
+    <value>@select: Testing string '{0}'</value>
+  </data>
+  <data name="SelectExpressionActionPairsFormat" xml:space="preserve">
+    <value>  Expression/action pairs: {0}</value>
+  </data>
+  <data name="SelectHasDefaultAction" xml:space="preserve">
+    <value>  Has default action</value>
+  </data>
+  <data name="SelectModeRegexp" xml:space="preserve">
+    <value>  Mode: Regular expression matching</value>
+  </data>
+  <data name="SelectModeWildcard" xml:space="preserve">
+    <value>  Mode: Wildcard pattern matching</value>
+  </data>
+  <data name="SelectExecutionInline" xml:space="preserve">
+    <value>  Execution: Inline (immediate)</value>
+  </data>
+  <data name="SelectNoBreakWontPropagate" xml:space="preserve">
+    <value>  @break won't propagate to caller</value>
+  </data>
+  <data name="SelectQregistersLocalized" xml:space="preserve">
+    <value>  Q-registers will be localized</value>
+  </data>
+  <data name="SelectQregistersCleared" xml:space="preserve">
+    <value>  Q-registers will be cleared</value>
+  </data>
+  <data name="SelectExecutionQueued" xml:space="preserve">
+    <value>  Execution: Queued</value>
+  </data>
+  <data name="SelectWillQueueNotify" xml:space="preserve">
+    <value>  Will queue @notify after completion</value>
+  </data>
+  <data name="SelectInvalidRegexPatternFormat" xml:space="preserve">
+    <value>Invalid regex pattern: {0}</value>
+  </data>
+
+  <!-- @trigger command -->
+  <data name="TriggerMustSpecifyAttributePath" xml:space="preserve">
+    <value>You must specify an object/attribute to trigger.</value>
+  </data>
+  <data name="TriggerMustSpecifyObjectAttributePath" xml:space="preserve">
+    <value>You must specify an object/attribute path.</value>
+  </data>
+  <data name="TriggerPermissionDeniedDoNotControl" xml:space="preserve">
+    <value>Permission denied. You do not control that object.</value>
+  </data>
+  <data name="TriggerNoSuchAttributeFormat" xml:space="preserve">
+    <value>No such attribute: {0}</value>
+  </data>
+  <data name="TriggerMustProvideMatchString" xml:space="preserve">
+    <value>You must provide a string to match when using /match.</value>
+  </data>
+
+  <!-- @whereis command -->
+  <data name="WhereIsMustSpecifyPlayer" xml:space="preserve">
+    <value>You must specify a player to locate.</value>
+  </data>
+  <data name="WhereIsCanOnlyLocatePlayers" xml:space="preserve">
+    <value>You can only @whereis players.</value>
+  </data>
+  <data name="WhereIsTriedToLocateYouFormat" xml:space="preserve">
+    <value>{0} tried to locate you, but was unable to.</value>
+  </data>
+  <data name="WhereIsUnfindableFormat" xml:space="preserve">
+    <value>{0} is UNFINDABLE.</value>
+  </data>
+  <data name="WhereIsLocatedYourPositionFormat" xml:space="preserve">
+    <value>{0} has just located your position.</value>
+  </data>
+  <data name="WhereIsObjectInLocationFormat" xml:space="preserve">
+    <value>{0} is in {1}.</value>
+  </data>
+
+  <!-- @config command -->
+  <data name="ConfigOnlyGodCanUseSave" xml:space="preserve">
+    <value>Only God can use /save switch.</value>
+  </data>
+  <data name="ConfigSetSaveNotImplemented" xml:space="preserve">
+    <value>@config/set and @config/save are not yet implemented.</value>
+  </data>
+  <data name="ConfigCategoriesHeader" xml:space="preserve">
+    <value>Configuration Categories:</value>
+  </data>
+  <data name="ConfigCategoryItemFormat" xml:space="preserve">
+    <value>  {0}</value>
+  </data>
+  <data name="ConfigUseCategoryHelp" xml:space="preserve">
+    <value>Use '@config &lt;category&gt;' to see options in a category.</value>
+  </data>
+  <data name="ConfigUseOptionHelp" xml:space="preserve">
+    <value>Use '@config &lt;option&gt;' to see the value of an option.</value>
+  </data>
+  <data name="ConfigNoOptionsInCategoryFormat" xml:space="preserve">
+    <value>No options found in category '{0}'.</value>
+  </data>
+  <data name="ConfigOptionsInCategoryFormat" xml:space="preserve">
+    <value>Options in {0}:</value>
+  </data>
+  <data name="ConfigOptionValueFormat" xml:space="preserve">
+    <value>  {0}: {1}</value>
+  </data>
+  <data name="ConfigOptionDescriptionFormat" xml:space="preserve">
+    <value>  Description: {0}</value>
+  </data>
+  <data name="ConfigOptionCategoryFormat" xml:space="preserve">
+    <value>  Category: {0}</value>
+  </data>
+  <data name="ConfigNoCategoryOrOptionFormat" xml:space="preserve">
+    <value>No configuration category or option named '{0}'.</value>
+  </data>
+
+  <!-- @edit command -->
+  <data name="EditInvalidArguments" xml:space="preserve">
+    <value>Invalid arguments to @edit.</value>
+  </data>
+  <data name="EditInvalidFormat" xml:space="preserve">
+    <value>Invalid format. Use: object/attribute=search,replace</value>
+  </data>
+  <data name="EditMustSpecifySearchAndReplace" xml:space="preserve">
+    <value>You must specify search and replace strings.</value>
+  </data>
+  <data name="EditNoMatchingAttributesFound" xml:space="preserve">
+    <value>No matching attributes found.</value>
+  </data>
+  <data name="EditAttributeSetFormat" xml:space="preserve">
+    <value>{0} - Set.</value>
+  </data>
+  <data name="EditWouldChangeToFormat" xml:space="preserve">
+    <value>{0} - Would change to: {1}</value>
+  </data>
+  <data name="EditSummaryFormat" xml:space="preserve">
+    <value>{0} {1} attribute{2}. {3} unchanged.</value>
+  </data>
+
+  <!-- @function command -->
+  <data name="FunctionLibraryUnavailable" xml:space="preserve">
+    <value>Function library unavailable.</value>
+  </data>
+  <data name="FunctionGlobalUserDefinedHeader" xml:space="preserve">
+    <value>Global user-defined functions:</value>
+  </data>
+  <data name="FunctionUserDefinedCountFormat" xml:space="preserve">
+    <value>  User-defined: {0}</value>
+  </data>
+  <data name="FunctionEntryFormat" xml:space="preserve">
+    <value>    {0}: {1}-{2} args, Flags: {3}</value>
+  </data>
+  <data name="FunctionAndMoreFormat" xml:space="preserve">
+    <value>    ... and {0} more</value>
+  </data>
+  <data name="FunctionBuiltInCountFormat" xml:space="preserve">
+    <value>  Built-in: {0}</value>
+  </data>
+  <data name="FunctionUserDefinedSummaryFormat" xml:space="preserve">
+    <value>  {0} user-defined functions</value>
+  </data>
+  <data name="FunctionBuiltInSummaryFormat" xml:space="preserve">
+    <value>  {0} built-in functions</value>
+  </data>
+  <data name="FunctionMustSpecifyName" xml:space="preserve">
+    <value>You must specify a function name.</value>
+  </data>
+  <data name="FunctionMustSpecifyAliasName" xml:space="preserve">
+    <value>You must specify an alias name.</value>
+  </data>
+  <data name="FunctionAliasWouldCreateFormat" xml:space="preserve">
+    <value>@function/alias: Would create alias '{0}' for function '{1}'.</value>
+  </data>
+  <data name="FunctionAliasingNotImplemented" xml:space="preserve">
+    <value>Note: Function aliasing not yet implemented.</value>
+  </data>
+  <data name="FunctionMustSpecifyCloneName" xml:space="preserve">
+    <value>You must specify a clone name.</value>
+  </data>
+  <data name="FunctionCloneWouldCloneFormat" xml:space="preserve">
+    <value>@function/clone: Would clone function '{0}' as '{1}'.</value>
+  </data>
+  <data name="FunctionCloningNotImplemented" xml:space="preserve">
+    <value>Note: Function cloning not yet implemented.</value>
+  </data>
+  <data name="FunctionDeleteWouldDeleteFormat" xml:space="preserve">
+    <value>@function/delete: Would delete function '{0}'.</value>
+  </data>
+  <data name="FunctionDeletionNotImplemented" xml:space="preserve">
+    <value>Note: Function deletion not yet implemented.</value>
+  </data>
+  <data name="FunctionDisableWouldDisableFormat" xml:space="preserve">
+    <value>@function/disable: Would disable function '{0}'.</value>
+  </data>
+  <data name="FunctionDisablingNotImplemented" xml:space="preserve">
+    <value>Note: Function disabling not yet implemented.</value>
+  </data>
+  <data name="FunctionEnableWouldEnableFormat" xml:space="preserve">
+    <value>@function/enable: Would enable function '{0}'.</value>
+  </data>
+  <data name="FunctionEnablingNotImplemented" xml:space="preserve">
+    <value>Note: Function enabling not yet implemented.</value>
+  </data>
+  <data name="FunctionRestrictWouldRestrictFormat" xml:space="preserve">
+    <value>@function/restrict: Would restrict function '{0}' to: {1}</value>
+  </data>
+  <data name="FunctionRestrictionNotImplemented" xml:space="preserve">
+    <value>Note: Function restriction not yet implemented.</value>
+  </data>
+  <data name="FunctionDefineWouldDefineFormat" xml:space="preserve">
+    <value>@function: Would define function '{0}' as: {1}</value>
+  </data>
+  <data name="FunctionMinArgsFormat" xml:space="preserve">
+    <value>  Min args: {0}</value>
+  </data>
+  <data name="FunctionMaxArgsFormat" xml:space="preserve">
+    <value>  Max args: {0}</value>
+  </data>
+  <data name="FunctionRestrictionsArgFormat" xml:space="preserve">
+    <value>  Restrictions: {0}</value>
+  </data>
+  <data name="FunctionDynamicDefinitionNotImplemented" xml:space="preserve">
+    <value>Note: Dynamic function definition not yet implemented.</value>
+  </data>
+  <data name="FunctionNotFoundFormat" xml:space="preserve">
+    <value>Function '{0}' not found.</value>
+  </data>
+  <data name="FunctionInfoNameFormat" xml:space="preserve">
+    <value>Function: {0}</value>
+  </data>
+  <data name="FunctionInfoTypeFormat" xml:space="preserve">
+    <value>  Type: {0}</value>
+  </data>
+  <data name="FunctionInfoMinArgsFormat" xml:space="preserve">
+    <value>  Min Args: {0}</value>
+  </data>
+  <data name="FunctionInfoMaxArgsFormat" xml:space="preserve">
+    <value>  Max Args: {0}</value>
+  </data>
+  <data name="FunctionInfoFlagsFormat" xml:space="preserve">
+    <value>  Flags: {0}</value>
+  </data>
+  <data name="FunctionInfoRestrictionsFormat" xml:space="preserve">
+    <value>  Restrictions: {0}</value>
+  </data>
+
+  <!-- @grep command -->
+  <data name="GrepInvalidArguments" xml:space="preserve">
+    <value>Invalid arguments to @grep.</value>
+  </data>
+  <data name="GrepErrorReadingAttributesFormat" xml:space="preserve">
+    <value>Error reading attributes: {0}</value>
+  </data>
+  <data name="GrepRegexpTimedOutFormat" xml:space="preserve">
+    <value>Regular expression timed out: {0}</value>
+  </data>
+  <data name="GrepInvalidRegexpFormat" xml:space="preserve">
+    <value>Invalid regular expression: {0}</value>
+  </data>
+  <data name="GrepWildcardTimedOutFormat" xml:space="preserve">
+    <value>Wildcard pattern timed out: {0}</value>
+  </data>
+  <data name="GrepInvalidWildcardFormat" xml:space="preserve">
+    <value>Invalid wildcard pattern: {0}</value>
+  </data>
+  <data name="GrepNoMatchingAttributesFound" xml:space="preserve">
+    <value>No matching attributes found.</value>
+  </data>
+
+  <!-- @include command -->
+  <data name="IncludeMustSpecifyAttributePath" xml:space="preserve">
+    <value>You must specify an object/attribute to include.</value>
+  </data>
+  <data name="IncludeMustSpecifyObjectAttributePath" xml:space="preserve">
+    <value>You must specify an object/attribute path.</value>
+  </data>
+  <data name="IncludeNoSuchAttributeFormat" xml:space="preserve">
+    <value>No such attribute: {0}</value>
+  </data>
+  <data name="IncludeAttributeIsEmptyFormat" xml:space="preserve">
+    <value>Attribute {0} is empty.</value>
+  </data>
+  <data name="IncludeErrorExecutingFormat" xml:space="preserve">
+    <value>Error executing included attribute: {0}</value>
+  </data>
+
+  <!-- @mail command -->
+  <data name="MailTooManySwitches" xml:space="preserve">
+    <value>Error: Too many switches passed to @mail.</value>
+  </data>
+
+  <!-- @password command -->
+  <data name="PasswordOnlyPlayersHavePasswords" xml:space="preserve">
+    <value>Only players have passwords.</value>
+  </data>
+  <data name="PasswordInvalid" xml:space="preserve">
+    <value>Invalid password.</value>
+  </data>
+
+  <!-- @restart command -->
+  <data name="RestartMustSpecifyObject" xml:space="preserve">
+    <value>You must specify an object to restart.</value>
+  </data>
+  <data name="RestartedPlayerAndObjectsFormat" xml:space="preserve">
+    <value>Restarted {0} and all their objects.</value>
+  </data>
+  <data name="RestartedObjectFormat" xml:space="preserve">
+    <value>Restarted {0}.</value>
+  </data>
+
+  <!-- @sweep command -->
+  <data name="SweepListeningInRoom" xml:space="preserve">
+    <value>Listening in ROOM:</value>
+  </data>
+  <data name="SweepObjectIsListeningFormat" xml:space="preserve">
+    <value>{0} is listening.</value>
+  </data>
+  <data name="SweepObjectOwnerIsListeningFormat" xml:space="preserve">
+    <value>{0} [owner: {1}] is listening.</value>
+  </data>
+  <data name="SweepRoomSpeechConnectedFormat" xml:space="preserve">
+    <value>{0} (this room) [speech]. (connected)</value>
+  </data>
+  <data name="SweepRoomSpeechFormat" xml:space="preserve">
+    <value>{0} (this room) [speech].</value>
+  </data>
+  <data name="SweepRoomCommandsFormat" xml:space="preserve">
+    <value>{0} (this room) [commands].</value>
+  </data>
+  <data name="SweepRoomBroadcastingFormat" xml:space="preserve">
+    <value>{0} (this room) [broadcasting].</value>
+  </data>
+  <data name="SweepObjectSpeechConnectedFormat" xml:space="preserve">
+    <value>{0} [speech]. (connected)</value>
+  </data>
+  <data name="SweepObjectSpeechFormat" xml:space="preserve">
+    <value>{0} [speech].</value>
+  </data>
+  <data name="SweepObjectCommandsFormat" xml:space="preserve">
+    <value>{0} [commands].</value>
+  </data>
+  <data name="SweepListeningExits" xml:space="preserve">
+    <value>Listening EXITS:</value>
+  </data>
+  <data name="SweepExitBroadcastingFormat" xml:space="preserve">
+    <value>{0} [broadcasting].</value>
+  </data>
+  <data name="SweepListeningInInventory" xml:space="preserve">
+    <value>Listening in your INVENTORY:</value>
+  </data>
+
+  <!-- @retry command -->
+  <data name="RetryUsage" xml:space="preserve">
+    <value>Usage: @retry &lt;condition&gt;[=&lt;arg0&gt;,&lt;arg1&gt;,...]</value>
+  </data>
+  <data name="RetryNothingToRetry" xml:space="preserve">
+    <value>Nothing to retry.</value>
+  </data>
+
+  <!-- @attribute command -->
+  <data name="AttributeCommandMustSpecifyAttribute" xml:space="preserve">
+    <value>You must specify an attribute.</value>
+  </data>
+  <data name="AttributeCommandMustSpecifyFlags" xml:space="preserve">
+    <value>You must specify attribute flags.</value>
+  </data>
+  <data name="AttributeCommandUnknownFlagFormat" xml:space="preserve">
+    <value>Unknown attribute flag: {0}</value>
+  </data>
+  <data name="AttributeCommandFailedToCreate" xml:space="preserve">
+    <value>Failed to create attribute entry.</value>
+  </data>
+  <data name="AttributeCommandPermissionsNowFormat" xml:space="preserve">
+    <value>{0} -- Attribute permissions now: {1}</value>
+  </data>
+  <data name="AttributeCommandRetroactiveNotImplemented" xml:space="preserve">
+    <value>Note: Retroactive flag updating not yet implemented.</value>
+  </data>
+  <data name="AttributeCommandRemovedFromTableFormat" xml:space="preserve">
+    <value>Attribute '{0}' removed from standard attribute table.</value>
+  </data>
+  <data name="AttributeCommandExistingCopiesRemain" xml:space="preserve">
+    <value>Existing copies remain but are no longer "standard".</value>
+  </data>
+  <data name="AttributeCommandNotFoundInTableFormat" xml:space="preserve">
+    <value>Attribute '{0}' not found in table.</value>
+  </data>
+  <data name="AttributeCommandMustSpecifyNewName" xml:space="preserve">
+    <value>You must specify a new name.</value>
+  </data>
+  <data name="AttributeCommandRenamedFormat" xml:space="preserve">
+    <value>Attribute '{0}' renamed to '{1}' in standard attribute table.</value>
+  </data>
+  <data name="AttributeCommandMustSpecifyPattern" xml:space="preserve">
+    <value>You must specify a regexp pattern.</value>
+  </data>
+  <data name="AttributeCommandLimitSettingPatternFormat" xml:space="preserve">
+    <value>@attribute/limit: Setting pattern for '{0}'</value>
+  </data>
+  <data name="AttributeCommandLimitPatternFormat" xml:space="preserve">
+    <value>  Pattern: {0}</value>
+  </data>
+  <data name="AttributeCommandLimitNewValuesMustMatch" xml:space="preserve">
+    <value>  New values must match this pattern (case insensitive)</value>
+  </data>
+  <data name="AttributeCommandValidationNotImplemented" xml:space="preserve">
+    <value>Note: Attribute validation not yet implemented.</value>
+  </data>
+  <data name="AttributeCommandMustSpecifyChoices" xml:space="preserve">
+    <value>You must specify a list of choices.</value>
+  </data>
+  <data name="AttributeCommandMustSpecifyAtLeastOneChoice" xml:space="preserve">
+    <value>You must specify at least one choice.</value>
+  </data>
+  <data name="AttributeCommandFailedToUpdate" xml:space="preserve">
+    <value>Failed to update attribute entry.</value>
+  </data>
+  <data name="AttributeCommandEnumSetChoicesFormat" xml:space="preserve">
+    <value>@attribute/enum: Set choices for '{0}'</value>
+  </data>
+  <data name="AttributeCommandEnumChoicesFormat" xml:space="preserve">
+    <value>  Choices: {0}</value>
+  </data>
+  <data name="AttributeCommandEnumNewValuesMustMatch" xml:space="preserve">
+    <value>  New values must match one of these choices</value>
+  </data>
+  <data name="AttributeCommandNotFoundNotErrorFormat" xml:space="preserve">
+    <value>Attribute '{0}' not found in standard attribute table.</value>
+  </data>
+  <data name="AttributeCommandNotFoundNotError2" xml:space="preserve">
+    <value>This is not an error - the attribute may still be used on objects.</value>
+  </data>
+  <data name="AttributeCommandInfoFormat" xml:space="preserve">
+    <value>@attribute: Information for '{0}'</value>
+  </data>
+  <data name="AttributeCommandDefaultFlagsFormat" xml:space="preserve">
+    <value>  Default flags: {0}</value>
+  </data>
+  <data name="AttributeCommandDefaultFlagsNone" xml:space="preserve">
+    <value>  Default flags: none</value>
+  </data>
+  <data name="AttributeCommandLimitPatternValueFormat" xml:space="preserve">
+    <value>  Limit pattern: {0}</value>
+  </data>
+  <data name="AttributeCommandEnumValuesFormat" xml:space="preserve">
+    <value>  Enum values: {0}</value>
+  </data>
+  <data name="AttributeCommandNoMatchPatternFormat" xml:space="preserve">
+    <value>No attributes match pattern '{0}'.</value>
+  </data>
+  <data name="AttributeCommandDecompileHeaderFormat" xml:space="preserve">
+    <value>@attribute/decompile: {0} attributes match pattern '{1}'</value>
+  </data>
+  <data name="AttributeCommandDecompileAccessFormat" xml:space="preserve">
+    <value>@attribute/access{0} {1}={2}</value>
+  </data>
+  <data name="AttributeCommandDecompileLimitFormat" xml:space="preserve">
+    <value>@attribute/limit {0}={1}</value>
+  </data>
+  <data name="AttributeCommandDecompileEnumFormat" xml:space="preserve">
+    <value>@attribute/enum {0}={1}</value>
+  </data>
+
+  <!-- @stats command -->
+  <data name="StatsTablesNotImplemented" xml:space="preserve">
+    <value>@stats/tables: Internal table statistics not yet implemented.</value>
+  </data>
+  <data name="StatsFlagsNotImplemented" xml:space="preserve">
+    <value>@stats/flags: Flag system statistics not yet implemented.</value>
+  </data>
+  <data name="StatsMemorySwitchesNotImplemented" xml:space="preserve">
+    <value>@stats memory switches not yet implemented.</value>
+  </data>
+  <data name="StatsDatabaseStatisticsHeader" xml:space="preserve">
+    <value>Database Statistics:</value>
+  </data>
+  <data name="StatsForPlayerFormat" xml:space="preserve">
+    <value>  For player: {0}</value>
+  </data>
+  <data name="StatsRoomsFormat" xml:space="preserve">
+    <value>  Rooms: {0}</value>
+  </data>
+  <data name="StatsExitsFormat" xml:space="preserve">
+    <value>  Exits: {0}</value>
+  </data>
+  <data name="StatsThingsFormat" xml:space="preserve">
+    <value>  Things: {0}</value>
+  </data>
+  <data name="StatsPlayersFormat" xml:space="preserve">
+    <value>  Players: {0}</value>
+  </data>
+  <data name="StatsTotalFormat" xml:space="preserve">
+    <value>  Total: {0}</value>
+  </data>
+
+  <!-- @entrances command -->
+  <data name="EntrancesToFormat" xml:space="preserve">
+    <value>Entrances to {0}:</value>
+  </data>
+  <data name="EntrancesFilteringForFormat" xml:space="preserve">
+    <value>  Filtering for: {0}</value>
+  </data>
+  <data name="EntrancesRangeFormat" xml:space="preserve">
+    <value>  Range: {0} to {1}</value>
+  </data>
+  <data name="EntrancesZeroFound" xml:space="preserve">
+    <value>0 entrances found.</value>
+  </data>
+  <data name="EntrancesObjectEntryFormat" xml:space="preserve">
+    <value>  #{0} ({1})</value>
+  </data>
+  <data name="EntrancesCountFormat" xml:space="preserve">
+    <value>{0} entrance(s) found.</value>
+  </data>
+
+  <!-- @search command -->
+  <data name="SearchAdvancedHeader" xml:space="preserve">
+    <value>@search: Advanced database search</value>
+  </data>
+  <data name="SearchPlayerFilterFormat" xml:space="preserve">
+    <value>  Player filter: {0}</value>
+  </data>
+  <data name="SearchCriteriaFormat" xml:space="preserve">
+    <value>  Criteria: {0}</value>
+  </data>
+  <data name="SearchRangeFormat" xml:space="preserve">
+    <value>  Range: {0} to {1}</value>
+  </data>
+  <data name="SearchObjectEntryFormat" xml:space="preserve">
+    <value>  #{0} ({1}) [{2}]</value>
+  </data>
+  <data name="SearchObjectsFoundFormat" xml:space="preserve">
+    <value>{0} objects found.</value>
+  </data>
+
+  <!-- @listmotd command -->
+  <data name="ListMotdCurrentSettingsHeader" xml:space="preserve">
+    <value>Current Message of the Day settings:</value>
+  </data>
+  <data name="ListMotdConnectFileFormat" xml:space="preserve">
+    <value>  Connect MOTD File: {0}</value>
+  </data>
+  <data name="ListMotdConnectHtmlFormat" xml:space="preserve">
+    <value>  Connect MOTD HTML: {0}</value>
+  </data>
+  <data name="ListMotdWizardFileFormat" xml:space="preserve">
+    <value>  Wizard MOTD File: {0}</value>
+  </data>
+  <data name="ListMotdWizardHtmlFormat" xml:space="preserve">
+    <value>  Wizard MOTD HTML: {0}</value>
+  </data>
+  <data name="ListMotdTemporaryHeader" xml:space="preserve">
+    <value>Temporary Message of the Day (cleared on restart):</value>
+  </data>
+  <data name="ListMotdConnectMotdFormat" xml:space="preserve">
+    <value>  Connect MOTD: {0}</value>
+  </data>
+  <data name="ListMotdWizardMotdFormat" xml:space="preserve">
+    <value>  Wizard MOTD:  {0}</value>
+  </data>
+  <data name="ListMotdDownMotdFormat" xml:space="preserve">
+    <value>  Down MOTD:    {0}</value>
+  </data>
+  <data name="ListMotdFullMotdFormat" xml:space="preserve">
+    <value>  Full MOTD:    {0}</value>
+  </data>
+
+  <!-- @verb command -->
+  <data name="VerbUsage" xml:space="preserve">
+    <value>Usage: @verb &lt;victim&gt;=&lt;actor&gt;,&lt;what&gt;,&lt;whatd&gt;,&lt;owhat&gt;,&lt;owhatd&gt;,&lt;awhat&gt;[,&lt;args&gt;]</value>
+  </data>
+
+  <!-- @whereis (duplicate with different name) -->
+  <data name="WhereIsTriedToLocateButUnableFormat" xml:space="preserve">
+    <value>{0} tried to locate you, but was unable to.</value>
+  </data>
+
+  <!-- @flag missing sub-command constants -->
+  <data name="CannotModifySystemFlagFormat" xml:space="preserve">
+    <value>Cannot modify system flag '{0}'.</value>
+  </data>
+  <data name="FlagDebugRequiresName" xml:space="preserve">
+    <value>@FLAG/DEBUG requires a flag name.</value>
+  </data>
+  <data name="FlagDisableEnableRequiresNameFormat" xml:space="preserve">
+    <value>@FLAG/{0} requires a flag name.</value>
+  </data>
+  <data name="FlagUsage" xml:space="preserve">
+    <value>Usage: @flag/list, @flag/add &lt;name&gt;=&lt;symbol&gt;, @flag/delete &lt;name&gt;, @flag/letter &lt;name&gt;=&lt;symbol&gt;, @flag/type &lt;name&gt;=&lt;types&gt;, @flag/alias &lt;name&gt;=&lt;aliases&gt;, @flag/restrict &lt;name&gt;=&lt;permissions&gt;, @flag/decompile &lt;name&gt;</value>
+  </data>
+
+  <!-- @power missing sub-command constants -->
+  <data name="CannotModifySystemPowerFormat" xml:space="preserve">
+    <value>Cannot modify system power '{0}'.</value>
+  </data>
+  <data name="PowerTypeRequiresNameAndTypes" xml:space="preserve">
+    <value>@POWER/TYPE requires power name and type restrictions.</value>
+  </data>
+  <data name="PowerNameAndTypesCannotBeEmpty" xml:space="preserve">
+    <value>Power name and types cannot be empty.</value>
+  </data>
+  <data name="PowerTypeUpdatedFormat" xml:space="preserve">
+    <value>Power '{0}' type restrictions updated to: {1}.</value>
+  </data>
+  <data name="PowerRestrictRequiresNameAndPermissions" xml:space="preserve">
+    <value>@POWER/RESTRICT requires power name and permissions.</value>
+  </data>
+  <data name="PowerNameAndPermissionsCannotBeEmpty" xml:space="preserve">
+    <value>Power name and permissions cannot be empty.</value>
+  </data>
+  <data name="PowerPermissionsUpdatedFormat" xml:space="preserve">
+    <value>Power '{0}' permissions updated to: {1}.</value>
+  </data>
+  <data name="PowerDecompileRequiresName" xml:space="preserve">
+    <value>@POWER/DECOMPILE requires a power name.</value>
+  </data>
+  <data name="PowerDisableEnableRequiresNameFormat" xml:space="preserve">
+    <value>@POWER/{0} requires a power name.</value>
+  </data>
+  <data name="CannotDisableSystemPowerFormat" xml:space="preserve">
+    <value>Cannot disable system power '{0}'.</value>
+  </data>
+  <data name="PowerDisabledFormat" xml:space="preserve">
+    <value>Power '{0}' disabled.</value>
+  </data>
+  <data name="PowerEnabledFormat" xml:space="preserve">
+    <value>Power '{0}' enabled.</value>
+  </data>
+  <data name="FailedToDisablePowerFormat" xml:space="preserve">
+    <value>Failed to disable power '{0}'.</value>
+  </data>
+  <data name="FailedToEnablePowerFormat" xml:space="preserve">
+    <value>Failed to enable power '{0}'.</value>
+  </data>
+  <data name="PowerUsage" xml:space="preserve">
+    <value>Usage: @power/list, @power/add &lt;name&gt;=&lt;alias&gt;, @power/delete &lt;name&gt;, @power/alias &lt;name&gt;=&lt;alias&gt;, @power/type &lt;name&gt;=&lt;types&gt;, @power/restrict &lt;name&gt;=&lt;permissions&gt;, @power/decompile &lt;name&gt;</value>
+  </data>
+
+  <!-- @rejectmotd / @wizmotd -->
+  <data name="FullMotdCleared" xml:space="preserve">
+    <value>Full MOTD cleared.</value>
+  </data>
+  <data name="RejectMotdUsage" xml:space="preserve">
+    <value>Usage: @rejectmotd &lt;message&gt;</value>
+  </data>
+  <data name="FullMotdSet" xml:space="preserve">
+    <value>Full MOTD set.</value>
+  </data>
+  <data name="WizMotdCleared" xml:space="preserve">
+    <value>Wizard MOTD cleared.</value>
+  </data>
+  <data name="WizMotdUsage" xml:space="preserve">
+    <value>Usage: @wizmotd &lt;message&gt;</value>
+  </data>
+  <data name="WizMotdSet" xml:space="preserve">
+    <value>Wizard MOTD set.</value>
+  </data>
+
+  <!-- @suggest -->
+  <data name="NoSuggestionCategoriesDefined" xml:space="preserve">
+    <value>No suggestion categories defined.</value>
+  </data>
+  <data name="SuggestAddUsage" xml:space="preserve">
+    <value>Usage: @suggest/add &lt;category&gt;=&lt;word&gt;</value>
+  </data>
+  <data name="SuggestCategoryAndWordCannotBeEmpty" xml:space="preserve">
+    <value>Category and word cannot be empty.</value>
+  </data>
+  <data name="SuggestAddedWordToCategoryFormat" xml:space="preserve">
+    <value>Added '{0}' to category '{1}'.</value>
+  </data>
+  <data name="SuggestWordAlreadyExistsFormat" xml:space="preserve">
+    <value>Word '{0}' already exists in category '{1}'.</value>
+  </data>
+  <data name="SuggestDeleteUsage" xml:space="preserve">
+    <value>Usage: @suggest/delete &lt;category&gt;=&lt;word&gt;</value>
+  </data>
+  <data name="SuggestCategoryDoesNotExistFormat" xml:space="preserve">
+    <value>Category '{0}' does not exist.</value>
+  </data>
+  <data name="SuggestRemovedWordFromCategoryFormat" xml:space="preserve">
+    <value>Removed '{0}' from category '{1}'.</value>
+  </data>
+  <data name="SuggestWordNotFoundInCategoryFormat" xml:space="preserve">
+    <value>Word '{0}' not found in category '{1}'.</value>
+  </data>
+  <data name="SuggestCategoryWordCountFormat" xml:space="preserve">
+    <value>Category '{0}' ({1} words):</value>
+  </data>
+  <data name="SuggestUsage" xml:space="preserve">
+    <value>Usage: @suggest[/list], @suggest &lt;category&gt;, @suggest/add &lt;category&gt;=&lt;word&gt;, @suggest/delete &lt;category&gt;=&lt;word&gt;</value>
+  </data>
+
+  <!-- @boot -->
+  <data name="BootPortUsage" xml:space="preserve">
+    <value>Usage: @boot/port &lt;descriptor number&gt;</value>
+  </data>
+  <data name="BootDescriptorMustBeNumber" xml:space="preserve">
+    <value>Descriptor number must be a number.</value>
+  </data>
+  <data name="BootNoSuchDescriptorFormat" xml:space="preserve">
+    <value>No such descriptor: {0}.</value>
+  </data>
+  <data name="BootUsage" xml:space="preserve">
+    <value>Usage: @boot &lt;player&gt; | @boot/me | @boot/port &lt;descriptor&gt;</value>
+  </data>
+  <data name="PlayerNotConnected" xml:space="preserve">
+    <value>That player is not connected.</value>
+  </data>
+  <data name="YouHaveBeenDisconnected" xml:space="preserve">
+    <value>You have been disconnected.</value>
+  </data>
+
+  <!-- @hook -->
+  <data name="HookMustSpecifyCommandName" xml:space="preserve">
+    <value>You must specify a command name.</value>
+  </data>
+  <data name="HookNoHooksForCommandFormat" xml:space="preserve">
+    <value>No hooks set for command '{0}'.</value>
+  </data>
+  <data name="HookListHeaderFormat" xml:space="preserve">
+    <value>Hooks for command '{0}':</value>
+  </data>
+  <data name="HookEntryFormat" xml:space="preserve">
+    <value>  {0}: {1}/{2}{3}</value>
+  </data>
+  <data name="HookMustSpecifyType" xml:space="preserve">
+    <value>You must specify a hook type: /ignore, /override, /before, /after, or /extend</value>
+  </data>
+  <data name="HookClearedFormat" xml:space="preserve">
+    <value>Hook '{0}' cleared for command '{1}'.</value>
+  </data>
+  <data name="HookNotSetFormat" xml:space="preserve">
+    <value>No '{0}' hook set for command '{1}'.</value>
+  </data>
+  <data name="HookMustSpecifyObject" xml:space="preserve">
+    <value>You must specify an object.</value>
+  </data>
+  <data name="HookAttributeNotFoundFormat" xml:space="preserve">
+    <value>Attribute '{0}' not found on object {1}.</value>
+  </data>
+  <data name="HookSetFormat" xml:space="preserve">
+    <value>Hook '{0}' set for command '{1}'{2}.</value>
+  </data>
+
+  <!-- @newpassword -->
+  <data name="NewPasswordGenerateSwitchConflict" xml:space="preserve">
+    <value>@NEWPASSWORD: /GENERATE switch cannot be used with other arguments.</value>
+  </data>
+  <data name="NewPasswordGeneratedFormat" xml:space="preserve">
+    <value>Generated password for {0}: {1}</value>
+  </data>
+  <data name="NewPasswordSetFormat" xml:space="preserve">
+    <value>Set new password for {0}: {1}</value>
+  </data>
+
+  <!-- @purge -->
+  <data name="PurgeCompleteFormat" xml:space="preserve">
+    <value>Purge complete. {0} objects advanced to GOING_TWICE. {1} objects marked for final deletion.</value>
+  </data>
+  <data name="PurgeNoteBackgroundGc" xml:space="preserve">
+    <value>Note: Actual object deletion is handled by background garbage collection in SharpMUSH.</value>
+  </data>
+
+  <!-- @shutdown -->
+  <data name="ShutdownOnlyGodPanic" xml:space="preserve">
+    <value>Only God can perform a panic shutdown.</value>
+  </data>
+  <data name="ShutdownPanicInitiated" xml:space="preserve">
+    <value>PANIC SHUTDOWN initiated by God.</value>
+  </data>
+  <data name="ShutdownRebootInitiated" xml:space="preserve">
+    <value>REBOOT initiated. In SharpMUSH's web-based architecture:</value>
+  </data>
+  <data name="ShutdownRebootDocker" xml:space="preserve">
+    <value>- For Docker/Kubernetes: Update deployment to trigger rolling restart</value>
+  </data>
+  <data name="ShutdownRebootStandalone" xml:space="preserve">
+    <value>- For standalone: Restart the web application</value>
+  </data>
+  <data name="ShutdownRebootRedis" xml:space="preserve">
+    <value>- Player connections will be preserved via Redis state store</value>
+  </data>
+  <data name="ShutdownParanoidInitiated" xml:space="preserve">
+    <value>PARANOID SHUTDOWN initiated.</value>
+  </data>
+  <data name="ShutdownParanoidArangoDB" xml:space="preserve">
+    <value>Database state is continuously persisted in ArangoDB.</value>
+  </data>
+  <data name="ShutdownInitiated" xml:space="preserve">
+    <value>SHUTDOWN initiated.</value>
+  </data>
+  <data name="ShutdownNoteWebApp" xml:space="preserve">
+    <value>Note: SharpMUSH runs as a web application. Traditional shutdown is not applicable.</value>
+  </data>
+  <data name="ShutdownNoteOrchestration" xml:space="preserve">
+    <value>In cloud/container deployments, use your orchestration tools to manage server lifecycle.</value>
+  </data>
+  <data name="ShutdownNoteNoSave" xml:space="preserve">
+    <value>Database state is preserved automatically. No explicit save is needed.</value>
+  </data>
+
+  <!-- @chownall -->
+  <data name="ChownAllUsage" xml:space="preserve">
+    <value>Usage: @chownall &lt;player&gt;[=&lt;new owner&gt;]</value>
+  </data>
+  <data name="ChownAllCompleteFormat" xml:space="preserve">
+    <value>Changed ownership of {0} object(s) from {1} to {2}.</value>
+  </data>
+
+  <!-- @dump -->
+  <data name="DumpDoesNothing" xml:space="preserve">
+    <value>Dump command does nothing for SharpMUSH. Consider using @backup.</value>
+  </data>
+
+  <!-- @pcreate -->
+  <data name="PlayerCreateInvalidName" xml:space="preserve">
+    <value>That is not a valid player name.</value>
+  </data>
+  <data name="PlayerNameAlreadyExists" xml:space="preserve">
+    <value>That player name already exists.</value>
+  </data>
+  <data name="PlayerCreateInvalidPassword" xml:space="preserve">
+    <value>That is not a valid password.</value>
+  </data>
+
+  <!-- @quota -->
+  <data name="QuotaSetUsage" xml:space="preserve">
+    <value>Usage: @quota/set &lt;player&gt;=&lt;amount&gt;</value>
+  </data>
+  <data name="QuotaForPlayerSetFormat" xml:space="preserve">
+    <value>Quota for {0} set to {1}.</value>
+  </data>
+  <data name="YourQuotaSetToByFormat" xml:space="preserve">
+    <value>Your quota has been set to {0} by {1}.</value>
+  </data>
+  <data name="QuotaListingHeader" xml:space="preserve">
+    <value>Quota listing for all players:</value>
+  </data>
+  <data name="QuotaListingColumnHeader" xml:space="preserve">
+    <value>Player                      Used/Quota</value>
+  </data>
+  <data name="QuotaListingSeparator" xml:space="preserve">
+    <value>=========================================</value>
+  </data>
+  <data name="QuotaPlayerRowFormat" xml:space="preserve">
+    <value>{0} {1,4}/{2,-4}</value>
+  </data>
+  <data name="QuotaPlayerObjectsFormat" xml:space="preserve">
+    <value>{0}'s quota: {1}/{2} objects used.</value>
+  </data>
+  <data name="AllQuotaSetForPlayerFormat" xml:space="preserve">
+    <value>Your building quota has been set to {0} by {1}.</value>
+  </data>
+
+  <!-- @sitelock -->
+  <data name="SitelockCheckRequiresHost" xml:space="preserve">
+    <value>@SITELOCK/CHECK requires a hostname or IP address.</value>
+  </data>
+  <data name="SitelockHostMatchesFormat" xml:space="preserve">
+    <value>Host '{0}' matches pattern '{1}' with options: {2}</value>
+  </data>
+  <data name="SitelockHostNoMatchFormat" xml:space="preserve">
+    <value>Host '{0}' does not match any sitelock rules (default access allowed).</value>
+  </data>
+  <data name="SitelockNameRequiresName" xml:space="preserve">
+    <value>@SITELOCK/NAME requires a player name.</value>
+  </data>
+  <data name="SitelockNameNotImplemented" xml:space="preserve">
+    <value>@SITELOCK/NAME modification is not yet implemented. Use the admin UI to modify banned names.</value>
+  </data>
+  <data name="SitelockBanRequiresPattern" xml:space="preserve">
+    <value>@SITELOCK/BAN requires a host pattern.</value>
+  </data>
+  <data name="SitelockBanNotImplemented" xml:space="preserve">
+    <value>@SITELOCK/BAN modification is not yet implemented. Use the admin UI to add sitelock rules.</value>
+  </data>
+  <data name="SitelockRegisterRequiresPattern" xml:space="preserve">
+    <value>@SITELOCK/REGISTER requires a host pattern.</value>
+  </data>
+  <data name="SitelockRegisterNotImplemented" xml:space="preserve">
+    <value>@SITELOCK/REGISTER modification is not yet implemented. Use the admin UI to add sitelock rules.</value>
+  </data>
+  <data name="SitelockRemoveRequiresPattern" xml:space="preserve">
+    <value>@SITELOCK/REMOVE requires a host pattern.</value>
+  </data>
+  <data name="SitelockRemoveNotImplemented" xml:space="preserve">
+    <value>@SITELOCK/REMOVE modification is not yet implemented. Use the admin UI to remove sitelock rules.</value>
+  </data>
+  <data name="SitelockRuleNotImplemented" xml:space="preserve">
+    <value>@SITELOCK rule modification is not yet implemented. Use the admin UI to modify sitelock rules.</value>
+  </data>
+  <data name="SitelockInvalidSyntax" xml:space="preserve">
+    <value>Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.</value>
+  </data>
+
+  <!-- @chzoneall -->
+  <data name="ZonesClearedForOwnerFormat" xml:space="preserve">
+    <value>Zones cleared for {0} object(s) owned by {1}.</value>
+  </data>
+  <data name="ZoneSetForOwnerFormat" xml:space="preserve">
+    <value>Zone set to {0} for {1} object(s) owned by {2}.</value>
+  </data>
+
+  <!-- @kick -->
+  <data name="KickUsage" xml:space="preserve">
+    <value>Usage: @kick &lt;player&gt;</value>
+  </data>
+
+  <!-- @poll -->
+  <data name="PollMessageCleared" xml:space="preserve">
+    <value>Poll message cleared.</value>
+  </data>
+  <data name="PollNoPollMessage" xml:space="preserve">
+    <value>No poll message is currently set.</value>
+  </data>
+  <data name="PollCurrentMessageFormat" xml:space="preserve">
+    <value>Current poll: {0}</value>
+  </data>
+  <data name="PollMessageSet" xml:space="preserve">
+    <value>Poll message set.</value>
+  </data>
+
+  <!-- @readcache -->
+  <data name="ReadCacheServiceNotAvailable" xml:space="preserve">
+    <value>Text file service not available.</value>
+  </data>
+  <data name="ReadCacheReindexing" xml:space="preserve">
+    <value>Reindexing text files...</value>
+  </data>
+  <data name="ReadCacheCompleteFormat" xml:space="preserve">
+    <value>Text file cache rebuilt in {0}ms.</value>
+  </data>
+  <data name="ReadCacheErrorFormat" xml:space="preserve">
+    <value>Error reindexing text files after {0}ms: {1}</value>
+  </data>
+
+  <!-- @enable / @disable -->
+  <data name="EnableDisableUsageSyntaxFormat" xml:space="preserve">
+    <value>Usage: @{0} &lt;option&gt;</value>
+  </data>
+  <data name="EnableDisableNoOptionFormat" xml:space="preserve">
+    <value>No configuration option named '{0}'.</value>
+  </data>
+  <data name="EnableDisableNotBooleanFormat" xml:space="preserve">
+    <value>Option '{0}' is not a boolean option. Use @config/set instead.</value>
+  </data>
+  <data name="EnableDisableEquivalentFormat" xml:space="preserve">
+    <value>@{0} is equivalent to @config/set {1}={2}</value>
+  </data>
+  <data name="RuntimeConfigNotImplemented" xml:space="preserve">
+    <value>Runtime configuration modification is not yet implemented. Changes require server restart.</value>
+  </data>
+  <data name="ConfigCurrentValueFormat" xml:space="preserve">
+    <value>Current value: {0}={1}</value>
+  </data>
+
+</root>
