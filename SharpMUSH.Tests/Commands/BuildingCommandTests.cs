@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -315,7 +316,8 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ParentLoopCannotAdd)));
 	}
 
 	[Test]
@@ -600,8 +602,8 @@ public class BuildingCommandTests
 		// Verify the notification shows it was set
 		await NotifyService
 			.Received()
-			.Notify(executor.Number, Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "DESCRIBE") && TestHelpers.MessageContains(msg, "Set")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(executor.Number,
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AttributeSet)));
 
 		// Retrieve the attribute and verify the stored value is "3" (evaluated), not "[add(1,2)]"
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
@@ -709,7 +711,7 @@ public class BuildingCommandTests
 		// Verify "Cleared" notification was sent
 		await NotifyService
 			.Received()
-			.Notify(executor.Number, Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "Cleared")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(executor.Number,
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AttributeCleared)));
 	}
 }

@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -44,7 +45,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "All objects halted")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat)));
 	}
 
 	[Test]
@@ -145,7 +147,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Notified")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.Notified)));
 	}
 
 	[Test]
@@ -357,8 +360,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "now hidden")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NowHiddenFromWho)));
 
 
 
@@ -367,8 +370,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho)));
 	}
 
 	[Test]
@@ -387,8 +390,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "hidden")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NowHiddenFromWho)));
 	}
 
 	[Test]
@@ -407,8 +410,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> s.Value.ToString()!.Contains("hidden")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NowHiddenFromWho)));
 	}
 
 	[Test]
@@ -427,8 +430,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho)));
 	}
 
 	[Test]
@@ -447,8 +450,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho)));
 	}
 
 	[Test, NotInParallel]
@@ -467,8 +470,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> s.Value.ToString()!.Contains("already hidden")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AlreadyHiddenFromWho)));
 	}
 
 	[Test, NotInParallel]
@@ -487,8 +490,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> s.Value.ToString()!.Contains("already visible")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AlreadyVisibleOnWho)));
 	}
 
 	[Test]
@@ -510,7 +513,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Reindexing text files") || TestHelpers.MessageContains(s, "Text file cache rebuilt")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ReadCacheReindexing) || k == nameof(ErrorMessages.Notifications.ReadCacheCompleteFormat)));
 	}
 
 	[Test]

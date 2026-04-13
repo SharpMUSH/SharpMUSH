@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -61,9 +62,9 @@ public class SystemCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(
+			.NotifyLocalized(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "No hooks set for command '@EMIT'.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.HookNoHooksForCommandFormat)));
 	}
 
 	// PennMUSH reference: cmd_function with no args calls do_function(executor, NULL, NULL, 0)
@@ -76,9 +77,9 @@ public class SystemCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(
+			.NotifyLocalized(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Global user-defined functions:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader)));
 	}
 
 	// PennMUSH reference: @command with no arg returns an error.
@@ -107,9 +108,9 @@ public class SystemCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(
+			.NotifyLocalized(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "You are now hidden from the WHO list.")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NowHiddenFromWho)));
 
 		// Restore to visible state.
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
@@ -128,9 +129,9 @@ public class SystemCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "That player is not connected.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(
+				TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.PlayerNotConnected)));
 	}
 
 	// PennMUSH reference: do_attribute_access outputs:
@@ -170,9 +171,9 @@ public class SystemCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(
+			.NotifyLocalized(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute locked.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AttributeLocked)));
 	}
 
 	// PennMUSH reference: do_atrchown on success outputs "Attribute owner changed." (attrib.c).
@@ -194,9 +195,9 @@ public class SystemCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(
+			.NotifyLocalized(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute owner changed.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AttributeOwnerChanged)));
 	}
 
 	// PennMUSH reference: do_firstexit re-links an exit to move it to the front of the room's exit list.

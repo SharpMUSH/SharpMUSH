@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -25,8 +26,8 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Message logged to Command log.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat)));
 	}
 
 	[Test]
@@ -37,8 +38,8 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Message logged to Command log.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat)));
 	}
 
 	[Test]
@@ -49,8 +50,8 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Message logged to Wizard log.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat)));
 	}
 
 	[Test]
@@ -61,8 +62,8 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Message logged to Error log.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat)));
 	}
 
 	[Test]
@@ -73,8 +74,8 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Usage: @log[/<switch>] <message> or @log/recall[/<switch>] [<number>]")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.LogUsage)));
 	}
 
 	[Test]
@@ -86,9 +87,8 @@ public class LogCommandTests
 		// @log/recall retrieves recent log entries — output starts with log header
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "No log entries found for category 'Command'.") ||
-				TestHelpers.MessagePlainTextStartsWith(msg, "--- Log entries for Command")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NoLogEntriesForCategoryFormat)));
 	}
 
 	[Test]

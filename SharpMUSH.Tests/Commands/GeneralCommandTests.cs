@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -337,8 +338,8 @@ public class GeneralCommandTests
 		// Should notify that it's not a player
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "only @whereis players")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.WhereIsCanOnlyLocatePlayers)));
 	}
 
 	[Test]
@@ -351,8 +352,8 @@ public class GeneralCommandTests
 		// Should notify about restart
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Restarted")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.RestartedObjectFormat) || k == nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat)));
 	}
 
 	[Test]
@@ -365,8 +366,8 @@ public class GeneralCommandTests
 		// Should notify about searching
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Searching")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.FindSearchingFormat)));
 	}
 
 	[Test]
@@ -379,8 +380,8 @@ public class GeneralCommandTests
 		// Should notify about database statistics
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Database Statistics")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.StatsDatabaseStatisticsHeader)));
 	}
 
 	[Test]
@@ -393,8 +394,8 @@ public class GeneralCommandTests
 		// Should notify about search
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("database search")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.SearchAdvancedHeader)));
 	}
 
 	[Test]
@@ -407,7 +408,8 @@ public class GeneralCommandTests
 		// Should notify about entrances
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("Entrances")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.EntrancesToFormat)));
 	}
 
 	[Test]
@@ -420,8 +422,8 @@ public class GeneralCommandTests
 		// Should notify about command information
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("Command:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.CommandInfoNameFormat)));
 	}
 
 	[Test]
@@ -434,8 +436,8 @@ public class GeneralCommandTests
 		// Should notify about global functions
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Global user-defined functions")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader)));
 	}
 
 	[Test]
@@ -448,8 +450,8 @@ public class GeneralCommandTests
 		// Should notify about function information
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Function:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.FunctionInfoNameFormat)));
 	}
 
 	[Test]
@@ -464,8 +466,8 @@ public class GeneralCommandTests
 		// Should notify about mapping
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@map:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.MapWouldIterateFormat) || k == nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat)));
 	}
 
 	[Test]
@@ -480,8 +482,8 @@ public class GeneralCommandTests
 		// Should notify with error since the attribute doesn't exist
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "No such attribute")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat)));
 	}
 
 	[Test]
@@ -497,8 +499,8 @@ public class GeneralCommandTests
 		// Since the attribute doesn't exist, it outputs "Attribute <name> is empty."
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, $"Attribute {uniqueAttr} is empty.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.IncludeAttributeIsEmptyFormat)));
 	}
 
 	[Test]
@@ -528,8 +530,8 @@ public class GeneralCommandTests
 		// Should notify about queue
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "@ps:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.PsQueueForTargetFormat)));
 	}
 
 	[Test]
@@ -542,8 +544,8 @@ public class GeneralCommandTests
 		// Should notify about select
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("@select:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.SelectTestingStringFormat)));
 	}
 
 	[Test]
@@ -559,8 +561,8 @@ public class GeneralCommandTests
 		// Should notify about attribute info
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("@attribute:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AttributeCommandInfoFormat)));
 	}
 
 	[Test]

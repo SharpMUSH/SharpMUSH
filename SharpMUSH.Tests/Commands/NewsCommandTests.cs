@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -59,9 +60,8 @@ public class NewsCommandTests
 		// Verify that NotifyService was called with matching topics or "No news available"
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "No news available for '*news*'.") ||
-				TestHelpers.MessagePlainTextStartsWith(msg, "News topics matching '*news*':")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NewsNoEntriesFoundContaining) || k == nameof(ErrorMessages.Notifications.NewsTopicsMatchingFormat)));
 	}
 
 	[Test]
@@ -74,9 +74,8 @@ public class NewsCommandTests
 		// Verify that NotifyService was called with "No news available"
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("No news available")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No news available"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NewsNoNewsForTopic)));
 	}
 }
 
@@ -146,8 +145,7 @@ public class AhelpCommandTests
 		// Verify that NotifyService was called with "No admin help available"
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("No admin help available")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No admin help available"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AhelpNoHelpAvailable)));
 	}
 }

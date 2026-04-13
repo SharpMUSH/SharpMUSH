@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -26,8 +27,8 @@ public class ConfigCommandTests
 		// Should notify with "Configuration Categories:"
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Configuration Categories:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ConfigCategoriesHeader)));
 	}
 
 	[Test]
@@ -39,8 +40,8 @@ public class ConfigCommandTests
 		// Should notify with "Options in Net:"
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Options in Net:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat)));
 	}
 
 	[Test]
@@ -52,8 +53,8 @@ public class ConfigCommandTests
 		// Should receive at least one notification about mud_name
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "mud_name")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ConfigOptionValueFormat)));
 	}
 
 	[Test]
@@ -65,8 +66,8 @@ public class ConfigCommandTests
 		// Should notify that option was not found
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "No configuration category or option")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat)));
 	}
 
 	[Test]
@@ -182,11 +183,8 @@ public class ConfigCommandTests
 		// Should notify about the equivalent @config/set command
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("@enable") &&
-					s.Value.ToString()!.Contains("@config/set") &&
-					s.Value.ToString()!.Contains("noisy_whisper")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat)));
 	}
 
 	[Test]
@@ -199,11 +197,8 @@ public class ConfigCommandTests
 		// Should notify about the equivalent @config/set command
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("@disable") &&
-					s.Value.ToString()!.Contains("@config/set") &&
-					s.Value.ToString()!.Contains("noisy_whisper")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat)));
 	}
 
 	[Test]
@@ -216,9 +211,8 @@ public class ConfigCommandTests
 		// Should notify that option was not found
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("No configuration option")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat)));
 	}
 
 	[Test]
@@ -231,9 +225,8 @@ public class ConfigCommandTests
 		// Should notify that option was not found
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("No configuration option")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat)));
 	}
 
 	[Test]
@@ -246,9 +239,8 @@ public class ConfigCommandTests
 		// Should notify that it's not a boolean option
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("not a boolean option")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat)));
 	}
 
 	[Test]
@@ -261,9 +253,8 @@ public class ConfigCommandTests
 		// Should notify that it's not a boolean option
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("not a boolean option")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat)));
 	}
 
 	[Test]
@@ -276,10 +267,8 @@ public class ConfigCommandTests
 		// Should show usage message
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("Usage:") &&
-					s.Value.ToString()!.Contains("@enable")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat)));
 	}
 
 	[Test]
@@ -292,9 +281,7 @@ public class ConfigCommandTests
 		// Should show usage message
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("Usage:") &&
-					s.Value.ToString()!.Contains("@disable")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat)));
 	}
 }

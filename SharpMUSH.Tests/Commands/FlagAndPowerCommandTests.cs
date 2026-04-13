@@ -4,6 +4,7 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -59,8 +60,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' created")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.FlagCreatedWithSymbolFormat)));
 
 		// Cleanup - delete the flag
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
@@ -105,8 +106,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "already exists")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.FlagAlreadyExistsFormat)));
 
 		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
@@ -136,8 +137,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' deleted")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.FlagDeletedFormat)));
 	}
 
 	[Test]
@@ -150,8 +151,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot delete system flag")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat)));
 	}
 
 	[Test]
@@ -165,8 +166,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent with the exact error message produced by the implementation.
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"Flag '{flagName}' not found.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.FlagNotFoundFormat)));
 	}
 
 	[Test]
@@ -204,8 +205,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' created")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.PowerCreatedWithAliasFormat)));
 
 		// Cleanup - delete the power
 		await Mediator.Send(new DeletePowerCommand(powerName));
@@ -254,8 +255,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' deleted")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.PowerDeletedFormat)));
 	}
 
 	[Test]
@@ -272,8 +273,8 @@ public class FlagAndPowerCommandTests
 			// Verify error notification was sent
 			await NotifyService
 				.Received(Quantity.Exactly(1))
-				.Notify(TestHelpers.MatchingObject(executor),
-					Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot delete system power")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				.NotifyLocalized(TestHelpers.MatchingObject(executor),
+					Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.CannotDeleteSystemPowerFormat)));
 		}
 	}
 
@@ -288,8 +289,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent with the exact error message produced by the implementation.
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"Power '{powerName}' not found.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.PowerNotFoundFormat)));
 	}
 
 	[Test]
@@ -302,8 +303,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "requires flag name and symbol")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.FlagAddRequiresNameAndSymbol)));
 	}
 
 	[Test]
@@ -316,8 +317,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "requires power name and alias")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.PowerAddRequiresNameAndAlias)));
 	}
 
 	[Test]
@@ -391,8 +392,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot disable system flag")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat)));
 	}
 
 	[Test]
@@ -464,8 +465,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot disable system power")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.CannotDisableSystemPowerFormat)));
 	}
 
 	[Test]

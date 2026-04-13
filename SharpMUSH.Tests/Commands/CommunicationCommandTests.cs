@@ -5,6 +5,7 @@ using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -295,10 +296,8 @@ public class CommunicationCommandTests
 		// Verify notification was sent with message containing the alias and channel
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' added for channel Public")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' added for channel Public"))),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AliasAddedForChannelFormat)));
 	}
 
 	[Test]
@@ -310,13 +309,28 @@ public class CommunicationCommandTests
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify error notification was sent containing the expected text
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText().Contains(expected)) ||
-				(msg.IsT1 && msg.AsT1.Contains(expected))),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// Verify error notification was sent containing the expected text.
+		// One case uses NotifyLocalized (AliasNameCannotBeEmpty) and the other uses Notify (Channel not found).
+		var anyNotify = NotifyService.ReceivedCalls().Any(call =>
+		{
+			var args = call.GetArguments();
+			if (args.Length < 2) return false;
+			if (args[1] is OneOf<MString, string> msg)
+				return msg.Match(m => m.ToPlainText().Contains(expected), s => s.Contains(expected));
+			return false;
+		});
+		var anyLocalizedNotify = NotifyService.ReceivedCalls().Any(call =>
+		{
+			var args = call.GetArguments();
+			if (args.Length < 2) return false;
+			if (args[1] is not string key) return false;
+			var type = typeof(ErrorMessages.Notifications);
+			var field = type.GetField(key, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+			if (field == null) return false;
+			var template = field.GetValue(null) as string;
+			return template != null && template.Contains(expected);
+		});
+		await Assert.That(anyNotify || anyLocalizedNotify).IsTrue();
 	}
 
 	[Test]
@@ -336,10 +350,8 @@ public class CommunicationCommandTests
 		// Check for the specific deletion message (not the addcom message from earlier)
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' deleted")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' deleted"))),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AliasDeletedFormat)));
 	}
 
 	[Test]
@@ -354,10 +366,8 @@ public class CommunicationCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AliasNotFoundFormat)));
 	}
 
 	[Test]
@@ -398,10 +408,8 @@ public class CommunicationCommandTests
 		// We check that at least one contains our custom message with alias information
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"for alias '{alias}'")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"for alias '{alias}'"))),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.TitleSetForAliasChannelFormat)));
 	}
 
 	[Test]
@@ -416,10 +424,8 @@ public class CommunicationCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AliasNotFoundFormat)));
 	}
 
 	[Test]
@@ -461,9 +467,7 @@ public class CommunicationCommandTests
 		// Verify the empty list message was sent
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText().Contains("no channel aliases")) ||
-				(msg.IsT1 && msg.AsT1.Contains("no channel aliases"))),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases)));
 	}
 }

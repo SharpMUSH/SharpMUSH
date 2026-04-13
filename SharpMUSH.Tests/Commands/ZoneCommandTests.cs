@@ -4,6 +4,7 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -63,8 +64,8 @@ public class ZoneCommandTests
 		// Verify zone set notification was received with the specific object dbref
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(TestHelpers.MessageContains(msg, $"Zoned to {zoneName}") || TestHelpers.MessageContains(msg, $"{objDbRef}"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ZoneChanged)));
 
 		// Verify the zone was actually set in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -140,8 +141,8 @@ public class ZoneCommandTests
 		// Verify success notification with specific zone name
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(TestHelpers.MessageContains(msg, $"{zoneName}") || TestHelpers.MessageContains(msg, "Zoned"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.NotifyLocalized(TestHelpers.MatchingObject(executor),
+				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ZoneChanged)));
 
 		// Verify zone was set
 		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));

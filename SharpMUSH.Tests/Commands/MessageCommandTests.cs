@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
@@ -155,10 +156,12 @@ public class MessageCommandTests
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			var msg = args[1] as OneOf<MString, string>?;
-			if (msg == null) return false;
-			return msg.Value.Match(
+			if (msg != null) return msg.Value.Match(
 				ms => ms.ToPlainText().Contains("Message sent to"),
 				s => s.Contains("Message sent to"));
+			// Check NotifyLocalized path
+			var key = args[1] as string;
+			return key == nameof(ErrorMessages.Notifications.MessageSentToRecipientsFormat);
 		});
 
 		await Assert.That(confirmationCall).IsNotNull();
