@@ -143,6 +143,7 @@ services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
 
 // Initialize TextFileService
 services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
+services.AddSingleton<ILocalizedTextFileService, Implementation.Services.LocalizedTextFileService>();
 
 services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
