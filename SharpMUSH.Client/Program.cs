@@ -65,7 +65,9 @@ try
 }
 catch (CultureNotFoundException)
 {
+	// Invalid locale stored in localStorage — reset to English
 	culture = new CultureInfo("en");
+	await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "locale");
 }
 CultureInfo.DefaultThreadCurrentCulture = culture;
 CultureInfo.DefaultThreadCurrentUICulture = culture;

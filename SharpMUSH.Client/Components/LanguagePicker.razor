@@ -1,3 +1,4 @@
+@using System.Globalization
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
@@ -8,7 +9,7 @@
         <MudMenuItem OnClick="@(() => SetLanguageAsync(lang.Code))">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                 <MudText>@lang.Flag</MudText>
-                <MudText Typo="Typo.body2">@lang.Name</MudText>
+                <MudText Typo="Typo.body2">@lang.DisplayName</MudText>
                 @if (lang.Code == _currentLocale)
                 {
                     <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Secondary" />
@@ -21,13 +22,32 @@
 @code {
     private string _currentLocale = "en";
 
-    private readonly record struct LanguageOption(string Code, string Name, string Flag);
+    private readonly record struct LanguageOption(string Code, string DisplayName, string Flag);
 
-    private static readonly LanguageOption[] _languages =
+    /// <summary>
+    /// Supported locale codes and their flag emoji. Display names are derived
+    /// automatically from <see cref="CultureInfo.NativeName"/>.
+    /// To add a new language, add its code and flag here — the display name
+    /// is resolved from the framework.
+    /// </summary>
+    private static readonly (string Code, string Flag)[] SupportedLocales =
     [
-        new("en", "English", "\U0001F1FA\U0001F1F8"),
-        new("fr", "Français", "\U0001F1EB\U0001F1F7")
+        ("en", "\U0001F1FA\U0001F1F8"),
+        ("fr", "\U0001F1EB\U0001F1F7")
     ];
+
+    private static readonly LanguageOption[] _languages = SupportedLocales
+        .Select(l =>
+        {
+            var culture = CultureInfo.GetCultureInfo(l.Code);
+            // NativeName gives the language name in its own language (e.g. "français" for "fr").
+            // Capitalize the first character for display.
+            var name = culture.NativeName;
+            if (name.Length > 0 && char.IsLower(name[0]))
+                name = char.ToUpper(name[0], culture) + name[1..];
+            return new LanguageOption(l.Code, name, l.Flag);
+        })
+        .ToArray();
 
     protected override async Task OnInitializedAsync()
     {

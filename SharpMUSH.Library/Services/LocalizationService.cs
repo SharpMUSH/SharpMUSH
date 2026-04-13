@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Resources;
+using System.Text;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -12,6 +14,7 @@ namespace SharpMUSH.Library.Services;
 public class LocalizationService : ILocalizationService
 {
 	private readonly ResourceManager _resourceManager;
+	private readonly ConcurrentDictionary<string, CompositeFormat> _formatCache = new();
 
 	public LocalizationService()
 	{
@@ -20,10 +23,12 @@ public class LocalizationService : ILocalizationService
 		_resourceManager = new ResourceManager(
 			"SharpMUSH.Library.Resources.Notifications",
 			typeof(LocalizationService).Assembly);
+
+		AvailableLocales = DiscoverAvailableLocales();
 	}
 
 	/// <inheritdoc />
-	public IReadOnlyList<string> AvailableLocales { get; } = ["en", "fr"];
+	public IReadOnlyList<string> AvailableLocales { get; }
 
 	/// <inheritdoc />
 	public string Get(string key, string? locale = null)
@@ -36,7 +41,11 @@ public class LocalizationService : ILocalizationService
 	public string Format(string key, string? locale, params object[] args)
 	{
 		var template = Get(key, locale);
-		return args.Length > 0 ? string.Format(template, args) : template;
+		if (args.Length == 0)
+			return template;
+
+		var compositeFormat = _formatCache.GetOrAdd(template, static t => CompositeFormat.Parse(t));
+		return string.Format(null, compositeFormat, args);
 	}
 
 	/// <inheritdoc />
@@ -47,7 +56,11 @@ public class LocalizationService : ILocalizationService
 			var culture = CultureInfo.GetCultureInfo(locale);
 			return _resourceManager.GetString(key, culture) is not null;
 		}
-		catch
+		catch (CultureNotFoundException)
+		{
+			return false;
+		}
+		catch (MissingManifestResourceException)
 		{
 			return false;
 		}
@@ -71,5 +84,45 @@ public class LocalizationService : ILocalizationService
 		{
 			return CultureInfo.InvariantCulture;
 		}
+	}
+
+	/// <summary>
+	/// Discovers available locales by scanning for satellite assembly directories
+	/// next to the executing assembly (e.g. <c>fr/SharpMUSH.Library.resources.dll</c>).
+	/// Always includes "en" as the baseline neutral locale.
+	/// </summary>
+	private static IReadOnlyList<string> DiscoverAvailableLocales()
+	{
+		var locales = new List<string> { "en" };
+
+		var assemblyLocation = typeof(LocalizationService).Assembly.Location;
+		if (string.IsNullOrEmpty(assemblyLocation))
+			return locales;
+
+		var baseDir = Path.GetDirectoryName(assemblyLocation);
+		if (baseDir is null || !Directory.Exists(baseDir))
+			return locales;
+
+		var satelliteName = Path.GetFileNameWithoutExtension(assemblyLocation) + ".resources.dll";
+
+		foreach (var subDir in Directory.EnumerateDirectories(baseDir))
+		{
+			var dirName = Path.GetFileName(subDir);
+			if (File.Exists(Path.Combine(subDir, satelliteName)))
+			{
+				try
+				{
+					// Verify this is actually a valid culture name
+					_ = CultureInfo.GetCultureInfo(dirName);
+					locales.Add(dirName);
+				}
+				catch (CultureNotFoundException)
+				{
+					// Not a valid culture directory — skip
+				}
+			}
+		}
+
+		return locales;
 	}
 }

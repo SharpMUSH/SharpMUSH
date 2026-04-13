@@ -40,67 +40,61 @@ public class LocalizedTextFileService(ITextFileService textFileService) : ILocal
 			: $"{fileReference[..slash]}.{locale}{fileReference[slash..]}"; // "news/help" → "news.fr/help"
 	}
 
+	/// <summary>
+	/// Generic locale-fallback helper. Tries the locale-specific lookup first,
+	/// then falls back to the neutral baseline if the result is considered empty.
+	/// </summary>
+	private async Task<T> WithLocaleFallbackAsync<T>(
+		string fileReference,
+		string? locale,
+		Func<string, Task<T>> lookup,
+		Func<T, bool> isEmpty)
+	{
+		if (NeedsLocale(locale))
+		{
+			var result = await lookup(LocalizedRef(fileReference, locale!));
+			if (!isEmpty(result))
+				return result;
+		}
+		return await lookup(fileReference);
+	}
+
 	// -----------------------------------------------------------------------
 	// ILocalizedTextFileService
 	// -----------------------------------------------------------------------
 
 	/// <inheritdoc />
-	public async Task<string?> GetEntryAsync(string fileReference, string entryName, string? locale = null)
-	{
-		if (NeedsLocale(locale))
-		{
-			var result = await textFileService.GetEntryAsync(LocalizedRef(fileReference, locale!), entryName);
-			if (result is not null)
-				return result;
-		}
-		return await textFileService.GetEntryAsync(fileReference, entryName);
-	}
+	public Task<string?> GetEntryAsync(string fileReference, string entryName, string? locale = null)
+		=> WithLocaleFallbackAsync(
+			fileReference, locale,
+			r => textFileService.GetEntryAsync(r, entryName),
+			result => result is null);
 
 	/// <inheritdoc />
-	public async Task<string?> GetFileContentAsync(string fileReference, string? locale = null)
-	{
-		if (NeedsLocale(locale))
-		{
-			var result = await textFileService.GetFileContentAsync(LocalizedRef(fileReference, locale!));
-			if (result is not null)
-				return result;
-		}
-		return await textFileService.GetFileContentAsync(fileReference);
-	}
+	public Task<string?> GetFileContentAsync(string fileReference, string? locale = null)
+		=> WithLocaleFallbackAsync(
+			fileReference, locale,
+			r => textFileService.GetFileContentAsync(r),
+			result => result is null);
 
 	/// <inheritdoc />
-	public async Task<string> ListEntriesAsync(string fileReference, string separator = " ", string? locale = null)
-	{
-		if (NeedsLocale(locale))
-		{
-			var result = await textFileService.ListEntriesAsync(LocalizedRef(fileReference, locale!), separator);
-			if (!string.IsNullOrEmpty(result))
-				return result;
-		}
-		return await textFileService.ListEntriesAsync(fileReference, separator);
-	}
+	public Task<string> ListEntriesAsync(string fileReference, string separator = " ", string? locale = null)
+		=> WithLocaleFallbackAsync(
+			fileReference, locale,
+			r => textFileService.ListEntriesAsync(r, separator),
+			string.IsNullOrEmpty);
 
 	/// <inheritdoc />
-	public async Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern, string? locale = null)
-	{
-		if (NeedsLocale(locale))
-		{
-			var result = await textFileService.SearchEntriesAsync(LocalizedRef(fileReference, locale!), pattern);
-			if (result.Any())
-				return result;
-		}
-		return await textFileService.SearchEntriesAsync(fileReference, pattern);
-	}
+	public Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern, string? locale = null)
+		=> WithLocaleFallbackAsync(
+			fileReference, locale,
+			r => textFileService.SearchEntriesAsync(r, pattern),
+			result => !result.Any());
 
 	/// <inheritdoc />
-	public async Task<IEnumerable<string>> SearchContentAsync(string fileReference, string searchTerm, string? locale = null)
-	{
-		if (NeedsLocale(locale))
-		{
-			var result = await textFileService.SearchContentAsync(LocalizedRef(fileReference, locale!), searchTerm);
-			if (result.Any())
-				return result;
-		}
-		return await textFileService.SearchContentAsync(fileReference, searchTerm);
-	}
+	public Task<IEnumerable<string>> SearchContentAsync(string fileReference, string searchTerm, string? locale = null)
+		=> WithLocaleFallbackAsync(
+			fileReference, locale,
+			r => textFileService.SearchContentAsync(r, searchTerm),
+			result => !result.Any());
 }
