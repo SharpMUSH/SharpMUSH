@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    French (fr) translations for SharpMUSH system messages.
+    Keys must match constant names in ErrorMessages.Notifications.
+    Only entries that differ from English need to be listed here;
+    the ResourceManager automatically falls back to Notifications.resx
+    for any key not found in this file.
+
+    Maintainer notes
+    ================
+    - Use {0}, {1}, … for format placeholders (matching the English template)
+    - Escape XML special characters: & → &amp;  < → &lt;  > → &gt;
+    - CRLF in values: use &#xD;&#xA;
+  -->
+
+  <!-- ── Connection / login ──────────────────────────────────────────── -->
+  <data name="Connected" xml:space="preserve">
+    <value>Connecté !</value>
+  </data>
+  <data name="WelcomeBackFormat" xml:space="preserve">
+    <value>Bienvenue, {0} !</value>
+  </data>
+
+  <!-- ── @locale command ─────────────────────────────────────────────── -->
+  <data name="LocaleSetFormat" xml:space="preserve">
+    <value>Langue définie sur {0}.</value>
+  </data>
+  <data name="LocaleCleared" xml:space="preserve">
+    <value>Langue réinitialisée (par défaut).</value>
+  </data>
+  <data name="LocaleInvalidFormat" xml:space="preserve">
+    <value>Langue invalide : {0}.</value>
+  </data>
+  <data name="LocaleCurrentFormat" xml:space="preserve">
+    <value>Langue actuelle : {0}.</value>
+  </data>
+
+  <!-- ── Common permission / error messages ─────────────────────────── -->
+  <data name="PermissionDenied" xml:space="preserve">
+    <value>Permission refusée.</value>
+  </data>
+  <data name="NoSuchObject" xml:space="preserve">
+    <value>Cet objet n'existe pas.</value>
+  </data>
+  <data name="InvalidArguments" xml:space="preserve">
+    <value>Arguments invalides.</value>
+  </data>
+
+  <!-- ── Movement ────────────────────────────────────────────────────── -->
+  <data name="YouCantGoThatWay" xml:space="preserve">
+    <value>Vous ne pouvez pas aller par là.</value>
+  </data>
+  <data name="CantSeeThat" xml:space="preserve">
+    <value>Vous ne voyez pas cela.</value>
+  </data>
+
+  <!-- ── Object manipulation ─────────────────────────────────────────── -->
+  <data name="YouPickUpFormat" xml:space="preserve">
+    <value>Vous prenez {0}.</value>
+  </data>
+  <data name="YouDropFormat" xml:space="preserve">
+    <value>Vous déposez {0}.</value>
+  </data>
+
+  <!-- ── @set / attributes ───────────────────────────────────────────── -->
+  <data name="AttributeSet" xml:space="preserve">
+    <value>Attribut défini.</value>
+  </data>
+  <data name="AttributeCleared" xml:space="preserve">
+    <value>Attribut effacé.</value>
+  </data>
+
+</root>

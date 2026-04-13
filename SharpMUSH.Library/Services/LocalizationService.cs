@@ -23,7 +23,7 @@ public class LocalizationService : ILocalizationService
 	}
 
 	/// <inheritdoc />
-	public IReadOnlyList<string> AvailableLocales { get; } = ["en"];
+	public IReadOnlyList<string> AvailableLocales { get; } = ["en", "fr"];
 
 	/// <inheritdoc />
 	public string Get(string key, string? locale = null)
