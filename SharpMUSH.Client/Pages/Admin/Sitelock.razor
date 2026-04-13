@@ -127,7 +127,7 @@
 
             if (accessRules.Length == 0)
             {
-                Snackbar.Add(Loc["AtLeastOneAccessRule"], Severity.Warning);
+                Snackbar.Add(Loc["AtLeastOneAccessRule"].Value, Severity.Warning);
                 return;
             }
 
@@ -141,7 +141,7 @@
             }
             else
             {
-                Snackbar.Add(Loc["SitelockRuleAddFailed"], Severity.Error);
+                Snackbar.Add(Loc["SitelockRuleAddFailed"].Value, Severity.Error);
             }
         }
         catch (Exception ex)
@@ -162,7 +162,7 @@
             }
             else
             {
-                Snackbar.Add(Loc["SitelockRuleRemoveFailed"], Severity.Error);
+                Snackbar.Add(Loc["SitelockRuleRemoveFailed"].Value, Severity.Error);
             }
         }
         catch (Exception ex)

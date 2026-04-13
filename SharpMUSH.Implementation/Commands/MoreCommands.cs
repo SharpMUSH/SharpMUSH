@@ -3204,21 +3204,20 @@ public partial class Commands
 	/// <summary>
 	/// @locale [locale]
 	/// With no argument: displays the executor's current locale.
-	/// With argument: validates and sets the locale for the current session and persists it
+	/// With an empty argument (@locale =): clears the locale back to the server default ("en").
+	/// With a non-empty argument: validates and sets the locale for the current session and persists it
 	/// as the LOCALE attribute on the player object.
 	/// Locale strings are BCP-47 tags (e.g. "en", "fr", "de").
-	/// Passing an empty string clears the locale back to the server default ("en").
 	/// </summary>
 	[SharpCommand(Name = "@LOCALE", Switches = [], Behavior = CB.Default | CB.NoParse | CB.EqSplit, MinArgs = 0, MaxArgs = 1, ParameterNames = ["locale"])]
 	public static async ValueTask<Option<CallState>> SetLocale(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var locale = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToPlainText().Trim();
 
-		if (string.IsNullOrEmpty(locale))
+		// No '=' sign at all → display current locale.
+		if (args.Count == 0)
 		{
-			// No argument — show the executor's current locale.
 			var current = "en";
 			await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
 			{
@@ -3233,7 +3232,28 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Validate: must be a recognised BCP-47 culture tag (or empty to clear).
+		var locale = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToPlainText().Trim();
+
+		// Explicit empty argument (@locale =) → clear locale back to server default.
+		if (string.IsNullOrEmpty(locale))
+		{
+			await AttributeService!.ClearAttributeAsync(executor, executor, "LOCALE",
+				IAttributeService.AttributePatternMode.Exact,
+				IAttributeService.AttributeClearMode.Safe);
+
+			await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+			{
+				if (conn.State == IConnectionService.ConnectionState.LoggedIn)
+				{
+					ConnectionService!.Update(conn.Handle, "Locale", string.Empty);
+				}
+			}
+
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleCleared));
+			return CallState.Empty;
+		}
+
+		// Validate: must be a recognised BCP-47 culture tag.
 		System.Globalization.CultureInfo? culture;
 		try
 		{

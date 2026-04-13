@@ -200,7 +200,7 @@
 
             if (restrictions.Length == 0)
             {
-                Snackbar.Add(Loc["AtLeastOneRestriction"], Severity.Warning);
+                Snackbar.Add(Loc["AtLeastOneRestriction"].Value, Severity.Warning);
                 return;
             }
 
@@ -214,7 +214,7 @@
             }
             else
             {
-                Snackbar.Add(Loc["CommandRestrictionAddFailed"], Severity.Error);
+                Snackbar.Add(Loc["CommandRestrictionAddFailed"].Value, Severity.Error);
             }
         }
         catch (Exception ex)
@@ -235,7 +235,7 @@
             }
             else
             {
-                Snackbar.Add(Loc["CommandRestrictionRemoveFailed"], Severity.Error);
+                Snackbar.Add(Loc["CommandRestrictionRemoveFailed"].Value, Severity.Error);
             }
         }
         catch (Exception ex)
@@ -259,7 +259,7 @@
 
             if (restrictions.Length == 0)
             {
-                Snackbar.Add(Loc["AtLeastOneRestriction"], Severity.Warning);
+                Snackbar.Add(Loc["AtLeastOneRestriction"].Value, Severity.Warning);
                 return;
             }
 
@@ -273,7 +273,7 @@
             }
             else
             {
-                Snackbar.Add(Loc["FunctionRestrictionAddFailed"], Severity.Error);
+                Snackbar.Add(Loc["FunctionRestrictionAddFailed"].Value, Severity.Error);
             }
         }
         catch (Exception ex)
@@ -294,7 +294,7 @@
             }
             else
             {
-                Snackbar.Add(Loc["FunctionRestrictionRemoveFailed"], Severity.Error);
+                Snackbar.Add(Loc["FunctionRestrictionRemoveFailed"].Value, Severity.Error);
             }
         }
         catch (Exception ex)

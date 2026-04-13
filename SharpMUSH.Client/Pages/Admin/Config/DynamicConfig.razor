@@ -251,7 +251,7 @@
             var schema = await SchemaService.GetSchemaAsync();
             if (schema == null)
             {
-                Snackbar.Add(Loc["FailedToLoadSchema"], Severity.Error);
+                Snackbar.Add(Loc["FailedToLoadSchema"].Value, Severity.Error);
                 return;
             }
 
@@ -279,7 +279,7 @@
             var result = await AdminConfigService.GetOptionsAsync();
             if (result.IsT1)
             {
-                Snackbar.Add(Loc["FailedToLoadValues"], Severity.Error);
+                Snackbar.Add(Loc["FailedToLoadValues"].Value, Severity.Error);
                 return;
             }
 
@@ -448,7 +448,7 @@
 
     private async Task SaveChanges()
     {
-        Snackbar.Add(Loc["SaveNotImplemented"], Severity.Info);
+        Snackbar.Add(Loc["SaveNotImplemented"].Value, Severity.Info);
         // TODO: Implement save to API
         _hasChanges = false;
     }

@@ -58,7 +58,15 @@ var app = builder.Build();
 // Restore saved locale from localStorage (defaults to "en" if not set)
 var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
 var storedLocale = await jsRuntime.InvokeAsync<string?>("localStorage.getItem", "locale");
-var culture = new CultureInfo(storedLocale ?? "en");
+CultureInfo culture;
+try
+{
+	culture = new CultureInfo(storedLocale ?? "en");
+}
+catch (CultureNotFoundException)
+{
+	culture = new CultureInfo("en");
+}
 CultureInfo.DefaultThreadCurrentCulture = culture;
 CultureInfo.DefaultThreadCurrentUICulture = culture;
 

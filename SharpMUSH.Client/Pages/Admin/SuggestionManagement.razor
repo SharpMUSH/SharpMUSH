@@ -237,7 +237,7 @@
     {
         if (string.IsNullOrWhiteSpace(_newCategoryName))
         {
-            Snackbar.Add(Loc["CategoryNameEmpty"], Severity.Warning);
+            Snackbar.Add(Loc["CategoryNameEmpty"].Value, Severity.Warning);
             return;
         }
 
@@ -255,7 +255,7 @@
             if (response.IsSuccessStatusCode)
             {
                 // Remove the placeholder word
-                await Http.DeleteAsync($"/api/suggestion/{categoryKey}/ ");
+                await Http.DeleteAsync($"/api/suggestion/{categoryKey}/{Uri.EscapeDataString(" ")}");
                 
                 await LoadSuggestionsAsync();
                 Snackbar.Add(string.Format(Loc["CategoryCreated"], categoryKey), Severity.Success);
@@ -277,7 +277,7 @@
     {
         if (string.IsNullOrWhiteSpace(_newWord))
         {
-            Snackbar.Add(Loc["WordEmpty"], Severity.Warning);
+            Snackbar.Add(Loc["WordEmpty"].Value, Severity.Warning);
             return;
         }
 

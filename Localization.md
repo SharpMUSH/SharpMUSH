@@ -25,7 +25,8 @@ ErrorMessages.Notifications.SomeKey   (compile-time constant, English fallback)
 Notifications.resx / Notifications.fr.resx   (resource files, keyed by name)
         │
         ▼
-ILocalizationService.Localize(key, locale)   (resolves string for a culture)
+ILocalizationService.Get(key, locale)         (plain string lookup)
+ILocalizationService.Format(key, locale, args) (formatted string lookup)
         │
         ▼
 NotifyService.NotifyLocalized(target, key, args...)
@@ -42,7 +43,8 @@ target `DBRef`, looks up the locale for each handle, translates via
 
 Players persist their preference with the `@locale` command, which writes a
 `LOCALE` attribute on the player object. The attribute is restored into
-connection metadata on login.
+connection metadata on login.  Passing `@locale =` (empty right-hand side)
+clears the attribute and resets the connection locale to the server default.
 
 ### String categories
 
@@ -97,18 +99,28 @@ positional placeholders (`{0}`, `{1}`, …).
 ### NotifyLocalized overloads
 
 ```csharp
-// Simple keyed message (no format args)
-void NotifyLocalized(DBRef target, string resourceKey);
+// Target: all connections for a DBRef (with optional format args)
+ValueTask NotifyLocalized(DBRef who, string key, params object[] args);
 
-// With format arguments
-void NotifyLocalized(DBRef target, string resourceKey, params object[] args);
+// Target: all connections for an AnySharpObject (convenience overload)
+ValueTask NotifyLocalized(AnySharpObject who, string key, params object[] args);
 
-// With explicit locale override
-void NotifyLocalized(DBRef target, string resourceKey, string locale, params object[] args);
+// Target: a single connection handle
+ValueTask NotifyLocalized(long handle, string key, params object[] args);
 ```
 
 The sender parameter is intentionally omitted — system notifications should not
 trigger listener routing.
+
+### ILocalizationService interface
+
+```csharp
+// Plain string lookup (no format substitution)
+string Get(string key, string? locale = null);
+
+// Formatted string lookup (substitutes {0}, {1}, … placeholders)
+string Format(string key, string? locale, params object[] args);
+```
 
 ---
 
