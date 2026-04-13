@@ -13,7 +13,7 @@
     <PackageReference Include="DotNext" Version="6.1.0" />
     <PackageReference Include="DotNext.Threading" Version="6.1.0" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.2" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.3" />
     <PackageReference Include="morelinq" Version="4.4.0" />
