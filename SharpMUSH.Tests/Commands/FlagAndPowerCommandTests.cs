@@ -58,7 +58,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(createdFlag.System).IsFalse();
 
 		// Verify notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagCreatedWithSymbolFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagCreatedWithSymbolFormat), executor, executor)).IsTrue();
 
 		// Cleanup - delete the flag
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
@@ -101,7 +101,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 
 		// Verify error notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagAlreadyExistsFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagAlreadyExistsFormat), executor, executor)).IsTrue();
 
 		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
@@ -129,7 +129,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(deletedFlag).IsNull();
 
 		// Verify notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagDeletedFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagDeletedFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -140,7 +140,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/delete WIZARD"));
 
 		// Verify error notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -152,7 +152,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/delete {flagName}"));
 
 		// Verify error notification was sent with the exact error message produced by the implementation.
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -188,7 +188,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(createdPower.System).IsFalse();
 
 		// Verify notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerCreatedWithAliasFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerCreatedWithAliasFormat), executor, executor)).IsTrue();
 
 		// Cleanup - delete the power
 		await Mediator.Send(new DeletePowerCommand(powerName));
@@ -235,7 +235,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(deletedPower).IsNull();
 
 		// Verify notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerDeletedFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerDeletedFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -250,7 +250,7 @@ public class FlagAndPowerCommandTests
 			await Parser.CommandParse(1, ConnectionService, MModule.single("@power/delete BUILDER"));
 
 			// Verify error notification was sent
-			await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemPowerFormat), executor)).IsTrue();
+			await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemPowerFormat), executor, executor)).IsTrue();
 		}
 	}
 
@@ -263,7 +263,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/delete {powerName}"));
 
 		// Verify error notification was sent with the exact error message produced by the implementation.
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -274,7 +274,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/add TESTFLAG"));
 
 		// Verify error notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagAddRequiresNameAndSymbol), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagAddRequiresNameAndSymbol), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -285,7 +285,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/add TESTPOWER"));
 
 		// Verify error notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerAddRequiresNameAndAlias), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerAddRequiresNameAndAlias), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -357,7 +357,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/disable WIZARD"));
 
 		// Verify error notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -427,7 +427,7 @@ public class FlagAndPowerCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/disable Builder"));
 
 		// Verify error notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDisableSystemPowerFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDisableSystemPowerFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]

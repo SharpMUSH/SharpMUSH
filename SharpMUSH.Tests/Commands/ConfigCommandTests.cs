@@ -25,7 +25,7 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config"));
 
 		// Should notify with "Configuration Categories:"
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigCategoriesHeader), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigCategoriesHeader), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -35,7 +35,7 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config Net"));
 
 		// Should notify with "Options in Net:"
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -45,7 +45,7 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config mud_name"));
 
 		// Should receive at least one notification about mud_name
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -55,7 +55,7 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config test_string_CONFIG_invalid_option"));
 
 		// Should notify that option was not found
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -169,7 +169,7 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable noisy_whisper"));
 
 		// Should notify about the equivalent @config/set command
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -180,7 +180,7 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable noisy_whisper"));
 
 		// Should notify about the equivalent @config/set command
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -191,7 +191,7 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable test_string_ENABLE_invalid_option_xyz"));
 
 		// Should notify that option was not found
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -202,7 +202,7 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable test_string_DISABLE_invalid_option_xyz"));
 
 		// Should notify that option was not found
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -213,7 +213,7 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable mud_name"));
 
 		// Should notify that it's not a boolean option
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -224,7 +224,7 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable probate_judge"));
 
 		// Should notify that it's not a boolean option
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -235,7 +235,7 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable"));
 
 		// Should show usage message
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -246,6 +246,6 @@ public class ConfigCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable"));
 
 		// Should show usage message
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, executor)).IsTrue();
 	}
 }

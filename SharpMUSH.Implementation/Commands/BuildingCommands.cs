@@ -77,7 +77,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Created), name, thing);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Created), executor, name, thing);
 
 		await EventService!.TriggerEventAsync(
 			parser,
@@ -208,7 +208,7 @@ public partial class Commands
 
 		if (setResult.IsT0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet),
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
 				realLocated.Object().Name, MModule.plainText(attribute));
 		}
 		else
@@ -436,7 +436,7 @@ public partial class Commands
 		if (await obj.HasFlag("GOING"))
 		{
 			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Destroyed));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Destroyed), executor);
 
 			// NOTE: Actual object deletion from database requires a garbage collection system.
 			// Objects marked GOING_TWICE will be cleaned up by a future purge process.
@@ -620,13 +620,13 @@ public partial class Commands
 					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
 					{
 						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeHome));
-						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToHome));
+						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToHome), executor);
 						return CallState.Empty;
 					}
 					else if (destName.Equals(LinkTypeVariable, StringComparison.InvariantCultureIgnoreCase))
 					{
 						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeVariable));
-						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToVariable));
+						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToVariable), executor);
 						return CallState.Empty;
 					}
 
@@ -711,7 +711,7 @@ public partial class Commands
 
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
-							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), exitObj.Object().DBRef.Number, destinationRoom.Object.DBRef.Number);
+							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, exitObj.Object().DBRef.Number, destinationRoom.Object.DBRef.Number);
 							return CallState.Empty;
 						}
 					);
@@ -734,7 +734,7 @@ public partial class Commands
 							// Convert to AnySharpContent for SetObjectHomeCommand
 							var contentObj = exitObj.AsContent;
 							await Mediator!.Send(new SetObjectHomeCommand(contentObj, destObj.AsRoom));
-							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HomeSet));
+							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HomeSet), executor);
 							return CallState.Empty;
 						}
 					);
@@ -757,7 +757,7 @@ public partial class Commands
 
 							// Link the room to its drop-to
 							await Mediator!.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
-							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToSet));
+							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToSet), executor);
 							return CallState.Empty;
 						}
 					);
@@ -826,7 +826,7 @@ public partial class Commands
 					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!GOING_TWICE", false);
 				}
 
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SparedFromDestructionFormat), obj.Object().Name);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SparedFromDestructionFormat), executor, obj.Object().Name);
 
 				// Trigger @startup attribute if it exists
 				try
@@ -937,7 +937,7 @@ public partial class Commands
 							}
 						}
 
-						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged));
+						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged), executor);
 						return CallState.Empty;
 					}
 				);
@@ -960,7 +960,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToString()))
 		{
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.DigWhat));
+			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.DigWhat), executorBase);
 			return new CallState("#-1 NO ROOM NAME SPECIFIED");
 		}
 
@@ -971,7 +971,7 @@ public partial class Commands
 		// CREATE ROOM
 		var response = await Mediator!.Send(new CreateRoomCommand(MModule.plainText(roomName),
 			await executor.Owner.WithCancellation(CancellationToken.None)));
-		await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), roomName, response.Number);
+		await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executorBase, roomName, response.Number);
 
 		// Inherit zone from creator
 		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
@@ -997,15 +997,15 @@ public partial class Commands
 			var toExitResponse = await Mediator.Send(new CreateExitCommand(exitToName.First(),
 				exitToName.Skip(1).ToArray(), await executorBase.Where(),
 				await executor.Owner.WithCancellation(CancellationToken.None)));
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), $"#{toExitResponse.Number}");
-		await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink));
+			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{toExitResponse.Number}");
+		await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
 
 		var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
 		var newExitObject = await Mediator.Send(new GetObjectNodeQuery(toExitResponse));
 
 			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
 
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), toExitResponse.Number, response.Number);
+			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, toExitResponse.Number, response.Number);
 		}
 
 		if (!string.IsNullOrWhiteSpace(exitFrom?.ToString()))
@@ -1021,13 +1021,13 @@ public partial class Commands
 				await executor.Owner.WithCancellation(CancellationToken.None)));
 			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(fromExitResponse));
 
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), $"#{fromExitResponse.Number}");
-		await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink));
+			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{fromExitResponse.Number}");
+		await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
 
 		var where = await executorBase.Where();
 			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
 
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), fromExitResponse.Number, where.Object().DBRef.Number);
+			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, fromExitResponse.Number, where.Object().DBRef.Number);
 		}
 
 		return new CallState(response.ToString());
@@ -1063,7 +1063,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, lockKey));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), obj.Object().Name, obj.Object().DBRef.Number, lockType);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, lockType);
 				return CallState.Empty;
 			}
 		);
@@ -1098,7 +1098,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new UnsetLockCommand(obj.Object(), lockType));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), obj.Object().Name, obj.Object().DBRef.Number, lockType);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, lockType);
 				return CallState.Empty;
 			}
 		);
@@ -1128,7 +1128,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new SetLockCommand(obj.Object(), "Enter", lockKey));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), obj.Object().Name, obj.Object().DBRef.Number, "Enter");
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Enter");
 				return CallState.Empty;
 			}
 		);
@@ -1157,7 +1157,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Enter"));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), obj.Object().Name, obj.Object().DBRef.Number, "Enter");
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Enter");
 				return CallState.Empty;
 			}
 		);
@@ -1187,7 +1187,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new SetLockCommand(obj.Object(), "Use", lockKey));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), obj.Object().Name, obj.Object().DBRef.Number, "Use");
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Use");
 				return CallState.Empty;
 			}
 		);
@@ -1216,7 +1216,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Use"));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), obj.Object().Name, obj.Object().DBRef.Number, "Use");
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Use");
 				return CallState.Empty;
 			}
 		);
@@ -1245,7 +1245,7 @@ public partial class Commands
 
 		if (locateResult.IsError || !locateResult.AsSharpObject.IsRoom)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SourceMustBeARoom));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SourceMustBeARoom), executor);
 			return new CallState(ErrorMessages.Returns.NotARoom);
 		}
 			sourceRoom = locateResult.AsSharpObject.AsRoom;
@@ -1284,7 +1284,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OpenedExit), $"#{exitDbRef.Number}");
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OpenedExit), executor, $"#{exitDbRef.Number}");
 
 		// Link to destination if provided
 		if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
@@ -1297,7 +1297,7 @@ public partial class Commands
 			{
 				var exitObj = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
 				await Mediator.Send(new LinkExitCommand(exitObj.AsExit, locateResult.AsSharpObject.AsRoom));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToNameFormat), destName);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToNameFormat), executor, destName);
 			}
 		}
 
@@ -1417,7 +1417,7 @@ public partial class Commands
 					}
 				}
 
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ClonedNewObjectFormat), cloneDbRef.Number);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ClonedNewObjectFormat), executor, cloneDbRef.Number);
 				return new CallState(cloneDbRef.ToString());
 			}
 		);
@@ -1447,13 +1447,13 @@ public partial class Commands
 				if (!args.ContainsKey("1") || string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 				{
 					await AttributeService!.SetAttributeAsync(executor, obj, "MONIKER", MModule.single(""));
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MonikerCleared));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MonikerCleared), executor);
 					return CallState.Empty;
 				}
 
 				var moniker = args["1"].Message!;
 				await AttributeService!.SetAttributeAsync(executor, obj, "MONIKER", moniker);
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MonikerSet));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MonikerSet), executor);
 				return CallState.Empty;
 			}
 		);
@@ -1524,14 +1524,14 @@ public partial class Commands
 					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
 
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UnlinkedExit), obj.Object().DBRef.Number);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UnlinkedExit), executor, obj.Object().DBRef.Number);
 					return CallState.Empty;
 				}
 				else if (obj.IsRoom)
 				{
 					// Remove drop-to
 					await Mediator!.Send(new UnlinkRoomCommand(obj.AsRoom));
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToRemoved));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToRemoved), executor);
 					return CallState.Empty;
 				}
 

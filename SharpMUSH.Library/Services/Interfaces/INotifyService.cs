@@ -76,4 +76,19 @@ public interface INotifyService
 	/// Sends a locale-aware notification to a single connection handle.
 	/// </summary>
 	ValueTask NotifyLocalized(long handle, string key, params object[] args);
+
+	/// <summary>
+	/// Sends a locale-aware notification to all connections for a DBRef, recording the sender.
+	/// </summary>
+	ValueTask NotifyLocalized(DBRef who, string key, AnySharpObject? sender, params object[] args);
+
+	/// <summary>
+	/// Sends a locale-aware notification to all connections for an object, recording the sender.
+	/// </summary>
+	ValueTask NotifyLocalized(AnySharpObject who, string key, AnySharpObject? sender, params object[] args);
+
+	/// <summary>
+	/// Sends a locale-aware notification to a single connection handle, recording the sender.
+	/// </summary>
+	ValueTask NotifyLocalized(long handle, string key, AnySharpObject? sender, params object[] args);
 }

@@ -315,4 +315,25 @@ public class NotifyService(
 		var message = localizationService.Format(key, locale, args);
 		await Notify(handle, message, sender: null);
 	}
+
+	public async ValueTask NotifyLocalized(DBRef who, string key, AnySharpObject? sender, params object[] args)
+	{
+		await foreach (var conn in connections.Get(who))
+		{
+			conn.Metadata.TryGetValue("Locale", out var locale);
+			var message = localizationService.Format(key, locale, args);
+			await Notify(conn.Handle, message, sender: sender);
+		}
+	}
+
+	public ValueTask NotifyLocalized(AnySharpObject who, string key, AnySharpObject? sender, params object[] args)
+		=> NotifyLocalized(who.Object().DBRef, key, sender, args);
+
+	public async ValueTask NotifyLocalized(long handle, string key, AnySharpObject? sender, params object[] args)
+	{
+		var conn = connections.Get(handle);
+		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
+		var message = localizationService.Format(key, locale, args);
+		await Notify(handle, message, sender: sender);
+	}
 }

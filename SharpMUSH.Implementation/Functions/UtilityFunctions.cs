@@ -556,13 +556,13 @@ public partial class Functions
 
 		if (location.IsNone || location.IsExit)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DefaultHomeLocationInvalid));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DefaultHomeLocationInvalid), executor);
 			return new CallState(Errors.ErrorInvalidRoom);
 		}
 
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidNameThing));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidNameThing), executor);
 			return new CallState(Errors.ErrorBadObjectName);
 		}
 

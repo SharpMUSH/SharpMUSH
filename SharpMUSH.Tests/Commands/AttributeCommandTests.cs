@@ -136,7 +136,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_DIRECT_CPATTR={objDbRef}/DEST_DIRECT_CPATTR"));
 
 		// Verify command sent a success notification with unique attribute name
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, executor)).IsTrue();
 
 		// Verify destination attribute was created
 		var destAttr = Database.GetAttributeAsync(objDbRef, ["DEST_DIRECT_CPATTR"]);
@@ -163,7 +163,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_CPATTR_BASIC={objDbRef}/DEST_CPATTR_BASIC"));
 
 		// Verify command executed with success notification mentioning destination.
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, executor)).IsTrue();
 
 		// Verify destination attribute was created
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -193,7 +193,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_CPATTR_MULTI_UNIQUE={objDbRef}/DEST1_CPATTR_MULTI,{objDbRef}/DEST2_CPATTR_MULTI"));
 
 		// Verify command executed successfully with notification mentioning 2 destinations
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, executor)).IsTrue();
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -223,7 +223,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mvattr {objDbRef}/MOVESOURCE_UNIQUE={objDbRef}/MOVEDEST_UNIQUE"));
 
 		// Verify command executed successfully with notification about move
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor, executor)).IsTrue();
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -261,7 +261,7 @@ public class AttributeCommandTests
 
 		// Verify command sent notification about wiping with the pattern
 		// Pattern-based wipe sends WipedAttributes (with the pattern), not AttributesWiped
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.WipedAttributes), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.WipedAttributes), executor, executor)).IsTrue();
 
 		// Verify they're gone
 		var attr1After = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "WIPE1_UNIQUE",
@@ -287,7 +287,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrlock {objDbRef}/LOCKTEST_UNIQUE_ATTR=on"));
 
 		// Verify lock notification sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeLocked), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeLocked), executor, executor)).IsTrue();
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "LOCKTEST_UNIQUE_ATTR",
@@ -303,7 +303,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrlock {objDbRef}/LOCKTEST_UNIQUE_ATTR=off"));
 
 		// Verify unlock notification sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeUnlocked), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeUnlocked), executor, executor)).IsTrue();
 
 		attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "LOCKTEST_UNIQUE_ATTR",
 			IAttributeService.AttributeMode.Read, false);
@@ -325,7 +325,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrlock {objDbRef}/QUERYLOCK_UNIQUE_ATTR"));
 
 		// Should receive a notification about lock status with the attribute name
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeIsUnlocked), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeIsUnlocked), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -339,7 +339,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrchown {objDbRef}"));
 
 		// Should receive error notification
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -353,7 +353,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/NONEXISTENT_ATTR_TEST={objDbRef}/DEST"));
 
 		// Should receive error notification
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -367,7 +367,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mvattr {objDbRef}/NONEXISTENT_MOVE_TEST={objDbRef}/DEST"));
 
 		// Should receive error notification
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -501,6 +501,6 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit {objDbRef}/NONEXISTENT_EDIT_TEST=foo,bar"));
 
 		// Should receive error notification
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EditNoMatchingAttributesFound), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EditNoMatchingAttributesFound), executor, executor)).IsTrue();
 	}
 }

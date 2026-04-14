@@ -39,7 +39,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.CannotNameObjectFormat), name.ToPlainText());
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.CannotNameObjectFormat), executor, name.ToPlainText());
 			}
 
 			return Errors.ErrorPerm;
@@ -59,7 +59,7 @@ public class ManipulateSharpObjectService(
 				{
 				if (notify)
 				{
-					await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerNameInUse));
+					await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerNameInUse), executor);
 				}
 
 				return "#-1 PLAYER NAME ALREADY IN USE.";
@@ -83,7 +83,7 @@ public class ManipulateSharpObjectService(
 				{
 				if (notify)
 				{
-					await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerAliasInUse));
+					await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerAliasInUse), executor);
 				}
 
 				return "#-1 PLAYER ALIAS ALREADY IN USE.";
@@ -124,7 +124,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.InvalidPasswordText));
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.InvalidPasswordText), executor);
 			}
 
 			return Errors.ErrorInvalidPassword;
@@ -513,7 +513,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ParentLoopCannotAdd));
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ParentLoopCannotAdd), executor);
 			}
 
 			return Errors.ParentLoop;
@@ -523,7 +523,7 @@ public class ManipulateSharpObjectService(
 
 		if (notify)
 		{
-			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ParentSet));
+			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ParentSet), executor);
 		}
 
 		return true;

@@ -571,7 +571,7 @@ public partial class Functions
 	{
 		// Money/pennies are not supported in SharpMUSH
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MoneyFunctionNotSupported));
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MoneyFunctionNotSupported), executor);
 		return new CallState("#-1 NOT SUPPORTED");
 	}
 

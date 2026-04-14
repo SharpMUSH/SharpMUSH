@@ -150,10 +150,33 @@ public static class TestHelpers
 	///   When non-null, constrains the match to calls whose first argument (the <em>receiver</em>)
 	///   resolves to this <see cref="DBRef"/>.
 	/// </param>
+	/// <summary>
+	/// Checks whether a <c>NotifyLocalized</c> call with the given resource <paramref name="key"/>
+	/// was received on the mock.
+	/// <para>
+	/// Use <paramref name="receiverDbRef"/> to assert the object being notified.
+	/// Use <paramref name="senderDbRef"/> to additionally verify the sender (only matches calls
+	/// using the sender-bearing <c>NotifyLocalized(who, key, sender, args)</c> overload).
+	/// </para>
+	/// This helper bypasses NSubstitute's params-expansion issue by inspecting
+	/// <see cref="ICallRouter.ReceivedCalls"/> directly.
+	/// </summary>
+	/// <param name="notifyService">The mocked <see cref="INotifyService"/> instance.</param>
+	/// <param name="key">The resource key passed to <c>NotifyLocalized</c>.</param>
+	/// <param name="receiverDbRef">
+	///   When non-null, constrains the match to calls whose first argument (the <em>receiver</em>)
+	///   resolves to this <see cref="DBRef"/>.
+	/// </param>
+	/// <param name="senderDbRef">
+	///   When non-null, constrains the match to calls using the sender-bearing overload whose
+	///   third argument (the <em>sender</em>) resolves to this <see cref="DBRef"/>.
+	///   Pass <see langword="null"/> to match calls regardless of sender.
+	/// </param>
 	public static bool ReceivedNotifyLocalizedWithKey(
 		INotifyService notifyService,
 		string key,
-		DBRef? receiverDbRef = null) =>
+		DBRef? receiverDbRef = null,
+		DBRef? senderDbRef = null) =>
 		notifyService.ReceivedCalls()
 			.Any(c =>
 				c.GetMethodInfo().Name == "NotifyLocalized" &&
@@ -161,5 +184,8 @@ public static class TestHelpers
 				c.GetArguments()[1] is string k && k == key &&
 				(receiverDbRef == null ||
 				 (c.GetArguments()[0] is AnySharpObject obj && obj.Object().DBRef == receiverDbRef) ||
-				 (c.GetArguments()[0] is DBRef d && d == receiverDbRef)));
+				 (c.GetArguments()[0] is DBRef d && d == receiverDbRef)) &&
+				(senderDbRef == null ||
+				 (c.GetArguments().Length >= 3 &&
+				  c.GetArguments()[2] is AnySharpObject sObj && sObj.Object().DBRef == senderDbRef)));
 }

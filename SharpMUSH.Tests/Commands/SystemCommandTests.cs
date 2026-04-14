@@ -115,7 +115,7 @@ public class SystemCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@kick {testPlayerDbRef}"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PlayerNotConnected), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PlayerNotConnected), executor, executor)).IsTrue();
 	}
 
 	// PennMUSH reference: do_attribute_access outputs:

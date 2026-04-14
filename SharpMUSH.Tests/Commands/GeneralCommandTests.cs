@@ -336,7 +336,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis test_object_whereis"));
 
 		// Should notify that it's not a player
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.WhereIsCanOnlyLocatePlayers), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.WhereIsCanOnlyLocatePlayers), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -348,8 +348,8 @@ public class GeneralCommandTests
 
 		// Should notify about restart
 		await Assert.That(
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.RestartedObjectFormat), executor) ||
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat), executor)
+    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.RestartedObjectFormat), executor, executor) ||
+    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat), executor, executor)
 ).IsTrue();
 	}
 
@@ -361,7 +361,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@find test"));
 
 		// Should notify about searching
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FindSearchingFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FindSearchingFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -372,7 +372,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
 
 		// Should notify about database statistics
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.StatsDatabaseStatisticsHeader), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.StatsDatabaseStatisticsHeader), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -383,7 +383,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
 
 		// Should notify about search
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SearchAdvancedHeader), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SearchAdvancedHeader), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -394,7 +394,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances"));
 
 		// Should notify about entrances
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EntrancesToFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EntrancesToFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -405,7 +405,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@command @emit"));
 
 		// Should notify about command information
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -416,7 +416,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
 
 		// Should notify about global functions
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -427,7 +427,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function name"));
 
 		// Should notify about function information
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionInfoNameFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionInfoNameFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -441,8 +441,8 @@ public class GeneralCommandTests
 
 		// Should notify about mapping
 		await Assert.That(
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MapWouldIterateFormat), executor) ||
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat), executor)
+    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MapWouldIterateFormat), executor, executor) ||
+    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat), executor, executor)
 ).IsTrue();
 	}
 
@@ -456,7 +456,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@trigger {trigObj}/{uniqueAttr}=arg1,arg2"));
 
 		// Should notify with error since the attribute doesn't exist
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -470,7 +470,7 @@ public class GeneralCommandTests
 
 		// Should attempt to locate the object and get the attribute
 		// Since the attribute doesn't exist, it outputs "Attribute <name> is empty."
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.IncludeAttributeIsEmptyFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.IncludeAttributeIsEmptyFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -498,7 +498,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
 
 		// Should notify about queue
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PsQueueForTargetFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PsQueueForTargetFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -509,7 +509,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@select test=foo,:action1,bar,:action2"));
 
 		// Should notify about select
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SelectTestingStringFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SelectTestingStringFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -523,7 +523,7 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute DESCRIPTION"));
 
 		// Should notify about attribute info
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCommandInfoFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCommandInfoFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]

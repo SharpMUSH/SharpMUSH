@@ -346,7 +346,7 @@ public class RecursionAndInvocationLimitTests
 			MModule.single($"@include {objDbRef}/INCLUDETEST_RECUR_LIM_UNIQUE"));
 
 		// The recursion-error string is treated as an unknown command → "Huh?" notification (sent via NotifyLocalized)
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.HuhTypeHelp), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.HuhTypeHelp), executor, executor)).IsTrue();
 	}
 
 	/// <summary>
@@ -371,7 +371,7 @@ public class RecursionAndInvocationLimitTests
 
 		// At least one notification must have been dispatched (Huh? from unknown command, sent via NotifyLocalized).
 		// @trigger runs the attribute with the triggered object as executor.
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.HuhTypeHelp), objDbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.HuhTypeHelp), objDbRef, objDbRef)).IsTrue();
 	}
 
 	/// <summary>

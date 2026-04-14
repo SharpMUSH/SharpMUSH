@@ -294,7 +294,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		// Verify notification was sent with message containing the alias and channel
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasAddedForChannelFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasAddedForChannelFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -345,7 +345,7 @@ public class CommunicationCommandTests
 
 		// Verify the deletion notification was sent
 		// Check for the specific deletion message (not the addcom message from earlier)
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasDeletedFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasDeletedFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -358,7 +358,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		// Verify error notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -397,7 +397,7 @@ public class CommunicationCommandTests
 		// Verify the title set notification was sent containing the title and alias
 		// Note: This command sends TWO notifications - one from ChannelTitle.Handle and one custom message
 		// We check that at least one contains our custom message with alias information
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.TitleSetForAliasChannelFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.TitleSetForAliasChannelFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -410,7 +410,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		// Verify error notification was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -450,6 +450,6 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		// Verify the empty list message was sent
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases), executor, executor)).IsTrue();
 	}
 }

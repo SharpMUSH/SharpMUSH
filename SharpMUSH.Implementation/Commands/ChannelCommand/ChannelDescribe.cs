@@ -14,7 +14,7 @@ public static class ChannelDescribe
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChatGuestsCantModify));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChatGuestsCantModify), executor);
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 

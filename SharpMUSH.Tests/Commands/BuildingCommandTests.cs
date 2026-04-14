@@ -314,7 +314,7 @@ public class BuildingCommandTests
 		await Assert.That(parentOfB.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -356,7 +356,7 @@ public class BuildingCommandTests
 		await Assert.That(parentOfC.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle (via NotifyLocalized)
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -377,7 +377,7 @@ public class BuildingCommandTests
 		await Assert.That(parent.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle (via NotifyLocalized)
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -417,7 +417,7 @@ public class BuildingCommandTests
 		await Assert.That(parentOf4.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle (via NotifyLocalized)
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
 	}
 
 	[Test]

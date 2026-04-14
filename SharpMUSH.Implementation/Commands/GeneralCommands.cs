@@ -222,7 +222,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HuhTypeHelp));
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HuhTypeHelp), executor);
 		return new CallState("#-1 HUH");
 	}
 
@@ -236,14 +236,14 @@ public partial class Commands
 
 		if (args.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapMustSpecifyAttribute));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapMustSpecifyAttribute), executor);
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
 
 		var attributePath = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(attributePath))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapMustSpecifyAttribute));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapMustSpecifyAttribute), executor);
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
 
@@ -251,14 +251,14 @@ public partial class Commands
 		var pathSplit = HelperFunctions.SplitDbRefAndOptionalAttr(attributePath);
 		if (!pathSplit.TryPickT0(out var pathDetails, out _))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapInvalidObjectAttributePath));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapInvalidObjectAttributePath), executor);
 			return new CallState("#-1 INVALID PATH");
 		}
 
 		var (objSpec, attrName) = pathDetails;
 		if (string.IsNullOrEmpty(attrName))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapMustSpecifyAttribute));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapMustSpecifyAttribute), executor);
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
 
@@ -267,26 +267,26 @@ public partial class Commands
 		var (delimiter, listText) = ExtractFirstParameter(originalListText, switches.Contains("DELIMIT"));
 		var list = MModule.split(delimiter, listText);
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWouldIterateFormat), list.Length, objSpec, attrName);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWouldIterateFormat), executor, list.Length, objSpec, attrName);
 
 		if (switches.Contains("INLINE"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapModeInline));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapModeInline), executor);
 		}
 
 		if (switches.Contains("NOTIFY"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWillQueueNotify));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWillQueueNotify), executor);
 		}
 
 		if (switches.Contains("CLEARREGS"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWillClearRegisters));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWillClearRegisters), executor);
 		}
 
 		if (switches.Contains("LOCALIZE"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWillLocalizeRegisters));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWillLocalizeRegisters), executor);
 		}
 
 		// Locate the target object
@@ -306,7 +306,7 @@ public partial class Commands
 
 		if (attributeResult.IsNone || attributeResult.IsError)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat), attrName, target.Object().Name);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat), executor, attrName, target.Object().Name);
 			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 
@@ -411,7 +411,7 @@ public partial class Commands
 
 		if (parser.CurrentState.Arguments.Count < 2)
 		{
-			await NotifyService!.NotifyLocalized(enactor, nameof(ErrorMessages.Notifications.DoListWhatToDoWithList));
+			await NotifyService!.NotifyLocalized(enactor, nameof(ErrorMessages.Notifications.DoListWhatToDoWithList), enactor);
 			return new None();
 		}
 
@@ -814,7 +814,7 @@ public partial class Commands
 						}
 						else
 						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitNameToDestFormat), exitObj.Name, destName);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitNameToDestFormat), executor, exitObj.Name, destName);
 						}
 					}
 				}
@@ -1228,7 +1228,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		if (parser.CurrentState.Arguments.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
 			return CallState.Empty;
 		}
 
@@ -1260,7 +1260,7 @@ public partial class Commands
 
 			if (destAttr.IsNone || destAttr.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid), executor);
 				return CallState.Empty;
 			}
 
@@ -1274,14 +1274,14 @@ public partial class Commands
 
 			if (!located.IsValid())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid), executor);
 				return CallState.Empty;
 			}
 
 			var locatedObj = located.WithoutError().WithoutNone();
 			if (!locatedObj.IsContainer)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitNoValidLocationDetail));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitNoValidLocationDetail), executor);
 				return CallState.Empty;
 			}
 
@@ -1294,13 +1294,13 @@ public partial class Commands
 
 		if (!await PermissionService!.CanGoto(executor, exitObj, destination))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
 			return CallState.Empty;
 		}
 
 		if (await MoveService!.WouldCreateLoop(executor.AsContent, destination))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWayContainmentLoop));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWayContainmentLoop), executor);
 			return CallState.Empty;
 		}
 
@@ -1345,7 +1345,7 @@ public partial class Commands
 
 		if (!destination.IsValid())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
 			return CallState.Empty;
 		}
 
@@ -1395,7 +1395,7 @@ public partial class Commands
 				var locatedObj = located.WithoutError().WithoutNone();
 				if (!locatedObj.IsContainer)
 				{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitDestinationInvalid), executor);
 					return CallState.Empty;
 				}
 
@@ -1420,7 +1420,7 @@ public partial class Commands
 				// Rooms cannot be teleported (PennMUSH src/wiz.c).
 				if (locateTarget.IsRoom)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantTeleportRooms));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantTeleportRooms), executor);
 				}
 				else
 				{
@@ -1461,7 +1461,7 @@ public partial class Commands
 					// NO_TEL flag on source room blocks teleport
 					if (await sourceObj.HasFlag("NO_TEL"))
 					{
-						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed));
+						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed), executor);
 						continue;
 					}
 
@@ -1479,7 +1479,7 @@ public partial class Commands
 						{
 							if (!LockService!.Evaluate(LockType.Zone, sourceObj, executor))
 							{
-								await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoZoneTeleport));
+								await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoZoneTeleport), executor);
 								continue;
 							}
 						}
@@ -1494,7 +1494,7 @@ public partial class Commands
 				var destObj = destinationContainer.WithExitOption();
 				if (!LockService!.Evaluate(LockType.TPort, destObj, executor))
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed), executor);
 					continue;
 				}
 			}
@@ -1579,7 +1579,7 @@ public partial class Commands
 
 		var matchCount = 0;
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindSearchingFormat), searchName != null ? string.Format(ErrorMessages.Notifications.FindSearchMatchingFormat, searchName) : "");
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindSearchingFormat), executor, searchName != null ? string.Format(ErrorMessages.Notifications.FindSearchMatchingFormat, searchName) : "");
 
 		// Query database for objects matching the criteria
 		var filter = new ObjectSearchFilter
@@ -1604,16 +1604,16 @@ public partial class Commands
 
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindRangeFormat), beginDbref ?? 0, endDbref?.ToString() ?? "end");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindRangeFormat), executor, beginDbref ?? 0, endDbref?.ToString() ?? "end");
 		}
 
 		// Display results
 		foreach (var obj in controlledResults)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindObjectResultFormat), obj.Key, obj.Name);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindObjectResultFormat), executor, obj.Key, obj.Name);
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindFoundMatchingFormat), matchCount);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindFoundMatchingFormat), executor, matchCount);
 
 		return new CallState(matchCount.ToString());
 	}
@@ -1636,7 +1636,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -1646,7 +1646,7 @@ public partial class Commands
 				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsHalted));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsHalted), executor);
 			return CallState.Empty;
 		}
 
@@ -1656,13 +1656,13 @@ public partial class Commands
 			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
 			if (string.IsNullOrEmpty(pidStr))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltMustSpecifyPid));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltMustSpecifyPid), executor);
 				return new CallState("#-1 NO PID SPECIFIED");
 			}
 
 			if (!long.TryParse(pidStr, out var pid))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPidFormat));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPidFormat), executor);
 				return new CallState("#-1 INVALID PID");
 			}
 
@@ -1670,11 +1670,11 @@ public partial class Commands
 			var halted = await Mediator!.Send(new HaltByPidRequest(pid));
 			if (halted)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltTaskHaltedFormat), pid);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltTaskHaltedFormat), executor, pid);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltNoTaskWithPidFormat), pid);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltNoTaskWithPidFormat), executor, pid);
 				return new CallState("#-1 NOT FOUND");
 			}
 
@@ -1685,7 +1685,7 @@ public partial class Commands
 		if (args.Count == 0)
 		{
 			await Mediator!.Send(new HaltObjectQueueRequest(executor.Object().DBRef));
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Halted));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Halted), executor);
 			return CallState.Empty;
 		}
 
@@ -1693,7 +1693,7 @@ public partial class Commands
 		var targetName = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(targetName))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltMustSpecifyTarget));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltMustSpecifyTarget), executor);
 			return new CallState("#-1 NO TARGET SPECIFIED");
 		}
 
@@ -1717,7 +1717,7 @@ public partial class Commands
 
 		if (!canHalt)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(Errors.ErrorPerm);
 		}
 
@@ -1752,7 +1752,7 @@ public partial class Commands
 					-1));
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedPlayerAndObjectsFormat), targetObject.Name);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedPlayerAndObjectsFormat), executor, targetObject.Name);
 		}
 		else
 		{
@@ -1765,7 +1765,7 @@ public partial class Commands
 					parser.CurrentState,
 					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedObjectWithActionsFormat), targetObject.Name);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedObjectWithActionsFormat), executor, targetObject.Name);
 			}
 			else
 			{
@@ -1774,7 +1774,7 @@ public partial class Commands
 				{
 					await Mediator.Send(new SetObjectFlagCommand(target, haltFlag));
 				}
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedObjectFormat), targetObject.Name);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedObjectFormat), executor, targetObject.Name);
 			}
 		}
 
@@ -1793,7 +1793,7 @@ public partial class Commands
 
 		if ((parser.CurrentState.Arguments.Count == 0) || string.IsNullOrEmpty(args["0"].Message?.ToPlainText()))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifySemaphoreObject));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifySemaphoreObject), executor);
 			return new None();
 		}
 
@@ -1818,7 +1818,7 @@ public partial class Commands
 		var objectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText());
 		if (objectAndAttribute.IsT1 && objectAndAttribute.AsT1 == false)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifyValidObjectAttribute));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifyValidObjectAttribute), executor);
 			return new None();
 		}
 
@@ -1856,14 +1856,14 @@ public partial class Commands
 			// So @notify/setq obj=0,val1,1,val2 becomes: args[0]=obj, args[1]=0, args[2]=val1, args[3]=1, args[4]=val2
 			if (args.Count < 3) // Need at least object, qreg, and value
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifyQregAssignments));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifyQregAssignments), executor);
 				return new CallState("#-1 MISSING QREG ASSIGNMENTS");
 			}
 
 			var qregArgCount = args.Count - 1; // Subtract 1 for arg[0] which is the object
 			if (qregArgCount % 2 != 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyQregAssignmentsMustBePairs));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyQregAssignmentsMustBePairs), executor);
 				return new CallState("#-1 INVALID QREG PAIRS");
 			}
 
@@ -1881,7 +1881,7 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(countArg) &&
 					(!int.TryParse(countArg, out notifyCount) || notifyCount < 1))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyInvalidNumber));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyInvalidNumber), executor);
 				return new CallState("#-1 INVALID NUMBER");
 			}
 		}
@@ -1907,7 +1907,7 @@ public partial class Commands
 				var modified = await Mediator!.Send(new ModifyQRegistersRequest(dbRefAttribute, qRegisters!));
 				if (!modified)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyNoTaskWaitingOnSemaphore));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyNoTaskWaitingOnSemaphore), executor);
 					return new CallState("#-1 NO WAITING TASK");
 				}
 				// After modifying Q-registers, trigger the task execution (same as regular @notify but only 1 task)
@@ -1921,7 +1921,7 @@ public partial class Commands
 
 		if (!parser.CurrentState.Switches.Contains("QUIET"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Notified));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Notified), executor);
 		}
 
 		return new None();
@@ -1949,7 +1949,7 @@ public partial class Commands
 
 		if (!await PermissionService!.CanInteract(executor, found, InteractType.Hear))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectDoesNotWantToHearFromYouFormat), found.Object().Name);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectDoesNotWantToHearFromYouFormat), executor, found.Object().Name);
 			return CallState.Empty;
 		}
 
@@ -1958,7 +1958,7 @@ public partial class Commands
 		// SILENT: Don't notify the executor
 		if (!switches.Contains("SILENT"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouPromptedFormat), found.Object().Name);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouPromptedFormat), executor, found.Object().Name);
 		}
 
 		return new CallState(message);
@@ -2186,7 +2186,7 @@ public partial class Commands
 					}
 					catch (ArgumentException ex)
 					{
-						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SwitchInvalidRegexpFormat), patternText, ex.Message);
+						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SwitchInvalidRegexpFormat), executor, patternText, ex.Message);
 						continue;
 					}
 				}
@@ -2275,7 +2275,7 @@ public partial class Commands
 
 		if (arg1 is null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitCommandListMissing));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitCommandListMissing), executor);
 			return new CallState("#-1 MISSING COMMAND LIST ARGUMENT");
 		}
 
@@ -2312,7 +2312,7 @@ public partial class Commands
 			var located = maybeObject.AsSharpObject;
 			if (!await PermissionService!.Controls(executor, located))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -2339,7 +2339,7 @@ public partial class Commands
 				{
 					if (!double.TryParse(splitBySlashes[1], out untilTime))
 					{
-						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeArgumentFormat));
+						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeArgumentFormat), executor);
 						return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
 					}
 
@@ -2372,7 +2372,7 @@ public partial class Commands
 
 			// @wait[/until] <object>/<attribute>/<time>=<command list>
 			case 3 when !double.TryParse(splitBySlashes[2], out untilTime):
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeArgumentFormat));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeArgumentFormat), executor);
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
 
 			// Note: Attribute value validation for semaphore usage is handled in QueueSemaphore/QueueSemaphoreWithDelay
@@ -2410,7 +2410,7 @@ public partial class Commands
 				}
 
 			default:
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidFirstArgumentFormat));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidFirstArgumentFormat), executor);
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "FIRST ARGUMENT"));
 		}
 	}
@@ -2490,13 +2490,13 @@ public partial class Commands
 	{
 		if (!int.TryParse(arg0, out var pid))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified), executor);
 			return new CallState("#-1 INVALID PID");
 		}
 
 		if (string.IsNullOrEmpty(arg1))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitWhatToDoWithProcess));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitWhatToDoWithProcess), executor);
 			return new CallState(string.Format(Errors.ErrorTooFewArguments, "@WAIT", 2, 1));
 		}
 
@@ -2505,7 +2505,7 @@ public partial class Commands
 
 		if (maybeFoundPid is null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified), executor);
 			return new CallState("#-1 INVALID PID");
 		}
 
@@ -2515,7 +2515,7 @@ public partial class Commands
 		{
 			if (!DateTimeOffset.TryParse(timeArg, out var dateTimeOffset))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeSpecified));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeSpecified), executor);
 				return new CallState("#-1 INVALID TIME");
 			}
 
@@ -2532,7 +2532,7 @@ public partial class Commands
 
 		if (!long.TryParse(timeArg, out var secs))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeSpecified));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeSpecified), executor);
 			return new CallState("#-1 INVALID TIME");
 		}
 
@@ -2568,14 +2568,14 @@ public partial class Commands
 
 		if (args.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyName));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyName), executor);
 			return new CallState("#-1 NO COMMAND SPECIFIED");
 		}
 
 		var commandName = args["0"].Message?.ToPlainText()?.ToUpper();
 		if (string.IsNullOrEmpty(commandName))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyName));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyName), executor);
 			return new CallState("#-1 NO COMMAND SPECIFIED");
 		}
 
@@ -2586,7 +2586,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -2595,7 +2595,7 @@ public partial class Commands
 			{
 				if (!isQuiet)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAddNotImplementedFormat));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAddNotImplementedFormat), executor);
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -2605,13 +2605,13 @@ public partial class Commands
 				var aliasName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
 				if (string.IsNullOrEmpty(aliasName))
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyAlias));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyAlias), executor);
 					return new CallState("#-1 NO ALIAS SPECIFIED");
 				}
 
 				if (!isQuiet)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAliasNotImplementedFormat));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAliasNotImplementedFormat), executor);
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -2621,13 +2621,13 @@ public partial class Commands
 				var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
 				if (string.IsNullOrEmpty(cloneName))
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyCloneName));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyCloneName), executor);
 					return new CallState("#-1 NO CLONE NAME SPECIFIED");
 				}
 
 				if (!isQuiet)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCloneNotImplementedFormat));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCloneNotImplementedFormat), executor);
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -2636,13 +2636,13 @@ public partial class Commands
 			{
 				if (!executor.IsGod())
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandOnlyGodCanDelete));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandOnlyGodCanDelete), executor);
 					return new CallState(Errors.ErrorPerm);
 				}
 
 				if (!isQuiet)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandDeleteNotImplementedFormat));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandDeleteNotImplementedFormat), executor);
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -2651,7 +2651,7 @@ public partial class Commands
 			{
 				if (!isQuiet)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandDisableNotImplementedFormat));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandDisableNotImplementedFormat), executor);
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -2660,7 +2660,7 @@ public partial class Commands
 			{
 				if (!isQuiet)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandEnableNotImplementedFormat));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandEnableNotImplementedFormat), executor);
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -2670,7 +2670,7 @@ public partial class Commands
 				var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
 				if (!isQuiet)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRestrictNotImplementedFormat));
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRestrictNotImplementedFormat), executor);
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
@@ -2679,28 +2679,28 @@ public partial class Commands
 		// No switches - display command information
 		if (CommandLibrary == null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandLibraryUnavailable));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandLibraryUnavailable), executor);
 			return new CallState("#-1 LIBRARY UNAVAILABLE");
 		}
 
 		// Try to find the command in the library
 		if (!CommandLibrary.TryGetValue(commandName, out var commandInfo))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNotFoundFormat), commandName);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNotFoundFormat), executor, commandName);
 			return new CallState("#-1 COMMAND NOT FOUND");
 		}
 
 		var (definition, isSystem) = commandInfo;
 		var attr = definition.Attribute;
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), attr.Name);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoTypeFormat), isSystem ? "Built-in" : "User-defined");
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMinArgsFormat), attr.MinArgs);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMaxArgsFormat), attr.MaxArgs);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), executor, attr.Name);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoTypeFormat), executor, isSystem ? "Built-in" : "User-defined");
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMinArgsFormat), executor, attr.MinArgs);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMaxArgsFormat), executor, attr.MaxArgs);
 
 		if (attr.Switches != null && attr.Switches.Length > 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoSwitchesFormat), string.Join(", ", attr.Switches));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoSwitchesFormat), executor, string.Join(", ", attr.Switches));
 		}
 
 		var behaviors = new List<string>();
@@ -2714,12 +2714,12 @@ public partial class Commands
 
 		if (behaviors.Count > 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoBehaviorFormat), string.Join(" | ", behaviors));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoBehaviorFormat), executor, string.Join(" | ", behaviors));
 		}
 
 		if (!string.IsNullOrEmpty(attr.CommandLock))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoLockFormat), attr.CommandLock);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoLockFormat), executor, attr.CommandLock);
 		}
 
 		return CallState.Empty;
@@ -2771,7 +2771,7 @@ public partial class Commands
 		{
 			if (!int.TryParse(arg1, out var count) || count < 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyInvalidNumber));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyInvalidNumber), executor);
 				return new CallState("#-1 INVALID NUMBER");
 			}
 			drainCount = count;
@@ -2780,14 +2780,14 @@ public partial class Commands
 		// Cannot specify both /any and a specific attribute
 		if (hasAny && maybeAttribute is not null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DrainCannotSpecifyBothAnyAndAttribute));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DrainCannotSpecifyBothAnyAndAttribute), executor);
 			return new CallState("#-1 INVALID COMBINATION");
 		}
 
 		// Cannot specify both /all and a number
 		if (hasAll && drainCount.HasValue)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DrainCannotSpecifyBothAllAndNumber));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DrainCannotSpecifyBothAllAndNumber), executor);
 			return new CallState("#-1 INVALID COMBINATION");
 		}
 
@@ -2899,19 +2899,19 @@ public partial class Commands
 		// God cannot be forced by anyone (PennMUSH src/wiz.c).
 		if (found.IsGod() && !executor.IsGod())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantForceGod));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantForceGod), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (!await PermissionService!.Controls(executor, found))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ForcePermissionDeniedDoNotControl));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ForcePermissionDeniedDoNotControl), executor);
 			return new CallState(Errors.ErrorPerm);
 		}
 
 		if (cmdListArg.Length < 1)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ForceThemToDoWhat));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ForceThemToDoWhat), executor);
 			return new CallState(Errors.NothingToDo);
 		}
 
@@ -3009,7 +3009,7 @@ public partial class Commands
 
 			if (!canSpoof && !controlsExecutor)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 		}
@@ -3035,7 +3035,7 @@ public partial class Commands
 
 		if (args.Count < 2)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -3107,7 +3107,7 @@ public partial class Commands
 
 			if (!await PermissionService!.CanInteract(executor, locateTarget, InteractType.Hear))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectDoesNotWantToHearFromYouFormat), locateTarget.Object().Name);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectDoesNotWantToHearFromYouFormat), executor, locateTarget.Object().Name);
 				continue;
 			}
 
@@ -3157,21 +3157,21 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchAdvancedHeader));
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchAdvancedHeader), executor);
 
 		if (playerName != null)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchPlayerFilterFormat), playerName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchPlayerFilterFormat), executor, playerName);
 		}
 
 		if (searchCriteria != null)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchCriteriaFormat), searchCriteria);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchCriteriaFormat), executor, searchCriteria);
 		}
 
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchRangeFormat), beginDbref ?? 0, endDbref?.ToString() ?? "end");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchRangeFormat), executor, beginDbref ?? 0, endDbref?.ToString() ?? "end");
 		}
 
 		// Build search filter from criteria
@@ -3191,11 +3191,11 @@ public partial class Commands
 		foreach (var obj in results)
 		{
 			// Check if executor can see this object (basic visibility check)
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchObjectEntryFormat), obj.Key, obj.Name, obj.Type);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchObjectEntryFormat), executor, obj.Key, obj.Name, obj.Type);
 			count++;
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchObjectsFoundFormat), count);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchObjectsFoundFormat), executor, count);
 
 		return new CallState(count.ToString());
 	}
@@ -3208,7 +3208,7 @@ public partial class Commands
 
 		if (args.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WhereIsMustSpecifyPlayer));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WhereIsMustSpecifyPlayer), executor);
 			return new CallState("#-1 NO PLAYER SPECIFIED");
 		}
 
@@ -3232,7 +3232,7 @@ public partial class Commands
 		// Check if target is a player
 		if (!target.IsPlayer)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WhereIsCanOnlyLocatePlayers));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WhereIsCanOnlyLocatePlayers), executor);
 			return new CallState("#-1 NOT A PLAYER");
 		}
 
@@ -3357,31 +3357,31 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
 			if (switches.Contains("SAVE") && !executor.IsGod())
 			{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOnlyGodCanUseSave));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOnlyGodCanUseSave), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
 			// /set and /save not yet implemented - would require runtime config modification
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigSetSaveNotImplemented));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigSetSaveNotImplemented), executor);
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 
 		// @config with no arguments - list categories
 		if (args.Count == 0)
 		{
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoriesHeader));
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoriesHeader), executor);
 		foreach (var cat in allCategories)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoryItemFormat), cat);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoryItemFormat), executor, cat);
 		}
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseCategoryHelp));
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseOptionHelp));
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseCategoryHelp), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseOptionHelp), executor);
 			return CallState.Empty;
 		}
 
@@ -3401,16 +3401,16 @@ public partial class Commands
 
 			if (categoryOptions.Count == 0)
 			{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoOptionsInCategoryFormat), matchingCategory);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoOptionsInCategoryFormat), executor, matchingCategory);
 				return CallState.Empty;
 			}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat), matchingCategory);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat), executor, matchingCategory);
 		foreach (var opt in categoryOptions)
 		{
 			var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
 			var value = opt.Value?.ToString() ?? "null";
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), name, value);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
 		}
 			return CallState.Empty;
 		}
@@ -3426,14 +3426,14 @@ public partial class Commands
 			var value = matchingOption.Value?.ToString() ?? "null";
 			var desc = matchingOption.ConfigAttr.Description;
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), name, value);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionDescriptionFormat), desc);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionCategoryFormat), matchingOption.Category);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionDescriptionFormat), executor, desc);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionCategoryFormat), executor, matchingOption.Category);
 			return new CallState(value);
 		}
 
 		// No match found
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), searchTerm);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor, searchTerm);
 		return new CallState("#-1 NOT FOUND");
 	}
 
@@ -3450,7 +3450,7 @@ public partial class Commands
 		var objAttrArg = args.ElementAtOrDefault(0).Value;
 		if (objAttrArg == null || objAttrArg.Message == null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidArguments));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidArguments), executor);
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -3459,7 +3459,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat), executor);
 			return new CallState("#-1 INVALID FORMAT");
 		}
 
@@ -3480,7 +3480,7 @@ public partial class Commands
 		var canModify = await PermissionService!.Controls(executor, targetObject);
 		if (!canModify)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -3491,7 +3491,7 @@ public partial class Commands
 
 		if (searchArg == null || searchArg.Message == null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditMustSpecifySearchAndReplace));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditMustSpecifySearchAndReplace), executor);
 			return new CallState("#-1 MISSING ARGUMENTS");
 		}
 
@@ -3511,7 +3511,7 @@ public partial class Commands
 		var attrList = attributes.AsAttributes.ToList();
 		if (attrList.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditNoMatchingAttributesFound));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditNoMatchingAttributesFound), executor);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
@@ -3553,12 +3553,12 @@ public partial class Commands
 
 			if (!isQuiet && !isCheck)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), attrName);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, attrName);
 			}
 			else if (!isQuiet && isCheck)
 			{
 				// Show changes with highlighting (simple version for now)
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditWouldChangeToFormat), attrName, newText);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditWouldChangeToFormat), executor, attrName, newText);
 			}
 
 			// Actually set the attribute unless in check mode
@@ -3749,11 +3749,11 @@ public partial class Commands
 		{
 			if (FunctionLibrary == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionLibraryUnavailable));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionLibraryUnavailable), executor);
 				return new CallState("#-1 LIBRARY UNAVAILABLE");
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader), executor);
 
 			// Check if executor has Functions power or is wizard
 			var canSeeDetails = await executor.IsWizard();
@@ -3763,22 +3763,22 @@ public partial class Commands
 
 			if (canSeeDetails)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionUserDefinedCountFormat), userFunctions.Length);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionUserDefinedCountFormat), executor, userFunctions.Length);
 				foreach (var (name, (def, _)) in userFunctions.Take(10))
 				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), name, def.Attribute.MinArgs, def.Attribute.MaxArgs, def.Attribute.Flags);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor, name, def.Attribute.MinArgs, def.Attribute.MaxArgs, def.Attribute.Flags);
 				}
 				if (userFunctions.Length > 10)
 				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAndMoreFormat), userFunctions.Length - 10);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAndMoreFormat), executor, userFunctions.Length - 10);
 				}
 
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionBuiltInCountFormat), builtinFunctions.Length);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionBuiltInCountFormat), executor, builtinFunctions.Length);
 			}
 			else
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionUserDefinedSummaryFormat), userFunctions.Length);
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionBuiltInSummaryFormat), builtinFunctions.Length);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionUserDefinedSummaryFormat), executor, userFunctions.Length);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionBuiltInSummaryFormat), executor, builtinFunctions.Length);
 			}
 
 			return CallState.Empty;
@@ -3787,7 +3787,7 @@ public partial class Commands
 		var functionName = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(functionName))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyName));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyName), executor);
 			return new CallState("#-1 NO FUNCTION SPECIFIED");
 		}
 
@@ -3797,12 +3797,12 @@ public partial class Commands
 			var aliasName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
 			if (string.IsNullOrEmpty(aliasName))
 			{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyAliasName));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyAliasName), executor);
 			return new CallState("#-1 NO ALIAS SPECIFIED");
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasWouldCreateFormat), aliasName, functionName);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasingNotImplemented));
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasWouldCreateFormat), executor, aliasName, functionName);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasingNotImplemented), executor);
 		return new CallState("#-1 NOT IMPLEMENTED");
 	}
 
@@ -3811,41 +3811,41 @@ public partial class Commands
 		var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
 		if (string.IsNullOrEmpty(cloneName))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyCloneName));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyCloneName), executor);
 				return new CallState("#-1 NO CLONE NAME SPECIFIED");
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionCloneWouldCloneFormat), functionName, cloneName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionCloningNotImplemented));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionCloneWouldCloneFormat), executor, functionName, cloneName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionCloningNotImplemented), executor);
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 
 		if (switches.Contains("DELETE"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDeleteWouldDeleteFormat), functionName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDeletionNotImplemented));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDeleteWouldDeleteFormat), executor, functionName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDeletionNotImplemented), executor);
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 
 		if (switches.Contains("DISABLE"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDisableWouldDisableFormat), functionName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDisablingNotImplemented));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDisableWouldDisableFormat), executor, functionName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDisablingNotImplemented), executor);
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 
 		if (switches.Contains("ENABLE"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEnableWouldEnableFormat), functionName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEnablingNotImplemented));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEnableWouldEnableFormat), executor, functionName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEnablingNotImplemented), executor);
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 
 		if (switches.Contains("RESTRICT"))
 		{
 			var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictWouldRestrictFormat), functionName, restriction ?? "none");
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictionNotImplemented));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictWouldRestrictFormat), executor, functionName, restriction ?? "none");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictionNotImplemented), executor);
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 
@@ -3856,28 +3856,28 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(defString))
 			{
 				// Parse definition: obj, attrib[, min, max[, restrictions]]
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefineWouldDefineFormat), functionName, defString);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefineWouldDefineFormat), executor, functionName, defString);
 
 				// Parse min/max args if provided
 				if (args.Count >= 3)
 				{
 					var minArgs = args.GetValueOrDefault("2")?.Message?.ToPlainText();
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMinArgsFormat), minArgs ?? "none");
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMinArgsFormat), executor, minArgs ?? "none");
 				}
 
 				if (args.Count >= 4)
 				{
 					var maxArgs = args.GetValueOrDefault("3")?.Message?.ToPlainText();
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMaxArgsFormat), maxArgs ?? "none");
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMaxArgsFormat), executor, maxArgs ?? "none");
 				}
 
 				if (args.Count >= 5)
 				{
 					var restrictions = args.GetValueOrDefault("4")?.Message?.ToPlainText();
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictionsArgFormat), restrictions ?? "none");
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictionsArgFormat), executor, restrictions ?? "none");
 				}
 
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDynamicDefinitionNotImplemented));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDynamicDefinitionNotImplemented), executor);
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
 		}
@@ -3885,7 +3885,7 @@ public partial class Commands
 		// Single argument - show function information
 		if (FunctionLibrary == null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionLibraryUnavailable));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionLibraryUnavailable), executor);
 			return new CallState("#-1 LIBRARY UNAVAILABLE");
 		}
 
@@ -3893,17 +3893,17 @@ public partial class Commands
 		var functionNameUpper = functionName.ToUpper();
 		if (!FunctionLibrary.TryGetValue(functionNameUpper, out var functionInfo))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), functionName);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
 			return new CallState("#-1 FUNCTION NOT FOUND");
 		}
 
 		var (definition, isSystem) = functionInfo;
 		var attr = definition.Attribute;
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoNameFormat), attr.Name);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoTypeFormat), isSystem ? "Built-in" : "User-defined");
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMinArgsFormat), attr.MinArgs);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMaxArgsFormat), attr.MaxArgs);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoNameFormat), executor, attr.Name);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoTypeFormat), executor, isSystem ? "Built-in" : "User-defined");
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMinArgsFormat), executor, attr.MinArgs);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMaxArgsFormat), executor, attr.MaxArgs);
 
 		var flags = new List<string>();
 		if ((attr.Flags & FunctionFlags.Regular) != 0) flags.Add("Regular");
@@ -3914,12 +3914,12 @@ public partial class Commands
 
 		if (flags.Count > 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoFlagsFormat), string.Join(" | ", flags));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoFlagsFormat), executor, string.Join(" | ", flags));
 		}
 
 		if (attr.Restrict != null && attr.Restrict.Length > 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoRestrictionsFormat), string.Join(", ", attr.Restrict));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoRestrictionsFormat), executor, string.Join(", ", attr.Restrict));
 		}
 
 		return CallState.Empty;
@@ -3934,7 +3934,7 @@ public partial class Commands
 
 		if (args.Count < 1)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -3959,7 +3959,7 @@ public partial class Commands
 
 		if (args.Count < 1)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -3994,7 +3994,7 @@ public partial class Commands
 
 		if (args.Count < 2)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -4055,13 +4055,13 @@ public partial class Commands
 			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
 			if (string.IsNullOrEmpty(pidStr))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltMustSpecifyPid));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltMustSpecifyPid), executor);
 				return new CallState("#-1 NO PID SPECIFIED");
 			}
 
 			if (!long.TryParse(pidStr, out var pid))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPidFormat));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPidFormat), executor);
 				return new CallState("#-1 INVALID PID");
 			}
 
@@ -4069,18 +4069,18 @@ public partial class Commands
 			var tasks = await Mediator!.CreateStream(new ScheduleSemaphoreQuery(pid)).ToArrayAsync();
 			if (tasks.Length == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsNoTaskWithPidFormat), pid);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsNoTaskWithPidFormat), executor, pid);
 				return new CallState("#-1 NOT FOUND");
 			}
 
 			var task = tasks[0];
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugTaskFormat), pid);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugOwnerFormat), task.Owner);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugSemaphoreFormat), task.SemaphoreSource);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugCommandFormat), task.Command.ToPlainText());
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugTaskFormat), executor, pid);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugOwnerFormat), executor, task.Owner);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugSemaphoreFormat), executor, task.SemaphoreSource);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugCommandFormat), executor, task.Command.ToPlainText());
 			if (task.RunDelay.HasValue)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugDelayFormat), task.RunDelay.Value.TotalSeconds.ToString("F1"));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugDelayFormat), executor, task.RunDelay.Value.TotalSeconds.ToString("F1"));
 			}
 
 			return CallState.Empty;
@@ -4121,21 +4121,21 @@ public partial class Commands
 		// Check for /summary switch
 		if (switches.Contains("SUMMARY"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSummaryHeader));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), enqueueTasks.Length);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), delayTasks.Length);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), semaphoreTasks.Length);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsLoadAverageZero));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSummaryHeader), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsLoadAverageZero), executor);
 			return CallState.Empty;
 		}
 
 		// Check for /quick switch
 		if (switches.Contains("QUICK"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQuickHeader));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), enqueueTasks.Length);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), delayTasks.Length);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), semaphoreTasks.Length);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQuickHeader), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
 			return CallState.Empty;
 		}
 
@@ -4144,17 +4144,17 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
 			// Get all tasks across the system
 			var allTasks = await Mediator!.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllHeader));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllHeader), executor);
 			foreach (var (group, tasks) in allTasks)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllGroupFormat), group, tasks.Length);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllGroupFormat), executor, group, tasks.Length);
 			}
 
 			return CallState.Empty;
@@ -4162,16 +4162,16 @@ public partial class Commands
 
 		// Show detailed queue for target
 		var targetName = target.Object().DBRef.ToString();
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQueueForTargetFormat), targetName);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), enqueueTasks.Length);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), delayTasks.Length);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), semaphoreTasks.Length);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQueueForTargetFormat), executor, targetName);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
 
 		// List semaphore tasks
 		if (semaphoreTasks.Length > 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EmptyLine));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreTasksHeader));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EmptyLine), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreTasksHeader), executor);
 			foreach (var task in semaphoreTasks.Take(10))
 			{
 				var delay = task.RunDelay.HasValue ? $"+{task.RunDelay.Value.TotalSeconds:F1}s" : "ready";
@@ -4179,30 +4179,30 @@ public partial class Commands
 				var truncatedCommand = commandText.Length > 40
 					? commandText[..40]
 					: commandText;
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreTaskEntryFormat), task.Pid, task.SemaphoreSource, delay, truncatedCommand);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreTaskEntryFormat), executor, task.Pid, task.SemaphoreSource, delay, truncatedCommand);
 			}
 			if (semaphoreTasks.Length > 10)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), semaphoreTasks.Length - 10);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), executor, semaphoreTasks.Length - 10);
 			}
 		}
 
 		// List delay tasks
 		if (delayTasks.Length > 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EmptyLine));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueHeader));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EmptyLine), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueHeader), executor);
 			foreach (var pid in delayTasks.Take(10))
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitTaskEntryFormat), pid);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitTaskEntryFormat), executor, pid);
 			}
 			if (delayTasks.Length > 10)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), delayTasks.Length - 10);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), executor, delayTasks.Length - 10);
 			}
 		}
 		// - Permission checks for viewing other players' queues
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQueueManagementNotImplemented));
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQueueManagementNotImplemented), executor);
 
 		return CallState.Empty;
 	}
@@ -4222,7 +4222,7 @@ public partial class Commands
 		var testString = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(testString))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectMustSpecifyTestString));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectMustSpecifyTestString), executor);
 			return new CallState("#-1 NO TEST STRING");
 		}
 
@@ -4254,55 +4254,55 @@ public partial class Commands
 
 		try
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectTestingStringFormat), testString);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectTestingStringFormat), executor, testString);
 
 			// Count expression/action pairs (args are: 0=test string, then pairs of expr,action)
 			int pairCount = (args.Count - 1) / 2;
 			bool hasDefault = (args.Count - 1) % 2 == 1;
 
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectExpressionActionPairsFormat), pairCount);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectExpressionActionPairsFormat), executor, pairCount);
 			if (hasDefault)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectHasDefaultAction));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectHasDefaultAction), executor);
 			}
 
 			// Check switches
 			if (switches.Contains("REGEXP"))
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectModeRegexp));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectModeRegexp), executor);
 			}
 			else
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectModeWildcard));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectModeWildcard), executor);
 			}
 
 			if (switches.Contains("INLINE") || switches.Contains("INPLACE"))
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectExecutionInline));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectExecutionInline), executor);
 
 				if (switches.Contains("NOBREAK"))
 				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectNoBreakWontPropagate));
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectNoBreakWontPropagate), executor);
 				}
 
 				if (switches.Contains("LOCALIZE"))
 				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectQregistersLocalized));
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectQregistersLocalized), executor);
 				}
 
 				if (switches.Contains("CLEARREGS"))
 				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectQregistersCleared));
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectQregistersCleared), executor);
 				}
 			}
 			else
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectExecutionQueued));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectExecutionQueued), executor);
 			}
 
 			if (switches.Contains("NOTIFY"))
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectWillQueueNotify));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectWillQueueNotify), executor);
 			}
 
 
@@ -4328,7 +4328,7 @@ public partial class Commands
 					}
 					catch (ArgumentException)
 					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), pattern);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), executor, pattern);
 						continue;
 					}
 				}
@@ -4429,7 +4429,7 @@ public partial class Commands
 		var attributePath = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(attributePath))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustSpecifyAttributePath));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustSpecifyAttributePath), executor);
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
 
@@ -4437,7 +4437,7 @@ public partial class Commands
 		var parts = attributePath.Split('/', 2);
 		if (parts.Length < 2)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustSpecifyObjectAttributePath));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustSpecifyObjectAttributePath), executor);
 			return new CallState("#-1 INVALID PATH");
 		}
 
@@ -4458,7 +4458,7 @@ public partial class Commands
 		// Check control permissions
 		if (!await PermissionService!.Controls(executor, targetObject))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerPermissionDeniedDoNotControl));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerPermissionDeniedDoNotControl), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -4468,13 +4468,13 @@ public partial class Commands
 
 		if (attributeResult.IsError)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), attributeName);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), executor, attributeName);
 			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 
 		if (attributeResult.IsNone)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), attributeName);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), executor, attributeName);
 			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 
@@ -4528,7 +4528,7 @@ public partial class Commands
 			// The attribute should contain patterns to match against
 			if (!args.TryGetValue("1", out var matchArg) || matchArg.Message == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustProvideMatchString));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustProvideMatchString), executor);
 				return new CallState("#-1 NO MATCH STRING");
 			}
 
@@ -4594,7 +4594,7 @@ public partial class Commands
 
 		if (args.Count < 2)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -4714,14 +4714,14 @@ public partial class Commands
 		// Parse arguments: object[/attribute pattern][=prefix]
 		if (args.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouMustSpecifyObjectToDecompile));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouMustSpecifyObjectToDecompile), executor);
 			return new CallState("#-1 NO OBJECT SPECIFIED");
 		}
 
 		var objectSpec = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(objectSpec))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouMustSpecifyObjectToDecompile));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouMustSpecifyObjectToDecompile), executor);
 			return new CallState("#-1 NO OBJECT SPECIFIED");
 		}
 
@@ -4794,7 +4794,7 @@ public partial class Commands
 		var canExamine = await PermissionService!.CanExamine(executor, targetKnown);
 		if (!canExamine)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(Errors.ErrorPerm);
 		}
 
@@ -5054,7 +5054,7 @@ public partial class Commands
 
 			if (!canSpoof && !controlsExecutor)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 		}
@@ -5062,7 +5062,7 @@ public partial class Commands
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
 		if (!LockService!.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
 			return CallState.Empty;
 		}
 
@@ -5088,32 +5088,32 @@ public partial class Commands
 		var motdFile = Configuration!.CurrentValue.Message.MessageOfTheDayFile;
 		var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdCurrentSettingsHeader));
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdConnectFileFormat), motdFile ?? "(not set)");
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdConnectHtmlFormat), motdHtmlFile ?? "(not set)");
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdCurrentSettingsHeader), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdConnectFileFormat), executor, motdFile ?? "(not set)");
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdConnectHtmlFormat), executor, motdHtmlFile ?? "(not set)");
 
 		if (isWizard)
 		{
 			var wizmotdFile = Configuration.CurrentValue.Message.WizMessageOfTheDayFile;
 			var wizmotdHtmlFile = Configuration.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
 
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdWizardFileFormat), wizmotdFile ?? "(not set)");
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdWizardHtmlFormat), wizmotdHtmlFile ?? "(not set)");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdWizardFileFormat), executor, wizmotdFile ?? "(not set)");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdWizardHtmlFormat), executor, wizmotdHtmlFile ?? "(not set)");
 		}
 
 		// Get temporary MOTD data from ExpandedServerData
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
 		if (motdData != null)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EmptyLine));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdTemporaryHeader));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdConnectMotdFormat), string.IsNullOrEmpty(motdData.ConnectMotd) ? "(not set)" : motdData.ConnectMotd);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EmptyLine), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdTemporaryHeader), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdConnectMotdFormat), executor, string.IsNullOrEmpty(motdData.ConnectMotd) ? "(not set)" : motdData.ConnectMotd);
 
 			if (isWizard)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdWizardMotdFormat), string.IsNullOrEmpty(motdData.WizardMotd) ? "(not set)" : motdData.WizardMotd);
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdDownMotdFormat), string.IsNullOrEmpty(motdData.DownMotd) ? "(not set)" : motdData.DownMotd);
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdFullMotdFormat), string.IsNullOrEmpty(motdData.FullMotd) ? "(not set)" : motdData.FullMotd);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdWizardMotdFormat), executor, string.IsNullOrEmpty(motdData.WizardMotd) ? "(not set)" : motdData.WizardMotd);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdDownMotdFormat), executor, string.IsNullOrEmpty(motdData.DownMotd) ? "(not set)" : motdData.DownMotd);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdFullMotdFormat), executor, string.IsNullOrEmpty(motdData.FullMotd) ? "(not set)" : motdData.FullMotd);
 			}
 		}
 
@@ -5144,7 +5144,7 @@ public partial class Commands
 
 		if (!canSpoof && !controlsExecutor)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
 			return new CallState(Errors.ErrorPerm);
 		}
 
@@ -5169,7 +5169,7 @@ public partial class Commands
 
 		if (args.Count < 2)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -5198,7 +5198,7 @@ public partial class Commands
 
 			if (!roomResult.IsValid() || (!roomResult.IsRoom && !roomResult.IsThing))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidRoomSpecifiedDetail));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidRoomSpecifiedDetail), executor);
 				return new CallState("#-1 INVALID ROOM");
 			}
 
@@ -5253,7 +5253,7 @@ public partial class Commands
 
 		if (args.Count < 2)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -5302,20 +5302,20 @@ public partial class Commands
 		// Check for specialized switches
 		if (switches.Contains("TABLES"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsTablesNotImplemented));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsTablesNotImplemented), executor);
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 
 		if (switches.Contains("FLAGS"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsFlagsNotImplemented));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsFlagsNotImplemented), executor);
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 
 		if (switches.Contains("CHUNKS") || switches.Contains("FREESPACE") ||
 				switches.Contains("PAGING") || switches.Contains("REGIONS"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsMemorySwitchesNotImplemented));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsMemorySwitchesNotImplemented), executor);
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 
@@ -5326,11 +5326,11 @@ public partial class Commands
 			playerName = args["0"].Message?.ToPlainText();
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsDatabaseStatisticsHeader));
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsDatabaseStatisticsHeader), executor);
 
 		if (playerName != null)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsForPlayerFormat), playerName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsForPlayerFormat), executor, playerName);
 		}
 
 		// Query actual database statistics
@@ -5341,11 +5341,11 @@ public partial class Commands
 		var playerCount = allObjects.Count(o => o.Type == "PLAYER");
 		var totalCount = roomCount + exitCount + thingCount + playerCount;
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsRoomsFormat), roomCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsExitsFormat), exitCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsThingsFormat), thingCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsPlayersFormat), playerCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsTotalFormat), totalCount);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsRoomsFormat), executor, roomCount);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsExitsFormat), executor, exitCount);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsThingsFormat), executor, thingCount);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsPlayersFormat), executor, playerCount);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsTotalFormat), executor, totalCount);
 
 		return CallState.Empty;
 	}
@@ -5414,7 +5414,7 @@ public partial class Commands
 
 		if (!hasPermission)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(Errors.ErrorPerm);
 		}
 
@@ -5559,7 +5559,7 @@ public partial class Commands
 		}
 
 		var targetObj = targetObject.Object();
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesToFormat), targetObj.Name);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesToFormat), executor, targetObj.Name);
 
 		// Filter by switch type
 		var filterTypes = new List<string>();
@@ -5570,12 +5570,12 @@ public partial class Commands
 
 		if (filterTypes.Count > 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesFilteringForFormat), string.Join(", ", filterTypes));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesFilteringForFormat), executor, string.Join(", ", filterTypes));
 		}
 
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesRangeFormat), beginDbref ?? 0, endDbref?.ToString() ?? "end");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesRangeFormat), executor, beginDbref ?? 0, endDbref?.ToString() ?? "end");
 		}
 
 		// Query database for exits linked to target
@@ -5601,15 +5601,15 @@ public partial class Commands
 		// Display results
 		if (entrances.Count == 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesZeroFound));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesZeroFound), executor);
 		}
 		else
 		{
 			foreach (var entrance in entrances)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesObjectEntryFormat), entrance.Object.Key, entrance.Object.Name);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesObjectEntryFormat), executor, entrance.Object.Key, entrance.Object.Name);
 			}
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesCountFormat), entrances.Count);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesCountFormat), executor, entrances.Count);
 		}
 
 		return new CallState(entrances.Count.ToString());
@@ -5626,7 +5626,7 @@ public partial class Commands
 
 		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var patternArg))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepInvalidArguments));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepInvalidArguments), executor);
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -5637,7 +5637,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return new CallState("#-1 INVALID OBJECT");
 		}
 
@@ -5679,7 +5679,7 @@ public partial class Commands
 
 		if (attributes.IsError)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepErrorReadingAttributesFormat), attributes.AsError.Value);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepErrorReadingAttributesFormat), executor, attributes.AsError.Value);
 			return new CallState($"#-1 {attributes.AsError.Value}");
 		}
 
@@ -5701,12 +5701,12 @@ public partial class Commands
 				}
 				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepRegexpTimedOutFormat), pattern);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepRegexpTimedOutFormat), executor, pattern);
 					return new CallState("#-1 REGEXP TIMEOUT");
 				}
 				catch
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepInvalidRegexpFormat), pattern);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepInvalidRegexpFormat), executor, pattern);
 					return new CallState("#-1 INVALID REGEXP");
 				}
 			}
@@ -5721,12 +5721,12 @@ public partial class Commands
 				}
 				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepWildcardTimedOutFormat), pattern);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepWildcardTimedOutFormat), executor, pattern);
 					return new CallState("#-1 PATTERN TIMEOUT");
 				}
 				catch
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepInvalidWildcardFormat), pattern);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepInvalidWildcardFormat), executor, pattern);
 					return new CallState("#-1 INVALID PATTERN");
 				}
 			}
@@ -5746,7 +5746,7 @@ public partial class Commands
 		// Display results
 		if (matchingAttributes.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepNoMatchingAttributesFound));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepNoMatchingAttributesFound), executor);
 			return new CallState(string.Empty);
 		}
 
@@ -5823,7 +5823,7 @@ public partial class Commands
 		var attributePath = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(attributePath))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyAttributePath));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyAttributePath), executor);
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
 
@@ -5831,7 +5831,7 @@ public partial class Commands
 		var parts = attributePath.Split('/', 2);
 		if (parts.Length < 2)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyObjectAttributePath));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyObjectAttributePath), executor);
 			return new CallState("#-1 INVALID PATH");
 		}
 
@@ -5855,13 +5855,13 @@ public partial class Commands
 
 		if (attributeResult.IsError)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeNoSuchAttributeFormat), attributeName);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeNoSuchAttributeFormat), executor, attributeName);
 			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 
 		if (attributeResult.IsNone)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeAttributeIsEmptyFormat), attributeName);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeAttributeIsEmptyFormat), executor, attributeName);
 			return CallState.Empty;
 		}
 
@@ -5937,7 +5937,7 @@ public partial class Commands
 		}
 		catch (Exception ex)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeErrorExecutingFormat), ex.Message);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeErrorExecutingFormat), executor, ex.Message);
 			return new CallState($"#-1 ERROR: {ex.Message}");
 		}
 		finally
@@ -5973,7 +5973,7 @@ public partial class Commands
 
 		if (switches.Except(sendSwitches).Any() && switches.Length > 1)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MailTooManySwitches));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MailTooManySwitches), executor);
 			return new CallState(Errors.ErrorTooManySwitches);
 		}
 
@@ -6053,7 +6053,7 @@ public partial class Commands
 
 		if (args.Count < 2)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -6123,7 +6123,7 @@ public partial class Commands
 
 		if (!executor.IsPlayer)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PasswordOnlyPlayersHavePasswords));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PasswordOnlyPlayersHavePasswords), executor);
 			return new CallState("#-1 INVALID OBJECT TYPE.");
 		}
 
@@ -6131,7 +6131,7 @@ public partial class Commands
 			executor.AsPlayer.PasswordHash);
 		if (!isValidPassword)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PasswordInvalid));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PasswordInvalid), executor);
 			return new CallState("#-1 INVALID PASSWORD.");
 		}
 
@@ -6154,7 +6154,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -6182,14 +6182,14 @@ public partial class Commands
 				}
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsRestarted));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsRestarted), executor);
 			return CallState.Empty;
 		}
 
 		// Get target object
 		if (args.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartMustSpecifyObject));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartMustSpecifyObject), executor);
 			return new CallState("#-1 NO OBJECT SPECIFIED");
 		}
 
@@ -6213,7 +6213,7 @@ public partial class Commands
 		// Check control permissions
 		if (!await PermissionService!.Controls(executor, target))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(Errors.ErrorPerm);
 		}
 
@@ -6252,11 +6252,11 @@ public partial class Commands
 				}
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat), targetObject.Name);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat), executor, targetObject.Name);
 		}
 		else
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartedObjectFormat), targetObject.Name);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartedObjectFormat), executor, targetObject.Name);
 		}
 
 		// Trigger @STARTUP attribute if it exists (never inherited per PennMUSH spec)
@@ -6295,7 +6295,7 @@ public partial class Commands
 		// ROOM sweep
 		if (!inventoryFlag && !exitsFlag)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningInRoom));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningInRoom), executor);
 
 			if (connectFlag)
 			{
@@ -6303,11 +6303,11 @@ public partial class Commands
 				{
 					if (location.IsPlayer)
 					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), locationObj.Name);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, locationObj.Name);
 					}
 					else
 					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), locationObj.Name, locationOwner.Object.Name);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, locationObj.Name, locationOwner.Object.Name);
 					}
 				}
 			}
@@ -6317,15 +6317,15 @@ public partial class Commands
 						await locationAnyObject.IsListener())
 				{
 					if (await ConnectionService!.IsConnected(locationAnyObject))
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomSpeechConnectedFormat), locationObj.Name);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomSpeechConnectedFormat), executor, locationObj.Name);
 					else
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomSpeechFormat), locationObj.Name);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomSpeechFormat), executor, locationObj.Name);
 				}
 
 				if (await locationAnyObject.HasActiveCommands(AttributeService!))
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomCommandsFormat), locationObj.Name);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomCommandsFormat), executor, locationObj.Name);
 				if (await locationAnyObject.IsAudible())
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomBroadcastingFormat), locationObj.Name);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomBroadcastingFormat), executor, locationObj.Name);
 			}
 
 			// Contents of the room
@@ -6340,11 +6340,11 @@ public partial class Commands
 					{
 						if (obj.IsPlayer)
 						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, obj.Object().Name);
 						}
 						else
 						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), obj.Object().Name, objOwner.Object.Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object().Name, objOwner.Object.Name);
 						}
 					}
 				}
@@ -6353,13 +6353,13 @@ public partial class Commands
 					if (await fullObj.IsHearer(ConnectionService!, AttributeService!) || await fullObj.IsListener())
 					{
 						if (await ConnectionService!.IsConnected(fullObj))
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), executor, obj.Object().Name);
 						else
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), executor, obj.Object().Name);
 					}
 
 					if (await fullObj.HasActiveCommands(AttributeService!))
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), obj.Object().Name);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, obj.Object().Name);
 				}
 			}
 		}
@@ -6367,7 +6367,7 @@ public partial class Commands
 		// EXITS sweep (only if not connectFlag and not inventoryFlag and location is a room)
 		if (!connectFlag && !inventoryFlag && location.IsRoom && exitsFlag)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningExits));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningExits), executor);
 			if (await locationAnyObject.IsAudible())
 			{
 				var exits = (location.Content(Mediator!)).Where(x => x.IsExit);
@@ -6375,7 +6375,7 @@ public partial class Commands
 				{
 					if (await exit.WithRoomOption().IsAudible())
 					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepExitBroadcastingFormat), exit.Object().Name);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepExitBroadcastingFormat), executor, exit.Object().Name);
 					}
 				}
 			}
@@ -6384,7 +6384,7 @@ public partial class Commands
 		// INVENTORY sweep (if not hereFlag and not exitFlag)
 		if (!hereFlag && !exitsFlag && inventoryFlag)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningInInventory));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningInInventory), executor);
 			await foreach (var obj in executor.AsContainer.Content(Mediator!))
 			{
 				var fullObj = obj.WithRoomOption();
@@ -6395,11 +6395,11 @@ public partial class Commands
 					{
 						if (obj.IsPlayer)
 						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, obj.Object().Name);
 						}
 						else
 						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), obj.Object().Name, objOwner.Object.Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object().Name, objOwner.Object.Name);
 						}
 					}
 				}
@@ -6408,13 +6408,13 @@ public partial class Commands
 					if (await fullObj.IsHearer(ConnectionService!, AttributeService!) || await fullObj.IsListener())
 					{
 						if (await ConnectionService!.IsConnected(fullObj))
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), executor, obj.Object().Name);
 						else
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), executor, obj.Object().Name);
 					}
 
 					if (await fullObj.HasActiveCommands(AttributeService!))
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), obj.Object().Name);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, obj.Object().Name);
 				}
 			}
 		}
@@ -6465,14 +6465,14 @@ public partial class Commands
 
 		if (!args.TryGetValue("0", out var predicate))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RetryUsage));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RetryUsage), executor);
 			return new CallState("#-1 RETRY: NO CONDITION PROVIDED.");
 		}
 
 		var commandHistory = parser.CurrentState.CommandHistory;
 		if (commandHistory == null || commandHistory.Count < 2)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RetryNothingToRetry));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RetryNothingToRetry), executor);
 			return new CallState("#-1 RETRY: NO COMMAND TO RETRY.");
 		}
 
@@ -6607,7 +6607,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -6626,30 +6626,30 @@ public partial class Commands
 
 			if (matchingEntries.Length == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNoMatchPatternFormat), pattern);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNoMatchPatternFormat), executor, pattern);
 				return CallState.Empty;
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileHeaderFormat), matchingEntries.Length, pattern);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileHeaderFormat), executor, matchingEntries.Length, pattern);
 
 			// Output @attribute/access command for each matching attribute
 			foreach (var entry in matchingEntries.OrderBy(e => e.Name))
 			{
 				var flagList = string.Join(" ", entry.DefaultFlags);
 				var retroFlag = retroactive ? "/retroactive" : "";
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileAccessFormat), retroFlag, entry.Name, flagList);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileAccessFormat), executor, retroFlag, entry.Name, flagList);
 
 				// Include limit pattern if present
 				if (!string.IsNullOrEmpty(entry.Limit))
 				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileLimitFormat), entry.Name, entry.Limit);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileLimitFormat), executor, entry.Name, entry.Limit);
 				}
 
 				// Include enum values if present
 				if (entry.Enum != null && entry.Enum.Length > 0)
 				{
 					var enumList = string.Join(" ", entry.Enum);
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileEnumFormat), entry.Name, enumList);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileEnumFormat), executor, entry.Name, enumList);
 				}
 			}
 
@@ -6659,14 +6659,14 @@ public partial class Commands
 		// All other operations require at least one argument
 		if (args.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyAttribute));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyAttribute), executor);
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
 
 		var attrName = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(attrName))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyAttribute));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyAttribute), executor);
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
 
@@ -6675,13 +6675,13 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
 			if (args.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyFlags));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyFlags), executor);
 				return new CallState("#-1 NO FLAGS SPECIFIED");
 			}
 
@@ -6699,7 +6699,7 @@ public partial class Commands
 			{
 				if (!allFlags.Any(f => f.Name.Equals(flagName, StringComparison.OrdinalIgnoreCase)))
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandUnknownFlagFormat), flagName);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandUnknownFlagFormat), executor, flagName);
 					return new CallState("#-1 UNKNOWN FLAG");
 				}
 			}
@@ -6708,18 +6708,18 @@ public partial class Commands
 			var entry = await Mediator!.Send(new CreateAttributeEntryCommand(attrName.ToUpper(), flagNames));
 			if (entry == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandFailedToCreate));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandFailedToCreate), executor);
 				return new CallState("#-1 CREATE FAILED");
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandPermissionsNowFormat), attrName.ToUpperInvariant(), string.Join(" ", flagNames.Select(f => f.ToLowerInvariant())));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandPermissionsNowFormat), executor, attrName.ToUpperInvariant(), string.Join(" ", flagNames.Select(f => f.ToLowerInvariant())));
 
 			// TODO: Retroactive flag updates to existing attribute instances.
 			// When /retroactive is set, should update flags on all existing copies of this attribute
 			// across all objects in the database. Requires bulk update operation.
 			if (retroactive)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRetroactiveNotImplemented));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRetroactiveNotImplemented), executor);
 			}
 
 			return CallState.Empty;
@@ -6729,7 +6729,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -6738,12 +6738,12 @@ public partial class Commands
 
 			if (deleted)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRemovedFromTableFormat), attrName);
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandExistingCopiesRemain));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRemovedFromTableFormat), executor, attrName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandExistingCopiesRemain), executor);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotFoundInTableFormat), attrName);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotFoundInTableFormat), executor, attrName);
 				return new CallState("#-1 NOT FOUND");
 			}
 
@@ -6754,20 +6754,20 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
 			if (args.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyNewName));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyNewName), executor);
 				return new CallState("#-1 NO NEW NAME SPECIFIED");
 			}
 
 			var newName = args["1"].Message?.ToPlainText();
 			if (string.IsNullOrEmpty(newName))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyNewName));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyNewName), executor);
 				return new CallState("#-1 NO NEW NAME SPECIFIED");
 			}
 
@@ -6776,12 +6776,12 @@ public partial class Commands
 
 			if (renamed != null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRenamedFormat), attrName, newName);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRenamedFormat), executor, attrName, newName);
 				// Note: Existing attribute instances keep their original names - this only affects new instances
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotFoundInTableFormat), attrName);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotFoundInTableFormat), executor, attrName);
 				return new CallState("#-1 NOT FOUND");
 			}
 
@@ -6792,27 +6792,27 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
 			if (args.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyPattern));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyPattern), executor);
 				return new CallState("#-1 NO PATTERN SPECIFIED");
 			}
 
 			var pattern = args["1"].Message?.ToPlainText();
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitSettingPatternFormat), attrName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitPatternFormat), pattern ?? string.Empty);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitNewValuesMustMatch));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitSettingPatternFormat), executor, attrName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitPatternFormat), executor, pattern ?? string.Empty);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitNewValuesMustMatch), executor);
 
 			// TODO: Attribute validation via regex patterns.
 			// Requirements:
 			// - Store regexp pattern with attribute in table
 			// - Validate all new attribute values against pattern
 			// - Pattern is case insensitive unless (?-i) is used
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandValidationNotImplemented));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandValidationNotImplemented), executor);
 
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
@@ -6821,13 +6821,13 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
 			if (args.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyChoices));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyChoices), executor);
 				return new CallState("#-1 NO CHOICES SPECIFIED");
 			}
 
@@ -6837,7 +6837,7 @@ public partial class Commands
 			// Validate that after parsing, we have actual choices (not just whitespace)
 			if (choiceArray.Length == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyAtLeastOneChoice));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyAtLeastOneChoice), executor);
 				return new CallState("#-1 NO CHOICES SPECIFIED");
 			}
 
@@ -6856,13 +6856,13 @@ public partial class Commands
 
 			if (enumAttrEntry == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandFailedToUpdate));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandFailedToUpdate), executor);
 				return new CallState("#-1 UPDATE FAILED");
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumSetChoicesFormat), attrName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumChoicesFormat), string.Join(" ", choiceArray));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumNewValuesMustMatch));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumSetChoicesFormat), executor, attrName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumChoicesFormat), executor, string.Join(" ", choiceArray));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumNewValuesMustMatch), executor);
 
 			return CallState.Empty;
 		}
@@ -6872,32 +6872,32 @@ public partial class Commands
 
 		if (attrEntry == null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotFoundNotErrorFormat), attrName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotFoundNotError2));
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotFoundNotErrorFormat), executor, attrName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotFoundNotError2), executor);
 			return CallState.Empty;
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandInfoFormat), attrEntry.Name);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandInfoFormat), executor, attrEntry.Name);
 
 		// Display default flags if any
 		if (attrEntry.DefaultFlags.Any())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDefaultFlagsFormat), string.Join(" ", attrEntry.DefaultFlags));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDefaultFlagsFormat), executor, string.Join(" ", attrEntry.DefaultFlags));
 		}
 		else
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDefaultFlagsNone));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDefaultFlagsNone), executor);
 		}
 
 		// Show validation rules if set
 		if (!string.IsNullOrEmpty(attrEntry.Limit))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitPatternValueFormat), attrEntry.Limit);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitPatternValueFormat), executor, attrEntry.Limit);
 		}
 
 		if (attrEntry.Enum != null && attrEntry.Enum.Any())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumValuesFormat), string.Join(" ", attrEntry.Enum));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumValuesFormat), executor, string.Join(" ", attrEntry.Enum));
 		}
 
 		return CallState.Empty;
