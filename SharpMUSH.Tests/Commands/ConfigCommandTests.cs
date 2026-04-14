@@ -91,11 +91,8 @@ public class ConfigCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@listmotd"));
 
-		// Should notify with MOTD settings
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Message of the Day settings")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// Should notify with MOTD settings header
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ListMotdCurrentSettingsHeader), executor, executor)).IsTrue();
 	}
 
 	[Test]
