@@ -337,10 +337,8 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll"));
 
-		await Assert.That(
-			TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PollNoPollMessage), executor, executor) ||
-			TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PollCurrentMessageFormat), executor, executor)
-		).IsTrue();
+		// Fresh DB has no poll message set, so PollNoPollMessage is always sent.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PollNoPollMessage), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -480,10 +478,8 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@readcache"));
 
-		await Assert.That(
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ReadCacheReindexing), executor, executor) ||
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ReadCacheCompleteFormat), executor, executor)
-).IsTrue();
+		// ReadCacheReindexing is always sent before the try/catch, so it is deterministic.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ReadCacheReindexing), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -492,10 +488,8 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown"));
 
-		await Assert.That(
-			TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ShutdownInitiated), executor, executor) ||
-			TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ShutdownNoteWebApp), executor, executor)
-		).IsTrue();
+		// No switch → else branch sends ShutdownInitiated, then ShutdownNoteWebApp is always sent.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ShutdownInitiated), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -504,10 +498,8 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown/reboot"));
 
-		await Assert.That(
-			TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ShutdownRebootInitiated), executor, executor) ||
-			TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ShutdownNoteWebApp), executor, executor)
-		).IsTrue();
+		// /reboot switch → ShutdownRebootInitiated is sent in the REBOOT branch.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ShutdownRebootInitiated), executor, executor)).IsTrue();
 	}
 
 	[Test]

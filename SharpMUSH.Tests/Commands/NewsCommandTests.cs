@@ -54,14 +54,11 @@ public class NewsCommandTests
 	public async ValueTask NewsWithWildcardWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test news with wildcard pattern - should list matching topics
-		await Parser.CommandParse(1, ConnectionService, MModule.single("news *news*"));
+		// Use a pattern that matches no topics → NewsNoNewsForTopic is deterministically sent.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("news *xyznonexistent99*"));
 
-		// Verify that NotifyService was called with matching topics or "No news available"
-		await Assert.That(
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NewsNoEntriesFoundContaining), executor, executor) ||
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NewsTopicsMatchingFormat), executor, executor)
-).IsTrue();
+		// Wildcard with 0 matches sends NewsNoNewsForTopic.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), executor, executor)).IsTrue();
 	}
 
 	[Test]

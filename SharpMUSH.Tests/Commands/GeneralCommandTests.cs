@@ -346,11 +346,8 @@ public class GeneralCommandTests
 		// Test @restart with a valid object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart #1"));
 
-		// Should notify about restart
-		await Assert.That(
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.RestartedObjectFormat), executor, executor) ||
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat), executor, executor)
-).IsTrue();
+		// @restart #1 targets the God player (#1 is a player) → RestartedPlayerAndObjectsFormat is always sent.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -439,11 +436,8 @@ public class GeneralCommandTests
 		var uniqueAttr = $"MAPATTR_{Guid.NewGuid():N}";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@map {mapObj}/{uniqueAttr}=foo bar baz"));
 
-		// Should notify about mapping
-		await Assert.That(
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MapWouldIterateFormat), executor, executor) ||
-    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat), executor, executor)
-).IsTrue();
+		// MapWouldIterateFormat is always sent before attribute lookup (before the try/get attribute).
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MapWouldIterateFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
