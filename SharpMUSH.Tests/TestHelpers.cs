@@ -137,23 +137,6 @@ public static class TestHelpers
 	/// Checks whether a <c>NotifyLocalized</c> call with the given resource <paramref name="key"/>
 	/// was received on the mock.
 	/// <para>
-	/// <c>NotifyLocalized(who, key, args)</c> carries only a <em>receiver</em> (<c>who</c>) and has
-	/// no separate sender parameter — unlike the four-argument <c>Notify(receiver, msg, sender, type)</c>
-	/// overload.  Use <paramref name="receiverDbRef"/> to assert the object that is being notified.
-	/// </para>
-	/// This helper bypasses NSubstitute's params-expansion issue by inspecting
-	/// <see cref="ICallRouter.ReceivedCalls"/> directly.
-	/// </summary>
-	/// <param name="notifyService">The mocked <see cref="INotifyService"/> instance.</param>
-	/// <param name="key">The resource key passed to <c>NotifyLocalized</c>.</param>
-	/// <param name="receiverDbRef">
-	///   When non-null, constrains the match to calls whose first argument (the <em>receiver</em>)
-	///   resolves to this <see cref="DBRef"/>.
-	/// </param>
-	/// <summary>
-	/// Checks whether a <c>NotifyLocalized</c> call with the given resource <paramref name="key"/>
-	/// was received on the mock.
-	/// <para>
 	/// Use <paramref name="receiverDbRef"/> to assert the object being notified.
 	/// Use <paramref name="senderDbRef"/> to additionally verify the sender (only matches calls
 	/// using the sender-bearing <c>NotifyLocalized(who, key, sender, args)</c> overload).
@@ -187,5 +170,6 @@ public static class TestHelpers
 				 (c.GetArguments()[0] is DBRef d && d == receiverDbRef)) &&
 				(senderDbRef == null ||
 				 (c.GetArguments().Length >= 3 &&
-				  c.GetArguments()[2] is AnySharpObject sObj && sObj.Object().DBRef == senderDbRef)));
+				  ((c.GetArguments()[2] is AnySharpObject sObj && sObj.Object().DBRef == senderDbRef) ||
+				   (c.GetArguments()[2] is DBRef sd && sd == senderDbRef)))));
 }
