@@ -335,10 +335,13 @@ public class WizardCommandTests
 	public async ValueTask PollCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll"));
+		// Set a poll message first so we can verify the display path.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll WizardPollDisplay999"));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PollMessageSet), executor, executor)).IsTrue();
 
-		// Fresh DB has no poll message set, so PollNoPollMessage is always sent.
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PollNoPollMessage), executor, executor)).IsTrue();
+		// Now display the current poll — should report the message we just set.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll"));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PollCurrentMessageFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]

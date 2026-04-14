@@ -211,9 +211,10 @@ public class DebugVerboseTests
 				// Legacy Notify path
 				if (args[1] is OneOf<MString, string> msg)
 					return msg.Match(m => m.ToString().Contains("DiagDebugThing"), s => s.Contains("DiagDebugThing"));
-				// NotifyLocalized path - check the params array
-				if (args[1] is string && args.Length > 2 && args[2] is object[] notifyArgs)
-					return notifyArgs.Any(a => a?.ToString()?.Contains("DiagDebugThing") == true);
+				// NotifyLocalized path with sender overload: (who, key, sender, params object[] formatArgs)
+				// args[3] is the params array: [name, dbref]
+				if (args[1] is string && args.Length > 3 && args[3] is object[] formatArgs)
+					return formatArgs.Any(a => a?.ToString()?.Contains("DiagDebugThing") == true);
 				return false;
 			});
 
@@ -225,9 +226,11 @@ public class DebugVerboseTests
 		{
 			createMsg = omsg.Match(m => m.ToString(), s => s);
 		}
-		else if (createArgs[1] is string && createArgs.Length > 2 && createArgs[2] is object[] notifyArgs && notifyArgs.Length > 1)
+		else if (createArgs[1] is string && createArgs.Length > 3 && createArgs[3] is object[] fmtArgs && fmtArgs.Length > 1)
 		{
-			createMsg = notifyArgs[1]?.ToString() ?? string.Empty;
+			// NotifyLocalized with sender: (who, key, sender, params object[] {name, dbref})
+			// fmtArgs[1] is the DBRef object → ToString() = "#N"
+			createMsg = fmtArgs[1]?.ToString() ?? string.Empty;
 		}
 		else
 		{

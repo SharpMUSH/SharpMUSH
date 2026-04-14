@@ -853,7 +853,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty()).ToString();
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToString();
 
 		// Get current MOTD data
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
@@ -1313,7 +1313,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty()).ToString();
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToString();
 
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
 
@@ -2597,7 +2597,7 @@ public partial class Commands
 				shouldNotify: true);
 		}
 
-		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty()).ToString();
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToString();
 		var newData = pollData with { Message = argText };
 		await ObjectDataService!.SetExpandedServerDataAsync(newData, ignoreNull: true);
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PollMessageSet), executor);
@@ -2642,7 +2642,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty()).ToString();
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToString();
 
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
 
