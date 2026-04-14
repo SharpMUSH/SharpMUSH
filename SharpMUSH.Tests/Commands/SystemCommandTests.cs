@@ -129,12 +129,7 @@ public class SystemCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@attribute/access {uniqueAttr}=wizard"));
 
-		await NotifyService
-			.Received()
-			.Notify(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageEquals(msg, $"{uniqueAttr} -- Attribute permissions now: wizard")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCommandPermissionsNowFormat))).IsTrue();
 	}
 
 	// PennMUSH reference: do_atrlock on success outputs "Attribute locked." (attrib.c).

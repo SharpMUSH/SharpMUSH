@@ -139,7 +139,7 @@ public class AhelpCommandTests
 		// Test ahelp with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp nonexistenttopicxyz123"));
 
-		// Verify that NotifyService was called with "No admin help available"
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AhelpNoHelpAvailable), executor)).IsTrue();
+		// Verify that NotifyService was called with "No admin help available for '<topic>'"
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AhelpNoHelpForTopic), executor)).IsTrue();
 	}
 }

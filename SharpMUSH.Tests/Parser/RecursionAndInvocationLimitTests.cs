@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -344,11 +345,8 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService,
 			MModule.single($"@include {objDbRef}/INCLUDETEST_RECUR_LIM_UNIQUE"));
 
-		// The recursion-error string is treated as an unknown command → "Huh?" notification
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Huh?  (Type \"help\" for help.)")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// The recursion-error string is treated as an unknown command → "Huh?" notification (sent via NotifyLocalized)
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.HuhTypeHelp), executor)).IsTrue();
 	}
 
 	/// <summary>
@@ -371,13 +369,9 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService,
 			MModule.single($"@trigger {objDbRef}/SELFCALL_TRIG_LIM_UNIQUE"));
 
-		// At least one notification must have been dispatched (Huh? from unknown command).
-		// @trigger runs the attribute with the triggered object as executor, so the Huh?
-		// notification goes to the thing (objDbRef), not the player.
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Huh?  (Type \"help\" for help.)")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
+		// At least one notification must have been dispatched (Huh? from unknown command, sent via NotifyLocalized).
+		// @trigger runs the attribute with the triggered object as executor.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.HuhTypeHelp), objDbRef)).IsTrue();
 	}
 
 	/// <summary>

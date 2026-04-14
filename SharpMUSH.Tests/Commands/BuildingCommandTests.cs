@@ -355,10 +355,8 @@ public class BuildingCommandTests
 		var parentOfC = await objC.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfC.IsNone).IsTrue();
 
-		// Verify notification was sent about the cycle
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// Verify notification was sent about the cycle (via NotifyLocalized)
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor)).IsTrue();
 	}
 
 	[Test]
@@ -378,10 +376,8 @@ public class BuildingCommandTests
 		var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parent.IsNone).IsTrue();
 
-		// Verify notification was sent about the cycle
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular") || TestHelpers.MessageContains(s, "itself")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// Verify notification was sent about the cycle (via NotifyLocalized)
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor)).IsTrue();
 	}
 
 	[Test]
@@ -420,10 +416,8 @@ public class BuildingCommandTests
 		var parentOf4 = await obj4.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOf4.IsNone).IsTrue();
 
-		// Verify notification was sent about the cycle
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// Verify notification was sent about the cycle (via NotifyLocalized)
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor)).IsTrue();
 	}
 
 	[Test]

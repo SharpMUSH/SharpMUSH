@@ -260,7 +260,8 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@wipe {objDbRef}/WIPE*_UNIQUE"));
 
 		// Verify command sent notification about wiping with the pattern
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributesWiped), executor)).IsTrue();
+		// Pattern-based wipe sends WipedAttributes (with the pattern), not AttributesWiped
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.WipedAttributes), executor)).IsTrue();
 
 		// Verify they're gone
 		var attr1After = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "WIPE1_UNIQUE",

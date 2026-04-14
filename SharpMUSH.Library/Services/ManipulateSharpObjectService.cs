@@ -513,7 +513,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.ParentLoopCannotAdd);
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ParentLoopCannotAdd));
 			}
 
 			return Errors.ParentLoop;
@@ -523,7 +523,7 @@ public class ManipulateSharpObjectService(
 
 		if (notify)
 		{
-			await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.ParentSet);
+			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ParentSet));
 		}
 
 		return true;
