@@ -135,20 +135,31 @@ public static class TestHelpers
 
 	/// <summary>
 	/// Checks whether a <c>NotifyLocalized</c> call with the given resource <paramref name="key"/>
-	/// was received on the mock, optionally constrained to a specific <paramref name="executorDbRef"/>.
+	/// was received on the mock.
+	/// <para>
+	/// <c>NotifyLocalized(who, key, args)</c> carries only a <em>receiver</em> (<c>who</c>) and has
+	/// no separate sender parameter — unlike the four-argument <c>Notify(receiver, msg, sender, type)</c>
+	/// overload.  Use <paramref name="receiverDbRef"/> to assert the object that is being notified.
+	/// </para>
 	/// This helper bypasses NSubstitute's params-expansion issue by inspecting
 	/// <see cref="ICallRouter.ReceivedCalls"/> directly.
 	/// </summary>
+	/// <param name="notifyService">The mocked <see cref="INotifyService"/> instance.</param>
+	/// <param name="key">The resource key passed to <c>NotifyLocalized</c>.</param>
+	/// <param name="receiverDbRef">
+	///   When non-null, constrains the match to calls whose first argument (the <em>receiver</em>)
+	///   resolves to this <see cref="DBRef"/>.
+	/// </param>
 	public static bool ReceivedNotifyLocalizedWithKey(
 		INotifyService notifyService,
 		string key,
-		DBRef? executorDbRef = null) =>
+		DBRef? receiverDbRef = null) =>
 		notifyService.ReceivedCalls()
 			.Any(c =>
 				c.GetMethodInfo().Name == "NotifyLocalized" &&
 				c.GetArguments().Length >= 2 &&
 				c.GetArguments()[1] is string k && k == key &&
-				(executorDbRef == null ||
-				 (c.GetArguments()[0] is AnySharpObject obj && obj.Object().DBRef == executorDbRef) ||
-				 (c.GetArguments()[0] is DBRef d && d == executorDbRef)));
+				(receiverDbRef == null ||
+				 (c.GetArguments()[0] is AnySharpObject obj && obj.Object().DBRef == receiverDbRef) ||
+				 (c.GetArguments()[0] is DBRef d && d == receiverDbRef)));
 }
