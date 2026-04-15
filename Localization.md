@@ -107,10 +107,23 @@ ValueTask NotifyLocalized(AnySharpObject who, string key, params object[] args);
 
 // Target: a single connection handle
 ValueTask NotifyLocalized(long handle, string key, params object[] args);
+
+// Sender-bearing overloads (enable listener routing):
+ValueTask NotifyLocalized(DBRef who, string key, AnySharpObject? sender, params object[] args);
+ValueTask NotifyLocalized(AnySharpObject who, string key, AnySharpObject? sender, params object[] args);
+ValueTask NotifyLocalized(long handle, string key, AnySharpObject? sender, params object[] args);
 ```
 
-The sender parameter is intentionally omitted — system notifications should not
-trigger listener routing.
+`NotifyLocalized()` has both senderless and sender-bearing overloads.
+Use the **sender-bearing overloads** when the notification originates from a
+specific in-game object or actor and listener routing should take that sender
+into account. Use the **senderless overloads** for true system messages, service
+notifications, or any case where there is no meaningful sender and listener
+routing should not be attributed to an object.
+
+In short: if sender identity affects who should hear the message or how
+listeners evaluate it, pass a sender; if the message is purely system-generated,
+use the senderless overloads.
 
 ### ILocalizationService interface
 

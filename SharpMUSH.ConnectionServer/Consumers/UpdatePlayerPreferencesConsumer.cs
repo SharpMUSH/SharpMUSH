@@ -25,11 +25,13 @@ public class UpdatePlayerPreferencesConsumer(
 
 		try
 		{
-			// Update the connection's preferences
+			// Update the connection's preferences, preserving the existing locale
+			var existingPreferences = connection.Preferences;
 			var updatedPreferences = new PlayerOutputPreferences(
 				AnsiEnabled: message.AnsiEnabled,
 				ColorEnabled: message.ColorEnabled,
-				Xterm256Enabled: message.Xterm256Enabled
+				Xterm256Enabled: message.Xterm256Enabled,
+				Locale: existingPreferences?.Locale ?? "en"
 			);
 
 			// Update in the connection service

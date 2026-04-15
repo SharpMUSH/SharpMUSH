@@ -460,7 +460,7 @@ public class ManipulateSharpObjectService(
 
 		if (notify && powersCleared > 0)
 		{
-			await notifyService.Notify(executor, string.Format(Definitions.ErrorMessages.Notifications.ClearedPowersFromFormat, powersCleared, obj.Object().Name));
+			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ClearedPowersFromFormat), executor, powersCleared, obj.Object().Name);
 		}
 
 		return true;

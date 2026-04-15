@@ -24,7 +24,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), parser.CurrentState.Executor!.Value);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -75,7 +75,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), parser.CurrentState.Executor!.Value);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -128,7 +128,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), parser.CurrentState.Executor!.Value);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 

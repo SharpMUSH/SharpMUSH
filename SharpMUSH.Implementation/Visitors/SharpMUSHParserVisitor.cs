@@ -1105,11 +1105,11 @@ public class SharpMUSHParserVisitor(
 			{
 			if (clearResult.TryPickT0(out _, out var clearError))
 			{
-				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared), clearTargetObject.Object().Name, matchedEntry.Name);
+				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared), clearExecutor, clearTargetObject.Object().Name, matchedEntry.Name);
 			}
 			else
 			{
-				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), clearError.Value);
+				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), clearExecutor, clearError.Value);
 			}
 			}
 
@@ -1156,11 +1156,11 @@ public class SharpMUSHParserVisitor(
 		{
 			if (setResult.TryPickT0(out _, out var error))
 			{
-				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet), targetObject.Object().Name, matchedEntry.Name);
+				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet), executor, targetObject.Object().Name, matchedEntry.Name);
 			}
 			else
 			{
-				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), error.Value);
+				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), executor, error.Value);
 			}
 		}
 

@@ -3,21 +3,16 @@
 Transforms Notify( calls that use ErrorMessages.Notifications.* constants into
 NotifyLocalized( calls that look up the key by name.
 
-Handles four patterns:
+Handles two patterns (only for 2-argument Notify calls):
   1. .Notify(target, ErrorMessages.Notifications.Key)
      → .NotifyLocalized(target, nameof(ErrorMessages.Notifications.Key))
 
-  2. .Notify(target, ErrorMessages.Notifications.Key, sender)
-     → .NotifyLocalized(target, nameof(ErrorMessages.Notifications.Key))
-        (sender dropped — system messages shouldn't trigger listener routing)
-
-  3. .Notify(target, string.Format(ErrorMessages.Notifications.Key, arg1, ...))
+  2. .Notify(target, string.Format(ErrorMessages.Notifications.Key, arg1, ...))
      → .NotifyLocalized(target, nameof(ErrorMessages.Notifications.Key), arg1, ...)
 
-  4. .Notify(target, string.Format(ErrorMessages.Notifications.Key, arg1, ...), sender)
-     → .NotifyLocalized(target, nameof(ErrorMessages.Notifications.Key), arg1, ...)
-
-Skips: .NotifyLocalized(, .NotifyAndReturn(, .NotifyExcept(
+Skips any Notify call with more than 2 top-level arguments (e.g., calls that
+include a sender or NotificationType parameter) to avoid silently dropping
+those arguments. Skips: .NotifyLocalized(, .NotifyAndReturn(, .NotifyExcept(
 """
 
 import re
