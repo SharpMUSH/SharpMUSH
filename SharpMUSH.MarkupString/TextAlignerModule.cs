@@ -16,17 +16,16 @@ public static class TextAlignerModule
 
     private static (int SplitPoint, bool FoundSpace) FindWrapPoint(global::MarkupString.MarkupString text, int width)
     {
-        int splitPoint = width;
-        bool foundSpace = false;
-        for (int i = width; i >= 0 && !foundSpace; i--)
+        var plainText = text.ToPlainText().AsSpan();
+        var searchStart = Math.Min(width, plainText.Length - 1);
+
+        for (var i = searchStart; i >= 0; i--)
         {
-            if (i < text.Length && MarkupStringModule.plainText(MarkupStringModule.substring(i, 1, text)) == " ")
-            {
-                splitPoint = i;
-                foundSpace = true;
-            }
+            if (plainText[i] == ' ')
+                return (i, true);
         }
-        return (splitPoint, foundSpace);
+
+        return (width, false);
     }
 
     private static global::MarkupString.MarkupString ApplyRepeatOption(

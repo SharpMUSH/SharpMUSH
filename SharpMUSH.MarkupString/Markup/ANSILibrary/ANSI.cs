@@ -1,6 +1,8 @@
 // Converted from ANSI.fs — ANSILibrary namespace
 // Original: https://github.com/WilliamRagstad/ANSIConsole/blob/main/ANSIConsole/
 using System;
+using System.Collections.Frozen;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -40,6 +42,41 @@ public static class ANSI
 {
     private const string ESC = "\u001b";
     private const string CSI = ESC + "[";
+    private static readonly FrozenDictionary<int, Color> AnsiPalette = new Dictionary<int, Color>
+    {
+        [30] = Color.FromArgb(0, 0, 0),
+        [31] = Color.FromArgb(170, 0, 0),
+        [32] = Color.FromArgb(0, 170, 0),
+        [33] = Color.FromArgb(170, 85, 0),
+        [34] = Color.FromArgb(0, 0, 170),
+        [35] = Color.FromArgb(170, 0, 170),
+        [36] = Color.FromArgb(0, 170, 170),
+        [37] = Color.FromArgb(170, 170, 170),
+        [40] = Color.FromArgb(0, 0, 0),
+        [41] = Color.FromArgb(170, 0, 0),
+        [42] = Color.FromArgb(0, 170, 0),
+        [43] = Color.FromArgb(170, 85, 0),
+        [44] = Color.FromArgb(0, 0, 170),
+        [45] = Color.FromArgb(170, 0, 170),
+        [46] = Color.FromArgb(0, 170, 170),
+        [47] = Color.FromArgb(170, 170, 170),
+        [90] = Color.FromArgb(85, 85, 85),
+        [91] = Color.FromArgb(255, 85, 85),
+        [92] = Color.FromArgb(85, 255, 85),
+        [93] = Color.FromArgb(255, 255, 85),
+        [94] = Color.FromArgb(85, 85, 255),
+        [95] = Color.FromArgb(255, 85, 255),
+        [96] = Color.FromArgb(85, 255, 255),
+        [97] = Color.FromArgb(255, 255, 255),
+        [100] = Color.FromArgb(85, 85, 85),
+        [101] = Color.FromArgb(255, 85, 85),
+        [102] = Color.FromArgb(85, 255, 85),
+        [103] = Color.FromArgb(255, 255, 85),
+        [104] = Color.FromArgb(85, 85, 255),
+        [105] = Color.FromArgb(255, 85, 255),
+        [106] = Color.FromArgb(85, 255, 255),
+        [107] = Color.FromArgb(255, 255, 255),
+    }.ToFrozenDictionary();
 
     private static string SGR(params byte[] codes) =>
         CSI + string.Join(";", Array.ConvertAll(codes, c => c.ToString())) + "m";
@@ -79,49 +116,16 @@ public static class ANSI
     /// </summary>
     public static Color AnsiToRgb(byte[] ansiBytes)
     {
-        int colorCode = ansiBytes.Length switch
+        ReadOnlySpan<byte> codeSpan = ansiBytes;
+        int colorCode = codeSpan.Length switch
         {
-            1 => ansiBytes[0],
-            2 => ansiBytes[1],
+            1 => codeSpan[0],
+            >= 2 => codeSpan[1],
             _ => 0
         };
-
-        return colorCode switch
-        {
-            30  => Color.FromArgb(0, 0, 0),
-            31  => Color.FromArgb(170, 0, 0),
-            32  => Color.FromArgb(0, 170, 0),
-            33  => Color.FromArgb(170, 85, 0),
-            34  => Color.FromArgb(0, 0, 170),
-            35  => Color.FromArgb(170, 0, 170),
-            36  => Color.FromArgb(0, 170, 170),
-            37  => Color.FromArgb(170, 170, 170),
-            40  => Color.FromArgb(0, 0, 0),
-            41  => Color.FromArgb(170, 0, 0),
-            42  => Color.FromArgb(0, 170, 0),
-            43  => Color.FromArgb(170, 85, 0),
-            44  => Color.FromArgb(0, 0, 170),
-            45  => Color.FromArgb(170, 0, 170),
-            46  => Color.FromArgb(0, 170, 170),
-            47  => Color.FromArgb(170, 170, 170),
-            90  => Color.FromArgb(85, 85, 85),
-            91  => Color.FromArgb(255, 85, 85),
-            92  => Color.FromArgb(85, 255, 85),
-            93  => Color.FromArgb(255, 255, 85),
-            94  => Color.FromArgb(85, 85, 255),
-            95  => Color.FromArgb(255, 85, 255),
-            96  => Color.FromArgb(85, 255, 255),
-            97  => Color.FromArgb(255, 255, 255),
-            100 => Color.FromArgb(85, 85, 85),
-            101 => Color.FromArgb(255, 85, 85),
-            102 => Color.FromArgb(85, 255, 85),
-            103 => Color.FromArgb(255, 255, 85),
-            104 => Color.FromArgb(85, 85, 255),
-            105 => Color.FromArgb(255, 85, 255),
-            106 => Color.FromArgb(85, 255, 255),
-            107 => Color.FromArgb(255, 255, 255),
-            _   => Color.FromArgb(0, 0, 0),
-        };
+        return AnsiPalette.TryGetValue(colorCode, out var color)
+            ? color
+            : Color.FromArgb(0, 0, 0);
     }
 }
 
