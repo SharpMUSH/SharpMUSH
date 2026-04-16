@@ -56,20 +56,14 @@ public static class AnsiCodeParser
 				{
 					yield return input[i..(end + 1)];
 					i = end + 1;
+					continue;
 				}
-				else
-				{
-					int start = i;
-					while (i < input.Length && input[i] != ' ') i++;
-					yield return input[start..i];
-				}
+				// No closing '>' — fall through and consume as a plain token.
 			}
-			else
-			{
-				int start = i;
-				while (i < input.Length && input[i] != ' ') i++;
-				yield return input[start..i];
-			}
+
+			int start = i;
+			while (i < input.Length && input[i] != ' ') i++;
+			yield return input[start..i];
 		}
 	}
 

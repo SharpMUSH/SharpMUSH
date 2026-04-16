@@ -263,7 +263,7 @@ public ref struct MarkupStringHandler
 		string dir = parts[0].ToLowerInvariant();
 		if (!int.TryParse(parts[1], out int width) || width <= 0) return value;
 
-		string fillStr = parts.Length >= 3 && parts[2].Length > 0 ? parts[2][0].ToString() : " ";
+		string fillStr = parts.Length >= 3 && parts[2].Length > 0 ? parts[2][..1] : " ";
 		MString fill = MModule.single(fillStr);
 
 		PadType padType = dir switch
