@@ -1261,7 +1261,7 @@ public partial class Functions
 			// Check if this position should be replaced
 			if (positionsSet.Contains(index) || positionsSet.Contains(negativeIndex))
 			{
-				list[i] = newItem;
+				list[i] = newItem ?? MModule.Empty();
 			}
 		}
 
@@ -1791,10 +1791,10 @@ public partial class Functions
 				fieldWidth,
 				fieldAlignment switch
 				{
-					">" => global::MarkupString.MarkupStringModule.PadType.Right,
-					"-" => global::MarkupString.MarkupStringModule.PadType.Center,
-					_ => global::MarkupString.MarkupStringModule.PadType.Left
-				}, global::MarkupString.MarkupStringModule.TruncationType.Truncate));
+				">" => global::MarkupString.PadType.Right,
+				"-" => global::MarkupString.PadType.Center,
+				_ => global::MarkupString.PadType.Left
+			}, global::MarkupString.TruncationType.Truncate));
 
 		var lines = resultFields.Chunk(fieldsPerLine);
 		var linesWithSeparators = lines.Select(x => MModule.multipleWithDelimiter(separatorArg, x));
@@ -1956,7 +1956,7 @@ public partial class Functions
 			return new CallState(listArg);
 		}
 
-		listItems.Insert(insertIndex, newItemArg);
+		listItems.Insert(insertIndex, newItemArg ?? MModule.Empty());
 		return new CallState(MModule.multipleWithDelimiter(delimiter, listItems));
 	}
 

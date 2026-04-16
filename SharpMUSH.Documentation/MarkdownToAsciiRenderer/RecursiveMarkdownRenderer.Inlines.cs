@@ -1,5 +1,4 @@
 using Markdig.Syntax.Inlines;
-using Microsoft.FSharp.Core;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -39,25 +38,25 @@ public partial class RecursiveMarkdownRenderer
 	/// Render bold text. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderBold(MString content)
-		=> MModule.markupSingle(_boldStyle, content.ToPlainText());
+		=> MModule.MarkupSingle(_boldStyle, content.ToPlainText());
 
 	/// <summary>
 	/// Render italic text. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderItalic(MString content)
-		=> MModule.markupSingle(_boldStyle, content.ToPlainText());
+		=> MModule.MarkupSingle(_boldStyle, content.ToPlainText());
 
 	/// <summary>
 	/// Render underlined text. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderUnderline(MString content)
-		=> MModule.markupSingle(_underlineStyle, content.ToPlainText());
+		=> MModule.MarkupSingle(_underlineStyle, content.ToPlainText());
 
 	/// <summary>
 	/// Render inline code. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderInlineCode(CodeInline code)
-		=> MModule.markupSingle(InlineCodeStyle, code.Content);
+		=> MModule.MarkupSingle(InlineCodeStyle, code.Content);
 
 	protected virtual MString RenderLink(LinkInline link, MString content)
 	{
@@ -78,8 +77,8 @@ public partial class RecursiveMarkdownRenderer
 		}
 
 		// Create hyperlink markup with linkUrl parameter
-		var linkMarkup = Ansi.Create(linkUrl: FSharpOption<string>.Some(url));
-		return MModule.markupSingle(linkMarkup, contentText);
+		var linkMarkup = Ansi.Create(linkUrl: url);
+		return MModule.MarkupSingle(linkMarkup, contentText);
 	}
 
 	protected virtual MString RenderAutolink(AutolinkInline autolink)
@@ -90,8 +89,8 @@ public partial class RecursiveMarkdownRenderer
 		}
 
 		// Create hyperlink with URL as both the text and the link
-		var linkMarkup = Ansi.Create(linkUrl: FSharpOption<string>.Some(autolink.Url));
-		return MModule.markupSingle(linkMarkup, autolink.Url);
+		var linkMarkup = Ansi.Create(linkUrl: autolink.Url);
+		return MModule.MarkupSingle(linkMarkup, autolink.Url);
 	}
 
 	private MString RenderHtmlInline(HtmlInline html)
@@ -149,7 +148,7 @@ public partial class RecursiveMarkdownRenderer
 			toRemove = next;
 		}
 
-		return MModule.markupMultiple(ansi, contentParts);
+		return MModule.MarkupMultiple(ansi, contentParts);
 	}
 
 	private MString RenderHtmlEntity(HtmlEntityInline entity)

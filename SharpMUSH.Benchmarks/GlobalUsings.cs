@@ -1,2 +1,2 @@
-global using MModule = MarkupString.MarkupStringModule;
-global using MString = MarkupString.MarkupStringModule.MarkupString;
+global using MModule = global::MarkupString.MarkupStringModule;
+global using MString = global::MarkupString.MarkupString;

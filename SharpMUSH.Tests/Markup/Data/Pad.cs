@@ -3,7 +3,7 @@
 namespace SharpMUSH.Tests.Markup.Data;
 
 public record PadTestData(
-	MString input, MString padStr, int width, global::MarkupString.MarkupStringModule.PadType padType, global::MarkupString.MarkupStringModule.TruncationType truncType, MString expected);
+	MString input, MString padStr, int width, global::MarkupString.PadType padType, global::MarkupString.TruncationType truncType, MString expected);
 
 public static class Pad
 {
@@ -13,8 +13,8 @@ public static class Pad
 			A.single("Test"),
 			A.single(" "),
 			10,
-			global::MarkupString.MarkupStringModule.PadType.Right,
-			global::MarkupString.MarkupStringModule.TruncationType.Overflow,
+			global::MarkupString.PadType.Right,
+			global::MarkupString.TruncationType.Overflow,
 			A.single("Test      ")
 		);
 
@@ -22,8 +22,8 @@ public static class Pad
 			A.single("Test"),
 			A.single(" "),
 			10,
-			global::MarkupString.MarkupStringModule.PadType.Left,
-			global::MarkupString.MarkupStringModule.TruncationType.Overflow,
+			global::MarkupString.PadType.Left,
+			global::MarkupString.TruncationType.Overflow,
 			A.single("      Test")
 		);
 
@@ -31,8 +31,8 @@ public static class Pad
 			A.single("Test"),
 			A.single(" "),
 			10,
-			global::MarkupString.MarkupStringModule.PadType.Center,
-			global::MarkupString.MarkupStringModule.TruncationType.Overflow,
+			global::MarkupString.PadType.Center,
+			global::MarkupString.TruncationType.Overflow,
 			A.single("   Test   ")
 		);
 
@@ -40,8 +40,8 @@ public static class Pad
 			A.single("Example"),
 			A.single("-"),
 			10,
-			global::MarkupString.MarkupStringModule.PadType.Right,
-			global::MarkupString.MarkupStringModule.TruncationType.Truncate,
+			global::MarkupString.PadType.Right,
+			global::MarkupString.TruncationType.Truncate,
 			A.single("Example---")
 		);
 
@@ -49,8 +49,8 @@ public static class Pad
 			A.single("LongInputString"),
 			A.single(" "),
 			10,
-			global::MarkupString.MarkupStringModule.PadType.Right,
-			global::MarkupString.MarkupStringModule.TruncationType.Truncate,
+			global::MarkupString.PadType.Right,
+			global::MarkupString.TruncationType.Truncate,
 			A.single("LongInput")
 		);
 
@@ -58,8 +58,8 @@ public static class Pad
 			A.single("Centered"),
 			A.single("."),
 			15,
-			global::MarkupString.MarkupStringModule.PadType.Center,
-			global::MarkupString.MarkupStringModule.TruncationType.Overflow,
+			global::MarkupString.PadType.Center,
+			global::MarkupString.TruncationType.Overflow,
 			A.single("...Centered....")
 		);
 
@@ -67,8 +67,8 @@ public static class Pad
 			A.single("Centered"),
 			A.single("."),
 			1,
-			global::MarkupString.MarkupStringModule.PadType.Center,
-			global::MarkupString.MarkupStringModule.TruncationType.Overflow,
+			global::MarkupString.PadType.Center,
+			global::MarkupString.TruncationType.Overflow,
 			A.single("Centered")
 		);
 
@@ -80,8 +80,8 @@ public static class Pad
 			A.single("|"),
 			A.single(" "),
 			1,
-			global::MarkupString.MarkupStringModule.PadType.Right,
-			global::MarkupString.MarkupStringModule.TruncationType.Truncate,
+			global::MarkupString.PadType.Right,
+			global::MarkupString.TruncationType.Truncate,
 			A.single("|")
 		);
 
@@ -90,8 +90,8 @@ public static class Pad
 			A.single("|"),
 			A.single(" "),
 			1,
-			global::MarkupString.MarkupStringModule.PadType.Left,
-			global::MarkupString.MarkupStringModule.TruncationType.Truncate,
+			global::MarkupString.PadType.Left,
+			global::MarkupString.TruncationType.Truncate,
 			A.single("|")
 		);
 
@@ -100,8 +100,8 @@ public static class Pad
 			A.single("X"),
 			A.single(" "),
 			1,
-			global::MarkupString.MarkupStringModule.PadType.Center,
-			global::MarkupString.MarkupStringModule.TruncationType.Truncate,
+			global::MarkupString.PadType.Center,
+			global::MarkupString.TruncationType.Truncate,
 			A.single("X")
 		);
 
@@ -110,8 +110,8 @@ public static class Pad
 			A.single("Test"),
 			A.single(" "),
 			4,
-			global::MarkupString.MarkupStringModule.PadType.Right,
-			global::MarkupString.MarkupStringModule.TruncationType.Truncate,
+			global::MarkupString.PadType.Right,
+			global::MarkupString.TruncationType.Truncate,
 			A.single("Test")
 		);
 
@@ -120,8 +120,8 @@ public static class Pad
 			A.single("Test"),
 			A.single(" "),
 			4,
-			global::MarkupString.MarkupStringModule.PadType.Left,
-			global::MarkupString.MarkupStringModule.TruncationType.Truncate,
+			global::MarkupString.PadType.Left,
+			global::MarkupString.TruncationType.Truncate,
 			A.single("Test")
 		);
 
@@ -130,8 +130,8 @@ public static class Pad
 			A.single("Word"),
 			A.single("-"),
 			4,
-			global::MarkupString.MarkupStringModule.PadType.Center,
-			global::MarkupString.MarkupStringModule.TruncationType.Truncate,
+			global::MarkupString.PadType.Center,
+			global::MarkupString.TruncationType.Truncate,
 			A.single("Word")
 		);
 	}

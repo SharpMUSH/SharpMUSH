@@ -1,6 +1,7 @@
 using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 using System.Drawing;
+using MarkupString;
 using StringExtensions = ANSILibrary.StringExtensions;
 using static MarkupString.MarkupStringModule;
 
@@ -16,10 +17,10 @@ public static class Trim
         () => new(A.single("  test  "), A.single(" "), TrimType.TrimStart, A.single("test  ")),
         // TrimStart — markup preserved
         () => new(
-            A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "  test  "),
+            A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "  test  "),
             A.single(" "),
             TrimType.TrimStart,
-            A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "test  ")),
+            A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "test  ")),
         // TrimStart — no leading chars to trim
         () => new(A.single("test"), A.single(" "), TrimType.TrimStart, A.single("test")),
 
@@ -27,10 +28,10 @@ public static class Trim
         () => new(A.single("  test  "), A.single(" "), TrimType.TrimEnd, A.single("  test")),
         // TrimEnd — markup preserved
         () => new(
-            A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "  test  "),
+            A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "  test  "),
             A.single(" "),
             TrimType.TrimEnd,
-            A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "  test")),
+            A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "  test")),
         // TrimEnd — no trailing chars to trim
         () => new(A.single("test"), A.single(" "), TrimType.TrimEnd, A.single("test")),
 
@@ -38,10 +39,10 @@ public static class Trim
         () => new(A.single("  test  "), A.single(" "), TrimType.TrimBoth, A.single("test")),
         // TrimBoth — markup preserved
         () => new(
-            A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "  test  "),
+            A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "  test  "),
             A.single(" "),
             TrimType.TrimBoth,
-            A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "test")),
+            A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "test")),
         // TrimBoth — nothing to trim
         () => new(A.single("test"), A.single(" "), TrimType.TrimBoth, A.single("test")),
 
@@ -60,8 +61,8 @@ public static class Trim
         // TrimBoth — markup across trim boundary (plain-text result)
         () => new(
             A.concat(
-                A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "-"),
-                A.concat(A.single("test"), A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "-"))),
+                A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "-"),
+                A.concat(A.single("test"), A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "-"))),
             A.single("-"),
             TrimType.TrimBoth,
             A.single("test")),

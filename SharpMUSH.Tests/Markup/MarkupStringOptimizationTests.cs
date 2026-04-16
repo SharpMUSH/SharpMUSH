@@ -1,5 +1,6 @@
-using Microsoft.FSharp.Core;
+using ANSILibrary;
 using MarkupString;
+using MarkupString.MarkupImplementation;
 using System.Drawing;
 using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
@@ -45,10 +46,10 @@ public class MarkupStringOptimizationTests
 	{
 		// Arrange
 		const string testText = "Colored Text";
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 
 		// Act
-		var markupString = A.markupSingle(redMarkup, testText);
+		var markupString = A.MarkupSingle(redMarkup, testText);
 
 		// Assert
 		await Assert.That(markupString.ToPlainText()).IsEqualTo(testText);
@@ -95,11 +96,11 @@ public class MarkupStringOptimizationTests
 	public async Task ConcatenateMarkupStrings_WithAnsi_PreservesMarkup()
 	{
 		// Arrange
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blueMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 
-		var redText = A.markupSingle(redMarkup, "Red");
-		var blueText = A.markupSingle(blueMarkup, "Blue");
+		var redText = A.MarkupSingle(redMarkup, "Red");
+		var blueText = A.MarkupSingle(blueMarkup, "Blue");
 
 		// Act
 		var result = A.concat(redText, blueText);
@@ -132,8 +133,8 @@ public class MarkupStringOptimizationTests
 	public async Task SubstringMarkupString_WithAnsi_PreservesMarkup()
 	{
 		// Arrange
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var markupString = A.markupSingle(redMarkup, "Hello, World!");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var markupString = A.MarkupSingle(redMarkup, "Hello, World!");
 
 		// Act
 		var result = A.substring(7, 5, markupString);
@@ -327,8 +328,8 @@ public class MarkupStringOptimizationTests
 	public async Task SerializeAndDeserialize_PreservesMarkupString()
 	{
 		// Arrange
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var original = A.markupSingle(redMarkup, "Test Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var original = A.MarkupSingle(redMarkup, "Test Text");
 
 		// Act
 		var serialized = A.serialize(original);
@@ -344,11 +345,11 @@ public class MarkupStringOptimizationTests
 	public async Task EvaluateWith_CustomEvaluator_WorksCorrectly()
 	{
 		// Arrange
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var markupString = A.markupSingle(redMarkup, "Test");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var markupString = A.MarkupSingle(redMarkup, "Test");
 
 		// Custom evaluator that wraps marked up text in brackets
-		Func<FSharpOption<MarkupImplementation.Markup>, string, string> evaluator = (markupType, text) =>
+		Func<IMarkup?, string, string> evaluator = (markupType, text) =>
 		{
 			return markupType switch
 			{
@@ -383,8 +384,8 @@ public class MarkupStringOptimizationTests
 	public async Task OptimizeMarkupString_SingleMarkup_RemainsUnchanged()
 	{
 		// Arrange
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var markupString = A.markupSingle(redMarkup, "Hello World");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var markupString = A.MarkupSingle(redMarkup, "Hello World");
 
 		// Act
 		var optimized = A.optimize(markupString);
@@ -398,9 +399,9 @@ public class MarkupStringOptimizationTests
 	public async Task OptimizeMarkupString_AdjacentSameMarkup_MergesContent()
 	{
 		// Arrange
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var first = A.markupSingle(redMarkup, "Hello ");
-		var second = A.markupSingle(redMarkup, "World");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var first = A.MarkupSingle(redMarkup, "Hello ");
+		var second = A.MarkupSingle(redMarkup, "World");
 		var combined = A.concat(first, second);
 
 		// Act
@@ -419,10 +420,10 @@ public class MarkupStringOptimizationTests
 	public async Task OptimizeMarkupString_DifferentMarkup_DoesNotMerge()
 	{
 		// Arrange
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var first = A.markupSingle(redMarkup, "Hello ");
-		var second = A.markupSingle(blueMarkup, "World");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blueMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
+		var first = A.MarkupSingle(redMarkup, "Hello ");
+		var second = A.MarkupSingle(blueMarkup, "World");
 		var combined = A.concat(first, second);
 
 		// Act
@@ -441,9 +442,9 @@ public class MarkupStringOptimizationTests
 	{
 		// Arrange
 
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var innerMarkup = A.markupSingle(redMarkup, "Hello");
-		var outerMarkup = A.markupSingle2(redMarkup, innerMarkup);
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var innerMarkup = A.MarkupSingle(redMarkup, "Hello");
+		var outerMarkup = A.MarkupSingle2(redMarkup, innerMarkup);
 
 		// Act
 		var optimized = A.optimize(outerMarkup);
@@ -460,10 +461,10 @@ public class MarkupStringOptimizationTests
 	public async Task OptimizeMarkupString_NestedDifferentMarkup_DoesNotLift()
 	{
 		// Arrange
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var innerMarkup = A.markupSingle(blueMarkup, "Hello");
-		var outerMarkup = A.markupSingle2(redMarkup, innerMarkup);
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blueMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
+		var innerMarkup = A.MarkupSingle(blueMarkup, "Hello");
+		var outerMarkup = A.MarkupSingle2(redMarkup, innerMarkup);
 
 		// Act
 		var optimized = A.optimize(outerMarkup);
@@ -480,15 +481,15 @@ public class MarkupStringOptimizationTests
 	public async Task OptimizeMarkupString_ComplexNesting_OptimizesCorrectly()
 	{
 		// Arrange
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 
 		// Create a complex nested structure with same markup
-		var inner1 = A.markupSingle(redMarkup, "Hello ");
-		var inner2 = A.markupSingle(redMarkup, "Beautiful ");
-		var inner3 = A.markupSingle(redMarkup, "World");
+		var inner1 = A.MarkupSingle(redMarkup, "Hello ");
+		var inner2 = A.MarkupSingle(redMarkup, "Beautiful ");
+		var inner3 = A.MarkupSingle(redMarkup, "World");
 
 		var combined = A.concat(A.concat(inner1, inner2), inner3);
-		var wrapped = A.markupSingle2(redMarkup, combined);
+		var wrapped = A.MarkupSingle2(redMarkup, combined);
 
 		// Act
 		var optimized = A.optimize(wrapped);
@@ -505,10 +506,10 @@ public class MarkupStringOptimizationTests
 	public async Task OptimizeMarkupString_MixedTextAndMarkup_HandlesCorrectly()
 	{
 		// Arrange
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var plainText = A.single("Plain ");
-		var redText = A.markupSingle(redMarkup, "Red ");
-		var moreRedText = A.markupSingle(redMarkup, "Text");
+		var redText = A.MarkupSingle(redMarkup, "Red ");
+		var moreRedText = A.MarkupSingle(redMarkup, "Text");
 
 		var combined = A.concat(A.concat(plainText, redText), moreRedText);
 
@@ -543,13 +544,13 @@ public class MarkupStringOptimizationTests
 	public async Task OptimizeMarkupString_DeepNesting_OptimizesRecursively()
 	{
 		// Arrange
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 
 		// Create deeply nested structure
-		var level1 = A.markupSingle(redMarkup, "Deep");
-		var level2 = A.markupSingle2(redMarkup, level1);
-		var level3 = A.markupSingle2(redMarkup, level2);
-		var level4 = A.markupSingle2(redMarkup, level3);
+		var level1 = A.MarkupSingle(redMarkup, "Deep");
+		var level2 = A.MarkupSingle2(redMarkup, level1);
+		var level3 = A.MarkupSingle2(redMarkup, level2);
+		var level4 = A.MarkupSingle2(redMarkup, level3);
 
 		// Act
 		var optimized = A.optimize(level4);

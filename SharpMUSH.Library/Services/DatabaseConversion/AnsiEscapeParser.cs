@@ -1,7 +1,8 @@
+using ANSILibrary;
 using MarkupString;
+using MarkupString.MarkupImplementation;
 using System.Drawing;
 using System.Text;
-using static MarkupString.MarkupImplementation;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion;
 
@@ -317,15 +318,15 @@ public static class AnsiEscapeParser
 						if (colorType == 5 && i + 2 < codes.Length) // 256-color
 						{
 							var colorIndex = codes[i + 2];
-							newState = newState with { Foreground = ANSILibrary.ANSI.AnsiColor.NewRGB(GetAnsi256Color(colorIndex)) };
-							i += 2;
-						}
-						else if (colorType == 2 && i + 4 < codes.Length) // RGB
-						{
-							var r = (byte)codes[i + 2];
-							var g = (byte)codes[i + 3];
-							var b = (byte)codes[i + 4];
-							newState = newState with { Foreground = ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(r, g, b)) };
+					newState = newState with { Foreground = new AnsiColor.RGB(GetAnsi256Color(colorIndex)) };
+						i += 2;
+					}
+					else if (colorType == 2 && i + 4 < codes.Length) // RGB
+					{
+						var r = (byte)codes[i + 2];
+						var g = (byte)codes[i + 3];
+						var b = (byte)codes[i + 4];
+						newState = newState with { Foreground = new AnsiColor.RGB(Color.FromArgb(r, g, b)) };
 							i += 4;
 						}
 					}
@@ -338,15 +339,15 @@ public static class AnsiEscapeParser
 						if (colorType == 5 && i + 2 < codes.Length) // 256-color
 						{
 							var colorIndex = codes[i + 2];
-							newState = newState with { Background = ANSILibrary.ANSI.AnsiColor.NewRGB(GetAnsi256Color(colorIndex)) };
-							i += 2;
-						}
-						else if (colorType == 2 && i + 4 < codes.Length) // RGB
-						{
-							var r = (byte)codes[i + 2];
-							var g = (byte)codes[i + 3];
-							var b = (byte)codes[i + 4];
-							newState = newState with { Background = ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(r, g, b)) };
+					newState = newState with { Background = new AnsiColor.RGB(GetAnsi256Color(colorIndex)) };
+						i += 2;
+					}
+					else if (colorType == 2 && i + 4 < codes.Length) // RGB
+					{
+						var r = (byte)codes[i + 2];
+						var g = (byte)codes[i + 3];
+						var b = (byte)codes[i + 4];
+						newState = newState with { Background = new AnsiColor.RGB(Color.FromArgb(r, g, b)) };
 							i += 4;
 						}
 					}
@@ -383,14 +384,11 @@ public static class AnsiEscapeParser
 		if (state.LinkUrl != null)
 		{
 			// Create markup with hyperlink
-			var linkText = Microsoft.FSharp.Core.FSharpOption<string>.Some(text);
-			var linkUrl = Microsoft.FSharp.Core.FSharpOption<string>.Some(state.LinkUrl);
-
 			markup = AnsiMarkup.Create(
 				foreground: state.Foreground,
 				background: state.Background,
-				linkText: Microsoft.FSharp.Core.FSharpOption<Microsoft.FSharp.Core.FSharpOption<string>>.Some(linkText),
-				linkUrl: Microsoft.FSharp.Core.FSharpOption<Microsoft.FSharp.Core.FSharpOption<string>>.Some(linkUrl),
+				linkText: text,
+				linkUrl: state.LinkUrl,
 				blink: state.Blink,
 				bold: state.Bold,
 				clear: false,
@@ -420,23 +418,23 @@ public static class AnsiEscapeParser
 			);
 		}
 
-		return MModule.markupSingle(markup, text);
+		return MModule.MarkupSingle(markup, text);
 	}
 
 	/// <summary>
 	/// Gets basic ANSI color (0-7)
 	/// </summary>
-	private static ANSILibrary.ANSI.AnsiColor GetAnsiBasicColor(int index)
+	private static AnsiColor GetAnsiBasicColor(int index)
 	{
-		return ANSILibrary.ANSI.AnsiColor.NewRGB(GetAnsi256Color(index));
+		return new AnsiColor.RGB(GetAnsi256Color(index));
 	}
 
 	/// <summary>
 	/// Gets bright ANSI color (8-15 in 256-color palette)
 	/// </summary>
-	private static ANSILibrary.ANSI.AnsiColor GetAnsiBrightColor(int index)
+	private static AnsiColor GetAnsiBrightColor(int index)
 	{
-		return ANSILibrary.ANSI.AnsiColor.NewRGB(GetAnsi256Color(index + 8));
+		return new AnsiColor.RGB(GetAnsi256Color(index + 8));
 	}
 
 	/// <summary>
@@ -510,8 +508,8 @@ public static class AnsiEscapeParser
 	/// </summary>
 	private record AnsiState
 	{
-		public ANSILibrary.ANSI.AnsiColor Foreground { get; init; } = ANSILibrary.ANSI.AnsiColor.NoAnsi;
-		public ANSILibrary.ANSI.AnsiColor Background { get; init; } = ANSILibrary.ANSI.AnsiColor.NoAnsi;
+		public AnsiColor Foreground { get; init; } = AnsiColor.NoAnsi.Instance;
+		public AnsiColor Background { get; init; } = AnsiColor.NoAnsi.Instance;
 		public string? LinkUrl { get; init; }
 		public bool Bold { get; init; }
 		public bool Faint { get; init; }
@@ -524,8 +522,8 @@ public static class AnsiEscapeParser
 
 		public bool IsEmpty()
 		{
-			return Foreground == ANSILibrary.ANSI.AnsiColor.NoAnsi
-				&& Background == ANSILibrary.ANSI.AnsiColor.NoAnsi
+			return Foreground == AnsiColor.NoAnsi.Instance
+				&& Background == AnsiColor.NoAnsi.Instance
 				&& LinkUrl == null
 				&& !Bold && !Faint && !Italic && !Underlined
 				&& !Blink && !Inverted && !StrikeThrough && !Overlined;
