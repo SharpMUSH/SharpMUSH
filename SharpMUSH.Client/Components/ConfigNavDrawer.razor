@@ -1,18 +1,19 @@
 @inject NavigationManager NavigationManager
+@inject IStringLocalizer<SharedResource> Loc
 
 <MudStack Spacing="0" Class="config-nav-drawer">
     @* Header *@
     <MudPaper Elevation="0" Class="config-nav-header pa-4">
         <MudText Typo="Typo.h6" Color="Color.Secondary">
-            <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" /> Configuration
+            <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" /> @Loc["Configuration"]
         </MudText>
-        <MudText Typo="Typo.body2" Color="Color.Default">Server Settings</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Default">@Loc["ServerSettings"]</MudText>
     </MudPaper>
 
     @* Search Box *@
     <MudPaper Elevation="0" Class="config-nav-search pa-3">
         <MudTextField @bind-Value="_searchText"
-                      Placeholder="Search settings..."
+                      Placeholder="@Loc["SearchSettings"].Value"
                       Variant="Variant.Outlined"
                       Margin="Margin.Dense"
                       Adornment="Adornment.Start"
@@ -26,92 +27,92 @@
     <MudPaper Elevation="0" Class="config-nav-menu">
         <MudNavMenu>
             @* Server Group *@
-            <MudNavGroup Title="Server" Icon="@Icons.Material.Filled.Computer" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Server")">
+            <MudNavGroup Title="@Loc["Server"].Value" Icon="@Icons.Material.Filled.Computer" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Server")">
                 <MudNavLink Href="/admin/config/net" Icon="@Icons.Material.Filled.NetworkCheck" Match="NavLinkMatch.All">
-                    Network @if (HasChanges("net")) { <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Warning" Class="change-indicator" /> }
+                    @Loc["Network"] @if (HasChanges("net")) { <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Warning" Class="change-indicator" /> }
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/database" Icon="@Icons.Material.Filled.Storage" Match="NavLinkMatch.All">
-                    Database
+                    @Loc["Database"]
                 </MudNavLink>
             </MudNavGroup>
 
             @* Performance Group *@
-            <MudNavGroup Title="Performance" Icon="@Icons.Material.Filled.Speed" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Performance")">
+            <MudNavGroup Title="@Loc["Performance"].Value" Icon="@Icons.Material.Filled.Speed" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Performance")">
                 <MudNavLink Href="/admin/config/limit" Icon="@Icons.Material.Filled.Timer" Match="NavLinkMatch.All">
-                    Limits
+                    @Loc["Limits"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/command" Icon="@Icons.Material.Filled.Terminal" Match="NavLinkMatch.All">
-                    Commands
+                    @Loc["Commands"]
                 </MudNavLink>
             </MudNavGroup>
 
             @* Security Group *@
-            <MudNavGroup Title="Security" Icon="@Icons.Material.Filled.Security" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Security")">
+            <MudNavGroup Title="@Loc["Security"].Value" Icon="@Icons.Material.Filled.Security" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Security")">
                 <MudNavLink Href="/admin/config/sitelock" Icon="@Icons.Material.Filled.Lock" Match="NavLinkMatch.All">
-                    Sitelock <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="Important" Class="ml-2" />
+                    @Loc["Sitelock"] <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="@Loc["Important"].Value" Class="ml-2" />
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/bannednames" Icon="@Icons.Material.Filled.Block" Match="NavLinkMatch.All">
-                    Banned Names
+                    @Loc["BannedNames"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/restrictions" Icon="@Icons.Material.Filled.GppBad" Match="NavLinkMatch.All">
-                    Restrictions
+                    @Loc["Restrictions"]
                 </MudNavLink>
             </MudNavGroup>
 
             @* Content Group *@
-            <MudNavGroup Title="Content" Icon="@Icons.Material.Filled.Article" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Content")">
+            <MudNavGroup Title="@Loc["Content"].Value" Icon="@Icons.Material.Filled.Article" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Content")">
                 <MudNavLink Href="/admin/config/message" Icon="@Icons.Material.Filled.Message" Match="NavLinkMatch.All">
-                    Messages
+                    @Loc["Messages"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/cosmetic" Icon="@Icons.Material.Filled.Palette" Match="NavLinkMatch.All">
-                    Cosmetic
+                    @Loc["Cosmetic"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/chat" Icon="@Icons.Material.Filled.Chat" Match="NavLinkMatch.All">
-                    Chat
+                    @Loc["Chat"]
                 </MudNavLink>
             </MudNavGroup>
 
             @* Logs & Files Group *@
-            <MudNavGroup Title="Logs & Files" Icon="@Icons.Material.Filled.FolderOpen" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Logs")">
+            <MudNavGroup Title="@Loc["LogsAndFiles"].Value" Icon="@Icons.Material.Filled.FolderOpen" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Logs")">
                 <MudNavLink Href="/admin/config/log" Icon="@Icons.Material.Filled.Description" Match="NavLinkMatch.All">
-                    Logging
+                    @Loc["Logging"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/file" Icon="@Icons.Material.Filled.Folder" Match="NavLinkMatch.All">
-                    Files
+                    @Loc["Files"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/textfile" Icon="@Icons.Material.Filled.TextSnippet" Match="NavLinkMatch.All">
-                    Text Files
+                    @Loc["TextFiles"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/dump" Icon="@Icons.Material.Filled.Save" Match="NavLinkMatch.All">
-                    Database Dumps
+                    @Loc["DatabaseDumps"]
                 </MudNavLink>
             </MudNavGroup>
 
             @* Advanced Group *@
-            <MudNavGroup Title="Advanced" Icon="@Icons.Material.Filled.Tune" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Advanced")">
+            <MudNavGroup Title="@Loc["Advanced"].Value" Icon="@Icons.Material.Filled.Tune" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Advanced")">
                 <MudNavLink Href="/admin/config/attribute" Icon="@Icons.Material.Filled.Label" Match="NavLinkMatch.All">
-                    Attributes
+                    @Loc["Attributes"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/flag" Icon="@Icons.Material.Filled.Flag" Match="NavLinkMatch.All">
-                    Flags
+                    @Loc["Flags"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/cost" Icon="@Icons.Material.Filled.MonetizationOn" Match="NavLinkMatch.All">
-                    Costs
+                    @Loc["Costs"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/compatibility" Icon="@Icons.Material.Filled.Verified" Match="NavLinkMatch.All">
-                    Compatibility
+                    @Loc["Compatibility"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/alias" Icon="@Icons.Material.Filled.Link" Match="NavLinkMatch.All">
-                    Aliases
+                    @Loc["Aliases"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/debug" Icon="@Icons.Material.Filled.BugReport" Match="NavLinkMatch.All">
-                    Debug
+                    @Loc["Debug"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/function" Icon="@Icons.Material.Filled.Functions" Match="NavLinkMatch.All">
-                    Functions
+                    @Loc["Functions"]
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/warning" Icon="@Icons.Material.Filled.Warning" Match="NavLinkMatch.All">
-                    Warnings
+                    @Loc["Warnings"]
                 </MudNavLink>
             </MudNavGroup>
         </MudNavMenu>

@@ -27,6 +27,7 @@ public class SuggestionManagementTests
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData());
 		ctx.Services.AddScoped(_ => httpClient);
 
@@ -46,6 +47,7 @@ public class SuggestionManagementTests
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
@@ -72,6 +74,7 @@ public class SuggestionManagementTests
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
@@ -99,6 +102,7 @@ public class SuggestionManagementTests
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
@@ -131,6 +135,7 @@ public class SuggestionManagementTests
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData());
 		ctx.Services.AddScoped(_ => httpClient);
 
@@ -150,6 +155,7 @@ public class SuggestionManagementTests
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData());
 		ctx.Services.AddScoped(_ => httpClient);
 
@@ -168,6 +174,7 @@ public class SuggestionManagementTests
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData());
 		ctx.Services.AddScoped(_ => httpClient);
 
@@ -186,6 +193,7 @@ public class SuggestionManagementTests
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData());
 		ctx.Services.AddScoped(_ => httpClient);
 
@@ -204,6 +212,7 @@ public class SuggestionManagementTests
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
@@ -235,6 +244,7 @@ public class SuggestionManagementTests
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
@@ -263,6 +273,7 @@ public class SuggestionManagementTests
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 		var httpClient = CreateMockHttpClient(new SuggestionData(), delayMs: 1000);
 		ctx.Services.AddScoped(_ => httpClient);
 

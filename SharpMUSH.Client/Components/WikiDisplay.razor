@@ -3,6 +3,7 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject WikiService Wiki
+@inject IStringLocalizer<SharedResource> Loc
 
 <MudCard Class="WikiContent" Style=@Style Elevation="0">
     @if (Article is not null)
@@ -36,11 +37,11 @@
             <MudAlert Severity="@Severity.Info">
                 <AuthorizeView>
                     <Authorized>
-                        <MudText>This page does not exist yet. You can create it by clicking the button below.</MudText>
-                        <MudButton EndIcon="@Icons.Material.Filled.Create" Color=Color.Secondary Ripple=true>Create this Page!</MudButton>
+                        <MudText>@Loc["WikiPageNotExist"]</MudText>
+                        <MudButton EndIcon="@Icons.Material.Filled.Create" Color=Color.Secondary Ripple=true>@Loc["CreateThisPage"]</MudButton>
                     </Authorized>
                     <NotAuthorized>
-                        <MudText>Nothing to see here.</MudText>
+                        <MudText>@Loc["NothingToSeeHere"]</MudText>
                     </NotAuthorized>
                 </AuthorizeView>
             </MudAlert>

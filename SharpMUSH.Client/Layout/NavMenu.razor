@@ -1,32 +1,33 @@
 @* NavMenu with support for collapsed (icon-only) mode *@
+@inject IStringLocalizer<SharedResource> Loc
 
 <MudPaper Width="@(IsCollapsed ? "60px" : "250px")" Class="py-3" Elevation="0">
     <MudNavMenu>
         @if (!IsCollapsed)
         {
-            <MudText Typo="Typo.h6" Class="px-4">SharpMUSH</MudText>
-            <MudText Typo="Typo.body2" Class="px-4">Admin Panel</MudText>
+            <MudText Typo="Typo.h6" Class="px-4">@Loc["AppTitle"]</MudText>
+            <MudText Typo="Typo.body2" Class="px-4">@Loc["AdminPanel"]</MudText>
             <MudDivider Class="my-2"/>
         }
         
         <MudNavLink Href="/" Icon="@Icons.Material.Filled.Home" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>Home</text> }
+            @if (!IsCollapsed) { <text>@Loc["Home"]</text> }
         </MudNavLink>
         
         <MudNavLink Href="/counter" Icon="@Icons.Material.Filled.Add" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>Counter</text> }
+            @if (!IsCollapsed) { <text>@Loc["Counter"]</text> }
         </MudNavLink>
         
         <MudNavLink Href="/weather" Icon="@Icons.Material.Filled.Cloud" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>Weather</text> }
+            @if (!IsCollapsed) { <text>@Loc["Weather"]</text> }
         </MudNavLink>
         
         @if (!IsCollapsed)
         {
-            <MudNavGroup Title="Settings" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary" Expanded="true">
-                <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Tune">Config</MudNavLink>
-                <MudNavLink Href="/admin/suggestions" Icon="@Icons.Material.Filled.Lightbulb">Suggestions</MudNavLink>
-                <MudNavLink Href="/security" Icon="@Icons.Material.Filled.Security">Security</MudNavLink>
+            <MudNavGroup Title="@Loc["Settings"].Value" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary" Expanded="true">
+                <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Tune">@Loc["Config"]</MudNavLink>
+                <MudNavLink Href="/admin/suggestions" Icon="@Icons.Material.Filled.Lightbulb">@Loc["Suggestions"]</MudNavLink>
+                <MudNavLink Href="/security" Icon="@Icons.Material.Filled.Security">@Loc["Security"]</MudNavLink>
             </MudNavGroup>
         }
         else
@@ -35,7 +36,7 @@
         }
         
         <MudNavLink Href="/about" Icon="@Icons.Material.Filled.Info" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>About</text> }
+            @if (!IsCollapsed) { <text>@Loc["About"]</text> }
         </MudNavLink>
     </MudNavMenu>
 </MudPaper>

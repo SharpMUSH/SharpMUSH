@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -207,16 +208,37 @@ public class DebugVerboseTests
 			{
 				var args = c.GetArguments();
 				if (args.Length < 2) return false;
-				return args[1] is OneOf<MString, string> msg &&
-					msg.Match(m => m.ToString().Contains("DiagDebugThing"), s => s.Contains("DiagDebugThing"));
+				// Legacy Notify path
+				if (args[1] is OneOf<MString, string> msg)
+					return msg.Match(m => m.ToString().Contains("DiagDebugThing"), s => s.Contains("DiagDebugThing"));
+				// NotifyLocalized path with sender overload: (who, key, sender, params object[] formatArgs)
+				// args[3] is the params array: [name, dbref]
+				if (args[1] is string && args.Length > 3 && args[3] is object[] formatArgs)
+					return formatArgs.Any(a => a?.ToString()?.Contains("DiagDebugThing") == true);
+				return false;
 			});
 
 		await Assert.That(createCall).IsNotNull().Because("@create should produce a notification");
-		var createMsg = ((OneOf<MString, string>)createCall!.GetArguments()[1]!)
-			.Match(m => m.ToString(), s => s);
 
-		// Extract DBRef number from "Created DiagDebugThing (#N:...)."
-		var match = Regex.Match(createMsg, @"#(\d+):");
+		string createMsg;
+		var createArgs = createCall!.GetArguments();
+		if (createArgs[1] is OneOf<MString, string> omsg)
+		{
+			createMsg = omsg.Match(m => m.ToString(), s => s);
+		}
+		else if (createArgs[1] is string && createArgs.Length > 3 && createArgs[3] is object[] fmtArgs && fmtArgs.Length > 1)
+		{
+			// NotifyLocalized with sender: (who, key, sender, params object[] {name, dbref})
+			// fmtArgs[1] is the DBRef object → ToString() = "#N"
+			createMsg = fmtArgs[1]?.ToString() ?? string.Empty;
+		}
+		else
+		{
+			createMsg = string.Empty;
+		}
+
+		// Extract DBRef number from "Created DiagDebugThing (#N)." or "#N"
+		var match = Regex.Match(createMsg, @"#(\d+)");
 		await Assert.That(match.Success).IsTrue().Because("Create notification should contain DBRef");
 		var dbrefNum = int.Parse(match.Groups[1].Value);
 		var dbref = new DBRef(dbrefNum);

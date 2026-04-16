@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -313,9 +314,7 @@ public class BuildingCommandTests
 		await Assert.That(parentOfB.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -356,10 +355,8 @@ public class BuildingCommandTests
 		var parentOfC = await objC.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfC.IsNone).IsTrue();
 
-		// Verify notification was sent about the cycle
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// Verify notification was sent about the cycle (via NotifyLocalized)
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -379,10 +376,8 @@ public class BuildingCommandTests
 		var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parent.IsNone).IsTrue();
 
-		// Verify notification was sent about the cycle
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular") || TestHelpers.MessageContains(s, "itself")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// Verify notification was sent about the cycle (via NotifyLocalized)
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -421,10 +416,8 @@ public class BuildingCommandTests
 		var parentOf4 = await obj4.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOf4.IsNone).IsTrue();
 
-		// Verify notification was sent about the cycle
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// Verify notification was sent about the cycle (via NotifyLocalized)
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -598,10 +591,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[add(1,2)]"));
 
 		// Verify the notification shows it was set
-		await NotifyService
-			.Received()
-			.Notify(executor.Number, Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "DESCRIBE") && TestHelpers.MessageContains(msg, "Set")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeSet))).IsTrue();
 
 		// Retrieve the attribute and verify the stored value is "3" (evaluated), not "[add(1,2)]"
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
@@ -707,9 +697,6 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}"));
 
 		// Verify "Cleared" notification was sent
-		await NotifyService
-			.Received()
-			.Notify(executor.Number, Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "Cleared")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCleared))).IsTrue();
 	}
 }

@@ -3,21 +3,14 @@
 @using SharpMUSH.Client.Services
 @inject BannedNamesService BannedNamesService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Banned Names - Configuration</PageTitle>
-
-<div style="background: lime; color: black; padding: 20px; font-size: 24px; font-weight: bold; text-align: center;">
-    🚨 BANNEDNAMES.RAZOR IS RENDERING 🚨
-</div>
+<PageTitle>@Loc["BannedNames"] - @Loc["Configuration"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
-    <MudAlert Severity="Severity.Success" Class="mb-4">
-        ✅ <strong>CUSTOM PAGE:</strong> BannedNames.razor is rendering correctly!
-    </MudAlert>
-    
-    <MudText Typo="Typo.h4" GutterBottom="true">Banned Player Names</MudText>
+    <MudText Typo="Typo.h4" GutterBottom="true">@Loc["BannedPlayerNames"]</MudText>
     <MudText Typo="Typo.body1" Class="mb-4">
-        Manage the list of names that players are not allowed to use when creating characters.
+        @Loc["BannedNamesDescription"]
     </MudText>
 
     @if (_loading)
@@ -27,11 +20,11 @@
     else
     {
         <MudPaper Class="pa-4 mb-4">
-            <MudText Typo="Typo.h6" GutterBottom="true">Add Banned Name</MudText>
+            <MudText Typo="Typo.h6" GutterBottom="true">@Loc["AddBannedName"]</MudText>
             <MudGrid>
                 <MudItem xs="12" md="8">
                     <MudTextField @bind-Value="_newName" 
-                                  Label="Name to Ban" 
+                                  Label="@Loc["NameToBan"].Value" 
                                   Variant="Variant.Outlined"
                                   Immediate="true"
                                   OnKeyDown="HandleKeyDown" />
@@ -43,18 +36,18 @@
                                Disabled="string.IsNullOrWhiteSpace(_newName)"
                                FullWidth="true"
                                StartIcon="@Icons.Material.Filled.Add">
-                        Add Name
+                        @Loc["AddName"]
                     </MudButton>
                 </MudItem>
             </MudGrid>
         </MudPaper>
 
         <MudPaper Class="pa-4">
-            <MudText Typo="Typo.h6" GutterBottom="true">Banned Names List</MudText>
+            <MudText Typo="Typo.h6" GutterBottom="true">@Loc["BannedNamesList"]</MudText>
             
             @if (_bannedNames == null || !_bannedNames.Any())
             {
-                <MudAlert Severity="Severity.Info">No banned names configured.</MudAlert>
+                <MudAlert Severity="Severity.Info">@Loc["NoBannedNamesConfigured"]</MudAlert>
             }
             else
             {
@@ -98,7 +91,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading banned names: {ex.Message}", Severity.Error);
+            Snackbar.Add(string.Format(Loc["ErrorLoadingBannedNames"], ex.Message), Severity.Error);
         }
         finally
         {
@@ -116,18 +109,18 @@
             var success = await BannedNamesService.AddBannedNameAsync(_newName.Trim());
             if (success)
             {
-                Snackbar.Add($"Banned name '{_newName}' added successfully", Severity.Success);
+                Snackbar.Add(string.Format(Loc["BannedNameAdded"], _newName), Severity.Success);
                 _newName = string.Empty;
                 await LoadBannedNames();
             }
             else
             {
-                Snackbar.Add($"Failed to add banned name '{_newName}'", Severity.Error);
+                Snackbar.Add(string.Format(Loc["BannedNameAddFailed"], _newName), Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error adding banned name: {ex.Message}", Severity.Error);
+            Snackbar.Add(string.Format(Loc["ErrorAddingBannedName"], ex.Message), Severity.Error);
         }
     }
 
@@ -138,17 +131,17 @@
             var success = await BannedNamesService.DeleteBannedNameAsync(name);
             if (success)
             {
-                Snackbar.Add($"Banned name '{name}' removed successfully", Severity.Success);
+                Snackbar.Add(string.Format(Loc["BannedNameRemoved"], name), Severity.Success);
                 await LoadBannedNames();
             }
             else
             {
-                Snackbar.Add($"Failed to remove banned name '{name}'", Severity.Error);
+                Snackbar.Add(string.Format(Loc["BannedNameRemoveFailed"], name), Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error removing banned name: {ex.Message}", Severity.Error);
+            Snackbar.Add(string.Format(Loc["ErrorRemovingBannedName"], ex.Message), Severity.Error);
         }
     }
 

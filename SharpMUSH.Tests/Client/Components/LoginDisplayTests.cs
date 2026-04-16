@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using SharpMUSH.Client.Layout;
 
@@ -17,6 +18,7 @@ public class LoginDisplayTests
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 
 		// Act
 		var cut = ctx.Render<LoginDisplay>();
@@ -36,6 +38,7 @@ public class LoginDisplayTests
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 
 		// Act
 		var cut = ctx.Render<LoginDisplay>();
@@ -54,6 +57,7 @@ public class LoginDisplayTests
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 
 		// Act
 		var cut = ctx.Render<LoginDisplay>();
@@ -71,6 +75,7 @@ public class LoginDisplayTests
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 
 		// Act
 		var cut = ctx.Render<LoginDisplay>();

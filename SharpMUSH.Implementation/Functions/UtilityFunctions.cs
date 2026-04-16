@@ -427,7 +427,7 @@ public partial class Functions
 		var dbRefConversion = HelperFunctions.ParseDbRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		if (dbRefConversion.IsNone())
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "I can't see that here.");
+			await NotifyService!.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.CantSeeThat));
 			return new CallState("#-1 NO SUCH PLAYER");
 		}
 
@@ -560,13 +560,13 @@ public partial class Functions
 
 		if (location.IsNone || location.IsExit)
 		{
-			await NotifyService!.Notify(executor, "Default home location is invalid.");
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DefaultHomeLocationInvalid), executor);
 			return new CallState(Errors.ErrorInvalidRoom);
 		}
 
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
-			await NotifyService!.Notify(executor, "Invalid name for a thing.");
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidNameThing), executor);
 			return new CallState(Errors.ErrorBadObjectName);
 		}
 

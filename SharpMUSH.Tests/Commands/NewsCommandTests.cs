@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -53,15 +54,11 @@ public class NewsCommandTests
 	public async ValueTask NewsWithWildcardWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test news with wildcard pattern - should list matching topics
-		await Parser.CommandParse(1, ConnectionService, MModule.single("news *news*"));
+		// Use a pattern that matches no topics → NewsNoNewsForTopic is deterministically sent.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("news *xyznonexistent99*"));
 
-		// Verify that NotifyService was called with matching topics or "No news available"
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "No news available for '*news*'.") ||
-				TestHelpers.MessagePlainTextStartsWith(msg, "News topics matching '*news*':")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// Wildcard with 0 matches sends NewsNoNewsForTopic.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -72,11 +69,7 @@ public class NewsCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news nonexistenttopicxyz123"));
 
 		// Verify that NotifyService was called with "No news available"
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("No news available")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No news available"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), executor, executor)).IsTrue();
 	}
 }
 
@@ -143,11 +136,7 @@ public class AhelpCommandTests
 		// Test ahelp with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp nonexistenttopicxyz123"));
 
-		// Verify that NotifyService was called with "No admin help available"
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("No admin help available")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No admin help available"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// Verify that NotifyService was called with "No admin help available for '<topic>'"
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AhelpNoHelpForTopic), executor, executor)).IsTrue();
 	}
 }

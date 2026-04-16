@@ -2,6 +2,7 @@
 @using SharpMUSH.Client.Components
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
+@inject IStringLocalizer<SharedResource> Loc
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
 <MudPopoverProvider />
@@ -16,9 +17,10 @@
         }
         @if (_isConfigRoute)
         {
-            <MudText Typo="Typo.h6" Color="Color.Secondary">Configuration</MudText>
+            <MudText Typo="Typo.h6" Color="Color.Secondary">@Loc["Configuration"]</MudText>
         }
         <MudSpacer />
+        <LanguagePicker />
         <LoginDisplay />
     </MudAppBar>
     

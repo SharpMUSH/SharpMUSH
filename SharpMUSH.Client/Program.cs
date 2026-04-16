@@ -1,6 +1,8 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.JSInterop;
 using MudBlazor.Services;
 using SharpMUSH.Client;
 using SharpMUSH.Client.Authentication;
@@ -11,6 +13,7 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddMudServices();
 builder.Services.AddLogging();
 builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
@@ -51,5 +54,22 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthorizationCore();
 
 var app = builder.Build();
+
+// Restore saved locale from localStorage (defaults to "en" if not set)
+var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
+var storedLocale = await jsRuntime.InvokeAsync<string?>("localStorage.getItem", "locale");
+CultureInfo culture;
+try
+{
+	culture = new CultureInfo(storedLocale ?? "en");
+}
+catch (CultureNotFoundException)
+{
+	// Invalid locale stored in localStorage — reset to English
+	culture = new CultureInfo("en");
+	await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "locale");
+}
+CultureInfo.DefaultThreadCurrentCulture = culture;
+CultureInfo.DefaultThreadCurrentUICulture = culture;
 
 await app.RunAsync();

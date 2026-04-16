@@ -2,48 +2,49 @@
 @using SharpMUSH.Client.Services
 @using System.Net.WebSockets
 @inject IWebSocketClientService WebSocketClient
+@inject IStringLocalizer<SharedResource> Loc
 @implements IAsyncDisposable
 
-<PageTitle>WebSocket Test</PageTitle>
+<PageTitle>@Loc["WebSocketTest"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-	<MudText Typo="Typo.h4" GutterBottom>WebSocket Connection Test</MudText>
+	<MudText Typo="Typo.h4" GutterBottom>@Loc["WebSocketConnectionTest"]</MudText>
 	
 	<MudPaper Class="pa-4 ma-2">
 		<MudStack Spacing="3">
-			<MudTextField @bind-Value="serverUri" Label="Server URI" Variant="Variant.Outlined" 
+			<MudTextField @bind-Value="serverUri" Label="@Loc["ServerUri"].Value" Variant="Variant.Outlined" 
 						  Placeholder="ws://localhost:4202/ws" />
 			
 			<MudStack Row="true" Spacing="2">
 				<MudButton Variant="Variant.Filled" Color="Color.Primary" 
 						   OnClick="Connect" Disabled="isConnected">
-					Connect
+					@Loc["Connect"]
 				</MudButton>
 				<MudButton Variant="Variant.Filled" Color="Color.Secondary" 
 						   OnClick="Disconnect" Disabled="!isConnected">
-					Disconnect
+					@Loc["Disconnect"]
 				</MudButton>
 			</MudStack>
 			
 			<MudChip T="string" Color="@(isConnected ? Color.Success : Color.Error)">
-				@(isConnected ? "Connected" : "Disconnected")
+				@(isConnected ? Loc["Connected"] : Loc["Disconnected"])
 			</MudChip>
 		</MudStack>
 	</MudPaper>
 
 	<MudPaper Class="pa-4 ma-2">
 		<MudStack Spacing="2">
-			<MudTextField @bind-Value="messageToSend" Label="Message" Variant="Variant.Outlined"
+			<MudTextField @bind-Value="messageToSend" Label="@Loc["Message"].Value" Variant="Variant.Outlined"
 						  OnKeyDown="OnKeyDown" Disabled="!isConnected" />
 			<MudButton Variant="Variant.Filled" Color="Color.Primary" 
 					   OnClick="SendMessage" Disabled="!isConnected">
-				Send Message
+				@Loc["SendMessage"]
 			</MudButton>
 		</MudStack>
 	</MudPaper>
 
 	<MudPaper Class="pa-4 ma-2" Style="max-height: 400px; overflow-y: auto;">
-		<MudText Typo="Typo.h6" GutterBottom>Messages</MudText>
+		<MudText Typo="Typo.h6" GutterBottom>@Loc["Messages"]</MudText>
 		<MudDivider />
 		@foreach (var msg in messages)
 		{

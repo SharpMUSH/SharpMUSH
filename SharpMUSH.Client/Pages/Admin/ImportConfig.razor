@@ -3,11 +3,12 @@
 @inject AdminConfigService AdminConfigService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Loc
 
 <div class="pa-4">
-	<MudText Typo="Typo.h4" GutterBottom="true">Import Configuration</MudText>
+	<MudText Typo="Typo.h4" GutterBottom="true">@Loc["ImportConfiguration"]</MudText>
 	<MudText Typo="Typo.body1" Class="mb-4">
-		Upload a mush.cnf file to import configuration settings. Supported formats: .cnf, .conf, .txt
+		@Loc["ImportConfigDescription"]
 	</MudText>
 
 	<MudPaper Class="pa-4">
@@ -20,9 +21,9 @@
                             MaxFileSize="1048576" />
 				<div class="d-flex flex-column align-center justify-center" style="min-height: 150px;">
 					<MudIcon Icon="Icons.Material.Filled.CloudUpload" Size="Size.Large" />
-					<MudText Typo="Typo.h6">Drop files here or click</MudText>
+					<MudText Typo="Typo.h6">@Loc["DropFilesOrClick"]</MudText>
 					<MudText Typo="Typo.body2" Class="mt-2">
-						Supported formats: .cnf, .conf, .txt (max 1MB)
+						@Loc["SupportedFormatsConfig"]
 					</MudText>
 				</div>
 			</MudCardContent>
@@ -32,7 +33,7 @@
 	@if (_selectedFile != null)
 	{
 		<MudPaper Class="pa-4 mt-4">
-			<MudText Typo="Typo.h6" GutterBottom="true">Selected File</MudText>
+			<MudText Typo="Typo.h6" GutterBottom="true">@Loc["SelectedFile"]</MudText>
 			<MudStack Row="true" Spacing="2" Style="align-items: center;">
 				<MudIcon Icon="Icons.Material.Filled.Description" />
 				<MudText>@_selectedFile.Name</MudText>
@@ -46,7 +47,7 @@
 						<TitleContent>
 							<div style="display: flex; align-items: center;">
 								<MudIcon Icon="Icons.Material.Filled.Visibility" class="mr-3" />
-								<MudText>Preview File Content</MudText>
+								<MudText>@Loc["PreviewFileContent"]</MudText>
 							</div>
 						</TitleContent>
 						<ChildContent>
@@ -63,7 +64,7 @@
 			<MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-4">
 				<MudButton StartIcon="Icons.Material.Filled.Clear" 
 				           OnClick="ClearSelection">
-					Clear Selection
+					@Loc["ClearSelection"]
 				</MudButton>
 				
 				<MudButton StartIcon="Icons.Material.Filled.Upload" 
@@ -74,11 +75,11 @@
 					@if (_isImporting)
 					{
 						<MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-						<MudText Class="ms-2">Importing...</MudText>
+						<MudText Class="ms-2">@Loc["Importing"]</MudText>
 					}
 					else
 					{
-						<MudText>Import Configuration</MudText>
+						<MudText>@Loc["ImportConfiguration"]</MudText>
 					}
 				</MudButton>
 			</MudStack>

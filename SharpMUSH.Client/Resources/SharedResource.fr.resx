@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- French proof-of-concept: core navigation and layout strings -->
+
+  <!-- App.razor -->
+  <data name="NotAuthorized" xml:space="preserve">
+    <value>Vous n'êtes pas autorisé à accéder à cette ressource.</value>
+  </data>
+
+  <!-- MainLayout / NavMenu -->
+  <data name="Configuration" xml:space="preserve">
+    <value>Configuration</value>
+  </data>
+  <data name="AppTitle" xml:space="preserve">
+    <value>SharpMUSH</value>
+  </data>
+  <data name="AdminPanel" xml:space="preserve">
+    <value>Panneau d'administration</value>
+  </data>
+  <data name="Home" xml:space="preserve">
+    <value>Accueil</value>
+  </data>
+  <data name="Counter" xml:space="preserve">
+    <value>Compteur</value>
+  </data>
+  <data name="Weather" xml:space="preserve">
+    <value>Météo</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Paramètres</value>
+  </data>
+  <data name="Config" xml:space="preserve">
+    <value>Configuration</value>
+  </data>
+  <data name="Suggestions" xml:space="preserve">
+    <value>Suggestions</value>
+  </data>
+  <data name="Security" xml:space="preserve">
+    <value>Sécurité</value>
+  </data>
+  <data name="About" xml:space="preserve">
+    <value>À propos</value>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>Connexion</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Langue</value>
+  </data>
+
+  <!-- ConfigNavDrawer -->
+  <data name="ServerSettings" xml:space="preserve">
+    <value>Paramètres du serveur</value>
+  </data>
+  <data name="SearchSettings" xml:space="preserve">
+    <value>Rechercher les paramètres...</value>
+  </data>
+  <data name="Server" xml:space="preserve">
+    <value>Serveur</value>
+  </data>
+  <data name="Network" xml:space="preserve">
+    <value>Réseau</value>
+  </data>
+  <data name="Database" xml:space="preserve">
+    <value>Base de données</value>
+  </data>
+  <data name="Performance" xml:space="preserve">
+    <value>Performance</value>
+  </data>
+  <data name="Limits" xml:space="preserve">
+    <value>Limites</value>
+  </data>
+  <data name="Commands" xml:space="preserve">
+    <value>Commandes</value>
+  </data>
+  <data name="Sitelock" xml:space="preserve">
+    <value>Verrouillage de site</value>
+  </data>
+  <data name="Important" xml:space="preserve">
+    <value>Important</value>
+  </data>
+  <data name="BannedNames" xml:space="preserve">
+    <value>Noms interdits</value>
+  </data>
+  <data name="Restrictions" xml:space="preserve">
+    <value>Restrictions</value>
+  </data>
+  <data name="Content" xml:space="preserve">
+    <value>Contenu</value>
+  </data>
+  <data name="Messages" xml:space="preserve">
+    <value>Messages</value>
+  </data>
+  <data name="Cosmetic" xml:space="preserve">
+    <value>Cosmétique</value>
+  </data>
+  <data name="Chat" xml:space="preserve">
+    <value>Discussion</value>
+  </data>
+  <data name="LogsAndFiles" xml:space="preserve">
+    <value>Journaux &amp; Fichiers</value>
+  </data>
+  <data name="Logging" xml:space="preserve">
+    <value>Journalisation</value>
+  </data>
+  <data name="Files" xml:space="preserve">
+    <value>Fichiers</value>
+  </data>
+  <data name="TextFiles" xml:space="preserve">
+    <value>Fichiers texte</value>
+  </data>
+  <data name="DatabaseDumps" xml:space="preserve">
+    <value>Sauvegardes de base de données</value>
+  </data>
+  <data name="Advanced" xml:space="preserve">
+    <value>Avancé</value>
+  </data>
+  <data name="Attributes" xml:space="preserve">
+    <value>Attributs</value>
+  </data>
+  <data name="Flags" xml:space="preserve">
+    <value>Drapeaux</value>
+  </data>
+  <data name="Costs" xml:space="preserve">
+    <value>Coûts</value>
+  </data>
+  <data name="Compatibility" xml:space="preserve">
+    <value>Compatibilité</value>
+  </data>
+  <data name="Aliases" xml:space="preserve">
+    <value>Alias</value>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>Débogage</value>
+  </data>
+  <data name="Functions" xml:space="preserve">
+    <value>Fonctions</value>
+  </data>
+  <data name="Warnings" xml:space="preserve">
+    <value>Avertissements</value>
+  </data>
+
+  <!-- Common pages -->
+  <data name="NotFound" xml:space="preserve">
+    <value>Page introuvable</value>
+  </data>
+  <data name="NotFoundDescription" xml:space="preserve">
+    <value>Désolé, le contenu que vous recherchez n'existe pas.</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Chargement...</value>
+  </data>
+  <data name="ClickMe" xml:space="preserve">
+    <value>Cliquez ici</value>
+  </data>
+  <data name="CurrentCount" xml:space="preserve">
+    <value>Compteur actuel : {0}</value>
+  </data>
+
+  <!-- Common actions -->
+  <data name="Add" xml:space="preserve">
+    <value>Ajouter</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="Create" xml:space="preserve">
+    <value>Créer</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Actualiser</value>
+  </data>
+  <data name="SaveConfiguration" xml:space="preserve">
+    <value>Enregistrer la configuration</value>
+  </data>
+  <data name="ResetChanges" xml:space="preserve">
+    <value>Réinitialiser les modifications</value>
+  </data>
+  <data name="UnsavedChanges" xml:space="preserve">
+    <value>Modifications non enregistrées</value>
+  </data>
+  <data name="InThisSection" xml:space="preserve">
+    <value>dans cette section</value>
+  </data>
+
+  <!-- ConfigIndex -->
+  <data name="ServerConfiguration" xml:space="preserve">
+    <value>Configuration du serveur</value>
+  </data>
+  <data name="ManageAllSettings" xml:space="preserve">
+    <value>Gérer tous les paramètres du serveur SharpMUSH depuis un seul endroit</value>
+  </data>
+  <data name="QuickActions" xml:space="preserve">
+    <value>Actions rapides</value>
+  </data>
+  <data name="SearchAllSettings" xml:space="preserve">
+    <value>Rechercher tous les paramètres</value>
+  </data>
+  <data name="ImportConfigFile" xml:space="preserve">
+    <value>Importer un fichier de configuration</value>
+  </data>
+  <data name="ExportConfiguration" xml:space="preserve">
+    <value>Exporter la configuration</value>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>Bientôt disponible</value>
+  </data>
+  <data name="ServerCategoryDescription" xml:space="preserve">
+    <value>Connexions réseau, base de données et paramètres principaux du serveur</value>
+  </data>
+  <data name="PerformanceCategoryDescription" xml:space="preserve">
+    <value>Limites de ressources, files de commandes et optimisation</value>
+  </data>
+  <data name="SecurityCategoryDescription" xml:space="preserve">
+    <value>Contrôle d'accès, règles de verrouillage de site et noms interdits</value>
+  </data>
+  <data name="ContentCategoryDescription" xml:space="preserve">
+    <value>Messages, options cosmétiques et configuration de la discussion</value>
+  </data>
+  <data name="LogsCategoryDescription" xml:space="preserve">
+    <value>Journalisation, chemins de fichiers et sauvegardes de base de données</value>
+  </data>
+  <data name="AdvancedCategoryDescription" xml:space="preserve">
+    <value>Attributs, drapeaux, coûts et paramètres spécialisés</value>
+  </data>
+</root>

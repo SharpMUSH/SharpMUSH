@@ -20,6 +20,7 @@ public class WikiDisplayTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.AddAuthorization(); // Required for AuthorizeView component
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 
 		// Add WikiService required by component
 		ctx.Services.AddSingleton<WikiService>();
@@ -45,6 +46,7 @@ public class WikiDisplayTests
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.AddAuthorization();
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 
 		// Add WikiService required by component
 		ctx.Services.AddSingleton<WikiService>();
@@ -71,6 +73,7 @@ public class WikiDisplayTests
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 
 		// Add WikiService required by component
 		ctx.Services.AddSingleton<WikiService>();
@@ -95,6 +98,7 @@ public class WikiDisplayTests
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 
 		// Add WikiService required by component
 		ctx.Services.AddSingleton<WikiService>();
@@ -120,6 +124,7 @@ public class WikiDisplayTests
 		authContext.SetAuthorized("TestUser");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 
 		// Add WikiService required by component
 		ctx.Services.AddSingleton<WikiService>();
@@ -146,6 +151,7 @@ public class WikiDisplayTests
 		ctx.AddAuthorization(); // Not authorized
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 
 		// Add WikiService required by component
 		ctx.Services.AddSingleton<WikiService>();
@@ -171,6 +177,7 @@ public class WikiDisplayTests
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
+		ctx.Services.AddLocalization();
 
 		// Add WikiService required by component
 		ctx.Services.AddSingleton<WikiService>();

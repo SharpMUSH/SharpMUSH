@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Common;
@@ -81,7 +81,7 @@ public partial class Commands
 
 		if (!isOwner && !passesModLock && !await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -309,7 +309,7 @@ public partial class Commands
 			var isWizard = await executor.IsWizard();
 			if (!isWizard)
 			{
-				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
@@ -337,7 +337,7 @@ public partial class Commands
 
 		if (!executor.IsGod())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -464,7 +464,7 @@ public partial class Commands
 		// Check permissions
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -492,7 +492,7 @@ public partial class Commands
 		// Check permissions
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -541,7 +541,7 @@ public partial class Commands
 		// Check permissions
 		if (!await PermissionService!.Controls(executor, target.AsSharpObject))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -638,7 +638,7 @@ public partial class Commands
 			// Check permissions - must own or have see_all
 			if (!(await executor.IsSee_All() || targetOwner.Object.DBRef.Equals(executor.Object().DBRef)))
 			{
-				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
@@ -893,7 +893,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -983,7 +983,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1072,7 +1072,7 @@ public partial class Commands
 		// Check DropIn lock on room
 		if (!LockService!.Evaluate(LockType.DropIn, currentRoom.WithExitOption(), objectToDrop))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.CantSeemToDropThingsHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantSeemToDropThingsHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1190,7 +1190,7 @@ public partial class Commands
 
 		if (!locateResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1199,7 +1199,7 @@ public partial class Commands
 		// Can only empty things and players (containers)
 		if (!objectToEmpty.IsThing && !objectToEmpty.IsPlayer)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.CantEmptyThatFromHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantEmptyThatFromHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1241,7 +1241,7 @@ public partial class Commands
 
 		if (!hasEnterOk && !await PermissionService!.Controls(executor, objectToEmpty))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
@@ -1471,7 +1471,7 @@ public partial class Commands
 
 			if (!hasEnterOk)
 			{
-				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return CallState.Empty;
 			}
 		}
@@ -1637,7 +1637,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1703,7 +1703,7 @@ public partial class Commands
 
 			if (!containerResult.IsValid() || (!containerResult.IsPlayer && !containerResult.IsThing))
 			{
-				await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 				return CallState.Empty;
 			}
 
@@ -1715,7 +1715,7 @@ public partial class Commands
 
 			if (!hasEnterOk && !await PermissionService!.Controls(executor, container))
 			{
-				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return CallState.Empty;
 			}
 
@@ -1737,7 +1737,7 @@ public partial class Commands
 
 		if (!locateResult.IsValid() || locateResult.IsRoom || locateResult.IsExit)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1870,7 +1870,7 @@ public partial class Commands
 
 		if (!recipientResult.IsValid() || recipientResult.IsRoom || recipientResult.IsExit)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1898,7 +1898,7 @@ public partial class Commands
 
 		if (!objectResult.IsValid() || objectResult.IsRoom || objectResult.IsExit)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontHaveThat, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontHaveThat), executor);
 			return CallState.Empty;
 		}
 
@@ -1918,7 +1918,7 @@ public partial class Commands
 
 		if (!isCarrying)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontHaveThat, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontHaveThat), executor);
 			return CallState.Empty;
 		}
 
@@ -1935,7 +1935,7 @@ public partial class Commands
 		// Check @lock/from on recipient
 		if (!LockService!.Evaluate(LockType.From, recipient, executor))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
@@ -2511,7 +2511,7 @@ public partial class Commands
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
 		if (!LockService!.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.MayNotSpeakHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
 			return CallState.Empty;
 		}
 
@@ -2553,7 +2553,7 @@ public partial class Commands
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
 		if (!LockService!.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.MayNotSpeakHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
 			return CallState.Empty;
 		}
 
@@ -2588,7 +2588,7 @@ public partial class Commands
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
 		if (!LockService!.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.MayNotSpeakHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
 			return CallState.Empty;
 		}
 
@@ -2697,7 +2697,7 @@ public partial class Commands
 
 		if (!locateResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -2980,7 +2980,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -2996,7 +2996,7 @@ public partial class Commands
 		// Check permissions - must control the target
 		if (!await PermissionService!.Controls(executor, target))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
@@ -3158,12 +3158,12 @@ public partial class Commands
 				if (string.IsNullOrEmpty(prefix))
 				{
 					conn.Metadata.TryRemove("OutputPrefix", out _);
-					await NotifyService!.Notify(executor, ErrorMessages.Notifications.OutputPrefixCleared, executor);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OutputPrefixCleared), executor);
 				}
 				else
 				{
 					conn.Metadata["OutputPrefix"] = prefix;
-					await NotifyService!.Notify(executor, ErrorMessages.Notifications.OutputPrefixSet, executor);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OutputPrefixSet), executor);
 				}
 				break;
 			}
@@ -3187,17 +3187,114 @@ public partial class Commands
 				if (string.IsNullOrEmpty(suffix))
 				{
 					conn.Metadata.TryRemove("OutputSuffix", out _);
-					await NotifyService!.Notify(executor, ErrorMessages.Notifications.OutputSuffixCleared, executor);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OutputSuffixCleared), executor);
 				}
 				else
 				{
 					conn.Metadata["OutputSuffix"] = suffix;
-					await NotifyService!.Notify(executor, ErrorMessages.Notifications.OutputSuffixSet, executor);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OutputSuffixSet), executor);
 				}
 				break;
 			}
 		}
 
+		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// @locale [locale]
+	/// With no argument: displays the executor's current locale.
+	/// With an empty argument (@locale =): clears the locale back to the server default ("en").
+	/// With a non-empty argument: validates and sets the locale for the current session and persists it
+	/// as the LOCALE attribute on the player object.
+	/// Locale strings are BCP-47 tags (e.g. "en", "fr", "de").
+	/// </summary>
+	[SharpCommand(Name = "@LOCALE", Switches = [], Behavior = CB.Default | CB.NoParse | CB.EqSplit, MinArgs = 0, MaxArgs = 1, ParameterNames = ["locale"])]
+	public static async ValueTask<Option<CallState>> SetLocale(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.ArgumentsOrdered;
+
+		// No '=' sign at all → display current locale.
+		if (args.Count == 0)
+		{
+			var current = "en";
+			var handle = parser.CurrentState.Handle;
+			if (handle.HasValue)
+			{
+				// Use the specific connection that ran @locale to avoid multi-session ambiguity.
+				var conn = ConnectionService!.Get(handle.Value);
+				if (conn is not null && conn.Metadata.TryGetValue("Locale", out var stored) && !string.IsNullOrEmpty(stored))
+				{
+					current = stored;
+				}
+			}
+			else
+			{
+				// No direct handle (e.g. @force context) — fall back to persisted LOCALE attribute.
+				var localeAttrs = Database!.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None);
+				await foreach (var attr in localeAttrs)
+				{
+					var saved = attr.Value.ToPlainText();
+					if (!string.IsNullOrEmpty(saved))
+					{
+						current = saved;
+						break;
+					}
+				}
+			}
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleCurrentFormat), executor, current);
+			return CallState.Empty;
+		}
+
+		var locale = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToPlainText().Trim();
+
+		// Explicit empty argument (@locale =) → clear locale back to server default.
+		if (string.IsNullOrEmpty(locale))
+		{
+			await AttributeService!.ClearAttributeAsync(executor, executor, "LOCALE",
+				IAttributeService.AttributePatternMode.Exact,
+				IAttributeService.AttributeClearMode.Safe);
+
+			await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+			{
+				if (conn.State == IConnectionService.ConnectionState.LoggedIn)
+				{
+					ConnectionService!.Update(conn.Handle, "Locale", string.Empty);
+				}
+			}
+
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleCleared), executor);
+			return CallState.Empty;
+		}
+
+		// Validate: must be a recognised BCP-47 culture tag.
+		System.Globalization.CultureInfo? culture;
+		try
+		{
+			culture = System.Globalization.CultureInfo.GetCultureInfo(locale);
+		}
+		catch (System.Globalization.CultureNotFoundException)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleInvalidFormat), executor, locale);
+			return CallState.Empty;
+		}
+
+		var canonicalLocale = culture.Name; // e.g. "en-US" → "en-US", "fr" → "fr"
+
+		// Persist to the player's LOCALE attribute so it survives reconnects.
+		await AttributeService!.SetAttributeAsync(executor, executor, "LOCALE", MModule.single(canonicalLocale));
+
+		// Update every active connection handle for this player immediately.
+		await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+		{
+			if (conn.State == IConnectionService.ConnectionState.LoggedIn)
+			{
+				ConnectionService!.Update(conn.Handle, "Locale", canonicalLocale);
+			}
+		}
+
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleSetFormat), executor, canonicalLocale);
 		return CallState.Empty;
 	}
 

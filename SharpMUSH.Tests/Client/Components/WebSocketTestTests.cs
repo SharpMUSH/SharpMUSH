@@ -21,6 +21,7 @@ public class WebSocketTestTests
 		{
 			JSInterop.Mode = JSRuntimeMode.Loose;
 			Services.AddMudServices();
+			Services.AddLocalization();
 		}
 	}
 

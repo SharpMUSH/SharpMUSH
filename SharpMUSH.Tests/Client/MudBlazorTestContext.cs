@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 
 namespace SharpMUSH.Tests.Client;
@@ -13,5 +14,7 @@ public abstract class MudBlazorTestContext : BunitContext
 	{
 		// Add MudBlazor services required for component rendering
 		Services.AddMudServices();
+		// Add localization services required for IStringLocalizer<SharedResource>
+		Services.AddLocalization();
 	}
 }
