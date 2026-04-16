@@ -250,12 +250,12 @@ public sealed class ANSIString
             {
                 var rgbA = ANSI.AnsiToRgb(fa.Value);
                 var rgbB = ANSI.AnsiToRgb(ba.Value);
-                result = ANSI.Foreground(Interpolate(rgbA, rgbB, _opacity.Value)) + result;
+                result = ANSI.Foreground(Interpolate(rgbB, rgbA, _opacity.Value)) + result;
             }
             else if (_colorForeground is AnsiColor.ANSI fa2 && _colorBackground is AnsiColor.RGB rbg)
             {
                 var rgbA = ANSI.AnsiToRgb(fa2.Value);
-                result = ANSI.Foreground(Interpolate(rgbA, rbg.Value, _opacity.Value)) + result;
+                result = ANSI.Foreground(Interpolate(rbg.Value, rgbA, _opacity.Value)) + result;
             }
             else if (_colorForeground is AnsiColor.RGB rfg && _colorBackground is AnsiColor.ANSI ba2)
             {
@@ -379,10 +379,10 @@ public static partial class Optimization
     }
 
     /// <summary>
-    /// Optimizes repeated clear codes: ]0m]0m → ]0m
+    /// Optimizes repeated clear codes: \u001b[0m\u001b[0m → \u001b[0m
     /// </summary>
     public static string OptimizeRepeatedClear(string text) =>
-        text.Replace("]0m]0m", "]0m");
+        text.Replace(ANSI.Clear + ANSI.Clear, ANSI.Clear);
 
     /// <summary>
     /// Removes duplicate consecutive escape codes, e.g. [31m[31m → [31m

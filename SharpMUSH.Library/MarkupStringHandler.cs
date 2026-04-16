@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace MarkupString;
@@ -27,8 +28,7 @@ public ref struct MarkupStringHandler
     // Segments collected during interpolation. Sized at construction time using
     // the compiler-provided literal and hole counts so no resizing occurs in
     // the common case.
-    private MString[] _parts;
-    private int _count;
+    private readonly List<MString> _parts;
 
     /// <summary>
     /// Called by the compiler before any <c>AppendLiteral</c>/<c>AppendFormatted</c> calls.
@@ -42,8 +42,7 @@ public ref struct MarkupStringHandler
     {
         // Upper bound: compiler produces at most (2 * formattedCount + 1) segments
         // in the pattern: lit? (hole lit?)*.
-        _parts = new MString[formattedCount * 2 + 1];
-        _count = 0;
+        _parts = new List<MString>(formattedCount * 2 + 1);
         _ = literalLength; // standard handler contract; not needed for MString segments
     }
 
@@ -117,18 +116,11 @@ public ref struct MarkupStringHandler
     /// via <c>MModule.concatMany</c>.
     /// </summary>
     public MString ToMarkupString()
-        => MModule.concatMany(new ArraySegment<MString>(_parts, 0, _count));
+        => MModule.concatMany(_parts);
 
     private void Push(MString value)
     {
-        // Defensive growth in case the compiler-provided count was an underestimate.
-        if (_count >= _parts.Length)
-        {
-            var grown = new MString[_parts.Length * 2];
-            _parts.CopyTo(grown, 0);
-            _parts = grown;
-        }
-        _parts[_count++] = value;
+        _parts.Add(value);
     }
 }
 
