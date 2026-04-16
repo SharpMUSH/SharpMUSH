@@ -2,6 +2,7 @@
 // Original: https://github.com/WilliamRagstad/ANSIConsole/blob/main/ANSIConsole/
 using System;
 using System.Drawing;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace ANSILibrary;
@@ -9,6 +10,9 @@ namespace ANSILibrary;
 // ── Discriminated union: AnsiColor ────────────────────────────────────────────
 
 /// <summary>Represents a terminal color: 24-bit RGB, a raw ANSI byte sequence, or absent.</summary>
+[JsonDerivedType(typeof(AnsiColor.RGB), "RGB")]
+[JsonDerivedType(typeof(AnsiColor.ANSI), "ANSI")]
+[JsonDerivedType(typeof(AnsiColor.NoAnsi), "NoAnsi")]
 public abstract record AnsiColor
 {
     private AnsiColor() { }
@@ -24,7 +28,8 @@ public abstract record AnsiColor
     {
         /// <summary>Singleton instance.</summary>
         public static readonly NoAnsi Instance = new();
-        private NoAnsi() { }
+        [JsonConstructor]
+        public NoAnsi() { }
     }
 }
 

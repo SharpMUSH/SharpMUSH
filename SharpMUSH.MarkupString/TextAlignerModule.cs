@@ -229,7 +229,6 @@ public static class TextAlignerModule
             accumulator.Add(newLine);
             columns = remainder;
         }
-        accumulator.Reverse();
         return MarkupStringModule.multipleWithDelimiter(rowSeparator, accumulator);
     }
 
