@@ -71,7 +71,7 @@ public class ArangoDBTests
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1)));
 		var playerOneDBRef = playerOne.Object()!.DBRef;
 
-		var ansiString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
+		var ansiString = A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "red");
 		await Database.SetAttributeAsync(playerOneDBRef, ["AnsiTest", "Layers"], ansiString, playerOne.AsPlayer);
 		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["AnsiTest", "Layers"]))!.ToListAsync();
 

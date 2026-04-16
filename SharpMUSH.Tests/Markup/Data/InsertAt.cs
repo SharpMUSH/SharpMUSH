@@ -14,8 +14,8 @@ internal static class InsertAt
 		() => new(A.single("RedCat"), 3, A.single("Kitty"), A.single("RedKittyCat")),
 		() => new(A.single("RedCat"), 0, A.single("Kitty"), A.single("KittyRedCat")),
 		() => new(A.single("RedCat"), 6, A.single("Kitty"), A.single("RedCatKitty")),
-		() => new(A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red"), 2,
-			A.single("a"), A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "read"))
+		() => new(A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "red"), 2,
+			A.single("a"), A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "read"))
 		// Functions, but does not Optimize properly yet.
 		// TODO: Investigate why Optimize does not handle this case correctly. Is the code maybe not hitting Optimize?
 	];

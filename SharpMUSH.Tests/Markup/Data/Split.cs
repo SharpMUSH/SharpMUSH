@@ -66,20 +66,20 @@ internal static class Split
 			}
 		),
 		() => new (
-			A.concat(A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red"), A.single(";cat")), ";",
+			A.concat(A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "red"), A.single(";cat")), ";",
 			new[]
 			{
-				A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red"),
+				A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "red"),
 				A.single("cat")
 			}
 		),
 		() => new (
-			A.concat(A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "r;e;d"), A.single("c;at")), ";",
+			A.concat(A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "r;e;d"), A.single("c;at")), ";",
 			new[]
 			{
-				A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "r"),
-				A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "e"),
-				A.multiple([A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "d"), A.single("c")]),
+				A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "r"),
+				A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "e"),
+				A.multiple([A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "d"), A.single("c")]),
 				A.single("at")
 			}
 		)

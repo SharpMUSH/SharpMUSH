@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using MarkupString;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -31,8 +32,8 @@ public static class ReadMail
 			MModule.single(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")),
 			MModule.single(" "),
 			25,
-			global::MarkupString.MarkupStringModule.PadType.Right,
-			global::MarkupString.MarkupStringModule.TruncationType.Truncate);
+			PadType.Right,
+			TruncationType.Truncate);
 
 		var mailFrom = await actualMail.From.WithCancellation(CancellationToken.None);
 		var messageBuilder = new List<MString>

@@ -4,7 +4,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using static MarkupString.MarkupImplementation;
+using MarkupString.MarkupImplementation;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -39,25 +39,22 @@ public partial class Functions
 		var content = args["1"].Message!;
 
 		// Add attributes if provided
-		Microsoft.FSharp.Core.FSharpOption<string>? attributes = null;
+		string? attributes = null;
 		if (args.Count > 2)
 		{
 			var attrText = args["2"].Message!.ToPlainText();
 			if (!string.IsNullOrEmpty(attrText))
 			{
-				attributes = Microsoft.FSharp.Core.FSharpOption<string>.Some(attrText);
+				attributes = attrText;
 			}
 		}
 
 		// Create HTML markup structure for semantic information
-		var htmlMarkup = attributes == null
-			? HtmlMarkup.Create(tagName)
-			: HtmlMarkup.Create(tagName,
-				Microsoft.FSharp.Core.FSharpOption<Microsoft.FSharp.Core.FSharpOption<string>>.Some(attributes));
+		var htmlMarkup = HtmlMarkup.Create(tagName, attributes);
 
 		// Return a MarkupString that contains both the HTML markup structure
 		// and the actual HTML text (so it appears in both ToString() and ToPlainText())
-		var wrappedContent = MModule.markupSingle2(htmlMarkup, content);
+		var wrappedContent = MModule.MarkupSingle2(htmlMarkup, content);
 
 		// But for now, return the plain HTML string since tests expect it
 		return ValueTask.FromResult<CallState>(wrappedContent.ToString());

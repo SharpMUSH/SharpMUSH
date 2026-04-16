@@ -14,7 +14,7 @@ public partial class RecursiveMarkdownRenderer
 	{
 		return tagName switch
 		{
-			"b" or "strong" => Ansi.Create(foreground: StringExtensions.rgb(Color.White), bold: true),
+			"b" or "strong" => Ansi.Create(foreground: new AnsiColor.RGB(Color.White), bold: true),
 			"i" or "em" => Ansi.Create(italic: true),
 			"u" => Ansi.Create(underlined: true),
 			"s" or "strike" or "del" => Ansi.Create(strikeThrough: true),
@@ -45,7 +45,7 @@ public partial class RecursiveMarkdownRenderer
 			var color = ParseColorValue(colorMatch.Groups[1].Value);
 			if (color.HasValue)
 			{
-				return Ansi.Create(foreground: StringExtensions.rgb(color.Value));
+				return Ansi.Create(foreground: new AnsiColor.RGB(color.Value));
 			}
 		}
 		return null;
@@ -71,11 +71,11 @@ public partial class RecursiveMarkdownRenderer
 
 		if (fg.HasValue && bg.HasValue)
 			return Ansi.Create(
-				foreground: StringExtensions.rgb(fg.Value),
-				background: StringExtensions.rgb(bg.Value));
+				foreground: new AnsiColor.RGB(fg.Value),
+				background: new AnsiColor.RGB(bg.Value));
 		if (fg.HasValue)
-			return Ansi.Create(foreground: StringExtensions.rgb(fg.Value));
-		return Ansi.Create(background: StringExtensions.rgb(bg!.Value));
+			return Ansi.Create(foreground: new AnsiColor.RGB(fg.Value));
+		return Ansi.Create(background: new AnsiColor.RGB(bg!.Value));
 	}
 
 	private Ansi? ParseColorTagToAnsi(string tag)
@@ -86,7 +86,7 @@ public partial class RecursiveMarkdownRenderer
 		{
 			var color = ParseColorValue(match.Groups[1].Value.Trim());
 			if (color.HasValue)
-				return Ansi.Create(foreground: StringExtensions.rgb(color.Value));
+				return Ansi.Create(foreground: new AnsiColor.RGB(color.Value));
 		}
 		return null;
 	}

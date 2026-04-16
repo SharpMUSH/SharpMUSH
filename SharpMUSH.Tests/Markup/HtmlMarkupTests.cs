@@ -1,4 +1,5 @@
 using System.Drawing;
+using ANSILibrary;
 using A = MarkupString.MarkupStringModule;
 using H = MarkupString.MarkupImplementation.HtmlMarkup;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
@@ -18,7 +19,7 @@ public class HtmlMarkupTests
 		var htmlMarkup = H.Create("b");
 
 		// Act
-		var markupString = A.markupSingle(htmlMarkup, testText);
+		var markupString = A.MarkupSingle(htmlMarkup, testText);
 
 		// Assert
 		await Assert.That(markupString.ToPlainText()).IsEqualTo(testText);
@@ -34,10 +35,10 @@ public class HtmlMarkupTests
 	{
 		// Arrange
 		const string testText = "Link Text";
-		var htmlMarkup = H.Create("a", Microsoft.FSharp.Core.FSharpOption<string>.Some("href=\"https://example.com\""));
+		var htmlMarkup = H.Create("a", "href=\"https://example.com\"");
 
 		// Act
-		var markupString = A.markupSingle(htmlMarkup, testText);
+		var markupString = A.MarkupSingle(htmlMarkup, testText);
 
 		// Assert
 		await Assert.That(markupString.ToPlainText()).IsEqualTo(testText);
@@ -53,10 +54,10 @@ public class HtmlMarkupTests
 	{
 		// Arrange
 		const string testText = "test_html_markup_div_unique";
-		var htmlMarkup = H.Create("div", Microsoft.FSharp.Core.FSharpOption<string>.Some("class=\"container\""));
+		var htmlMarkup = H.Create("div", "class=\"container\"");
 
 		// Act
-		var markupString = A.markupSingle(htmlMarkup, testText);
+		var markupString = A.MarkupSingle(htmlMarkup, testText);
 
 		// Assert
 		await Assert.That(markupString.ToPlainText()).IsEqualTo(testText);
@@ -68,10 +69,10 @@ public class HtmlMarkupTests
 	{
 		// Arrange
 		const string testText = "test_html_markup_span_unique";
-		var htmlMarkup = H.Create("span", Microsoft.FSharp.Core.FSharpOption<string>.Some("id=\"test-id\""));
+		var htmlMarkup = H.Create("span", "id=\"test-id\"");
 
 		// Act
-		var markupString = A.markupSingle(htmlMarkup, testText);
+		var markupString = A.MarkupSingle(htmlMarkup, testText);
 
 		// Assert
 		await Assert.That(markupString.ToString()).IsEqualTo("<span id=\"test-id\">test_html_markup_span_unique</span>");
@@ -84,8 +85,8 @@ public class HtmlMarkupTests
 		var boldMarkup = H.Create("b");
 		var italicMarkup = H.Create("i");
 
-		var boldText = A.markupSingle(boldMarkup, "Bold");
-		var italicText = A.markupSingle(italicMarkup, "Italic");
+		var boldText = A.MarkupSingle(boldMarkup, "Bold");
+		var italicText = A.MarkupSingle(italicMarkup, "Italic");
 
 		// Act
 		var result = A.concat(boldText, italicText);
@@ -103,11 +104,11 @@ public class HtmlMarkupTests
 	public async Task HtmlMarkup_NestedHtmlTags_WorksCorrectly()
 	{
 		// Arrange
-		var divMarkup = H.Create("div", Microsoft.FSharp.Core.FSharpOption<string>.Some("class=\"outer\""));
-		var spanMarkup = H.Create("span", Microsoft.FSharp.Core.FSharpOption<string>.Some("class=\"inner\""));
+		var divMarkup = H.Create("div", "class=\"outer\"");
+		var spanMarkup = H.Create("span", "class=\"inner\"");
 
-		var innerText = A.markupSingle(spanMarkup, "Inner");
-		var outerText = A.markupSingle2(divMarkup, innerText);
+		var innerText = A.MarkupSingle(spanMarkup, "Inner");
+		var outerText = A.MarkupSingle2(divMarkup, innerText);
 
 		// Act & Assert
 		await Assert.That(outerText.ToPlainText()).IsEqualTo("Inner");
@@ -122,13 +123,13 @@ public class HtmlMarkupTests
 		// Arrange
 		const string testText = "test_combined_html_ansi_unique";
 		var htmlMarkup = H.Create("b");
-		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var ansiMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 
 		// Create HTML wrapped text
-		var htmlText = A.markupSingle(htmlMarkup, testText);
+		var htmlText = A.MarkupSingle(htmlMarkup, testText);
 
 		// Create ANSI colored text
-		var ansiText = A.markupSingle(ansiMarkup, testText);
+		var ansiText = A.MarkupSingle(ansiMarkup, testText);
 
 		// Act - concatenate them
 		var result = A.concat(htmlText, ansiText);
@@ -151,13 +152,13 @@ public class HtmlMarkupTests
 		// Arrange
 		const string testText = "test_ansi_inside_html_unique";
 		var htmlMarkup = H.Create("div");
-		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var ansiMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 
 		// Create ANSI colored text
-		var coloredText = A.markupSingle(ansiMarkup, testText);
+		var coloredText = A.MarkupSingle(ansiMarkup, testText);
 
 		// Wrap it in HTML
-		var htmlWrapped = A.markupSingle2(htmlMarkup, coloredText);
+		var htmlWrapped = A.MarkupSingle2(htmlMarkup, coloredText);
 
 		// Act & Assert
 		await Assert.That(htmlWrapped.ToPlainText()).IsEqualTo(testText);
@@ -174,13 +175,13 @@ public class HtmlMarkupTests
 		// Arrange
 		const string testText = "test_html_inside_ansi_unique";
 		var htmlMarkup = H.Create("span");
-		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Green));
+		var ansiMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Green));
 
 		// Create HTML tagged text
-		var htmlText = A.markupSingle(htmlMarkup, testText);
+		var htmlText = A.MarkupSingle(htmlMarkup, testText);
 
 		// Wrap it in ANSI color
-		var ansiWrapped = A.markupSingle2(ansiMarkup, htmlText);
+		var ansiWrapped = A.MarkupSingle2(ansiMarkup, htmlText);
 
 		// Act & Assert
 		await Assert.That(ansiWrapped.ToPlainText()).IsEqualTo(testText);
@@ -196,16 +197,16 @@ public class HtmlMarkupTests
 	{
 		// Arrange
 		var boldHtml = H.Create("b");
-		var divHtml = H.Create("div", Microsoft.FSharp.Core.FSharpOption<string>.Some("class=\"test\""));
-		var redAnsi = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blueAnsi = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var divHtml = H.Create("div", "class=\"test\"");
+		var redAnsi = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blueAnsi = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 
 		// Create complex nested structure
-		var text1 = A.markupSingle(boldHtml, "Bold");
-		var text2 = A.markupSingle(redAnsi, "Red");
-		var text3 = A.markupSingle(blueAnsi, "Blue");
+		var text1 = A.MarkupSingle(boldHtml, "Bold");
+		var text2 = A.MarkupSingle(redAnsi, "Red");
+		var text3 = A.MarkupSingle(blueAnsi, "Blue");
 		var combined = A.concat(A.concat(text1, text2), text3);
-		var wrapped = A.markupSingle2(divHtml, combined);
+		var wrapped = A.MarkupSingle2(divHtml, combined);
 
 		// Act & Assert
 		await Assert.That(wrapped.ToPlainText()).IsEqualTo("BoldRedBlue");
@@ -222,7 +223,7 @@ public class HtmlMarkupTests
 	{
 		// Arrange
 		var htmlMarkup = H.Create("b");
-		var original = A.markupSingle(htmlMarkup, "Test HTML");
+		var original = A.MarkupSingle(htmlMarkup, "Test HTML");
 
 		// Act
 		var serialized = A.serialize(original);
@@ -238,8 +239,8 @@ public class HtmlMarkupTests
 	public async Task HtmlMarkup_SerializeAndDeserialize_WithAttributes_PreservesHtml()
 	{
 		// Arrange
-		var htmlMarkup = H.Create("a", Microsoft.FSharp.Core.FSharpOption<string>.Some("href=\"https://test.com\""));
-		var original = A.markupSingle(htmlMarkup, "test_html_serialize_attrs");
+		var htmlMarkup = H.Create("a", "href=\"https://test.com\"");
+		var original = A.MarkupSingle(htmlMarkup, "test_html_serialize_attrs");
 
 		// Act
 		var serialized = A.serialize(original);
@@ -256,10 +257,10 @@ public class HtmlMarkupTests
 	{
 		// Arrange
 		var htmlMarkup = H.Create("div");
-		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Yellow));
+		var ansiMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Yellow));
 
-		var ansiText = A.markupSingle(ansiMarkup, "test_mixed_serialize");
-		var htmlWrapped = A.markupSingle2(htmlMarkup, ansiText);
+		var ansiText = A.MarkupSingle(ansiMarkup, "test_mixed_serialize");
+		var htmlWrapped = A.MarkupSingle2(htmlMarkup, ansiText);
 
 		// Act
 		var serialized = A.serialize(htmlWrapped);
@@ -275,7 +276,7 @@ public class HtmlMarkupTests
 	{
 		// Arrange
 		var htmlMarkup = H.Create("b");
-		var markupString = A.markupSingle(htmlMarkup, "Hello, World!");
+		var markupString = A.MarkupSingle(htmlMarkup, "Hello, World!");
 
 		// Act
 		var result = A.substring(7, 5, markupString);
@@ -292,7 +293,7 @@ public class HtmlMarkupTests
 	{
 		// Arrange
 		var htmlMarkup = H.Create("span");
-		var markupString = A.markupSingle(htmlMarkup, "one,two,three");
+		var markupString = A.MarkupSingle(htmlMarkup, "one,two,three");
 
 		// Act
 		var result = A.split(",", markupString);
@@ -314,8 +315,8 @@ public class HtmlMarkupTests
 	{
 		// Arrange
 		var boldMarkup = H.Create("b");
-		var first = A.markupSingle(boldMarkup, "Hello ");
-		var second = A.markupSingle(boldMarkup, "World");
+		var first = A.MarkupSingle(boldMarkup, "Hello ");
+		var second = A.MarkupSingle(boldMarkup, "World");
 		var combined = A.concat(first, second);
 
 		// Act
@@ -332,8 +333,8 @@ public class HtmlMarkupTests
 		// Arrange
 		var boldMarkup = H.Create("b");
 		var italicMarkup = H.Create("i");
-		var first = A.markupSingle(boldMarkup, "Bold ");
-		var second = A.markupSingle(italicMarkup, "Italic");
+		var first = A.MarkupSingle(boldMarkup, "Bold ");
+		var second = A.MarkupSingle(italicMarkup, "Italic");
 		var combined = A.concat(first, second);
 
 		// Act
@@ -353,12 +354,12 @@ public class HtmlMarkupTests
 	public async Task HtmlMarkup_MultipleWithDelimiter_WorksWithHtml()
 	{
 		// Arrange
-		var htmlMarkup = H.Create("span", Microsoft.FSharp.Core.FSharpOption<string>.Some("class=\"item\""));
+		var htmlMarkup = H.Create("span", "class=\"item\"");
 		var markupStrings = new[]
 		{
-			A.markupSingle(htmlMarkup, "one"),
-			A.markupSingle(htmlMarkup, "two"),
-			A.markupSingle(htmlMarkup, "three")
+			A.MarkupSingle(htmlMarkup, "one"),
+			A.MarkupSingle(htmlMarkup, "two"),
+			A.MarkupSingle(htmlMarkup, "three")
 		};
 		var delimiter = A.single(", ");
 
@@ -380,7 +381,7 @@ public class HtmlMarkupTests
 	{
 		// Arrange
 		var htmlMarkup = H.Create("br");
-		var markupString = A.markupSingle(htmlMarkup, "");
+		var markupString = A.MarkupSingle(htmlMarkup, "");
 
 		// Act & Assert
 		await Assert.That(markupString.ToPlainText()).IsEqualTo("");
@@ -395,7 +396,7 @@ public class HtmlMarkupTests
 		var content = A.single("content");
 
 		// Act - using markupSingle2 like tagwrap does
-		var result = A.markupSingle2(htmlMarkup, content);
+		var result = A.MarkupSingle2(htmlMarkup, content);
 
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("content");
@@ -406,11 +407,11 @@ public class HtmlMarkupTests
 	public async Task HtmlMarkup_TagwrapFunctionWithAttributes_Integration()
 	{
 		// Arrange - simulating tagwrap(div, content, class="test")
-		var htmlMarkup = H.Create("div", Microsoft.FSharp.Core.FSharpOption<string>.Some("class=\"test\""));
+		var htmlMarkup = H.Create("div", "class=\"test\"");
 		var content = A.single("test_tagwrap_attrs_unique");
 
 		// Act
-		var result = A.markupSingle2(htmlMarkup, content);
+		var result = A.MarkupSingle2(htmlMarkup, content);
 
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("test_tagwrap_attrs_unique");
