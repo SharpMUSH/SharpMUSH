@@ -120,7 +120,7 @@ public static class ANSI
         int colorCode = codeSpan.Length switch
         {
             1 => codeSpan[0],
-            >= 2 => codeSpan[1],
+            2 => codeSpan[1],
             _ => 0
         };
         return AnsiPalette.TryGetValue(colorCode, out var color)

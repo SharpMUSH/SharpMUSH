@@ -17,6 +17,9 @@ public static class TextAlignerModule
     private static (int SplitPoint, bool FoundSpace) FindWrapPoint(global::MarkupString.MarkupString text, int width)
     {
         var plainText = text.ToPlainText().AsSpan();
+        if (plainText.Length == 0)
+            return (width, false);
+
         var searchStart = Math.Min(width, plainText.Length - 1);
 
         for (var i = searchStart; i >= 0; i--)
