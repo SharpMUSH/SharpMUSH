@@ -248,19 +248,19 @@ public sealed class ANSIString
                 result = ANSI.Foreground(Interpolate(bg.Value, fg.Value, _opacity.Value)) + result;
             else if (_colorForeground is AnsiColor.ANSI fa && _colorBackground is AnsiColor.ANSI ba)
             {
-                var rgbA = ANSI.AnsiToRgb(fa.Value);
-                var rgbB = ANSI.AnsiToRgb(ba.Value);
-                result = ANSI.Foreground(Interpolate(rgbB, rgbA, _opacity.Value)) + result;
+                var foregroundRgb = ANSI.AnsiToRgb(fa.Value);
+                var backgroundRgb = ANSI.AnsiToRgb(ba.Value);
+                result = ANSI.Foreground(Interpolate(backgroundRgb, foregroundRgb, _opacity.Value)) + result;
             }
-            else if (_colorForeground is AnsiColor.ANSI fa2 && _colorBackground is AnsiColor.RGB rbg)
+            else if (_colorForeground is AnsiColor.ANSI fa2 && _colorBackground is AnsiColor.RGB backgroundRgb)
             {
-                var rgbA = ANSI.AnsiToRgb(fa2.Value);
-                result = ANSI.Foreground(Interpolate(rbg.Value, rgbA, _opacity.Value)) + result;
+                var foregroundRgb = ANSI.AnsiToRgb(fa2.Value);
+                result = ANSI.Foreground(Interpolate(backgroundRgb.Value, foregroundRgb, _opacity.Value)) + result;
             }
-            else if (_colorForeground is AnsiColor.RGB rfg && _colorBackground is AnsiColor.ANSI ba2)
+            else if (_colorForeground is AnsiColor.RGB foregroundRgb && _colorBackground is AnsiColor.ANSI ba2)
             {
-                var rgbB = ANSI.AnsiToRgb(ba2.Value);
-                result = ANSI.Foreground(Interpolate(rgbB, rfg.Value, _opacity.Value)) + result;
+                var backgroundAnsiRgb = ANSI.AnsiToRgb(ba2.Value);
+                result = ANSI.Foreground(Interpolate(backgroundAnsiRgb, foregroundRgb.Value, _opacity.Value)) + result;
             }
         }
         else if (_colorForeground != null)
