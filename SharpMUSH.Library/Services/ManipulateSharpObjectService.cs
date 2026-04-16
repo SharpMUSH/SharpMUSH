@@ -562,7 +562,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.ZoneCycleCannotAdd);
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ZoneCycleCannotAdd), executor);
 			}
 
 			return Errors.ZoneLoop;
@@ -572,7 +572,7 @@ public class ManipulateSharpObjectService(
 
 		if (notify)
 		{
-			await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.ZoneSet);
+			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ZoneSet), executor);
 		}
 
 		return true;
@@ -593,7 +593,7 @@ public class ManipulateSharpObjectService(
 
 		if (notify)
 		{
-			await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.ZoneCleared);
+			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ZoneCleared), executor);
 		}
 
 		return true;

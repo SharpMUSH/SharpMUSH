@@ -298,36 +298,21 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("addcom=Public", "Alias name cannot be empty.")]
-	[Arguments("addcom test_alias_ADDCOM3=NonExistentChannel", "Channel not found.")]
-	public async ValueTask AddComInvalidArgs(string command, string expected)
+	public async ValueTask AddComEmptyAlias()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom=Public"));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor, executor)).IsTrue();
+	}
 
-		// Verify error notification was sent containing the expected text.
-		// One case uses NotifyLocalized (AliasNameCannotBeEmpty) and the other uses Notify (Channel not found).
-		var anyNotify = NotifyService.ReceivedCalls().Any(call =>
-		{
-			var args = call.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is OneOf<MString, string> msg)
-				return msg.Match(m => m.ToPlainText().Contains(expected), s => s.Contains(expected));
-			return false;
-		});
-		var anyLocalizedNotify = NotifyService.ReceivedCalls().Any(call =>
-		{
-			var args = call.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is not string key) return false;
-			var type = typeof(ErrorMessages.Notifications);
-			var field = type.GetField(key, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-			if (field == null) return false;
-			var template = field.GetValue(null) as string;
-			return template != null && template.Contains(expected);
-		});
-		await Assert.That(anyNotify || anyLocalizedNotify).IsTrue();
+	[Test]
+	public async ValueTask AddComChannelNotFound()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_ADDCOM3=NonExistentChannel"));
+		await NotifyService
+			.Received(Quantity.AtLeastOne())
+			.Notify(TestHelpers.MatchingObject(executor), "Channel not found.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
