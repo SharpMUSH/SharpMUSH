@@ -7,7 +7,6 @@ using ColorCode.Styling;
 using Markdig.Extensions.Tables;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
-using Microsoft.FSharp.Core;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.MarkupString;
 using System.Drawing;
@@ -23,10 +22,10 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 public partial class RecursiveMarkdownRenderer
 {
 	private readonly Ansi _dimStyle = Ansi.Create(faint: true);
-	private readonly Ansi _boldStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), bold: true);
+	private readonly Ansi _boldStyle = Ansi.Create(foreground: new AnsiColor.RGB(Color.White), bold: true);
 	private readonly Ansi _underlineStyle = Ansi.Create(underlined: true);
-	private readonly Ansi _headingStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true, bold: true);
-	private readonly Ansi _heading3Style = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true);
+	private readonly Ansi _headingStyle = Ansi.Create(foreground: new AnsiColor.RGB(Color.White), underlined: true, bold: true);
+	private readonly Ansi _heading3Style = Ansi.Create(foreground: new AnsiColor.RGB(Color.White), underlined: true);
 	private readonly int _maxWidth;
 	private readonly IMUSHCodeParser? _mushParser;
 
@@ -65,13 +64,13 @@ public partial class RecursiveMarkdownRenderer
 	// bleeds into the following plain-text segment.  With both fg+bg in the outer style,
 	// WrapAndRestore re-applies both after every inner span, keeping colours correct.
 	private static readonly Ansi CodeBackgroundStyle = Ansi.Create(
-		foreground: StringExtensions.rgb(Color.FromArgb(0xD4, 0xD4, 0xD4)),
-		background: StringExtensions.rgb(Color.FromArgb(0x2D, 0x2D, 0x2D)));
+		foreground: new AnsiColor.RGB(Color.FromArgb(0xD4, 0xD4, 0xD4)),
+		background: new AnsiColor.RGB(Color.FromArgb(0x2D, 0x2D, 0x2D)));
 
 	// Light-blue colour applied to inline code spans (`...`).
 	// #9CDCFE matches VS Code Dark+'s variable/property colour and reads well on dark terminals.
 	private static readonly Ansi InlineCodeStyle = Ansi.Create(
-		foreground: StringExtensions.rgb(Color.FromArgb(0x9C, 0xDC, 0xFE)));
+		foreground: new AnsiColor.RGB(Color.FromArgb(0x9C, 0xDC, 0xFE)));
 
 	/// <summary>
 	/// Initializes a new instance of the RecursiveMarkdownRenderer

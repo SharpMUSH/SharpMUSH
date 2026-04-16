@@ -1,5 +1,6 @@
 using Markdig.Extensions.Tables;
 using SharpMUSH.MarkupString;
+using SharpMUSH.MarkupString.TextAlignerModule;
 using System.Text;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -147,15 +148,15 @@ public partial class RecursiveMarkdownRenderer
 				columnSpecs.ToString(),
 				cells,
 				MModule.single(" "),
-				MModule.markupSingle(borderStyle, " | "),
+				MModule.MarkupSingle(borderStyle, " | "),
 				MModule.single("")
 			);
 
 			// Wrap in borders
 			var rowWithBorders = MModule.multiple([
-				MModule.markupSingle(borderStyle, "| "),
+				MModule.MarkupSingle(borderStyle, "| "),
 				alignedRow,
-				MModule.markupSingle(borderStyle, " |")
+				MModule.MarkupSingle(borderStyle, " |")
 			]);
 
 			renderedRows.Add(rowWithBorders);
@@ -170,7 +171,7 @@ public partial class RecursiveMarkdownRenderer
 					separator.Append('-', columnWidths[col] + 2);
 					separator.Append('|');
 				}
-				renderedRows.Add(MModule.markupSingle(borderStyle, separator.ToString()));
+				renderedRows.Add(MModule.MarkupSingle(borderStyle, separator.ToString()));
 			}
 		}
 

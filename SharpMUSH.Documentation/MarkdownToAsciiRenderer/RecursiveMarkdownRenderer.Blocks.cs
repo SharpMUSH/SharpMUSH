@@ -1,4 +1,5 @@
 using Markdig.Syntax;
+using MarkupString;
 using SharpMUSH.MarkupString;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -15,7 +16,7 @@ public partial class RecursiveMarkdownRenderer
 		};
 
 		var content = RenderInlines(heading.Inline);
-		return MModule.markupSingle(style, content.ToPlainText());
+		return MModule.MarkupSingle(style, content.ToPlainText());
 	}
 
 	private MString RenderParagraph(ParagraphBlock para)
@@ -24,7 +25,7 @@ public partial class RecursiveMarkdownRenderer
 		// Trim trailing whitespace because EnableTrackTrivia appends a soft
 		// LineBreakInline (rendered as " ") at the end of many paragraphs.
 		var content = RenderInlines(para.Inline);
-		return MModule.trim(content, " ", global::MarkupString.MarkupStringModule.TrimType.TrimEnd);
+		return MModule.trim(content, " ", TrimType.TrimEnd);
 	}
 
 	private MString RenderList(ListBlock list)
@@ -44,7 +45,7 @@ public partial class RecursiveMarkdownRenderer
 			.OfType<ListItemBlock>()
 			.Select(listItem =>
 			{
-				var prefix = MModule.markupSingle(_dimStyle, $"{itemIndex}. ");
+				var prefix = MModule.MarkupSingle(_dimStyle, $"{itemIndex}. ");
 
 				var content = RenderListItem(listItem, itemIndex - 1, list.IsOrdered);
 				itemIndex++;
@@ -64,7 +65,7 @@ public partial class RecursiveMarkdownRenderer
 
 		var combined = MModule.multiple(parts);
 
-		var trimmed = MModule.trim(combined, " ", global::MarkupString.MarkupStringModule.TrimType.TrimBoth);
+		var trimmed = MModule.trim(combined, " ", TrimType.TrimBoth);
 		return trimmed;
 	}
 
@@ -91,7 +92,7 @@ public partial class RecursiveMarkdownRenderer
 	}
 
 	private MString RenderThematicBreak()
-		=> MModule.markupSingle(_dimStyle, string.Concat(Enumerable.Repeat("-", _maxWidth)));
+		=> MModule.MarkupSingle(_dimStyle, string.Concat(Enumerable.Repeat("-", _maxWidth)));
 
 	private MString RenderHtmlBlock(HtmlBlock html)
 	{

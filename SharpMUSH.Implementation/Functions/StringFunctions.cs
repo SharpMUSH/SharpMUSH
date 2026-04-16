@@ -1,7 +1,8 @@
 ﻿using ANSILibrary;
 using DotNext.Collections.Generic;
 using Humanizer;
-using Microsoft.FSharp.Core;
+using MarkupString;
+using MarkupString.MarkupImplementation;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Implementation.Tools;
@@ -13,6 +14,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.MarkupString;
+using SharpMUSH.MarkupString.TextAlignerModule;
 using System.Drawing;
 using System.Globalization;
 using System.Net;
@@ -21,7 +23,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using static ANSILibrary.ANSI;
-using static MarkupString.MarkupImplementation;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -667,7 +668,7 @@ public partial class Functions
 
 		var leftSide = MModule.substring(0, 1, arg0);
 		var rightSide = MModule.substring(1, arg0.Length - 1, arg0);
-		var capitalized = MModule.apply(leftSide, FuncConvert.FromFunc<string, string>(x => x.ToUpperInvariant()));
+		var capitalized = MModule.apply(leftSide, x => x.ToUpperInvariant());
 		var concat = MModule.concat(capitalized, rightSide);
 
 		return new ValueTask<CallState>(new CallState(concat));
@@ -734,7 +735,7 @@ public partial class Functions
 			return new ValueTask<CallState>(new CallState(Errors.ErrorPositiveInteger));
 		}
 
-		var result = MModule.center2(str, fill, rightFill, widthInt, global::MarkupString.MarkupStringModule.TruncationType.Overflow);
+		var result = MModule.center2(str, fill, rightFill, widthInt, TruncationType.Overflow);
 
 		return new ValueTask<CallState>(new CallState(result));
 	}
@@ -958,7 +959,7 @@ public partial class Functions
 		var str = MModule.concat(MModule.single("\\"), parser.CurrentState.Arguments["0"].Message!);
 
 		return ValueTask.FromResult<CallState>(MModule.apply(str,
-			FSharpFunc<string, string>.FromConverter(x => x switch
+			x => x switch
 			{
 				"%" => "\\%",
 				";" => "\\;",
@@ -973,7 +974,7 @@ public partial class Functions
 				"^" => "\\^",
 				"$" => "\\$",
 				_ => x
-			})));
+			}));
 	}
 
 	[SharpFunction(Name = "flip", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -1032,7 +1033,7 @@ public partial class Functions
 			MModule.evaluateWith((markupType, innerText)
 				=> markupType switch
 				{
-					{ Value: Ansi ansiMarkup }
+					Ansi ansiMarkup
 						=> ReconstructWebCall(ansiMarkup.Details, WebEncodeAngleBrackets(innerText)),
 					_ => WebEncodeAngleBrackets(innerText)
 				},
@@ -1050,7 +1051,7 @@ public partial class Functions
 		{
 			return markupType switch
 			{
-				{ Value: Ansi ansiMarkup }
+				Ansi ansiMarkup
 					=> ReconstructAnsiCall(ansiMarkup.Details, innerText),
 				_ => innerText
 			};
@@ -1092,7 +1093,7 @@ public partial class Functions
 		if (ansiDetails.Inverted) formatPrefix += "i";
 
 		// Add foreground color (with formatting prefix if any)
-		if (!ansiDetails.Foreground.Equals(AnsiColor.NoAnsi))
+		if (!ansiDetails.Foreground.Equals(AnsiColor.NoAnsi.Instance))
 		{
 			var colorCode = ConvertAnsiColorToCode(ansiDetails.Foreground);
 			if (!string.IsNullOrEmpty(colorCode))
@@ -1130,7 +1131,7 @@ public partial class Functions
 		}
 
 		// Add background color
-		if (!ansiDetails.Background.Equals(AnsiColor.NoAnsi))
+		if (!ansiDetails.Background.Equals(AnsiColor.NoAnsi.Instance))
 		{
 			var colorCode = ConvertAnsiColorToCode(ansiDetails.Background, isBackground: true);
 			if (!string.IsNullOrEmpty(colorCode))
@@ -1162,12 +1163,12 @@ public partial class Functions
 		Color foregroundColor = Color.Empty;
 		Color backgroundColor = Color.Empty;
 
-		if (!ansiDetails.Foreground.Equals(AnsiColor.NoAnsi))
+		if (!ansiDetails.Foreground.Equals(AnsiColor.NoAnsi.Instance))
 		{
 			foregroundColor = ConvertAnsiColorToRGB(ansiDetails.Foreground);
 		}
 
-		if (!ansiDetails.Background.Equals(AnsiColor.NoAnsi))
+		if (!ansiDetails.Background.Equals(AnsiColor.NoAnsi.Instance))
 		{
 			backgroundColor = ConvertAnsiColorToRGB(ansiDetails.Background);
 		}
@@ -1186,15 +1187,15 @@ public partial class Functions
 	/// <summary>
 	/// Converts AnsiColor to PennMUSH color code
 	/// </summary>
-	internal static string ConvertAnsiColorToCode(ANSI.AnsiColor color, bool isBackground = false)
+	internal static string ConvertAnsiColorToCode(AnsiColor color, bool isBackground = false)
 	{
 		return color switch
 		{
-			ANSI.AnsiColor.RGB rgb => isBackground
-				? $"/{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}"
-				: $"{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}",
+			AnsiColor.RGB rgb => isBackground
+				? $"/{rgb.Value.R:X2}{rgb.Value.G:X2}{rgb.Value.B:X2}"
+				: $"{rgb.Value.R:X2}{rgb.Value.G:X2}{rgb.Value.B:X2}",
 			AnsiColor.ANSI ansi
-				=> ansi.Item switch
+				=> ansi.Value switch
 				{
 					// Background colors use uppercase, foreground uses lowercase
 					// Handle both single-element [34] and two-element [0, 34] arrays
@@ -1239,13 +1240,13 @@ public partial class Functions
 	/// <summary>
 	/// Converts AnsiColor to PennMUSH color code
 	/// </summary>
-	private static Color ConvertAnsiColorToRGB(ANSI.AnsiColor color)
+	private static Color ConvertAnsiColorToRGB(AnsiColor color)
 	{
 		return color switch
 		{
-			ANSI.AnsiColor.RGB rgb => rgb.Item,
+			AnsiColor.RGB rgb => rgb.Value,
 			AnsiColor.ANSI ansi
-				=> ansi.Item switch
+				=> ansi.Value switch
 				{
 					[0, 30] => Color.Black, // black
 					[0, 31] => Color.DarkRed, // red  
@@ -1381,7 +1382,7 @@ public partial class Functions
 		return new ValueTask<CallState>(
 			MModule.apply(
 				parser.CurrentState.Arguments["0"].Message!,
-				transform: FuncConvert.FromFunc<string, string>(x => x.ToLowerInvariant())));
+				transform: x => x.ToLowerInvariant()));
 	}
 
 	[SharpFunction(Name = "left", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "length"])]
@@ -1408,8 +1409,8 @@ public partial class Functions
 			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, global::MarkupString.MarkupStringModule.PadType.Right,
-			global::MarkupString.MarkupStringModule.TruncationType.Overflow));
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, PadType.Right,
+			TruncationType.Overflow));
 	}
 
 	[SharpFunction(Name = "lpos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["target", "list", "delimiter"])]
@@ -1640,8 +1641,8 @@ public partial class Functions
 			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, global::MarkupString.MarkupStringModule.PadType.Left,
-			global::MarkupString.MarkupStringModule.TruncationType.Overflow));
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, PadType.Left,
+			TruncationType.Overflow));
 	}
 
 	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -1655,11 +1656,11 @@ public partial class Functions
 	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public static ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(MModule.apply(parser.CurrentState.Arguments["0"].Message!,
-			FSharpFunc<string, string>.FromConverter(x => x switch
+			x => x switch
 			{
 				"%" or ";" or "[" or "]" or "(" or ")" or "{" or "}" or "$" or "," or "^" => " ",
 				_ => x
-			})));
+			}));
 
 	[SharpFunction(Name = "space", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["count"])]
 	public static ValueTask<CallState> Space(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1731,7 +1732,7 @@ public partial class Functions
 		// We do nothing with arg1 for SharpMUSH.
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
 
-		var func = FuncConvert.FromFunc<string, string>(RemoveDiacritics);
+		var func = (Func<string, string>)RemoveDiacritics;
 		return ValueTask.FromResult<CallState>(MModule.apply(arg0, func));
 	}
 
@@ -1950,9 +1951,9 @@ public partial class Functions
 
 		var trimType = arg2.ToLowerInvariant() switch
 		{
-			"l" => global::MarkupString.MarkupStringModule.TrimType.TrimStart,
-			"r" => global::MarkupString.MarkupStringModule.TrimType.TrimEnd,
-			_ => global::MarkupString.MarkupStringModule.TrimType.TrimBoth,
+			"l" => TrimType.TrimStart,
+			"r" => TrimType.TrimEnd,
+			_ => TrimType.TrimBoth,
 		};
 
 		return ValueTask.FromResult<CallState>(
@@ -1973,9 +1974,9 @@ public partial class Functions
 
 		var trimType = arg2.ToLowerInvariant() switch
 		{
-			"l" => global::MarkupString.MarkupStringModule.TrimType.TrimStart,
-			"r" => global::MarkupString.MarkupStringModule.TrimType.TrimEnd,
-			_ => global::MarkupString.MarkupStringModule.TrimType.TrimBoth,
+			"l" => TrimType.TrimStart,
+			"r" => TrimType.TrimEnd,
+			_ => TrimType.TrimBoth,
 		};
 
 		return ValueTask.FromResult<CallState>(
@@ -1996,9 +1997,9 @@ public partial class Functions
 
 		var trimType = arg2.ToLowerInvariant() switch
 		{
-			"l" => global::MarkupString.MarkupStringModule.TrimType.TrimStart,
-			"r" => global::MarkupString.MarkupStringModule.TrimType.TrimEnd,
-			_ => global::MarkupString.MarkupStringModule.TrimType.TrimBoth,
+			"l" => TrimType.TrimStart,
+			"r" => TrimType.TrimEnd,
+			_ => TrimType.TrimBoth,
 		};
 
 		return ValueTask.FromResult<CallState>(
@@ -2009,7 +2010,7 @@ public partial class Functions
 	public static ValueTask<CallState> UpperCaseString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		var result = MModule.apply(arg0, FuncConvert.FromFunc<string, string>(x => x.ToUpperInvariant()));
+		var result = MModule.apply(arg0, x => x.ToUpperInvariant());
 
 		return new ValueTask<CallState>(result);
 	}

@@ -2517,7 +2517,7 @@ public partial class Commands
 
 		var executorName = MModule.single(executor.Object().Name);
 		var poseMessage = isNoSpace
-			? MModule.concat(executorName, MModule.trim(message, " ", MModule.TrimType.TrimStart))
+			? MModule.concat(executorName, MModule.trim(message, " ", global::MarkupString.TrimType.TrimStart))
 			: MModule.concat(MModule.concat(executorName, MModule.single(" ")), message);
 
 		await CommunicationService!.SendToRoomAsync(executor, executorLocation,

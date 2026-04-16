@@ -1,5 +1,7 @@
 using System.Drawing;
+using ANSILibrary;
 using MarkupString;
+using MarkupString.MarkupImplementation;
 using AMS = MarkupString.MarkupStringModule;
 using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
@@ -20,7 +22,7 @@ public class RenderStrategyTests
 	public async Task AnsiStrategy_PlainText_PassesThrough()
 	{
 		var ams = AMS.single("Hello");
-		var result = ams.RenderWith(AMS.RenderStrategies.ansi);
+		var result = ams.RenderWith(AMS.RenderStrategies.AnsiStrategy);
 
 		await Assert.That(result).IsEqualTo("Hello");
 	}
@@ -28,10 +30,10 @@ public class RenderStrategyTests
 	[Test]
 	public async Task AnsiStrategy_WithMarkup_ContainsEscapeCodes()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Red Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Red Text");
 
-		var result = ams.RenderWith(AMS.RenderStrategies.ansi);
+		var result = ams.RenderWith(AMS.RenderStrategies.AnsiStrategy);
 
 		await Assert.That(result).Contains("\u001b[");
 		await Assert.That(result).Contains("Red Text");
@@ -40,10 +42,10 @@ public class RenderStrategyTests
 	[Test]
 	public async Task AnsiStrategy_MatchesToString()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Red Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Red Text");
 
-		var strategyResult = ams.RenderWith(AMS.RenderStrategies.ansi);
+		var strategyResult = ams.RenderWith(AMS.RenderStrategies.AnsiStrategy);
 		var toStringResult = ams.ToString();
 
 		await Assert.That(strategyResult).IsEqualTo(toStringResult);
@@ -52,10 +54,10 @@ public class RenderStrategyTests
 	[Test]
 	public async Task AnsiStrategy_MatchesRenderAnsi()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Red Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Red Text");
 
-		var strategyResult = ams.RenderWith(AMS.RenderStrategies.ansi);
+		var strategyResult = ams.RenderWith(AMS.RenderStrategies.AnsiStrategy);
 		var renderResult = ams.Render("ansi");
 
 		await Assert.That(strategyResult).IsEqualTo(renderResult);
@@ -65,9 +67,9 @@ public class RenderStrategyTests
 	public async Task AnsiStrategy_BoldMarkup_ContainsBoldEscape()
 	{
 		var boldMarkup = M.Create(bold: true);
-		var ams = AMS.markupSingle(boldMarkup, "Bold");
+		var ams = AMS.MarkupSingle(boldMarkup, "Bold");
 
-		var result = ams.RenderWith(AMS.RenderStrategies.ansi);
+		var result = ams.RenderWith(AMS.RenderStrategies.AnsiStrategy);
 
 		await Assert.That(result).Contains("\u001b[");
 		await Assert.That(result).Contains("Bold");
@@ -77,7 +79,7 @@ public class RenderStrategyTests
 	public async Task AnsiStrategy_EmptyString_ReturnsEmpty()
 	{
 		var ams = AMS.empty();
-		var result = ams.RenderWith(AMS.RenderStrategies.ansi);
+		var result = ams.RenderWith(AMS.RenderStrategies.AnsiStrategy);
 
 		await Assert.That(result).IsEqualTo("");
 	}
@@ -85,14 +87,14 @@ public class RenderStrategyTests
 	[Test]
 	public async Task AnsiStrategy_ConcatenatedMarkup_OptimizesOutput()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var part1 = AMS.markupSingle(redMarkup, "Hello");
-		var part2 = AMS.markupSingle(redMarkup, " World");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var part1 = AMS.MarkupSingle(redMarkup, "Hello");
+		var part2 = AMS.MarkupSingle(redMarkup, " World");
 		var combined = AMS.concat(part1, part2);
 
 		// Optimized version should merge redundant escape sequences
 		var optimized = AMS.optimize(combined);
-		var result = optimized.RenderWith(AMS.RenderStrategies.ansi);
+		var result = optimized.RenderWith(AMS.RenderStrategies.AnsiStrategy);
 
 		await Assert.That(result).Contains("Hello World");
 		await Assert.That(result).Contains("\u001b[");
@@ -104,7 +106,7 @@ public class RenderStrategyTests
 	public async Task HtmlStrategy_PlainText_PassesThrough()
 	{
 		var ams = AMS.single("Hello");
-		var result = ams.RenderWith(AMS.RenderStrategies.html);
+		var result = ams.RenderWith(AMS.RenderStrategies.HtmlStrategy);
 
 		await Assert.That(result).IsEqualTo("Hello");
 	}
@@ -112,10 +114,10 @@ public class RenderStrategyTests
 	[Test]
 	public async Task HtmlStrategy_WithAnsiMarkup_ContainsSpanTags()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
-		var ams = AMS.markupSingle(redMarkup, "Red Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.FromArgb(255, 0, 0)));
+		var ams = AMS.MarkupSingle(redMarkup, "Red Text");
 
-		var result = ams.RenderWith(AMS.RenderStrategies.html);
+		var result = ams.RenderWith(AMS.RenderStrategies.HtmlStrategy);
 
 		await Assert.That(result).Contains("<span");
 		await Assert.That(result).Contains("color: #ff0000");
@@ -126,10 +128,10 @@ public class RenderStrategyTests
 	[Test]
 	public async Task HtmlStrategy_MatchesRenderHtml()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Red Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Red Text");
 
-		var strategyResult = ams.RenderWith(AMS.RenderStrategies.html);
+		var strategyResult = ams.RenderWith(AMS.RenderStrategies.HtmlStrategy);
 		var renderResult = ams.Render("html");
 
 		await Assert.That(strategyResult).IsEqualTo(renderResult);
@@ -138,10 +140,10 @@ public class RenderStrategyTests
 	[Test]
 	public async Task HtmlStrategy_HtmlEncodesText()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "<script>alert('xss')</script>");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "<script>alert('xss')</script>");
 
-		var result = ams.RenderWith(AMS.RenderStrategies.html);
+		var result = ams.RenderWith(AMS.RenderStrategies.HtmlStrategy);
 
 		await Assert.That(result).DoesNotContain("<script>");
 		await Assert.That(result).Contains("&lt;script&gt;");
@@ -151,9 +153,9 @@ public class RenderStrategyTests
 	public async Task HtmlStrategy_BoldMarkup_ContainsCssClass()
 	{
 		var boldMarkup = M.Create(bold: true);
-		var ams = AMS.markupSingle(boldMarkup, "Bold");
+		var ams = AMS.MarkupSingle(boldMarkup, "Bold");
 
-		var result = ams.RenderWith(AMS.RenderStrategies.html);
+		var result = ams.RenderWith(AMS.RenderStrategies.HtmlStrategy);
 
 		await Assert.That(result).Contains("ms-bold");
 	}
@@ -162,9 +164,9 @@ public class RenderStrategyTests
 	public async Task HtmlStrategy_HtmlMarkup_RendersHtmlTags()
 	{
 		var htmlMarkup = H.Create("b");
-		var ams = AMS.markupSingle(htmlMarkup, "Bold");
+		var ams = AMS.MarkupSingle(htmlMarkup, "Bold");
 
-		var result = ams.RenderWith(AMS.RenderStrategies.html);
+		var result = ams.RenderWith(AMS.RenderStrategies.HtmlStrategy);
 
 		await Assert.That(result).IsEqualTo("<b>Bold</b>");
 	}
@@ -172,10 +174,10 @@ public class RenderStrategyTests
 	[Test]
 	public async Task HtmlStrategy_NoEscapeCodes()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Text");
 
-		var result = ams.RenderWith(AMS.RenderStrategies.html);
+		var result = ams.RenderWith(AMS.RenderStrategies.HtmlStrategy);
 
 		await Assert.That(result).DoesNotContain("\u001b[");
 	}
@@ -183,10 +185,10 @@ public class RenderStrategyTests
 	[Test]
 	public async Task HtmlStrategy_BackgroundColor_ContainsStyleAttribute()
 	{
-		var markup = M.Create(background: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(0, 128, 0)));
-		var ams = AMS.markupSingle(markup, "Green BG");
+		var markup = M.Create(background: new AnsiColor.RGB(Color.FromArgb(0, 128, 0)));
+		var ams = AMS.MarkupSingle(markup, "Green BG");
 
-		var result = ams.RenderWith(AMS.RenderStrategies.html);
+		var result = ams.RenderWith(AMS.RenderStrategies.HtmlStrategy);
 
 		await Assert.That(result).Contains("background-color: #008000");
 	}
@@ -195,7 +197,7 @@ public class RenderStrategyTests
 	public async Task HtmlStrategy_EmptyString_ReturnsEmpty()
 	{
 		var ams = AMS.empty();
-		var result = ams.RenderWith(AMS.RenderStrategies.html);
+		var result = ams.RenderWith(AMS.RenderStrategies.HtmlStrategy);
 
 		await Assert.That(result).IsEqualTo("");
 	}
@@ -206,7 +208,7 @@ public class RenderStrategyTests
 	public async Task PlainTextStrategy_PlainText_PassesThrough()
 	{
 		var ams = AMS.single("Hello");
-		var result = ams.RenderWith(AMS.RenderStrategies.plainText);
+		var result = ams.RenderWith(AMS.RenderStrategies.PlainTextStrategy);
 
 		await Assert.That(result).IsEqualTo("Hello");
 	}
@@ -214,10 +216,10 @@ public class RenderStrategyTests
 	[Test]
 	public async Task PlainTextStrategy_WithMarkup_StripsFormatting()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Red Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Red Text");
 
-		var result = ams.RenderWith(AMS.RenderStrategies.plainText);
+		var result = ams.RenderWith(AMS.RenderStrategies.PlainTextStrategy);
 
 		await Assert.That(result).IsEqualTo("Red Text");
 		await Assert.That(result).DoesNotContain("\u001b[");
@@ -227,10 +229,10 @@ public class RenderStrategyTests
 	[Test]
 	public async Task PlainTextStrategy_MatchesToPlainText()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Red Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Red Text");
 
-		var strategyResult = ams.RenderWith(AMS.RenderStrategies.plainText);
+		var strategyResult = ams.RenderWith(AMS.RenderStrategies.PlainTextStrategy);
 		var plainResult = ams.ToPlainText();
 
 		await Assert.That(strategyResult).IsEqualTo(plainResult);
@@ -239,13 +241,13 @@ public class RenderStrategyTests
 	[Test]
 	public async Task PlainTextStrategy_ConcatenatedMarkup_StripsAll()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var part1 = AMS.markupSingle(redMarkup, "Hello");
-		var part2 = AMS.markupSingle(blueMarkup, " World");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blueMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
+		var part1 = AMS.MarkupSingle(redMarkup, "Hello");
+		var part2 = AMS.MarkupSingle(blueMarkup, " World");
 		var combined = AMS.concat(part1, part2);
 
-		var result = combined.RenderWith(AMS.RenderStrategies.plainText);
+		var result = combined.RenderWith(AMS.RenderStrategies.PlainTextStrategy);
 
 		await Assert.That(result).IsEqualTo("Hello World");
 	}
@@ -254,7 +256,7 @@ public class RenderStrategyTests
 	public async Task PlainTextStrategy_EmptyString_ReturnsEmpty()
 	{
 		var ams = AMS.empty();
-		var result = ams.RenderWith(AMS.RenderStrategies.plainText);
+		var result = ams.RenderWith(AMS.RenderStrategies.PlainTextStrategy);
 
 		await Assert.That(result).IsEqualTo("");
 	}
@@ -264,7 +266,7 @@ public class RenderStrategyTests
 	[Test]
 	public async Task ForFormat_Ansi_ReturnsAnsiStrategy()
 	{
-		var strategy = AMS.forFormat(AMS.RenderFormat.Ansi);
+		var strategy = AMS.ForFormat(RenderFormat.Ansi.Instance);
 		var ams = AMS.single("Test");
 		var result = ams.RenderWith(strategy);
 
@@ -274,9 +276,9 @@ public class RenderStrategyTests
 	[Test]
 	public async Task ForFormat_Html_ReturnsHtmlStrategy()
 	{
-		var strategy = AMS.forFormat(AMS.RenderFormat.Html);
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
-		var ams = AMS.markupSingle(redMarkup, "Test");
+		var strategy = AMS.ForFormat(RenderFormat.Html.Instance);
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.FromArgb(255, 0, 0)));
+		var ams = AMS.MarkupSingle(redMarkup, "Test");
 		var result = ams.RenderWith(strategy);
 
 		await Assert.That(result).Contains("<span");
@@ -285,9 +287,9 @@ public class RenderStrategyTests
 	[Test]
 	public async Task ForFormat_PlainText_ReturnsPlainTextStrategy()
 	{
-		var strategy = AMS.forFormat(AMS.RenderFormat.PlainText);
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Test");
+		var strategy = AMS.ForFormat(RenderFormat.PlainText.Instance);
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Test");
 		var result = ams.RenderWith(strategy);
 
 		await Assert.That(result).IsEqualTo("Test");
@@ -296,11 +298,11 @@ public class RenderStrategyTests
 	[Test]
 	public async Task ForFormat_MatchesToStrategy()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Test");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Test");
 
-		var forFormatResult = ams.RenderWith(AMS.forFormat(AMS.RenderFormat.Ansi));
-		var toStrategyResult = ams.RenderWith(AMS.RenderFormat.Ansi.ToStrategy());
+		var forFormatResult = ams.RenderWith(AMS.ForFormat(RenderFormat.Ansi.Instance));
+		var toStrategyResult = ams.RenderWith(RenderFormat.Ansi.Instance.ToStrategy());
 
 		await Assert.That(forFormatResult).IsEqualTo(toStrategyResult);
 	}
@@ -310,12 +312,12 @@ public class RenderStrategyTests
 	[Test]
 	public async Task RenderWith_AcceptsDifferentStrategies()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Test");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Test");
 
-		var ansiResult = ams.RenderWith(AMS.RenderStrategies.ansi);
-		var htmlResult = ams.RenderWith(AMS.RenderStrategies.html);
-		var plainResult = ams.RenderWith(AMS.RenderStrategies.plainText);
+		var ansiResult = ams.RenderWith(AMS.RenderStrategies.AnsiStrategy);
+		var htmlResult = ams.RenderWith(AMS.RenderStrategies.HtmlStrategy);
+		var plainResult = ams.RenderWith(AMS.RenderStrategies.PlainTextStrategy);
 
 		// All three should produce different outputs for marked-up text
 		await Assert.That(ansiResult).IsNotEqualTo(htmlResult);
@@ -326,16 +328,16 @@ public class RenderStrategyTests
 	[Test]
 	public async Task RenderWith_MultipleRuns_AllStrategiesWork()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blueMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 		var plain = AMS.single("Hello ");
-		var red = AMS.markupSingle(redMarkup, "Red ");
-		var blue = AMS.markupSingle(blueMarkup, "Blue");
+		var red = AMS.MarkupSingle(redMarkup, "Red ");
+		var blue = AMS.MarkupSingle(blueMarkup, "Blue");
 		var combined = AMS.concat(AMS.concat(plain, red), blue);
 
-		var ansiResult = combined.RenderWith(AMS.RenderStrategies.ansi);
-		var htmlResult = combined.RenderWith(AMS.RenderStrategies.html);
-		var plainResult = combined.RenderWith(AMS.RenderStrategies.plainText);
+		var ansiResult = combined.RenderWith(AMS.RenderStrategies.AnsiStrategy);
+		var htmlResult = combined.RenderWith(AMS.RenderStrategies.HtmlStrategy);
+		var plainResult = combined.RenderWith(AMS.RenderStrategies.PlainTextStrategy);
 
 		// All should contain the plain text
 		await Assert.That(plainResult).IsEqualTo("Hello Red Blue");
@@ -359,10 +361,10 @@ public class RenderStrategyTests
 		// Create a custom BBCode render strategy to demonstrate extensibility
 		var bbCodeStrategy = new BBCodeRenderStrategy();
 
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var boldMarkup = M.Create(bold: true);
-		var ams = AMS.markupSingle(redMarkup, "Red Text");
-		var amsBold = AMS.markupSingle(boldMarkup, "Bold Text");
+		var ams = AMS.MarkupSingle(redMarkup, "Red Text");
+		var amsBold = AMS.MarkupSingle(boldMarkup, "Bold Text");
 
 		var redResult = ams.RenderWith(bbCodeStrategy);
 		var boldResult = amsBold.RenderWith(bbCodeStrategy);
@@ -386,11 +388,11 @@ public class RenderStrategyTests
 	public async Task CustomStrategy_BBCode_ConcatenatedRuns()
 	{
 		var bbCodeStrategy = new BBCodeRenderStrategy();
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var red = AMS.markupSingle(redMarkup, "Red");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blueMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
+		var red = AMS.MarkupSingle(redMarkup, "Red");
 		var plain = AMS.single(" and ");
-		var blue = AMS.markupSingle(blueMarkup, "Blue");
+		var blue = AMS.MarkupSingle(blueMarkup, "Blue");
 		var combined = AMS.concat(AMS.concat(red, plain), blue);
 
 		var result = combined.RenderWith(bbCodeStrategy);
@@ -404,7 +406,7 @@ public class RenderStrategyTests
 		// Another custom strategy: Markdown-style bold
 		var markdownStrategy = new MarkdownBoldRenderStrategy();
 		var boldMarkup = M.Create(bold: true);
-		var ams = AMS.markupSingle(boldMarkup, "Important");
+		var ams = AMS.MarkupSingle(boldMarkup, "Important");
 
 		var result = ams.RenderWith(markdownStrategy);
 
@@ -416,12 +418,12 @@ public class RenderStrategyTests
 	[Test]
 	public async Task Singletons_AreSameInstance()
 	{
-		var ansi1 = AMS.RenderStrategies.ansi;
-		var ansi2 = AMS.RenderStrategies.ansi;
-		var html1 = AMS.RenderStrategies.html;
-		var html2 = AMS.RenderStrategies.html;
-		var plain1 = AMS.RenderStrategies.plainText;
-		var plain2 = AMS.RenderStrategies.plainText;
+		var ansi1 = AMS.RenderStrategies.AnsiStrategy;
+		var ansi2 = AMS.RenderStrategies.AnsiStrategy;
+		var html1 = AMS.RenderStrategies.HtmlStrategy;
+		var html2 = AMS.RenderStrategies.HtmlStrategy;
+		var plain1 = AMS.RenderStrategies.PlainTextStrategy;
+		var plain2 = AMS.RenderStrategies.PlainTextStrategy;
 
 		await Assert.That(ReferenceEquals(ansi1, ansi2)).IsTrue();
 		await Assert.That(ReferenceEquals(html1, html2)).IsTrue();
@@ -433,28 +435,28 @@ public class RenderStrategyTests
 	[Test]
 	public async Task BackwardCompat_RenderAnsi_SameAsRenderWithAnsi()
 	{
-		var markup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red), bold: true);
-		var ams = AMS.markupSingle(markup, "Test");
+		var markup = M.Create(foreground: new AnsiColor.RGB(Color.Red), bold: true);
+		var ams = AMS.MarkupSingle(markup, "Test");
 
-		await Assert.That(ams.Render("ansi")).IsEqualTo(ams.RenderWith(AMS.RenderStrategies.ansi));
+		await Assert.That(ams.Render("ansi")).IsEqualTo(ams.RenderWith(AMS.RenderStrategies.AnsiStrategy));
 	}
 
 	[Test]
 	public async Task BackwardCompat_RenderHtml_SameAsRenderWithHtml()
 	{
-		var markup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)), bold: true);
-		var ams = AMS.markupSingle(markup, "Test");
+		var markup = M.Create(foreground: new AnsiColor.RGB(Color.FromArgb(255, 0, 0)), bold: true);
+		var ams = AMS.MarkupSingle(markup, "Test");
 
-		await Assert.That(ams.Render("html")).IsEqualTo(ams.RenderWith(AMS.RenderStrategies.html));
+		await Assert.That(ams.Render("html")).IsEqualTo(ams.RenderWith(AMS.RenderStrategies.HtmlStrategy));
 	}
 
 	[Test]
 	public async Task BackwardCompat_RenderPlainText_SameAsRenderWithPlainText()
 	{
-		var markup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red), bold: true);
-		var ams = AMS.markupSingle(markup, "Test");
+		var markup = M.Create(foreground: new AnsiColor.RGB(Color.Red), bold: true);
+		var ams = AMS.MarkupSingle(markup, "Test");
 
-		await Assert.That(ams.Render("plaintext")).IsEqualTo(ams.RenderWith(AMS.RenderStrategies.plainText));
+		await Assert.That(ams.Render("plaintext")).IsEqualTo(ams.RenderWith(AMS.RenderStrategies.PlainTextStrategy));
 	}
 }
 
@@ -462,11 +464,11 @@ public class RenderStrategyTests
 /// Custom BBCode render strategy demonstrating extensibility.
 /// Converts ANSI markup to BBCode format: [color=#rrggbb]text[/color], [b]text[/b], etc.
 /// </summary>
-internal class BBCodeRenderStrategy : AMS.IRenderStrategy
+internal class BBCodeRenderStrategy : IRenderStrategy
 {
 	public string EncodeText(string text) => text;
 
-	public string ApplyMarkup(MarkupImplementation.Markup markup, string text)
+	public string ApplyMarkup(IMarkup markup, string text)
 	{
 		if (markup is M ansiMarkup)
 		{
@@ -490,8 +492,8 @@ internal class BBCodeRenderStrategy : AMS.IRenderStrategy
 				result = $"[s]{result}[/s]";
 
 			// Apply foreground color
-			if (details.Foreground is ANSILibrary.ANSI.AnsiColor.RGB rgb)
-				result = $"[color=#{rgb.Item.R:x2}{rgb.Item.G:x2}{rgb.Item.B:x2}]{result}[/color]";
+			if (details.Foreground is AnsiColor.RGB rgb)
+				result = $"[color=#{rgb.Value.R:x2}{rgb.Value.G:x2}{rgb.Value.B:x2}]{result}[/color]";
 
 			return result;
 		}
@@ -513,11 +515,11 @@ internal class BBCodeRenderStrategy : AMS.IRenderStrategy
 /// Custom Markdown render strategy demonstrating extensibility.
 /// Converts ANSI markup to Markdown format: **bold**, *italic*, etc.
 /// </summary>
-internal class MarkdownBoldRenderStrategy : AMS.IRenderStrategy
+internal class MarkdownBoldRenderStrategy : IRenderStrategy
 {
 	public string EncodeText(string text) => text;
 
-	public string ApplyMarkup(MarkupImplementation.Markup markup, string text)
+	public string ApplyMarkup(IMarkup markup, string text)
 	{
 		if (markup is M ansiMarkup)
 		{

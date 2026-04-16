@@ -1,7 +1,8 @@
 using System.Collections.Immutable;
 using System.Drawing;
-using Microsoft.FSharp.Core;
+using ANSILibrary;
 using MarkupString;
+using MarkupString.MarkupImplementation;
 using AMS = MarkupString.MarkupStringModule;
 using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
@@ -39,8 +40,8 @@ public class MarkupStringTests
 	[Test]
 	public async Task MarkupSingle_WithAnsiMarkup_PreservesPlainText()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Red Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Red Text");
 
 		await Assert.That(ams.ToPlainText()).IsEqualTo("Red Text");
 		await Assert.That(ams.Length).IsEqualTo(8);
@@ -52,7 +53,7 @@ public class MarkupStringTests
 	public async Task MarkupSingle_WithHtmlMarkup_PreservesPlainText()
 	{
 		var htmlMarkup = H.Create("b");
-		var ams = AMS.markupSingle(htmlMarkup, "Bold Text");
+		var ams = AMS.MarkupSingle(htmlMarkup, "Bold Text");
 
 		await Assert.That(ams.ToPlainText()).IsEqualTo("Bold Text");
 		await Assert.That(ams.Length).IsEqualTo(9);
@@ -61,10 +62,10 @@ public class MarkupStringTests
 	[Test]
 	public async Task MarkupSingleMulti_WithMixedMarkups_StoresAll()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var htmlMarkup = H.Create("b");
-		var ams = AMS.markupSingleMulti(
-			ImmutableArray.Create<MarkupImplementation.Markup>(redMarkup, htmlMarkup),
+		var ams = AMS.MarkupSingleMulti(
+			ImmutableArray.Create<IMarkup>(redMarkup, htmlMarkup),
 			"Mixed Markup");
 
 		await Assert.That(ams.ToPlainText()).IsEqualTo("Mixed Markup");
@@ -88,8 +89,8 @@ public class MarkupStringTests
 	public async Task Concat_PlainAndMarkup_PreservesBothRuns()
 	{
 		var plain = AMS.single("Hello ");
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var marked = AMS.markupSingle(redMarkup, "World");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var marked = AMS.MarkupSingle(redMarkup, "World");
 		var result = AMS.concat(plain, marked);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Hello World");
@@ -132,15 +133,15 @@ public class MarkupStringTests
 	[Test]
 	public async Task ConcatMany_WithMarkups_PreservesAllRuns()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var green = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Green));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
+		var green = M.Create(foreground: new AnsiColor.RGB(Color.Green));
 
 		var items = new[]
 		{
-			AMS.markupSingle(red, "Red"),
-			AMS.markupSingle(blue, "Blue"),
-			AMS.markupSingle(green, "Green")
+			AMS.MarkupSingle(red, "Red"),
+			AMS.MarkupSingle(blue, "Blue"),
+			AMS.MarkupSingle(green, "Green")
 		};
 		var result = AMS.concatMany(items);
 
@@ -157,7 +158,7 @@ public class MarkupStringTests
 	[Test]
 	public async Task ConcatMany_EmptySequence_ReturnsEmpty()
 	{
-		var result = AMS.concatMany(Array.Empty<AMS.MarkupString>());
+		var result = AMS.concatMany(Array.Empty<MString>());
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 		await Assert.That(result.Length).IsEqualTo(0);
@@ -190,13 +191,13 @@ public class MarkupStringTests
 	[Test]
 	public async Task ConcatMany_MatchesBinaryConcat()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var green = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Green));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
+		var green = M.Create(foreground: new AnsiColor.RGB(Color.Green));
 
-		var a = AMS.markupSingle(red, "AA");
-		var b = AMS.markupSingle(blue, "BB");
-		var c = AMS.markupSingle(green, "CC");
+		var a = AMS.MarkupSingle(red, "AA");
+		var b = AMS.MarkupSingle(blue, "BB");
+		var c = AMS.MarkupSingle(green, "CC");
 
 		var binaryResult = AMS.concat(AMS.concat(a, b), c);
 		var manyResult = AMS.concatMany(new[] { a, b, c });
@@ -221,10 +222,10 @@ public class MarkupStringTests
 	[Test]
 	public async Task Substring_AcrossRuns_ClipsRuns()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var part1 = AMS.markupSingle(red, "Hello");
-		var part2 = AMS.markupSingle(blue, " World");
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
+		var part1 = AMS.MarkupSingle(red, "Hello");
+		var part2 = AMS.MarkupSingle(blue, " World");
 		var combined = AMS.concat(part1, part2);
 
 		// Take "llo W" which spans both runs
@@ -284,7 +285,7 @@ public class MarkupStringTests
 	public async Task Trim_BothSides_TrimsCorrectly()
 	{
 		var ams = AMS.single("  hello  ");
-		var result = AMS.trim(ams, " ", MarkupStringModule.TrimType.TrimBoth);
+		var result = AMS.trim(ams, " ", TrimType.TrimBoth);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 	}
@@ -293,7 +294,7 @@ public class MarkupStringTests
 	public async Task Trim_StartOnly_TrimsCorrectly()
 	{
 		var ams = AMS.single("  hello  ");
-		var result = AMS.trim(ams, " ", MarkupStringModule.TrimType.TrimStart);
+		var result = AMS.trim(ams, " ", TrimType.TrimStart);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello  ");
 	}
@@ -302,7 +303,7 @@ public class MarkupStringTests
 	public async Task Trim_EndOnly_TrimsCorrectly()
 	{
 		var ams = AMS.single("  hello  ");
-		var result = AMS.trim(ams, " ", MarkupStringModule.TrimType.TrimEnd);
+		var result = AMS.trim(ams, " ", TrimType.TrimEnd);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("  hello");
 	}
@@ -312,9 +313,9 @@ public class MarkupStringTests
 	[Test]
 	public async Task Optimize_AdjacentSameMarkup_MergesRuns()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var part1 = AMS.markupSingle(red, "Hello");
-		var part2 = AMS.markupSingle(red, " World");
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var part1 = AMS.MarkupSingle(red, "Hello");
+		var part2 = AMS.MarkupSingle(red, " World");
 		var combined = AMS.concat(part1, part2);
 
 		// Before optimize: 2 runs
@@ -330,10 +331,10 @@ public class MarkupStringTests
 	[Test]
 	public async Task Optimize_DifferentMarkup_DoesNotMerge()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var part1 = AMS.markupSingle(red, "Hello");
-		var part2 = AMS.markupSingle(blue, " World");
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
+		var part1 = AMS.MarkupSingle(red, "Hello");
+		var part2 = AMS.MarkupSingle(blue, " World");
 		var combined = AMS.concat(part1, part2);
 
 		var optimized = AMS.optimize(combined);
@@ -347,8 +348,8 @@ public class MarkupStringTests
 	[Test]
 	public async Task Render_AnsiFormat_ContainsEscapeCodes()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Red Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Red Text");
 
 		var ansiOutput = ams.Render("ansi");
 
@@ -359,8 +360,8 @@ public class MarkupStringTests
 	[Test]
 	public async Task Render_HtmlFormat_ContainsSpanTags()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
-		var ams = AMS.markupSingle(redMarkup, "Red Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.FromArgb(255, 0, 0)));
+		var ams = AMS.MarkupSingle(redMarkup, "Red Text");
 
 		var htmlOutput = ams.Render("html");
 
@@ -373,8 +374,8 @@ public class MarkupStringTests
 	[Test]
 	public async Task Render_HtmlFormat_HtmlEncodesText()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "<script>alert('xss')</script>");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "<script>alert('xss')</script>");
 
 		var htmlOutput = ams.Render("html");
 
@@ -386,7 +387,7 @@ public class MarkupStringTests
 	public async Task Render_HtmlFormat_BoldMarkup_ReturnsCssClass()
 	{
 		var boldMarkup = M.Create(bold: true);
-		var ams = AMS.markupSingle(boldMarkup, "Bold Text");
+		var ams = AMS.MarkupSingle(boldMarkup, "Bold Text");
 
 		var htmlOutput = ams.Render("html");
 
@@ -396,8 +397,8 @@ public class MarkupStringTests
 	[Test]
 	public async Task Render_PlainText_NoFormatting()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Text");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Text");
 
 		var plainText = ams.ToPlainText();
 
@@ -409,7 +410,7 @@ public class MarkupStringTests
 	public async Task Render_HtmlFormat_HtmlMarkup_RendersHtmlTags()
 	{
 		var htmlMarkup = H.Create("b");
-		var ams = AMS.markupSingle(htmlMarkup, "Bold");
+		var ams = AMS.MarkupSingle(htmlMarkup, "Bold");
 
 		var htmlOutput = ams.Render("html");
 
@@ -497,10 +498,10 @@ public class MarkupStringTests
 	[Test]
 	public async Task EvaluateWith_CustomEvaluator_WorksCorrectly()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Test");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Test");
 
-		Func<FSharpOption<MarkupImplementation.Markup>, string, string> evaluator = (markupType, text) =>
+		Func<IMarkup?, string, string> evaluator = (markupType, text) =>
 		{
 			return markupType switch
 			{
@@ -549,7 +550,7 @@ public class MarkupStringTests
 	{
 		var ams = AMS.single("Hi");
 		var padStr = AMS.single(" ");
-		var result = AMS.pad(ams, padStr, 5, MarkupStringModule.PadType.Right, MarkupStringModule.TruncationType.Overflow);
+		var result = AMS.pad(ams, padStr, 5, PadType.Right, TruncationType.Overflow);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Hi   ");
 		await Assert.That(result.Length).IsEqualTo(5);
@@ -560,7 +561,7 @@ public class MarkupStringTests
 	{
 		var ams = AMS.single("Hi");
 		var padStr = AMS.single(" ");
-		var result = AMS.pad(ams, padStr, 5, MarkupStringModule.PadType.Left, MarkupStringModule.TruncationType.Overflow);
+		var result = AMS.pad(ams, padStr, 5, PadType.Left, TruncationType.Overflow);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("   Hi");
 	}
@@ -570,7 +571,7 @@ public class MarkupStringTests
 	{
 		var ams = AMS.single("Hi");
 		var padStr = AMS.single("-");
-		var result = AMS.pad(ams, padStr, 6, MarkupStringModule.PadType.Center, MarkupStringModule.TruncationType.Overflow);
+		var result = AMS.pad(ams, padStr, 6, PadType.Center, TruncationType.Overflow);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("--Hi--");
 	}
@@ -599,7 +600,7 @@ public class MarkupStringTests
 	{
 		var ams = AMS.single("hello");
 		Func<string, string> transform = s => s.ToUpper();
-		var result = AMS.apply(ams, Microsoft.FSharp.Core.FuncConvert.FromFunc(transform));
+		var result = AMS.apply(ams, transform);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("HELLO");
 	}
@@ -613,18 +614,18 @@ public class MarkupStringTests
 
 		// Runs property returns ImmutableArray — a value type that cannot be mutated
 		var runs = ams.Runs;
-		await Assert.That(runs).IsTypeOf<ImmutableArray<AMS.AttributeRun>>();
+		await Assert.That(runs).IsTypeOf<ImmutableArray<AttributeRun>>();
 	}
 
 	[Test]
 	public async Task Immutability_MarkupsAreImmutableArray()
 	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Red");
+		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = AMS.MarkupSingle(redMarkup, "Red");
 
 		// Markups within each run are ImmutableArray — cannot be mutated
 		var markups = ams.Runs[0].Markups;
-		await Assert.That(markups).IsTypeOf<ImmutableArray<MarkupImplementation.Markup>>();
+		await Assert.That(markups).IsTypeOf<ImmutableArray<IMarkup>>();
 	}
 
 	[Test]
@@ -662,9 +663,9 @@ public class MarkupStringTests
 	[Test]
 	public async Task Immutability_OptimizeDoesNotMutateOriginal()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var part1 = AMS.markupSingle(red, "Hello");
-		var part2 = AMS.markupSingle(red, " World");
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var part1 = AMS.MarkupSingle(red, "Hello");
+		var part2 = AMS.MarkupSingle(red, " World");
 		var combined = AMS.concat(part1, part2);
 
 		var optimized = AMS.optimize(combined);
@@ -697,7 +698,7 @@ public class MarkupStringTests
 	// Runs must always be sorted ascending by Start position.
 	// These tests verify the invariant is maintained across all operations.
 
-	private static async Task AssertRunsSortedByStart(AMS.MarkupString ams)
+	private static async Task AssertRunsSortedByStart(MString ams)
 	{
 		for (int i = 1; i < ams.Runs.Length; i++)
 		{
@@ -718,11 +719,11 @@ public class MarkupStringTests
 	[Test]
 	public async Task SortOrder_Concat_RunsRemainSorted()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 
-		var a = AMS.markupSingle(red, "Hello");
-		var b = AMS.markupSingle(blue, " World");
+		var a = AMS.MarkupSingle(red, "Hello");
+		var b = AMS.MarkupSingle(blue, " World");
 		var result = AMS.concat(a, b);
 
 		await Assert.That(result.Runs.Length).IsEqualTo(2);
@@ -734,13 +735,13 @@ public class MarkupStringTests
 	[Test]
 	public async Task SortOrder_MultipleConcat_RunsRemainSorted()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var green = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Green));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
+		var green = M.Create(foreground: new AnsiColor.RGB(Color.Green));
 
-		var a = AMS.markupSingle(red, "AA");
-		var b = AMS.markupSingle(blue, "BB");
-		var c = AMS.markupSingle(green, "CC");
+		var a = AMS.MarkupSingle(red, "AA");
+		var b = AMS.MarkupSingle(blue, "BB");
+		var c = AMS.MarkupSingle(green, "CC");
 		var result = AMS.concat(AMS.concat(a, b), c);
 
 		await Assert.That(result.Runs.Length).IsEqualTo(3);
@@ -750,15 +751,15 @@ public class MarkupStringTests
 	[Test]
 	public async Task SortOrder_ConcatMany_RunsRemainSorted()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var green = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Green));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
+		var green = M.Create(foreground: new AnsiColor.RGB(Color.Green));
 
 		var result = AMS.concatMany(new[]
 		{
-			AMS.markupSingle(red, "AA"),
-			AMS.markupSingle(blue, "BB"),
-			AMS.markupSingle(green, "CC")
+			AMS.MarkupSingle(red, "AA"),
+			AMS.MarkupSingle(blue, "BB"),
+			AMS.MarkupSingle(green, "CC")
 		});
 
 		await Assert.That(result.Runs.Length).IsEqualTo(3);
@@ -768,10 +769,10 @@ public class MarkupStringTests
 	[Test]
 	public async Task SortOrder_Substring_RunsRemainSorted()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 
-		var combined = AMS.concat(AMS.markupSingle(red, "Hello"), AMS.markupSingle(blue, " World"));
+		var combined = AMS.concat(AMS.MarkupSingle(red, "Hello"), AMS.MarkupSingle(blue, " World"));
 		var sub = AMS.substring(3, 5, combined);
 
 		await AssertRunsSortedByStart(sub);
@@ -781,11 +782,11 @@ public class MarkupStringTests
 	[Test]
 	public async Task SortOrder_Remove_RunsRemainSorted()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var green = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Green));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
+		var green = M.Create(foreground: new AnsiColor.RGB(Color.Green));
 
-		var abc = AMS.concat(AMS.concat(AMS.markupSingle(red, "AA"), AMS.markupSingle(blue, "BB")), AMS.markupSingle(green, "CC"));
+		var abc = AMS.concat(AMS.concat(AMS.MarkupSingle(red, "AA"), AMS.MarkupSingle(blue, "BB")), AMS.MarkupSingle(green, "CC"));
 		var result = AMS.remove(abc, 2, 2);
 
 		await AssertRunsSortedByStart(result);
@@ -794,11 +795,11 @@ public class MarkupStringTests
 	[Test]
 	public async Task SortOrder_Replace_RunsRemainSorted()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 
-		var original = AMS.markupSingle(red, "Hello World");
-		var replacement = AMS.markupSingle(blue, "XX");
+		var original = AMS.MarkupSingle(red, "Hello World");
+		var replacement = AMS.MarkupSingle(blue, "XX");
 		var result = AMS.replace(original, replacement, 5, 1);
 
 		await AssertRunsSortedByStart(result);
@@ -807,11 +808,11 @@ public class MarkupStringTests
 	[Test]
 	public async Task SortOrder_InsertAt_RunsRemainSorted()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 
-		var original = AMS.markupSingle(red, "HelloWorld");
-		var insert = AMS.markupSingle(blue, " ");
+		var original = AMS.MarkupSingle(red, "HelloWorld");
+		var insert = AMS.MarkupSingle(blue, " ");
 		var result = AMS.insertAt(original, insert, 5);
 
 		await AssertRunsSortedByStart(result);
@@ -820,10 +821,10 @@ public class MarkupStringTests
 	[Test]
 	public async Task SortOrder_Split_AllSegmentsRemainSorted()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var blue = M.Create(foreground: new AnsiColor.RGB(Color.Blue));
 
-		var combined = AMS.concat(AMS.markupSingle(red, "Hello"), AMS.markupSingle(blue, " World"));
+		var combined = AMS.concat(AMS.MarkupSingle(red, "Hello"), AMS.MarkupSingle(blue, " World"));
 		var parts = AMS.split(" ", combined);
 
 		foreach (var part in parts)
@@ -837,9 +838,9 @@ public class MarkupStringTests
 	[Test]
 	public async Task SortOrder_Repeat_RunsRemainSorted()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 
-		var ams = AMS.markupSingle(red, "AB");
+		var ams = AMS.MarkupSingle(red, "AB");
 		var result = AMS.repeat(ams, 5);
 
 		await Assert.That(result.Runs.Length).IsEqualTo(5);
@@ -849,10 +850,10 @@ public class MarkupStringTests
 	[Test]
 	public async Task SortOrder_Optimize_RunsRemainSorted()
 	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 
-		var a = AMS.markupSingle(red, "Hello");
-		var b = AMS.markupSingle(red, " World");
+		var a = AMS.MarkupSingle(red, "Hello");
+		var b = AMS.MarkupSingle(red, " World");
 		var combined = AMS.concat(a, b);
 		var optimized = AMS.optimize(combined);
 

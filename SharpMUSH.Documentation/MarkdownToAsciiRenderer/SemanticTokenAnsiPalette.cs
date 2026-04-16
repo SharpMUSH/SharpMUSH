@@ -44,6 +44,6 @@ public static class SemanticTokenAnsiPalette
 		var bold = modifiers.HasFlag(SemanticTokenModifier.DefaultLibrary) &&
 		           tokenType == SemanticTokenType.Function;
 
-		return Ansi.Create(foreground: StringExtensions.rgb(color.Value), bold: bold);
+		return Ansi.Create(foreground: new AnsiColor.RGB(color.Value), bold: bold);
 	}
 }

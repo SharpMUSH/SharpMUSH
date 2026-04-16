@@ -15,30 +15,30 @@ internal static class Concat
 		() => new(A.single(string.Empty), A.single("woof"), A.single("woof")),
 		() => new(A.empty(), A.single("woof"), A.single("woof")),
 		() => new(A.single("con"), A.single("cat"), A.single("concat")),
-		() => new(A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")), A.single("cat"),
+		() => new(A.MarkupSingle2(M.Create(foreground: StringExtensions.Rgb(Color.Red)), A.single("red")), A.single("cat"),
 			A.multiple([
-				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
+				A.MarkupSingle2(M.Create(foreground: StringExtensions.Rgb(Color.Red)), A.single("red")),
 				A.single("cat")
 			])),
-		() => new(A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
-			A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Blue)), "cat"),
+		() => new(A.MarkupSingle2(M.Create(foreground: StringExtensions.Rgb(Color.Red)), A.single("red")),
+			A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Blue)), "cat"),
 			A.multiple([
-				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
-				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Blue)), A.single("cat"))
+				A.MarkupSingle2(M.Create(foreground: StringExtensions.Rgb(Color.Red)), A.single("red")),
+				A.MarkupSingle2(M.Create(foreground: StringExtensions.Rgb(Color.Blue)), A.single("cat"))
 			])),
-		() => new(A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
-			A.concat(A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Blue)), "cat"),
-				A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "reallyred")),
+		() => new(A.MarkupSingle2(M.Create(foreground: StringExtensions.Rgb(Color.Red)), A.single("red")),
+			A.concat(A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Blue)), "cat"),
+				A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "reallyred")),
 			A.multiple([
-				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("red")),
-				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Blue)), A.single("cat")),
-				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Red)), A.single("reallyred"))
+				A.MarkupSingle2(M.Create(foreground: StringExtensions.Rgb(Color.Red)), A.single("red")),
+				A.MarkupSingle2(M.Create(foreground: StringExtensions.Rgb(Color.Blue)), A.single("cat")),
+				A.MarkupSingle2(M.Create(foreground: StringExtensions.Rgb(Color.Red)), A.single("reallyred"))
 			])),
-		() => new(A.markupSingle2(M.Create(clear: true), A.single("clear")),
-			A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Blue)), "cat"),
+		() => new(A.MarkupSingle2(M.Create(clear: true), A.single("clear")),
+			A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Blue)), "cat"),
 			A.multiple([
-				A.markupSingle2(M.Create(clear: true), A.single("clear")),
-				A.markupSingle2(M.Create(foreground: StringExtensions.rgb(Color.Blue)), A.single("cat"))
+				A.MarkupSingle2(M.Create(clear: true), A.single("clear")),
+				A.MarkupSingle2(M.Create(foreground: StringExtensions.Rgb(Color.Blue)), A.single("cat"))
 			]))
 	];
 }

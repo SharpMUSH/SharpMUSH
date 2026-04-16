@@ -1,5 +1,6 @@
 ﻿using Humanizer;
 using Mediator;
+using MarkupString;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -32,8 +33,8 @@ public static class ListMail
 				MModule.single($"  MAIL (folder {folder.Key})  "),
 				MModule.single("-"),
 				78,
-				global::MarkupString.MarkupStringModule.PadType.Center,
-				global::MarkupString.MarkupStringModule.TruncationType.Truncate);
+				PadType.Center,
+				TruncationType.Truncate);
 
 			var folderTasks = await folder.ToAsyncEnumerable().Select((x, y, _) => DisplayMailLine(x, y)).ToArrayAsync();
 

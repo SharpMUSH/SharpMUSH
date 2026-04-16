@@ -5,6 +5,7 @@ using ColorCode.Parsing;
 using Markdig.Syntax;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.MarkupString;
+using SharpMUSH.MarkupString.TextAlignerModule;
 using System.Drawing;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -29,7 +30,7 @@ public partial class RecursiveMarkdownRenderer
 			!string.Equals(fencedStd.Info, "sharp", StringComparison.OrdinalIgnoreCase))
 		{
 			var colored = TryRenderColorCodeBlock(fencedStd);
-			if (colored is not null) return MModule.markupSingle2(CodeBackgroundStyle, colored);
+			if (colored is not null) return MModule.MarkupSingle2(CodeBackgroundStyle, colored);
 		}
 
 		// Apply background styling to unlabeled fenced code blocks so they are visually
@@ -41,7 +42,7 @@ public partial class RecursiveMarkdownRenderer
 				.Select(line => MModule.single(line.Slice.ToString()))
 				.ToList() ?? new List<MString>();
 			if (bgLines.Count == 0) return MModule.empty();
-			return MModule.markupSingle2(CodeBackgroundStyle, AlignAllCodeLines(bgLines));
+			return MModule.MarkupSingle2(CodeBackgroundStyle, AlignAllCodeLines(bgLines));
 		}
 
 		var lines = code.Lines.Lines?
@@ -135,8 +136,8 @@ public partial class RecursiveMarkdownRenderer
 				var color = style?.Foreground is not null ? ParseArgbHex(style.Foreground) : null;
 				if (color is not null && scope.Name != ScopeName.PlainText)
 				{
-					var ansiStyle = Ansi.Create(foreground: StringExtensions.rgb(color.Value), bold: style!.Bold);
-					parts.Add(MModule.markupSingle(ansiStyle, scopeText));
+					var ansiStyle = Ansi.Create(foreground: new AnsiColor.RGB(color.Value), bold: style!.Bold);
+					parts.Add(MModule.MarkupSingle(ansiStyle, scopeText));
 				}
 				else
 				{
@@ -211,7 +212,7 @@ public partial class RecursiveMarkdownRenderer
 				MModule.single(" "),
 				MModule.single("\n")
 			);
-			return MModule.markupSingle2(CodeBackgroundStyle, aligned);
+			return MModule.MarkupSingle2(CodeBackgroundStyle, aligned);
 		});
 
 		return MModule.multipleWithDelimiter(MModule.single("\n"), styledLines);
@@ -265,7 +266,7 @@ public partial class RecursiveMarkdownRenderer
 			var style = SemanticTokenAnsiPalette.GetStyle(token.TokenType, token.Modifiers);
 			parts.Add(style is null
 				? MModule.single(token.Text)
-				: MModule.markupSingle(style, token.Text));
+				: MModule.MarkupSingle(style, token.Text));
 		}
 		return MModule.multiple(parts);
 	}
