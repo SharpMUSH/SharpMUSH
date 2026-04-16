@@ -117,15 +117,18 @@ public static class ANSI
     public static Color AnsiToRgb(byte[] ansiBytes)
     {
         ReadOnlySpan<byte> codeSpan = ansiBytes;
-        int colorCode = codeSpan.Length switch
+        var colorCode = codeSpan switch
         {
-            1 => codeSpan[0],
-            2 => codeSpan[1],
-            _ => 0
+            [var code] => code,
+            [_, var code] => code,
+            _ => (byte)0
         };
-        return AnsiPalette.TryGetValue(colorCode, out var color)
-            ? color
-            : Color.FromArgb(0, 0, 0);
+
+        return colorCode switch
+        {
+            var code when AnsiPalette.TryGetValue(code, out var color) => color,
+            _ => Color.FromArgb(0, 0, 0)
+        };
     }
 }
 
