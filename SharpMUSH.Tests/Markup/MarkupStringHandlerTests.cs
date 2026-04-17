@@ -2,6 +2,7 @@ using System.Drawing;
 using ANSILibrary;
 using MarkupString;
 using MarkupString.MarkupImplementation;
+using SharpMUSH.Library.Extensions;
 using AMS = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 using static MarkupString.MStringInterpolation;
@@ -603,5 +604,41 @@ public class MarkupStringHandlerTests
         // align with zero width should return value unchanged (invalid)
         MString result = Format($"{value:align:left:0}");
         await Assert.That(result.ToPlainText()).IsEqualTo("hello");
+    }
+
+    // ── Hilight() extension ──────────────────────────────────────────
+
+    [Test]
+    public async Task Hilight_String_ProducesBoldBrightWhite()
+    {
+        // Hilight() uses AnsiCodeParser.ParseCodes("hw") → AnsiColor.ANSI([1, 37])
+        // which renders as ESC[1;37m (bold + SGR bright white).
+        MString result = "hello".Hilight();
+        await Assert.That(result.ToPlainText()).IsEqualTo("hello");
+        var ansiOut = result.Render("ansi");
+        // Must contain ANSI escape
+        await Assert.That(ansiOut).Contains("\u001b[");
+        // Bold (1) and white (37) SGR codes must be present
+        await Assert.That(ansiOut).Contains("1;37");
+    }
+
+    [Test]
+    public async Task Hilight_MString_ProducesBoldBrightWhite()
+    {
+        MString inner = AMS.single("hello");
+        MString result = inner.Hilight();
+        await Assert.That(result.ToPlainText()).IsEqualTo("hello");
+        var ansiOut = result.Render("ansi");
+        await Assert.That(ansiOut).Contains("1;37");
+    }
+
+    [Test]
+    public async Task Hilight_RendersIdenticallyToColorHw()
+    {
+        // Hilight() must produce the same ANSI output as Format($"{value:color:hw}")
+        MString value = AMS.single("hello");
+        MString fromHilight = value.Hilight();
+        MString fromColorHw = Format($"{value:color:hw}");
+        await Assert.That(fromHilight.Render("ansi")).IsEqualTo(fromColorHw.Render("ansi"));
     }
 }

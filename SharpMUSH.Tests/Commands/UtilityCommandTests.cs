@@ -79,7 +79,7 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("look"));
 
 		// The room name must be sent as an MString that, when rendered as ANSI, contains escape codes
-		// because name.Hilight() wraps the name in white-foreground ANSI markup.
+		// because name.Hilight() applies bold+bright-white (ansi("hw", …) → ESC[1;37m).
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -107,7 +107,7 @@ public class UtilityCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Verify the name row has "Name(#dbref)" format (no space before '(') in plain text.
-		// We use plain-text check because name.Hilight() inserts ANSI codes around the name.
+		// We use plain-text check because name.Hilight() inserts ANSI codes (bold+bright-white) around the name.
 		// Player #1 is named "God" in the test database.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
@@ -122,7 +122,7 @@ public class UtilityCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// The name row output must be an MString where the ANSI render contains escape codes,
-		// because the object name is wrapped with Hilight() which applies white foreground color.
+		// because the object name is wrapped with Hilight() which applies bold+bright-white (ESC[1;37m).
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
