@@ -13,35 +13,17 @@
 
   <ItemGroup>
     <PackageReference Include="bunit" Version="2.7.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.5" />
-    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.5" />
     <PackageReference Include="coverlet.collector" Version="8.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
-    <PackageReference Include="NSubstitute" Version="5.3.0" />
-    <PackageReference Include="Serilog" Version="4.3.1" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-    <PackageReference Include="Testcontainers.ArangoDb" Version="4.10.0" />
-    <PackageReference Include="Testcontainers.MySql" Version="4.10.0" />
-    <PackageReference Include="Testcontainers.PostgreSql" Version="4.10.0" />
-    <PackageReference Include="MySqlConnector" Version="2.5.0" />
 		<PackageReference Include="TUnit" Version="1.19.16" />
 		<PackageReference Include="TUnit.AspNetCore" Version="1.19.16" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SharpMUSH.Client\SharpMUSH.Client.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
-    <ProjectReference Include="..\SharpMUSH.ConnectionServer\SharpMUSH.ConnectionServer.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Database.ArangoDB\SharpMUSH.Database.ArangoDB.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Documentation\SharpMUSH.Documentation.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Implementation\SharpMUSH.Implementation.csproj" />
-    <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Server\SharpMUSH.Server.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
+    <!-- Shared test infrastructure (ServerWebAppFactory, TestHelpers, test containers, etc.) -->
+    <ProjectReference Include="..\SharpMUSH.Tests.Infrastructure\SharpMUSH.Tests.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -79,6 +61,21 @@
 
   <ItemGroup>
     <Compile Remove="Functions\UtilityFunctionUnitTests.cs" />
+    <!-- Infrastructure files are now in SharpMUSH.Tests.Infrastructure -->
+    <Compile Remove="DockerNetwork.cs" />
+    <Compile Remove="ArangoDBTestServer.cs" />
+    <Compile Remove="MemgraphTestServer.cs" />
+    <Compile Remove="NatsTestServer.cs" />
+    <Compile Remove="MySqlTestServer.cs" />
+    <Compile Remove="PostgreSqlTestServer.cs" />
+    <Compile Remove="SqliteTestServer.cs" />
+    <Compile Remove="ServerWebAppFactory.cs" />
+    <Compile Remove="ServerTestWebApplicationBuilderFactory.cs" />
+    <Compile Remove="ConnectionServerWebAppFactory.cs" />
+    <Compile Remove="ConnectionServerTestWebApplicationBuilderFactory.cs" />
+    <Compile Remove="TestHelpers.cs" />
+    <Compile Remove="TestIsolationHelpers.cs" />
   </ItemGroup>
 
 </Project>
+

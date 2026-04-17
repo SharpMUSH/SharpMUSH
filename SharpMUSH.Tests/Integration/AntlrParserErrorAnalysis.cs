@@ -13,7 +13,6 @@ namespace SharpMUSH.Tests.Integration;
 /// in the build output directory with per-line error details, escape sequence analysis,
 /// root cause classification, and error category statistics.
 /// </summary>
-[NotInParallel]
 public class AntlrParserErrorAnalysis
 {
 	private const string TestDataDir = "Integration/TestData";

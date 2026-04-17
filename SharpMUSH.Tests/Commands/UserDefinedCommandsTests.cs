@@ -9,7 +9,6 @@ using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class UserDefinedCommandsTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -23,17 +22,20 @@ public class UserDefinedCommandsTests
 	public async ValueTask WildcardEqSplitCommandPassesArgsToEmit()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Set a $ command attribute with an EqSplit wildcard pattern on #1 (God player, in room #0)
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcWildEq");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		// Set a $ command attribute with an EqSplit wildcard pattern on a unique object in room #0
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_WILDEQ #1=$utest_wildeq *=*:@emit Boo! %0 - %1"));
+			MModule.single($"&UTEST_WILDEQ {obj}=${token} *=*:@emit {token} Boo! %0 - %1"));
 
 		// Fire the command — %0 should be "a", %1 should be "b"
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_wildeq a=b"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} a=b"));
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Boo! a - b")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token} Boo! a - b")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
 	// ── Wildcard pattern tests ──────────────────────────────────────────────
@@ -45,15 +47,18 @@ public class UserDefinedCommandsTests
 	public async ValueTask Wildcard_Single_SubstitutesArg()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSingle");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_SINGLE #1=$utest_greet *:@emit Hello, %0!"));
+			MModule.single($"&UTEST_SINGLE {obj}=${token} *:@emit {token} Hello, %0!"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_greet World"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} World"));
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Hello, World!")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token} Hello, World!")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -63,15 +68,18 @@ public class UserDefinedCommandsTests
 	public async ValueTask Wildcard_TwoCaptures_WithLiteralBetween_SubstitutesBothArgs()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcTwo");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_TWO #1=$utest_msg * to *:@emit Message from %0 to %1"));
+			MModule.single($"&UTEST_TWO {obj}=${token} * to *:@emit {token}: Message from %0 to %1"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_msg Alice to Bob"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} Alice to Bob"));
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Message from Alice to Bob")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token}: Message from Alice to Bob")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -81,15 +89,18 @@ public class UserDefinedCommandsTests
 	public async ValueTask Wildcard_ExactMatch_NoWildcards_FiresCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcExact");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_EXACT #1=$utest_ping:@emit Pong!"));
+			MModule.single($"&UTEST_EXACT {obj}=${token}:@emit {token} Pong!"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_ping"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}"));
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Pong!")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token} Pong!")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -99,15 +110,18 @@ public class UserDefinedCommandsTests
 	public async ValueTask Wildcard_ThreeCaptures_SubstitutesAllThreeArgs()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcThree");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_THREE #1=$utest_three * * *:@emit A=%0 B=%1 C=%2"));
+			MModule.single($"&UTEST_THREE {obj}=${token} * * *:@emit {token}: A=%0 B=%1 C=%2"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_three foo bar baz"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} foo bar baz"));
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "A=foo B=bar C=baz")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token}: A=foo B=bar C=baz")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
 	// ── Regex pattern tests ──────────────────────────────────────────────────
@@ -119,38 +133,45 @@ public class UserDefinedCommandsTests
 	public async ValueTask Regex_SingleCaptureGroup_SubstitutesArg()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx1");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single(@"&UTEST_RX1 #1=$utest_rsay (.+):@emit You said: %1"));
+			MModule.single($@"&UTEST_RX1 {obj}=${token} (.+):@emit {token}: You said: %1"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@set #1/UTEST_RX1=regexp"));
+			MModule.single($"@set {obj}/UTEST_RX1=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_rsay hello world"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} hello world"));
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "You said: hello world")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token}: You said: hello world")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
-	/// Regex %0 is the full match string: $utest_rfull prefix_(\d+) → %0="prefix_42", %1="42".
+	/// Regex %0 is the full match string: $cmd prefix_([0-9]+) — %0 includes the command token, %1 is the number.
 	/// Uses [0-9]+ instead of \d+ to avoid MUSH backslash escaping on attribute set.
 	/// </summary>
 	[Test]
 	public async ValueTask Regex_PercentZeroIsFullMatch_PercentOneIsCaptureGroup()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx2");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_RX2 #1=$utest_rfull prefix_([0-9]+):@emit Full: %0, Part: %1"));
+			MModule.single($"&UTEST_RX2 {obj}=${token} prefix_([0-9]+):@emit Full: %0, Part: %1"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@set #1/UTEST_RX2=regexp"));
+			MModule.single($"@set {obj}/UTEST_RX2=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_rfull prefix_42"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} prefix_42"));
 
+		// %0 is the full match which includes the command token: "{token} prefix_42"
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Full: utest_rfull prefix_42, Part: 42")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"Full: {token} prefix_42, Part: 42")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -161,17 +182,20 @@ public class UserDefinedCommandsTests
 	public async ValueTask Regex_TwoCaptureGroups_SubstitutesBothArgs()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx3");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_RX3 #1=$utest_rtell ([A-Za-z]+) ([A-Za-z]+):@emit %1 messaged %2"));
+			MModule.single($"&UTEST_RX3 {obj}=${token} ([A-Za-z]+) ([A-Za-z]+):@emit {token}: %1 messaged %2"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@set #1/UTEST_RX3=regexp"));
+			MModule.single($"@set {obj}/UTEST_RX3=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_rtell Alice Bob"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} Alice Bob"));
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Alice messaged Bob")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token}: Alice messaged Bob")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -182,17 +206,20 @@ public class UserDefinedCommandsTests
 	public async ValueTask Regex_NamedCaptureGroups_AccessibleByIndex()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx4");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_RX4 #1=$utest_roll (?<num>[0-9]+)d(?<sides>[0-9]+):@emit Rolling %1d%2"));
+			MModule.single($"&UTEST_RX4 {obj}=${token} (?<num>[0-9]+)d(?<sides>[0-9]+):@emit {token}: Rolling %1d%2"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@set #1/UTEST_RX4=regexp"));
+			MModule.single($"@set {obj}/UTEST_RX4=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_roll 3d6"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} 3d6"));
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Rolling 3d6")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token}: Rolling 3d6")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]

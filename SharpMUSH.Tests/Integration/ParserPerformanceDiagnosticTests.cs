@@ -23,7 +23,6 @@ namespace SharpMUSH.Tests.Integration;
 /// - Context sensitivity events (predicate-dependent decisions)
 /// - Syntax error comparison between modes
 /// </summary>
-[NotInParallel]
 public class ParserPerformanceDiagnosticTests
 {
 	private const string TestDataDir = "Integration/TestData";

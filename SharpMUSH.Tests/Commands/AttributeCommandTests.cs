@@ -16,7 +16,6 @@ using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class AttributeCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

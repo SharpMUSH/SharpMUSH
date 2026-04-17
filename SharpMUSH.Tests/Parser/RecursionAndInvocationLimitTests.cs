@@ -13,7 +13,6 @@ namespace SharpMUSH.Tests.Parser;
 /// Tests to verify that recursion and invocation limits are tracked accurately.
 /// These tests prove assumptions about how the limits work and ensure they are enforced correctly.
 /// </summary>
-[NotInParallel]
 public class RecursionAndInvocationLimitTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

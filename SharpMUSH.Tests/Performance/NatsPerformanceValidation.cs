@@ -12,7 +12,6 @@ namespace SharpMUSH.Tests.Performance;
 /// Test cases mirror <see cref="KafkaPerformanceValidation"/> so that throughput
 /// and latency numbers can be compared directly between the two transports.
 /// </summary>
-[NotInParallel]
 public class NatsPerformanceValidation
 {
 	[ClassDataSource<NatsTestServer>(Shared = SharedType.PerTestSession)]

@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+		<LangVersion>default</LangVersion>
+		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+		<NoWarn>TUnit0038</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- TUnit test framework -->
+		<PackageReference Include="TUnit" Version="1.19.16" />
+		<PackageReference Include="TUnit.AspNetCore" Version="1.19.16" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Shared test infrastructure (ServerWebAppFactory, test containers, etc.) -->
+		<ProjectReference Include="..\SharpMUSH.Tests.Infrastructure\SharpMUSH.Tests.Infrastructure.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- BBS script and reference output files required by MyrddinBBSIntegrationTests -->
+		<Content Include="..\SharpMUSH.Tests\Integration\TestData\MyrddinBBS_v406.txt">
+			<Link>Integration\TestData\MyrddinBBS_v406.txt</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\SharpMUSH.Tests\Integration\TestData\PennMUSH_BBS_ReferenceOutput.txt">
+			<Link>Integration\TestData\PennMUSH_BBS_ReferenceOutput.txt</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\SharpMUSH.Tests\Integration\TestData\PennMUSH_BBS_ReferenceOutput_NoDebug.txt">
+			<Link>Integration\TestData\PennMUSH_BBS_ReferenceOutput_NoDebug.txt</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\SharpMUSH.Tests\Integration\TestData\PennMUSH_vs_SharpMUSH_BBS_Analysis.txt">
+			<Link>Integration\TestData\PennMUSH_vs_SharpMUSH_BBS_Analysis.txt</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<!-- Documentation files required by MUSH code execution during integration tests -->
+		<Content Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\sharpattr.md">
+			<Link>Documentation\Testfile\sharpattr.md</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\sharpchat.md">
+			<Link>Documentation\Testfile\sharpchat.md</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\SharpMUSH.Tests\Configuration\Testfile\mushcnf.dst">
+			<Link>Configuration\Testfile\mushcnf.dst</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\SharpMUSH.Server\*.txt">
+			<Link>txt\%(Filename)%(Extension)</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">
+			<Link>TextFiles\help\%(Filename)%(Extension)</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\ahelp\*.md">
+			<Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\news\*.md">
+			<Link>TextFiles\news\%(Filename)%(Extension)</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+</Project>

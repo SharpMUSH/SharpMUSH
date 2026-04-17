@@ -12,7 +12,6 @@ namespace SharpMUSH.Tests.Commands;
 /// <summary>
 /// Tests for CommandLock enforcement and @pcreate EqSplit fix.
 /// </summary>
-[NotInParallel]
 public class CommandLockTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

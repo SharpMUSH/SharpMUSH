@@ -8,7 +8,6 @@ namespace SharpMUSH.Tests;
 /// Tests to verify that function and command aliases work correctly.
 /// This ensures that the alias mappings from Configurable are properly loaded and functional.
 /// </summary>
-[NotInParallel]
 public class AliasTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

@@ -3,7 +3,6 @@ namespace SharpMUSH.Tests.Performance;
 /// <summary>
 /// Benchmarks batching service metrics to understand why batching isn't effective.
 /// </summary>
-[NotInParallel]
 public class TcpWriteBenchmark
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
