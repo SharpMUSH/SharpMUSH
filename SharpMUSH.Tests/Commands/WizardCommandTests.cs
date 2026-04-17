@@ -178,12 +178,13 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@wait 1={{&{attrName} {testObj}=[add(1,1)]}}"));
 
-		// Allow the scheduler to fire and the command-list consumer to execute.
-		// [NotInParallel] ensures the queue consumer isn't saturated by other tests.
-		await Task.Delay(3000);
+		// Poll until the @wait callback sets the attribute (or 10s timeout).
+		// Polling replaces a fixed Task.Delay so the test isn't fragile against
+		// slow database backends (e.g. Memgraph being ~50% slower than ArangoDB in CI).
+		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
+		await TestHelpers.WaitForAttribute(AttributeService, obj.Known, attrName, 10000);
 
 		// Assert - the & command should evaluate [add(1,1)] → "2" before storing
-		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrName,
 			IAttributeService.AttributeMode.Read, false);
 
@@ -215,12 +216,13 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"testcmd_{uniqueId} hello_world"));
 
-		// Allow the scheduler to fire and the command-list consumer to execute.
-		// [NotInParallel] ensures the queue consumer isn't saturated by other tests.
-		await Task.Delay(3000);
+		// Poll until the @wait callback sets the attribute (or 10s timeout).
+		// Polling replaces a fixed Task.Delay so the test isn't fragile against
+		// slow database backends (e.g. Memgraph being ~50% slower than ArangoDB in CI).
+		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
+		await TestHelpers.WaitForAttribute(AttributeService, obj.Known, resultAttr, 10000);
 
 		// Assert - the attribute should contain the pattern-matched value, not @wait's arg
-		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, resultAttr,
 			IAttributeService.AttributeMode.Read, false);
 

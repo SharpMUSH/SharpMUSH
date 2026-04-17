@@ -214,8 +214,9 @@ public class MyrddinBBSIntegrationTests
 		Log($"[BBS INSTALL] Executed {executedLines} commands from {scriptLines.Length} total lines.");
 
 		// Wait for delayed @wait callbacks in the BBS install to complete
-		// The install script uses @wait 1={...} and @wait 3={...} at the end
-		await Task.Delay(5000);
+		// The install script uses @wait 1={...} and @wait 3={...} at the end.
+		// Using 10s to give Memgraph (which is ~50% slower than ArangoDB) enough margin.
+		await Task.Delay(10000);
 
 		// Create a regular (non-God) player for BBS tests that need a normal user.
 		// The WIZARD BBS object cannot set attributes on God (#1) — controls(WIZARD, God) → false
@@ -538,9 +539,10 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(parseErrors.Count).IsEqualTo(0)
 			.Because("+bbnewgroup command should not produce any ANTLR parser errors");
 
-		// Execute +bbnewgroup and wait for the @wait callback to complete
+		// Execute +bbnewgroup and wait for the @wait 1={...} callback to complete.
+		// Using 10s to give Memgraph (which is ~50% slower than ArangoDB) enough margin.
 		await Parser.CommandParse(1, ConnectionService, MModule.single(newGroupCmd));
-		await Task.Delay(5000);
+		await Task.Delay(10000);
 
 		// Capture the group object's dbref and set DEBUG, VERBOSE, PUPPET on it
 		string? groupDbref = null;
@@ -752,8 +754,9 @@ public class MyrddinBBSIntegrationTests
 			Log($"[BBS POST ERROR] +bbpost execution failed: {ex.Message}");
 			throw;
 		}
-		// Wait for any @wait callbacks in the post flow
-		await Task.Delay(5000);
+		// Wait for any @wait callbacks in the post flow.
+		// Using 10s to give Memgraph (which is ~50% slower than ArangoDB) enough margin.
+		await Task.Delay(10000);
 
 		// Collect +bbpost notifications
 		var postPostNotifications = NotifyService.ReceivedCalls()
@@ -822,7 +825,8 @@ public class MyrddinBBSIntegrationTests
 
 		// Wait for async @dolist callbacks to complete (the BBS +bbread uses @dolist without
 		// INLINE/INPLACE, so each iteration body is queued asynchronously via the scheduler).
-		await Task.Delay(5000);
+		// Using 10s to give Memgraph (which is ~50% slower than ArangoDB) enough margin.
+		await Task.Delay(10000);
 		var postReadNotifications = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
@@ -1027,7 +1031,7 @@ public class MyrddinBBSIntegrationTests
 		var group1Name = await GetGroupName(1);
 		Log($"  Group 1 name: {group1Name}");
 
-		var msgs = await RunAndCollect("+bbread 1", 5000);
+		var msgs = await RunAndCollect("+bbread 1", 10000);
 
 		Log($"  Notifications received: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
@@ -1220,13 +1224,13 @@ public class MyrddinBBSIntegrationTests
 			Log($"  [write/{i}] {Truncate(writeMsgs[i], 200)}");
 
 		// +bbpost with no args finalises the staged post
-		var postMsgs = await RunAndCollect("+bbpost", 5000);
+		var postMsgs = await RunAndCollect("+bbpost", 10000);
 		Log($"  +bbpost (finalise) notifications: {postMsgs.Count}");
 		for (var i = 0; i < postMsgs.Count; i++)
 			Log($"  [post/{i}] {Truncate(postMsgs[i], 200)}");
 
 		// Read back message 2
-		var readMsgs = await RunAndCollect("+bbread 1/2", 5000);
+		var readMsgs = await RunAndCollect("+bbread 1/2", 10000);
 		Log($"  +bbread 1/2 notifications: {readMsgs.Count}");
 		for (var i = 0; i < readMsgs.Count; i++)
 			Log($"  [read/{i}] {Truncate(readMsgs[i], 200)}");
@@ -1302,7 +1306,7 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS_BBREAD_UNREADFILTER");
 		Log(new string('=', 78));
 
-		var msgs = await RunAndCollect("+bbread 1/u", 5000);
+		var msgs = await RunAndCollect("+bbread 1/u", 10000);
 		Log($"  +bbread 1/u notifications: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
 			Log($"  [{i}] {Truncate(msgs[i], 200)}");
@@ -1426,7 +1430,7 @@ public class MyrddinBBSIntegrationTests
 		var group1Name = await GetGroupName(1);
 		Log($"  Group 1 name: {group1Name}");
 
-		var msgs = await RunAndCollect("+bbsearch 1/God", 5000);
+		var msgs = await RunAndCollect("+bbsearch 1/God", 10000);
 		Log($"  +bbsearch notifications: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
 			Log($"  [{i}] {Truncate(msgs[i], 200)}");
@@ -1462,7 +1466,7 @@ public class MyrddinBBSIntegrationTests
 		var group1Name = await GetGroupName(1);
 		Log($"  Group 1 name: {group1Name}");
 
-		var msgs = await RunAndCollect("+bbtimeout 1/2=30", 5000);
+		var msgs = await RunAndCollect("+bbtimeout 1/2=30", 10000);
 		Log($"  +bbtimeout notifications: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
 			Log($"  [{i}] {Truncate(msgs[i], 200)}");
@@ -1492,7 +1496,7 @@ public class MyrddinBBSIntegrationTests
 		var group1Name = await GetGroupName(1);
 		Log($"  Group 1 name: {group1Name}");
 
-		var msgs = await RunAndCollect("+bbremove 1/2", 5000);
+		var msgs = await RunAndCollect("+bbremove 1/2", 10000);
 		Log($"  +bbremove notifications: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
 			Log($"  [{i}] {Truncate(msgs[i], 200)}");
@@ -1519,7 +1523,7 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS_BBNEWGROUP_SECOND");
 		Log(new string('=', 78));
 
-		var msgs = await RunAndCollect("+bbnewgroup BBTestGroup2", 5000);
+		var msgs = await RunAndCollect("+bbnewgroup BBTestGroup2", 10000);
 		Log($"  +bbnewgroup BBTestGroup2 notifications: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
 			Log($"  [{i}] {Truncate(msgs[i], 200)}");
@@ -1698,7 +1702,7 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS_BBCLEARGROUP_DELETESGROUP");
 		Log(new string('=', 78));
 
-		var newGroupMsgs = await RunAndCollect("+bbnewgroup TempGroupForDeletion", 5000);
+		var newGroupMsgs = await RunAndCollect("+bbnewgroup TempGroupForDeletion", 10000);
 		Log($"  +bbnewgroup TempGroupForDeletion notifications: {newGroupMsgs.Count}");
 		for (var i = 0; i < newGroupMsgs.Count; i++)
 			Log($"  [newgroup/{i}] {Truncate(newGroupMsgs[i], 200)}");
