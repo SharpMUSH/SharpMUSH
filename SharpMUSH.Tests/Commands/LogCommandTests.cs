@@ -4,6 +4,7 @@ using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -89,11 +90,15 @@ public class LogCommandTests
 	[Test]
 	public async ValueTask LsetCommand()
 	{
-		// First set a lock on object #1
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@lock #1=#TRUE"));
+		// Create a dedicated test object so we don't mutate God (#1) in the shared DB
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LSetTestObject"));
+		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		// Set a lock on the test object
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@lock #{newDb.Number}=#TRUE"));
 
 		// Now test @lset to set a flag on the Basic lock
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@lset #1/Basic=visual"));
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@lset #{newDb.Number}/Basic=visual"));
 
 		// Verify the command executed successfully (didn't throw or return error)
 		await Assert.That(result).IsNotNull();

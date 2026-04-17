@@ -74,3 +74,53 @@ jobs:
           name: test-telemetry-${{ matrix.database }}
           path: test-telemetry.md
           if-no-files-found: ignore
+
+  test-integration:
+    needs: [build]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        database: [arangodb, memgraph]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore
+
+      - name: Integration Test (${{ matrix.database }})
+        env:
+          SHARPMUSH_ENABLE_TEST_TELEMETRY: true
+          SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry-integration.md
+          SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
+        run: dotnet run --project SharpMUSH.IntegrationTests --no-build --verbosity normal -- --output Detailed
+
+      - name: Publish Integration Telemetry to Summary
+        if: always()
+        run: |
+          if [ -f test-telemetry-integration.md ]; then
+            cat test-telemetry-integration.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## 📊 Integration Test Telemetry Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No telemetry data was recorded." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Integration Telemetry Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-telemetry-integration-${{ matrix.database }}
+          path: test-telemetry-integration.md
+          if-no-files-found: ignore
+
