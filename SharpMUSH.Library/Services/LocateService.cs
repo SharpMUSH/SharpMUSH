@@ -310,8 +310,14 @@ public partial class LocateService(
 			List<AnySharpContent>? cachedLocationContents = null;
 			async ValueTask<List<AnySharpContent>> GetCachedLocationContentsAsync()
 			{
-				return cachedLocationContents ??=
-					await (mediator.CreateStream(new GetContentsQuery(location))?.ToListAsync() ?? ValueTask.FromResult(new List<AnySharpContent>()));
+				if (cachedLocationContents is not null)
+					return cachedLocationContents;
+
+				var stream = mediator.CreateStream(new GetContentsQuery(location));
+				cachedLocationContents = stream is not null
+					? await stream.ToListAsync()
+					: [];
+				return cachedLocationContents;
 			}
 
 			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)

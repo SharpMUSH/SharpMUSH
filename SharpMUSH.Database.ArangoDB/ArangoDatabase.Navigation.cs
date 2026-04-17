@@ -278,7 +278,9 @@ public partial class ArangoDatabase
 
 	/// <summary>
 	/// Hydrates a fully-typed object from raw JSON elements of the typed vertex and its Objects document.
-	/// This mirrors the logic of GetObjectNodeAsync(string) but operates on already-fetched JSON data.
+	/// Used by batch methods (GetContentsBatchAsync, GetExitsBatchAsync) to construct objects from
+	/// already-fetched JSON data without additional DB round-trips, unlike GetObjectNodeAsync which
+	/// fetches from the database.
 	/// </summary>
 	private AnyOptionalSharpObject HydrateObjectFromElements(
 		System.Text.Json.JsonElement typedVertex,
@@ -286,19 +288,19 @@ public partial class ArangoDatabase
 	{
 		var id = typedVertex.GetProperty("_id").GetString()!;
 		var collection = id.Split("/")[0];
-		var convertObject = SharpObjectQueryToSharpObject(objectVertex);
+		var sharpObject = SharpObjectQueryToSharpObject(objectVertex);
 
 		return collection switch
 		{
 			DatabaseConstants.Things => new SharpThing
 			{
-				Id = id, Object = convertObject,
+				Id = id, Object = sharpObject,
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.Players => new SharpPlayer
 			{
-				Id = id, Object = convertObject,
+				Id = id, Object = sharpObject,
 				Aliases = typedVertex.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
@@ -309,12 +311,12 @@ public partial class ArangoDatabase
 			DatabaseConstants.Rooms => new SharpRoom
 			{
 				Id = id,
-				Object = convertObject,
+				Object = sharpObject,
 				Location = new(async ct => await GetDropToAsync(id, ct))
 			},
 			DatabaseConstants.Exits => new SharpExit
 			{
-				Id = id, Object = convertObject,
+				Id = id, Object = sharpObject,
 				Aliases = typedVertex.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
