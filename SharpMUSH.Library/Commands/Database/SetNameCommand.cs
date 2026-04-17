@@ -8,5 +8,5 @@ namespace SharpMUSH.Library.Commands.Database;
 public record SetNameCommand(AnySharpObject Target, MString Name) : ICommand, ICacheInvalidating
 {
 	public string[] CacheKeys => [$"object:{Target.Object().DBRef}"];
-	public string[] CacheTags => [Definitions.CacheTags.PlayerNames];
+	public string[] CacheTags => Target.IsPlayer ? [Definitions.CacheTags.PlayerNames] : [];
 }
