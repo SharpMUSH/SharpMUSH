@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -46,7 +47,7 @@ public class CachingBehaviorTests
 
 		// Verify cache key exists
 		var cacheKey = $"object:{dbRef}";
-		var cached = await Cache.TryGetAsync<object>(cacheKey);
+		var cached = await Cache.TryGetAsync<AnyOptionalSharpObject>(cacheKey);
 		await Assert.That(cached.HasValue).IsTrue();
 
 		// Second call – should come from cache
@@ -66,7 +67,7 @@ public class CachingBehaviorTests
 		var dbRef = WebAppFactory.ExecutorDBRef;
 
 		// First call – materialize and cache
-		var result1 = new List<object>();
+		var result1 = new List<AnySharpContent>();
 		await foreach (var item in mediator.CreateStream(new GetContentsQuery(dbRef)))
 		{
 			result1.Add(item);
@@ -74,11 +75,11 @@ public class CachingBehaviorTests
 
 		// Verify cache key exists
 		var cacheKey = $"object-contents:{dbRef}";
-		var cached = await Cache.TryGetAsync<object>(cacheKey);
+		var cached = await Cache.TryGetAsync<List<AnySharpContent>>(cacheKey);
 		await Assert.That(cached.HasValue).IsTrue();
 
 		// Second call – should come from cache
-		var result2 = new List<object>();
+		var result2 = new List<AnySharpContent>();
 		await foreach (var item in mediator.CreateStream(new GetContentsQuery(dbRef)))
 		{
 			result2.Add(item);
