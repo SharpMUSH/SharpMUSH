@@ -26,6 +26,7 @@ using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
+using static MarkupString.MStringInterpolation;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
@@ -641,9 +642,8 @@ public partial class Commands
 		}
 
 		var flags = await viewingObject.Flags.Value.ToArrayAsync();
-		var defaultFormattedName = MModule.concat(
-			baseName.Hilight(),
-			MModule.single($"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})"));
+		var flagStr = string.Join(string.Empty, flags.Select(x => x.Symbol));
+		var defaultFormattedName = Format($"{baseName.Hilight()}(#{viewingObject.DBRef.Number}{flagStr})");
 
 		var formattedName = defaultFormattedName;
 		if (realViewing.IsRoom && viewingFromInside)
@@ -733,15 +733,17 @@ public partial class Commands
 				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
 
 				// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
-				var contentLines = await Task.WhenAll(visibleContents.Select(async item =>
+				var contentMStrings = await Task.WhenAll(visibleContents.Select(async item =>
 				{
 					if (canSeeAll)
 					{
-						return await MessageHelpers.FormatObjectWithDbref(item.Object());
+						return await MessageHelpers.FormatObjectWithDbrefMString(item.Object());
 					}
-					return item.Object().Name;
+					return MModule.single(item.Object().Name);
 				}));
-				var defaultContents = MModule.single($"{contentsLabel}\n{string.Join("\n", contentLines)}");
+				var defaultContents = MModule.multipleWithDelimiter(
+					MModule.single("\n"),
+					new[] { MModule.single(contentsLabel) }.Concat(contentMStrings));
 
 				var conFormatArgs = new Dictionary<string, CallState>
 				{
@@ -906,12 +908,9 @@ public partial class Commands
 		{
 			var limitedObj = viewingKnown.Object();
 			var limitedOwnerObj = (await limitedObj.Owner.WithCancellation(CancellationToken.None)).Object;
-			await NotifyService!.Notify(enactor, MModule.multiple([
-				limitedObj.Name.Hilight(),
-				MModule.single(" is owned by "),
-				limitedOwnerObj.Name.Hilight(),
-				MModule.single(".")
-			]), enactor);
+			await NotifyService!.Notify(enactor,
+				Format($"{limitedObj.Name.Hilight()} is owned by {limitedOwnerObj.Name.Hilight()}."),
+				enactor);
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
@@ -944,11 +943,8 @@ public partial class Commands
 		var showFlags = Configuration!.CurrentValue.Cosmetic.FlagsOnExamine;
 
 		// Name row: Name(#flagSymbols) — no space before (
-		var nameRow = MModule.concat(
-			name.Hilight(),
-			MModule.single(showFlags
-				? $"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})"
-				: $"(#{obj.DBRef.Number})"));
+		var objFlagStr = showFlags ? string.Join(string.Empty, objFlags.Select(x => x.Symbol)) : string.Empty;
+		var nameRow = Format($"{name.Hilight()}(#{obj.DBRef.Number}{objFlagStr})");
 		outputSections.Add(nameRow);
 
 		// Type / Flags row
@@ -972,22 +968,13 @@ public partial class Commands
 		{
 			var zoneObject = objZone.Known.Object();
 			var zoneFlags = await zoneObject.Flags.Value.ToArrayAsync();
-			zoneSection = MModule.multiple([
-				MModule.single("  Zone: "),
-				zoneObject.Name.Hilight(),
-				MModule.single($"(#{zoneObject.DBRef.Number}{string.Join(string.Empty, zoneFlags.Select(x => x.Symbol))})")
-			]);
+			var zoneFlagStr = string.Join(string.Empty, zoneFlags.Select(x => x.Symbol));
+			zoneSection = Format($"  Zone: {zoneObject.Name.Hilight()}(#{zoneObject.DBRef.Number}{zoneFlagStr})");
 		}
 
 		// Owner row: "Owner: Name(#flags)  Zone: ..." — owner name hilighted as MString
-		var ownerRow = MModule.multiple([
-			MModule.single("Owner: "),
-			ownerName.Hilight(),
-			MModule.single(showFlags
-				? $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})"
-				: $"(#{ownerObj.DBRef.Number})"),
-			zoneSection
-		]);
+		var ownerFlagStr = showFlags ? string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol)) : string.Empty;
+		var ownerRow = Format($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number}{ownerFlagStr}){zoneSection}");
 		outputSections.Add(ownerRow);
 
 		// Parent row: "Parent: Name(#flags)" or "Parent: *NOTHING*"
@@ -999,11 +986,8 @@ public partial class Commands
 		else
 		{
 			var parentFlags = await parentObject.Flags.Value.ToArrayAsync();
-			outputSections.Add(MModule.multiple([
-				MModule.single("Parent: "),
-				parentObject.Name.Hilight(),
-				MModule.single($"(#{parentObject.DBRef.Number}{string.Join(string.Empty, parentFlags.Select(x => x.Symbol))})")
-			]));
+			var parentFlagStr = string.Join(string.Empty, parentFlags.Select(x => x.Symbol));
+			outputSections.Add(Format($"Parent: {parentObject.Name.Hilight()}(#{parentObject.DBRef.Number}{parentFlagStr})"));
 		}
 
 		// Locks: one line per lock — no "Locks:" header
@@ -1089,9 +1073,8 @@ public partial class Commands
 					}
 
 					await NotifyService!.Notify(enactor,
-						MModule.concat(
-							MModule.single($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight(),
-							attr.Value), enactor);
+						Format($"{MModule.single($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight()}{attr.Value}"),
+						enactor);
 				}
 			}
 
@@ -1125,9 +1108,8 @@ public partial class Commands
 					{
 						var cObj = content.Object();
 						var cFlags = await cObj.Flags.Value.ToArrayAsync();
-						return MModule.concat(
-							cObj.Name.Hilight(),
-							MModule.single($"(#{cObj.DBRef.Number}{string.Join(string.Empty, cFlags.Select(x => x.Symbol))})"));
+						var cFlagStr = string.Join(string.Empty, cFlags.Select(x => x.Symbol));
+						return Format($"{cObj.Name.Hilight()}(#{cObj.DBRef.Number}{cFlagStr})");
 					}
 					var contentItems = await contents
 						.ToAsyncEnumerable()
@@ -1151,9 +1133,8 @@ public partial class Commands
 					{
 						var eObj = exit.Object;
 						var eFlags = await eObj.Flags.Value.ToArrayAsync();
-						return MModule.concat(
-							eObj.Name.Hilight(),
-							MModule.single($"(#{eObj.DBRef.Number}{string.Join(string.Empty, eFlags.Select(x => x.Symbol))})"));
+						var eFlagStr = string.Join(string.Empty, eFlags.Select(x => x.Symbol));
+						return Format($"{eObj.Name.Hilight()}(#{eObj.DBRef.Number}{eFlagStr})");
 					}
 					var exitLines = await exits
 						.ToAsyncEnumerable()
@@ -1176,16 +1157,10 @@ public partial class Commands
 				var homeFlags = await homeObject.Flags.Value.ToArrayAsync();
 				var locationFlags = await locationObject.Flags.Value.ToArrayAsync();
 
-				await NotifyService.Notify(enactor, MModule.multiple([
-					MModule.single("Home: "),
-					homeObject.Name.Hilight(),
-					MModule.single($"(#{homeObject.DBRef.Number}{string.Join(string.Empty, homeFlags.Select(x => x.Symbol))})")
-				]), enactor);
-				await NotifyService.Notify(enactor, MModule.multiple([
-					MModule.single("Location: "),
-					locationObject.Name.Hilight(),
-					MModule.single($"(#{locationObject.DBRef.Number}{string.Join(string.Empty, locationFlags.Select(x => x.Symbol))})")
-				]), enactor);
+				var homeFlagStr = string.Join(string.Empty, homeFlags.Select(x => x.Symbol));
+				var locationFlagStr = string.Join(string.Empty, locationFlags.Select(x => x.Symbol));
+				await NotifyService.Notify(enactor, Format($"Home: {homeObject.Name.Hilight()}(#{homeObject.DBRef.Number}{homeFlagStr})"), enactor);
+				await NotifyService.Notify(enactor, Format($"Location: {locationObject.Name.Hilight()}(#{locationObject.DBRef.Number}{locationFlagStr})"), enactor);
 			}
 		}
 
