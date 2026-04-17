@@ -1,11 +1,14 @@
 using Mediator;
+using MarkupString;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
+using static MarkupString.MStringInterpolation;
 namespace SharpMUSH.Implementation.Common;
 
 public static class MessageHelpers
@@ -44,6 +47,20 @@ public static class MessageHelpers
 			['|', .. var rest] => new string(rest.ToArray()),
 			_ => message
 		};
+	}
+
+	/// <summary>
+	/// Formats an object name with its dbref and flag symbols as a markup-preserving MString.
+	/// The name portion is hilighted (white foreground); the dbref and flag symbols are plain text.
+	/// Example: an MString with "Chest" hilighted followed by plain "(#5Tn)".
+	/// </summary>
+	/// <param name="obj">The sharp object to format</param>
+	/// <returns>A task yielding the formatted MString with the name hilighted</returns>
+	public static async ValueTask<MString> FormatObjectWithDbrefMString(Library.Models.SharpObject obj)
+	{
+		var flags = await obj.Flags.Value.ToArrayAsync();
+		var flagSymbols = string.Join(string.Empty, flags.Select(x => x.Symbol));
+		return Format($"{obj.Name.Hilight()}(#{obj.DBRef.Number}{flagSymbols})");
 	}
 
 	/// <summary>

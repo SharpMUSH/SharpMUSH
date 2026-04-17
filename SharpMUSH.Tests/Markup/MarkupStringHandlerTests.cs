@@ -484,4 +484,124 @@ public class MarkupStringHandlerTests
         var markup = AnsiCodeParser.ParseCodes("<255 0 0>");
         await Assert.That(markup.Details.Foreground).IsTypeOf<AnsiColor.RGB>();
     }
+
+    // ── Additional AnsiCodeParser coverage ──────────────────────────
+
+    [Test]
+    public async Task AnsiCodeParser_BlinkCode_SetsBlink()
+    {
+        var markup = AnsiCodeParser.ParseCodes("f");
+        await Assert.That(markup.Details.Blink).IsTrue();
+        await Assert.That(markup.Details.Foreground).IsEqualTo(AnsiColor.NoAnsi.Instance);
+    }
+
+    [Test]
+    public async Task AnsiCodeParser_XtermPlusPrefix_SetsForeground()
+    {
+        var markup = AnsiCodeParser.ParseCodes("+xterm200");
+        await Assert.That(markup.Details.Foreground).IsNotEqualTo(AnsiColor.NoAnsi.Instance);
+    }
+
+    [Test]
+    public async Task AnsiCodeParser_BackgroundUpperLetter_SetsBackground()
+    {
+        // Uppercase 'R' sets red background
+        var markup = AnsiCodeParser.ParseCodes("R");
+        await Assert.That(markup.Details.Background).IsNotEqualTo(AnsiColor.NoAnsi.Instance);
+        await Assert.That(markup.Details.Foreground).IsEqualTo(AnsiColor.NoAnsi.Instance);
+    }
+
+    [Test]
+    public async Task AnsiCodeParser_BackgroundSlashHex_SetsBackground()
+    {
+        var markup = AnsiCodeParser.ParseCodes("/#ff0000");
+        await Assert.That(markup.Details.Background).IsTypeOf<AnsiColor.RGB>();
+        await Assert.That(markup.Details.Foreground).IsEqualTo(AnsiColor.NoAnsi.Instance);
+    }
+
+    [Test]
+    public async Task AnsiCodeParser_ResetCode_ClearsAndSetsClearTrue()
+    {
+        // "n" resets all formatting and sets Clear=true
+        var markup = AnsiCodeParser.ParseCodes("rn");
+        await Assert.That(markup.Details.Clear).IsTrue();
+        await Assert.That(markup.Details.Foreground).IsEqualTo(AnsiColor.NoAnsi.Instance);
+    }
+
+    // ── Additional Handler format specifier coverage ─────────────────
+
+    [Test]
+    public async Task Handler_Color_BackgroundLetter_SetsBackground()
+    {
+        MString value = AMS.single("hello");
+        MString result = Format($"{value:color:R}");
+        await Assert.That(result.ToPlainText()).IsEqualTo("hello");
+        // Background color should produce ANSI output
+        await Assert.That(result.Render("ansi")).Contains("\u001b[");
+    }
+
+    [Test]
+    public async Task Handler_Color_BackgroundHex_SetsBackground()
+    {
+        MString value = AMS.single("hello");
+        MString result = Format($"{value:color:/#ff0000}");
+        await Assert.That(result.ToPlainText()).IsEqualTo("hello");
+        await Assert.That(result.Render("ansi")).Contains("\u001b[");
+    }
+
+    [Test]
+    public async Task Handler_Color_RgbTripletInFormat_SetsForeground()
+    {
+        MString value = AMS.single("hello");
+        MString result = Format($"{value:color:<255 0 0>}");
+        await Assert.That(result.ToPlainText()).IsEqualTo("hello");
+        await Assert.That(result.Render("ansi")).Contains("\u001b[");
+        var run = result.Runs.FirstOrDefault(r => r.Markups.Length > 0);
+        await Assert.That(run.Markups.Length).IsGreaterThanOrEqualTo(1);
+    }
+
+    [Test]
+    public async Task Handler_Color_EmptyCodes_RetainsValueUnchanged()
+    {
+        MString value = AMS.single("hello");
+        MString result = Format($"{value:color:}");
+        await Assert.That(result.ToPlainText()).IsEqualTo("hello");
+        // No markup should be applied when codes string is empty
+        await Assert.That(result.Runs.All(r => r.Markups.Length == 0)).IsTrue();
+    }
+
+    [Test]
+    public async Task Handler_Color_XtermPlusPrefix_ProducesAnsi()
+    {
+        MString value = AMS.single("hello");
+        MString result = Format($"{value:color:+xterm200}");
+        await Assert.That(result.ToPlainText()).IsEqualTo("hello");
+        await Assert.That(result.Render("ansi")).Contains("\u001b[");
+    }
+
+    [Test]
+    public async Task Handler_Align_InvalidWidth_RetainsValue()
+    {
+        MString value = AMS.single("hello");
+        // align with a non-numeric width should return value unchanged
+        MString result = Format($"{value:align:left:notanumber}");
+        await Assert.That(result.ToPlainText()).IsEqualTo("hello");
+    }
+
+    [Test]
+    public async Task Handler_Trim_EmptyString_ReturnsEmpty()
+    {
+        MString value = AMS.empty();
+        MString result = Format($"{value:trim}");
+        await Assert.That(result.ToPlainText()).IsEqualTo(string.Empty);
+    }
+
+    [Test]
+    public async Task Handler_Align_ZeroWidth_RetainsValue()
+    {
+        MString value = AMS.single("hello");
+        // align with zero width should return value unchanged (invalid)
+        MString result = Format($"{value:align:left:0}");
+        await Assert.That(result.ToPlainText()).IsEqualTo("hello");
+    }
 }

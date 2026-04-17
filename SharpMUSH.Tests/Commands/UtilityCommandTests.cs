@@ -73,6 +73,23 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	public async ValueTask LookBasic_RoomNameHasAnsiMarkup()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single("look"));
+
+		// The room name must be sent as an MString that, when rendered as ANSI, contains escape codes
+		// because name.Hilight() wraps the name in white-foreground ANSI markup.
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				msg.IsT0 &&
+				TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero(#0") &&
+				msg.AsT0.Render("ansi").Contains("\x1b[")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
 	public async ValueTask LookAtObject()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
@@ -98,6 +115,23 @@ public class UtilityCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "God(#1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_NameRowHasAnsiMarkup()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		// The name row output must be an MString where the ANSI render contains escape codes,
+		// because the object name is wrapped with Hilight() which applies white foreground color.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				msg.IsT0 &&
+				TestHelpers.MessagePlainTextContains(msg, "God(#1") &&
+				msg.AsT0.Render("ansi").Contains("\x1b[")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
