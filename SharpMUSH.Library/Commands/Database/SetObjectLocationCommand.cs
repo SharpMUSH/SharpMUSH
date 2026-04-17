@@ -8,5 +8,5 @@ namespace SharpMUSH.Library.Commands.Database;
 public record SetObjectLocationCommand(AnySharpContent Target, AnySharpContainer Container) : ICommand, ICacheInvalidating
 {
 	public string[] CacheKeys => [$"object:{Target.Object().DBRef}", $"object:{Container.Object().DBRef}"];
-	public string[] CacheTags => [];
+	public string[] CacheTags => [Definitions.CacheTags.ObjectContents];
 }

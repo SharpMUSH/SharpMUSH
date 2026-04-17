@@ -304,28 +304,12 @@ public partial class LocateService(
 				if (c == ControlFlow.Return) break;
 			}
 
-			// Cache location contents to avoid querying the same container multiple times.
-			// GetContentsQuery is a streaming query (IStreamQuery) that does NOT go through
-			// QueryCachingBehavior, so repeated calls for the same container hit the DB each time.
-			List<AnySharpContent>? cachedLocationContents = null;
-			async ValueTask<List<AnySharpContent>> GetCachedLocationContentsAsync()
-			{
-				if (cachedLocationContents is not null)
-					return cachedLocationContents;
-
-				var stream = mediator.CreateStream(new GetContentsQuery(location));
-				cachedLocationContents = stream is not null
-					? await stream.ToListAsync()
-					: [];
-				return cachedLocationContents;
-			}
-
 			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
 					&& location.Object().DBRef != where.Object().DBRef)
 			{
-				var locationContents = await GetCachedLocationContentsAsync();
-				var contents = locationContents
-					.Select(x => x.WithRoomOption()).ToAsyncEnumerable();
+				var contents = mediator
+					.CreateStream(new GetContentsQuery(location))
+					?.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
 
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
@@ -341,11 +325,11 @@ public partial class LocateService(
 					// Step 1: Match exits in the current location (PennMUSH order)
 					if (location.IsRoom)
 					{
-						var locationContents = await GetCachedLocationContentsAsync();
-						var exits = locationContents
-							.Where(x => x.IsExit)
+						var exits = mediator
+							.CreateStream(new GetContentsQuery(location))
+							?.Where(x => x.IsExit)
 							.Select(x => new AnySharpObject(x.AsExit))
-							.ToAsyncEnumerable();
+							?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
 
 						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
 							exact, final, curr, right_type, flags, name);
