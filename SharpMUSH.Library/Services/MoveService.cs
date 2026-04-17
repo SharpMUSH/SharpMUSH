@@ -150,7 +150,8 @@ public class MoveService(
 			destination,
 			enactor,
 			silent,
-			cause));
+			cause,
+			OldContainer: oldLocation));
 
 		// 7. Trigger ENTER hooks on new location (if not silent)
 		if (!silent)

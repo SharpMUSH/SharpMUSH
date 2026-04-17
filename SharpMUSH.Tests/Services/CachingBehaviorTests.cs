@@ -35,12 +35,18 @@ public class CachingBehaviorTests
 	/// <summary>
 	/// Verifies that querying GetObjectNodeQuery twice with the same DBRef returns
 	/// a result from cache on the second call (the cache key should be populated).
+	/// Uses a freshly created object to avoid interference from concurrent tests that
+	/// might invalidate the executor's well-known cache key.
 	/// </summary>
 	[Test]
 	public async Task QueryCachingBehavior_CachesObjectNodeQuery()
 	{
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
-		var dbRef = WebAppFactory.ExecutorDBRef;
+
+		// Create a unique object so no other parallel test can invalidate its specific cache key
+		var createResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@create QueryCachingBehavior Test Object"));
+		var dbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		// First call – populates cache
 		var result1 = await mediator.Send(new GetObjectNodeQuery(dbRef));
@@ -59,12 +65,17 @@ public class CachingBehaviorTests
 	/// <summary>
 	/// Verifies that StreamQueryCachingBehavior caches GetContentsQuery results.
 	/// The second invocation with the same container should serve from cache.
+	/// Uses a freshly created room to avoid interference from concurrent tests.
 	/// </summary>
 	[Test]
 	public async Task StreamQueryCachingBehavior_CachesContentsQuery()
 	{
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
-		var dbRef = WebAppFactory.ExecutorDBRef;
+
+		// Dig a unique room so no other parallel test can invalidate its specific cache key
+		var digResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@dig StreamCachingBehavior Test Room"));
+		var dbRef = Library.Models.DBRef.Parse(digResult.Message!.ToPlainText()!);
 
 		// First call – materialize and cache
 		var result1 = new List<AnySharpContent>();
