@@ -11,7 +11,20 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache) 
 		MessageHandlerDelegate<TRequest, TResponse> next,
 		CancellationToken cancellationToken)
 	{
-		await foreach (var key in message.CacheKeys.ToAsyncEnumerable().WithCancellation(cancellationToken))
+		await InvalidateCacheAsync(message, cancellationToken);
+
+		var result = await next(message, cancellationToken);
+
+		// Invalidate again after the handler completes to clear any cache entries
+		// that were repopulated by concurrent reads during the handler execution.
+		await InvalidateCacheAsync(message, cancellationToken);
+
+		return result;
+	}
+
+	private async ValueTask InvalidateCacheAsync(TRequest message, CancellationToken cancellationToken)
+	{
+		foreach (var key in message.CacheKeys)
 		{
 			await cache.RemoveAsync(key, token: cancellationToken);
 		}
@@ -20,7 +33,5 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache) 
 		{
 			await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
 		}
-
-		return await next(message, cancellationToken);
 	}
 }
