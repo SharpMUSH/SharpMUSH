@@ -253,11 +253,9 @@ public class DatabaseFunctionUnitTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&Test_Mapsql_BasicExecution {objDbRef}=Test_Mapsql_BasicExecution: Row %0 has value %2"));
 
-		await Task.Delay(100);
-
-		var result =
-			(await Parser.FunctionParse(MModule.single(
-				$"mapsql({objDbRef}/Test_Mapsql_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = 1))")))?.Message!;
+		var result = await PollFunctionUntilAttributeReadyAsync(
+			Parser,
+			$"mapsql({objDbRef}/Test_Mapsql_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = 1))");
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_BasicExecution: Row 1 has value 100");
 	}
@@ -269,12 +267,9 @@ public class DatabaseFunctionUnitTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&Test_Mapsql_BasicExecution2 {objDbRef}=Test_Mapsql_BasicExecution2: Row %0 has value %2"));
 
-		await Task.Delay(100);
-
-		var result =
-			(await Parser.FunctionParse(
-				MModule.single($"mapsql({objDbRef}/Test_Mapsql_BasicExecution2,lit(SELECT `name`,`value` FROM `test_sql_data_func` LIMIT 3),%r)")))
-			?.Message!;
+		var result = await PollFunctionUntilAttributeReadyAsync(
+			Parser,
+			$"mapsql({objDbRef}/Test_Mapsql_BasicExecution2,lit(SELECT `name`,`value` FROM `test_sql_data_func` LIMIT 3),%r)");
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_BasicExecution2: Row 1 has value 100" +
 																											"\nTest_Mapsql_BasicExecution2: Row 2 has value 200" +
@@ -293,11 +288,9 @@ public class DatabaseFunctionUnitTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlNoTable");
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&Test_Mapsql_TableDoesNotExist {objDbRef}=think %0"));
-		await Task.Delay(100);
-
-		var result =
-			(await Parser.FunctionParse(
-				MModule.single($"mapsql({objDbRef}/Test_Mapsql_TableDoesNotExist,lit(SELECT * FROM nonexistent_table))")))?.Message!;
+		var result = await PollFunctionUntilAttributeReadyAsync(
+			Parser,
+			$"mapsql({objDbRef}/Test_Mapsql_TableDoesNotExist,lit(SELECT * FROM nonexistent_table))");
 		await Assert.That(result.ToPlainText()).StartsWith("#-1 SQL ERROR");
 	}
 
@@ -372,12 +365,10 @@ public class DatabaseFunctionUnitTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&Test_Mapsql_PreparedStatement_BasicExecution {objDbRef}=Test_Mapsql_PreparedStatement_BasicExecution: Row %0 has value %2"));
 
-		await Task.Delay(100);
-
 		// Args: obj/attr, query, osep, fieldnames, param1
-		var result =
-			(await Parser.FunctionParse(MModule.single(
-				$"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = ?),%b,0,1)")))?.Message!;
+		var result = await PollFunctionUntilAttributeReadyAsync(
+			Parser,
+			$"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = ?),%b,0,1)");
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_PreparedStatement_BasicExecution: Row 1 has value 100");
 	}
@@ -389,12 +380,9 @@ public class DatabaseFunctionUnitTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&Test_Mapsql_PreparedStatement_MultipleRows {objDbRef}=Test_Mapsql_PreparedStatement_MultipleRows: Row %0 has value %2"));
 
-		await Task.Delay(100);
-
-		var result =
-			(await Parser.FunctionParse(
-				MModule.single($"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_MultipleRows,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id <= ? ORDER BY id),%b,0,2)")))
-			?.Message!;
+		var result = await PollFunctionUntilAttributeReadyAsync(
+			Parser,
+			$"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_MultipleRows,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id <= ? ORDER BY id),%b,0,2)");
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_PreparedStatement_MultipleRows: Row 1 has value 100 Test_Mapsql_PreparedStatement_MultipleRows: Row 2 has value 200");
 	}
@@ -406,12 +394,9 @@ public class DatabaseFunctionUnitTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&Test_Mapsql_PreparedStatement_StringParam {objDbRef}=Test_Mapsql_PreparedStatement_StringParam: %1=%2"));
 
-		await Task.Delay(500); // Increased delay to ensure attribute is fully set
-
-		var result =
-			(await Parser.FunctionParse(
-				MModule.single($"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_StringParam,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE name = ?),%b,0,test_sql_row3)")))
-			?.Message!;
+		var result = await PollFunctionUntilAttributeReadyAsync(
+			Parser,
+			$"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_StringParam,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE name = ?),%b,0,test_sql_row3)");
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_PreparedStatement_StringParam: test_sql_row3=300");
 	}
@@ -428,11 +413,30 @@ public class DatabaseFunctionUnitTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlPrepNoTable");
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&Test_Mapsql_PreparedStatement_TableDoesNotExist {objDbRef}=think %0"));
-		await Task.Delay(100);
-
-		var result =
-			(await Parser.FunctionParse(
-				MModule.single($"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_TableDoesNotExist,lit(SELECT * FROM nonexistent_table),%b,0,param)")))?.Message!;
+		var result = await PollFunctionUntilAttributeReadyAsync(
+			Parser,
+			$"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_TableDoesNotExist,lit(SELECT * FROM nonexistent_table),%b,0,param)");
 		await Assert.That(result.ToPlainText()).StartsWith("#-1 SQL ERROR");
+	}
+	/// <summary>
+	/// Polls <see cref="IMUSHCodeParser.FunctionParse"/> until the attribute referenced by
+	/// <paramref name="expression"/> is visible in the database (result is not <c>#-1 NO SUCH ATTRIBUTE</c>),
+	/// avoiding a fixed-duration sleep after attribute writes.
+	/// </summary>
+	private static async Task<MString> PollFunctionUntilAttributeReadyAsync(
+		IMUSHCodeParser parser,
+		string expression,
+		int timeoutMs = 5000,
+		int pollIntervalMs = 50)
+	{
+		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+		while (DateTime.UtcNow < deadline)
+		{
+			var result = (await parser.FunctionParse(MModule.single(expression)))?.Message;
+			if (result != null && !result.ToPlainText().Contains("#-1 NO SUCH ATTRIBUTE"))
+				return result;
+			await Task.Delay(pollIntervalMs);
+		}
+		throw new TimeoutException($"Timed out after {timeoutMs}ms waiting for attribute to become readable.");
 	}
 }

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using NSubstitute;
+using NSubstitute.Core;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -228,8 +229,8 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_test_attr_basic {objDbRef}=think Test_MapSql_Basic: %0 - %1 - %2"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data_cmd WHERE id = 1"));
 
-		// Wait for the channel consumer to process the queued attribute execution
-		await Task.Delay(2000); // Increased from 500ms to handle parallel test load
+		// Poll until the channel consumer has processed the queued attribute execution
+		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_Basic"));
 
 		await NotifyService
 			.Received()
@@ -247,8 +248,8 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_test_attr_mr {objDbRef}=think Test_MapSql_WithMultipleRows: %0 - %1 - %2 - %3"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
 
-		// Wait for the channel consumer to process the queued attribute executions
-		await Task.Delay(2000); // Increased from 500ms to handle parallel test load
+		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
+		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1"));
 
 		await NotifyService
 			.DidNotReceive()
@@ -293,8 +294,8 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_test_attr_cn {objDbRef}=think Test_MapSql_WithColnamesSwitch: %0 - %1 - %2 - %3"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/colnames {objDbRef}/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data_cmd WHERE id = 1"));
 
-		// Wait for the channel consumer to process the queued attribute executions
-		await Task.Delay(2000); // Increased from 500ms to handle parallel test load
+		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
+		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -404,8 +405,8 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_prepare_test_attr_basic {objDbRef}=think Test_MapSql_PrepareSwitch_Basic: %0 - %1 - %2"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id = ?),1"));
 
-		// Wait for the channel consumer to process the queued attribute execution
-		await Task.Delay(2000); // Increased from 500ms to handle parallel test load
+		// Poll until the channel consumer has processed the queued attribute execution
+		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_PrepareSwitch_Basic"));
 
 		await NotifyService
 			.Received()
@@ -423,8 +424,8 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_prepare_test_attr_mr {objDbRef}=think Test_MapSql_PrepareSwitch_WithMultipleRows: %0 - %1 - %2 - %3"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id <= ? ORDER BY id),2"));
 
-		// Wait for the channel consumer to process the queued attribute executions
-		await Task.Delay(2000); // Increased from 500ms to handle parallel test load
+		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
+		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -464,5 +465,31 @@ public class DatabaseCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1 SQL ERROR")) ||
 				(msg.IsT1 && msg.AsT1.Contains("#-1 SQL ERROR"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// Polls <see cref="INotifyService.ReceivedCalls"/> until a notification whose plain-text message
+	/// satisfies <paramref name="messagePredicate"/> arrives, avoiding a fixed-duration sleep.
+	/// </summary>
+	private static async Task WaitForNotificationAsync(
+		INotifyService notifyService,
+		Func<string, bool> messagePredicate,
+		int timeoutMs = 5000,
+		int pollIntervalMs = 50)
+	{
+		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+		while (DateTime.UtcNow < deadline)
+		{
+			var found = notifyService.ReceivedCalls().Any(call =>
+			{
+				var args = call.GetArguments();
+				if (args.Length < 2) return false;
+				return args[1] is OneOf<MString, string> msg &&
+					msg.Match(m => messagePredicate(m.ToString()), s => messagePredicate(s));
+			});
+			if (found) return;
+			await Task.Delay(pollIntervalMs);
+		}
+		throw new TimeoutException($"Timed out after {timeoutMs}ms waiting for expected notification.");
 	}
 }
