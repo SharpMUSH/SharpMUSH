@@ -418,6 +418,8 @@ public class DatabaseFunctionUnitTests
 			$"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_TableDoesNotExist,lit(SELECT * FROM nonexistent_table),%b,0,param)");
 		await Assert.That(result.ToPlainText()).StartsWith("#-1 SQL ERROR");
 	}
+	private const string NoSuchAttributeError = "#-1 NO SUCH ATTRIBUTE";
+
 	/// <summary>
 	/// Polls <see cref="IMUSHCodeParser.FunctionParse"/> until the attribute referenced by
 	/// <paramref name="expression"/> is visible in the database (result is not <c>#-1 NO SUCH ATTRIBUTE</c>),
@@ -433,7 +435,7 @@ public class DatabaseFunctionUnitTests
 		while (DateTime.UtcNow < deadline)
 		{
 			var result = (await parser.FunctionParse(MModule.single(expression)))?.Message;
-			if (result != null && !result.ToPlainText().Contains("#-1 NO SUCH ATTRIBUTE"))
+			if (result != null && !result.ToPlainText().Contains(NoSuchAttributeError))
 				return result;
 			await Task.Delay(pollIntervalMs);
 		}

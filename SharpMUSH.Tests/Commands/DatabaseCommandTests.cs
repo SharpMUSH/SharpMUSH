@@ -470,6 +470,7 @@ public class DatabaseCommandTests
 	/// <summary>
 	/// Polls <see cref="INotifyService.ReceivedCalls"/> until a notification whose plain-text message
 	/// satisfies <paramref name="messagePredicate"/> arrives, avoiding a fixed-duration sleep.
+	/// Only new calls since the previous iteration are examined to avoid redundant work.
 	/// </summary>
 	private static async Task WaitForNotificationAsync(
 		INotifyService notifyService,
@@ -478,9 +479,11 @@ public class DatabaseCommandTests
 		int pollIntervalMs = 50)
 	{
 		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+		var scannedCount = 0;
 		while (DateTime.UtcNow < deadline)
 		{
-			var found = notifyService.ReceivedCalls().Any(call =>
+			var calls = notifyService.ReceivedCalls().ToList();
+			var found = calls.Skip(scannedCount).Any(call =>
 			{
 				var args = call.GetArguments();
 				if (args.Length < 2) return false;
@@ -488,6 +491,7 @@ public class DatabaseCommandTests
 					msg.Match(m => messagePredicate(m.ToString()), s => messagePredicate(s));
 			});
 			if (found) return;
+			scannedCount = calls.Count;
 			await Task.Delay(pollIntervalMs);
 		}
 		throw new TimeoutException($"Timed out after {timeoutMs}ms waiting for expected notification.");
