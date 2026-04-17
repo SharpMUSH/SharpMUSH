@@ -9,6 +9,7 @@ using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using TUnit.AspNetCore;
@@ -104,6 +105,10 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 
 				sc.RemoveAll<INotifyService>();
 				sc.AddSingleton(notifier);
+
+				// Enable post-handler cache invalidation for tests to prevent
+				// concurrent reads from repopulating stale cache during writes.
+				sc.Configure<CacheInvalidationOptions>(o => o.InvalidateAfterHandler = true);
 
 				sc.RemoveAll<ISqlService>();
 				sc.AddSingleton<ISqlService>(new SqlService(sqlOptionsMonitor));
