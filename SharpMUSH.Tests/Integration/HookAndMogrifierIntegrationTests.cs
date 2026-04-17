@@ -11,7 +11,6 @@ namespace SharpMUSH.Tests.Integration;
 /// These tests validate the complete hook workflow including command execution,
 /// hook triggering, and $-command matching.
 /// </summary>
-[NotInParallel]
 public class HookIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -209,7 +208,6 @@ public class HookIntegrationTests
 /// These tests validate the complete mogrification pipeline including
 /// channel message processing and all MOGRIFY` attributes.
 /// </summary>
-[NotInParallel]
 public class MogrifierIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

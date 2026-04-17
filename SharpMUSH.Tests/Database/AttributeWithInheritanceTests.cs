@@ -6,7 +6,6 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Tests.Database;
 
-[NotInParallel]
 public class AttributeWithInheritanceTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

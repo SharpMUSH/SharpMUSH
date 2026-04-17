@@ -9,7 +9,6 @@ namespace SharpMUSH.Tests.Commands;
 /// <summary>
 /// Tests for newly implemented PennMUSH lock commands
 /// </summary>
-[NotInParallel]
 public class NewLockCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

@@ -679,7 +679,6 @@ public class RecursiveMarkdownRendererTests
 /// Tests for <c>sharp</c> fenced code block syntax highlighting using a real MUSH parser.
 /// These tests require the full server DI stack to produce a <see cref="IMUSHCodeParser"/>.
 /// </summary>
-[NotInParallel]
 public class RecursiveMarkdownRendererWithParserTests
 {
 	private const string ESC = "\u001b";

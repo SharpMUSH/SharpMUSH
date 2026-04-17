@@ -14,7 +14,6 @@ namespace SharpMUSH.Tests.Commands;
 /// <summary>
 /// Tests for wildcard/partial flag matching in @set command
 /// </summary>
-[NotInParallel]
 public class FlagWildcardMatchingTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

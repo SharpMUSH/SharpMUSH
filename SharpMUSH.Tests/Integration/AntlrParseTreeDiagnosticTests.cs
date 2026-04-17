@@ -12,7 +12,6 @@ namespace SharpMUSH.Tests.Integration;
 /// These tests parse raw input through the ANTLR4 parser directly (no visitor evaluation)
 /// to inspect the parse tree structure and prediction behavior.
 /// </summary>
-[NotInParallel]
 public class AntlrParseTreeDiagnosticTests
 {
 /// <summary>

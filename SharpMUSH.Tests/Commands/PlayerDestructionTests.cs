@@ -24,7 +24,6 @@ namespace SharpMUSH.Tests.Commands;
 /// Each test creates fresh, uniquely-named objects so that shared-session state
 /// from other test classes does not interfere.
 /// </summary>
-[NotInParallel]
 public class PlayerDestructionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

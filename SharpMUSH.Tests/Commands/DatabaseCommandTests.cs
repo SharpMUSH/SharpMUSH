@@ -229,7 +229,7 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Wait for the channel consumer to process the queued attribute execution
-		await Task.Delay(500);
+		await Task.Delay(2000); // Increased from 500ms to handle parallel test load
 
 		await NotifyService
 			.Received()
@@ -248,7 +248,7 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
 
 		// Wait for the channel consumer to process the queued attribute executions
-		await Task.Delay(500);
+		await Task.Delay(2000); // Increased from 500ms to handle parallel test load
 
 		await NotifyService
 			.DidNotReceive()
@@ -294,7 +294,7 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/colnames {objDbRef}/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Wait for the channel consumer to process the queued attribute executions
-		await Task.Delay(500);
+		await Task.Delay(2000); // Increased from 500ms to handle parallel test load
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -405,7 +405,7 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id = ?),1"));
 
 		// Wait for the channel consumer to process the queued attribute execution
-		await Task.Delay(500);
+		await Task.Delay(2000); // Increased from 500ms to handle parallel test load
 
 		await NotifyService
 			.Received()
@@ -424,7 +424,7 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id <= ? ORDER BY id),2"));
 
 		// Wait for the channel consumer to process the queued attribute executions
-		await Task.Delay(500);
+		await Task.Delay(2000); // Increased from 500ms to handle parallel test load
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
