@@ -15,9 +15,11 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache)
 	)
 	{
 		return message.CacheTags.Length > 0
-			? await cache.GetOrSetAsync(message.CacheKey, await next(message, cancellationToken),
+			? await cache.GetOrSetAsync(message.CacheKey,
+				async _ => await next(message, cancellationToken),
 				tags: message.CacheTags, token: cancellationToken)
-			: await cache.GetOrSetAsync(message.CacheKey, await next(message, cancellationToken),
+			: await cache.GetOrSetAsync(message.CacheKey,
+				async _ => await next(message, cancellationToken),
 				token: cancellationToken);
 	}
 }

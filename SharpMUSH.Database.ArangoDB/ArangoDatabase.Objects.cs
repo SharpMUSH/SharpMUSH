@@ -396,29 +396,25 @@ public partial class ArangoDatabase
 	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref,
 		CancellationToken cancellationToken = default)
 	{
-		SharpObjectQueryResult? obj;
-		try
-		{
-			obj = await arangoDb.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.Objects,
-				dbref.Number.ToString(), cancellationToken: cancellationToken);
-		}
-		catch
-		{
-			obj = null;
-		}
+		// Single AQL query that fetches both the Objects document and its typed vertex in one round-trip.
+		// Uses FOR...IN to emit two rows: first the Objects doc, then the typed vertex.
+		var query = await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
+			$"LET obj = DOCUMENT('{DatabaseConstants.Objects}', @key) " +
+			$"FILTER obj != null " +
+			$"LET typed = FIRST(FOR v IN 1..1 INBOUND obj GRAPH {DatabaseConstants.GraphObjects} RETURN v) " +
+			$"FILTER typed != null " +
+			$"FOR item IN [obj, typed] RETURN item",
+			new Dictionary<string, object> { { "key", dbref.Number.ToString() } },
+			cache: true, cancellationToken: cancellationToken);
 
-		if (obj is null
-				|| dbref.CreationMilliseconds is not null
+		if (query.Count < 2) return new None();
+
+		var obj = query[0];
+		var res = query[1];
+
+		if (dbref.CreationMilliseconds is not null
 				&& obj.CreationTime != dbref.CreationMilliseconds)
 			return new None();
-
-		var startVertex = obj.Id;
-		var res = (await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
-				$"FOR v IN 1..1 INBOUND {startVertex} GRAPH {DatabaseConstants.GraphObjects} RETURN v", cache: true,
-				cancellationToken: cancellationToken))
-			.FirstOrDefault();
-
-		if (res is null) return new None();
 
 		var id = res.Id;
 

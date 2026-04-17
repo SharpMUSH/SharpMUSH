@@ -304,12 +304,22 @@ public partial class LocateService(
 				if (c == ControlFlow.Return) break;
 			}
 
+			// Cache location contents to avoid querying the same container multiple times.
+			// GetContentsQuery is a streaming query (IStreamQuery) that does NOT go through
+			// QueryCachingBehavior, so repeated calls for the same container hit the DB each time.
+			List<AnySharpContent>? cachedLocationContents = null;
+			async ValueTask<List<AnySharpContent>> GetCachedLocationContentsAsync()
+			{
+				return cachedLocationContents ??=
+					await (mediator.CreateStream(new GetContentsQuery(location))?.ToListAsync() ?? ValueTask.FromResult(new List<AnySharpContent>()));
+			}
+
 			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
 					&& location.Object().DBRef != where.Object().DBRef)
 			{
-				var maybeContents = mediator.CreateStream(new GetContentsQuery(location));
-				var contents = maybeContents?
-					.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
+				var locationContents = await GetCachedLocationContentsAsync();
+				var contents = locationContents
+					.Select(x => x.WithRoomOption()).ToAsyncEnumerable();
 
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
@@ -325,10 +335,11 @@ public partial class LocateService(
 					// Step 1: Match exits in the current location (PennMUSH order)
 					if (location.IsRoom)
 					{
-						var exits = mediator
-							.CreateStream(new GetContentsQuery(location))
+						var locationContents = await GetCachedLocationContentsAsync();
+						var exits = locationContents
 							.Where(x => x.IsExit)
-							.Select(x => new AnySharpObject(x.AsExit));
+							.Select(x => new AnySharpObject(x.AsExit))
+							.ToAsyncEnumerable();
 
 						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
 							exact, final, curr, right_type, flags, name);
