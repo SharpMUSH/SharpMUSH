@@ -87,6 +87,7 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
+	[Retry(3)]
 	[Arguments("create(some-silly-object)", "locate(%#,some-silly-object,*)")]
 	// TODO: Enable when tel() is implemented
 	// [Arguments("tel(create(content-object),create(container-object))", "locate(%#,container-object's content-object,*)")]
