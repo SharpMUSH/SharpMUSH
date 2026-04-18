@@ -135,21 +135,26 @@ public partial class ArangoDatabase
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphPowers} RETURN v", cancellationToken: ct)
 			.Select(SharpPowerQueryToSharpPower);
 
-	public IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, string type, CancellationToken ct = default)
-		=> arangoDb.Query.ExecuteStreamAsync<SharpObjectFlagQueryResult>(handle,
-				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v", cancellationToken: ct)
-			.Select(SharpObjectFlagQueryToSharpFlag)
-			.Append(new SharpObjectFlag()
-			{
-				Name = type,
-				SetPermissions = [],
-				TypeRestrictions = [],
-				Symbol = type[0].ToString(),
-				System = true,
-				UnsetPermissions = [],
-				Id = null,
-				Aliases = []
-			});
+	public async IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, string type, [EnumeratorCancellation] CancellationToken ct = default)
+	{
+		await foreach (var item in arangoDb.Query.ExecuteStreamAsync<SharpObjectFlagQueryResult>(handle,
+			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphFlags} RETURN v", cancellationToken: ct))
+		{
+			yield return SharpObjectFlagQueryToSharpFlag(item);
+		}
+
+		yield return new SharpObjectFlag()
+		{
+			Name = type,
+			SetPermissions = [],
+			TypeRestrictions = [],
+			Symbol = type[0].ToString(),
+			System = true,
+			UnsetPermissions = [],
+			Id = null,
+			Aliases = []
+		};
+	}
 	private SharpObjectFlag SharpObjectFlagQueryToSharpFlag(SharpObjectFlagQueryResult x) =>
 		new()
 		{
