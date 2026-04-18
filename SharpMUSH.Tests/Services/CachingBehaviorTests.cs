@@ -84,12 +84,12 @@ public class CachingBehaviorTests
 			result1.Add(item);
 		}
 
-		// Verify cache key exists. Under parallel test load the global ObjectContents tag may be
-		// evicted by concurrent CreateThingCommand calls from other tests, so retry up to 10 times.
-		// Each attempt re-queries to repopulate the cache, then immediately checks the key.
+		// Verify cache key exists. The room is unique to this test so no other test can invalidate
+		// this specific key via a targeted CacheKey. A single retry guards against the rare
+		// MoveObjectCommand fallback tag sweep (fires only when OldContainer is unknown).
 		var cacheKey = $"object-contents:{dbRef}";
 		var cached = await Cache.TryGetAsync<List<AnySharpContent>>(cacheKey);
-		for (var attempt = 0; attempt < 10 && !cached.HasValue; attempt++)
+		if (!cached.HasValue)
 		{
 			result1.Clear();
 			await foreach (var item in mediator.CreateStream(new GetContentsQuery(dbRef)))
