@@ -13,6 +13,7 @@ namespace SharpMUSH.Tests.Services;
 /// These tests exercise the real QueryCachingBehavior, StreamQueryCachingBehavior,
 /// and CacheInvalidationBehavior using the fully wired DI container.
 /// </summary>
+[NotInParallel]
 public class CachingBehaviorTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
