@@ -2,18 +2,40 @@
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 
 namespace SharpMUSH.Implementation;
 
 public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionParser
 {
-	// Future optimization: Cache invalidation system for when objects/flags change
-	// The compiled expression could be cached and invalidated when:
-	// - A character stops existing
-	// - A flag gets removed
-	// - Other rare structural changes occur
+	/// <summary>
+	/// Cache of compiled lock expressions keyed by their text representation.
+	/// Lock expressions are static text stored on objects that change only when a player
+	/// explicitly sets a lock (via @lock). Since compilation involves a full ANTLR
+	/// lex-parse-visit cycle plus Expression.Lambda.Compile() (JIT compilation),
+	/// caching provides significant savings on the frequent lock-check hot path.
+	/// </summary>
+	private static readonly ConcurrentDictionary<string, Func<AnySharpObject, AnySharpObject, bool>> _compiledCache = new();
+
 	public Func<AnySharpObject, AnySharpObject, bool> Compile(string text)
+	{
+		return _compiledCache.GetOrAdd(text, CompileInternal);
+	}
+
+	/// <summary>
+	/// Invalidate a cached compiled expression. Call this when a lock expression changes
+	/// (e.g., via @lock). If text is null, clears the entire cache.
+	/// </summary>
+	public static void InvalidateCache(string? text = null)
+	{
+		if (text is null)
+			_compiledCache.Clear();
+		else
+			_compiledCache.TryRemove(text, out _);
+	}
+
+	private Func<AnySharpObject, AnySharpObject, bool> CompileInternal(string text)
 	{
 		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Compile));
 		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);

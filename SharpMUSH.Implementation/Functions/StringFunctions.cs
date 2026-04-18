@@ -1,4 +1,4 @@
-﻿using ANSILibrary;
+using ANSILibrary;
 using DotNext.Collections.Generic;
 using Humanizer;
 using MarkupString;
@@ -132,24 +132,26 @@ public partial class Functions
 		}
 
 		// If not Emit, use Speakername.
-
-		var concat = MModule.single(string.Empty);
+		// Build the prefix using ConcatMany to avoid O(N²) sequential concat
+		var parts = new List<MString>(4);
 
 		if (messageType is not INotifyService.NotificationType.Emit)
 		{
-			concat = MModule.concat(concat, speakerName);
+			parts.Add(speakerName);
 		}
 
 		if (messageType is INotifyService.NotificationType.Pose or INotifyService.NotificationType.Say)
 		{
-			concat = MModule.concat(concat, MModule.single(" "));
+			parts.Add(MModule.Space());
 		}
 
 		if (messageType is INotifyService.NotificationType.Say)
 		{
-			concat = MModule.concat(concat, sayString);
-			concat = MModule.concat(concat, open);
+			parts.Add(sayString);
+			parts.Add(open);
 		}
+
+		var concat = parts.Count > 0 ? MModule.ConcatMany(parts) : MModule.empty();
 
 		/*
 		  If <transform> is specified (an object/attribute pair or attribute, as with map() and similar functions),
@@ -340,9 +342,9 @@ public partial class Functions
 
 	[SharpFunction(Name = "strcat", Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public static ValueTask<CallState> Concat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.ArgumentsOrdered
-			.Select(x => x.Value.Message)
-			.Aggregate((x, y) => MModule.concat(x, y)));
+		=> ValueTask.FromResult<CallState>(MModule.ConcatMany(
+			parser.CurrentState.ArgumentsOrdered
+				.Select(x => x.Value.Message ?? MModule.empty())));
 
 	[SharpFunction(Name = "cat", Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public static ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)

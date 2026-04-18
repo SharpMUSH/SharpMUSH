@@ -130,16 +130,29 @@ public class SharpMUSHParserVisitor(
 	{
 		if (node is null) return null;
 
-		var result = await DefaultResult;
+		var childCount = node.ChildCount;
+		if (childCount == 0) return null;
 
-		await foreach (var child in Enumerable
-							 .Range(0, node.ChildCount)
-							 .ToAsyncEnumerable()
-							 .Select(node.GetChild))
+		// Fast path for single child — no aggregation needed
+		if (childCount == 1)
 		{
-			result = child is null
-				? AggregateResult(result, null)
-				: AggregateResult(result, await child.Accept(this));
+			var only = node.GetChild(0);
+			return only is null ? null : await only.Accept(this);
+		}
+
+		// Collect non-null child results to batch-merge at the end
+		List<CallState>? results = null;
+
+		for (var i = 0; i < childCount; i++)
+		{
+			var child = node.GetChild(i);
+			var childResult = child is null ? null : await child.Accept(this);
+
+			if (childResult is not null)
+			{
+				results ??= new List<CallState>(childCount);
+				results.Add(childResult);
+			}
 
 			// Halt evaluation if a limit has been exceeded
 			if (parser.CurrentState.LimitExceeded?.IsExceeded == true)
@@ -148,43 +161,84 @@ public class SharpMUSHParserVisitor(
 			}
 		}
 
-		return result;
+		if (results is null || results.Count == 0)
+			return null;
+
+		if (results.Count == 1)
+			return results[0];
+
+		return BatchMergeResults(results);
 	}
 
 	public async ValueTask<CallState?> VisitChildrenOrBreak(IRuleNode node, Func<bool> haltPredicate)
 	{
-		var result = await DefaultResult;
+		var childCount = node.ChildCount;
+		List<CallState>? results = null;
 
-		await foreach (var child in Enumerable
-								 .Range(0, node.ChildCount)
-								 .Select(node.GetChild)
-								 .ToAsyncEnumerable()
-								 .TakeWhile(_ => !haltPredicate()))
+		for (var i = 0; i < childCount; i++)
 		{
-			result = AggregateResult(result, await child.Accept(this));
+			if (haltPredicate()) break;
+			var child = node.GetChild(i);
+			if (child is not null)
+			{
+				var childResult = await child.Accept(this);
+				if (childResult is not null)
+				{
+					results ??= new List<CallState>(childCount);
+					results.Add(childResult);
+				}
+			}
 		}
 
-		return result;
+		if (results is null || results.Count == 0)
+			return null;
+
+		if (results.Count == 1)
+			return results[0];
+
+		return BatchMergeResults(results);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-	private static CallState? AggregateResult(CallState? aggregate,
-		CallState? nextResult)
-		=> (aggregate, nextResult) switch
+	/// <summary>
+	/// Merges a list of child CallState results in O(N) instead of the previous
+	/// pairwise AggregateResult approach which was O(N²) for Message concatenation.
+	/// Uses ConcatMany for messages (single StringBuilder pass) and batched array
+	/// construction for arguments.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static CallState BatchMergeResults(List<CallState> results)
+	{
+		// Check if any result has Arguments — if so, use arguments merge path
+		if (results[0].Arguments is not null)
 		{
-			(null, null)
-				=> null,
-			({ Arguments: not null } agg, { Arguments: not null } next)
-				=> agg with { Arguments = [.. agg.Arguments, .. next.Arguments] },
-			({ Message: not null } agg, { Message: not null } next)
-				=> agg with {
-					Message = MModule.concat(agg.Message, next.Message), 
-					ParsedMessage = () => ValueTask.FromResult<MString?>(MModule.concat(agg.Message, next.Message))
-				},
-				// => new CallState(MModule.concat(agg.Message, next.Message), agg.Depth),
-			var (agg, next)
-				=> agg ?? next
-		};
+			// Batch merge arguments: count total first, then copy once
+			var totalArgs = 0;
+			foreach (var r in results)
+				totalArgs += r.Arguments?.Length ?? 0;
+
+			var merged = new MString[totalArgs];
+			var offset = 0;
+			foreach (var r in results)
+			{
+				if (r.Arguments is { Length: > 0 } args)
+				{
+					args.CopyTo(merged, offset);
+					offset += args.Length;
+				}
+			}
+
+			return results[0] with { Arguments = merged };
+		}
+
+		// Message merge path: use ConcatMany for O(N) instead of O(N²)
+		var messages = new MString[results.Count];
+		for (var i = 0; i < results.Count; i++)
+			messages[i] = results[i].Message ?? MModule.empty();
+
+		var combined = MModule.ConcatMany(messages);
+		return new CallState(combined, results[0].Depth, null,
+			() => ValueTask.FromResult<MString?>(combined));
+	}
 
 	/// <summary>
 	/// Extracts text from a parser context using the source string.
