@@ -1,4 +1,4 @@
-﻿using Mediator;
+using Mediator;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -15,17 +15,34 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 	/// explicitly sets a lock (via @lock). Since compilation involves a full ANTLR
 	/// lex-parse-visit cycle plus Expression.Lambda.Compile() (JIT compilation),
 	/// caching provides significant savings on the frequent lock-check hot path.
+	/// 
+	/// Uses Lazy&lt;T&gt; to ensure only one thread performs the expensive compilation
+	/// for a given key, even under concurrent access.
 	/// </summary>
-	private static readonly ConcurrentDictionary<string, Func<AnySharpObject, AnySharpObject, bool>> _compiledCache = new();
+	private static readonly ConcurrentDictionary<string, Lazy<Func<AnySharpObject, AnySharpObject, bool>>> _compiledCache = new();
 
 	public Func<AnySharpObject, AnySharpObject, bool> Compile(string text)
 	{
-		return _compiledCache.GetOrAdd(text, CompileInternal);
+		var lazy = _compiledCache.GetOrAdd(
+			text,
+			key => new Lazy<Func<AnySharpObject, AnySharpObject, bool>>(
+				() => CompileInternal(key), LazyThreadSafetyMode.ExecutionAndPublication));
+
+		try
+		{
+			return lazy.Value;
+		}
+		catch
+		{
+			// Remove poisoned entry so subsequent attempts can retry
+			_compiledCache.TryRemove(text, out _);
+			throw;
+		}
 	}
 
 	/// <summary>
 	/// Invalidate a cached compiled expression. Call this when a lock expression changes
-	/// (e.g., via @lock). If text is null, clears the entire cache.
+	/// (e.g., via @lock or @unlock). If text is null, clears the entire cache.
 	/// </summary>
 	public static void InvalidateCache(string? text = null)
 	{

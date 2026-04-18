@@ -132,26 +132,30 @@ public partial class Functions
 		}
 
 		// If not Emit, use Speakername.
-		// Build the prefix using ConcatMany to avoid O(N²) sequential concat
-		var parts = new List<MString>(4);
+		// Build the prefix using ConcatMany to avoid O(N²) sequential concat.
+		// List is allocated lazily to avoid an allocation for the Emit case (no prefix).
+		List<MString>? parts = null;
 
 		if (messageType is not INotifyService.NotificationType.Emit)
 		{
+			parts ??= new List<MString>(4);
 			parts.Add(speakerName);
 		}
 
 		if (messageType is INotifyService.NotificationType.Pose or INotifyService.NotificationType.Say)
 		{
+			parts ??= new List<MString>(4);
 			parts.Add(MModule.Space());
 		}
 
 		if (messageType is INotifyService.NotificationType.Say)
 		{
+			parts ??= new List<MString>(4);
 			parts.Add(sayString);
 			parts.Add(open);
 		}
 
-		var concat = parts.Count > 0 ? MModule.ConcatMany(parts) : MModule.empty();
+		var concat = parts is { Count: > 0 } ? MModule.ConcatMany(parts) : MModule.Empty();
 
 		/*
 		  If <transform> is specified (an object/attribute pair or attribute, as with map() and similar functions),
@@ -344,7 +348,7 @@ public partial class Functions
 	public static ValueTask<CallState> Concat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(MModule.ConcatMany(
 			parser.CurrentState.ArgumentsOrdered
-				.Select(x => x.Value.Message ?? MModule.empty())));
+				.Select(x => x.Value.Message ?? MModule.Empty())));
 
 	[SharpFunction(Name = "cat", Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public static ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)

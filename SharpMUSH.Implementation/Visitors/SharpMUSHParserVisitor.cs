@@ -209,7 +209,17 @@ public class SharpMUSHParserVisitor(
 	private static CallState BatchMergeResults(List<CallState> results)
 	{
 		// Check if any result has Arguments — if so, use arguments merge path
-		if (results[0].Arguments is not null)
+		CallState? argumentSource = null;
+		foreach (var r in results)
+		{
+			if (r.Arguments is not null)
+			{
+				argumentSource = r;
+				break;
+			}
+		}
+
+		if (argumentSource is not null)
 		{
 			// Batch merge arguments: count total first, then copy once
 			var totalArgs = 0;
@@ -227,13 +237,13 @@ public class SharpMUSHParserVisitor(
 				}
 			}
 
-			return results[0] with { Arguments = merged };
+			return argumentSource with { Arguments = merged };
 		}
 
 		// Message merge path: use ConcatMany for O(N) instead of O(N²)
 		var messages = new MString[results.Count];
 		for (var i = 0; i < results.Count; i++)
-			messages[i] = results[i].Message ?? MModule.empty();
+			messages[i] = results[i].Message ?? MModule.Empty();
 
 		var combined = MModule.ConcatMany(messages);
 		return new CallState(combined, results[0].Depth, null,
