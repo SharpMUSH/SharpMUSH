@@ -11,5 +11,6 @@ public record CreatePlayerCommand(string Name, string Password, DBRef Location, 
 	public string[] CacheTags => [
 		Definitions.CacheTags.ObjectOwnership,
 		Definitions.CacheTags.ObjectList,
-		Definitions.CacheTags.PlayerList];
+		Definitions.CacheTags.PlayerList,
+		Definitions.CacheTags.PlayerNames];
 }
