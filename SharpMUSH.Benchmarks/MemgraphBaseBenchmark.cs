@@ -1,34 +1,23 @@
-using Core.Arango;
-using Core.Arango.Serialization.Json;
+using BenchmarkDotNet.Attributes;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
-using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using OneOf.Types;
 using Serilog;
 using SharpMUSH.Library;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
-using System.Collections.Concurrent;
-using System.Text;
-using Testcontainers.ArangoDb;
-using BenchmarkDotNet.Attributes;
 
 namespace SharpMUSH.Benchmarks;
 
 /// <summary>
-/// Base class for all ArangoDB-backed benchmarks.
-/// Spins up ArangoDB and NATS Testcontainers, wires up the full DI stack,
+/// Base class for all Memgraph-backed benchmarks.
+/// Spins up Memgraph and NATS Testcontainers, wires up the full DI stack,
 /// and provides a ready-to-use <see cref="IMUSHCodeParser"/>.
 /// </summary>
 [Config(typeof(AdaptiveBenchmarkConfig))]
-public class BaseBenchmark
+public class MemgraphBaseBenchmark
 {
-	public BaseBenchmark() =>
+	public MemgraphBaseBenchmark() =>
 		Log.Logger = new LoggerConfiguration()
 			.WriteTo.Console()
 			.MinimumLevel.Information()
@@ -36,23 +25,26 @@ public class BaseBenchmark
 
 	protected TestWebApplicationBuilderFactory<Server.Program>? _server;
 	protected ISharpDatabase? _database;
-	private ArangoDbContainer? _arangoContainer;
+	private IContainer? _memgraphContainer;
 	private IContainer? _natsContainer;
 
 	[GlobalSetup]
 	public async ValueTask Setup()
 	{
-		_arangoContainer = new ArangoDbBuilder("arangodb:latest")
-			.WithPassword("password")
+		_memgraphContainer = new ContainerBuilder("memgraph/memgraph:3.8.1")
+			.WithPortBinding(7687, true)
+			.WithCommand(
+				"--bolt-num-workers=4",
+				"--storage-mode=IN_MEMORY_TRANSACTIONAL",
+				"--memory-limit=1024",
+				"--log-level=WARNING")
+			.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("You are running Memgraph"))
+			.WithReuse(false)
 			.Build();
 
-		await _arangoContainer.StartAsync().ConfigureAwait(false);
+		await _memgraphContainer.StartAsync().ConfigureAwait(false);
 
-		var config = new ArangoConfiguration
-		{
-			ConnectionString = $"Server={_arangoContainer.GetTransportAddress()};User=root;Realm=;Password=password;",
-			Serializer = new ArangoJsonSerializer(new ArangoJsonDefaultPolicy())
-		};
+		var memgraphUri = $"bolt://localhost:{_memgraphContainer.GetMappedPublicPort(7687)}";
 
 		_natsContainer = await BenchmarkHelpers.StartNatsContainerAsync().ConfigureAwait(false);
 		Environment.SetEnvironmentVariable("NATS_URL",
@@ -61,7 +53,13 @@ public class BaseBenchmark
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
-		_server = new TestWebApplicationBuilderFactory<Server.Program>(config, configFile, colorFile);
+		_server = new TestWebApplicationBuilderFactory<Server.Program>(
+			acnf: null,
+			configFile: configFile,
+			colorFile: colorFile,
+			databaseProvider: DatabaseProvider.Memgraph,
+			memgraphUri: memgraphUri);
+
 		_database = _server!.Services.GetRequiredService<ISharpDatabase>();
 	}
 
@@ -71,8 +69,8 @@ public class BaseBenchmark
 		if (_natsContainer is not null)
 			await _natsContainer.DisposeAsync().ConfigureAwait(false);
 
-		if (_arangoContainer is not null)
-			await _arangoContainer.DisposeAsync().ConfigureAwait(false);
+		if (_memgraphContainer is not null)
+			await _memgraphContainer.DisposeAsync().ConfigureAwait(false);
 	}
 
 	protected async Task<IMUSHCodeParser?> TestParser() =>

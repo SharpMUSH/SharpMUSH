@@ -1,11 +1,9 @@
-﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Attributes;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text;
 
 namespace SharpMUSH.Benchmarks;
 
-[SimpleJob(RuntimeMoniker.Net90)]
 [BenchmarkCategory("Non-DB Function Evaluation")]
 public class SimpleFunctionCalls : BaseBenchmark
 {
@@ -27,16 +25,11 @@ public class SimpleFunctionCalls : BaseBenchmark
 	{
 		var sb = new StringBuilder();
 		foreach (var _ in Enumerable.Range(0, depth))
-		{
 			sb.Append("[add(1,");
-		}
 		sb.Append('1');
 		foreach (var _ in Enumerable.Range(0, depth))
-		{
 			sb.Append(")]");
-		}
-		var str = sb.ToString();
 
-		await _parser!.FunctionParse(MModule.single(str));
+		await _parser!.FunctionParse(MModule.single(sb.ToString()));
 	}
 }

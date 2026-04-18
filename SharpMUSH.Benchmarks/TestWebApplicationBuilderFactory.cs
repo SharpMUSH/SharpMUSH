@@ -10,15 +10,18 @@ using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
 
 namespace SharpMUSH.Benchmarks;
 
 public class TestWebApplicationBuilderFactory<TProgram>(
-		ArangoConfiguration acnf,
+		ArangoConfiguration? acnf,
 		string configFile,
-		string colorFile) :
+		string colorFile,
+		DatabaseProvider databaseProvider = DatabaseProvider.ArangoDB,
+		string? memgraphUri = null) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -32,14 +35,13 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		Log.Logger = log;
 
 		var natsUrl = Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
-		var startup = new Startup(acnf, colorFile, natsUrl);
+		var startup = new Startup(acnf, colorFile, natsUrl, databaseProvider, memgraphUri);
 
 		var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));
 
 		builder.ConfigureServices(services =>
 		{
-			// Build a minimal configuration for Serilog to read from
 			var configuration = new ConfigurationBuilder()
 				.SetBasePath(AppContext.BaseDirectory)
 				.AddJsonFile("appsettings.json", optional: true)
@@ -47,10 +49,9 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 			startup.ConfigureServices(services, configuration);
 		});
 		builder.ConfigureTestServices(sc =>
-			{
-				sc.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
-				sc.AddSingleton(x => substitute);
-			}
-		);
+		{
+			sc.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
+			sc.AddSingleton(x => substitute);
+		});
 	}
 }
