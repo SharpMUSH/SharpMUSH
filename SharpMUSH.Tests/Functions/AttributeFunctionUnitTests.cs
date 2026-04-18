@@ -74,6 +74,18 @@ public class AttributeFunctionUnitTests
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// Runs after all GenderTest3 cases complete. Wipes the GENDER attribute from player #1
+	/// so that the shared state does not affect any subsequent tests or retries that rely on
+	/// the default (gender-neutral) pronouns.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(GenderTest3))]
+	public async Task GenderCleanup()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&GENDER me="));
+	}
+
 
 	[Test]
 	[NotInParallel]
