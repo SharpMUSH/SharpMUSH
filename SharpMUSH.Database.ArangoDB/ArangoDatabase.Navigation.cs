@@ -231,17 +231,41 @@ public partial class ArangoDatabase
 		var baseObject = await GetObjectNodeAsync(obj, ct);
 		if (baseObject.IsNone) yield break;
 
-		const string locationQuery =
-			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN v._id";
-		var query = arangoDb.Query.ExecuteStreamAsync<string>(handle, $"{locationQuery}",
-			new Dictionary<string, object>
-			{
-				{ StartVertex, baseObject.Id()! }
-			}, cancellationToken: ct);
-
-		await foreach (var id in query.WithCancellation(ct))
+		await foreach (var content in GetContentsBatchAsync(baseObject.Id()!, ct))
 		{
-			var node = await GetObjectNodeAsync(id, ct);
+			yield return content;
+		}
+	}
+
+	public async IAsyncEnumerable<AnySharpContent> GetContentsAsync(AnySharpContainer node,
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		await foreach (var content in GetContentsBatchAsync(node.Id, ct))
+		{
+			yield return content;
+		}
+	}
+
+	/// <summary>
+	/// Batch-fetches all contents of a container in a single AQL query, avoiding N+1 round-trips.
+	/// Returns both the typed vertex and its Objects document for each content item.
+	/// </summary>
+	private async IAsyncEnumerable<AnySharpContent> GetContentsBatchAsync(string startVertex,
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		var results = arangoDb.Query.ExecuteStreamAsync<System.Text.Json.JsonElement>(handle,
+			$"FOR typed IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} " +
+			$"LET obj = FIRST(FOR o IN 1..1 OUTBOUND typed GRAPH {DatabaseConstants.GraphObjects} RETURN o) " +
+			$"FILTER obj != null " +
+			$"RETURN {{typed: typed, obj: obj}}",
+			new Dictionary<string, object> { { StartVertex, startVertex } },
+			cancellationToken: ct);
+
+		await foreach (var result in results.WithCancellation(ct))
+		{
+			var typedEl = result.GetProperty("typed");
+			var objEl = result.GetProperty("obj");
+			var node = HydrateObjectFromElements(typedEl, objEl);
 			yield return node.Match<AnySharpContent>(
 				player => player,
 				_ => throw new Exception("Invalid Contents found"),
@@ -252,30 +276,53 @@ public partial class ArangoDatabase
 		}
 	}
 
-	public async IAsyncEnumerable<AnySharpContent> GetContentsAsync(AnySharpContainer node,
-		[EnumeratorCancellation] CancellationToken ct = default)
+	/// <summary>
+	/// Hydrates a fully-typed object from raw JSON elements of the typed vertex and its Objects document.
+	/// Used by batch methods (GetContentsBatchAsync, GetExitsBatchAsync) to construct objects from
+	/// already-fetched JSON data without additional DB round-trips, unlike GetObjectNodeAsync which
+	/// fetches from the database.
+	/// </summary>
+	private AnyOptionalSharpObject HydrateObjectFromElements(
+		System.Text.Json.JsonElement typedVertex,
+		System.Text.Json.JsonElement objectVertex)
 	{
-		var startVertex = node.Id;
+		var id = typedVertex.GetProperty("_id").GetString()!;
+		var collection = id.Split("/")[0];
+		var sharpObject = SharpObjectQueryToSharpObject(objectVertex);
 
-		const string locationQuery =
-			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN v._id";
-		var queryIds = arangoDb.Query.ExecuteStreamAsync<string>(handle, $"{locationQuery}",
-			new Dictionary<string, object>
-			{
-				{ StartVertex, startVertex }
-			}, cancellationToken: ct);
-
-		await foreach (var id in queryIds.WithCancellation(ct))
+		return collection switch
 		{
-			var x = await GetObjectNodeAsync(id, ct);
-			yield return x.Match<AnySharpContent>(
-				player => player,
-				_ => throw new Exception("Invalid Contents found"),
-				exit => exit,
-				thing => thing,
-				_ => throw new Exception("Invalid Contents found")
-			);
-		}
+			DatabaseConstants.Things => new SharpThing
+			{
+				Id = id, Object = sharpObject,
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Home = new(async ct => await GetHomeAsync(id, ct))
+			},
+			DatabaseConstants.Players => new SharpPlayer
+			{
+				Id = id, Object = sharpObject,
+				Aliases = typedVertex.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Home = new(async ct => await GetHomeAsync(id, ct)),
+				PasswordHash = typedVertex.GetProperty("PasswordHash").GetString()!,
+				PasswordSalt = typedVertex.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
+				Quota = typedVertex.GetProperty("Quota").GetInt32()
+			},
+			DatabaseConstants.Rooms => new SharpRoom
+			{
+				Id = id,
+				Object = sharpObject,
+				Location = new(async ct => await GetDropToAsync(id, ct))
+			},
+			DatabaseConstants.Exits => new SharpExit
+			{
+				Id = id, Object = sharpObject,
+				Aliases = typedVertex.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Home = new(async ct => await GetHomeAsync(id, ct))
+			},
+			_ => throw new ArgumentException($"Invalid Object Type found: '{objectVertex.GetProperty("Type").GetString()}'"),
+		};
 	}
 	public record SharpExitQuery(
 		SharpExitQueryResult Exit,
@@ -287,47 +334,44 @@ public partial class ArangoDatabase
 		var baseObject = await GetObjectNodeAsync(obj, ct);
 		if (baseObject.IsNone) yield break;
 
-		// Exits are stored in GraphLocations (exitNode --AtLocation--> sourceRoom).
-		// Use same pattern as GetContentsAsync but filter to the exits collection only.
-		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} " +
-		                         $"FILTER IS_SAME_COLLECTION('{DatabaseConstants.Exits}', v) RETURN v._id";
-
-		var ids = arangoDb.Query.ExecuteStreamAsync<string>(handle, exitQuery,
-			new Dictionary<string, object>
-			{
-				{ StartVertex, baseObject.Known().Id()! }
-			}, cancellationToken: ct);
-
-		await foreach (var id in ids.WithCancellation(ct))
+		await foreach (var exit in GetExitsBatchAsync(baseObject.Known().Id()!, ct))
 		{
-			var node = await GetObjectNodeAsync(id, ct);
-			if (node.IsNone) continue;
-			var exitNode = node.Known().AsExit;
-			yield return exitNode;
+			yield return exit;
 		}
 	}
 
 	public async IAsyncEnumerable<SharpExit> GetExitsAsync(AnySharpContainer node,
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
-		var startVertex = node.Id;
-
-		// Exits are stored in GraphLocations (exitNode --AtLocation--> sourceRoom).
-		// Use same pattern as GetContentsAsync but filter to the exits collection only.
-		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} " +
-		                         $"FILTER IS_SAME_COLLECTION('{DatabaseConstants.Exits}', v) RETURN v._id";
-
-		var ids = arangoDb.Query.ExecuteStreamAsync<string>(handle, exitQuery,
-			new Dictionary<string, object>
-			{
-				{ StartVertex, startVertex }
-			}, cancellationToken: ct);
-
-		await foreach (var id in ids.WithCancellation(ct))
+		await foreach (var exit in GetExitsBatchAsync(node.Id, ct))
 		{
-			var exitObjNode = await GetObjectNodeAsync(id, ct);
-			if (exitObjNode.IsNone) continue;
-			yield return exitObjNode.Known().AsExit;
+			yield return exit;
+		}
+	}
+
+	/// <summary>
+	/// Batch-fetches all exits of a container in a single AQL query, avoiding N+1 round-trips.
+	/// Filters to the exits collection and returns fully hydrated SharpExit objects.
+	/// </summary>
+	private async IAsyncEnumerable<SharpExit> GetExitsBatchAsync(string startVertex,
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		var results = arangoDb.Query.ExecuteStreamAsync<System.Text.Json.JsonElement>(handle,
+			$"FOR typed IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} " +
+			$"FILTER IS_SAME_COLLECTION('{DatabaseConstants.Exits}', typed) " +
+			$"LET obj = FIRST(FOR o IN 1..1 OUTBOUND typed GRAPH {DatabaseConstants.GraphObjects} RETURN o) " +
+			$"FILTER obj != null " +
+			$"RETURN {{typed: typed, obj: obj}}",
+			new Dictionary<string, object> { { StartVertex, startVertex } },
+			cancellationToken: ct);
+
+		await foreach (var result in results.WithCancellation(ct))
+		{
+			var typedEl = result.GetProperty("typed");
+			var objEl = result.GetProperty("obj");
+			var node = HydrateObjectFromElements(typedEl, objEl);
+			if (node.IsNone) continue;
+			yield return node.Known().AsExit;
 		}
 	}
 	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone,

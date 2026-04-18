@@ -3,6 +3,7 @@
 /// <summary>
 /// Removed by <see cref="SharpMUSH.Library.Attributes.ICacheInvalidating"/>
 /// Handled by <see cref="SharpMUSH.Library.Behaviors.QueryCachingBehavior{TRequest, TResponse}"/>
+/// and <see cref="SharpMUSH.Library.Behaviors.StreamQueryCachingBehavior{TRequest, TResponse}"/>
 /// </summary>
 public interface ICacheable
 {

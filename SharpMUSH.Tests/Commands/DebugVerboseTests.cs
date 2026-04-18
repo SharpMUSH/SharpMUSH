@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class DebugVerboseTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

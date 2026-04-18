@@ -9,8 +9,8 @@ public record CreatePlayerCommand(string Name, string Password, DBRef Location, 
 	public string[] CacheKeys => [$"object-contents:{Location}"];
 
 	public string[] CacheTags => [
-		Definitions.CacheTags.ObjectContents,
 		Definitions.CacheTags.ObjectOwnership,
 		Definitions.CacheTags.ObjectList,
-		Definitions.CacheTags.PlayerList];
+		Definitions.CacheTags.PlayerList,
+		Definitions.CacheTags.PlayerNames];
 }

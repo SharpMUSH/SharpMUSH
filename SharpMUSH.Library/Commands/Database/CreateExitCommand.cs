@@ -13,7 +13,6 @@ public record CreateExitCommand(string Name, string[] Aliases, AnySharpContainer
 
 	public string[] CacheTags =>
 	[
-		Definitions.CacheTags.ObjectContents,
 		Definitions.CacheTags.ObjectOwnership,
 		Definitions.CacheTags.ExitList,
 		Definitions.CacheTags.ObjectList

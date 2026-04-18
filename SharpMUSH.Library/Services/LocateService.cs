@@ -307,9 +307,9 @@ public partial class LocateService(
 			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
 					&& location.Object().DBRef != where.Object().DBRef)
 			{
-				var maybeContents = mediator.CreateStream(new GetContentsQuery(location));
-				var contents = maybeContents?
-					.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
+				var contents = mediator
+					.CreateStream(new GetContentsQuery(location))
+					?.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
 
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
@@ -327,8 +327,9 @@ public partial class LocateService(
 					{
 						var exits = mediator
 							.CreateStream(new GetContentsQuery(location))
-							.Where(x => x.IsExit)
-							.Select(x => new AnySharpObject(x.AsExit));
+							?.Where(x => x.IsExit)
+							.Select(x => new AnySharpObject(x.AsExit))
+							?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
 
 						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
 							exact, final, curr, right_type, flags, name);

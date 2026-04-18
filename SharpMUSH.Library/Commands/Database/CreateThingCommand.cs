@@ -13,7 +13,6 @@ public record CreateThingCommand(string Name, AnySharpContainer Where, SharpPlay
 	public string[] CacheTags => [
 		Definitions.CacheTags.ObjectList,
 		Definitions.CacheTags.ThingList,
-		Definitions.CacheTags.ObjectContents,
 		Definitions.CacheTags.ObjectOwnership
 	];
 }

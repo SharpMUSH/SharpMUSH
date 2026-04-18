@@ -357,10 +357,25 @@ public partial record ParserState(
 	/// <summary>
 	/// Just the numbered arguments, %0-%9 etc., in numerical order. This excludes named arguments.
 	/// </summary>
-	public ImmutableSortedDictionary<string, CallState> ArgumentsOrdered => Arguments
-		.Where(x => int.TryParse(x.Key, out _))
-		.OrderBy(x => int.Parse(x.Key))
-		.ToImmutableSortedDictionary();
+	public ImmutableSortedDictionary<string, CallState> ArgumentsOrdered
+	{
+		get
+		{
+			// Cache the result. Invalidate if Arguments reference changed (e.g., after `with` expression).
+			if (_argumentsOrdered is not null && ReferenceEquals(_argumentsOrderedSource, Arguments))
+				return _argumentsOrdered;
+
+			_argumentsOrderedSource = Arguments;
+			_argumentsOrdered = Arguments
+				.Where(x => int.TryParse(x.Key, out _))
+				.OrderBy(x => int.Parse(x.Key))
+				.ToImmutableSortedDictionary();
+			return _argumentsOrdered;
+		}
+	}
+
+	private ImmutableSortedDictionary<string, CallState>? _argumentsOrdered;
+	private Dictionary<string, CallState>? _argumentsOrderedSource;
 
 	/// <summary>
 	/// Add a register value to the Register stack.

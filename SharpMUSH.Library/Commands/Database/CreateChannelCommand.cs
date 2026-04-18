@@ -14,7 +14,11 @@ public record CreateChannelCommand(
 	public string[] CacheTags => [Definitions.CacheTags.ChannelList];
 }
 
-public record UpdateChannelOwnerCommand(SharpChannel Channel, SharpPlayer Player) : ICommand;
+public record UpdateChannelOwnerCommand(SharpChannel Channel, SharpPlayer Player) : ICommand, ICacheInvalidating
+{
+	public string[] CacheKeys => [];
+	public string[] CacheTags => [Definitions.CacheTags.ChannelList];
+}
 
 public record UpdateChannelCommand(
 	SharpChannel Channel,
@@ -27,9 +31,17 @@ public record UpdateChannelCommand(
 	string? HideLock,
 	string? ModLock,
 	string? Mogrifier,
-	int? Buffer) : ICommand;
+	int? Buffer) : ICommand, ICacheInvalidating
+{
+	public string[] CacheKeys => [];
+	public string[] CacheTags => [Definitions.CacheTags.ChannelList];
+}
 
-public record DeleteChannelCommand(SharpChannel Channel) : ICommand;
+public record DeleteChannelCommand(SharpChannel Channel) : ICommand, ICacheInvalidating
+{
+	public string[] CacheKeys => [$"channel:{Channel.Name}"];
+	public string[] CacheTags => [Definitions.CacheTags.ChannelList];
+}
 
 public record AddUserToChannelCommand(
 	SharpChannel Channel,
