@@ -476,6 +476,8 @@ public partial class ArangoDatabase
 				cancellationToken: cancellationToken);
 		}
 
+		if (query.Count < 2) return new None();
+
 		var res = query.First();
 		var obj = query.Last();
 
@@ -513,7 +515,7 @@ public partial class ArangoDatabase
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
-			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.GetProperty("Type").GetString()}'"),
+			_ => new None(),
 		};
 	}
 
