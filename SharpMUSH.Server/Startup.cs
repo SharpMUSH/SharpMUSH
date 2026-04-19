@@ -27,6 +27,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.NATS;
+using Microsoft.Extensions.Caching.Memory;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
@@ -39,6 +40,9 @@ string natsUrl,
 DatabaseProvider databaseProvider = DatabaseProvider.ArangoDB,
 string? memgraphUri = null)
 {
+// Cache name for the dedicated compiled boolean-lock expression cache.
+// Must match the [FromKeyedServices] key used in BooleanExpressionParser.
+public const string CompiledExpressionsCacheName = "compiled-expressions";
 // This method gets called by the runtime. Use this method to add services to the container.
 // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
 public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
@@ -216,6 +220,17 @@ x.AddConsumer<Consumers.ConnectionClosedConsumer>();
 });
 
 services.AddFusionCache().TryWithAutoSetup();
+
+// Dedicated cache for compiled boolean-lock expressions.
+// Uses a size-limited memory cache (max 1024 entries, 25% compaction) so rarely-used
+// entries are evicted first under memory pressure while hot entries stay resident.
+services.AddFusionCache(CompiledExpressionsCacheName)
+	.WithMemoryCache(_ => new MemoryCache(new MemoryCacheOptions
+	{
+		SizeLimit = 1024,
+		CompactionPercentage = 0.25,
+	}))
+	.AsKeyedServiceByCacheName();
 services.AddQuartz(x =>
 {
 x.UseInMemoryStore();

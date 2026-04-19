@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -7,19 +8,32 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Implementation;
 
-public class BooleanExpressionParser(IMediator mediator, IFusionCache cache) : IBooleanExpressionParser
+public class BooleanExpressionParser(
+	IMediator mediator,
+	[FromKeyedServices("compiled-expressions")] IFusionCache cache) : IBooleanExpressionParser
 {
+	// Keep in sync with the registration constant in Startup.cs (CompiledExpressionsCacheName).
+	private const string CompiledExpressionsCacheName = "compiled-expressions";
 	private const string CompiledExpressionsTag = "compiled-lock-expressions";
 	private const string CacheKeyPrefix = "compiled-lock-expr:";
 
 	/// <summary>
 	/// Per-entry cache options for compiled lock expressions.
-	/// The 1-hour Duration provides automatic expiry, naturally bounding memory usage
-	/// without requiring manual eviction bookkeeping.
+	/// <list type="bullet">
+	///   <item><description><b>Duration 1 h</b> – absolute ceiling before eviction.</description></item>
+	///   <item><description><b>EagerRefreshThreshold 0.9</b> – when an entry reaches 90 % of its TTL
+	///     and is accessed, FusionCache silently recompiles it in the background so hot entries never
+	///     suffer a cold-start compile stall. This effectively favours frequently-accessed lock
+	///     expressions over rarely-called ones.</description></item>
+	///   <item><description><b>Size 1</b> – each entry counts as one unit against the dedicated
+	///     MemoryCache SizeLimit (1 024), capping the total number of cached expressions.</description></item>
+	/// </list>
 	/// </summary>
 	private static readonly FusionCacheEntryOptions CompiledExpressionEntryOptions = new()
 	{
 		Duration = TimeSpan.FromHours(1),
+		EagerRefreshThreshold = 0.9f,
+		Size = 1,
 	};
 
 	/// <summary>
