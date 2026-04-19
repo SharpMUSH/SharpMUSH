@@ -16,6 +16,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using static SharpMUSHParser;
 
@@ -200,15 +201,7 @@ public class SharpMUSHParserVisitor(
 	private static CallState BatchMergeResults(List<CallState> results)
 	{
 		// Check if any result has Arguments — if so, use arguments merge path
-		CallState? argumentSource = null;
-		foreach (var r in results)
-		{
-			if (r.Arguments is not null)
-			{
-				argumentSource = r;
-				break;
-			}
-		}
+		var argumentSource = results.FirstOrDefault(r => r.Arguments is not null);
 
 		if (argumentSource is not null)
 		{
@@ -219,13 +212,11 @@ public class SharpMUSHParserVisitor(
 
 			var merged = new MString[totalArgs];
 			var offset = 0;
-			foreach (var r in results)
+			foreach (var r in results.Where(r => r.Arguments is { Length: > 0 }))
 			{
-				if (r.Arguments is { Length: > 0 } args)
-				{
-					args.CopyTo(merged, offset);
-					offset += args.Length;
-				}
+				var args = r.Arguments!;
+				args.CopyTo(merged, offset);
+				offset += args.Length;
 			}
 
 			return argumentSource with { Arguments = merged };
