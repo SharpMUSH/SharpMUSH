@@ -89,35 +89,38 @@ public class SearchFunctionUnitTests
 	[Test]
 	public async Task Scan_ReturnsVisibleObjects()
 	{
-		// Create a unique test object with a $-command to verify scan behavior
-		// scan() searches for $-commands that match a given command string
-		var uniqueName = $"ScanTest_{Guid.NewGuid():N}";
-		var commandWord = $"testcmd{Guid.NewGuid():N}";
-		var attrName = $"CMD_{commandWord.ToUpperInvariant()}";
+		// Use a short unique identifier to avoid cross-test interference.
+		// We do NOT use @create here because that increments Memgraph's global counter node,
+		// which all parallel @create calls compete for and causes transient transaction conflicts.
+		// Instead, set a $-command attribute directly on room #0 (the master room).
+		// scan() with the default "all" switch always checks room #0 via the globals scope,
+		// so no object creation is needed.
+		var uid = Guid.NewGuid().ToString("N")[..12]; // 12 lowercase hex chars, unique per run
+		var commandWord = $"sc{uid}"; // e.g. "scabcd1234" — unique pattern for this test
+		var attrName = $"CMD_{uid.ToUpperInvariant()}"; // e.g. "CMD_ABCD1234" — unique attribute name
 
-		// Create a test object in the same location as executor (room #0)
-		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
-		var createOutput = createResult?.Message?.ToPlainText() ?? "";
-
-		// Extract the dbref from the create output (format: "Created" or contains "#<number>")
-		var dbrefMatch = System.Text.RegularExpressions.Regex.Match(createOutput, @"#(\d+)");
-		await Assert.That(dbrefMatch.Success).IsTrue().Because($"Create command output should contain a dbref. Output was: {createOutput}");
-		var createdDbref = dbrefMatch.Value; // This will be something like "#5"
-
-		// Set a $-command attribute on the created object
-		// Format: $pattern:code
+		// Set the $-command attribute on room #0.
 		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&{attrName} {createdDbref}=${commandWord} *:@emit Test command triggered!"));
+			MModule.single($"&{attrName} #0=${commandWord} *:@emit Scan test triggered!"));
+		try
+		{
+			// scan() searches for $-commands that would match the given command.
+			// The attribute is on room #0, which scan() always includes via checkGlobals.
+			var result = (await Parser.FunctionParse(MModule.single($"scan({commandWord} test argument)")))?.Message!;
+			var resultText = result.ToPlainText();
 
-		// scan() searches for $-commands that would match the given command
-		// This should find the $-command we just created
-		var result = (await Parser.FunctionParse(MModule.single($"scan({commandWord} test argument)")))?.Message!;
-		var resultText = result.ToPlainText();
-
-		// Should return a space-separated list of "dbref/attribute" pairs
-		// The result should contain something like "#5/CMD_TESTCMD..."
-		await Assert.That(resultText).Contains(createdDbref).Because($"scan({commandWord} test argument) should return {createdDbref}/... Actual result: {resultText}");
-		await Assert.That(resultText).Contains(attrName).Because($"scan({commandWord} test argument) should return .../{attrName}. Actual result: {resultText}");
+			// Should return a "dbref/attribute" pair for room #0.
+			await Assert.That(resultText).Contains("#0").Because(
+				$"scan({commandWord} test argument) should find attribute {attrName} on room #0. Actual result: {resultText}");
+			await Assert.That(resultText).Contains(attrName).Because(
+				$"scan({commandWord} test argument) should return #0/.../{attrName}. Actual result: {resultText}");
+		}
+		finally
+		{
+			// Clean up: remove the test attribute from room #0 to avoid polluting shared state.
+			await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
+				MModule.single($"&{attrName} #0="));
+		}
 	}
 
 	[Test]
