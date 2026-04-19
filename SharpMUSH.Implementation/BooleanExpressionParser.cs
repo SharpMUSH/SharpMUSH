@@ -9,6 +9,8 @@ namespace SharpMUSH.Implementation;
 
 public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionParser
 {
+	private const int MaxCompiledExpressionCacheEntries = 4096;
+
 	/// <summary>
 	/// Cache of compiled lock expressions keyed by their text representation.
 	/// Lock expressions are static text stored on objects that change only when a player
@@ -18,11 +20,19 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 	/// 
 	/// Uses Lazy&lt;T&gt; to ensure only one thread performs the expensive compilation
 	/// for a given key, even under concurrent access.
+	/// 
+	/// The cache is bounded to avoid unbounded memory growth from arbitrary player-provided
+	/// lock text. When the cap is reached and a new key is introduced, entries are cleared.
 	/// </summary>
 	private static readonly ConcurrentDictionary<string, Lazy<Func<AnySharpObject, AnySharpObject, bool>>> _compiledCache = new();
 
 	public Func<AnySharpObject, AnySharpObject, bool> Compile(string text)
 	{
+		if (!_compiledCache.ContainsKey(text) && _compiledCache.Count >= MaxCompiledExpressionCacheEntries)
+		{
+			_compiledCache.Clear();
+		}
+
 		var lazy = _compiledCache.GetOrAdd(
 			text,
 			key => new Lazy<Func<AnySharpObject, AnySharpObject, bool>>(

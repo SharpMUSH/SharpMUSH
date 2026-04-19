@@ -10,7 +10,7 @@ public class SetLockCommandHandler(ISharpDatabase database, IBooleanExpressionPa
 {
 	public async ValueTask<Unit> Handle(SetLockCommand request, CancellationToken cancellationToken)
 	{
-		// Invalidate any previously compiled expression for the old lock on this object+lockName.
+		// Invalidate any previously compiled expression for the old lock text.
 		// The old lock text comes from the in-memory object (no extra DB round-trip).
 		if (request.Target.Locks.TryGetValue(request.LockName, out var oldLock)
 			&& oldLock.LockString is not "#TRUE" and not null)
