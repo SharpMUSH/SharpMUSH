@@ -285,11 +285,9 @@ RETURN o, p
 			var typedNode = record["typed"].As<INode>();
 			var labels = record["lbl"].As<List<object>>().Select(x => x.ToString()!).ToList();
 			var sharpObj = MapNodeToSharpObject(objNode);
-			var key = objNode["key"].As<int>();
-			var type = sharpObj.Type;
-			var typedId = GetTypedId(labels, key, typedNode);
+			var typedId = GetTypedId(labels, objNode["key"].As<int>(), typedNode);
 
-			AnyOptionalSharpObject typed = type switch
+			AnyOptionalSharpObject typed = sharpObj.Type switch
 			{
 				"PLAYER" => BuildPlayer(typedId, typedNode, sharpObj),
 				"ROOM" => BuildRoom(typedId, sharpObj),
