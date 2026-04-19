@@ -3,6 +3,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Collections.Concurrent;
 
 namespace SharpMUSH.Tests.Parser;
 
@@ -151,5 +152,76 @@ public class BooleanExpressionUnitTests
 		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task InvalidateCache_SpecificExpression_AllowsRecompile()
+	{
+		var bep = BooleanParser;
+		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var input = "type^Player";
+
+		await Assert.That(bep.Compile(input)(player, player)).IsTrue();
+		bep.InvalidateCache(input);
+		await Assert.That(bep.Compile(input)(player, player)).IsTrue();
+	}
+
+	[Test]
+	public async Task InvalidateCache_AllExpressions_AllowsRecompile()
+	{
+		var bep = BooleanParser;
+		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+
+		await Assert.That(bep.Compile("#TRUE")(player, player)).IsTrue();
+		await Assert.That(bep.Compile("type^Thing")(player, player)).IsFalse();
+
+		bep.InvalidateCache();
+
+		await Assert.That(bep.Compile("#TRUE")(player, player)).IsTrue();
+		await Assert.That(bep.Compile("type^Thing")(player, player)).IsFalse();
+	}
+
+	[Test]
+	public async Task CompileAndInvalidateCache_Concurrently_DoesNotThrow()
+	{
+		const int iterationCount = 1000;
+		var bep = BooleanParser;
+		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var input = "type^Player";
+		var errors = new ConcurrentQueue<Exception>();
+
+		var compileTask = Task.Run(() =>
+		{
+			for (var i = 0; i < iterationCount; i++)
+			{
+				try
+				{
+					var compiled = bep.Compile(input);
+					_ = compiled(player, player);
+				}
+				catch (Exception ex)
+				{
+					errors.Enqueue(ex);
+				}
+			}
+		});
+
+		var invalidateTask = Task.Run(() =>
+		{
+			for (var i = 0; i < iterationCount; i++)
+			{
+				try
+				{
+					bep.InvalidateCache(input);
+				}
+				catch (Exception ex)
+				{
+					errors.Enqueue(ex);
+				}
+			}
+		});
+
+		await Task.WhenAll(compileTask, invalidateTask);
+		await Assert.That(errors).IsEmpty();
 	}
 }

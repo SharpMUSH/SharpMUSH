@@ -1,4 +1,4 @@
-﻿using OneOf.Types;
+using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -65,6 +65,9 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	{
 	}
 
-	public static readonly CallState EmptyArgument = new(MModule.empty(), 0, [], () => ValueTask.FromResult(MModule.empty())!);
-	public static readonly CallState Empty = new(MModule.empty(), 0, null, () => ValueTask.FromResult(MModule.empty())!);
+	private static readonly MString _emptyMString = MModule.empty();
+	private static readonly Func<ValueTask<MString?>> _emptyParsedMessage = () => ValueTask.FromResult<MString?>(_emptyMString);
+
+	public static readonly CallState EmptyArgument = new(_emptyMString, 0, [], _emptyParsedMessage);
+	public static readonly CallState Empty = new(_emptyMString, 0, null, _emptyParsedMessage);
 }

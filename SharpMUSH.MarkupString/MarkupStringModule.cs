@@ -289,22 +289,47 @@ public static partial class MarkupStringModule
         return Math.Max(0, insertionPoint - 1);
     }
 
-    // ── Construction ──────────────────────────────────────────────────────────
+    // ── Cached singletons ────────────────────────────────────────────────────
+    // MarkupString is immutable, so frequently-used identical instances can be shared.
 
-    public static MarkupString Single(string str)
+    private static readonly MarkupString _empty = new(string.Empty, ImmutableArray<AttributeRun>.Empty);
+    private static readonly MarkupString _space = NewPlain(" ");
+    private static readonly MarkupString _comma = NewPlain(",");
+    private static readonly MarkupString _zero = NewPlain("0");
+    private static readonly MarkupString _one = NewPlain("1");
+    private static readonly MarkupString _negOne = NewPlain("#-1");
+    private static readonly MarkupString _newline = NewPlain("\n");
+
+    /// <summary>Creates a new plain (no-markup) MarkupString. Used for singleton initialization.</summary>
+    private static MarkupString NewPlain(string str) =>
+        new(str, ImmutableArray.Create(new AttributeRun(0, str.Length, ImmutableArray<IMarkup>.Empty)));
+
+    /// <summary>
+    /// Returns a cached singleton for commonly used plain-text strings,
+    /// avoiding repeated allocations for values like " ", ",", "0", "1", "#-1", "\n".
+    /// Falls through to a new allocation only for uncached strings.
+    /// </summary>
+    public static MarkupString Single(string str) => str switch
     {
-        if (str.Length == 0)
-            return new MarkupString(string.Empty, ImmutableArray<AttributeRun>.Empty);
-        return new MarkupString(str,
-            ImmutableArray.Create(new AttributeRun(0, str.Length, ImmutableArray<IMarkup>.Empty)));
-    }
+        "" => _empty,
+        " " => _space,
+        "," => _comma,
+        "0" => _zero,
+        "1" => _one,
+        "#-1" => _negOne,
+        "\n" => _newline,
+        _ => new MarkupString(str,
+            ImmutableArray.Create(new AttributeRun(0, str.Length, ImmutableArray<IMarkup>.Empty)))
+    };
 
     // F#-style lowercase alias kept for callers that use `single`
-    public static MarkupString single(string? str) => str is null ? Empty() : Single(str);
+    public static MarkupString single(string? str) => str is null ? _empty : Single(str);
 
-    public static MarkupString Empty() =>
-        new(string.Empty, ImmutableArray<AttributeRun>.Empty);
-    public static MarkupString empty() => Empty();
+    public static MarkupString Empty() => _empty;
+    public static MarkupString empty() => _empty;
+
+    /// <summary>Returns the cached space singleton (" "). Avoids allocations at 77+ call sites.</summary>
+    public static MarkupString Space() => _space;
 
     public static MarkupString MarkupSingle(IMarkup markup, string str)
     {
@@ -341,7 +366,7 @@ public static partial class MarkupStringModule
             builder.Add(new AttributeRun(run.Start + offset, run.Length, run.Markups));
         return new MarkupString(combinedText, builder.ToImmutable());
     }
-    public static MarkupString concat(MarkupString? a, MarkupString? b) => Concat(a ?? Empty(), b ?? Empty());
+    public static MarkupString concat(MarkupString? a, MarkupString? b) => Concat(a ?? _empty, b ?? _empty);
 
     public static MarkupString ConcatMany(IEnumerable<MarkupString> items)
     {
