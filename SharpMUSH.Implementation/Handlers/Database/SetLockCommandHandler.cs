@@ -10,6 +10,14 @@ public class SetLockCommandHandler(ISharpDatabase database, IBooleanExpressionPa
 {
 	public async ValueTask<Unit> Handle(SetLockCommand request, CancellationToken cancellationToken)
 	{
+		// Invalidate any previously compiled expression for the old lock text.
+		// The old lock text comes from the in-memory object (no extra DB round-trip).
+		if (request.Target.Locks.TryGetValue(request.LockName, out var oldLock)
+			&& oldLock.LockString is not "#TRUE" and not null)
+		{
+			booleanParser.InvalidateCache(oldLock.LockString);
+		}
+
 		// Normalize the lock string by converting bare dbrefs to objids
 		// This ensures locks won't match recycled dbrefs after objects are destroyed
 		var normalizedLockString = booleanParser.Normalize(request.LockString);
@@ -24,10 +32,17 @@ public class SetLockCommandHandler(ISharpDatabase database, IBooleanExpressionPa
 		return new Unit();
 	}
 }
-public class UnsetLockCommandHandler(ISharpDatabase database) : ICommandHandler<UnsetLockCommand>
+public class UnsetLockCommandHandler(ISharpDatabase database, IBooleanExpressionParser booleanParser) : ICommandHandler<UnsetLockCommand>
 {
 	public async ValueTask<Unit> Handle(UnsetLockCommand request, CancellationToken cancellationToken)
 	{
+		// Invalidate the compiled expression for the lock being removed
+		if (request.Target.Locks.TryGetValue(request.LockName, out var oldLock)
+			&& oldLock.LockString is not "#TRUE" and not null)
+		{
+			booleanParser.InvalidateCache(oldLock.LockString);
+		}
+
 		await database.UnsetLockAsync(request.Target, request.LockName, cancellationToken);
 		return new Unit();
 	}
