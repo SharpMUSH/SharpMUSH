@@ -88,8 +88,10 @@ public class WarningService(
 		var warningCount = 0;
 		var ownerObj = owner.Object();
 
-		// Get all objects in the database and filter by owner
-		var allObjects = mediator.CreateStream(new GetAllObjectsQuery());
+		// Use GetAllTypedObjectsQuery to get fully-typed objects directly, avoiding a secondary
+		// per-object GetObjectNodeQuery call inside the loop (which would route through the
+		// FusionCache per-key lock and contend with active player commands).
+		var allObjects = mediator.CreateStream(new GetAllTypedObjectsQuery());
 
 		await foreach (var obj in allObjects)
 		{
@@ -97,7 +99,7 @@ public class WarningService(
 			SharpPlayer objectOwner;
 			try
 			{
-				objectOwner = await obj.Owner.WithCancellation(CancellationToken.None);
+				objectOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 			}
 			catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
 			{
@@ -110,15 +112,8 @@ public class WarningService(
 				continue;
 			}
 
-			// Get the full object node to get AnySharpObject
-			var objectNode = await mediator.Send(new GetObjectNodeQuery(obj.DBRef));
-			if (objectNode.IsNone)
-			{
-				continue;
-			}
-
-			// Check warnings on this object
-			var hadWarnings = await CheckObjectAsync(owner, objectNode.WithoutNone());
+			// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
+			var hadWarnings = await CheckObjectAsync(owner, obj);
 			if (hadWarnings)
 			{
 				warningCount++;
@@ -138,8 +133,10 @@ public class WarningService(
 		var checkedCount = 0;
 		var warningsByOwner = new Dictionary<DBRef, (AnySharpObject Owner, List<string> Warnings)>();
 
-		// Get all objects in the database
-		var allObjects = mediator.CreateStream(new GetAllObjectsQuery());
+		// Use GetAllTypedObjectsQuery to get fully-typed objects directly, avoiding two secondary
+		// per-object GetObjectNodeQuery calls inside the loop (which route through FusionCache
+		// per-key locks and contend with — or even deadlock against — active player commands).
+		var allObjects = mediator.CreateStream(new GetAllTypedObjectsQuery());
 
 		await foreach (var obj in allObjects)
 		{
@@ -149,7 +146,7 @@ public class WarningService(
 			SharpPlayer owner;
 			try
 			{
-				owner = await obj.Owner.WithCancellation(CancellationToken.None);
+				owner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 			}
 			catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
 			{
@@ -159,30 +156,22 @@ public class WarningService(
 
 			var ownerDbRef = owner.Object.DBRef;
 
-			// Get the full object nodes
-			var ownerNode = await mediator.Send(new GetObjectNodeQuery(ownerDbRef));
-			var objectNode = await mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+			// obj is already AnySharpObject, and owner is already a SharpPlayer —
+			// no secondary GetObjectNodeQuery calls needed.
+			var ownerAny = new AnySharpObject(owner);
 
-			if (ownerNode.IsNone || objectNode.IsNone)
-			{
-				continue;
-			}
-
-			var ownerAny = ownerNode.WithoutNone();
-			var objectAny = objectNode.WithoutNone();
-
-			// Track warnings per owner - use TryAdd for efficiency
+			// Track warnings per owner
 			if (!warningsByOwner.TryGetValue(ownerDbRef, out _))
 			{
 				warningsByOwner[ownerDbRef] = (ownerAny, []);
 			}
 
 			// Check warnings (using owner as checker for their own objects)
-			var hadWarnings = await CheckObjectAsync(ownerAny, objectAny);
+			var hadWarnings = await CheckObjectAsync(ownerAny, obj);
 
 			if (hadWarnings)
 			{
-				warningsByOwner[ownerDbRef].Warnings.Add($"{obj.Name}(#{obj.Key})");
+				warningsByOwner[ownerDbRef].Warnings.Add($"{obj.Object().Name}(#{obj.Object().Key})");
 			}
 		}
 

@@ -6134,22 +6134,19 @@ public partial class Commands
 			}
 
 			// Halt all objects, then trigger @STARTUP on all objects that have it
-			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in Mediator!.CreateStream(new GetAllTypedObjectsQuery()))
 			{
 				// Halt the object's queue
-				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
+				await Mediator.Send(new HaltObjectQueueRequest(obj.Object().DBRef));
 
 				// Trigger @STARTUP attribute if it exists (non-inherited)
+				// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
 				try
 				{
-					var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
-					if (!objNode.IsNone)
-					{
-						await AttributeService!.EvaluateAttributeFunctionAsync(
-							parser, executor, objNode.Known, "STARTUP",
-							new Dictionary<string, CallState>(),
-							evalParent: false);
-					}
+					await AttributeService!.EvaluateAttributeFunctionAsync(
+						parser, executor, obj, "STARTUP",
+						new Dictionary<string, CallState>(),
+						evalParent: false);
 				}
 				catch
 				{
@@ -6201,24 +6198,21 @@ public partial class Commands
 		if (target.IsPlayer)
 		{
 			// Halt and restart all objects owned by the player
-			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
 			{
-				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
+				var owner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 				if (owner.Object.DBRef == targetObject.DBRef)
 				{
-					await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
+					await Mediator.Send(new HaltObjectQueueRequest(obj.Object().DBRef));
 
 					// Trigger @STARTUP if it exists
+					// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
 					try
 					{
-						var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
-						if (!objNode.IsNone)
-						{
-							await AttributeService!.EvaluateAttributeFunctionAsync(
-								parser, executor, objNode.Known, "STARTUP",
-								new Dictionary<string, CallState>(),
-								evalParent: false);
-						}
+						await AttributeService!.EvaluateAttributeFunctionAsync(
+							parser, executor, obj, "STARTUP",
+							new Dictionary<string, CallState>(),
+							evalParent: false);
 					}
 					catch
 					{

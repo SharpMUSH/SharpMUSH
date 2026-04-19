@@ -269,6 +269,42 @@ RETURN o, p
 		}
 	}
 
+	public async IAsyncEnumerable<AnySharpObject> GetAllTypedObjectsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		// Single Cypher query that fetches all Object nodes together with their type-specific
+		// nodes (Player/Room/Thing/Exit) in one round-trip. This avoids the N+1 pattern of calling
+		// GetObjectNodeAsync per object and, crucially, bypasses the per-object FusionCache lock
+		// so that a full-database scan does not contend with concurrent player commands.
+		var result = await ExecuteWithRetryAsync(
+			"MATCH (typed)-[:IS_OBJECT]->(o:Object) RETURN o, typed, labels(typed) AS lbl",
+			ct: cancellationToken);
+
+		foreach (var record in result.Result)
+		{
+			var objNode = record["o"].As<INode>();
+			var typedNode = record["typed"].As<INode>();
+			var labels = record["lbl"].As<List<object>>().Select(x => x.ToString()!).ToList();
+			var sharpObj = MapNodeToSharpObject(objNode);
+			var key = objNode["key"].As<int>();
+			var type = sharpObj.Type;
+			var typedId = GetTypedId(labels, key, typedNode);
+
+			AnyOptionalSharpObject typed = type switch
+			{
+				"PLAYER" => BuildPlayer(typedId, typedNode, sharpObj),
+				"ROOM" => BuildRoom(typedId, sharpObj),
+				"THING" => BuildThing(typedId, sharpObj),
+				"EXIT" => BuildExit(typedId, typedNode, sharpObj),
+				_ => new None()
+			};
+
+			if (!typed.IsNone)
+			{
+				yield return typed.WithoutNone();
+			}
+		}
+	}
+
 	public async IAsyncEnumerable<SharpObject> GetFilteredObjectsAsync(ObjectSearchFilter filter, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var conditions = new List<string>();

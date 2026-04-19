@@ -1749,29 +1749,20 @@ public partial class Commands
 		// In a cloud/web environment, actual object deletion should be handled by a background service
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var objects = Mediator!.CreateStream(new GetAllObjectsQuery());
+		var objects = Mediator!.CreateStream(new GetAllTypedObjectsQuery());
 		var goingToTwice = 0;
 		var twiceDestroyed = 0;
 
 		await foreach (var obj in objects)
 		{
-			// Get the full object node to check flags
-			var fullObj = await Mediator!.Send(new GetObjectNodeQuery(obj.DBRef));
-			if (fullObj.IsNone)
+			// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
+			if (await obj.HasFlag("GOING") && !await obj.HasFlag("GOING_TWICE"))
 			{
-				continue;
-			}
-
-			var objAny = fullObj.Known;
-
-			// Mark GOING objects as GOING_TWICE
-			if (await objAny.HasFlag("GOING") && !await objAny.HasFlag("GOING_TWICE"))
-			{
-				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "GOING_TWICE", false);
+				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
 				goingToTwice++;
 			}
 			// Objects marked GOING_TWICE would be deleted by background GC
-			else if (await objAny.HasFlag("GOING_TWICE"))
+			else if (await obj.HasFlag("GOING_TWICE"))
 			{
 				twiceDestroyed++;
 			}
@@ -1948,32 +1939,24 @@ public partial class Commands
 		var chownExits = switches.Contains("EXITS") || (!switches.Contains("THINGS") && !switches.Contains("ROOMS"));
 
 		// Get all objects and chown matching ones
-		var objects = Mediator!.CreateStream(new GetAllObjectsQuery());
+		var objects = Mediator!.CreateStream(new GetAllTypedObjectsQuery());
 		var count = 0;
 
 		await foreach (var obj in objects)
 		{
-			var objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
-			var ownerAsAny = new AnySharpObject(objOwner);
+			var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 
-			if (ownerAsAny.Object().DBRef.Number != oldOwner.Object.DBRef.Number)
+			if (objOwner.Object.DBRef.Number != oldOwner.Object.DBRef.Number)
 			{
 				continue;
 			}
 
-			// Get the full object node to work with
-			var fullObj = await Mediator!.Send(new GetObjectNodeQuery(obj.DBRef));
-			if (fullObj.IsNone)
-			{
-				continue;
-			}
-
-			var objAny = fullObj.Known;
+			// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
 
 			// Check type filters
-			var shouldChown = (chownThings && objAny.IsThing) ||
-												(chownRooms && objAny.IsRoom) ||
-												(chownExits && objAny.IsExit);
+			var shouldChown = (chownThings && obj.IsThing) ||
+												(chownRooms && obj.IsRoom) ||
+												(chownExits && obj.IsExit);
 
 			if (!shouldChown)
 			{
@@ -1981,29 +1964,29 @@ public partial class Commands
 			}
 
 			// Chown the object
-			await Mediator!.Send(new SetObjectOwnerCommand(objAny, newOwner.AsPlayer));
+			await Mediator!.Send(new SetObjectOwnerCommand(obj, newOwner.AsPlayer));
 			count++;
 
 			// Clear privileged flags and powers unless /preserve
-			if (!preserve && !objAny.IsPlayer)
+			if (!preserve && !obj.IsPlayer)
 			{
-				if (await objAny.HasFlag("WIZARD"))
+				if (await obj.HasFlag("WIZARD"))
 				{
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "!WIZARD", false);
+					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
 				}
-				if (await objAny.HasFlag("ROYALTY"))
+				if (await obj.HasFlag("ROYALTY"))
 				{
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "!ROYALTY", false);
+					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
 				}
-				if (await objAny.HasFlag("TRUST"))
+				if (await obj.HasFlag("TRUST"))
 				{
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "!TRUST", false);
+					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 				}
 				// Set HALT flag
-				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "HALT", false);
+				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "HALT", false);
 
 				// Clear all powers from the object
-				await ManipulateSharpObjectService!.ClearAllPowers(executor, objAny, false);
+				await ManipulateSharpObjectService!.ClearAllPowers(executor, obj, false);
 			}
 		}
 
@@ -2410,23 +2393,18 @@ public partial class Commands
 				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
 				{
 					// Get all objects owned by this player
-					var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery())!;
+					var allObjects = Mediator!.CreateStream(new GetAllTypedObjectsQuery())!;
 					var count = 0;
 
 					await foreach (var obj in allObjects)
 					{
-						var objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
-						var ownerAsAny = new AnySharpObject(objOwner);
-						if (ownerAsAny.Object().DBRef.Number == player.Object().DBRef.Number)
+						var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+						if (objOwner.Object.DBRef.Number == player.Object().DBRef.Number)
 						{
-							// Get the full object node to use with commands
-							var fullObj = await Mediator!.Send(new GetObjectNodeQuery(obj.DBRef));
-							if (!fullObj.IsNone)
-							{
-								// Clear the zone
-								await Mediator!.Send(new UnsetObjectZoneCommand(fullObj.Known));
-								count++;
-							}
+							// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
+							// Clear the zone
+							await Mediator!.Send(new UnsetObjectZoneCommand(obj));
+							count++;
 						}
 					}
 
@@ -2440,53 +2418,47 @@ public partial class Commands
 					async zoneObj =>
 					{
 						// Get all objects owned by this player
-						var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery())!;
+						var allObjects = Mediator!.CreateStream(new GetAllTypedObjectsQuery())!;
 						var count = 0;
 
 						await foreach (var obj in allObjects)
 						{
-							var objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
-							var ownerAsAny = new AnySharpObject(objOwner);
-							if (ownerAsAny.Object().DBRef.Number == player.Object().DBRef.Number)
+							var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+							if (objOwner.Object.DBRef.Number == player.Object().DBRef.Number)
 							{
-								// Get the full object node to use with commands
-								var fullObj = await Mediator!.Send(new GetObjectNodeQuery(obj.DBRef));
-								if (!fullObj.IsNone)
+								// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
+
+								// Check for cycles before setting the zone
+								if (!await HelperFunctions.SafeToAddZone(Mediator, Database!, obj, zoneObj))
 								{
-									var anyObj = fullObj.Known;
-
-									// Check for cycles before setting the zone
-									if (!await HelperFunctions.SafeToAddZone(Mediator, Database!, anyObj, zoneObj))
-									{
-										// Skip this object if it would create a cycle
-										continue;
-									}
-
-									// Set the zone
-									await Mediator!.Send(new SetObjectZoneCommand(anyObj, zoneObj));
-
-									// Strip flags and powers unless /preserve is used
-									if (!preserve && !anyObj.IsPlayer)
-									{
-										if (await anyObj.HasFlag("WIZARD"))
-										{
-											await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, anyObj, "!WIZARD", false);
-										}
-										if (await anyObj.HasFlag("ROYALTY"))
-										{
-											await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, anyObj, "!ROYALTY", false);
-										}
-										if (await anyObj.HasFlag("TRUST"))
-										{
-											await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, anyObj, "!TRUST", false);
-										}
-
-										// Clear all powers from the object
-										await ManipulateSharpObjectService!.ClearAllPowers(executor, anyObj, false);
-									}
-
-									count++;
+									// Skip this object if it would create a cycle
+									continue;
 								}
+
+								// Set the zone
+								await Mediator!.Send(new SetObjectZoneCommand(obj, zoneObj));
+
+								// Strip flags and powers unless /preserve is used
+								if (!preserve && !obj.IsPlayer)
+								{
+									if (await obj.HasFlag("WIZARD"))
+									{
+										await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
+									}
+									if (await obj.HasFlag("ROYALTY"))
+									{
+										await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
+									}
+									if (await obj.HasFlag("TRUST"))
+									{
+										await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
+									}
+
+									// Clear all powers from the object
+									await ManipulateSharpObjectService!.ClearAllPowers(executor, obj, false);
+								}
+
+								count++;
 							}
 						}
 

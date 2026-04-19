@@ -538,21 +538,19 @@ public partial class Commands
 		}
 
 		// --- Possessions (PennMUSH clear_player object loop) ---
-		var objects = Mediator.CreateStream(new GetAllObjectsQuery());
+		var objects = Mediator.CreateStream(new GetAllTypedObjectsQuery());
 		await foreach (var obj in objects)
 		{
-			var objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
+			var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
 
 			if (objOwner.Object.DBRef.Number != playerDbRefNumber)
 				continue;
 
-			if (obj.DBRef.Number == playerDbRefNumber)
+			if (obj.Object().DBRef.Number == playerDbRefNumber)
 				continue; // Never process the player themselves.
 
-			var fullObjResult = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
-			if (fullObjResult.IsNone)
-				continue;
-			var fullObj = fullObjResult.Known;
+			// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
+			var fullObj = obj;
 
 			// Determine whether this object should be chowned to probate or destroyed.
 			// Logic mirrors PennMUSH clear_player():
