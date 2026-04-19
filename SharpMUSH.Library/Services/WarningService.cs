@@ -171,7 +171,8 @@ public class WarningService(
 
 			if (hadWarnings)
 			{
-				warningsByOwner[ownerDbRef].Warnings.Add($"{obj.Object().Name}(#{obj.Object().Key})");
+				var objBase = obj.Object();
+				warningsByOwner[ownerDbRef].Warnings.Add($"{objBase.Name}(#{objBase.Key})");
 			}
 		}
 

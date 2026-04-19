@@ -10,7 +10,6 @@ using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
 
