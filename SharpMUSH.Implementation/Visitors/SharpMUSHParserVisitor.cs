@@ -144,7 +144,7 @@ public class SharpMUSHParserVisitor(
 		// Collect non-null child results to batch-merge at the end
 		var results = new List<CallState>(childCount);
 
-		foreach (var i in Enumerable.Range(0, childCount))
+		for (var i = 0; i < childCount; i++)
 		{
 			var child = node.GetChild(i);
 			var childResult = child is null ? null : await child.Accept(this);
@@ -200,23 +200,34 @@ public class SharpMUSHParserVisitor(
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static CallState BatchMergeResults(List<CallState> results)
 	{
-		// Check if any result has Arguments — if so, use arguments merge path
-		var argumentSource = results.FirstOrDefault(r => r.Arguments is not null);
+		// Single pass: find the first result with Arguments
+		CallState? argumentSource = null;
+		for (var i = 0; i < results.Count; i++)
+		{
+			if (results[i].Arguments is not null)
+			{
+				argumentSource = results[i];
+				break;
+			}
+		}
 
 		if (argumentSource is not null)
 		{
-			// Batch merge arguments: count total first, then copy once
+			// Batch merge arguments: count total first, then copy once — no LINQ
 			var totalArgs = 0;
-			foreach (var r in results)
-				totalArgs += r.Arguments?.Length ?? 0;
+			for (var i = 0; i < results.Count; i++)
+				totalArgs += results[i].Arguments?.Length ?? 0;
 
 			var merged = new MString[totalArgs];
 			var offset = 0;
-			foreach (var r in results.Where(r => r.Arguments is { Length: > 0 }))
+			for (var i = 0; i < results.Count; i++)
 			{
-				var args = r.Arguments!;
-				args.CopyTo(merged, offset);
-				offset += args.Length;
+				var args = results[i].Arguments;
+				if (args is { Length: > 0 })
+				{
+					args.CopyTo(merged, offset);
+					offset += args.Length;
+				}
 			}
 
 			return argumentSource with { Arguments = merged };
