@@ -15,7 +15,7 @@ public class SetLockCommandHandler(ISharpDatabase database, IBooleanExpressionPa
 		if (request.Target.Locks.TryGetValue(request.LockName, out var oldLock)
 			&& oldLock.LockString is not "#TRUE" and not null)
 		{
-			BooleanExpressionParser.InvalidateCache(oldLock.LockString);
+			booleanParser.InvalidateCache(oldLock.LockString);
 		}
 
 		// Normalize the lock string by converting bare dbrefs to objids
@@ -32,7 +32,7 @@ public class SetLockCommandHandler(ISharpDatabase database, IBooleanExpressionPa
 		return new Unit();
 	}
 }
-public class UnsetLockCommandHandler(ISharpDatabase database) : ICommandHandler<UnsetLockCommand>
+public class UnsetLockCommandHandler(ISharpDatabase database, IBooleanExpressionParser booleanParser) : ICommandHandler<UnsetLockCommand>
 {
 	public async ValueTask<Unit> Handle(UnsetLockCommand request, CancellationToken cancellationToken)
 	{
@@ -40,7 +40,7 @@ public class UnsetLockCommandHandler(ISharpDatabase database) : ICommandHandler<
 		if (request.Target.Locks.TryGetValue(request.LockName, out var oldLock)
 			&& oldLock.LockString is not "#TRUE" and not null)
 		{
-			BooleanExpressionParser.InvalidateCache(oldLock.LockString);
+			booleanParser.InvalidateCache(oldLock.LockString);
 		}
 
 		await database.UnsetLockAsync(request.Target, request.LockName, cancellationToken);

@@ -11,8 +11,8 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 {
 	private const int MaxCompiledExpressionCacheEntries = 4096;
 	private const int CacheEvictionBatchSize = MaxCompiledExpressionCacheEntries / 4;
-	private static readonly object _cacheTrimLock = new();
-	private static readonly Queue<string> _cacheInsertionOrder = new();
+	private readonly object _cacheTrimLock = new();
+	private readonly Queue<string> _cacheInsertionOrder = new();
 
 	/// <summary>
 	/// Cache of compiled lock expressions keyed by their text representation.
@@ -28,39 +28,45 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 	/// lock text. When the cap is reached and a new key is introduced, the oldest keys
 	/// are evicted in batches to keep hot entries resident and avoid full-cache flushes.
 	/// </summary>
-	private static readonly ConcurrentDictionary<string, Lazy<Func<AnySharpObject, AnySharpObject, bool>>> _compiledCache = new();
+	private readonly ConcurrentDictionary<string, Lazy<Func<AnySharpObject, AnySharpObject, bool>>> _compiledCache = new();
 
 	public Func<AnySharpObject, AnySharpObject, bool> Compile(string text)
 	{
-		if (!_compiledCache.TryGetValue(text, out var lazy))
+		while (true)
 		{
 			var candidate = new Lazy<Func<AnySharpObject, AnySharpObject, bool>>(
 				() => CompileInternal(text), LazyThreadSafetyMode.ExecutionAndPublication);
+			var lazy = _compiledCache.GetOrAdd(text, candidate);
 
-			if (_compiledCache.TryAdd(text, candidate))
+			if (ReferenceEquals(lazy, candidate))
 			{
 				TrackCacheKeyAndTrimIfNeeded(text);
-				lazy = candidate;
 			}
-			else
-			{
-				lazy = _compiledCache[text];
-			}
-		}
 
-		try
-		{
-			return lazy.Value;
-		}
-		catch
-		{
-			// Remove poisoned entry so subsequent attempts can retry
-			_compiledCache.TryRemove(text, out _);
-			throw;
+			try
+			{
+				return lazy.Value;
+			}
+			catch
+			{
+				// Remove poisoned entry so subsequent attempts can retry.
+				// Only remove if this exact lazy is still the current mapping.
+				if (_compiledCache.TryGetValue(text, out var current) && ReferenceEquals(current, lazy))
+				{
+					_compiledCache.TryRemove(new KeyValuePair<string, Lazy<Func<AnySharpObject, AnySharpObject, bool>>>(text, lazy));
+				}
+
+				if (ReferenceEquals(lazy, candidate))
+				{
+					continue;
+				}
+
+				throw;
+			}
 		}
 	}
 
-	private static void TrackCacheKeyAndTrimIfNeeded(string key)
+	private void TrackCacheKeyAndTrimIfNeeded(string key)
 	{
 		lock (_cacheTrimLock)
 		{
@@ -78,16 +84,47 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 		}
 	}
 
+	private void RemoveFromCacheInsertionOrder(string key)
+	{
+		if (_cacheInsertionOrder.Count == 0)
+		{
+			return;
+		}
+
+		var retained = new Queue<string>(_cacheInsertionOrder.Count);
+		while (_cacheInsertionOrder.Count > 0)
+		{
+			var existing = _cacheInsertionOrder.Dequeue();
+			if (!string.Equals(existing, key, StringComparison.Ordinal))
+			{
+				retained.Enqueue(existing);
+			}
+		}
+
+		while (retained.Count > 0)
+		{
+			_cacheInsertionOrder.Enqueue(retained.Dequeue());
+		}
+	}
+
 	/// <summary>
 	/// Invalidate a cached compiled expression. Call this when a lock expression changes
 	/// (e.g., via @lock or @unlock). If text is null, clears the entire cache.
 	/// </summary>
-	public static void InvalidateCache(string? text = null)
+	public void InvalidateCache(string? text = null)
 	{
-		if (text is null)
-			_compiledCache.Clear();
-		else
+		lock (_cacheTrimLock)
+		{
+			if (text is null)
+			{
+				_compiledCache.Clear();
+				_cacheInsertionOrder.Clear();
+				return;
+			}
+
 			_compiledCache.TryRemove(text, out _);
+			RemoveFromCacheInsertionOrder(text);
+		}
 	}
 
 	private Func<AnySharpObject, AnySharpObject, bool> CompileInternal(string text)
