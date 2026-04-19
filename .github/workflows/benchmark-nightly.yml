@@ -1,0 +1,78 @@
+name: Nightly Benchmarks
+
+on:
+  schedule:
+    # 02:00 UTC every night
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: BenchmarkDotNet (Job.Default)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java (required for ANTLR parser generation)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build (Release)
+        run: dotnet build --no-restore --configuration Release
+
+      # SHARPMUSH_CI_BENCHMARK is intentionally NOT set here so that
+      # AdaptiveBenchmarkConfig selects Job.Default (full nightly run).
+      - name: Run Benchmarks
+        run: >
+          dotnet run
+          --project SharpMUSH.Benchmarks
+          --configuration Release
+          --no-build
+          -- --filter '*'
+
+      - name: Publish Results to Step Summary
+        if: always()
+        run: |
+          echo "## Benchmark Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Full BenchmarkDotNet reports are available in the uploaded artifact \`benchmark-results-${{ github.run_id }}\`." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          found_any=false
+          for f in BenchmarkDotNet.Artifacts/results/*.md; do
+            if [ -f "$f" ]; then
+              if [ "$found_any" = false ]; then
+                echo "### Result files" >> "$GITHUB_STEP_SUMMARY"
+                found_any=true
+              fi
+              echo "- \`$(basename "$f")\`" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+          if [ "$found_any" = false ]; then
+            echo "_No markdown benchmark result files were found in \`BenchmarkDotNet.Artifacts/results\`._" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Benchmark Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_id }}
+          path: BenchmarkDotNet.Artifacts/
+          if-no-files-found: warn
