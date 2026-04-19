@@ -7,7 +7,6 @@ public class SimpleFunctionCalls : BaseBenchmark
 {
 	private IMUSHCodeParser? _parser;
 
-	[GlobalSetup]
 	public override async ValueTask Setup()
 	{
 		await base.Setup().ConfigureAwait(false);

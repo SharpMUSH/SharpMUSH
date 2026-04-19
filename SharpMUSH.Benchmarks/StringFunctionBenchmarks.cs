@@ -29,7 +29,6 @@ public class StringFunctionBenchmarks : BaseBenchmark
 	private static readonly MString Cat26 = MModule.single(
 		$"cat({string.Join(",", Enumerable.Range('a', 26).Select(c => ((char)c).ToString()))})");
 
-	[GlobalSetup]
 	public override async ValueTask Setup()
 	{
 		await base.Setup().ConfigureAwait(false);

@@ -32,7 +32,6 @@ public class SubstitutionBenchmarks : BaseBenchmark
 	private static readonly MString Add5Subst = MModule.single(
 		"[add(%#,[add(%#,[add(%#,[add(%#,%#)])])])]");
 
-	[GlobalSetup]
 	public override async ValueTask Setup()
 	{
 		await base.Setup().ConfigureAwait(false);
