@@ -75,11 +75,12 @@ public class AttributeFunctionUnitTests
 	}
 
 	/// <summary>
-	/// Runs after all GenderTest3 cases complete. Wipes the GENDER attribute from player #1
-	/// so that the shared state does not affect any subsequent tests or retries that rely on
-	/// the default (gender-neutral) pronouns.
+	/// Runs after all GenderTest2 and GenderTest3 cases complete. Wipes the GENDER attribute
+	/// from player #1 so that the shared state does not affect any subsequent tests or retries
+	/// that rely on the default (gender-neutral) pronouns.
 	/// </summary>
 	[Test]
+	[DependsOn(nameof(GenderTest2))]
 	[DependsOn(nameof(GenderTest3))]
 	public async Task GenderCleanup()
 	{

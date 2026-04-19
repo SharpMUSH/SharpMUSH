@@ -95,7 +95,7 @@ public class SearchFunctionUnitTests
 		// Instead, set a $-command attribute directly on room #0 (the master room).
 		// scan() with the default "all" switch always checks room #0 via the globals scope,
 		// so no object creation is needed.
-		var uid = Guid.NewGuid().ToString("N")[..8]; // 8 lowercase hex chars, unique per run
+		var uid = Guid.NewGuid().ToString("N")[..12]; // 12 lowercase hex chars, unique per run
 		var commandWord = $"sc{uid}"; // e.g. "scabcd1234" — unique pattern for this test
 		var attrName = $"CMD_{uid.ToUpperInvariant()}"; // e.g. "CMD_ABCD1234" — unique attribute name
 
