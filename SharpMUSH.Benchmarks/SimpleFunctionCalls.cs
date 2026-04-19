@@ -1,20 +1,17 @@
-﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
-using SharpMUSH.Library.ParserInterfaces;
 using System.Text;
 
 namespace SharpMUSH.Benchmarks;
 
-[SimpleJob(RuntimeMoniker.Net90)]
 [BenchmarkCategory("Non-DB Function Evaluation")]
 public class SimpleFunctionCalls : BaseBenchmark
 {
-	private readonly IMUSHCodeParser? _parser;
+	private IMUSHCodeParser? _parser;
 
-	public SimpleFunctionCalls()
+	[GlobalSetup]
+	public override async ValueTask Setup()
 	{
-		Setup().ConfigureAwait(false).GetAwaiter().GetResult();
-		_parser = TestParser().ConfigureAwait(false).GetAwaiter().GetResult();
+		await base.Setup().ConfigureAwait(false);
+		_parser = await TestParser().ConfigureAwait(false);
 	}
 
 	[Benchmark]
@@ -27,16 +24,11 @@ public class SimpleFunctionCalls : BaseBenchmark
 	{
 		var sb = new StringBuilder();
 		foreach (var _ in Enumerable.Range(0, depth))
-		{
 			sb.Append("[add(1,");
-		}
 		sb.Append('1');
 		foreach (var _ in Enumerable.Range(0, depth))
-		{
 			sb.Append(")]");
-		}
-		var str = sb.ToString();
 
-		await _parser!.FunctionParse(MModule.single(str));
+		await _parser!.FunctionParse(MModule.single(sb.ToString()));
 	}
 }
