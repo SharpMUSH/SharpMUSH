@@ -10,6 +10,9 @@ namespace SharpMUSH.Implementation;
 public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionParser
 {
 	private const int MaxCompiledExpressionCacheEntries = 4096;
+	private const int CacheEvictionBatchSize = MaxCompiledExpressionCacheEntries / 4;
+	private static readonly object _cacheTrimLock = new();
+	private static readonly Queue<string> _cacheInsertionOrder = new();
 
 	/// <summary>
 	/// Cache of compiled lock expressions keyed by their text representation.
@@ -22,21 +25,28 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 	/// for a given key, even under concurrent access.
 	/// 
 	/// The cache is bounded to avoid unbounded memory growth from arbitrary player-provided
-	/// lock text. When the cap is reached and a new key is introduced, entries are cleared.
+	/// lock text. When the cap is reached and a new key is introduced, the oldest keys
+	/// are evicted in batches to keep hot entries resident and avoid full-cache flushes.
 	/// </summary>
 	private static readonly ConcurrentDictionary<string, Lazy<Func<AnySharpObject, AnySharpObject, bool>>> _compiledCache = new();
 
 	public Func<AnySharpObject, AnySharpObject, bool> Compile(string text)
 	{
-		if (!_compiledCache.ContainsKey(text) && _compiledCache.Count >= MaxCompiledExpressionCacheEntries)
+		if (!_compiledCache.TryGetValue(text, out var lazy))
 		{
-			_compiledCache.Clear();
-		}
+			var candidate = new Lazy<Func<AnySharpObject, AnySharpObject, bool>>(
+				() => CompileInternal(text), LazyThreadSafetyMode.ExecutionAndPublication);
 
-		var lazy = _compiledCache.GetOrAdd(
-			text,
-			key => new Lazy<Func<AnySharpObject, AnySharpObject, bool>>(
-				() => CompileInternal(key), LazyThreadSafetyMode.ExecutionAndPublication));
+			if (_compiledCache.TryAdd(text, candidate))
+			{
+				TrackCacheKeyAndTrimIfNeeded(text);
+				lazy = candidate;
+			}
+			else
+			{
+				lazy = _compiledCache[text];
+			}
+		}
 
 		try
 		{
@@ -47,6 +57,24 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 			// Remove poisoned entry so subsequent attempts can retry
 			_compiledCache.TryRemove(text, out _);
 			throw;
+		}
+	}
+
+	private static void TrackCacheKeyAndTrimIfNeeded(string key)
+	{
+		lock (_cacheTrimLock)
+		{
+			_cacheInsertionOrder.Enqueue(key);
+			if (_compiledCache.Count <= MaxCompiledExpressionCacheEntries)
+			{
+				return;
+			}
+
+			for (var i = 0; i < CacheEvictionBatchSize && _compiledCache.Count > MaxCompiledExpressionCacheEntries && _cacheInsertionOrder.Count > 0; i++)
+			{
+				var removeKey = _cacheInsertionOrder.Dequeue();
+				_compiledCache.TryRemove(removeKey, out _);
+			}
 		}
 	}
 
