@@ -19,11 +19,12 @@ public class NotifyPipelineBenchmarks : BaseBenchmark
 	private static readonly MString ThinkCmd = MModule.single("think Hello World");
 	private static readonly MString PemitCmd = MModule.single("@pemit me=Hello World");
 
-	public NotifyPipelineBenchmarks()
+	[GlobalSetup]
+	public override async ValueTask Setup()
 	{
-		Setup().ConfigureAwait(false).GetAwaiter().GetResult();
+		await base.Setup().ConfigureAwait(false);
 		_notifyService = _server!.Services.GetRequiredService<INotifyService>();
-		_parser = TestParser().ConfigureAwait(false).GetAwaiter().GetResult();
+		_parser = await TestParser().ConfigureAwait(false);
 	}
 
 	// ── Direct notify calls (no parsing) ──────────────────────────────────────

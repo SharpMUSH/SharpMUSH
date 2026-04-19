@@ -29,10 +29,11 @@ public class StringFunctionBenchmarks : BaseBenchmark
 	private static readonly MString Cat26 = MModule.single(
 		$"cat({string.Join(",", Enumerable.Range('a', 26).Select(c => ((char)c).ToString()))})");
 
-	public StringFunctionBenchmarks()
+	[GlobalSetup]
+	public override async ValueTask Setup()
 	{
-		Setup().ConfigureAwait(false).GetAwaiter().GetResult();
-		_parser = TestParser().ConfigureAwait(false).GetAwaiter().GetResult();
+		await base.Setup().ConfigureAwait(false);
+		_parser = await TestParser().ConfigureAwait(false);
 	}
 
 	[Benchmark(Description = "mid(abcdefghij,2,5)")]

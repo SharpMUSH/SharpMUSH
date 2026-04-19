@@ -1,11 +1,9 @@
-using BenchmarkDotNet.Attributes;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Benchmarks;
 
@@ -29,7 +27,7 @@ public class MemgraphBaseBenchmark
 	private IContainer? _natsContainer;
 
 	[GlobalSetup]
-	public async ValueTask Setup()
+	public virtual async ValueTask Setup()
 	{
 		_memgraphContainer = new ContainerBuilder("memgraph/memgraph:3.8.1")
 			.WithPortBinding(7687, true)
@@ -71,6 +69,9 @@ public class MemgraphBaseBenchmark
 
 		if (_memgraphContainer is not null)
 			await _memgraphContainer.DisposeAsync().ConfigureAwait(false);
+
+		_server?.Dispose();
+		Environment.SetEnvironmentVariable("NATS_URL", null);
 	}
 
 	protected async Task<IMUSHCodeParser?> TestParser() =>

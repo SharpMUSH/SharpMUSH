@@ -156,13 +156,17 @@ public class ParserThroughputTests
 
 	private static void PrintReport(string label, long[] timings, int iterations)
 	{
+		if (timings.Length == 0)
+			throw new ArgumentException("Timings collection must not be empty.", nameof(timings));
+
 		Array.Sort(timings);
 		var ticksPerMs = (double)Stopwatch.Frequency / 1000.0;
+		var sampleCount = timings.Length;
 
 		var meanMs = timings.Average() / ticksPerMs;
-		var p50Ms = timings[iterations / 2] / ticksPerMs;
-		var p95Ms = timings[(int)(iterations * 0.95)] / ticksPerMs;
-		var p99Ms = timings[(int)(iterations * 0.99)] / ticksPerMs;
+		var p50Ms = timings[GetPercentileIndex(sampleCount, 0.50)] / ticksPerMs;
+		var p95Ms = timings[GetPercentileIndex(sampleCount, 0.95)] / ticksPerMs;
+		var p99Ms = timings[GetPercentileIndex(sampleCount, 0.99)] / ticksPerMs;
 		var opsPerSec = 1000.0 / meanMs;
 
 		Console.WriteLine($"\n[{label}]");
@@ -171,5 +175,11 @@ public class ParserThroughputTests
 		Console.WriteLine($"  P50        : {p50Ms,8:F3} ms");
 		Console.WriteLine($"  P95        : {p95Ms,8:F3} ms");
 		Console.WriteLine($"  P99        : {p99Ms,8:F3} ms");
+	}
+
+	private static int GetPercentileIndex(int count, double percentile)
+	{
+		var index = (int)Math.Ceiling(percentile * count) - 1;
+		return Math.Clamp(index, 0, count - 1);
 	}
 }

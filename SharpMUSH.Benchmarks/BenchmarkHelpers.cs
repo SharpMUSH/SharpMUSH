@@ -1,16 +1,10 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
-using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models;
-using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
 using System.Collections.Concurrent;
-using System.Text;
 
 namespace SharpMUSH.Benchmarks;
 
@@ -46,15 +40,6 @@ internal static class BenchmarkHelpers
 	{
 		var realOne = await database.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false);
 		var one = realOne.Object()!.DBRef;
-
-		var mockPublisher = Substitute.For<IPublisher>();
-		var simpleConnectionService = new ConnectionService(mockPublisher);
-		await simpleConnectionService.Register(
-			1, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask,
-			_ => ValueTask.CompletedTask,
-			() => Encoding.UTF8).ConfigureAwait(false);
-		await simpleConnectionService.Bind(1, one).ConfigureAwait(false);
 
 		var parser = services.GetRequiredService<IMUSHCodeParser>();
 		return parser.FromState(new ParserState(

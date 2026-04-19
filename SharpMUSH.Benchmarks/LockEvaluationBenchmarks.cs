@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Benchmarks;
 
@@ -21,14 +20,13 @@ public class LockEvaluationBenchmarks : BaseBenchmark
 	private Func<AnySharpObject, AnySharpObject, bool>? _nestedLock;
 	private Func<AnySharpObject, AnySharpObject, bool>? _complexLock;
 
-	public LockEvaluationBenchmarks()
+	[GlobalSetup]
+	public override async ValueTask Setup()
 	{
-		Setup().ConfigureAwait(false).GetAwaiter().GetResult();
+		await base.Setup().ConfigureAwait(false);
 
 		_lockParser = _server!.Services.GetRequiredService<IBooleanExpressionParser>();
-		_godPlayer = _database!.GetObjectNodeAsync(new DBRef(1))
-			.ConfigureAwait(false).GetAwaiter().GetResult()
-			.Known;
+		_godPlayer = (await _database!.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false)).Known;
 
 		_simpleLock = _lockParser.Compile("#1");
 		_andLock = _lockParser.Compile("#1&#1&#1");

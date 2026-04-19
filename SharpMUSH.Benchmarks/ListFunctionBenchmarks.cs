@@ -36,10 +36,11 @@ public class ListFunctionBenchmarks : BaseBenchmark
 	private static readonly MString MapInput10 = MModule.single("map(upcase,lnum(10))");
 	private static readonly MString MapInput100 = MModule.single("map(upcase,lnum(100))");
 
-	public ListFunctionBenchmarks()
+	[GlobalSetup]
+	public override async ValueTask Setup()
 	{
-		Setup().ConfigureAwait(false).GetAwaiter().GetResult();
-		_parser = TestParser().ConfigureAwait(false).GetAwaiter().GetResult();
+		await base.Setup().ConfigureAwait(false);
+		_parser = await TestParser().ConfigureAwait(false);
 	}
 
 	[Benchmark(Description = "lnum(N) — generate N-element list")]

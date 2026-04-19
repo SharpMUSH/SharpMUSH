@@ -2,21 +2,10 @@ using Core.Arango;
 using Core.Arango.Serialization.Json;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
-using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using OneOf.Types;
 using Serilog;
 using SharpMUSH.Library;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models;
-using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
-using System.Collections.Concurrent;
-using System.Text;
 using Testcontainers.ArangoDb;
-using BenchmarkDotNet.Attributes;
 
 namespace SharpMUSH.Benchmarks;
 
@@ -40,7 +29,7 @@ public class BaseBenchmark
 	private IContainer? _natsContainer;
 
 	[GlobalSetup]
-	public async ValueTask Setup()
+	public virtual async ValueTask Setup()
 	{
 		_arangoContainer = new ArangoDbBuilder("arangodb:latest")
 			.WithPassword("password")
@@ -73,6 +62,9 @@ public class BaseBenchmark
 
 		if (_arangoContainer is not null)
 			await _arangoContainer.DisposeAsync().ConfigureAwait(false);
+
+		_server?.Dispose();
+		Environment.SetEnvironmentVariable("NATS_URL", null);
 	}
 
 	protected async Task<IMUSHCodeParser?> TestParser() =>

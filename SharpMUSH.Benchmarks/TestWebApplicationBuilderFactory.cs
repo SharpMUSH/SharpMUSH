@@ -26,6 +26,9 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
+		if (databaseProvider == DatabaseProvider.ArangoDB && acnf is null)
+			throw new ArgumentNullException(nameof(acnf), "Arango configuration is required for ArangoDB benchmarks.");
+
 		var log = new LoggerConfiguration()
 			.Enrich.FromLogContext()
 			.WriteTo.Console(theme: AnsiConsoleTheme.Code)

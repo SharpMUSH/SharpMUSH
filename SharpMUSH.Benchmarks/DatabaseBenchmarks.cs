@@ -1,5 +1,3 @@
-using SharpMUSH.Library.Models;
-
 namespace SharpMUSH.Benchmarks;
 
 /// <summary>
@@ -11,12 +9,11 @@ public class ArangoDBReadBenchmarks : BaseBenchmark
 {
 	private AnySharpContainer? _masterRoom;
 
-	public ArangoDBReadBenchmarks()
+	[GlobalSetup]
+	public override async ValueTask Setup()
 	{
-		Setup().ConfigureAwait(false).GetAwaiter().GetResult();
-		_masterRoom = _database!.GetObjectNodeAsync(new DBRef(2))
-			.ConfigureAwait(false).GetAwaiter().GetResult()
-			.Known.AsContainer;
+		await base.Setup().ConfigureAwait(false);
+		_masterRoom = (await _database!.GetObjectNodeAsync(new DBRef(2)).ConfigureAwait(false)).Known.AsContainer;
 	}
 
 	[Benchmark(Description = "GetObjectNodeAsync(#1) — God player")]
@@ -57,15 +54,12 @@ public class ArangoDBWriteBenchmarks : BaseBenchmark
 	private AnySharpContainer? _masterRoom;
 	private int _counter;
 
-	public ArangoDBWriteBenchmarks()
+	[GlobalSetup]
+	public override async ValueTask Setup()
 	{
-		Setup().ConfigureAwait(false).GetAwaiter().GetResult();
-		_godPlayer = _database!.GetObjectNodeAsync(new DBRef(1))
-			.ConfigureAwait(false).GetAwaiter().GetResult()
-			.AsPlayer;
-		_masterRoom = _database!.GetObjectNodeAsync(new DBRef(2))
-			.ConfigureAwait(false).GetAwaiter().GetResult()
-			.Known.AsContainer;
+		await base.Setup().ConfigureAwait(false);
+		_godPlayer = (await _database!.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false)).AsPlayer;
+		_masterRoom = (await _database!.GetObjectNodeAsync(new DBRef(2)).ConfigureAwait(false)).Known.AsContainer;
 	}
 
 	[Benchmark(Description = "CreateThingAsync — unique name each call")]

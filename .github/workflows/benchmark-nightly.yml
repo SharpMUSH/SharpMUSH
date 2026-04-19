@@ -51,13 +51,23 @@ jobs:
         run: |
           echo "## Benchmark Results" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Full BenchmarkDotNet reports are available in the uploaded artifact \`benchmark-results-${{ github.run_id }}\`." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          found_any=false
           for f in BenchmarkDotNet.Artifacts/results/*.md; do
             if [ -f "$f" ]; then
-              echo "### $(basename "$f" .md)" >> "$GITHUB_STEP_SUMMARY"
-              cat "$f" >> "$GITHUB_STEP_SUMMARY"
-              echo "" >> "$GITHUB_STEP_SUMMARY"
+              if [ "$found_any" = false ]; then
+                echo "### Result files" >> "$GITHUB_STEP_SUMMARY"
+                found_any=true
+              fi
+              echo "- \`$(basename "$f")\`" >> "$GITHUB_STEP_SUMMARY"
             fi
           done
+
+          if [ "$found_any" = false ]; then
+            echo "_No markdown benchmark result files were found in \`BenchmarkDotNet.Artifacts/results\`._" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload Benchmark Artifacts
         if: always()

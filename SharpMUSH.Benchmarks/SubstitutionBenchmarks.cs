@@ -32,10 +32,11 @@ public class SubstitutionBenchmarks : BaseBenchmark
 	private static readonly MString Add5Subst = MModule.single(
 		"[add(%#,[add(%#,[add(%#,[add(%#,%#)])])])]");
 
-	public SubstitutionBenchmarks()
+	[GlobalSetup]
+	public override async ValueTask Setup()
 	{
-		Setup().ConfigureAwait(false).GetAwaiter().GetResult();
-		_parser = TestParser().ConfigureAwait(false).GetAwaiter().GetResult();
+		await base.Setup().ConfigureAwait(false);
+		_parser = await TestParser().ConfigureAwait(false);
 	}
 
 	[Benchmark(Description = "think %# — executor dbref command subst")]

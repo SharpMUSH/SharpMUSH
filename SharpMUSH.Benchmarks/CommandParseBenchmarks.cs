@@ -16,10 +16,11 @@ public class CommandParseBenchmarks : BaseBenchmark
 	private static readonly MString PemitSelfInput = MModule.single("@pemit me=Hello World");
 	private static readonly MString SetAttrInput = MModule.single("@set me=SAFE");
 
-	public CommandParseBenchmarks()
+	[GlobalSetup]
+	public override async ValueTask Setup()
 	{
-		Setup().ConfigureAwait(false).GetAwaiter().GetResult();
-		_parser = TestParser().ConfigureAwait(false).GetAwaiter().GetResult();
+		await base.Setup().ConfigureAwait(false);
+		_parser = await TestParser().ConfigureAwait(false);
 	}
 
 	[Benchmark(Description = "think with literal text")]
