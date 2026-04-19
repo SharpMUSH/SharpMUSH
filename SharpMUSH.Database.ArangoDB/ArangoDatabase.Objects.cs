@@ -684,6 +684,26 @@ public partial class ArangoDatabase
 		}
 	}
 
+	public async IAsyncEnumerable<AnySharpObject> GetAllTypedObjectsAsync([EnumeratorCancellation] CancellationToken ct = default)
+	{
+		// Each call to GetObjectNodeAsync here is the *direct* database method, not the
+		// mediator-routed GetObjectNodeQuery that passes through QueryCachingBehavior →
+		// FusionCache per-key SemaphoreSlim.  This stream therefore does NOT contend with
+		// concurrent player commands on the FusionCache lock.
+		var objectIds = arangoDb.Query.ExecuteStreamAsync<string>(handle,
+			$"FOR v IN {DatabaseConstants.Objects:@} RETURN v._id",
+			cancellationToken: ct) ?? AsyncEnumerable.Empty<string>();
+
+		await foreach (var id in objectIds.WithCancellation(ct))
+		{
+			var optionalObj = await GetObjectNodeAsync(id, ct);
+			if (!optionalObj.IsNone)
+			{
+				yield return optionalObj.WithoutNone();
+			}
+		}
+	}
+
 	public async IAsyncEnumerable<SharpObject> GetFilteredObjectsAsync(ObjectSearchFilter filter, [EnumeratorCancellation] CancellationToken ct = default)
 	{
 		// Build AQL query with filters applied at database level

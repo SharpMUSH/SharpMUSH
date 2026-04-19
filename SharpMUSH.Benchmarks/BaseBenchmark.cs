@@ -48,9 +48,8 @@ public class BaseBenchmark
 			$"nats://localhost:{_natsContainer.GetMappedPublicPort(4222)}");
 
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
-		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
-		_server = new TestWebApplicationBuilderFactory<Server.Program>(config, configFile, colorFile);
+		_server = new TestWebApplicationBuilderFactory<Server.Program>(config, configFile);
 		_database = _server!.Services.GetRequiredService<ISharpDatabase>();
 	}
 

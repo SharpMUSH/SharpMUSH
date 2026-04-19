@@ -476,6 +476,16 @@ public interface ISharpDatabase
 	IAsyncEnumerable<SharpObject> GetAllObjectsAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Get all objects in the database as fully-typed <see cref="AnySharpObject"/> instances.
+	/// Use this instead of <see cref="GetAllObjectsAsync"/> when callers need the typed object
+	/// without a subsequent per-object mediator query — which would cause FusionCache lock
+	/// contention with concurrently-executing player commands.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>An async enumerable of all fully-typed objects in the database</returns>
+	IAsyncEnumerable<AnySharpObject> GetAllTypedObjectsAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Get objects from the database with filtering applied at the database level.
 	/// This is more efficient than loading all objects and filtering in application code.
 	/// Lock evaluation must happen in application code, but other filters can be pushed to the database.

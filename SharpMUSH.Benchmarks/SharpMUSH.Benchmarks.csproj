@@ -31,6 +31,10 @@
 	  <Content Update="mushcnf.dst">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Content>
+	  <Content Include="..\SharpMUSH.Configuration\colors.json">
+	    <Link>colors.json</Link>
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
 	</ItemGroup>
 
 </Project>
