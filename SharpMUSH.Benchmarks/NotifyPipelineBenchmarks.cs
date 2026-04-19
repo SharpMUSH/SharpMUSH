@@ -19,7 +19,6 @@ public class NotifyPipelineBenchmarks : BaseBenchmark
 	private static readonly MString ThinkCmd = MModule.single("think Hello World");
 	private static readonly MString PemitCmd = MModule.single("@pemit me=Hello World");
 
-	[GlobalSetup]
 	public override async ValueTask Setup()
 	{
 		await base.Setup().ConfigureAwait(false);

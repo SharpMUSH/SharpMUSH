@@ -9,7 +9,6 @@ public class MemgraphReadBenchmarks : MemgraphBaseBenchmark
 {
 	private AnySharpContainer? _masterRoom;
 
-	[GlobalSetup]
 	public override async ValueTask Setup()
 	{
 		await base.Setup().ConfigureAwait(false);
@@ -54,7 +53,6 @@ public class MemgraphWriteBenchmarks : MemgraphBaseBenchmark
 	private AnySharpContainer? _masterRoom;
 	private int _counter;
 
-	[GlobalSetup]
 	public override async ValueTask Setup()
 	{
 		await base.Setup().ConfigureAwait(false);

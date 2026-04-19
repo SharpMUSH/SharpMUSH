@@ -20,7 +20,6 @@ public class LockEvaluationBenchmarks : BaseBenchmark
 	private Func<AnySharpObject, AnySharpObject, bool>? _nestedLock;
 	private Func<AnySharpObject, AnySharpObject, bool>? _complexLock;
 
-	[GlobalSetup]
 	public override async ValueTask Setup()
 	{
 		await base.Setup().ConfigureAwait(false);

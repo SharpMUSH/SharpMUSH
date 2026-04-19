@@ -44,7 +44,7 @@ jobs:
           --project SharpMUSH.Benchmarks
           --configuration Release
           --no-build
-          -- --all
+          -- --filter '*'
 
       - name: Publish Results to Step Summary
         if: always()

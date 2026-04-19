@@ -36,7 +36,6 @@ public class ListFunctionBenchmarks : BaseBenchmark
 	private static readonly MString MapInput10 = MModule.single("map(upcase,lnum(10))");
 	private static readonly MString MapInput100 = MModule.single("map(upcase,lnum(100))");
 
-	[GlobalSetup]
 	public override async ValueTask Setup()
 	{
 		await base.Setup().ConfigureAwait(false);
