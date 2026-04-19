@@ -2,145 +2,51 @@ using Mediator;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
-using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Implementation;
 
-public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionParser
+public class BooleanExpressionParser(IMediator mediator, IFusionCache cache) : IBooleanExpressionParser
 {
-	private const int MaxCompiledExpressionCacheEntries = 4096;
-	private const int CacheEvictionBatchSize = MaxCompiledExpressionCacheEntries / 4;
-	private readonly object _cacheTrimLock = new();
-	private readonly Queue<string> _cacheInsertionOrder = new();
+	private const string CompiledExpressionsTag = "compiled-lock-expressions";
+	private const string CacheKeyPrefix = "compiled-lock-expr:";
 
 	/// <summary>
-	/// Cache of compiled lock expressions keyed by their text representation.
-	/// Lock expressions are static text stored on objects that change only when a player
-	/// explicitly sets a lock (via @lock). Since compilation involves a full ANTLR
-	/// lex-parse-visit cycle plus Expression.Lambda.Compile() (JIT compilation),
-	/// caching provides significant savings on the frequent lock-check hot path.
-	/// 
-	/// Uses Lazy&lt;T&gt; to ensure only one thread performs the expensive compilation
-	/// for a given key, even under concurrent access.
-	/// 
-	/// The cache is bounded to avoid unbounded memory growth from arbitrary player-provided
-	/// lock text. When the cap is reached and a new key is introduced, the oldest keys
-	/// are evicted in batches to keep hot entries resident and avoid full-cache flushes.
+	/// Per-entry cache options for compiled lock expressions.
+	/// The 1-hour Duration provides automatic expiry, naturally bounding memory usage
+	/// without requiring manual eviction bookkeeping.
 	/// </summary>
-	private readonly ConcurrentDictionary<string, Lazy<Func<AnySharpObject, AnySharpObject, bool>>> _compiledCache = new();
+	private static readonly FusionCacheEntryOptions CompiledExpressionEntryOptions = new()
+	{
+		Duration = TimeSpan.FromHours(1),
+	};
 
+	/// <summary>
+	/// Returns a compiled delegate for the given lock expression text, using FusionCache to avoid
+	/// repeated ANTLR lex-parse-visit + Expression.Lambda.Compile() work on the hot path.
+	/// Entries are tagged so the entire compiled-expression set can be flushed at once.
+	/// </summary>
 	public Func<AnySharpObject, AnySharpObject, bool> Compile(string text)
-	{
-		while (true)
-		{
-			if (_compiledCache.TryGetValue(text, out var existing))
-			{
-				try
-				{
-					return existing.Value;
-				}
-				catch
-				{
-					TryRemoveIfCurrent(text, existing);
-					throw;
-				}
-			}
-
-			var candidate = new Lazy<Func<AnySharpObject, AnySharpObject, bool>>(
-				() => CompileInternal(text), LazyThreadSafetyMode.ExecutionAndPublication);
-			if (!_compiledCache.TryAdd(text, candidate))
-			{
-				continue;
-			}
-
-			TrackCacheKeyAndTrimIfNeeded(text);
-			try
-			{
-				return candidate.Value;
-			}
-			catch
-			{
-				// Candidate failed compilation. Remove poisoned entry and retry.
-				TryRemoveIfCurrent(text, candidate);
-				continue;
-			}
-		}
-	}
-
-	private bool TryRemoveIfCurrent(string text, Lazy<Func<AnySharpObject, AnySharpObject, bool>> lazy)
-	{
-		if (_compiledCache.TryGetValue(text, out var current) && ReferenceEquals(current, lazy))
-		{
-			return _compiledCache.TryRemove(new KeyValuePair<string, Lazy<Func<AnySharpObject, AnySharpObject, bool>>>(text, lazy));
-		}
-
-		return false;
-	}
-
-	private void TrackCacheKeyAndTrimIfNeeded(string key)
-	{
-		lock (_cacheTrimLock)
-		{
-			_cacheInsertionOrder.Enqueue(key);
-			if (_compiledCache.Count <= MaxCompiledExpressionCacheEntries)
-			{
-				return;
-			}
-
-			for (var i = 0; i < CacheEvictionBatchSize && _compiledCache.Count > MaxCompiledExpressionCacheEntries && _cacheInsertionOrder.Count > 0; i++)
-			{
-				var removeKey = _cacheInsertionOrder.Dequeue();
-				_compiledCache.TryRemove(removeKey, out _);
-			}
-		}
-	}
-
-	/// <summary>
-	/// Removes all occurrences of a key from insertion order.
-	/// Call only while holding _cacheTrimLock.
-	/// </summary>
-	private void RemoveFromCacheInsertionOrder(string key)
-	{
-		if (_cacheInsertionOrder.Count == 0)
-		{
-			return;
-		}
-
-		var retained = new Queue<string>(_cacheInsertionOrder.Count);
-		while (_cacheInsertionOrder.Count > 0)
-		{
-			var existing = _cacheInsertionOrder.Dequeue();
-			if (!string.Equals(existing, key, StringComparison.Ordinal))
-			{
-				retained.Enqueue(existing);
-			}
-		}
-
-		while (retained.Count > 0)
-		{
-			_cacheInsertionOrder.Enqueue(retained.Dequeue());
-		}
-	}
+		=> cache.GetOrSet(
+			$"{CacheKeyPrefix}{text}",
+			_ => CompileInternal(text),
+			CompiledExpressionEntryOptions,
+			tags: [CompiledExpressionsTag])!;
 
 	/// <summary>
 	/// Invalidate a cached compiled expression. Call this when a lock expression changes
-	/// (e.g., via @lock or @unlock). If text is null, clears the entire cache.
+	/// (e.g., via @lock or @unlock). If text is null, clears all compiled expressions.
 	/// </summary>
 	public void InvalidateCache(string? text = null)
 	{
-		lock (_cacheTrimLock)
+		if (text is null)
 		{
-			if (text is null)
-			{
-				_compiledCache.Clear();
-				_cacheInsertionOrder.Clear();
-				return;
-			}
-
-			_compiledCache.TryRemove(text, out _);
-			RemoveFromCacheInsertionOrder(text);
+			cache.RemoveByTag(CompiledExpressionsTag);
+			return;
 		}
+
+		cache.Remove($"{CacheKeyPrefix}{text}");
 	}
 
 	private Func<AnySharpObject, AnySharpObject, bool> CompileInternal(string text)

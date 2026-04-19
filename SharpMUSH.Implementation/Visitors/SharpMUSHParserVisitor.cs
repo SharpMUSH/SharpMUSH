@@ -141,33 +141,24 @@ public class SharpMUSHParserVisitor(
 		}
 
 		// Collect non-null child results to batch-merge at the end
-		List<CallState>? results = null;
+		var results = new List<CallState>(childCount);
 
-		for (var i = 0; i < childCount; i++)
+		foreach (var i in Enumerable.Range(0, childCount))
 		{
 			var child = node.GetChild(i);
 			var childResult = child is null ? null : await child.Accept(this);
-
-			if (childResult is not null)
-			{
-				results ??= new List<CallState>(childCount);
-				results.Add(childResult);
-			}
+			if (childResult is not null) results.Add(childResult);
 
 			// Halt evaluation if a limit has been exceeded
-			if (parser.CurrentState.LimitExceeded?.IsExceeded == true)
-			{
-				break;
-			}
+			if (parser.CurrentState.LimitExceeded?.IsExceeded == true) break;
 		}
 
-		if (results is null || results.Count == 0)
-			return null;
-
-		if (results.Count == 1)
-			return results[0];
-
-		return BatchMergeResults(results);
+		return results.Count switch
+		{
+			0 => null,
+			1 => results[0],
+			_ => BatchMergeResults(results)
+		};
 	}
 
 	public async ValueTask<CallState?> VisitChildrenOrBreak(IRuleNode node, Func<bool> haltPredicate)
