@@ -184,6 +184,7 @@ public class BooleanExpressionUnitTests
 	[Test]
 	public async Task CompileAndInvalidateCache_Concurrently_DoesNotThrow()
 	{
+		const int iterationCount = 1000;
 		var bep = BooleanParser;
 		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 		var input = "type^Player";
@@ -191,7 +192,7 @@ public class BooleanExpressionUnitTests
 
 		var compileTask = Task.Run(() =>
 		{
-			for (var i = 0; i < 200; i++)
+			for (var i = 0; i < iterationCount; i++)
 			{
 				try
 				{
@@ -207,7 +208,7 @@ public class BooleanExpressionUnitTests
 
 		var invalidateTask = Task.Run(() =>
 		{
-			for (var i = 0; i < 200; i++)
+			for (var i = 0; i < iterationCount; i++)
 			{
 				try
 				{

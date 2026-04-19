@@ -34,36 +34,48 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 	{
 		while (true)
 		{
-			var candidate = new Lazy<Func<AnySharpObject, AnySharpObject, bool>>(
-				() => CompileInternal(text), LazyThreadSafetyMode.ExecutionAndPublication);
-			var lazy = _compiledCache.GetOrAdd(text, candidate);
-
-			if (ReferenceEquals(lazy, candidate))
+			if (_compiledCache.TryGetValue(text, out var existing))
 			{
-				TrackCacheKeyAndTrimIfNeeded(text);
+				try
+				{
+					return existing.Value;
+				}
+				catch
+				{
+					TryRemoveIfCurrent(text, existing);
+					throw;
+				}
 			}
 
+			var candidate = new Lazy<Func<AnySharpObject, AnySharpObject, bool>>(
+				() => CompileInternal(text), LazyThreadSafetyMode.ExecutionAndPublication);
+			if (!_compiledCache.TryAdd(text, candidate))
+			{
+				continue;
+			}
+
+			TrackCacheKeyAndTrimIfNeeded(text);
 			try
 			{
-				return lazy.Value;
+				return candidate.Value;
 			}
 			catch
 			{
-				// Remove poisoned entry so subsequent attempts can retry.
-				// Only remove if this exact lazy is still the current mapping.
-				if (_compiledCache.TryGetValue(text, out var current) && ReferenceEquals(current, lazy))
-				{
-					_compiledCache.TryRemove(new KeyValuePair<string, Lazy<Func<AnySharpObject, AnySharpObject, bool>>>(text, lazy));
-				}
-
-				if (ReferenceEquals(lazy, candidate))
-				{
-					continue;
-				}
-
-				throw;
+				// Candidate failed compilation. Remove poisoned entry and retry.
+				TryRemoveIfCurrent(text, candidate);
+				continue;
 			}
 		}
+	}
+
+	private bool TryRemoveIfCurrent(string text, Lazy<Func<AnySharpObject, AnySharpObject, bool>> lazy)
+	{
+		if (_compiledCache.TryGetValue(text, out var current) && ReferenceEquals(current, lazy))
+		{
+			return _compiledCache.TryRemove(new KeyValuePair<string, Lazy<Func<AnySharpObject, AnySharpObject, bool>>>(text, lazy));
+		}
+
+		return false;
 	}
 
 	private void TrackCacheKeyAndTrimIfNeeded(string key)
@@ -84,6 +96,10 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 		}
 	}
 
+	/// <summary>
+	/// Removes all occurrences of a key from insertion order.
+	/// Call only while holding _cacheTrimLock.
+	/// </summary>
 	private void RemoveFromCacheInsertionOrder(string key)
 	{
 		if (_cacheInsertionOrder.Count == 0)
