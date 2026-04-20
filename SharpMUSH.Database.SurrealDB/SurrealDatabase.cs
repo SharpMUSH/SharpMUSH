@@ -135,12 +135,13 @@ public partial class SurrealDatabase(
 			expandedQuery = expandedQuery.Replace(paramToken, serialized);
 		}
 
-		logger.LogDebug("Executing SurrealQL: {Query}", expandedQuery);
+		// Log the query template (not the expanded query) to avoid leaking sensitive parameter values
+		logger.LogDebug("Executing SurrealQL: {Query}", query);
 		var response = await db.RawQuery(expandedQuery, null, ct);
 		if (response.HasErrors)
 		{
 			var errors = string.Join("; ", response.Errors.Select(e => e.ToString()));
-			logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, expandedQuery);
+			logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
 		}
 		return response;
 	}
