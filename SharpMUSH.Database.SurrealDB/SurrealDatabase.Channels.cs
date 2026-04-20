@@ -27,7 +27,7 @@ public partial class SurrealDatabase
 		var response = await ExecuteAsync("SELECT * FROM channel", cancellationToken);
 		var results = response.GetValue<List<ChannelDbRecord>>(0)!;
 		foreach (var element in results)
-			yield return MapElementToChannel(element);
+			yield return MapRecordToChannel(element);
 	}
 
 	public async ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default)
@@ -38,7 +38,7 @@ public partial class SurrealDatabase
 			parameters, cancellationToken);
 
 		var results = response.GetValue<List<ChannelDbRecord>>(0)!;
-		return results.Count > 0 ? MapElementToChannel(results[0]) : null;
+		return results.Count > 0 ? MapRecordToChannel(results[0]) : null;
 	}
 
 	public async IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -51,7 +51,7 @@ public partial class SurrealDatabase
 
 		var records = response.GetValue<List<ChannelDbRecord>>(0)!;
 		foreach (var channelRecord in records)
-			yield return MapElementToChannel(channelRecord);
+			yield return MapRecordToChannel(channelRecord);
 	}
 
 	public async ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
@@ -217,7 +217,7 @@ public partial class SurrealDatabase
 		await ExecuteAsync(query, parameters, cancellationToken);
 	}
 
-	private SharpChannel MapElementToChannel(ChannelDbRecord record)
+	private SharpChannel MapRecordToChannel(ChannelDbRecord record)
 	{
 		var channelName = record.name;
 		var markedUpName = string.IsNullOrEmpty(record.markedUpName) ? channelName : record.markedUpName;

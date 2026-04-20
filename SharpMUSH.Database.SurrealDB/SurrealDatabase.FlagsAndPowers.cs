@@ -122,12 +122,17 @@ public partial class SurrealDatabase
 			["fname"] = flag.Name
 		};
 
-		var response = await ExecuteAsync(
-			"DELETE has_flags WHERE in = type::thing('object', $key) AND out.name = $fname RETURN BEFORE",
+		// Check existence first
+		var countResponse = await ExecuteAsync(
+			"SELECT count() AS cnt FROM has_flags WHERE in = type::thing('object', $key) AND out.name = $fname GROUP ALL",
 			parameters, cancellationToken);
+		var countResults = countResponse.GetValue<List<CountRecord>>(0)!;
+		var existed = countResults.Count > 0 && countResults[0].cnt > 0;
 
-		var results = response.GetValue<List<CountRecord>>(0)!;
-		return results.Count > 0;
+		await ExecuteAsync(
+			"DELETE has_flags WHERE in = type::thing('object', $key) AND out.name = $fname",
+			parameters, cancellationToken);
+		return existed;
 	}
 
 	public async ValueTask<bool> UpdateObjectFlagAsync(string name, string[]? aliases, string symbol,
@@ -265,12 +270,17 @@ public partial class SurrealDatabase
 			["pname"] = power.Name
 		};
 
-		var response = await ExecuteAsync(
-			"DELETE has_powers WHERE in = type::thing('object', $key) AND out.name = $pname RETURN BEFORE",
+		// Check existence first
+		var countResponse = await ExecuteAsync(
+			"SELECT count() AS cnt FROM has_powers WHERE in = type::thing('object', $key) AND out.name = $pname GROUP ALL",
 			parameters, cancellationToken);
+		var countResults = countResponse.GetValue<List<CountRecord>>(0)!;
+		var existed = countResults.Count > 0 && countResults[0].cnt > 0;
 
-		var results = response.GetValue<List<CountRecord>>(0)!;
-		return results.Count > 0;
+		await ExecuteAsync(
+			"DELETE has_powers WHERE in = type::thing('object', $key) AND out.name = $pname",
+			parameters, cancellationToken);
+		return existed;
 	}
 
 	public async ValueTask<bool> UpdatePowerAsync(string name, string alias,

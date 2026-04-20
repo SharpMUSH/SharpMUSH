@@ -174,12 +174,15 @@ public partial class SurrealDatabase
 		var exitKey = ExtractKey(exit.Id!);
 		var parameters = new Dictionary<string, object?> { ["key"] = exitKey };
 
-		var response = await ExecuteAsync(
-			"DELETE has_home WHERE in = exit:$key RETURN BEFORE",
+		// Check if there's anything to delete first
+		var countResponse = await ExecuteAsync(
+			"SELECT count() AS cnt FROM has_home WHERE in = exit:$key GROUP ALL",
 			parameters, cancellationToken);
+		var countResults = countResponse.GetValue<List<CountRecord>>(0)!;
+		var existed = countResults.Count > 0 && countResults[0].cnt > 0;
 
-		var results = response.GetValue<List<ObjectRecord>>(0)!;
-		return results.Count > 0;
+		await ExecuteAsync("DELETE has_home WHERE in = exit:$key", parameters, cancellationToken);
+		return existed;
 	}
 
 	public async ValueTask<bool> LinkRoomAsync(SharpRoom room, AnyOptionalSharpContainer location, CancellationToken cancellationToken = default)
@@ -218,12 +221,15 @@ public partial class SurrealDatabase
 		var roomKey = ExtractKey(room.Id!);
 		var parameters = new Dictionary<string, object?> { ["key"] = roomKey };
 
-		var response = await ExecuteAsync(
-			"DELETE has_home WHERE in = room:$key RETURN BEFORE",
+		// Check if there's anything to delete first
+		var countResponse = await ExecuteAsync(
+			"SELECT count() AS cnt FROM has_home WHERE in = room:$key GROUP ALL",
 			parameters, cancellationToken);
+		var countResults = countResponse.GetValue<List<CountRecord>>(0)!;
+		var existed = countResults.Count > 0 && countResults[0].cnt > 0;
 
-		var results = response.GetValue<List<ObjectRecord>>(0)!;
-		return results.Count > 0;
+		await ExecuteAsync("DELETE has_home WHERE in = room:$key", parameters, cancellationToken);
+		return existed;
 	}
 
 	public async ValueTask SetLockAsync(SharpObject target, string lockName, SharpLockData lockData, CancellationToken cancellationToken = default)
