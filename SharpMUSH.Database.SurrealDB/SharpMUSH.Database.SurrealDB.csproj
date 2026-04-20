@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="SurrealDb.Embedded.InMemory" Version="0.9.0" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
   </ItemGroup>
 
   <ItemGroup>

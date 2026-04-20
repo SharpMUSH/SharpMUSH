@@ -38,7 +38,7 @@ public partial class SurrealDatabase
 			"SELECT data FROM object_data WHERE objectKey = $key AND dataType = $dataType",
 			parameters, cancellationToken);
 
-		var existingResults = existing.GetValue<List<JsonElement>>(0);
+		var existingResults = existing.GetValue<List<JsonElement>>(0)!;
 
 		string jsonData;
 		if (existingResults.Count > 0)
@@ -97,7 +97,7 @@ public partial class SurrealDatabase
 			"SELECT data FROM object_data WHERE objectKey = $key AND dataType = $dataType",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0);
+		var results = response.GetValue<List<JsonElement>>(0)!;
 		if (results.Count == 0) return default;
 
 		var jsonData = GetStringOrDefault(results[0], "data");
@@ -128,7 +128,7 @@ public partial class SurrealDatabase
 				"SELECT data FROM server_data WHERE dataType = $dataType",
 				parameters, cancellationToken);
 
-			var results = response.GetValue<List<JsonElement>>(0);
+			var results = response.GetValue<List<JsonElement>>(0)!;
 			if (results.Count == 0) return default;
 
 			var jsonData = GetStringOrDefault(results[0], "data");

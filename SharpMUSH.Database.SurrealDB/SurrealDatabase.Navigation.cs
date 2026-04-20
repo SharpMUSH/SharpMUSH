@@ -30,7 +30,7 @@ public partial class SurrealDatabase
 			"SELECT ->has_parent->object.* AS parent FROM type::thing('object', $key)",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) return new None();
 
 		var parentArray = records[0].GetProperty("parent");
@@ -56,7 +56,7 @@ public partial class SurrealDatabase
 				"SELECT ->has_parent->object.* AS parent FROM type::thing('object', $key)",
 				parameters, cancellationToken);
 
-			var records = response.GetValue<List<JsonElement>>(0);
+			var records = response.GetValue<List<JsonElement>>(0)!;
 			if (records.Count == 0) yield break;
 
 			var parentArray = records[0].GetProperty("parent");
@@ -89,7 +89,7 @@ public partial class SurrealDatabase
 				"SELECT ->has_parent->object.key AS parentKeys, ->has_zone->object.key AS zoneKeys FROM type::thing('object', $key)",
 				parameters, cancellationToken);
 
-			var records = response.GetValue<List<JsonElement>>(0);
+			var records = response.GetValue<List<JsonElement>>(0)!;
 			if (records.Count == 0) return false;
 
 			var record = records[0];
@@ -136,7 +136,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM object WHERE key IN (SELECT VALUE in.key FROM has_zone WHERE out = type::thing('object', $key))",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		foreach (var record in records)
 			yield return MapElementToSharpObject(record);
 	}
@@ -180,7 +180,7 @@ public partial class SurrealDatabase
 				"SELECT VALUE out.key FROM at_location WHERE in.key = $key",
 				parameters, ct);
 
-			var records = response.GetValue<List<JsonElement>>(0);
+			var records = response.GetValue<List<JsonElement>>(0)!;
 			if (records.Count == 0) break;
 
 			var destKey = records[0].GetInt32();
@@ -226,7 +226,7 @@ public partial class SurrealDatabase
 			"SELECT VALUE in.key FROM at_location WHERE out.key = $key",
 			parameters, ct);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		foreach (var record in records)
 		{
 			var contentKey = record.GetInt32();
@@ -269,13 +269,13 @@ public partial class SurrealDatabase
 			"SELECT VALUE in FROM at_location WHERE out.key = $key AND in.id LIKE 'exit:%'",
 			parameters, ct);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		foreach (var exitElement in records)
 		{
 			var key = GetIntOrDefault(exitElement, "key");
 			var objParams = new Dictionary<string, object?> { ["key"] = key };
 			var objResponse = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, ct);
-			var objResults = objResponse.GetValue<List<JsonElement>>(0);
+			var objResults = objResponse.GetValue<List<JsonElement>>(0)!;
 			if (objResults.Count > 0)
 			{
 				var sharpObj = MapElementToSharpObject(objResults[0]);

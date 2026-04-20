@@ -95,7 +95,7 @@ public partial class SurrealDatabase(
 		CancellationToken ct = default)
 	{
 		logger.LogDebug("Executing SurrealQL: {Query}", query);
-		var response = await db.RawQuery(query, ct);
+		var response = await db.RawQuery(query, null, ct);
 		if (response.HasErrors)
 		{
 			var errors = string.Join("; ", response.Errors.Select(e => e.ToString()));
@@ -126,7 +126,7 @@ public partial class SurrealDatabase(
 	{
 		var response = await ExecuteAsync(
 			"UPSERT counter:object_key SET value = (value ?? 0) + 1 RETURN AFTER", ct);
-		var result = response.GetValue<List<JsonElement>>(0);
+		var result = response.GetValue<List<JsonElement>>(0)!;
 		return result[0].GetProperty("value").GetInt32();
 	}
 
@@ -276,7 +276,7 @@ public partial class SurrealDatabase(
 			"SELECT * FROM player, room, thing, exit WHERE key = $key",
 			parameters, ct);
 
-		var typedRecords = typedResult.GetValue<List<JsonElement>>(0);
+		var typedRecords = typedResult.GetValue<List<JsonElement>>(0)!;
 		if (typedRecords.Count == 0) return new None();
 
 		var typedElement = typedRecords[0];
@@ -299,7 +299,7 @@ public partial class SurrealDatabase(
 			"SELECT * FROM object WHERE key = $key",
 			parameters, ct);
 
-		var objRecords = objResult.GetValue<List<JsonElement>>(0);
+		var objRecords = objResult.GetValue<List<JsonElement>>(0)!;
 		if (objRecords.Count == 0) return new None();
 
 		return await BuildTypedObjectFromObjectElement(objRecords[0], ct);
@@ -375,7 +375,7 @@ public partial class SurrealDatabase(
 			"SELECT ->at_location->object.* AS dest FROM type::thing('player', $key), type::thing('thing', $key), type::thing('exit', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0)
 			throw new InvalidOperationException($"No location found for {typedId}");
 
@@ -402,7 +402,7 @@ public partial class SurrealDatabase(
 			"SELECT ->has_home->object.* AS dest FROM type::thing('player', $key), type::thing('thing', $key), type::thing('exit', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0)
 			throw new InvalidOperationException($"No home found for {typedId}");
 
@@ -428,7 +428,7 @@ public partial class SurrealDatabase(
 			"SELECT ->has_home->object.* AS dest FROM type::thing('room', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) return new None();
 
 		var destArray = records[0].GetProperty("dest");
@@ -453,7 +453,7 @@ public partial class SurrealDatabase(
 			"SELECT ->has_owner->player.* AS owner FROM type::thing('object', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0)
 			throw new InvalidOperationException($"No owner found for {objectId}");
 
@@ -470,7 +470,7 @@ public partial class SurrealDatabase(
 			"SELECT * FROM object WHERE key = $key",
 			ownerObjParams, ct);
 
-		var ownerObjRecords = ownerObjResult.GetValue<List<JsonElement>>(0);
+		var ownerObjRecords = ownerObjResult.GetValue<List<JsonElement>>(0)!;
 		if (ownerObjRecords.Count == 0)
 			throw new InvalidOperationException($"No object record found for owner of {objectId}");
 
@@ -486,7 +486,7 @@ public partial class SurrealDatabase(
 			"SELECT ->has_parent->object.* AS parent FROM type::thing('object', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) return new None();
 
 		var parentArray = records[0].GetProperty("parent");
@@ -505,7 +505,7 @@ public partial class SurrealDatabase(
 			"SELECT ->has_zone->object.* AS zone FROM type::thing('object', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) return new None();
 
 		var zoneArray = records[0].GetProperty("zone");
@@ -524,7 +524,7 @@ public partial class SurrealDatabase(
 			"SELECT ->has_flags->object_flag.* AS flags FROM type::thing('object', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count > 0)
 		{
 			var flagsArray = records[0].GetProperty("flags");
@@ -559,7 +559,7 @@ public partial class SurrealDatabase(
 			"SELECT ->has_powers->power.* AS powers FROM type::thing('object', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count > 0)
 		{
 			var powersArray = records[0].GetProperty("powers");
@@ -642,7 +642,7 @@ public partial class SurrealDatabase(
 			"SELECT ->has_attribute_flag->attribute_flag.* AS flags FROM type::thing('attribute', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count > 0)
 		{
 			var flagsArray = records[0].GetProperty("flags");
@@ -664,7 +664,7 @@ public partial class SurrealDatabase(
 			"SELECT ->has_attribute_owner->player.* AS owner FROM type::thing('attribute', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) return null;
 
 		var ownerArray = records[0].GetProperty("owner");
@@ -676,7 +676,7 @@ public partial class SurrealDatabase(
 
 		var objParams = new Dictionary<string, object?> { ["key"] = pKey };
 		var objResult = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, ct);
-		var objRecords = objResult.GetValue<List<JsonElement>>(0);
+		var objRecords = objResult.GetValue<List<JsonElement>>(0)!;
 		if (objRecords.Count == 0) return null;
 
 		var sharpObj = MapElementToSharpObject(objRecords[0]);
@@ -691,7 +691,7 @@ public partial class SurrealDatabase(
 			"SELECT ->has_attribute_entry->attribute_entry.* AS entries FROM type::thing('attribute', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) return null;
 
 		var entriesArray = records[0].GetProperty("entries");
@@ -761,7 +761,7 @@ public partial class SurrealDatabase(
 				parameters, ct);
 		}
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) yield break;
 
 		var childrenArray = records[0].GetProperty("children");
@@ -793,7 +793,7 @@ public partial class SurrealDatabase(
 				parameters, ct);
 		}
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) yield break;
 
 		var childrenArray = records[0].GetProperty("children");
@@ -844,7 +844,7 @@ public partial class SurrealDatabase(
 			"SELECT * FROM object WHERE key IN (SELECT VALUE in.key FROM has_parent WHERE out = type::thing('object', $key))",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		foreach (var record in records)
 		{
 			yield return MapElementToSharpObject(record);

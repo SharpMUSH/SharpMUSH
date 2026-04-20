@@ -35,7 +35,7 @@ public partial class SurrealDatabase
 			"SELECT ->received_mail->mail.* AS mails FROM type::thing('player', $key)",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) yield break;
 
 		var mailsArray = records[0].GetProperty("mails");
@@ -57,7 +57,7 @@ public partial class SurrealDatabase
 			"SELECT ->received_mail->mail.* AS mails FROM type::thing('player', $key)",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) yield break;
 
 		var mailsArray = records[0].GetProperty("mails");
@@ -80,7 +80,7 @@ public partial class SurrealDatabase
 			"SELECT ->received_mail->mail.* AS mails FROM type::thing('player', $key)",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) return null;
 
 		var mailsArray = records[0].GetProperty("mails");
@@ -109,7 +109,7 @@ public partial class SurrealDatabase
 			"SELECT ->received_mail->mail.* AS mails FROM type::thing('player', $recipientKey)",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) yield break;
 
 		var mailsArray = records[0].GetProperty("mails");
@@ -124,7 +124,7 @@ public partial class SurrealDatabase
 				"SELECT ->mail_sender->object.key AS senderKeys FROM mail WHERE key = $mailKey",
 				senderParams, cancellationToken);
 
-			var senderRecords = senderResponse.GetValue<List<JsonElement>>(0);
+			var senderRecords = senderResponse.GetValue<List<JsonElement>>(0)!;
 			if (senderRecords.Count > 0)
 			{
 				var senderKeysArray = senderRecords[0].GetProperty("senderKeys");
@@ -152,7 +152,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM mail WHERE key IN (SELECT VALUE in.key FROM mail_sender WHERE out = type::thing('object', $key))",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0);
+		var results = response.GetValue<List<JsonElement>>(0)!;
 		foreach (var element in results)
 			yield return MapElementToMail(element);
 	}
@@ -176,7 +176,7 @@ public partial class SurrealDatabase
 			"SELECT ->received_mail->mail.folder AS folders FROM type::thing('player', $key)",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) return [];
 
 		var foldersArray = records[0].GetProperty("folders");
@@ -273,7 +273,7 @@ public partial class SurrealDatabase
 			"SELECT ->received_mail->mail.* AS mails FROM type::thing('player', $key)",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) return;
 
 		var mailsArray = records[0].GetProperty("mails");
@@ -308,7 +308,7 @@ public partial class SurrealDatabase
 	public async IAsyncEnumerable<SharpMail> GetAllSystemMailAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var response = await ExecuteAsync("SELECT * FROM mail", cancellationToken);
-		var results = response.GetValue<List<JsonElement>>(0);
+		var results = response.GetValue<List<JsonElement>>(0)!;
 		foreach (var element in results)
 			yield return MapElementToMail(element);
 	}
@@ -340,7 +340,7 @@ public partial class SurrealDatabase
 			"SELECT ->mail_sender->object.key AS senderKeys FROM mail WHERE key = $key",
 			parameters, ct);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) return new None();
 
 		var senderKeysArray = records[0].GetProperty("senderKeys");

@@ -25,7 +25,7 @@ public partial class SurrealDatabase
 	public async IAsyncEnumerable<SharpChannel> GetAllChannelsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var response = await ExecuteAsync("SELECT * FROM channel", cancellationToken);
-		var results = response.GetValue<List<JsonElement>>(0);
+		var results = response.GetValue<List<JsonElement>>(0)!;
 		foreach (var element in results)
 			yield return MapElementToChannel(element);
 	}
@@ -37,7 +37,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM channel WHERE name = $name",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0);
+		var results = response.GetValue<List<JsonElement>>(0)!;
 		return results.Count > 0 ? MapElementToChannel(results[0]) : null;
 	}
 
@@ -49,7 +49,7 @@ public partial class SurrealDatabase
 			"SELECT ->member_of_channel->channel.* AS channels FROM type::thing('object', $key)",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) yield break;
 
 		var channelsArray = records[0].GetProperty("channels");
@@ -254,7 +254,7 @@ public partial class SurrealDatabase
 			"SELECT ->owner_of_channel->object.key AS ownerKeys FROM channel WHERE name = $name",
 			parameters, ct);
 
-		var records = response.GetValue<List<JsonElement>>(0);
+		var records = response.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0)
 			throw new InvalidOperationException($"No owner found for channel '{channelName}'");
 
@@ -276,7 +276,7 @@ public partial class SurrealDatabase
 			parameters, ct);
 
 		// The second statement (index 1) contains the edge records
-		var records = response.GetValue<List<JsonElement>>(1);
+		var records = response.GetValue<List<JsonElement>>(1)!;
 		foreach (var record in records)
 		{
 			var memberKey = GetIntOrDefault(record, "memberKey");

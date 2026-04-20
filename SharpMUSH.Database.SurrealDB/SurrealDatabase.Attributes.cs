@@ -32,7 +32,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM player, room, thing, exit WHERE key = $key",
 			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
 
-		var typedRecords = typedResult.GetValue<List<JsonElement>>(0);
+		var typedRecords = typedResult.GetValue<List<JsonElement>>(0)!;
 		if (typedRecords.Count == 0) yield break;
 
 		// Walk the attribute tree step by step
@@ -59,7 +59,7 @@ public partial class SurrealDatabase
 					parameters, cancellationToken);
 			}
 
-			var records = stepResult.GetValue<List<JsonElement>>(0);
+			var records = stepResult.GetValue<List<JsonElement>>(0)!;
 			if (records.Count == 0) yield break;
 
 			var childrenArray = records[0].GetProperty("children");
@@ -99,7 +99,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM player, room, thing, exit WHERE key = $key",
 			parameters, cancellationToken);
 
-		var typedRecords = typedResult.GetValue<List<JsonElement>>(0);
+		var typedRecords = typedResult.GetValue<List<JsonElement>>(0)!;
 		if (typedRecords.Count == 0) yield break;
 
 		var typedId = GetTypedIdFromElement(typedRecords[0]);
@@ -123,7 +123,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM player, room, thing, exit WHERE key = $key",
 			parameters, cancellationToken);
 
-		var typedRecords = typedResult.GetValue<List<JsonElement>>(0);
+		var typedRecords = typedResult.GetValue<List<JsonElement>>(0)!;
 		if (typedRecords.Count == 0) yield break;
 
 		var typedId = GetTypedIdFromElement(typedRecords[0]);
@@ -148,7 +148,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM player, room, thing, exit WHERE key = $key",
 			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
 
-		var typedRecords = typedResult.GetValue<List<JsonElement>>(0);
+		var typedRecords = typedResult.GetValue<List<JsonElement>>(0)!;
 		if (typedRecords.Count == 0) yield break;
 
 		var attrs = new List<JsonElement>();
@@ -174,7 +174,7 @@ public partial class SurrealDatabase
 					parameters, cancellationToken);
 			}
 
-			var records = stepResult.GetValue<List<JsonElement>>(0);
+			var records = stepResult.GetValue<List<JsonElement>>(0)!;
 			if (records.Count == 0) yield break;
 
 			var childrenArray = records[0].GetProperty("children");
@@ -211,7 +211,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM player, room, thing, exit WHERE key = $key",
 			parameters, cancellationToken);
 
-		var typedRecords = typedResult.GetValue<List<JsonElement>>(0);
+		var typedRecords = typedResult.GetValue<List<JsonElement>>(0)!;
 		if (typedRecords.Count == 0) yield break;
 
 		var typedId = GetTypedIdFromElement(typedRecords[0]);
@@ -234,7 +234,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM player, room, thing, exit WHERE key = $key",
 			parameters, cancellationToken);
 
-		var typedRecords = typedResult.GetValue<List<JsonElement>>(0);
+		var typedRecords = typedResult.GetValue<List<JsonElement>>(0)!;
 		if (typedRecords.Count == 0) yield break;
 
 		var typedId = GetTypedIdFromElement(typedRecords[0]);
@@ -266,7 +266,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM player, room, thing, exit WHERE key = $key",
 			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
 
-		var typedRecords = typedResult.GetValue<List<JsonElement>>(0);
+		var typedRecords = typedResult.GetValue<List<JsonElement>>(0)!;
 		if (typedRecords.Count == 0) return false;
 
 		var typedElement = typedRecords[0];
@@ -427,14 +427,14 @@ public partial class SurrealDatabase
 			"SELECT * FROM attribute_flag WHERE string::uppercase(name) = string::uppercase($name)",
 			parameters, cancellationToken);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		return records.Count > 0 ? MapElementToAttributeFlag(records[0]) : null;
 	}
 
 	public async IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var result = await ExecuteAsync("SELECT * FROM attribute_flag", cancellationToken);
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		foreach (var record in records)
 			yield return MapElementToAttributeFlag(record);
 	}
@@ -454,7 +454,7 @@ public partial class SurrealDatabase
 			"SELECT ->has_attribute->attribute AS children FROM type::thing('attribute', $key)",
 			childParams, cancellationToken);
 
-		var records = childrenResult.GetValue<List<JsonElement>>(0);
+		var records = childrenResult.GetValue<List<JsonElement>>(0)!;
 		var hasChildren = false;
 		if (records.Count > 0)
 		{
@@ -519,7 +519,7 @@ public partial class SurrealDatabase
 			"SELECT ->has_attribute->attribute.key AS childKeys FROM type::thing('attribute', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		if (records.Count == 0) return;
 
 		var childKeysElement = records[0].GetProperty("childKeys");
@@ -551,7 +551,7 @@ public partial class SurrealDatabase
 	public async IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var result = await ExecuteAsync("SELECT * FROM attribute_entry", cancellationToken);
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		foreach (var record in records)
 			yield return MapElementToAttributeEntry(record);
 	}
@@ -563,7 +563,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM attribute_entry WHERE name = $name",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0);
+		var records = result.GetValue<List<JsonElement>>(0)!;
 		return records.Count > 0 ? MapElementToAttributeEntry(records[0]) : null;
 	}
 
@@ -646,7 +646,7 @@ public partial class SurrealDatabase
 				"SELECT ->has_zone->object.key AS zoneKeys FROM type::thing('object', $key)",
 				zoneParams, cancellationToken);
 
-			var zoneRecords = zoneResult.GetValue<List<JsonElement>>(0);
+			var zoneRecords = zoneResult.GetValue<List<JsonElement>>(0)!;
 			if (zoneRecords.Count == 0) continue;
 
 			var zoneKeysElement = zoneRecords[0].GetProperty("zoneKeys");
@@ -711,7 +711,7 @@ public partial class SurrealDatabase
 				"SELECT ->has_zone->object.key AS zoneKeys FROM type::thing('object', $key)",
 				zoneParams, cancellationToken);
 
-			var zoneRecords = zoneResult.GetValue<List<JsonElement>>(0);
+			var zoneRecords = zoneResult.GetValue<List<JsonElement>>(0)!;
 			if (zoneRecords.Count == 0) continue;
 
 			var zoneKeysElement = zoneRecords[0].GetProperty("zoneKeys");
@@ -774,7 +774,7 @@ public partial class SurrealDatabase
 				"SELECT ->has_parent->object.key AS parentKeys FROM type::thing('object', $key)",
 				parameters, ct);
 
-			var records = result.GetValue<List<JsonElement>>(0);
+			var records = result.GetValue<List<JsonElement>>(0)!;
 			if (records.Count == 0) break;
 
 			var parentKeysElement = records[0].GetProperty("parentKeys");
