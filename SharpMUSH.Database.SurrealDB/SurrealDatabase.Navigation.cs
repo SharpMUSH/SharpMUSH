@@ -246,20 +246,23 @@ public partial class SurrealDatabase
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = containerKey };
 		var response = await ExecuteAsync(
-			"SELECT VALUE in FROM at_location WHERE out.key = $key AND in.id LIKE 'exit:%'",
+			"SELECT VALUE in.key FROM at_location WHERE out.key = $key AND in.id LIKE 'exit:%'",
 			parameters, ct);
 
-		var records = response.GetValue<List<ExitRecord>>(0)!;
-		foreach (var exitRecord in records)
+		var exitKeys = response.GetValue<List<int>>(0)!;
+		foreach (var key in exitKeys)
 		{
-			var key = exitRecord.key;
-			var objParams = new Dictionary<string, object?> { ["key"] = key };
-			var objResponse = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, ct);
+			var exitParams = new Dictionary<string, object?> { ["key"] = key };
+			var exitResponse = await ExecuteAsync("SELECT * FROM exit WHERE key = $key", exitParams, ct);
+			var exitResults = exitResponse.GetValue<List<ExitRecord>>(0)!;
+			if (exitResults.Count == 0) continue;
+
+			var objResponse = await ExecuteAsync("SELECT * FROM object WHERE key = $key", exitParams, ct);
 			var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 			if (objResults.Count > 0)
 			{
 				var sharpObj = MapRecordToSharpObject(objResults[0]);
-				yield return BuildExit(ExitId(key), exitRecord, sharpObj);
+				yield return BuildExit(ExitId(key), exitResults[0], sharpObj);
 			}
 		}
 	}

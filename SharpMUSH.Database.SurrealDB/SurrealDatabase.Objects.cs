@@ -510,21 +510,24 @@ public partial class SurrealDatabase
 
 		// Find exits that have an at_location edge pointing to the destination
 		var response = await ExecuteAsync(
-			"SELECT VALUE in FROM at_location WHERE out.key = $destKey AND in.id LIKE 'exit:%'",
+			"SELECT VALUE in.key FROM at_location WHERE out.key = $destKey AND in.id LIKE 'exit:%'",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<ExitRecord>>(0)!;
+		var exitKeys = response.GetValue<List<int>>(0)!;
 
-		foreach (var exitRecord in results)
+		foreach (var key in exitKeys)
 		{
-			var key = exitRecord.key;
-			var objParams = new Dictionary<string, object?> { ["key"] = key };
-			var objResponse = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, cancellationToken);
+			var exitParams = new Dictionary<string, object?> { ["key"] = key };
+			var exitResponse = await ExecuteAsync("SELECT * FROM exit WHERE key = $key", exitParams, cancellationToken);
+			var exitResults = exitResponse.GetValue<List<ExitRecord>>(0)!;
+			if (exitResults.Count == 0) continue;
+
+			var objResponse = await ExecuteAsync("SELECT * FROM object WHERE key = $key", exitParams, cancellationToken);
 			var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 			if (objResults.Count > 0)
 			{
 				var sharpObj = MapRecordToSharpObject(objResults[0]);
-				yield return BuildExit(ExitId(key), exitRecord, sharpObj);
+				yield return BuildExit(ExitId(key), exitResults[0], sharpObj);
 			}
 		}
 	}

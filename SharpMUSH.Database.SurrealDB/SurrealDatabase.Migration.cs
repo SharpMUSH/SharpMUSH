@@ -132,7 +132,7 @@ public partial class SurrealDatabase
 
 			// Give Player One the WIZARD flag
 			await ExecuteAsync(
-				"RELATE object:1->has_flag->object_flag:WIZARD",
+				"RELATE object:1->has_flags->object_flag:WIZARD",
 				cancellationToken);
 
 			logger.LogInformation("SurrealDB Migration Completed");

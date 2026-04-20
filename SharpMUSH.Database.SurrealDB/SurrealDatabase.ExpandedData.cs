@@ -115,7 +115,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"UPSERT server_data SET data = $data WHERE dataType = $dataType",
+			"UPSERT server_data SET dataType = $dataType, data = $data WHERE dataType = $dataType",
 			parameters, cancellationToken);
 	}
 

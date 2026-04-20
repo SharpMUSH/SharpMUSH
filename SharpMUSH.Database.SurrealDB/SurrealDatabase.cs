@@ -108,7 +108,7 @@ public partial class SurrealDatabase(
 	/// Executes a SurrealQL query with parameters and returns the response.
 	/// Since the SurrealDB embedded CBOR serializer cannot handle Dictionary&lt;string, object?&gt;
 	/// with mixed value types, we inline parameter values directly into the query string.
-	/// This is safe because this is an embedded in-memory database with no injection risk.
+	/// All string values are escaped via <see cref="EscapeString"/> to prevent SurrealQL injection.
 	/// </summary>
 	private async ValueTask<SurrealDbResponse> ExecuteAsync(
 		string query,
@@ -128,7 +128,7 @@ public partial class SurrealDatabase(
 			// Replace occurrences inside ⟨...⟩ with raw value (no quotes for strings)
 			expandedQuery = System.Text.RegularExpressions.Regex.Replace(
 				expandedQuery,
-				$@"⟨([^⟩]*?)\{Regex.Escape(paramToken)}([^⟩]*?)⟩",
+				$@"⟨([^⟩]*?){Regex.Escape(paramToken)}([^⟩]*?)⟩",
 				m => $"⟨{m.Groups[1].Value}{rawValue}{m.Groups[2].Value}⟩");
 
 			// Replace remaining occurrences with quoted value

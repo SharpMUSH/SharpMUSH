@@ -27,13 +27,13 @@ public partial class SurrealDatabase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var objKey = dbref.Number;
 
-		// Find the typed node for this object
-		var typedResult = await ExecuteAsync(
-			"SELECT * FROM player, room, thing, exit WHERE key = $key",
+		// Verify the object exists using the object table
+		var existResult = await ExecuteAsync(
+			"SELECT key FROM object WHERE key = $key",
 			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
 
-		var typedRecords = typedResult.GetValue<List<PlayerRecord>>(0)!;
-		if (typedRecords.Count == 0) yield break;
+		var existRecords = existResult.GetValue<List<ObjectRecord>>(0)!;
+		if (existRecords.Count == 0) yield break;
 
 		// Walk the attribute tree step by step
 		var attrs = new List<AttributeRecord>();
@@ -134,12 +134,13 @@ public partial class SurrealDatabase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var objKey = dbref.Number;
 
-		var typedResult = await ExecuteAsync(
-			"SELECT * FROM player, room, thing, exit WHERE key = $key",
+		// Verify the object exists using the object table
+		var existResult = await ExecuteAsync(
+			"SELECT key FROM object WHERE key = $key",
 			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
 
-		var typedRecords = typedResult.GetValue<List<PlayerRecord>>(0)!;
-		if (typedRecords.Count == 0) yield break;
+		var existRecords = existResult.GetValue<List<ObjectRecord>>(0)!;
+		if (existRecords.Count == 0) yield break;
 
 		var attrs = new List<AttributeRecord>();
 		string? currentParentKey = null;
@@ -241,22 +242,13 @@ public partial class SurrealDatabase
 		var ownerKey = ExtractKey(owner.Id!);
 		var serializedValue = MModule.serialize(value);
 
-		// Verify the object exists
-		var typedResult = await ExecuteAsync(
-			"SELECT * FROM player, room, thing, exit WHERE key = $key",
-			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
+		// Verify the object exists and determine its type via the object table
+		var objParams = new Dictionary<string, object?> { ["key"] = objKey };
+		var objResult = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, cancellationToken);
+		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
+		if (objRecords.Count == 0) return false;
 
-		var typedRecords = typedResult.GetValue<List<PlayerRecord>>(0)!;
-		if (typedRecords.Count == 0) return false;
-
-		var typedRecordKey = typedRecords[0].key;
-		// Determine the SurrealDB record ID for this typed node
-		var objParams2 = new Dictionary<string, object?> { ["key"] = objKey };
-		var objResult2 = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams2, cancellationToken);
-		var objRecords2 = objResult2.GetValue<List<ObjectRecord>>(0)!;
-		var typedRecordId = objRecords2.Count > 0
-			? GetSurrealRecordId(objRecords2[0].type.ToLower(), objKey)
-			: $"player:{objKey}";
+		var typedRecordId = GetSurrealRecordId(objRecords[0].type.ToLower(), objKey);
 
 		// Walk or create the attribute path
 		string currentParentRecordId = typedRecordId;
