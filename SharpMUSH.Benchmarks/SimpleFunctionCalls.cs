@@ -23,10 +23,10 @@ public class SimpleFunctionCalls : BaseBenchmark
 	{
 		var sb = new StringBuilder();
 		foreach (var _ in Enumerable.Range(0, depth))
-			sb.Append("[add(1,");
+			sb.Append("add(1,");
 		sb.Append('1');
 		foreach (var _ in Enumerable.Range(0, depth))
-			sb.Append(")]");
+			sb.Append(')');
 
 		await _parser!.FunctionParse(MModule.single(sb.ToString()));
 	}
