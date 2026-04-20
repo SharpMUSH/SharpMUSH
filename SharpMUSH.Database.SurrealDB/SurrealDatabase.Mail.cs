@@ -161,8 +161,8 @@ public partial class SurrealDatabase
 			parameters, cancellationToken);
 
 		await ExecuteAsync(
-			"RELATE type::thing('player', $toKey)->received_mail->(SELECT VALUE id FROM mail WHERE key = $mailKey LIMIT 1);" +
-			"RELATE (SELECT VALUE id FROM mail WHERE key = $mailKey LIMIT 1)->mail_sender->type::thing('object', $fromKey)",
+			"RELATE player:$toKey->received_mail->(SELECT VALUE id FROM mail WHERE key = $mailKey LIMIT 1);" +
+			"RELATE (SELECT VALUE id FROM mail WHERE key = $mailKey LIMIT 1)->mail_sender->object:$fromKey",
 			parameters, cancellationToken);
 	}
 

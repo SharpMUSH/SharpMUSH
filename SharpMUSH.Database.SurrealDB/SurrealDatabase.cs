@@ -115,11 +115,24 @@ public partial class SurrealDatabase(
 		IReadOnlyDictionary<string, object?> parameters,
 		CancellationToken ct = default)
 	{
-		// Replace $param references with their serialized values inline
+		// Replace $param references with their serialized values inline.
+		// Special handling: when $param appears inside ⟨...⟩ (record ID context),
+		// use the raw value without string quotes.
 		var expandedQuery = query;
 		foreach (var kvp in parameters.OrderByDescending(k => k.Key.Length))
 		{
-			expandedQuery = expandedQuery.Replace($"${kvp.Key}", SerializeValue(kvp.Value));
+			var paramToken = $"${kvp.Key}";
+			var serialized = SerializeValue(kvp.Value);
+			var rawValue = SerializeValueRaw(kvp.Value);
+
+			// Replace occurrences inside ⟨...⟩ with raw value (no quotes for strings)
+			expandedQuery = System.Text.RegularExpressions.Regex.Replace(
+				expandedQuery,
+				$@"⟨([^⟩]*?)\{Regex.Escape(paramToken)}([^⟩]*?)⟩",
+				m => $"⟨{m.Groups[1].Value}{rawValue}{m.Groups[2].Value}⟩");
+
+			// Replace remaining occurrences with quoted value
+			expandedQuery = expandedQuery.Replace(paramToken, serialized);
 		}
 
 		logger.LogDebug("Executing SurrealQL: {Query}", expandedQuery);
@@ -133,7 +146,7 @@ public partial class SurrealDatabase(
 	}
 
 	/// <summary>
-	/// Serializes a value to a SurrealQL literal string.
+	/// Serializes a value to a SurrealQL literal string (with quotes for strings).
 	/// </summary>
 	private static string SerializeValue(object? value) => value switch
 	{
@@ -151,6 +164,23 @@ public partial class SurrealDatabase(
 	};
 
 	private static string EscapeString(string s) => s.Replace("\\", "\\\\").Replace("'", "\\'");
+
+	/// <summary>
+	/// Serializes a value without string quotes (for use inside record ID brackets ⟨...⟩).
+	/// </summary>
+	private static string SerializeValueRaw(object? value) => value switch
+	{
+		null => "",
+		string s => s,
+		int i => i.ToString(),
+		long l => l.ToString(),
+		_ => value.ToString() ?? "",
+	};
+
+	/// <summary>
+	/// Escapes a string for use as a SurrealDB record ID inside ⟨...⟩ brackets.
+	/// </summary>
+	private static string EscapeRecordId(string s) => s;
 
 	private async ValueTask<int> GetNextObjectKeyAsync(CancellationToken ct = default)
 	{

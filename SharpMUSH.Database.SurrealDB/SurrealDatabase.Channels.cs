@@ -74,8 +74,8 @@ public partial class SurrealDatabase
 			parameters, cancellationToken);
 
 		await ExecuteAsync(
-			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->type::thing('object', $ownerKey);" +
-			"RELATE type::thing('object', $ownerKey)->member_of_channel SET combine = false, gagged = false, hide = false, mute = false, title = '' CONTENT { out: (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)[0] }",
+			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->object:$ownerKey;" +
+			"RELATE object:$ownerKey->member_of_channel->(SELECT VALUE id FROM channel WHERE name = $name LIMIT 1) SET combine = false, gagged = false, hide = false, mute = false, title = ''",
 			parameters, cancellationToken);
 	}
 
@@ -122,7 +122,7 @@ public partial class SurrealDatabase
 
 		await ExecuteAsync(
 			"DELETE owner_of_channel WHERE in IN (SELECT VALUE id FROM channel WHERE name = $name);" +
-			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->type::thing('object', $ownerKey)",
+			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->object:$ownerKey",
 			parameters, cancellationToken);
 	}
 
@@ -150,7 +150,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"RELATE type::thing('object', $key)->member_of_channel SET combine = false, gagged = false, hide = false, mute = false, title = '' CONTENT { out: (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)[0] }",
+			"RELATE object:$key->member_of_channel->(SELECT VALUE id FROM channel WHERE name = $name LIMIT 1) SET combine = false, gagged = false, hide = false, mute = false, title = ''",
 			parameters, cancellationToken);
 	}
 

@@ -107,7 +107,7 @@ public partial class SurrealDatabase
 
 		// Find the flag record and relate
 		await ExecuteAsync(
-			"RELATE type::thing('object', $key)->has_flags->(SELECT VALUE id FROM object_flag WHERE name = $fname LIMIT 1)",
+			"RELATE object:$key->has_flags->(SELECT VALUE id FROM object_flag WHERE name = $fname LIMIT 1)",
 			parameters, cancellationToken);
 		return true;
 	}
@@ -254,7 +254,7 @@ public partial class SurrealDatabase
 			return false;
 
 		await ExecuteAsync(
-			"RELATE type::thing('object', $key)->has_powers->(SELECT VALUE id FROM power WHERE name = $pname LIMIT 1)",
+			"RELATE object:$key->has_powers->(SELECT VALUE id FROM power WHERE name = $pname LIMIT 1)",
 			parameters, cancellationToken);
 		return true;
 	}

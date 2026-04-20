@@ -340,16 +340,16 @@ public partial class SurrealDatabase
 			var flagNames = attrEntry?.DefaultFlags ?? [];
 
 			var attrKey = $"{objKey}_{longName}";
+			var escapedAttrKey = EscapeRecordId(attrKey);
 			foreach (var flagName in flagNames)
 			{
 				var flagParams = new Dictionary<string, object?>
 				{
-					["attrKey"] = attrKey,
 					["flagName"] = flagName
 				};
 
 				await ExecuteAsync(
-					"RELATE attribute:⟨$attrKey⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = string::uppercase($flagName) AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨$attrKey⟩) LIMIT 1)",
+					$"RELATE attribute:⟨{escapedAttrKey}⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = string::uppercase($flagName) AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨{escapedAttrKey}⟩) LIMIT 1)",
 					flagParams, cancellationToken);
 			}
 		}
