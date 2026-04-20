@@ -245,11 +245,12 @@ public partial class SurrealDatabase
 	private async IAsyncEnumerable<SharpExit> GetExitsForKeyAsync(int containerKey, [EnumeratorCancellation] CancellationToken ct = default)
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = containerKey };
+		// Get exit keys by querying the exit table for items at this location
 		var response = await ExecuteAsync(
-			"SELECT VALUE in.key FROM at_location WHERE out.key = $key AND in.id LIKE 'exit:%'",
+			"SELECT VALUE key FROM exit WHERE key IN (SELECT VALUE in.key FROM at_location WHERE out.key = $key)",
 			parameters, ct);
 
-		var exitKeys = response.GetValue<List<int>>(0)!;
+		var exitKeys = response.GetValue<List<int>>(0) ?? [];
 		foreach (var key in exitKeys)
 		{
 			var exitParams = new Dictionary<string, object?> { ["key"] = key };
