@@ -68,10 +68,14 @@ public partial class SurrealDatabase
 			["ownerKey"] = ownerObjKey
 		};
 
+		// Create channel then use its ID via subqueries
 		await ExecuteAsync(
-			"LET $ch = (CREATE channel SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = '');" +
-			"RELATE $ch[0].id->owner_of_channel->type::thing('object', $ownerKey);" +
-			"RELATE type::thing('object', $ownerKey)->member_of_channel SET combine = false, gagged = false, hide = false, mute = false, title = '' CONTENT { out: $ch[0].id }",
+			"CREATE channel SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = ''",
+			parameters, cancellationToken);
+
+		await ExecuteAsync(
+			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->type::thing('object', $ownerKey);" +
+			"RELATE type::thing('object', $ownerKey)->member_of_channel SET combine = false, gagged = false, hide = false, mute = false, title = '' CONTENT { out: (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)[0] }",
 			parameters, cancellationToken);
 	}
 
@@ -117,9 +121,8 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"LET $ch = (SELECT id FROM channel WHERE name = $name);" +
-			"DELETE owner_of_channel WHERE in = $ch[0].id;" +
-			"RELATE $ch[0].id->owner_of_channel->type::thing('object', $ownerKey)",
+			"DELETE owner_of_channel WHERE in IN (SELECT VALUE id FROM channel WHERE name = $name);" +
+			"RELATE (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)->owner_of_channel->type::thing('object', $ownerKey)",
 			parameters, cancellationToken);
 	}
 
@@ -129,9 +132,8 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["name"] = channelName };
 
 		await ExecuteAsync(
-			"LET $ch = (SELECT id FROM channel WHERE name = $name);" +
-			"DELETE member_of_channel WHERE out = $ch[0].id;" +
-			"DELETE owner_of_channel WHERE in = $ch[0].id;" +
+			"DELETE member_of_channel WHERE out IN (SELECT VALUE id FROM channel WHERE name = $name);" +
+			"DELETE owner_of_channel WHERE in IN (SELECT VALUE id FROM channel WHERE name = $name);" +
 			"DELETE channel WHERE name = $name",
 			parameters, cancellationToken);
 	}
@@ -148,8 +150,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"LET $ch = (SELECT id FROM channel WHERE name = $name);" +
-			"RELATE type::thing('object', $key)->member_of_channel SET combine = false, gagged = false, hide = false, mute = false, title = '' CONTENT { out: $ch[0].id }",
+			"RELATE type::thing('object', $key)->member_of_channel SET combine = false, gagged = false, hide = false, mute = false, title = '' CONTENT { out: (SELECT VALUE id FROM channel WHERE name = $name LIMIT 1)[0] }",
 			parameters, cancellationToken);
 	}
 
@@ -165,8 +166,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"LET $ch = (SELECT id FROM channel WHERE name = $name);" +
-			"DELETE member_of_channel WHERE in = type::thing('object', $key) AND out = $ch[0].id",
+			"DELETE member_of_channel WHERE in = type::thing('object', $key) AND out IN (SELECT VALUE id FROM channel WHERE name = $name)",
 			parameters, cancellationToken);
 	}
 
@@ -211,8 +211,7 @@ public partial class SurrealDatabase
 		if (setClauses.Count == 0) return;
 
 		var query =
-			"LET $ch = (SELECT id FROM channel WHERE name = $name);" +
-			$"UPDATE member_of_channel SET {string.Join(", ", setClauses)} WHERE in = type::thing('object', $key) AND out = $ch[0].id";
+			$"UPDATE member_of_channel SET {string.Join(", ", setClauses)} WHERE in = type::thing('object', $key) AND out IN (SELECT VALUE id FROM channel WHERE name = $name)";
 
 		await ExecuteAsync(query, parameters, cancellationToken);
 	}
@@ -262,12 +261,10 @@ public partial class SurrealDatabase
 	{
 		var parameters = new Dictionary<string, object?> { ["name"] = channelName };
 		var response = await ExecuteAsync(
-			"LET $ch = (SELECT id FROM channel WHERE name = $name);" +
-			"SELECT *, in.key AS memberKey FROM member_of_channel WHERE out = $ch[0].id",
+			"SELECT *, in.key AS memberKey FROM member_of_channel WHERE out IN (SELECT VALUE id FROM channel WHERE name = $name)",
 			parameters, ct);
 
-		// The second statement (index 1) contains the edge records
-		var records = response.GetValue<List<ChannelMemberEdgeRecord>>(1)!;
+		var records = response.GetValue<List<ChannelMemberEdgeRecord>>(0)!;
 		foreach (var record in records)
 		{
 			var memberKey = record.memberKey;

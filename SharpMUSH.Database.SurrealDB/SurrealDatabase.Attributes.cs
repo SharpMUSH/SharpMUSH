@@ -349,9 +349,7 @@ public partial class SurrealDatabase
 				};
 
 				await ExecuteAsync(
-					"LET $flag = (SELECT * FROM attribute_flag WHERE string::uppercase(name) = string::uppercase($flagName)); " +
-					"IF $flag.len() > 0 AND (SELECT * FROM has_attribute_flag WHERE in = attribute:⟨$attrKey⟩ AND out = $flag[0].id).len() == 0 " +
-					"{ RELATE attribute:⟨$attrKey⟩->has_attribute_flag->$flag[0].id }",
+					"RELATE attribute:⟨$attrKey⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = string::uppercase($flagName) AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨$attrKey⟩) LIMIT 1)",
 					flagParams, cancellationToken);
 			}
 		}
@@ -378,8 +376,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"LET $flag = (SELECT * FROM attribute_flag WHERE name = $flagName); " +
-			"IF $flag.len() > 0 { RELATE attribute:⟨$attrKey⟩->has_attribute_flag->$flag[0].id }",
+			"RELATE attribute:⟨$attrKey⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE name = $flagName LIMIT 1)",
 			parameters, cancellationToken);
 	}
 

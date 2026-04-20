@@ -155,10 +155,14 @@ public partial class SurrealDatabase
 			["toKey"] = toKey
 		};
 
+		// Create mail then use its key to reference it in subsequent queries
 		await ExecuteAsync(
-			"LET $m = (CREATE mail SET key = $mailKey, dateSent = $dateSent, fresh = $fresh, read = $read, tagged = $tagged, urgent = $urgent, forwarded = $forwarded, cleared = $cleared, folder = $folder, content = $content, subject = $subject);" +
-			"RELATE type::thing('player', $toKey)->received_mail->$m[0].id;" +
-			"RELATE $m[0].id->mail_sender->type::thing('object', $fromKey)",
+			"CREATE mail SET key = $mailKey, dateSent = $dateSent, fresh = $fresh, read = $read, tagged = $tagged, urgent = $urgent, forwarded = $forwarded, cleared = $cleared, folder = $folder, content = $content, subject = $subject",
+			parameters, cancellationToken);
+
+		await ExecuteAsync(
+			"RELATE type::thing('player', $toKey)->received_mail->(SELECT VALUE id FROM mail WHERE key = $mailKey LIMIT 1);" +
+			"RELATE (SELECT VALUE id FROM mail WHERE key = $mailKey LIMIT 1)->mail_sender->type::thing('object', $fromKey)",
 			parameters, cancellationToken);
 	}
 
@@ -194,9 +198,8 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["key"] = mailKey };
 
 		await ExecuteAsync(
-			"LET $m = (SELECT id FROM mail WHERE key = $key);" +
-			"DELETE received_mail WHERE out = $m[0].id;" +
-			"DELETE mail_sender WHERE in = $m[0].id;" +
+			"DELETE received_mail WHERE out IN (SELECT VALUE id FROM mail WHERE key = $key);" +
+			"DELETE mail_sender WHERE in IN (SELECT VALUE id FROM mail WHERE key = $key);" +
 			"DELETE mail WHERE key = $key",
 			parameters, cancellationToken);
 	}
