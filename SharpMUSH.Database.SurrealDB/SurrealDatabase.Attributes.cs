@@ -260,20 +260,36 @@ public partial class SurrealDatabase
 			var longName = string.Join('`', attribute.Take(i + 1));
 			var attrKey = $"{objKey}_{longName}";
 			var isLast = i == attribute.Length - 1;
-			var attrValue = isLast ? serializedValue : "";
 
-			// Upsert the attribute
-			var upsertParams = new Dictionary<string, object?>
+			if (isLast)
 			{
-				["key"] = attrKey,
-				["name"] = attrName,
-				["longName"] = longName,
-				["value"] = attrValue
-			};
+				// For the target attribute, always set the value
+				var upsertParams = new Dictionary<string, object?>
+				{
+					["key"] = attrKey,
+					["name"] = attrName,
+					["longName"] = longName,
+					["value"] = serializedValue
+				};
 
-			await ExecuteAsync(
-				"UPSERT attribute:⟨$key⟩ SET key = $key, name = $name, longName = $longName, value = $value",
-				upsertParams, cancellationToken);
+				await ExecuteAsync(
+					"UPSERT attribute:⟨$key⟩ SET key = $key, name = $name, longName = $longName, value = $value",
+					upsertParams, cancellationToken);
+			}
+			else
+			{
+				// For intermediate nodes, only create if not existing (preserve existing values)
+				var upsertParams = new Dictionary<string, object?>
+				{
+					["key"] = attrKey,
+					["name"] = attrName,
+					["longName"] = longName
+				};
+
+				await ExecuteAsync(
+					"IF (SELECT * FROM attribute WHERE id = attribute:⟨$key⟩).len() == 0 { CREATE attribute:⟨$key⟩ SET key = $key, name = $name, longName = $longName, value = '' }",
+					upsertParams, cancellationToken);
+			}
 
 			// Ensure the has_attribute edge exists from parent to this attribute
 			var edgeParams = new Dictionary<string, object?>
@@ -699,14 +715,31 @@ public partial class SurrealDatabase
 			["newKey"] = newKey
 		};
 
-		// Find all attributes owned by old owner, reassign to new owner
-		await ExecuteAsync("""
-			LET $edges = (SELECT * FROM has_attribute_owner WHERE out = player:$oldKey);
-			FOR $edge IN $edges {
-				RELATE $edge.in->has_attribute_owner->player:$newKey;
-			};
-			DELETE has_attribute_owner WHERE out = player:$oldKey
-			""", parameters, cancellationToken);
+		// Find all attribute keys owned by old owner
+		var response = await ExecuteAsync(
+			"SELECT VALUE in.key FROM has_attribute_owner WHERE out = player:$oldKey",
+			parameters, cancellationToken);
+		var attrKeys = response.GetValue<List<string>>(0);
+
+		if (attrKeys != null)
+		{
+			foreach (var attrKey in attrKeys)
+			{
+				if (string.IsNullOrEmpty(attrKey)) continue;
+				var attrParams = new Dictionary<string, object?>
+				{
+					["attrKey"] = attrKey,
+					["newKey"] = newKey
+				};
+				await ExecuteAsync(
+					"DELETE has_attribute_owner WHERE in = attribute:⟨$attrKey⟩;" +
+					"RELATE attribute:⟨$attrKey⟩->has_attribute_owner->player:$newKey",
+					attrParams, cancellationToken);
+			}
+		}
+
+		// Clean up any remaining edges
+		await ExecuteAsync("DELETE has_attribute_owner WHERE out = player:$oldKey", parameters, cancellationToken);
 	}
 
 	#endregion

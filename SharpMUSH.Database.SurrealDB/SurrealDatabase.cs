@@ -26,6 +26,7 @@ public partial class SurrealDatabase(
 {
 	private readonly IPasswordService _passwordService = passwordService;
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
+	private static readonly SemaphoreSlim WriteLock = new(1, 1);
 	private static volatile bool _migrated;
 
 	private static readonly JsonSerializerOptions JsonOptions = new()
@@ -87,21 +88,45 @@ public partial class SurrealDatabase(
 		return pattern;
 	}
 
+	private static string FormatError(ISurrealDbErrorResult error) =>
+		error is SurrealDbErrorResult concrete ? (concrete.Details ?? concrete.Status) : error.GetType().Name;
+
+	private static bool IsWriteQuery(string query)
+	{
+		var trimmed = query.TrimStart();
+		return trimmed.StartsWith("CREATE", StringComparison.OrdinalIgnoreCase)
+			|| trimmed.StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase)
+			|| trimmed.StartsWith("UPSERT", StringComparison.OrdinalIgnoreCase)
+			|| trimmed.StartsWith("DELETE", StringComparison.OrdinalIgnoreCase)
+			|| trimmed.StartsWith("RELATE", StringComparison.OrdinalIgnoreCase)
+			|| trimmed.StartsWith("IF ", StringComparison.OrdinalIgnoreCase);
+	}
+
 	/// <summary>
 	/// Executes a SurrealQL query and returns the response.
+	/// Write operations are serialized to avoid concurrency issues in the embedded engine.
 	/// </summary>
 	private async ValueTask<SurrealDbResponse> ExecuteAsync(
 		string query,
 		CancellationToken ct = default)
 	{
 		logger.LogDebug("Executing SurrealQL: {Query}", query);
-		var response = await db.RawQuery(query, null, ct);
-		if (response.HasErrors)
+		var isWrite = IsWriteQuery(query);
+		if (isWrite) await WriteLock.WaitAsync(ct);
+		try
 		{
-			var errors = string.Join("; ", response.Errors.Select(e => e.ToString()));
-			logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
+			var response = await db.RawQuery(query, null, ct);
+			if (response.HasErrors)
+			{
+				var errors = string.Join("; ", response.Errors.Select(FormatError));
+				logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
+			}
+			return response;
 		}
-		return response;
+		finally
+		{
+			if (isWrite) WriteLock.Release();
+		}
 	}
 
 	/// <summary>
@@ -137,13 +162,22 @@ public partial class SurrealDatabase(
 
 		// Log the query template (not the expanded query) to avoid leaking sensitive parameter values
 		logger.LogDebug("Executing SurrealQL: {Query}", query);
-		var response = await db.RawQuery(expandedQuery, null, ct);
-		if (response.HasErrors)
+		var isWrite = IsWriteQuery(expandedQuery);
+		if (isWrite) await WriteLock.WaitAsync(ct);
+		try
 		{
-			var errors = string.Join("; ", response.Errors.Select(e => e.ToString()));
-			logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
+			var response = await db.RawQuery(expandedQuery, null, ct);
+			if (response.HasErrors)
+			{
+				var errors = string.Join("; ", response.Errors.Select(FormatError));
+				logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
+			}
+			return response;
 		}
-		return response;
+		finally
+		{
+			if (isWrite) WriteLock.Release();
+		}
 	}
 
 	/// <summary>
