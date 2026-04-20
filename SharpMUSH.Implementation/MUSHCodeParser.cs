@@ -184,11 +184,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 	public ValueTask<CallState?> FunctionParse(MString text)
 	{
-		// Ensure we have invocation tracking for standalone function parsing
-		// Check if tracking is already initialized - if not, create a new parser with tracking
-		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
-
-		var parser = needsTracking
+		// Ensure invocation tracking exists, while preserving any caller/executor identity
+		// already present in the parser state (important for permission-sensitive functions).
+		var parser = State.IsEmpty
 			? Push(new ParserState(
 				Registers: new([[]]),
 				IterationRegisters: [],
@@ -213,7 +211,16 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations: new InvocationCounter(),
 				LimitExceeded: new LimitExceededFlag()))
-			: this;
+			: CurrentState.TotalInvocations == null
+				? Push(CurrentState with
+				{
+					CallDepth = CurrentState.CallDepth ?? new InvocationCounter(),
+					FunctionRecursionDepths = CurrentState.FunctionRecursionDepths ??
+						new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+					TotalInvocations = new InvocationCounter(),
+					LimitExceeded = CurrentState.LimitExceeded ?? new LimitExceededFlag()
+				})
+				: this;
 
 		return ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 	}
