@@ -20,6 +20,10 @@ public class ArangoDbTestServer : IAsyncInitializer, IAsyncDisposable
 		!string.Equals(
 			Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"),
 			"memgraph",
+			StringComparison.OrdinalIgnoreCase)
+		&& !string.Equals(
+			Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"),
+			"surrealdb",
 			StringComparison.OrdinalIgnoreCase);
 
 	public async Task InitializeAsync()

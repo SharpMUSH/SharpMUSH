@@ -204,11 +204,17 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		// Determine database provider from environment variable
 		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
 		var useMemgraph = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase);
+		var useSurrealDb = string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase);
 
 		if (useMemgraph)
 		{
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "memgraph");
 			Environment.SetEnvironmentVariable("MEMGRAPH_URI", MemgraphTestServer.BoltUri);
+		}
+		else if (useSurrealDb)
+		{
+			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "surrealdb");
+			// SurrealDB uses embedded in-memory mode, no external URI needed
 		}
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
