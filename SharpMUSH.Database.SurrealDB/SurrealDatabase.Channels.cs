@@ -25,7 +25,7 @@ public partial class SurrealDatabase
 	public async IAsyncEnumerable<SharpChannel> GetAllChannelsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var response = await ExecuteAsync("SELECT * FROM channel", cancellationToken);
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<ChannelDbRecord>>(0)!;
 		foreach (var element in results)
 			yield return MapElementToChannel(element);
 	}
@@ -37,7 +37,7 @@ public partial class SurrealDatabase
 			"SELECT * FROM channel WHERE name = $name",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<ChannelDbRecord>>(0)!;
 		return results.Count > 0 ? MapElementToChannel(results[0]) : null;
 	}
 
@@ -46,17 +46,12 @@ public partial class SurrealDatabase
 		var objKey = obj.Object().Key;
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 		var response = await ExecuteAsync(
-			"SELECT ->member_of_channel->channel.* AS channels FROM type::thing('object', $key)",
+			"SELECT * FROM channel WHERE id IN (SELECT VALUE out FROM member_of_channel WHERE in = type::thing('object', $key))",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0) yield break;
-
-		var channelsArray = records[0].GetProperty("channels");
-		if (channelsArray.ValueKind != JsonValueKind.Array) yield break;
-
-		foreach (var channelElement in channelsArray.EnumerateArray())
-			yield return MapElementToChannel(channelElement);
+		var records = response.GetValue<List<ChannelDbRecord>>(0)!;
+		foreach (var channelRecord in records)
+			yield return MapElementToChannel(channelRecord);
 	}
 
 	public async ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
@@ -222,25 +217,25 @@ public partial class SurrealDatabase
 		await ExecuteAsync(query, parameters, cancellationToken);
 	}
 
-	private SharpChannel MapElementToChannel(JsonElement element)
+	private SharpChannel MapElementToChannel(ChannelDbRecord record)
 	{
-		var channelName = GetStringOrDefault(element, "name");
-		var markedUpName = GetStringOrDefault(element, "markedUpName", channelName);
-		var description = GetStringOrDefault(element, "description");
+		var channelName = record.name;
+		var markedUpName = string.IsNullOrEmpty(record.markedUpName) ? channelName : record.markedUpName;
+		var description = record.description;
 
 		return new SharpChannel
 		{
 			Id = ChannelId(channelName),
 			Name = MModule.deserialize(markedUpName),
 			Description = MModule.deserialize(description),
-			Privs = GetStringArrayOrEmpty(element, "privs"),
-			JoinLock = GetStringOrDefault(element, "joinLock"),
-			SpeakLock = GetStringOrDefault(element, "speakLock"),
-			SeeLock = GetStringOrDefault(element, "seeLock"),
-			HideLock = GetStringOrDefault(element, "hideLock"),
-			ModLock = GetStringOrDefault(element, "modLock"),
-			Buffer = GetIntOrDefault(element, "buffer"),
-			Mogrifier = GetStringOrDefault(element, "mogrifier"),
+			Privs = record.privs,
+			JoinLock = record.joinLock,
+			SpeakLock = record.speakLock,
+			SeeLock = record.seeLock,
+			HideLock = record.hideLock,
+			ModLock = record.modLock,
+			Buffer = record.buffer,
+			Mogrifier = record.mogrifier,
 			Owner = new AsyncLazy<SharpPlayer>(async ct => await GetChannelOwnerAsync(channelName, ct)),
 			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
 				GetChannelMembersAsync(channelName, CancellationToken.None))
@@ -251,18 +246,14 @@ public partial class SurrealDatabase
 	{
 		var parameters = new Dictionary<string, object?> { ["name"] = channelName };
 		var response = await ExecuteAsync(
-			"SELECT ->owner_of_channel->object.key AS ownerKeys FROM channel WHERE name = $name",
+			"SELECT VALUE out.key FROM owner_of_channel WHERE in.name = $name",
 			parameters, ct);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0)
+		var ownerKeys = response.GetValue<List<int>>(0)!;
+		if (ownerKeys.Count == 0)
 			throw new InvalidOperationException($"No owner found for channel '{channelName}'");
 
-		var ownerKeysArray = records[0].GetProperty("ownerKeys");
-		if (ownerKeysArray.ValueKind != JsonValueKind.Array || ownerKeysArray.GetArrayLength() == 0)
-			throw new InvalidOperationException($"No owner found for channel '{channelName}'");
-
-		var ownerKey = ownerKeysArray[0].GetInt32();
+		var ownerKey = ownerKeys[0];
 		var typed = await BuildTypedObjectFromKey(ownerKey, ct);
 		return typed.AsPlayer;
 	}
@@ -276,19 +267,19 @@ public partial class SurrealDatabase
 			parameters, ct);
 
 		// The second statement (index 1) contains the edge records
-		var records = response.GetValue<List<JsonElement>>(1)!;
+		var records = response.GetValue<List<ChannelMemberEdgeRecord>>(1)!;
 		foreach (var record in records)
 		{
-			var memberKey = GetIntOrDefault(record, "memberKey");
+			var memberKey = record.memberKey;
 			var memberObj = await BuildTypedObjectFromKey(memberKey, ct);
 			if (memberObj.IsNone) continue;
 
 			var status = new SharpChannelStatus(
-				Combine: GetBoolOrDefault(record, "combine"),
-				Gagged: GetBoolOrDefault(record, "gagged"),
-				Hide: GetBoolOrDefault(record, "hide"),
-				Mute: GetBoolOrDefault(record, "mute"),
-				Title: MModule.deserialize(GetStringOrDefault(record, "title")));
+				Combine: record.combine,
+				Gagged: record.gagged,
+				Hide: record.hide,
+				Mute: record.mute,
+				Title: MModule.deserialize(record.title));
 
 			yield return new SharpChannel.MemberAndStatus(memberObj.Known(), status);
 		}

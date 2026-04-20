@@ -38,13 +38,13 @@ public partial class SurrealDatabase
 			"SELECT data FROM object_data WHERE objectKey = $key AND dataType = $dataType",
 			parameters, cancellationToken);
 
-		var existingResults = existing.GetValue<List<JsonElement>>(0)!;
+		var existingResults = existing.GetValue<List<ExpandedDataDbRecord>>(0)!;
 
 		string jsonData;
 		if (existingResults.Count > 0)
 		{
 			// Merge with existing data: non-null values from new data override existing
-			var existingJson = GetStringOrDefault(existingResults[0], "data");
+			var existingJson = existingResults[0].data;
 			var existingDoc = JsonSerializer.Deserialize<JsonElement>(existingJson, JsonOptions);
 			var newDoc = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize((object)data, JsonOptions), JsonOptions);
 
@@ -97,10 +97,10 @@ public partial class SurrealDatabase
 			"SELECT data FROM object_data WHERE objectKey = $key AND dataType = $dataType",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<ExpandedDataDbRecord>>(0)!;
 		if (results.Count == 0) return default;
 
-		var jsonData = GetStringOrDefault(results[0], "data");
+		var jsonData = results[0].data;
 		if (string.IsNullOrEmpty(jsonData)) return default;
 		return JsonSerializer.Deserialize<T>(jsonData, JsonOptions);
 	}
@@ -128,10 +128,10 @@ public partial class SurrealDatabase
 				"SELECT data FROM server_data WHERE dataType = $dataType",
 				parameters, cancellationToken);
 
-			var results = response.GetValue<List<JsonElement>>(0)!;
+			var results = response.GetValue<List<ExpandedDataDbRecord>>(0)!;
 			if (results.Count == 0) return default;
 
-			var jsonData = GetStringOrDefault(results[0], "data");
+			var jsonData = results[0].data;
 			if (string.IsNullOrEmpty(jsonData)) return default;
 			return JsonSerializer.Deserialize<T>(jsonData, JsonOptions);
 		}

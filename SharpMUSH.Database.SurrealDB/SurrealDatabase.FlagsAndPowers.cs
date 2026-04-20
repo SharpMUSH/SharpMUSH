@@ -29,16 +29,16 @@ public partial class SurrealDatabase
 			"SELECT * FROM object_flag WHERE name = $name",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
-		return results.Count > 0 ? MapElementToFlag(results[0]) : null;
+		var results = response.GetValue<List<FlagRecord>>(0)!;
+		return results.Count > 0 ? MapRecordToFlag(results[0]) : null;
 	}
 
 	public async IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var response = await ExecuteAsync("SELECT * FROM object_flag", cancellationToken);
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<FlagRecord>>(0)!;
 		foreach (var element in results)
-			yield return MapElementToFlag(element);
+			yield return MapRecordToFlag(element);
 	}
 
 	public async ValueTask<SharpObjectFlag?> CreateObjectFlagAsync(string name, string[]? aliases, string symbol,
@@ -101,8 +101,8 @@ public partial class SurrealDatabase
 			"SELECT count() AS cnt FROM has_flags WHERE in = type::thing('object', $key) AND out.name = $fname GROUP ALL",
 			parameters, cancellationToken);
 
-		var existingResults = existing.GetValue<List<JsonElement>>(0)!;
-		if (existingResults.Count > 0 && GetIntOrDefault(existingResults[0], "cnt") > 0)
+		var existingResults = existing.GetValue<List<CountRecord>>(0)!;
+		if (existingResults.Count > 0 && existingResults[0].cnt > 0)
 			return false;
 
 		// Find the flag record and relate
@@ -126,7 +126,7 @@ public partial class SurrealDatabase
 			"DELETE has_flags WHERE in = type::thing('object', $key) AND out.name = $fname RETURN BEFORE",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<CountRecord>>(0)!;
 		return results.Count > 0;
 	}
 
@@ -176,16 +176,16 @@ public partial class SurrealDatabase
 			"SELECT * FROM power WHERE name = $name",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
-		return results.Count > 0 ? MapElementToPower(results[0]) : null;
+		var results = response.GetValue<List<PowerRecord>>(0)!;
+		return results.Count > 0 ? MapRecordToPower(results[0]) : null;
 	}
 
 	public async IAsyncEnumerable<SharpPower> GetObjectPowersAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var response = await ExecuteAsync("SELECT * FROM power", cancellationToken);
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<PowerRecord>>(0)!;
 		foreach (var element in results)
-			yield return MapElementToPower(element);
+			yield return MapRecordToPower(element);
 	}
 
 	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, bool system,
@@ -245,8 +245,8 @@ public partial class SurrealDatabase
 			"SELECT count() AS cnt FROM has_powers WHERE in = type::thing('object', $key) AND out.name = $pname GROUP ALL",
 			parameters, cancellationToken);
 
-		var existingResults = existing.GetValue<List<JsonElement>>(0)!;
-		if (existingResults.Count > 0 && GetIntOrDefault(existingResults[0], "cnt") > 0)
+		var existingResults = existing.GetValue<List<CountRecord>>(0)!;
+		if (existingResults.Count > 0 && existingResults[0].cnt > 0)
 			return false;
 
 		await ExecuteAsync(
@@ -269,7 +269,7 @@ public partial class SurrealDatabase
 			"DELETE has_powers WHERE in = type::thing('object', $key) AND out.name = $pname RETURN BEFORE",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<CountRecord>>(0)!;
 		return results.Count > 0;
 	}
 

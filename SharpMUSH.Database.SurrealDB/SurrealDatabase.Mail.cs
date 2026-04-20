@@ -32,20 +32,12 @@ public partial class SurrealDatabase
 		};
 
 		var response = await ExecuteAsync(
-			"SELECT ->received_mail->mail.* AS mails FROM type::thing('player', $key)",
+			"SELECT * FROM mail WHERE folder = $folder AND id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $key))",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0) yield break;
-
-		var mailsArray = records[0].GetProperty("mails");
-		if (mailsArray.ValueKind != JsonValueKind.Array) yield break;
-
-		foreach (var mailElement in mailsArray.EnumerateArray())
-		{
-			if (GetStringOrDefault(mailElement, "folder") == folder)
-				yield return MapElementToMail(mailElement);
-		}
+		var records = response.GetValue<List<MailDbRecord>>(0)!;
+		foreach (var record in records)
+			yield return MapRecordToMail(record);
 	}
 
 	public async IAsyncEnumerable<SharpMail> GetAllIncomingMailsAsync(SharpPlayer id, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -54,17 +46,12 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["key"] = playerKey };
 
 		var response = await ExecuteAsync(
-			"SELECT ->received_mail->mail.* AS mails FROM type::thing('player', $key)",
+			"SELECT * FROM mail WHERE id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $key))",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0) yield break;
-
-		var mailsArray = records[0].GetProperty("mails");
-		if (mailsArray.ValueKind != JsonValueKind.Array) yield break;
-
-		foreach (var mailElement in mailsArray.EnumerateArray())
-			yield return MapElementToMail(mailElement);
+		var records = response.GetValue<List<MailDbRecord>>(0)!;
+		foreach (var record in records)
+			yield return MapRecordToMail(record);
 	}
 
 	public async ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail, CancellationToken cancellationToken = default)
@@ -77,21 +64,12 @@ public partial class SurrealDatabase
 		};
 
 		var response = await ExecuteAsync(
-			"SELECT ->received_mail->mail.* AS mails FROM type::thing('player', $key)",
+			"SELECT * FROM mail WHERE folder = $folder AND id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $key))",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0) return null;
-
-		var mailsArray = records[0].GetProperty("mails");
-		if (mailsArray.ValueKind != JsonValueKind.Array) return null;
-
-		var folderMails = mailsArray.EnumerateArray()
-			.Where(m => GetStringOrDefault(m, "folder") == folder)
-			.ToList();
-
-		if (mail >= folderMails.Count) return null;
-		return MapElementToMail(folderMails[mail]);
+		var records = response.GetValue<List<MailDbRecord>>(0)!;
+		if (mail >= records.Count) return null;
+		return MapRecordToMail(records[mail]);
 	}
 
 	public async IAsyncEnumerable<SharpMail> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -106,41 +84,12 @@ public partial class SurrealDatabase
 
 		// Get mails received by recipient that were sent by sender
 		var response = await ExecuteAsync(
-			"SELECT ->received_mail->mail.* AS mails FROM type::thing('player', $recipientKey)",
+			"SELECT * FROM mail WHERE id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $recipientKey)) AND id IN (SELECT VALUE in FROM mail_sender WHERE out = type::thing('object', $senderKey))",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0) yield break;
-
-		var mailsArray = records[0].GetProperty("mails");
-		if (mailsArray.ValueKind != JsonValueKind.Array) yield break;
-
-		foreach (var mailElement in mailsArray.EnumerateArray())
-		{
-			// Check if this mail was sent by the sender
-			var mailKey = GetStringOrDefault(mailElement, "key");
-			var senderParams = new Dictionary<string, object?> { ["mailKey"] = mailKey };
-			var senderResponse = await ExecuteAsync(
-				"SELECT ->mail_sender->object.key AS senderKeys FROM mail WHERE key = $mailKey",
-				senderParams, cancellationToken);
-
-			var senderRecords = senderResponse.GetValue<List<JsonElement>>(0)!;
-			if (senderRecords.Count > 0)
-			{
-				var senderKeysArray = senderRecords[0].GetProperty("senderKeys");
-				if (senderKeysArray.ValueKind == JsonValueKind.Array)
-				{
-					foreach (var sk in senderKeysArray.EnumerateArray())
-					{
-						if (sk.GetInt32() == senderKey)
-						{
-							yield return MapElementToMail(mailElement);
-							break;
-						}
-					}
-				}
-			}
-		}
+		var records = response.GetValue<List<MailDbRecord>>(0)!;
+		foreach (var record in records)
+			yield return MapRecordToMail(record);
 	}
 
 	public async IAsyncEnumerable<SharpMail> GetAllSentMailsAsync(SharpObject sender, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -149,12 +98,12 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["key"] = senderKey };
 
 		var response = await ExecuteAsync(
-			"SELECT * FROM mail WHERE key IN (SELECT VALUE in.key FROM mail_sender WHERE out = type::thing('object', $key))",
+			"SELECT * FROM mail WHERE id IN (SELECT VALUE in FROM mail_sender WHERE out = type::thing('object', $key))",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
-		foreach (var element in results)
-			yield return MapElementToMail(element);
+		var results = response.GetValue<List<MailDbRecord>>(0)!;
+		foreach (var record in results)
+			yield return MapRecordToMail(record);
 	}
 
 	public async ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail, CancellationToken cancellationToken = default)
@@ -173,17 +122,11 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["key"] = playerKey };
 
 		var response = await ExecuteAsync(
-			"SELECT ->received_mail->mail.folder AS folders FROM type::thing('player', $key)",
+			"SELECT VALUE folder FROM mail WHERE id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $key))",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0) return [];
-
-		var foldersArray = records[0].GetProperty("folders");
-		if (foldersArray.ValueKind != JsonValueKind.Array) return [];
-
-		return foldersArray.EnumerateArray()
-			.Select(f => f.GetString() ?? "")
+		var folders = response.GetValue<List<string>>(0)!;
+		return folders
 			.Where(f => !string.IsNullOrEmpty(f))
 			.Distinct()
 			.ToArray();
@@ -268,30 +211,10 @@ public partial class SurrealDatabase
 			["newFolder"] = newFolder
 		};
 
-		// Get all mail IDs received by this player in the specified folder
-		var response = await ExecuteAsync(
-			"SELECT ->received_mail->mail.* AS mails FROM type::thing('player', $key)",
+		// Update all mail in the folder for this player directly
+		await ExecuteAsync(
+			"UPDATE mail SET folder = $newFolder WHERE folder = $folder AND id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $key))",
 			parameters, cancellationToken);
-
-		var records = response.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0) return;
-
-		var mailsArray = records[0].GetProperty("mails");
-		if (mailsArray.ValueKind != JsonValueKind.Array) return;
-
-		foreach (var mailElement in mailsArray.EnumerateArray())
-		{
-			if (GetStringOrDefault(mailElement, "folder") == folder)
-			{
-				var mKey = GetStringOrDefault(mailElement, "key");
-				var updateParams = new Dictionary<string, object?>
-				{
-					["mailKey"] = mKey,
-					["newFolder"] = newFolder
-				};
-				await ExecuteAsync("UPDATE mail SET folder = $newFolder WHERE key = $mailKey", updateParams, cancellationToken);
-			}
-		}
 	}
 
 	public async ValueTask MoveMailFolderAsync(string mailId, string newFolder, CancellationToken cancellationToken = default)
@@ -308,27 +231,27 @@ public partial class SurrealDatabase
 	public async IAsyncEnumerable<SharpMail> GetAllSystemMailAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var response = await ExecuteAsync("SELECT * FROM mail", cancellationToken);
-		var results = response.GetValue<List<JsonElement>>(0)!;
-		foreach (var element in results)
-			yield return MapElementToMail(element);
+		var results = response.GetValue<List<MailDbRecord>>(0)!;
+		foreach (var record in results)
+			yield return MapRecordToMail(record);
 	}
 
-	private SharpMail MapElementToMail(JsonElement element)
+	private SharpMail MapRecordToMail(MailDbRecord record)
 	{
-		var mailKey = GetStringOrDefault(element, "key");
+		var mailKey = record.key;
 		return new SharpMail
 		{
 			Id = MailId(mailKey),
-			DateSent = DateTimeOffset.FromUnixTimeMilliseconds(GetLongOrDefault(element, "dateSent")),
-			Fresh = GetBoolOrDefault(element, "fresh"),
-			Read = GetBoolOrDefault(element, "read"),
-			Tagged = GetBoolOrDefault(element, "tagged"),
-			Urgent = GetBoolOrDefault(element, "urgent"),
-			Forwarded = GetBoolOrDefault(element, "forwarded"),
-			Cleared = GetBoolOrDefault(element, "cleared"),
-			Folder = GetStringOrDefault(element, "folder"),
-			Content = MModule.deserialize(GetStringOrDefault(element, "content")),
-			Subject = MModule.deserialize(GetStringOrDefault(element, "subject")),
+			DateSent = DateTimeOffset.FromUnixTimeMilliseconds(record.dateSent),
+			Fresh = record.fresh,
+			Read = record.read,
+			Tagged = record.tagged,
+			Urgent = record.urgent,
+			Forwarded = record.forwarded,
+			Cleared = record.cleared,
+			Folder = record.folder,
+			Content = MModule.deserialize(record.content),
+			Subject = MModule.deserialize(record.subject),
 			From = new AsyncLazy<AnyOptionalSharpObject>(async ct => await MailFromAsync(mailKey, ct))
 		};
 	}
@@ -337,17 +260,13 @@ public partial class SurrealDatabase
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = mailKey };
 		var response = await ExecuteAsync(
-			"SELECT ->mail_sender->object.key AS senderKeys FROM mail WHERE key = $key",
+			"SELECT VALUE out.key FROM mail_sender WHERE in.key = $key",
 			parameters, ct);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0) return new None();
+		var senderKeys = response.GetValue<List<int>>(0)!;
+		if (senderKeys.Count == 0) return new None();
 
-		var senderKeysArray = records[0].GetProperty("senderKeys");
-		if (senderKeysArray.ValueKind != JsonValueKind.Array || senderKeysArray.GetArrayLength() == 0)
-			return new None();
-
-		var senderKey = senderKeysArray[0].GetInt32();
+		var senderKey = senderKeys[0];
 		return await BuildTypedObjectFromKey(senderKey, ct);
 	}
 

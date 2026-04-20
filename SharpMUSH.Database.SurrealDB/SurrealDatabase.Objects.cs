@@ -178,7 +178,7 @@ public partial class SurrealDatabase
 			"DELETE has_home WHERE in = exit:$key RETURN BEFORE",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<ObjectRecord>>(0)!;
 		return results.Count > 0;
 	}
 
@@ -222,7 +222,7 @@ public partial class SurrealDatabase
 			"DELETE has_home WHERE in = room:$key RETURN BEFORE",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<ObjectRecord>>(0)!;
 		return results.Count > 0;
 	}
 
@@ -286,9 +286,9 @@ public partial class SurrealDatabase
 			"SELECT count() AS cnt FROM has_owner WHERE out = player:$key GROUP ALL",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<CountRecord>>(0)!;
 		if (results.Count == 0) return 0;
-		return GetIntOrDefault(results[0], "cnt");
+		return (int)results[0].cnt;
 	}
 
 	#endregion
@@ -300,14 +300,14 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["key"] = dbref.Number };
 		var response = await ExecuteAsync("SELECT * FROM object WHERE key = $key", parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<ObjectRecord>>(0)!;
 		if (results.Count == 0) return new None();
 
-		var objElement = results[0];
-		if (dbref.CreationMilliseconds is not null && GetLongOrDefault(objElement, "creationTime") != dbref.CreationMilliseconds)
+		var objRecord = results[0];
+		if (dbref.CreationMilliseconds is not null && objRecord.creationTime != dbref.CreationMilliseconds)
 			return new None();
 
-		return await BuildTypedObjectFromObjectElement(objElement, cancellationToken);
+		return await BuildTypedObjectFromObjectRecord(objRecord, cancellationToken);
 	}
 
 	public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default)
@@ -315,14 +315,14 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["key"] = dbref.Number };
 		var response = await ExecuteAsync("SELECT * FROM object WHERE key = $key", parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<ObjectRecord>>(0)!;
 		if (results.Count == 0) return null;
 
-		var objElement = results[0];
-		if (dbref.CreationMilliseconds.HasValue && GetLongOrDefault(objElement, "creationTime") != dbref.CreationMilliseconds)
+		var objRecord = results[0];
+		if (dbref.CreationMilliseconds.HasValue && objRecord.creationTime != dbref.CreationMilliseconds)
 			return null;
 
-		return MapElementToSharpObject(objElement);
+		return MapRecordToSharpObject(objRecord);
 	}
 
 	public async IAsyncEnumerable<SharpPlayer> GetPlayerByNameOrAliasAsync(string name, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -333,26 +333,26 @@ public partial class SurrealDatabase
 			"SELECT * FROM object WHERE type = 'PLAYER' AND name = $name",
 			parameters, cancellationToken);
 
-		var objResults = objResponse.GetValue<List<JsonElement>>(0)!;
+		var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 
 		// Also search by alias
 		var aliasResponse = await ExecuteAsync(
 			"SELECT * FROM player WHERE $name IN aliases",
 			parameters, cancellationToken);
 
-		var aliasResults = aliasResponse.GetValue<List<JsonElement>>(0)!;
+		var aliasResults = aliasResponse.GetValue<List<PlayerRecord>>(0)!;
 
 		// Collect keys from name matches
 		var foundKeys = new HashSet<int>();
-		foreach (var objElement in objResults)
+		foreach (var objRecord in objResults)
 		{
-			var key = GetIntOrDefault(objElement, "key");
+			var key = objRecord.key;
 			if (foundKeys.Add(key))
 			{
-				var sharpObj = MapElementToSharpObject(objElement);
+				var sharpObj = MapRecordToSharpObject(objRecord);
 				var playerParams = new Dictionary<string, object?> { ["key"] = key };
 				var playerResponse = await ExecuteAsync("SELECT * FROM player WHERE key = $key", playerParams, cancellationToken);
-				var playerResults = playerResponse.GetValue<List<JsonElement>>(0)!;
+				var playerResults = playerResponse.GetValue<List<PlayerRecord>>(0)!;
 				if (playerResults.Count > 0)
 				{
 					yield return BuildPlayer(PlayerId(key), playerResults[0], sharpObj);
@@ -361,18 +361,18 @@ public partial class SurrealDatabase
 		}
 
 		// Collect keys from alias matches
-		foreach (var playerElement in aliasResults)
+		foreach (var playerRecord in aliasResults)
 		{
-			var key = GetIntOrDefault(playerElement, "key");
+			var key = playerRecord.key;
 			if (foundKeys.Add(key))
 			{
 				var objParams = new Dictionary<string, object?> { ["key"] = key };
 				var objResp = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, cancellationToken);
-				var objRecs = objResp.GetValue<List<JsonElement>>(0)!;
+				var objRecs = objResp.GetValue<List<ObjectRecord>>(0)!;
 				if (objRecs.Count > 0)
 				{
-					var sharpObj = MapElementToSharpObject(objRecs[0]);
-					yield return BuildPlayer(PlayerId(key), playerElement, sharpObj);
+					var sharpObj = MapRecordToSharpObject(objRecs[0]);
+					yield return BuildPlayer(PlayerId(key), playerRecord, sharpObj);
 				}
 			}
 		}
@@ -382,10 +382,10 @@ public partial class SurrealDatabase
 	{
 		var response = await ExecuteAsync("SELECT * FROM object", cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
-		foreach (var element in results)
+		var results = response.GetValue<List<ObjectRecord>>(0)!;
+		foreach (var record in results)
 		{
-			yield return MapElementToSharpObject(element);
+			yield return MapRecordToSharpObject(record);
 		}
 	}
 
@@ -393,38 +393,31 @@ public partial class SurrealDatabase
 	{
 		// Fetch all objects
 		var objResponse = await ExecuteAsync("SELECT * FROM object", cancellationToken);
-		var objResults = objResponse.GetValue<List<JsonElement>>(0)!;
+		var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 
-		// Fetch all typed records in a single query
-		var typedResponse = await ExecuteAsync(
-			"SELECT * FROM player, room, thing, exit",
-			cancellationToken);
-		var typedResults = typedResponse.GetValue<List<JsonElement>>(0)!;
+		// Fetch all typed records
+		var playerResponse = await ExecuteAsync("SELECT * FROM player", cancellationToken);
+		var playerResults = playerResponse.GetValue<List<PlayerRecord>>(0)!;
+		var exitResponse = await ExecuteAsync("SELECT * FROM exit", cancellationToken);
+		var exitResults = exitResponse.GetValue<List<ExitRecord>>(0)!;
 
 		// Index typed records by key for efficient lookup
-		var typedByKey = new Dictionary<int, JsonElement>();
-		foreach (var typed in typedResults)
-		{
-			var key = GetIntOrDefault(typed, "key");
-			typedByKey.TryAdd(key, typed);
-		}
+		var playersByKey = playerResults.ToDictionary(p => p.key);
+		var exitsByKey = exitResults.ToDictionary(e => e.key);
 
-		foreach (var objElement in objResults)
+		foreach (var objRecord in objResults)
 		{
-			var key = GetIntOrDefault(objElement, "key");
-			var type = GetStringOrDefault(objElement, "type");
-			var sharpObj = MapElementToSharpObject(objElement);
+			var key = objRecord.key;
+			var type = objRecord.type;
+			var sharpObj = MapRecordToSharpObject(objRecord);
 			var typedId = GetTypedId(type, key);
-
-			if (!typedByKey.TryGetValue(key, out var typedElement))
-				continue;
 
 			AnyOptionalSharpObject typed = type.ToUpper() switch
 			{
-				"PLAYER" => BuildPlayer(typedId, typedElement, sharpObj),
+				"PLAYER" => playersByKey.TryGetValue(key, out var pr) ? BuildPlayer(typedId, pr, sharpObj) : new None(),
 				"ROOM" => BuildRoom(typedId, sharpObj),
 				"THING" => BuildThing(typedId, sharpObj),
-				"EXIT" => BuildExit(typedId, typedElement, sharpObj),
+				"EXIT" => exitsByKey.TryGetValue(key, out var er) ? BuildExit(typedId, er, sharpObj) : new None(),
 				_ => new None()
 			};
 
@@ -479,28 +472,28 @@ public partial class SurrealDatabase
 		var query = $"SELECT * FROM object {whereClause} {limitClause}";
 		var response = await ExecuteAsync(query, parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
-		foreach (var element in results)
+		var results = response.GetValue<List<ObjectRecord>>(0)!;
+		foreach (var record in results)
 		{
-			yield return MapElementToSharpObject(element);
+			yield return MapRecordToSharpObject(record);
 		}
 	}
 
 	public async IAsyncEnumerable<SharpPlayer> GetAllPlayersAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var playerResponse = await ExecuteAsync("SELECT * FROM player", cancellationToken);
-		var playerResults = playerResponse.GetValue<List<JsonElement>>(0)!;
+		var playerResults = playerResponse.GetValue<List<PlayerRecord>>(0)!;
 
-		foreach (var playerElement in playerResults)
+		foreach (var playerRecord in playerResults)
 		{
-			var key = GetIntOrDefault(playerElement, "key");
+			var key = playerRecord.key;
 			var objParams = new Dictionary<string, object?> { ["key"] = key };
 			var objResponse = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, cancellationToken);
-			var objResults = objResponse.GetValue<List<JsonElement>>(0)!;
+			var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 			if (objResults.Count > 0)
 			{
-				var sharpObj = MapElementToSharpObject(objResults[0]);
-				yield return BuildPlayer(PlayerId(key), playerElement, sharpObj);
+				var sharpObj = MapRecordToSharpObject(objResults[0]);
+				yield return BuildPlayer(PlayerId(key), playerRecord, sharpObj);
 			}
 		}
 	}
@@ -514,18 +507,18 @@ public partial class SurrealDatabase
 			"SELECT VALUE in FROM at_location WHERE out.key = $destKey AND in.id LIKE 'exit:%'",
 			parameters, cancellationToken);
 
-		var results = response.GetValue<List<JsonElement>>(0)!;
+		var results = response.GetValue<List<ExitRecord>>(0)!;
 
-		foreach (var exitElement in results)
+		foreach (var exitRecord in results)
 		{
-			var key = GetIntOrDefault(exitElement, "key");
+			var key = exitRecord.key;
 			var objParams = new Dictionary<string, object?> { ["key"] = key };
 			var objResponse = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, cancellationToken);
-			var objResults = objResponse.GetValue<List<JsonElement>>(0)!;
+			var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 			if (objResults.Count > 0)
 			{
-				var sharpObj = MapElementToSharpObject(objResults[0]);
-				yield return BuildExit(ExitId(key), exitElement, sharpObj);
+				var sharpObj = MapRecordToSharpObject(objResults[0]);
+				yield return BuildExit(ExitId(key), exitRecord, sharpObj);
 			}
 		}
 	}

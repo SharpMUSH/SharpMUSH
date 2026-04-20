@@ -27,17 +27,13 @@ public partial class SurrealDatabase
 		var key = ExtractKey(id);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var response = await ExecuteAsync(
-			"SELECT ->has_parent->object.* AS parent FROM type::thing('object', $key)",
+			"SELECT * FROM object WHERE key IN (SELECT VALUE out.key FROM has_parent WHERE in = type::thing('object', $key))",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
+		var records = response.GetValue<List<ObjectRecord>>(0)!;
 		if (records.Count == 0) return new None();
 
-		var parentArray = records[0].GetProperty("parent");
-		if (parentArray.ValueKind != JsonValueKind.Array || parentArray.GetArrayLength() == 0)
-			return new None();
-
-		return await BuildTypedObjectFromObjectElement(parentArray[0], cancellationToken);
+		return await BuildTypedObjectFromObjectRecord(records[0], cancellationToken);
 	}
 
 	public async IAsyncEnumerable<SharpObject> GetParentsAsync(string id, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -53,18 +49,13 @@ public partial class SurrealDatabase
 
 			var parameters = new Dictionary<string, object?> { ["key"] = currentKey };
 			var response = await ExecuteAsync(
-				"SELECT ->has_parent->object.* AS parent FROM type::thing('object', $key)",
+				"SELECT * FROM object WHERE key IN (SELECT VALUE out.key FROM has_parent WHERE in = type::thing('object', $key))",
 				parameters, cancellationToken);
 
-			var records = response.GetValue<List<JsonElement>>(0)!;
+			var records = response.GetValue<List<ObjectRecord>>(0)!;
 			if (records.Count == 0) yield break;
 
-			var parentArray = records[0].GetProperty("parent");
-			if (parentArray.ValueKind != JsonValueKind.Array || parentArray.GetArrayLength() == 0)
-				yield break;
-
-			var parentElement = parentArray[0];
-			var parentObj = MapElementToSharpObject(parentElement);
+			var parentObj = MapRecordToSharpObject(records[0]);
 			yield return parentObj;
 
 			currentKey = parentObj.Key;
@@ -85,32 +76,22 @@ public partial class SurrealDatabase
 			if (!visited.Add(currentKey)) return false;
 
 			var parameters = new Dictionary<string, object?> { ["key"] = currentKey };
-			var response = await ExecuteAsync(
-				"SELECT ->has_parent->object.key AS parentKeys, ->has_zone->object.key AS zoneKeys FROM type::thing('object', $key)",
+
+			// Get parent keys
+			var parentResponse = await ExecuteAsync(
+				"SELECT VALUE out.key FROM has_parent WHERE in = type::thing('object', $key)",
 				parameters, cancellationToken);
+			var parentKeys = parentResponse.GetValue<List<int>>(0)!;
 
-			var records = response.GetValue<List<JsonElement>>(0)!;
-			if (records.Count == 0) return false;
+			// Get zone keys
+			var zoneResponse = await ExecuteAsync(
+				"SELECT VALUE out.key FROM has_zone WHERE in = type::thing('object', $key)",
+				parameters, cancellationToken);
+			var zoneKeys = zoneResponse.GetValue<List<int>>(0)!;
 
-			var record = records[0];
 			var nextKeys = new List<int>();
-
-			if (record.TryGetProperty("parentKeys", out var parentKeys) && parentKeys.ValueKind == JsonValueKind.Array)
-			{
-				foreach (var pk in parentKeys.EnumerateArray())
-				{
-					if (pk.ValueKind == JsonValueKind.Number)
-						nextKeys.Add(pk.GetInt32());
-				}
-			}
-			if (record.TryGetProperty("zoneKeys", out var zoneKeys) && zoneKeys.ValueKind == JsonValueKind.Array)
-			{
-				foreach (var zk in zoneKeys.EnumerateArray())
-				{
-					if (zk.ValueKind == JsonValueKind.Number)
-						nextKeys.Add(zk.GetInt32());
-				}
-			}
+			nextKeys.AddRange(parentKeys);
+			nextKeys.AddRange(zoneKeys);
 
 			if (nextKeys.Count == 0) return false;
 
@@ -136,9 +117,9 @@ public partial class SurrealDatabase
 			"SELECT * FROM object WHERE key IN (SELECT VALUE in.key FROM has_zone WHERE out = type::thing('object', $key))",
 			parameters, cancellationToken);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
+		var records = response.GetValue<List<ObjectRecord>>(0)!;
 		foreach (var record in records)
-			yield return MapElementToSharpObject(record);
+			yield return MapRecordToSharpObject(record);
 	}
 
 	#endregion
@@ -180,10 +161,10 @@ public partial class SurrealDatabase
 				"SELECT VALUE out.key FROM at_location WHERE in.key = $key",
 				parameters, ct);
 
-			var records = response.GetValue<List<JsonElement>>(0)!;
+			var records = response.GetValue<List<int>>(0)!;
 			if (records.Count == 0) break;
 
-			var destKey = records[0].GetInt32();
+			var destKey = records[0];
 			lastValidContainerKey = destKey;
 			currentKey = destKey;
 			hops++;
@@ -226,10 +207,9 @@ public partial class SurrealDatabase
 			"SELECT VALUE in.key FROM at_location WHERE out.key = $key",
 			parameters, ct);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
-		foreach (var record in records)
+		var records = response.GetValue<List<int>>(0)!;
+		foreach (var contentKey in records)
 		{
-			var contentKey = record.GetInt32();
 			var typed = await BuildTypedObjectFromKey(contentKey, ct);
 			if (typed.IsNone) continue;
 
@@ -269,17 +249,17 @@ public partial class SurrealDatabase
 			"SELECT VALUE in FROM at_location WHERE out.key = $key AND in.id LIKE 'exit:%'",
 			parameters, ct);
 
-		var records = response.GetValue<List<JsonElement>>(0)!;
-		foreach (var exitElement in records)
+		var records = response.GetValue<List<ExitRecord>>(0)!;
+		foreach (var exitRecord in records)
 		{
-			var key = GetIntOrDefault(exitElement, "key");
+			var key = exitRecord.key;
 			var objParams = new Dictionary<string, object?> { ["key"] = key };
 			var objResponse = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, ct);
-			var objResults = objResponse.GetValue<List<JsonElement>>(0)!;
+			var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 			if (objResults.Count > 0)
 			{
-				var sharpObj = MapElementToSharpObject(objResults[0]);
-				yield return BuildExit(ExitId(key), exitElement, sharpObj);
+				var sharpObj = MapRecordToSharpObject(objResults[0]);
+				yield return BuildExit(ExitId(key), exitRecord, sharpObj);
 			}
 		}
 	}

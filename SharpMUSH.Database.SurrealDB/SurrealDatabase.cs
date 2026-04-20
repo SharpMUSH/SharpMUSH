@@ -106,28 +106,58 @@ public partial class SurrealDatabase(
 
 	/// <summary>
 	/// Executes a SurrealQL query with parameters and returns the response.
+	/// Since the SurrealDB embedded CBOR serializer cannot handle Dictionary&lt;string, object?&gt;
+	/// with mixed value types, we inline parameter values directly into the query string.
+	/// This is safe because this is an embedded in-memory database with no injection risk.
 	/// </summary>
 	private async ValueTask<SurrealDbResponse> ExecuteAsync(
 		string query,
 		IReadOnlyDictionary<string, object?> parameters,
 		CancellationToken ct = default)
 	{
-		logger.LogDebug("Executing SurrealQL: {Query} with params: {Params}", query, parameters.Keys);
-		var response = await db.RawQuery(query, parameters, ct);
+		// Replace $param references with their serialized values inline
+		var expandedQuery = query;
+		foreach (var kvp in parameters.OrderByDescending(k => k.Key.Length))
+		{
+			expandedQuery = expandedQuery.Replace($"${kvp.Key}", SerializeValue(kvp.Value));
+		}
+
+		logger.LogDebug("Executing SurrealQL: {Query}", expandedQuery);
+		var response = await db.RawQuery(expandedQuery, null, ct);
 		if (response.HasErrors)
 		{
 			var errors = string.Join("; ", response.Errors.Select(e => e.ToString()));
-			logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
+			logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, expandedQuery);
 		}
 		return response;
 	}
+
+	/// <summary>
+	/// Serializes a value to a SurrealQL literal string.
+	/// </summary>
+	private static string SerializeValue(object? value) => value switch
+	{
+		null => "NONE",
+		string s => $"'{EscapeString(s)}'",
+		int i => i.ToString(),
+		long l => l.ToString(),
+		double d => d.ToString(System.Globalization.CultureInfo.InvariantCulture),
+		float f => f.ToString(System.Globalization.CultureInfo.InvariantCulture),
+		bool b => b ? "true" : "false",
+		string[] arr => $"[{string.Join(", ", arr.Select(a => $"'{EscapeString(a)}'"))}]",
+		int[] arr => $"[{string.Join(", ", arr)}]",
+		IEnumerable<string> arr => $"[{string.Join(", ", arr.Select(a => $"'{EscapeString(a)}'"))}]",
+		_ => $"'{EscapeString(value.ToString() ?? "")}'",
+	};
+
+	private static string EscapeString(string s) => s.Replace("\\", "\\\\").Replace("'", "\\'");
 
 	private async ValueTask<int> GetNextObjectKeyAsync(CancellationToken ct = default)
 	{
 		var response = await ExecuteAsync(
 			"UPSERT counter:object_key SET value = (value ?? 0) + 1 RETURN AFTER", ct);
-		var result = response.GetValue<List<JsonElement>>(0)!;
-		return result[0].GetProperty("value").GetInt32();
+		var result = response.GetValue<List<ValueRecord>>(0)!;
+		return result[0].value;
 	}
 
 	private static string SerializeLocks(IImmutableDictionary<string, SharpLockData>? locks)
@@ -168,78 +198,15 @@ public partial class SurrealDatabase(
 		}
 	}
 
-	/// <summary>
-	/// Safely gets an int value from a JsonElement, returning a default if the property is missing.
-	/// </summary>
-	private static int GetIntOrDefault(JsonElement element, string property, int defaultValue = 0)
+	private SharpObject MapRecordToSharpObject(ObjectRecord record)
 	{
-		if (element.TryGetProperty(property, out var prop) && prop.ValueKind == JsonValueKind.Number)
-			return prop.GetInt32();
-		return defaultValue;
-	}
-
-	/// <summary>
-	/// Safely gets a long value from a JsonElement, returning a default if the property is missing.
-	/// </summary>
-	private static long GetLongOrDefault(JsonElement element, string property, long defaultValue = 0)
-	{
-		if (element.TryGetProperty(property, out var prop) && prop.ValueKind == JsonValueKind.Number)
-			return prop.GetInt64();
-		return defaultValue;
-	}
-
-	/// <summary>
-	/// Safely gets a string value from a JsonElement, returning null if the property is missing.
-	/// </summary>
-	private static string? GetStringOrNull(JsonElement element, string property)
-	{
-		if (element.TryGetProperty(property, out var prop) && prop.ValueKind == JsonValueKind.String)
-			return prop.GetString();
-		return null;
-	}
-
-	/// <summary>
-	/// Safely gets a string value from a JsonElement, returning a default if the property is missing.
-	/// </summary>
-	private static string GetStringOrDefault(JsonElement element, string property, string defaultValue = "")
-	{
-		if (element.TryGetProperty(property, out var prop) && prop.ValueKind == JsonValueKind.String)
-			return prop.GetString() ?? defaultValue;
-		return defaultValue;
-	}
-
-	/// <summary>
-	/// Safely gets a bool value from a JsonElement.
-	/// </summary>
-	private static bool GetBoolOrDefault(JsonElement element, string property, bool defaultValue = false)
-	{
-		if (element.TryGetProperty(property, out var prop))
-		{
-			if (prop.ValueKind == JsonValueKind.True) return true;
-			if (prop.ValueKind == JsonValueKind.False) return false;
-		}
-		return defaultValue;
-	}
-
-	/// <summary>
-	/// Safely gets a string array from a JsonElement.
-	/// </summary>
-	private static string[] GetStringArrayOrEmpty(JsonElement element, string property)
-	{
-		if (element.TryGetProperty(property, out var prop) && prop.ValueKind == JsonValueKind.Array)
-			return prop.EnumerateArray().Select(x => x.GetString() ?? "").ToArray();
-		return [];
-	}
-
-	private SharpObject MapElementToSharpObject(JsonElement element)
-	{
-		var key = GetIntOrDefault(element, "key");
-		var name = GetStringOrDefault(element, "name");
-		var type = GetStringOrDefault(element, "type");
-		var creationTime = GetLongOrDefault(element, "creationTime");
-		var modifiedTime = GetLongOrDefault(element, "modifiedTime");
-		var warnings = (WarningType)GetIntOrDefault(element, "warnings");
-		var locksJson = GetStringOrNull(element, "locks");
+		var key = record.key;
+		var name = record.name;
+		var type = record.type;
+		var creationTime = record.creationTime;
+		var modifiedTime = record.modifiedTime;
+		var warnings = (WarningType)record.warnings;
+		var locksJson = record.locks;
 		var id = ObjectId(key);
 
 		return new SharpObject
@@ -265,31 +232,33 @@ public partial class SurrealDatabase(
 		};
 	}
 
-	private async ValueTask<AnyOptionalSharpObject> BuildTypedObjectFromObjectElement(JsonElement objElement, CancellationToken ct)
+	private async ValueTask<AnyOptionalSharpObject> BuildTypedObjectFromObjectRecord(ObjectRecord objRecord, CancellationToken ct)
 	{
-		var key = GetIntOrDefault(objElement, "key");
-		var type = GetStringOrDefault(objElement, "type");
-		var sharpObj = MapElementToSharpObject(objElement);
-
+		var key = objRecord.key;
+		var type = objRecord.type;
+		var sharpObj = MapRecordToSharpObject(objRecord);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
-		var typedResult = await ExecuteAsync(
-			"SELECT * FROM player, room, thing, exit WHERE key = $key",
-			parameters, ct);
-
-		var typedRecords = typedResult.GetValue<List<JsonElement>>(0)!;
-		if (typedRecords.Count == 0) return new None();
-
-		var typedElement = typedRecords[0];
 		var typedId = GetTypedId(type, key);
 
-		return type.ToUpper() switch
+		switch (type.ToUpper())
 		{
-			"PLAYER" => BuildPlayer(typedId, typedElement, sharpObj),
-			"ROOM" => BuildRoom(typedId, sharpObj),
-			"THING" => BuildThing(typedId, sharpObj),
-			"EXIT" => BuildExit(typedId, typedElement, sharpObj),
-			_ => throw new ArgumentException($"Invalid Object Type: '{type}'")
-		};
+			case "PLAYER":
+				var playerResult = await ExecuteAsync("SELECT * FROM player WHERE key = $key", parameters, ct);
+				var players = playerResult.GetValue<List<PlayerRecord>>(0)!;
+				if (players.Count == 0) return new None();
+				return BuildPlayer(typedId, players[0], sharpObj);
+			case "ROOM":
+				return BuildRoom(typedId, sharpObj);
+			case "THING":
+				return BuildThing(typedId, sharpObj);
+			case "EXIT":
+				var exitResult = await ExecuteAsync("SELECT * FROM exit WHERE key = $key", parameters, ct);
+				var exits = exitResult.GetValue<List<ExitRecord>>(0)!;
+				if (exits.Count == 0) return new None();
+				return BuildExit(typedId, exits[0], sharpObj);
+			default:
+				throw new ArgumentException($"Invalid Object Type: '{type}'");
+		}
 	}
 
 	private async ValueTask<AnyOptionalSharpObject> BuildTypedObjectFromKey(int key, CancellationToken ct)
@@ -299,10 +268,10 @@ public partial class SurrealDatabase(
 			"SELECT * FROM object WHERE key = $key",
 			parameters, ct);
 
-		var objRecords = objResult.GetValue<List<JsonElement>>(0)!;
+		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
 		if (objRecords.Count == 0) return new None();
 
-		return await BuildTypedObjectFromObjectElement(objRecords[0], ct);
+		return await BuildTypedObjectFromObjectRecord(objRecords[0], ct);
 	}
 
 	private string GetTypedId(string type, int key)
@@ -317,17 +286,26 @@ public partial class SurrealDatabase(
 		};
 	}
 
-	private SharpPlayer BuildPlayer(string id, JsonElement typedElement, SharpObject sharpObj)
+	private string GetTypedIdFromObjectRecord(ObjectRecord record)
 	{
-		var aliases = GetStringArrayOrEmpty(typedElement, "aliases");
+		return GetTypedId(record.type, record.key);
+	}
+
+	private static string GetSurrealRecordId(string type, int key)
+	{
+		return $"{type.ToLower()}:{key}";
+	}
+
+	private SharpPlayer BuildPlayer(string id, PlayerRecord playerRecord, SharpObject sharpObj)
+	{
 		return new SharpPlayer
 		{
 			Id = id,
 			Object = sharpObj,
-			Aliases = aliases,
-			PasswordHash = GetStringOrDefault(typedElement, "passwordHash"),
-			PasswordSalt = GetStringOrNull(typedElement, "passwordSalt"),
-			Quota = GetIntOrDefault(typedElement, "quota"),
+			Aliases = playerRecord.aliases,
+			PasswordHash = playerRecord.passwordHash,
+			PasswordSalt = playerRecord.passwordSalt,
+			Quota = playerRecord.quota,
 			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
 			Home = new(async ct => await GetHomeAsync(id, ct))
 		};
@@ -354,14 +332,13 @@ public partial class SurrealDatabase(
 		};
 	}
 
-	private SharpExit BuildExit(string id, JsonElement typedElement, SharpObject sharpObj)
+	private SharpExit BuildExit(string id, ExitRecord exitRecord, SharpObject sharpObj)
 	{
-		var aliases = GetStringArrayOrEmpty(typedElement, "aliases");
 		return new SharpExit
 		{
 			Id = id,
 			Object = sharpObj,
-			Aliases = aliases,
+			Aliases = exitRecord.aliases,
 			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
 			Home = new(async ct => await GetHomeAsync(id, ct))
 		};
@@ -372,20 +349,15 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(typedId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT ->at_location->object.* AS dest FROM type::thing('player', $key), type::thing('thing', $key), type::thing('exit', $key)",
+			"SELECT VALUE out.key FROM at_location WHERE in.key = $key",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0)
+		var destKeys = result.GetValue<List<int>>(0)!;
+		if (destKeys.Count == 0)
 			throw new InvalidOperationException($"No location found for {typedId}");
 
-		// Traverse the result to find the destination object
-		var destArray = records[0].GetProperty("dest");
-		if (destArray.ValueKind != JsonValueKind.Array || destArray.GetArrayLength() == 0)
-			throw new InvalidOperationException($"No location found for {typedId}");
-
-		var destObj = destArray[0];
-		var located = await BuildTypedObjectFromObjectElement(destObj, ct);
+		var destKey = destKeys[0];
+		var located = await BuildTypedObjectFromKey(destKey, ct);
 		return located.Match<AnySharpContainer>(
 			player => player,
 			room => room,
@@ -399,19 +371,15 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(typedId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT ->has_home->object.* AS dest FROM type::thing('player', $key), type::thing('thing', $key), type::thing('exit', $key)",
+			"SELECT VALUE out.key FROM has_home WHERE in.key = $key",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0)
+		var destKeys = result.GetValue<List<int>>(0)!;
+		if (destKeys.Count == 0)
 			throw new InvalidOperationException($"No home found for {typedId}");
 
-		var destArray = records[0].GetProperty("dest");
-		if (destArray.ValueKind != JsonValueKind.Array || destArray.GetArrayLength() == 0)
-			throw new InvalidOperationException($"No home found for {typedId}");
-
-		var destObj = destArray[0];
-		var homeObj = await BuildTypedObjectFromObjectElement(destObj, ct);
+		var destKey = destKeys[0];
+		var homeObj = await BuildTypedObjectFromKey(destKey, ct);
 		return homeObj.Match<AnySharpContainer>(
 			player => player,
 			room => room,
@@ -425,18 +393,14 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(roomId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT ->has_home->object.* AS dest FROM type::thing('room', $key)",
+			"SELECT VALUE out.key FROM has_home WHERE in = type::thing('room', $key)",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0) return new None();
+		var destKeys = result.GetValue<List<int>>(0)!;
+		if (destKeys.Count == 0) return new None();
 
-		var destArray = records[0].GetProperty("dest");
-		if (destArray.ValueKind != JsonValueKind.Array || destArray.GetArrayLength() == 0)
-			return new None();
-
-		var destObj = destArray[0];
-		var dropToObj = await BuildTypedObjectFromObjectElement(destObj, ct);
+		var destKey = destKeys[0];
+		var dropToObj = await BuildTypedObjectFromKey(destKey, ct);
 		return dropToObj.Match<AnyOptionalSharpContainer>(
 			player => player,
 			room => room,
@@ -449,33 +413,29 @@ public partial class SurrealDatabase(
 	{
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
-		var result = await ExecuteAsync(
-			"SELECT ->has_owner->player.* AS owner FROM type::thing('object', $key)",
+
+		// Get the owner's player record
+		var ownerResult = await ExecuteAsync(
+			"SELECT * FROM player WHERE id IN (SELECT VALUE out FROM has_owner WHERE in = type::thing('object', $key))",
 			parameters, ct);
-
-		var records = result.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0)
+		var ownerPlayers = ownerResult.GetValue<List<PlayerRecord>>(0)!;
+		if (ownerPlayers.Count == 0)
 			throw new InvalidOperationException($"No owner found for {objectId}");
 
-		var ownerArray = records[0].GetProperty("owner");
-		if (ownerArray.ValueKind != JsonValueKind.Array || ownerArray.GetArrayLength() == 0)
-			throw new InvalidOperationException($"No owner found for {objectId}");
+		var ownerPlayerRecord = ownerPlayers[0];
+		var ownerKey = ownerPlayerRecord.key;
 
-		var ownerTypedElement = ownerArray[0];
-		var ownerKey = GetIntOrDefault(ownerTypedElement, "key");
-
-		// Get the object node for the owner
+		// Get the object record for the owner
 		var ownerObjParams = new Dictionary<string, object?> { ["key"] = ownerKey };
 		var ownerObjResult = await ExecuteAsync(
 			"SELECT * FROM object WHERE key = $key",
 			ownerObjParams, ct);
-
-		var ownerObjRecords = ownerObjResult.GetValue<List<JsonElement>>(0)!;
+		var ownerObjRecords = ownerObjResult.GetValue<List<ObjectRecord>>(0)!;
 		if (ownerObjRecords.Count == 0)
 			throw new InvalidOperationException($"No object record found for owner of {objectId}");
 
-		var sharpObj = MapElementToSharpObject(ownerObjRecords[0]);
-		return BuildPlayer(PlayerId(ownerKey), ownerTypedElement, sharpObj);
+		var sharpObj = MapRecordToSharpObject(ownerObjRecords[0]);
+		return BuildPlayer(PlayerId(ownerKey), ownerPlayerRecord, sharpObj);
 	}
 
 	private async ValueTask<AnyOptionalSharpObject> GetParentForObjectAsync(string objectId, CancellationToken ct)
@@ -483,18 +443,13 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT ->has_parent->object.* AS parent FROM type::thing('object', $key)",
+			"SELECT * FROM object WHERE key IN (SELECT VALUE out.key FROM has_parent WHERE in = type::thing('object', $key))",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
+		var records = result.GetValue<List<ObjectRecord>>(0)!;
 		if (records.Count == 0) return new None();
 
-		var parentArray = records[0].GetProperty("parent");
-		if (parentArray.ValueKind != JsonValueKind.Array || parentArray.GetArrayLength() == 0)
-			return new None();
-
-		var parentObj = parentArray[0];
-		return await BuildTypedObjectFromObjectElement(parentObj, ct);
+		return await BuildTypedObjectFromObjectRecord(records[0], ct);
 	}
 
 	private async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct)
@@ -502,18 +457,13 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT ->has_zone->object.* AS zone FROM type::thing('object', $key)",
+			"SELECT * FROM object WHERE key IN (SELECT VALUE out.key FROM has_zone WHERE in = type::thing('object', $key))",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
+		var records = result.GetValue<List<ObjectRecord>>(0)!;
 		if (records.Count == 0) return new None();
 
-		var zoneArray = records[0].GetProperty("zone");
-		if (zoneArray.ValueKind != JsonValueKind.Array || zoneArray.GetArrayLength() == 0)
-			return new None();
-
-		var zoneObj = zoneArray[0];
-		return await BuildTypedObjectFromObjectElement(zoneObj, ct);
+		return await BuildTypedObjectFromObjectRecord(records[0], ct);
 	}
 
 	private async IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsForIdAsync(string objectId, string type, [EnumeratorCancellation] CancellationToken ct = default)
@@ -521,20 +471,13 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT ->has_flags->object_flag.* AS flags FROM type::thing('object', $key)",
+			"SELECT * FROM object_flag WHERE id IN (SELECT VALUE out FROM has_flags WHERE in = type::thing('object', $key))",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
-		if (records.Count > 0)
+		var records = result.GetValue<List<FlagRecord>>(0)!;
+		foreach (var record in records)
 		{
-			var flagsArray = records[0].GetProperty("flags");
-			if (flagsArray.ValueKind == JsonValueKind.Array)
-			{
-				foreach (var flagElement in flagsArray.EnumerateArray())
-				{
-					yield return MapElementToFlag(flagElement);
-				}
-			}
+			yield return MapRecordToFlag(record);
 		}
 
 		// Append the implicit type flag
@@ -556,81 +499,69 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT ->has_powers->power.* AS powers FROM type::thing('object', $key)",
+			"SELECT * FROM power WHERE id IN (SELECT VALUE out FROM has_powers WHERE in = type::thing('object', $key))",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
-		if (records.Count > 0)
+		var records = result.GetValue<List<PowerRecord>>(0)!;
+		foreach (var record in records)
 		{
-			var powersArray = records[0].GetProperty("powers");
-			if (powersArray.ValueKind == JsonValueKind.Array)
-			{
-				foreach (var powerElement in powersArray.EnumerateArray())
-				{
-					yield return MapElementToPower(powerElement);
-				}
-			}
+			yield return MapRecordToPower(record);
 		}
 	}
 
-	private static SharpObjectFlag MapElementToFlag(JsonElement element)
+	private static SharpObjectFlag MapRecordToFlag(FlagRecord record)
 	{
-		var name = GetStringOrDefault(element, "name");
 		return new SharpObjectFlag
 		{
-			Id = $"ObjectFlag/{name}",
-			Name = name,
-			Symbol = GetStringOrDefault(element, "symbol"),
-			System = GetBoolOrDefault(element, "system"),
-			Disabled = GetBoolOrDefault(element, "disabled"),
-			Aliases = GetStringArrayOrEmpty(element, "aliases"),
-			SetPermissions = GetStringArrayOrEmpty(element, "setPermissions"),
-			UnsetPermissions = GetStringArrayOrEmpty(element, "unsetPermissions"),
-			TypeRestrictions = GetStringArrayOrEmpty(element, "typeRestrictions")
+			Id = $"ObjectFlag/{record.name}",
+			Name = record.name,
+			Symbol = record.symbol,
+			System = record.system,
+			Disabled = record.disabled,
+			Aliases = record.aliases,
+			SetPermissions = record.setPermissions,
+			UnsetPermissions = record.unsetPermissions,
+			TypeRestrictions = record.typeRestrictions
 		};
 	}
 
-	private static SharpPower MapElementToPower(JsonElement element)
+	private static SharpPower MapRecordToPower(PowerRecord record)
 	{
-		var name = GetStringOrDefault(element, "name");
 		return new SharpPower
 		{
-			Id = $"Power/{name}",
-			Name = name,
-			Alias = GetStringOrDefault(element, "alias"),
-			System = GetBoolOrDefault(element, "system"),
-			Disabled = GetBoolOrDefault(element, "disabled"),
-			SetPermissions = GetStringArrayOrEmpty(element, "setPermissions"),
-			UnsetPermissions = GetStringArrayOrEmpty(element, "unsetPermissions"),
-			TypeRestrictions = GetStringArrayOrEmpty(element, "typeRestrictions")
+			Id = $"Power/{record.name}",
+			Name = record.name,
+			Alias = record.alias,
+			System = record.system,
+			Disabled = record.disabled,
+			SetPermissions = record.setPermissions,
+			UnsetPermissions = record.unsetPermissions,
+			TypeRestrictions = record.typeRestrictions
 		};
 	}
 
-	private static SharpAttributeFlag MapElementToAttributeFlag(JsonElement element)
+	private static SharpAttributeFlag MapRecordToAttributeFlag(AttributeFlagRecord record)
 	{
-		var name = GetStringOrDefault(element, "name");
 		return new SharpAttributeFlag
 		{
-			Id = $"AttributeFlag/{name}",
-			Key = name,
-			Name = name,
-			Symbol = GetStringOrDefault(element, "symbol"),
-			System = GetBoolOrDefault(element, "system"),
-			Inheritable = GetBoolOrDefault(element, "inheritable")
+			Id = $"AttributeFlag/{record.name}",
+			Key = record.name,
+			Name = record.name,
+			Symbol = record.symbol,
+			System = record.system,
+			Inheritable = record.inheritable
 		};
 	}
 
-	private static SharpAttributeEntry MapElementToAttributeEntry(JsonElement element)
+	private static SharpAttributeEntry MapRecordToAttributeEntry(AttributeEntryRecord record)
 	{
 		return new SharpAttributeEntry
 		{
-			Id = $"AttributeEntry/{GetStringOrDefault(element, "name")}",
-			Name = GetStringOrDefault(element, "name"),
-			DefaultFlags = GetStringArrayOrEmpty(element, "defaultFlags"),
-			Limit = GetStringOrNull(element, "lim"),
-			Enum = element.TryGetProperty("enumValues", out var enumProp) && enumProp.ValueKind == JsonValueKind.Array
-				? enumProp.EnumerateArray().Select(x => x.GetString() ?? "").ToArray()
-				: null
+			Id = $"AttributeEntry/{record.name}",
+			Name = record.name,
+			DefaultFlags = record.defaultFlags,
+			Limit = string.IsNullOrEmpty(record.lim) ? null : record.lim,
+			Enum = record.enumValues.Length > 0 ? record.enumValues : null
 		};
 	}
 
@@ -639,20 +570,13 @@ public partial class SurrealDatabase(
 		var attrKey = ExtractKeyString(attrId);
 		var parameters = new Dictionary<string, object?> { ["key"] = attrKey };
 		var result = await ExecuteAsync(
-			"SELECT ->has_attribute_flag->attribute_flag.* AS flags FROM type::thing('attribute', $key)",
+			"SELECT * FROM attribute_flag WHERE id IN (SELECT VALUE out FROM has_attribute_flag WHERE in = type::thing('attribute', $key))",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
-		if (records.Count > 0)
+		var records = result.GetValue<List<AttributeFlagRecord>>(0)!;
+		foreach (var record in records)
 		{
-			var flagsArray = records[0].GetProperty("flags");
-			if (flagsArray.ValueKind == JsonValueKind.Array)
-			{
-				foreach (var flagElement in flagsArray.EnumerateArray())
-				{
-					yield return MapElementToAttributeFlag(flagElement);
-				}
-			}
+			yield return MapRecordToAttributeFlag(record);
 		}
 	}
 
@@ -661,26 +585,22 @@ public partial class SurrealDatabase(
 		var attrKey = ExtractKeyString(attrId);
 		var parameters = new Dictionary<string, object?> { ["key"] = attrKey };
 		var result = await ExecuteAsync(
-			"SELECT ->has_attribute_owner->player.* AS owner FROM type::thing('attribute', $key)",
+			"SELECT * FROM player WHERE id IN (SELECT VALUE out FROM has_attribute_owner WHERE in = type::thing('attribute', $key))",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
+		var records = result.GetValue<List<PlayerRecord>>(0)!;
 		if (records.Count == 0) return null;
 
-		var ownerArray = records[0].GetProperty("owner");
-		if (ownerArray.ValueKind != JsonValueKind.Array || ownerArray.GetArrayLength() == 0)
-			return null;
-
-		var playerElement = ownerArray[0];
-		var pKey = GetIntOrDefault(playerElement, "key");
+		var playerRecord = records[0];
+		var pKey = playerRecord.key;
 
 		var objParams = new Dictionary<string, object?> { ["key"] = pKey };
 		var objResult = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, ct);
-		var objRecords = objResult.GetValue<List<JsonElement>>(0)!;
+		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
 		if (objRecords.Count == 0) return null;
 
-		var sharpObj = MapElementToSharpObject(objRecords[0]);
-		return BuildPlayer(PlayerId(pKey), playerElement, sharpObj);
+		var sharpObj = MapRecordToSharpObject(objRecords[0]);
+		return BuildPlayer(PlayerId(pKey), playerRecord, sharpObj);
 	}
 
 	private async ValueTask<SharpAttributeEntry?> GetRelatedAttributeEntryAsync(string attrId, CancellationToken ct)
@@ -688,56 +608,52 @@ public partial class SurrealDatabase(
 		var attrKey = ExtractKeyString(attrId);
 		var parameters = new Dictionary<string, object?> { ["key"] = attrKey };
 		var result = await ExecuteAsync(
-			"SELECT ->has_attribute_entry->attribute_entry.* AS entries FROM type::thing('attribute', $key)",
+			"SELECT * FROM attribute_entry WHERE id IN (SELECT VALUE out FROM has_attribute_entry WHERE in = type::thing('attribute', $key))",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
+		var records = result.GetValue<List<AttributeEntryRecord>>(0)!;
 		if (records.Count == 0) return null;
 
-		var entriesArray = records[0].GetProperty("entries");
-		if (entriesArray.ValueKind != JsonValueKind.Array || entriesArray.GetArrayLength() == 0)
-			return null;
-
-		return MapElementToAttributeEntry(entriesArray[0]);
+		return MapRecordToAttributeEntry(records[0]);
 	}
 
-	private async ValueTask<SharpAttribute> MapToSharpAttribute(JsonElement element, CancellationToken ct)
+	private async ValueTask<SharpAttribute> MapToSharpAttribute(AttributeRecord record, CancellationToken ct)
 	{
-		var key = GetStringOrDefault(element, "key");
+		var key = record.key;
 		var id = AttributeId(key);
 		var flags = await GetAttributeFlagsForAttrAsync(id, ct).ToArrayAsync(ct);
 		return new SharpAttribute(
 			id,
 			key,
-			GetStringOrDefault(element, "name"),
+			record.name,
 			flags,
 			null,
-			GetStringOrNull(element, "longName"),
+			string.IsNullOrEmpty(record.longName) ? null : record.longName,
 			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<SharpAttribute>>(new FreshEnumerable<SharpAttribute>(() => GetTopLevelAttributesAsync(id, innerCt)))),
 			new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 			new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)))
 		{
-			Value = MModule.deserialize(GetStringOrDefault(element, "value"))
+			Value = MModule.deserialize(record.value)
 		};
 	}
 
-	private async ValueTask<LazySharpAttribute> MapToLazySharpAttribute(JsonElement element, CancellationToken ct)
+	private async ValueTask<LazySharpAttribute> MapToLazySharpAttribute(AttributeRecord record, CancellationToken ct)
 	{
-		var key = GetStringOrDefault(element, "key");
+		var key = record.key;
 		var id = AttributeId(key);
 		var flags = await GetAttributeFlagsForAttrAsync(id, ct).ToArrayAsync(ct);
 		return new LazySharpAttribute(
 			id,
 			key,
-			GetStringOrDefault(element, "name"),
+			record.name,
 			flags,
 			null,
-			GetStringOrNull(element, "longName"),
+			string.IsNullOrEmpty(record.longName) ? null : record.longName,
 			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<LazySharpAttribute>>(new FreshEnumerable<LazySharpAttribute>(() => GetTopLevelLazyAttributesAsync(id, innerCt)))),
 			new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 			new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)),
 			Value: new AsyncLazy<MString>(innerCt =>
-				Task.FromResult(MModule.deserialize(GetStringOrDefault(element, "value")))));
+				Task.FromResult(MModule.deserialize(record.value))));
 	}
 
 	private async IAsyncEnumerable<SharpAttribute> GetTopLevelAttributesAsync(string parentId, [EnumeratorCancellation] CancellationToken ct = default)
@@ -748,28 +664,22 @@ public partial class SurrealDatabase(
 			var key = ExtractKeyString(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = key };
 			result = await ExecuteAsync(
-				"SELECT ->has_attribute->attribute.* AS children FROM type::thing('attribute', $key)",
+				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))",
 				parameters, ct);
 		}
 		else
 		{
-			// parentId is an Object ID — find the typed node first
 			var objKey = ExtractKey(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 			result = await ExecuteAsync(
-				"SELECT ->has_attribute->attribute.* AS children FROM player, room, thing, exit WHERE key = $key",
+				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('player', $key) OR in = type::thing('room', $key) OR in = type::thing('thing', $key) OR in = type::thing('exit', $key))",
 				parameters, ct);
 		}
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0) yield break;
-
-		var childrenArray = records[0].GetProperty("children");
-		if (childrenArray.ValueKind != JsonValueKind.Array) yield break;
-
-		foreach (var child in childrenArray.EnumerateArray())
+		var records = result.GetValue<List<AttributeRecord>>(0)!;
+		foreach (var record in records)
 		{
-			yield return await MapToSharpAttribute(child, ct);
+			yield return await MapToSharpAttribute(record, ct);
 		}
 	}
 
@@ -781,7 +691,7 @@ public partial class SurrealDatabase(
 			var key = ExtractKeyString(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = key };
 			result = await ExecuteAsync(
-				"SELECT ->has_attribute->attribute.* AS children FROM type::thing('attribute', $key)",
+				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))",
 				parameters, ct);
 		}
 		else
@@ -789,19 +699,14 @@ public partial class SurrealDatabase(
 			var objKey = ExtractKey(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 			result = await ExecuteAsync(
-				"SELECT ->has_attribute->attribute.* AS children FROM player, room, thing, exit WHERE key = $key",
+				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('player', $key) OR in = type::thing('room', $key) OR in = type::thing('thing', $key) OR in = type::thing('exit', $key))",
 				parameters, ct);
 		}
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
-		if (records.Count == 0) yield break;
-
-		var childrenArray = records[0].GetProperty("children");
-		if (childrenArray.ValueKind != JsonValueKind.Array) yield break;
-
-		foreach (var child in childrenArray.EnumerateArray())
+		var records = result.GetValue<List<AttributeRecord>>(0)!;
+		foreach (var record in records)
 		{
-			yield return await MapToLazySharpAttribute(child, ct);
+			yield return await MapToLazySharpAttribute(record, ct);
 		}
 	}
 
@@ -844,15 +749,159 @@ public partial class SurrealDatabase(
 			"SELECT * FROM object WHERE key IN (SELECT VALUE in.key FROM has_parent WHERE out = type::thing('object', $key))",
 			parameters, ct);
 
-		var records = result.GetValue<List<JsonElement>>(0)!;
+		var records = result.GetValue<List<ObjectRecord>>(0)!;
 		foreach (var record in records)
 		{
-			yield return MapElementToSharpObject(record);
+			yield return MapRecordToSharpObject(record);
 		}
 	}
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
 	private static partial Regex WildcardToRegex();
+
+	#endregion
+
+	#region Internal Record Types for CBOR Deserialization
+
+	internal record ObjectRecord
+	{
+		public int key { get; set; }
+		public string name { get; set; } = "";
+		public string type { get; set; } = "";
+		public long creationTime { get; set; }
+		public long modifiedTime { get; set; }
+		public string locks { get; set; } = "{}";
+		public int warnings { get; set; }
+	}
+
+	internal record PlayerRecord
+	{
+		public int key { get; set; }
+		public string passwordHash { get; set; } = "";
+		public string passwordSalt { get; set; } = "";
+		public string[] aliases { get; set; } = [];
+		public int quota { get; set; }
+	}
+
+	internal record RoomRecord
+	{
+		public int key { get; set; }
+		public string[] aliases { get; set; } = [];
+	}
+
+	internal record ThingRecord
+	{
+		public int key { get; set; }
+		public string[] aliases { get; set; } = [];
+	}
+
+	internal record ExitRecord
+	{
+		public int key { get; set; }
+		public string[] aliases { get; set; } = [];
+	}
+
+	internal record AttributeRecord
+	{
+		public string key { get; set; } = "";
+		public string name { get; set; } = "";
+		public string value { get; set; } = "";
+		public string longName { get; set; } = "";
+	}
+
+	internal record FlagRecord
+	{
+		public string name { get; set; } = "";
+		public string symbol { get; set; } = "";
+		public bool system { get; set; }
+		public bool disabled { get; set; }
+		public string[] aliases { get; set; } = [];
+		public string[] setPermissions { get; set; } = [];
+		public string[] unsetPermissions { get; set; } = [];
+		public string[] typeRestrictions { get; set; } = [];
+	}
+
+	internal record PowerRecord
+	{
+		public string name { get; set; } = "";
+		public string alias { get; set; } = "";
+		public bool system { get; set; }
+		public bool disabled { get; set; }
+		public string[] setPermissions { get; set; } = [];
+		public string[] unsetPermissions { get; set; } = [];
+		public string[] typeRestrictions { get; set; } = [];
+	}
+
+	internal record AttributeFlagRecord
+	{
+		public string name { get; set; } = "";
+		public string symbol { get; set; } = "";
+		public bool system { get; set; }
+		public bool inheritable { get; set; }
+	}
+
+	internal record AttributeEntryRecord
+	{
+		public string name { get; set; } = "";
+		public string[] defaultFlags { get; set; } = [];
+		public string lim { get; set; } = "";
+		public string[] enumValues { get; set; } = [];
+	}
+
+	internal record CountRecord
+	{
+		public long cnt { get; set; }
+	}
+
+	internal record ValueRecord
+	{
+		public int value { get; set; }
+	}
+
+	internal record ChannelDbRecord
+	{
+		public string name { get; set; } = "";
+		public string markedUpName { get; set; } = "";
+		public string description { get; set; } = "";
+		public string[] privs { get; set; } = [];
+		public string joinLock { get; set; } = "";
+		public string speakLock { get; set; } = "";
+		public string seeLock { get; set; } = "";
+		public string hideLock { get; set; } = "";
+		public string modLock { get; set; } = "";
+		public string mogrifier { get; set; } = "";
+		public int buffer { get; set; }
+	}
+
+	internal record ChannelMemberEdgeRecord
+	{
+		public int memberKey { get; set; }
+		public bool combine { get; set; }
+		public bool gagged { get; set; }
+		public bool hide { get; set; }
+		public bool mute { get; set; }
+		public string title { get; set; } = "";
+	}
+
+	internal record MailDbRecord
+	{
+		public string key { get; set; } = "";
+		public long dateSent { get; set; }
+		public bool fresh { get; set; }
+		public bool read { get; set; }
+		public bool tagged { get; set; }
+		public bool urgent { get; set; }
+		public bool forwarded { get; set; }
+		public bool cleared { get; set; }
+		public string folder { get; set; } = "";
+		public string content { get; set; } = "";
+		public string subject { get; set; } = "";
+	}
+
+	internal record ExpandedDataDbRecord
+	{
+		public string data { get; set; } = "";
+	}
 
 	#endregion
 }
