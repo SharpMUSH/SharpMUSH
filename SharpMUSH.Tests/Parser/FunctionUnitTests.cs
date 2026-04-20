@@ -49,4 +49,24 @@ public class FunctionUnitTests
 			await Assert.That(result).IsEqualTo(expected);
 		}
 	}
+
+	[Test]
+	public async Task FunctionParse_WithIdentityButNoTracking_DoesNotCrashRegularFunctions()
+	{
+		var missingTrackingState = Parser.CurrentState with
+		{
+			Executor = new SharpMUSH.Library.Models.DBRef(999999),
+			Enactor = new SharpMUSH.Library.Models.DBRef(999999),
+			Caller = new SharpMUSH.Library.Models.DBRef(999999),
+			CallDepth = null,
+			FunctionRecursionDepths = null,
+			TotalInvocations = null,
+			LimitExceeded = null
+		};
+
+		var parser = Parser.FromState(missingTrackingState);
+		var result = await parser.FunctionParse(MModule.single("add(1,1)"));
+
+		await Assert.That(result?.Message?.ToString()).IsEqualTo("2");
+	}
 }

@@ -439,42 +439,61 @@ public class SharpMUSHParserVisitor(
 
 			List<CallState> refinedArguments;
 
-			// Check function-level permissions
-			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+			// Check function-level permissions only when the function actually has
+			// permission flags. This avoids hard-failing regular functions when
+			// executor identity cannot be resolved.
+			var requiresExecutor =
+				attribute.Flags.HasFlag(FunctionFlags.WizardOnly) ||
+				attribute.Flags.HasFlag(FunctionFlags.AdminOnly) ||
+				attribute.Flags.HasFlag(FunctionFlags.GodOnly) ||
+				attribute.Flags.HasFlag(FunctionFlags.NoGuest) ||
+				attribute.Flags.HasFlag(FunctionFlags.NoGagged);
 
-			// Check if function is restricted to Wizards
-			if (attribute.Flags.HasFlag(FunctionFlags.WizardOnly) && !await executor.IsWizard())
+			if (requiresExecutor)
 			{
-				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
-			}
+				var executorOptional = await parser.CurrentState.ExecutorObject(Mediator);
+				if (executorOptional is null || executorOptional.IsNone)
+				{
+					success = false;
+					return new CallState(Errors.ErrorPerm, contextDepth);
+				}
 
-			// Check if function is restricted to Admins (Wizards or higher)
-			if (attribute.Flags.HasFlag(FunctionFlags.AdminOnly) && !await executor.IsWizard())
-			{
-				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
-			}
+				var executor = executorOptional.Known();
 
-			// Check if function is restricted to God
-			if (attribute.Flags.HasFlag(FunctionFlags.GodOnly) && !executor.IsGod())
-			{
-				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
-			}
+				// Check if function is restricted to Wizards
+				if (attribute.Flags.HasFlag(FunctionFlags.WizardOnly) && !await executor.IsWizard())
+				{
+					success = false;
+					return new CallState(Errors.ErrorPerm, contextDepth);
+				}
 
-			// Check if function cannot be used by Guests
-			if (attribute.Flags.HasFlag(FunctionFlags.NoGuest) && await executor.IsGuest())
-			{
-				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
-			}
+				// Check if function is restricted to Admins (Wizards or higher)
+				if (attribute.Flags.HasFlag(FunctionFlags.AdminOnly) && !await executor.IsWizard())
+				{
+					success = false;
+					return new CallState(Errors.ErrorPerm, contextDepth);
+				}
 
-			// Check if function cannot be used by Gagged players
-			if (attribute.Flags.HasFlag(FunctionFlags.NoGagged) && await executor.HasFlag("GAGGED"))
-			{
-				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
+				// Check if function is restricted to God
+				if (attribute.Flags.HasFlag(FunctionFlags.GodOnly) && !executor.IsGod())
+				{
+					success = false;
+					return new CallState(Errors.ErrorPerm, contextDepth);
+				}
+
+				// Check if function cannot be used by Guests
+				if (attribute.Flags.HasFlag(FunctionFlags.NoGuest) && await executor.IsGuest())
+				{
+					success = false;
+					return new CallState(Errors.ErrorPerm, contextDepth);
+				}
+
+				// Check if function cannot be used by Gagged players
+				if (attribute.Flags.HasFlag(FunctionFlags.NoGagged) && await executor.HasFlag("GAGGED"))
+				{
+					success = false;
+					return new CallState(Errors.ErrorPerm, contextDepth);
+				}
 			}
 
 			/* Validation, this should probably go into its own function! */
@@ -599,11 +618,14 @@ public class SharpMUSHParserVisitor(
 			logger.LogError(ex, nameof(CallFunction));
 			success = false;
 
-			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-			if (executor.IsGod())
+			var executorOptional = await parser.CurrentState.ExecutorObject(Mediator);
+			if (executorOptional is not null && !executorOptional.IsNone)
 			{
-				await NotifyService.Notify(executor, string.Format(ErrorMessages.Returns.InternalErrorFormat, ex));
+				var executor = executorOptional.Known();
+				if (executor.IsGod())
+				{
+					await NotifyService.Notify(executor, string.Format(ErrorMessages.Returns.InternalErrorFormat, ex));
+				}
 			}
 
 			return CallState.Empty;
