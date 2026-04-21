@@ -278,7 +278,7 @@ public partial class SurrealDatabase
 			}
 			else
 			{
-				// For intermediate nodes, only create if not existing (preserve existing values)
+				// For intermediate nodes, use UPSERT preserving any existing value
 				var upsertParams = new Dictionary<string, object?>
 				{
 					["key"] = attrKey,
@@ -287,35 +287,36 @@ public partial class SurrealDatabase
 				};
 
 				await ExecuteAsync(
-					"IF (SELECT * FROM attribute WHERE id = attribute:⟨$key⟩).len() == 0 { CREATE attribute:⟨$key⟩ SET key = $key, name = $name, longName = $longName, value = '' }",
+					"UPSERT attribute:⟨$key⟩ SET key = $key, name = $name, longName = $longName, value = value ?? ''",
 					upsertParams, cancellationToken);
 			}
 
-			// Ensure the has_attribute edge exists from parent to this attribute
-			var edgeParams = new Dictionary<string, object?>
-			{
-				["parentId"] = currentParentRecordId,
-				["childKey"] = attrKey
-			};
-
-			// Use a conditional query: create edge only if not existing
+			// Ensure the has_attribute edge exists from parent to this attribute using UPSERT with deterministic ID
 			if (i == 0)
 			{
 				// Parent is a typed object node (player/room/thing/exit)
+				var edgeId = $"{currentParentRecordId.Replace(":", "_")}__attr_{EscapeString(attrKey)}";
+				var edgeParams = new Dictionary<string, object?>
+				{
+					["childKey"] = attrKey,
+					["edgeId"] = edgeId
+				};
 				await ExecuteAsync(
-					$"IF (SELECT * FROM has_attribute WHERE in = {currentParentRecordId} AND out = attribute:⟨$childKey⟩).len() == 0 {{ RELATE {currentParentRecordId}->has_attribute->attribute:⟨$childKey⟩ }}",
+					$"UPSERT has_attribute:⟨$edgeId⟩ SET in = {currentParentRecordId}, out = attribute:⟨$childKey⟩",
 					edgeParams, cancellationToken);
 			}
 			else
 			{
 				var prevAttrKey = $"{objKey}_{string.Join('`', attribute.Take(i))}";
+				var edgeId = $"attr_{EscapeString(prevAttrKey)}__attr_{EscapeString(attrKey)}";
 				var innerEdgeParams = new Dictionary<string, object?>
 				{
 					["parentKey"] = prevAttrKey,
-					["childKey"] = attrKey
+					["childKey"] = attrKey,
+					["edgeId"] = edgeId
 				};
 				await ExecuteAsync(
-					"IF (SELECT * FROM has_attribute WHERE in = attribute:⟨$parentKey⟩ AND out = attribute:⟨$childKey⟩).len() == 0 { RELATE attribute:⟨$parentKey⟩->has_attribute->attribute:⟨$childKey⟩ }",
+					"UPSERT has_attribute:⟨$edgeId⟩ SET in = attribute:⟨$parentKey⟩, out = attribute:⟨$childKey⟩",
 					innerEdgeParams, cancellationToken);
 			}
 
