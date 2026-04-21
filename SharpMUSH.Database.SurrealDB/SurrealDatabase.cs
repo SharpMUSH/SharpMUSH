@@ -86,6 +86,9 @@ public partial class SurrealDatabase(
 		return parts[0].ToLowerInvariant();
 	}
 
+	private const string AttributeChildrenByParentQuery =
+		"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))";
+
 	/// <summary>
 	/// Converts a partial-match regex to a full-match regex for SurrealDB.
 	/// SurrealDB's regex matching does full-string matching,
@@ -712,7 +715,7 @@ public partial class SurrealDatabase(
 			var key = ExtractKeyString(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = key };
 			result = await ExecuteAsync(
-				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))",
+				AttributeChildrenByParentQuery,
 				parameters, ct);
 		}
 		else
@@ -739,7 +742,7 @@ public partial class SurrealDatabase(
 			var key = ExtractKeyString(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = key };
 			result = await ExecuteAsync(
-				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))",
+				AttributeChildrenByParentQuery,
 				parameters, ct);
 		}
 		else
