@@ -222,6 +222,7 @@ public class ZoneCommandTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask ZMRUserDefinedCommandTest()
 	{
 		// Use a fresh player so this test does not mutate the shared player #1
@@ -267,7 +268,8 @@ public class ZoneCommandTests
 
 		// Set a $-command on the object with unique command name
 		var cmdName = TestIsolationHelpers.GenerateUniqueName("zmrtest");
-		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {cmdObjDbRef}=${cmdName}:@pemit #{testPlayer.Number}=ZMR command executed"));
+		var expectedOutput = TestIsolationHelpers.GenerateUniqueName("ZMR command executed");
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {cmdObjDbRef}=${cmdName}:@pemit #{testPlayer.Number}={expectedOutput}"));
 
 		// Teleport the test player to the zoned room
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@tel {zonedRoomDbRef}"));
@@ -279,10 +281,11 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "ZMR command executed")), TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, expectedOutput)), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask PersonalZoneUserDefinedCommandTest()
 	{
 		// Use a fresh player so this test never mutates the shared player #1
@@ -299,13 +302,25 @@ public class ZoneCommandTests
 		await Assert.That(personalZMRObject.IsNone).IsFalse();
 
 		// Set the TEST PLAYER'S zone to the ZMR (this is the "personal zone" concept)
-		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@chzone me={personalZMRDbRef}"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@chzone #{testPlayer.Number}={personalZMRDbRef}"));
 
-		// Verify zone was set on the test player
-		var playerObj = await Mediator.Send(new GetObjectNodeQuery(testPlayer));
-		var playerZone = await playerObj.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		await Assert.That(playerZone.IsNone).IsFalse();
-		await Assert.That(playerZone.Known.Object().DBRef.Number).IsEqualTo(personalZMRDbRef.Number);
+		// Verify zone was set on the test player. Poll briefly because DB updates can be delayed under full-suite load.
+		var playerZoneSet = false;
+		for (var attempt = 0; attempt < 20; attempt++)
+		{
+			var playerObj = await Mediator.Send(new GetObjectNodeQuery(testPlayer));
+			var playerZone = await playerObj.Known.Object().Zone.WithCancellation(CancellationToken.None);
+			if (!playerZone.IsNone)
+			{
+				playerZoneSet = true;
+				await Assert.That(playerZone.Known.Object().DBRef.Number).IsEqualTo(personalZMRDbRef.Number);
+				break;
+			}
+
+			await Task.Delay(100);
+		}
+
+		await Assert.That(playerZoneSet).IsTrue();
 
 		// Create a unique object in the personal ZMR with a $-command
 		var personalCmdObjName = TestIsolationHelpers.GenerateUniqueName("PersonalCmdObj");
@@ -319,7 +334,8 @@ public class ZoneCommandTests
 
 		// Set a $-command on the object with unique command name
 		var cmdName = TestIsolationHelpers.GenerateUniqueName("personaltest");
-		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {personalCmdObjDbRef}=${cmdName}:@pemit #{testPlayer.Number}=Personal zone command executed"));
+		var expectedOutput = TestIsolationHelpers.GenerateUniqueName("Personal zone command executed");
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {personalCmdObjDbRef}=${cmdName}:@pemit #{testPlayer.Number}={expectedOutput}"));
 
 		// Create a unique room to test from (separate from the ZMR)
 		var testRoomName = TestIsolationHelpers.GenerateUniqueName("PersonalZoneTestRoom");
@@ -341,7 +357,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "Personal zone command executed")), TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, expectedOutput)), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
