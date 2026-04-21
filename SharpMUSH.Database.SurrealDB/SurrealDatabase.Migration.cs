@@ -31,7 +31,7 @@ public partial class SurrealDatabase
 			if (_migrated) return;
 			logger.LogInformation("Migrating SurrealDB Database");
 
-			// Create indexes
+			// Create indexes on data tables
 			var indexQueries = new[]
 			{
 				"DEFINE INDEX object_key ON object FIELDS key UNIQUE",
@@ -47,7 +47,26 @@ public partial class SurrealDatabase
 				"DEFINE INDEX attribute_flag_name ON attribute_flag FIELDS name UNIQUE",
 				"DEFINE INDEX attribute_entry_name ON attribute_entry FIELDS name UNIQUE",
 				"DEFINE INDEX channel_name ON channel FIELDS name UNIQUE",
-				"DEFINE INDEX counter_name ON counter FIELDS name UNIQUE"
+				"DEFINE INDEX counter_name ON counter FIELDS name UNIQUE",
+				// Indexes on edge/relation tables for fast traversal
+				"DEFINE INDEX has_attribute_in ON has_attribute FIELDS in",
+				"DEFINE INDEX has_attribute_out ON has_attribute FIELDS out",
+				"DEFINE INDEX has_attribute_flag_in ON has_attribute_flag FIELDS in",
+				"DEFINE INDEX has_attribute_entry_in ON has_attribute_entry FIELDS in",
+				"DEFINE INDEX has_attribute_owner_in ON has_attribute_owner FIELDS in",
+				"DEFINE INDEX has_flags_in ON has_flags FIELDS in",
+				"DEFINE INDEX has_powers_in ON has_powers FIELDS in",
+				"DEFINE INDEX has_owner_in ON has_owner FIELDS in",
+				"DEFINE INDEX has_home_in ON has_home FIELDS in",
+				"DEFINE INDEX has_zone_in ON has_zone FIELDS in",
+				"DEFINE INDEX has_parent_in ON has_parent FIELDS in",
+				"DEFINE INDEX at_location_in ON at_location FIELDS in",
+				"DEFINE INDEX at_location_out ON at_location FIELDS out",
+				"DEFINE INDEX is_object_in ON is_object FIELDS in",
+				"DEFINE INDEX member_of_channel_in ON member_of_channel FIELDS in",
+				"DEFINE INDEX owner_of_channel_in ON owner_of_channel FIELDS in",
+				"DEFINE INDEX received_mail_in ON received_mail FIELDS in",
+				"DEFINE INDEX mail_sender_in ON mail_sender FIELDS in"
 			};
 
 			foreach (var q in indexQueries)
