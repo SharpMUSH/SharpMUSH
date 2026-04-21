@@ -26,8 +26,8 @@ public partial class SurrealDatabase(
 {
 	private readonly IPasswordService _passwordService = passwordService;
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
-	private static readonly SemaphoreSlim CounterLock = new(1, 1);
 	private static volatile bool _migrated;
+	private static int _nextObjectKey;
 
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
@@ -187,21 +187,11 @@ public partial class SurrealDatabase(
 	/// </summary>
 	private static string EscapeRecordId(string s) => s;
 
-	private async ValueTask<int> GetNextObjectKeyAsync(CancellationToken ct = default)
+	private ValueTask<int> GetNextObjectKeyAsync(CancellationToken ct = default)
 	{
-		// Serialize counter increments to prevent read/write conflicts on the shared counter record.
-		await CounterLock.WaitAsync(ct);
-		try
-		{
-			var response = await ExecuteAsync(
-				"UPSERT counter:object_key SET value = (value ?? 0) + 1 RETURN AFTER", ct);
-			var result = response.GetValue<List<ValueRecord>>(0)!;
-			return result[0].value;
-		}
-		finally
-		{
-			CounterLock.Release();
-		}
+		// Use an in-memory atomic counter to avoid SurrealDB UPSERT transaction conflicts
+		// under parallel test execution. The counter is initialized during migration.
+		return ValueTask.FromResult(Interlocked.Increment(ref _nextObjectKey));
 	}
 
 	private static string SerializeLocks(IImmutableDictionary<string, SharpLockData>? locks)

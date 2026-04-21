@@ -58,8 +58,8 @@ public partial class SurrealDatabase
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-			// Create Counter for auto-increment object keys
-			await ExecuteAsync("UPSERT counter:object_key SET name = 'object_key', value = 2", cancellationToken);
+			// Initialize in-memory counter for auto-increment object keys (migration creates keys 0, 1, 2)
+			_nextObjectKey = 2;
 
 			// Create Room Zero (key=0)
 			await ExecuteAsync(
