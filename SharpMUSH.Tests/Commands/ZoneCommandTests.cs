@@ -17,6 +17,9 @@ namespace SharpMUSH.Tests.Commands;
 
 public class ZoneCommandTests
 {
+	private const int ZoneSetPollAttempts = 20;
+	private const int ZoneSetPollDelayMs = 100;
+
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
@@ -306,7 +309,7 @@ public class ZoneCommandTests
 
 		// Verify zone was set on the test player. Poll briefly because DB updates can be delayed under full-suite load.
 		var playerZoneSet = false;
-		for (var attempt = 0; attempt < 20; attempt++)
+		for (var attempt = 0; attempt < ZoneSetPollAttempts; attempt++)
 		{
 			var playerObj = await Mediator.Send(new GetObjectNodeQuery(testPlayer));
 			var playerZone = await playerObj.Known.Object().Zone.WithCancellation(CancellationToken.None);
@@ -317,7 +320,7 @@ public class ZoneCommandTests
 				break;
 			}
 
-			await Task.Delay(100);
+			await Task.Delay(ZoneSetPollDelayMs);
 		}
 
 		await Assert.That(playerZoneSet).IsTrue();
