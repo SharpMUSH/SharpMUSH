@@ -304,7 +304,7 @@ public partial class SurrealDatabase
 	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default)
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = dbref.Number };
-		var response = await ExecuteAsync("SELECT * FROM object WHERE key = $key", parameters, cancellationToken);
+		var response = await ExecuteAsync("SELECT * FROM object:$key", parameters, cancellationToken);
 
 		var results = response.GetValue<List<ObjectRecord>>(0)!;
 		if (results.Count == 0) return new None();
@@ -319,7 +319,7 @@ public partial class SurrealDatabase
 	public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default)
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = dbref.Number };
-		var response = await ExecuteAsync("SELECT * FROM object WHERE key = $key", parameters, cancellationToken);
+		var response = await ExecuteAsync("SELECT * FROM object:$key", parameters, cancellationToken);
 
 		var results = response.GetValue<List<ObjectRecord>>(0)!;
 		if (results.Count == 0) return null;
@@ -357,7 +357,7 @@ public partial class SurrealDatabase
 			{
 				var sharpObj = MapRecordToSharpObject(objRecord);
 				var playerParams = new Dictionary<string, object?> { ["key"] = key };
-				var playerResponse = await ExecuteAsync("SELECT * FROM player WHERE key = $key", playerParams, cancellationToken);
+				var playerResponse = await ExecuteAsync("SELECT * FROM player:$key", playerParams, cancellationToken);
 				var playerResults = playerResponse.GetValue<List<PlayerRecord>>(0)!;
 				if (playerResults.Count > 0)
 				{
@@ -373,7 +373,7 @@ public partial class SurrealDatabase
 			if (foundKeys.Add(key))
 			{
 				var objParams = new Dictionary<string, object?> { ["key"] = key };
-				var objResp = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, cancellationToken);
+				var objResp = await ExecuteAsync("SELECT * FROM object:$key", objParams, cancellationToken);
 				var objRecs = objResp.GetValue<List<ObjectRecord>>(0)!;
 				if (objRecs.Count > 0)
 				{
@@ -494,7 +494,7 @@ public partial class SurrealDatabase
 		{
 			var key = playerRecord.key;
 			var objParams = new Dictionary<string, object?> { ["key"] = key };
-			var objResponse = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, cancellationToken);
+			var objResponse = await ExecuteAsync("SELECT * FROM object:$key", objParams, cancellationToken);
 			var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 			if (objResults.Count > 0)
 			{
@@ -519,11 +519,11 @@ public partial class SurrealDatabase
 		foreach (var key in exitKeys)
 		{
 			var exitParams = new Dictionary<string, object?> { ["key"] = key };
-			var exitResponse = await ExecuteAsync("SELECT * FROM exit WHERE key = $key", exitParams, cancellationToken);
+			var exitResponse = await ExecuteAsync("SELECT * FROM exit:$key", exitParams, cancellationToken);
 			var exitResults = exitResponse.GetValue<List<ExitRecord>>(0)!;
 			if (exitResults.Count == 0) continue;
 
-			var objResponse = await ExecuteAsync("SELECT * FROM object WHERE key = $key", exitParams, cancellationToken);
+			var objResponse = await ExecuteAsync("SELECT * FROM object:$key", exitParams, cancellationToken);
 			var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 			if (objResults.Count > 0)
 			{

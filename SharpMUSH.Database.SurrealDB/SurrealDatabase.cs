@@ -75,6 +75,11 @@ public partial class SurrealDatabase(
 	private static string ExtractKeyString(string id) => id.Split('/')[1];
 
 	/// <summary>
+	/// Extracts the SurrealDB table name from a typed ID like "Player/42" → "player".
+	/// </summary>
+	private static string ExtractTable(string typedId) => typedId.Split('/')[0].ToLower();
+
+	/// <summary>
 	/// Converts a partial-match regex to a full-match regex for SurrealDB.
 	/// SurrealDB's regex matching does full-string matching,
 	/// so we add .* anchors as needed to simulate partial matching.
@@ -277,7 +282,7 @@ public partial class SurrealDatabase(
 		switch (type.ToUpper())
 		{
 			case "PLAYER":
-				var playerResult = await ExecuteAsync("SELECT * FROM player WHERE key = $key", parameters, ct);
+				var playerResult = await ExecuteAsync("SELECT * FROM player:$key", parameters, ct);
 				var players = playerResult.GetValue<List<PlayerRecord>>(0)!;
 				if (players.Count == 0) return new None();
 				return BuildPlayer(typedId, players[0], sharpObj);
@@ -286,7 +291,7 @@ public partial class SurrealDatabase(
 			case "THING":
 				return BuildThing(typedId, sharpObj);
 			case "EXIT":
-				var exitResult = await ExecuteAsync("SELECT * FROM exit WHERE key = $key", parameters, ct);
+				var exitResult = await ExecuteAsync("SELECT * FROM exit:$key", parameters, ct);
 				var exits = exitResult.GetValue<List<ExitRecord>>(0)!;
 				if (exits.Count == 0) return new None();
 				return BuildExit(typedId, exits[0], sharpObj);
@@ -299,7 +304,7 @@ public partial class SurrealDatabase(
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var objResult = await ExecuteAsync(
-			"SELECT * FROM object WHERE key = $key",
+			"SELECT * FROM object:$key",
 			parameters, ct);
 
 		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
@@ -381,9 +386,10 @@ public partial class SurrealDatabase(
 	private async ValueTask<AnySharpContainer> GetLocationForTypedAsync(string typedId, CancellationToken ct)
 	{
 		var key = ExtractKey(typedId);
+		var table = ExtractTable(typedId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT VALUE out.key FROM at_location WHERE in.key = $key",
+			$"SELECT VALUE out.key FROM at_location WHERE in = {table}:$key",
 			parameters, ct);
 
 		var destKeys = result.GetValue<List<int>>(0)!;
@@ -403,9 +409,10 @@ public partial class SurrealDatabase(
 	private async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct)
 	{
 		var key = ExtractKey(typedId);
+		var table = ExtractTable(typedId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT VALUE out.key FROM has_home WHERE in.key = $key",
+			$"SELECT VALUE out.key FROM has_home WHERE in = {table}:$key",
 			parameters, ct);
 
 		var destKeys = result.GetValue<List<int>>(0)!;
@@ -427,7 +434,7 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(roomId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT VALUE out.key FROM has_home WHERE in = type::thing('room', $key)",
+			"SELECT VALUE out.key FROM has_home WHERE in = room:$key",
 			parameters, ct);
 
 		var destKeys = result.GetValue<List<int>>(0)!;
@@ -448,9 +455,9 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 
-		// Get the owner's player record
+		// Get the owner's player record via graph traversal
 		var ownerResult = await ExecuteAsync(
-			"SELECT * FROM player WHERE id IN (SELECT VALUE out FROM has_owner WHERE in = type::thing('object', $key))",
+			"SELECT * FROM object:$key->has_owner->player",
 			parameters, ct);
 		var ownerPlayers = ownerResult.GetValue<List<PlayerRecord>>(0)!;
 		if (ownerPlayers.Count == 0)
@@ -459,10 +466,10 @@ public partial class SurrealDatabase(
 		var ownerPlayerRecord = ownerPlayers[0];
 		var ownerKey = ownerPlayerRecord.key;
 
-		// Get the object record for the owner
+		// Get the object record for the owner via direct record ID
 		var ownerObjParams = new Dictionary<string, object?> { ["key"] = ownerKey };
 		var ownerObjResult = await ExecuteAsync(
-			"SELECT * FROM object WHERE key = $key",
+			"SELECT * FROM object:$key",
 			ownerObjParams, ct);
 		var ownerObjRecords = ownerObjResult.GetValue<List<ObjectRecord>>(0)!;
 		if (ownerObjRecords.Count == 0)
@@ -477,7 +484,7 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT * FROM object WHERE key IN (SELECT VALUE out.key FROM has_parent WHERE in = type::thing('object', $key))",
+			"SELECT * FROM object:$key->has_parent->object",
 			parameters, ct);
 
 		var records = result.GetValue<List<ObjectRecord>>(0)!;
@@ -491,7 +498,7 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT * FROM object WHERE key IN (SELECT VALUE out.key FROM has_zone WHERE in = type::thing('object', $key))",
+			"SELECT * FROM object:$key->has_zone->object",
 			parameters, ct);
 
 		var records = result.GetValue<List<ObjectRecord>>(0)!;
@@ -505,7 +512,7 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT * FROM object_flag WHERE id IN (SELECT VALUE out FROM has_flags WHERE in = type::thing('object', $key))",
+			"SELECT * FROM object:$key->has_flags->object_flag",
 			parameters, ct);
 
 		var records = result.GetValue<List<FlagRecord>>(0)!;
@@ -533,7 +540,7 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT * FROM power WHERE id IN (SELECT VALUE out FROM has_powers WHERE in = type::thing('object', $key))",
+			"SELECT * FROM object:$key->has_powers->power",
 			parameters, ct);
 
 		var records = result.GetValue<List<PowerRecord>>(0)!;
@@ -604,7 +611,7 @@ public partial class SurrealDatabase(
 		var attrKey = ExtractKeyString(attrId);
 		var parameters = new Dictionary<string, object?> { ["key"] = attrKey };
 		var result = await ExecuteAsync(
-			"SELECT * FROM attribute_flag WHERE id IN (SELECT VALUE out FROM has_attribute_flag WHERE in = type::thing('attribute', $key))",
+			"SELECT * FROM attribute:⟨$key⟩->has_attribute_flag->attribute_flag",
 			parameters, ct);
 
 		var records = result.GetValue<List<AttributeFlagRecord>>(0)!;
@@ -619,7 +626,7 @@ public partial class SurrealDatabase(
 		var attrKey = ExtractKeyString(attrId);
 		var parameters = new Dictionary<string, object?> { ["key"] = attrKey };
 		var result = await ExecuteAsync(
-			"SELECT * FROM player WHERE id IN (SELECT VALUE out FROM has_attribute_owner WHERE in = type::thing('attribute', $key))",
+			"SELECT * FROM attribute:⟨$key⟩->has_attribute_owner->player",
 			parameters, ct);
 
 		var records = result.GetValue<List<PlayerRecord>>(0)!;
@@ -629,7 +636,7 @@ public partial class SurrealDatabase(
 		var pKey = playerRecord.key;
 
 		var objParams = new Dictionary<string, object?> { ["key"] = pKey };
-		var objResult = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, ct);
+		var objResult = await ExecuteAsync("SELECT * FROM object:$key", objParams, ct);
 		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
 		if (objRecords.Count == 0) return null;
 
@@ -642,7 +649,7 @@ public partial class SurrealDatabase(
 		var attrKey = ExtractKeyString(attrId);
 		var parameters = new Dictionary<string, object?> { ["key"] = attrKey };
 		var result = await ExecuteAsync(
-			"SELECT * FROM attribute_entry WHERE id IN (SELECT VALUE out FROM has_attribute_entry WHERE in = type::thing('attribute', $key))",
+			"SELECT * FROM attribute:⟨$key⟩->has_attribute_entry->attribute_entry",
 			parameters, ct);
 
 		var records = result.GetValue<List<AttributeEntryRecord>>(0)!;
@@ -698,7 +705,7 @@ public partial class SurrealDatabase(
 			var key = ExtractKeyString(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = key };
 			result = await ExecuteAsync(
-				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))",
+				"SELECT * FROM attribute:⟨$key⟩->has_attribute->attribute",
 				parameters, ct);
 		}
 		else
@@ -706,7 +713,7 @@ public partial class SurrealDatabase(
 			var objKey = ExtractKey(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 			result = await ExecuteAsync(
-				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('player', $key) OR in = type::thing('room', $key) OR in = type::thing('thing', $key) OR in = type::thing('exit', $key))",
+				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in IN [player:$key, room:$key, thing:$key, exit:$key])",
 				parameters, ct);
 		}
 
@@ -725,7 +732,7 @@ public partial class SurrealDatabase(
 			var key = ExtractKeyString(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = key };
 			result = await ExecuteAsync(
-				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))",
+				"SELECT * FROM attribute:⟨$key⟩->has_attribute->attribute",
 				parameters, ct);
 		}
 		else
@@ -733,7 +740,7 @@ public partial class SurrealDatabase(
 			var objKey = ExtractKey(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 			result = await ExecuteAsync(
-				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('player', $key) OR in = type::thing('room', $key) OR in = type::thing('thing', $key) OR in = type::thing('exit', $key))",
+				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in IN [player:$key, room:$key, thing:$key, exit:$key])",
 				parameters, ct);
 		}
 
@@ -780,7 +787,7 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var result = await ExecuteAsync(
-			"SELECT * FROM object WHERE key IN (SELECT VALUE in.key FROM has_parent WHERE out = type::thing('object', $key))",
+			"SELECT * FROM object:$key<-has_parent<-object",
 			parameters, ct);
 
 		var records = result.GetValue<List<ObjectRecord>>(0)!;

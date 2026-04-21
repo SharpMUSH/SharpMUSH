@@ -27,7 +27,7 @@ public partial class SurrealDatabase
 		var key = ExtractKey(id);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 		var response = await ExecuteAsync(
-			"SELECT * FROM object WHERE key IN (SELECT VALUE out.key FROM has_parent WHERE in = type::thing('object', $key))",
+			"SELECT * FROM object:$key->has_parent->object",
 			parameters, cancellationToken);
 
 		var records = response.GetValue<List<ObjectRecord>>(0)!;
@@ -49,7 +49,7 @@ public partial class SurrealDatabase
 
 			var parameters = new Dictionary<string, object?> { ["key"] = currentKey };
 			var response = await ExecuteAsync(
-				"SELECT * FROM object WHERE key IN (SELECT VALUE out.key FROM has_parent WHERE in = type::thing('object', $key))",
+				"SELECT * FROM object:$key->has_parent->object",
 				parameters, cancellationToken);
 
 			var records = response.GetValue<List<ObjectRecord>>(0)!;
@@ -79,13 +79,13 @@ public partial class SurrealDatabase
 
 			// Get parent keys
 			var parentResponse = await ExecuteAsync(
-				"SELECT VALUE out.key FROM has_parent WHERE in = type::thing('object', $key)",
+				"SELECT VALUE key FROM object:$key->has_parent->object",
 				parameters, cancellationToken);
 			var parentKeys = parentResponse.GetValue<List<int>>(0)!;
 
 			// Get zone keys
 			var zoneResponse = await ExecuteAsync(
-				"SELECT VALUE out.key FROM has_zone WHERE in = type::thing('object', $key)",
+				"SELECT VALUE key FROM object:$key->has_zone->object",
 				parameters, cancellationToken);
 			var zoneKeys = zoneResponse.GetValue<List<int>>(0)!;
 
@@ -114,7 +114,7 @@ public partial class SurrealDatabase
 		var zoneKey = zone.Object().Key;
 		var parameters = new Dictionary<string, object?> { ["key"] = zoneKey };
 		var response = await ExecuteAsync(
-			"SELECT * FROM object WHERE key IN (SELECT VALUE in.key FROM has_zone WHERE out = type::thing('object', $key))",
+			"SELECT * FROM object:$key<-has_zone<-object",
 			parameters, cancellationToken);
 
 		var records = response.GetValue<List<ObjectRecord>>(0)!;
@@ -254,11 +254,12 @@ public partial class SurrealDatabase
 		foreach (var key in exitKeys)
 		{
 			var exitParams = new Dictionary<string, object?> { ["key"] = key };
-			var exitResponse = await ExecuteAsync("SELECT * FROM exit WHERE key = $key", exitParams, ct);
+			var exitResponse = await ExecuteAsync(
+			"SELECT * FROM exit:$key", exitParams, ct);
 			var exitResults = exitResponse.GetValue<List<ExitRecord>>(0)!;
 			if (exitResults.Count == 0) continue;
 
-			var objResponse = await ExecuteAsync("SELECT * FROM object WHERE key = $key", exitParams, ct);
+			var objResponse = await ExecuteAsync("SELECT * FROM object:$key", exitParams, ct);
 			var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 			if (objResults.Count > 0)
 			{

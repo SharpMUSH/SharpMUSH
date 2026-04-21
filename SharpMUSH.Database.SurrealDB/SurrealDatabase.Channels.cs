@@ -46,7 +46,7 @@ public partial class SurrealDatabase
 		var objKey = obj.Object().Key;
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 		var response = await ExecuteAsync(
-			"SELECT * FROM channel WHERE id IN (SELECT VALUE out FROM member_of_channel WHERE in = type::thing('object', $key))",
+			"SELECT * FROM object:$key->member_of_channel->channel",
 			parameters, cancellationToken);
 
 		var records = response.GetValue<List<ChannelDbRecord>>(0)!;
@@ -166,7 +166,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"DELETE member_of_channel WHERE in = type::thing('object', $key) AND out IN (SELECT VALUE id FROM channel WHERE name = $name)",
+			"DELETE member_of_channel WHERE in = object:$key AND out IN (SELECT VALUE id FROM channel WHERE name = $name)",
 			parameters, cancellationToken);
 	}
 
@@ -211,7 +211,7 @@ public partial class SurrealDatabase
 		if (setClauses.Count == 0) return;
 
 		var query =
-			$"UPDATE member_of_channel SET {string.Join(", ", setClauses)} WHERE in = type::thing('object', $key) AND out IN (SELECT VALUE id FROM channel WHERE name = $name)";
+			$"UPDATE member_of_channel SET {string.Join(", ", setClauses)} WHERE in = object:$key AND out IN (SELECT VALUE id FROM channel WHERE name = $name)";
 
 		await ExecuteAsync(query, parameters, cancellationToken);
 	}

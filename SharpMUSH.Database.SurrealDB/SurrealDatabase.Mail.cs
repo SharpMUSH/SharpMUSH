@@ -32,7 +32,7 @@ public partial class SurrealDatabase
 		};
 
 		var response = await ExecuteAsync(
-			"SELECT * FROM mail WHERE folder = $folder AND id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $key))",
+			"SELECT * FROM mail WHERE folder = $folder AND id IN (SELECT VALUE out FROM received_mail WHERE in = player:$key)",
 			parameters, cancellationToken);
 
 		var records = response.GetValue<List<MailDbRecord>>(0)!;
@@ -46,7 +46,7 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["key"] = playerKey };
 
 		var response = await ExecuteAsync(
-			"SELECT * FROM mail WHERE id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $key))",
+			"SELECT * FROM player:$key->received_mail->mail",
 			parameters, cancellationToken);
 
 		var records = response.GetValue<List<MailDbRecord>>(0)!;
@@ -64,7 +64,7 @@ public partial class SurrealDatabase
 		};
 
 		var response = await ExecuteAsync(
-			"SELECT * FROM mail WHERE folder = $folder AND id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $key))",
+			"SELECT * FROM mail WHERE folder = $folder AND id IN (SELECT VALUE out FROM received_mail WHERE in = player:$key)",
 			parameters, cancellationToken);
 
 		var records = response.GetValue<List<MailDbRecord>>(0)!;
@@ -84,7 +84,7 @@ public partial class SurrealDatabase
 
 		// Get mails received by recipient that were sent by sender
 		var response = await ExecuteAsync(
-			"SELECT * FROM mail WHERE id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $recipientKey)) AND id IN (SELECT VALUE in FROM mail_sender WHERE out = type::thing('object', $senderKey))",
+			"SELECT * FROM mail WHERE id IN (SELECT VALUE out FROM received_mail WHERE in = player:$recipientKey) AND id IN (SELECT VALUE in FROM mail_sender WHERE out = object:$senderKey)",
 			parameters, cancellationToken);
 
 		var records = response.GetValue<List<MailDbRecord>>(0)!;
@@ -98,7 +98,7 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["key"] = senderKey };
 
 		var response = await ExecuteAsync(
-			"SELECT * FROM mail WHERE id IN (SELECT VALUE in FROM mail_sender WHERE out = type::thing('object', $key))",
+			"SELECT * FROM object:$key<-mail_sender<-mail",
 			parameters, cancellationToken);
 
 		var results = response.GetValue<List<MailDbRecord>>(0)!;
@@ -122,7 +122,7 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["key"] = playerKey };
 
 		var response = await ExecuteAsync(
-			"SELECT VALUE folder FROM mail WHERE id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $key))",
+			"SELECT VALUE folder FROM player:$key->received_mail->mail",
 			parameters, cancellationToken);
 
 		var folders = response.GetValue<List<string>>(0)!;
@@ -155,14 +155,14 @@ public partial class SurrealDatabase
 			["toKey"] = toKey
 		};
 
-		// Create mail then use its key to reference it in subsequent queries
+		// Create mail then link it via direct record ID
 		await ExecuteAsync(
 			"CREATE mail SET key = $mailKey, dateSent = $dateSent, fresh = $fresh, read = $read, tagged = $tagged, urgent = $urgent, forwarded = $forwarded, cleared = $cleared, folder = $folder, content = $content, subject = $subject",
 			parameters, cancellationToken);
 
 		await ExecuteAsync(
-			"RELATE player:$toKey->received_mail->(SELECT VALUE id FROM mail WHERE key = $mailKey LIMIT 1);" +
-			"RELATE (SELECT VALUE id FROM mail WHERE key = $mailKey LIMIT 1)->mail_sender->object:$fromKey",
+			"RELATE player:$toKey->received_mail->mail:⟨$mailKey⟩;" +
+			"RELATE mail:⟨$mailKey⟩->mail_sender->object:$fromKey",
 			parameters, cancellationToken);
 	}
 
@@ -175,19 +175,19 @@ public partial class SurrealDatabase
 		{
 			case { IsReadEdit: true }:
 				parameters["val"] = commandMail.AsReadEdit;
-				await ExecuteAsync("UPDATE mail SET read = $val, fresh = false WHERE key = $key", parameters, cancellationToken);
+				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET read = $val, fresh = false", parameters, cancellationToken);
 				return;
 			case { IsClearEdit: true }:
 				parameters["val"] = commandMail.AsClearEdit;
-				await ExecuteAsync("UPDATE mail SET cleared = $val WHERE key = $key", parameters, cancellationToken);
+				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET cleared = $val", parameters, cancellationToken);
 				return;
 			case { IsTaggedEdit: true }:
 				parameters["val"] = commandMail.AsTaggedEdit;
-				await ExecuteAsync("UPDATE mail SET tagged = $val WHERE key = $key", parameters, cancellationToken);
+				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET tagged = $val", parameters, cancellationToken);
 				return;
 			case { IsUrgentEdit: true }:
 				parameters["val"] = commandMail.AsUrgentEdit;
-				await ExecuteAsync("UPDATE mail SET urgent = $val WHERE key = $key", parameters, cancellationToken);
+				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET urgent = $val", parameters, cancellationToken);
 				return;
 		}
 	}
@@ -198,9 +198,9 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["key"] = mailKey };
 
 		await ExecuteAsync(
-			"DELETE received_mail WHERE out IN (SELECT VALUE id FROM mail WHERE key = $key);" +
-			"DELETE mail_sender WHERE in IN (SELECT VALUE id FROM mail WHERE key = $key);" +
-			"DELETE mail WHERE key = $key",
+			"DELETE received_mail WHERE out = mail:⟨$key⟩;" +
+			"DELETE mail_sender WHERE in = mail:⟨$key⟩;" +
+			"DELETE mail:⟨$key⟩",
 			parameters, cancellationToken);
 	}
 
@@ -216,7 +216,7 @@ public partial class SurrealDatabase
 
 		// Update all mail in the folder for this player directly
 		await ExecuteAsync(
-			"UPDATE mail SET folder = $newFolder WHERE folder = $folder AND id IN (SELECT VALUE out FROM received_mail WHERE in = type::thing('player', $key))",
+			"UPDATE mail SET folder = $newFolder WHERE folder = $folder AND id IN (SELECT VALUE out FROM received_mail WHERE in = player:$key)",
 			parameters, cancellationToken);
 	}
 
@@ -228,7 +228,7 @@ public partial class SurrealDatabase
 			["key"] = mailKey,
 			["newFolder"] = newFolder
 		};
-		await ExecuteAsync("UPDATE mail SET folder = $newFolder WHERE key = $key", parameters, cancellationToken);
+		await ExecuteAsync("UPDATE mail:⟨$key⟩ SET folder = $newFolder", parameters, cancellationToken);
 	}
 
 	public async IAsyncEnumerable<SharpMail> GetAllSystemMailAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -263,7 +263,7 @@ public partial class SurrealDatabase
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = mailKey };
 		var response = await ExecuteAsync(
-			"SELECT VALUE out.key FROM mail_sender WHERE in.key = $key",
+			"SELECT VALUE out.key FROM mail_sender WHERE in = mail:⟨$key⟩",
 			parameters, ct);
 
 		var senderKeys = response.GetValue<List<int>>(0)!;
