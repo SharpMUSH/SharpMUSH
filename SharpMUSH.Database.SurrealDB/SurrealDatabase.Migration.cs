@@ -53,20 +53,28 @@ public partial class SurrealDatabase
 				"DEFINE INDEX has_attribute_out ON has_attribute FIELDS out",
 				"DEFINE INDEX has_attribute_flag_in ON has_attribute_flag FIELDS in",
 				"DEFINE INDEX has_attribute_entry_in ON has_attribute_entry FIELDS in",
+				"DEFINE INDEX has_attribute_entry_out ON has_attribute_entry FIELDS out",
 				"DEFINE INDEX has_attribute_owner_in ON has_attribute_owner FIELDS in",
+				"DEFINE INDEX has_attribute_owner_out ON has_attribute_owner FIELDS out",
 				"DEFINE INDEX has_flags_in ON has_flags FIELDS in",
 				"DEFINE INDEX has_powers_in ON has_powers FIELDS in",
 				"DEFINE INDEX has_owner_in ON has_owner FIELDS in",
+				"DEFINE INDEX has_owner_out ON has_owner FIELDS out",
 				"DEFINE INDEX has_home_in ON has_home FIELDS in",
 				"DEFINE INDEX has_zone_in ON has_zone FIELDS in",
+				"DEFINE INDEX has_zone_out ON has_zone FIELDS out",
 				"DEFINE INDEX has_parent_in ON has_parent FIELDS in",
+				"DEFINE INDEX has_parent_out ON has_parent FIELDS out",
 				"DEFINE INDEX at_location_in ON at_location FIELDS in",
 				"DEFINE INDEX at_location_out ON at_location FIELDS out",
 				"DEFINE INDEX is_object_in ON is_object FIELDS in",
 				"DEFINE INDEX member_of_channel_in ON member_of_channel FIELDS in",
+				"DEFINE INDEX member_of_channel_out ON member_of_channel FIELDS out",
 				"DEFINE INDEX owner_of_channel_in ON owner_of_channel FIELDS in",
 				"DEFINE INDEX received_mail_in ON received_mail FIELDS in",
-				"DEFINE INDEX mail_sender_in ON mail_sender FIELDS in"
+				"DEFINE INDEX received_mail_out ON received_mail FIELDS out",
+				"DEFINE INDEX mail_sender_in ON mail_sender FIELDS in",
+				"DEFINE INDEX mail_sender_out ON mail_sender FIELDS out"
 			};
 
 			foreach (var q in indexQueries)
