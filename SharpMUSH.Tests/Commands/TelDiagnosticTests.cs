@@ -322,10 +322,22 @@ public class TelDiagnosticTests
 		var pocketBareDbref = pocketDbref.Contains(':') ? pocketDbref[..pocketDbref.IndexOf(':')] : pocketDbref;
 		var boardBareDbref = boardDbref.Contains(':') ? boardDbref[..boardDbref.IndexOf(':')] : boardDbref;
 
-		var numPocket = await Eval($"num({pocketName})");
-		var numBoard = await Eval($"num({boardName})");
-		Console.WriteLine($"num({pocketName}) = {numPocket}");
-		Console.WriteLine($"num({boardName}) = {numBoard}");
+		var numPocket = "";
+		var numBoard = "";
+		for (var attempt = 0; attempt < 10; attempt++)
+		{
+			numPocket = await Eval($"num({pocketName})");
+			numBoard = await Eval($"num({boardName})");
+			Console.WriteLine($"num({pocketName}) = {numPocket} (attempt {attempt + 1})");
+			Console.WriteLine($"num({boardName}) = {numBoard} (attempt {attempt + 1})");
+
+			if (numPocket == pocketBareDbref && numBoard == boardBareDbref)
+			{
+				break;
+			}
+
+			await Task.Delay(50);
+		}
 
 		await Assert.That(numPocket).IsEqualTo(pocketBareDbref)
 			.Because("num() should find the pocket object by name and return bare #N format");
