@@ -77,7 +77,14 @@ public partial class SurrealDatabase(
 	/// <summary>
 	/// Extracts the SurrealDB table name from a typed ID like "Player/42" → "player".
 	/// </summary>
-	private static string ExtractTable(string typedId) => typedId.Split('/')[0].ToLower();
+	private static string ExtractTable(string typedId)
+	{
+		var parts = typedId.Split('/');
+		if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[0]))
+			throw new ArgumentException($"Invalid ID format: '{typedId}'. Expected 'Label/key'.", nameof(typedId));
+
+		return parts[0].ToLowerInvariant();
+	}
 
 	/// <summary>
 	/// Converts a partial-match regex to a full-match regex for SurrealDB.
@@ -705,7 +712,7 @@ public partial class SurrealDatabase(
 			var key = ExtractKeyString(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = key };
 			result = await ExecuteAsync(
-				"SELECT * FROM attribute:⟨$key⟩->has_attribute->attribute",
+				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))",
 				parameters, ct);
 		}
 		else
@@ -732,7 +739,7 @@ public partial class SurrealDatabase(
 			var key = ExtractKeyString(parentId);
 			var parameters = new Dictionary<string, object?> { ["key"] = key };
 			result = await ExecuteAsync(
-				"SELECT * FROM attribute:⟨$key⟩->has_attribute->attribute",
+				"SELECT * FROM attribute WHERE id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))",
 				parameters, ct);
 		}
 		else

@@ -68,9 +68,9 @@ public partial class SurrealDatabase
 			["ownerKey"] = ownerObjKey
 		};
 
-		// Create channel then use its ID via subqueries
+		// Use deterministic record ID so repeated creates are idempotent under unique name index
 		await ExecuteAsync(
-			"CREATE channel SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = ''",
+			"UPSERT channel:⟨$name⟩ SET name = $name, markedUpName = $markedUpName, description = '', privs = $privs, joinLock = '', speakLock = '', seeLock = '', hideLock = '', modLock = '', buffer = 0, mogrifier = ''",
 			parameters, cancellationToken);
 
 		await ExecuteAsync(

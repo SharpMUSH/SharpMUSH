@@ -155,9 +155,9 @@ public partial class SurrealDatabase
 			["toKey"] = toKey
 		};
 
-		// Create mail then link it via direct record ID
+		// Create mail using the same deterministic record ID used by later record-id-based operations
 		await ExecuteAsync(
-			"CREATE mail SET key = $mailKey, dateSent = $dateSent, fresh = $fresh, read = $read, tagged = $tagged, urgent = $urgent, forwarded = $forwarded, cleared = $cleared, folder = $folder, content = $content, subject = $subject",
+			"UPSERT mail:⟨$mailKey⟩ SET key = $mailKey, dateSent = $dateSent, fresh = $fresh, read = $read, tagged = $tagged, urgent = $urgent, forwarded = $forwarded, cleared = $cleared, folder = $folder, content = $content, subject = $subject",
 			parameters, cancellationToken);
 
 		await ExecuteAsync(

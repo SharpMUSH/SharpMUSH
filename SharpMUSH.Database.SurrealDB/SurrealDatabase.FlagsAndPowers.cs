@@ -57,7 +57,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"CREATE object_flag SET name = $name, symbol = $symbol, system = $system, disabled = false, aliases = $aliases, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
+			"UPSERT object_flag:⟨$name⟩ SET name = $name, symbol = $symbol, system = $system, disabled = false, aliases = $aliases, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
 			parameters, cancellationToken);
 
 		return new SharpObjectFlag
@@ -207,7 +207,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"CREATE power SET name = $name, alias = $alias, system = $system, disabled = false, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
+			"UPSERT power:⟨$name⟩ SET name = $name, alias = $alias, system = $system, disabled = false, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
 			parameters, cancellationToken);
 
 		return new SharpPower
