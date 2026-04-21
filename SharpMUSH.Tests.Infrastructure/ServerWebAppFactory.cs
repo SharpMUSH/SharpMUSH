@@ -6,6 +6,7 @@ using NSubstitute;
 using OneOf.Types;
 using Quartz;
 using Serilog;
+using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
@@ -186,7 +187,8 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		_meterListener.Start();
 		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
-			.MinimumLevel.Verbose();
+			.MinimumLevel.Verbose()
+			.MinimumLevel.Override("SurrealDb", LogEventLevel.Warning);
 
 		// Only write to console if explicitly enabled via environment variable
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
