@@ -26,7 +26,7 @@ public partial class SurrealDatabase(
 {
 	private readonly IPasswordService _passwordService = passwordService;
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
-	private static readonly SemaphoreSlim WriteLock = new(1, 1);
+	private static readonly SemaphoreSlim CounterLock = new(1, 1);
 	private static volatile bool _migrated;
 
 	private static readonly JsonSerializerOptions JsonOptions = new()
@@ -91,42 +91,21 @@ public partial class SurrealDatabase(
 	private static string FormatError(ISurrealDbErrorResult error) =>
 		error is SurrealDbErrorResult concrete ? (concrete.Details ?? concrete.Status) : error.GetType().Name;
 
-	private static bool IsWriteQuery(string query)
-	{
-		var trimmed = query.TrimStart();
-		return trimmed.StartsWith("CREATE", StringComparison.OrdinalIgnoreCase)
-			|| trimmed.StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase)
-			|| trimmed.StartsWith("UPSERT", StringComparison.OrdinalIgnoreCase)
-			|| trimmed.StartsWith("DELETE", StringComparison.OrdinalIgnoreCase)
-			|| trimmed.StartsWith("RELATE", StringComparison.OrdinalIgnoreCase)
-			|| trimmed.StartsWith("IF ", StringComparison.OrdinalIgnoreCase);
-	}
-
 	/// <summary>
 	/// Executes a SurrealQL query and returns the response.
-	/// Write operations are serialized to avoid concurrency issues in the embedded engine.
 	/// </summary>
 	private async ValueTask<SurrealDbResponse> ExecuteAsync(
 		string query,
 		CancellationToken ct = default)
 	{
 		logger.LogDebug("Executing SurrealQL: {Query}", query);
-		var isWrite = IsWriteQuery(query);
-		if (isWrite) await WriteLock.WaitAsync(ct);
-		try
+		var response = await db.RawQuery(query, null, ct);
+		if (response.HasErrors)
 		{
-			var response = await db.RawQuery(query, null, ct);
-			if (response.HasErrors)
-			{
-				var errors = string.Join("; ", response.Errors.Select(FormatError));
-				logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
-			}
-			return response;
+			var errors = string.Join("; ", response.Errors.Select(FormatError));
+			logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
 		}
-		finally
-		{
-			if (isWrite) WriteLock.Release();
-		}
+		return response;
 	}
 
 	/// <summary>
@@ -162,22 +141,13 @@ public partial class SurrealDatabase(
 
 		// Log the query template (not the expanded query) to avoid leaking sensitive parameter values
 		logger.LogDebug("Executing SurrealQL: {Query}", query);
-		var isWrite = IsWriteQuery(expandedQuery);
-		if (isWrite) await WriteLock.WaitAsync(ct);
-		try
+		var response = await db.RawQuery(expandedQuery, null, ct);
+		if (response.HasErrors)
 		{
-			var response = await db.RawQuery(expandedQuery, null, ct);
-			if (response.HasErrors)
-			{
-				var errors = string.Join("; ", response.Errors.Select(FormatError));
-				logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
-			}
-			return response;
+			var errors = string.Join("; ", response.Errors.Select(FormatError));
+			logger.LogError("SurrealDB query error: {Errors} for query: {Query}", errors, query);
 		}
-		finally
-		{
-			if (isWrite) WriteLock.Release();
-		}
+		return response;
 	}
 
 	/// <summary>
@@ -219,10 +189,19 @@ public partial class SurrealDatabase(
 
 	private async ValueTask<int> GetNextObjectKeyAsync(CancellationToken ct = default)
 	{
-		var response = await ExecuteAsync(
-			"UPSERT counter:object_key SET value = (value ?? 0) + 1 RETURN AFTER", ct);
-		var result = response.GetValue<List<ValueRecord>>(0)!;
-		return result[0].value;
+		// Serialize counter increments to prevent read/write conflicts on the shared counter record.
+		await CounterLock.WaitAsync(ct);
+		try
+		{
+			var response = await ExecuteAsync(
+				"UPSERT counter:object_key SET value = (value ?? 0) + 1 RETURN AFTER", ct);
+			var result = response.GetValue<List<ValueRecord>>(0)!;
+			return result[0].value;
+		}
+		finally
+		{
+			CounterLock.Release();
+		}
 	}
 
 	private static string SerializeLocks(IImmutableDictionary<string, SharpLockData>? locks)
