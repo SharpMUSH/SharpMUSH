@@ -508,12 +508,13 @@ public partial class SurrealDatabase
 	{
 		var parameters = new Dictionary<string, object?> { ["destKey"] = destination.Number };
 
-		// Find exits that have an at_location edge pointing to the destination
+		// Find exits whose destination (has_home) points to the target.
+		// has_home links exit → destination; at_location links exit → source room.
 		var response = await ExecuteAsync(
-			"SELECT VALUE in.key FROM at_location WHERE out.key = $destKey AND in.id LIKE 'exit:%'",
+			"SELECT VALUE key FROM exit WHERE key IN (SELECT VALUE in.key FROM has_home WHERE out.key = $destKey)",
 			parameters, cancellationToken);
 
-		var exitKeys = response.GetValue<List<int>>(0)!;
+		var exitKeys = response.GetValue<List<int>>(0) ?? [];
 
 		foreach (var key in exitKeys)
 		{
