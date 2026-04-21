@@ -322,9 +322,11 @@ public class TelDiagnosticTests
 		var pocketBareDbref = pocketDbref.Contains(':') ? pocketDbref[..pocketDbref.IndexOf(':')] : pocketDbref;
 		var boardBareDbref = boardDbref.Contains(':') ? boardDbref[..boardDbref.IndexOf(':')] : boardDbref;
 
-		var numPocket = "";
-		var numBoard = "";
-		for (var attempt = 0; attempt < 10; attempt++)
+		const int maxRetryAttempts = 10;
+		const int retryDelayMs = 50;
+		string? numPocket = null;
+		string? numBoard = null;
+		for (var attempt = 0; attempt < maxRetryAttempts; attempt++)
 		{
 			numPocket = await Eval($"num({pocketName})");
 			numBoard = await Eval($"num({boardName})");
@@ -336,7 +338,7 @@ public class TelDiagnosticTests
 				break;
 			}
 
-			await Task.Delay(50);
+			await Task.Delay(retryDelayMs);
 		}
 
 		await Assert.That(numPocket).IsEqualTo(pocketBareDbref)
