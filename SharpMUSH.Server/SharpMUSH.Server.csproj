@@ -51,6 +51,7 @@
     <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
   </ItemGroup>
 	
   <ItemGroup>
@@ -76,6 +77,8 @@
       <Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <PackageReference Include="SurrealDb.Embedded.InMemory" Version="0.9.0" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
   </ItemGroup>
 
 </Project>
