@@ -115,7 +115,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"UPSERT server_data SET dataType = $dataType, data = $data WHERE dataType = $dataType",
+			"UPSERT server_data:⟨$dataType⟩ SET dataType = $dataType, data = $data",
 			parameters, cancellationToken);
 	}
 
@@ -125,7 +125,7 @@ public partial class SurrealDatabase
 		{
 			var parameters = new Dictionary<string, object?> { ["dataType"] = dataType };
 			var response = await ExecuteAsync(
-				"SELECT data FROM server_data WHERE dataType = $dataType",
+				"SELECT data FROM server_data:⟨$dataType⟩",
 				parameters, cancellationToken);
 
 			var results = response.GetValue<List<ExpandedDataDbRecord>>(0)!;

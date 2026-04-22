@@ -29,7 +29,7 @@ public partial class SurrealDatabase
 
 		// Verify the object exists using the object table
 		var existResult = await ExecuteAsync(
-			"SELECT key FROM object WHERE key = $key",
+			"SELECT key FROM object:$key",
 			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
 
 		var existRecords = existResult.GetValue<List<ObjectRecord>>(0)!;
@@ -47,7 +47,7 @@ public partial class SurrealDatabase
 			{
 				var parameters = new Dictionary<string, object?> { ["key"] = objKey, ["attrName"] = attrName };
 				stepResult = await ExecuteAsync(
-					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('player', $key) OR in = type::thing('room', $key) OR in = type::thing('thing', $key) OR in = type::thing('exit', $key))",
+					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in IN [player:$key, room:$key, thing:$key, exit:$key])",
 					parameters, cancellationToken);
 				isFirst = false;
 			}
@@ -55,7 +55,7 @@ public partial class SurrealDatabase
 			{
 				var parameters = new Dictionary<string, object?> { ["key"] = currentParentKey!, ["attrName"] = attrName };
 				stepResult = await ExecuteAsync(
-					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))",
+					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in = attribute:⟨$key⟩)",
 					parameters, cancellationToken);
 			}
 
@@ -91,7 +91,7 @@ public partial class SurrealDatabase
 
 		// Get the typed ID for this object
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
-		var objResult = await ExecuteAsync("SELECT * FROM object WHERE key = $key", parameters, cancellationToken);
+		var objResult = await ExecuteAsync("SELECT * FROM object:$key", parameters, cancellationToken);
 		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
 		if (objRecords.Count == 0) yield break;
 
@@ -112,7 +112,7 @@ public partial class SurrealDatabase
 		var objKey = dbref.Number;
 
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
-		var objResult = await ExecuteAsync("SELECT * FROM object WHERE key = $key", parameters, cancellationToken);
+		var objResult = await ExecuteAsync("SELECT * FROM object:$key", parameters, cancellationToken);
 		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
 		if (objRecords.Count == 0) yield break;
 
@@ -136,7 +136,7 @@ public partial class SurrealDatabase
 
 		// Verify the object exists using the object table
 		var existResult = await ExecuteAsync(
-			"SELECT key FROM object WHERE key = $key",
+			"SELECT key FROM object:$key",
 			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
 
 		var existRecords = existResult.GetValue<List<ObjectRecord>>(0)!;
@@ -153,7 +153,7 @@ public partial class SurrealDatabase
 			{
 				var parameters = new Dictionary<string, object?> { ["key"] = objKey, ["attrName"] = attrName };
 				stepResult = await ExecuteAsync(
-					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('player', $key) OR in = type::thing('room', $key) OR in = type::thing('thing', $key) OR in = type::thing('exit', $key))",
+					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in IN [player:$key, room:$key, thing:$key, exit:$key])",
 					parameters, cancellationToken);
 				isFirst = false;
 			}
@@ -161,7 +161,7 @@ public partial class SurrealDatabase
 			{
 				var parameters = new Dictionary<string, object?> { ["key"] = currentParentKey!, ["attrName"] = attrName };
 				stepResult = await ExecuteAsync(
-					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in = type::thing('attribute', $key))",
+					"SELECT * FROM attribute WHERE name = $attrName AND id IN (SELECT VALUE out FROM has_attribute WHERE in = attribute:⟨$key⟩)",
 					parameters, cancellationToken);
 			}
 
@@ -194,7 +194,7 @@ public partial class SurrealDatabase
 		var regexPattern = $"(?i)^{pattern}$";
 
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
-		var objResult = await ExecuteAsync("SELECT * FROM object WHERE key = $key", parameters, cancellationToken);
+		var objResult = await ExecuteAsync("SELECT * FROM object:$key", parameters, cancellationToken);
 		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
 		if (objRecords.Count == 0) yield break;
 
@@ -214,7 +214,7 @@ public partial class SurrealDatabase
 		var objKey = dbref.Number;
 
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
-		var objResult = await ExecuteAsync("SELECT * FROM object WHERE key = $key", parameters, cancellationToken);
+		var objResult = await ExecuteAsync("SELECT * FROM object:$key", parameters, cancellationToken);
 		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
 		if (objRecords.Count == 0) yield break;
 
@@ -244,7 +244,7 @@ public partial class SurrealDatabase
 
 		// Verify the object exists and determine its type via the object table
 		var objParams = new Dictionary<string, object?> { ["key"] = objKey };
-		var objResult = await ExecuteAsync("SELECT * FROM object WHERE key = $key", objParams, cancellationToken);
+		var objResult = await ExecuteAsync("SELECT * FROM object:$key", objParams, cancellationToken);
 		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
 		if (objRecords.Count == 0) return false;
 
@@ -443,7 +443,7 @@ public partial class SurrealDatabase
 		// Check for children
 		var childParams = new Dictionary<string, object?> { ["key"] = attrKey };
 		var childrenResult = await ExecuteAsync(
-			"SELECT count() AS cnt FROM has_attribute WHERE in = type::thing('attribute', $key) GROUP ALL",
+			"SELECT count() AS cnt FROM has_attribute WHERE in = attribute:⟨$key⟩ GROUP ALL",
 			childParams, cancellationToken);
 
 		var records = childrenResult.GetValue<List<CountRecord>>(0)!;
@@ -503,7 +503,7 @@ public partial class SurrealDatabase
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = attrKey };
 		var result = await ExecuteAsync(
-			"SELECT VALUE out.key FROM has_attribute WHERE in = type::thing('attribute', $key)",
+			"SELECT VALUE key FROM attribute:⟨$key⟩->has_attribute->attribute",
 			parameters, ct);
 
 		var childKeys = result.GetValue<List<string>>(0)!;
@@ -625,7 +625,7 @@ public partial class SurrealDatabase
 		{
 			var zoneParams = new Dictionary<string, object?> { ["key"] = chainKey };
 			var zoneResult = await ExecuteAsync(
-				"SELECT VALUE out.key FROM has_zone WHERE in = type::thing('object', $key)",
+				"SELECT VALUE key FROM object:$key->has_zone->object",
 				zoneParams, cancellationToken);
 
 			var zoneKeys = zoneResult.GetValue<List<int>>(0)!;
@@ -685,7 +685,7 @@ public partial class SurrealDatabase
 		{
 			var zoneParams = new Dictionary<string, object?> { ["key"] = chainKey };
 			var zoneResult = await ExecuteAsync(
-				"SELECT VALUE out.key FROM has_zone WHERE in = type::thing('object', $key)",
+				"SELECT VALUE key FROM object:$key->has_zone->object",
 				zoneParams, cancellationToken);
 
 			var zoneKeys = zoneResult.GetValue<List<int>>(0)!;
@@ -760,7 +760,7 @@ public partial class SurrealDatabase
 		{
 			var parameters = new Dictionary<string, object?> { ["key"] = currentKey };
 			var result = await ExecuteAsync(
-				"SELECT VALUE out.key FROM has_parent WHERE in = type::thing('object', $key)",
+				"SELECT VALUE key FROM object:$key->has_parent->object",
 				parameters, ct);
 
 			var parentKeys = result.GetValue<List<int>>(0)!;

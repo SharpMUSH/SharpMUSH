@@ -57,7 +57,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"CREATE object_flag SET name = $name, symbol = $symbol, system = $system, disabled = false, aliases = $aliases, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
+			"UPSERT object_flag:⟨$name⟩ SET name = $name, symbol = $symbol, system = $system, disabled = false, aliases = $aliases, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
 			parameters, cancellationToken);
 
 		return new SharpObjectFlag
@@ -81,8 +81,8 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?> { ["name"] = name };
 		// Delete the flag and any edges referencing it
 		await ExecuteAsync(
-			"DELETE has_flags WHERE out.name = $name;" +
-			"DELETE object_flag WHERE name = $name",
+			"DELETE has_flags WHERE out = object_flag:⟨$name⟩;" +
+			"DELETE object_flag:⟨$name⟩",
 			parameters, cancellationToken);
 		return true;
 	}
@@ -98,16 +98,16 @@ public partial class SurrealDatabase
 
 		// Check if already set
 		var existing = await ExecuteAsync(
-			"SELECT count() AS cnt FROM has_flags WHERE in = type::thing('object', $key) AND out.name = $fname GROUP ALL",
+			"SELECT count() AS cnt FROM has_flags WHERE in = object:$key AND out.name = $fname GROUP ALL",
 			parameters, cancellationToken);
 
 		var existingResults = existing.GetValue<List<CountRecord>>(0)!;
 		if (existingResults.Count > 0 && existingResults[0].cnt > 0)
 			return false;
 
-		// Find the flag record and relate
+		// Relate directly using the flag's record ID
 		await ExecuteAsync(
-			"RELATE object:$key->has_flags->(SELECT VALUE id FROM object_flag WHERE name = $fname LIMIT 1)",
+			"RELATE object:$key->has_flags->object_flag:⟨$fname⟩",
 			parameters, cancellationToken);
 		return true;
 	}
@@ -123,13 +123,13 @@ public partial class SurrealDatabase
 
 		// Check existence first
 		var countResponse = await ExecuteAsync(
-			"SELECT count() AS cnt FROM has_flags WHERE in = type::thing('object', $key) AND out.name = $fname GROUP ALL",
+			"SELECT count() AS cnt FROM has_flags WHERE in = object:$key AND out.name = $fname GROUP ALL",
 			parameters, cancellationToken);
 		var countResults = countResponse.GetValue<List<CountRecord>>(0)!;
 		var existed = countResults.Count > 0 && countResults[0].cnt > 0;
 
 		await ExecuteAsync(
-			"DELETE has_flags WHERE in = type::thing('object', $key) AND out.name = $fname",
+			"DELETE has_flags WHERE in = object:$key AND out.name = $fname",
 			parameters, cancellationToken);
 		return existed;
 	}
@@ -207,7 +207,7 @@ public partial class SurrealDatabase
 		};
 
 		await ExecuteAsync(
-			"CREATE power SET name = $name, alias = $alias, system = $system, disabled = false, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
+			"UPSERT power:⟨$name⟩ SET name = $name, alias = $alias, system = $system, disabled = false, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
 			parameters, cancellationToken);
 
 		return new SharpPower
@@ -229,8 +229,8 @@ public partial class SurrealDatabase
 
 		var parameters = new Dictionary<string, object?> { ["name"] = name };
 		await ExecuteAsync(
-			"DELETE has_powers WHERE out.name = $name;" +
-			"DELETE power WHERE name = $name",
+			"DELETE has_powers WHERE out = power:⟨$name⟩;" +
+			"DELETE power:⟨$name⟩",
 			parameters, cancellationToken);
 		return true;
 	}
@@ -246,7 +246,7 @@ public partial class SurrealDatabase
 
 		// Check if already set
 		var existing = await ExecuteAsync(
-			"SELECT count() AS cnt FROM has_powers WHERE in = type::thing('object', $key) AND out.name = $pname GROUP ALL",
+			"SELECT count() AS cnt FROM has_powers WHERE in = object:$key AND out.name = $pname GROUP ALL",
 			parameters, cancellationToken);
 
 		var existingResults = existing.GetValue<List<CountRecord>>(0)!;
@@ -254,7 +254,7 @@ public partial class SurrealDatabase
 			return false;
 
 		await ExecuteAsync(
-			"RELATE object:$key->has_powers->(SELECT VALUE id FROM power WHERE name = $pname LIMIT 1)",
+			"RELATE object:$key->has_powers->power:⟨$pname⟩",
 			parameters, cancellationToken);
 		return true;
 	}
@@ -270,13 +270,13 @@ public partial class SurrealDatabase
 
 		// Check existence first
 		var countResponse = await ExecuteAsync(
-			"SELECT count() AS cnt FROM has_powers WHERE in = type::thing('object', $key) AND out.name = $pname GROUP ALL",
+			"SELECT count() AS cnt FROM has_powers WHERE in = object:$key AND out.name = $pname GROUP ALL",
 			parameters, cancellationToken);
 		var countResults = countResponse.GetValue<List<CountRecord>>(0)!;
 		var existed = countResults.Count > 0 && countResults[0].cnt > 0;
 
 		await ExecuteAsync(
-			"DELETE has_powers WHERE in = type::thing('object', $key) AND out.name = $pname",
+			"DELETE has_powers WHERE in = object:$key AND out.name = $pname",
 			parameters, cancellationToken);
 		return existed;
 	}
