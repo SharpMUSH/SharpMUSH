@@ -83,18 +83,21 @@ public class AhelpCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
-	public async ValueTask AhelpCommandWorks()
+	public async ValueTask AhelpCommandAndAnewsAliasWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		
 		// Test that ahelp command runs for God (player 1)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("anews"));
 
 		// Verify that NotifyService was called with content about ahelp
 		await NotifyService
-			.Received(1)
+			.Received(2)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && (msg.AsT0.ToString().Contains("ahelp") || msg.AsT0.ToString().Contains("admin"))) ||
-				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Admin help system for SharpMUSH.")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Admin help system for SharpMUSH."))), 
+					TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -108,23 +111,8 @@ public class AhelpCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Security")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Security"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	public async ValueTask AnewsAliasWorks()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test that anews is an alias for ahelp
-		await Parser.CommandParse(1, ConnectionService, MModule.single("anews"));
-
-		// Verify that NotifyService was called with ahelp content
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && (msg.AsT0.ToString().Contains("ahelp") || msg.AsT0.ToString().Contains("admin"))) ||
-				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToString().Contains("SharpMUSH includes comprehensive security features to protect your MUSH:")) ||
+				(msg.IsT1 && msg.AsT1.Contains("SharpMUSH includes comprehensive security features to protect your MUSH:"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
