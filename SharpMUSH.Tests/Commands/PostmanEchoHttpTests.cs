@@ -121,7 +121,7 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -144,7 +144,7 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -167,7 +167,7 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -190,7 +190,7 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -213,7 +213,7 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -241,7 +241,7 @@ public class PostmanEchoHttpTests
 			TestHelpers.MessageContains(msg, "gzipped"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -269,7 +269,7 @@ public class PostmanEchoHttpTests
 			TestHelpers.MessageContains(msg, "deflated"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -293,7 +293,7 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -327,7 +327,7 @@ public class PostmanEchoHttpTests
 
 		// GET with a body is refused before the task is queued — error message is immediate.
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -353,7 +353,7 @@ public class PostmanEchoHttpTests
 			TestHelpers.MessageContains(msg, "200"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -381,7 +381,7 @@ public class PostmanEchoHttpTests
 			TestHelpers.MessageContains(msg, "404"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>

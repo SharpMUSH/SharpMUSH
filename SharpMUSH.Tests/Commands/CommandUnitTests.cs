@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -36,7 +35,7 @@ public class CommandUnitTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -63,12 +62,12 @@ public class CommandUnitTests
 		await Parser.CommandListParse(MModule.single(str));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
 				=> x.Value.ToString()!.Contains(expected1)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
 				=> x.Value.ToString()!.Contains(expected2)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}

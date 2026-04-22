@@ -27,7 +27,7 @@ public class HelpCommandTests
 
 		// Verify that NotifyService was called with content containing "help newbie"
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("help newbie")) ||
 				(msg.IsT1 && msg.AsT1.Contains("help newbie"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -42,7 +42,7 @@ public class HelpCommandTests
 
 		// Verify that NotifyService was called with content about newbie help
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("MUSH")) ||
 				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -57,7 +57,7 @@ public class HelpCommandTests
 
 		// Verify that NotifyService was called with a list of matching topics
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && (msg.AsT0.ToString().Contains("help") || msg.AsT0.ToString().Contains("helpfile"))) ||
 				(msg.IsT1 && (msg.AsT1.Contains("help") || msg.AsT1.Contains("helpfile")))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -72,7 +72,7 @@ public class HelpCommandTests
 
 		// Verify that NotifyService was called with "Matches:" format (content search result)
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Matches:")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Matches:"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -87,7 +87,7 @@ public class HelpCommandTests
 
 		// Verify that NotifyService was called with "No entry for" (PennMUSH-compatible message)
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("No entry for")) ||
 				(msg.IsT1 && msg.AsT1.Contains("No entry for"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -102,7 +102,7 @@ public class HelpCommandTests
 
 		// Should show the 'newbie' entry content (contains "MUSHing")
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("MUSH")) ||
 				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);

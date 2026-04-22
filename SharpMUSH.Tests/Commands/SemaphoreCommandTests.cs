@@ -48,7 +48,7 @@ public class SemaphoreCommandTests
 		await Task.Delay(2000);
 
 		// Assert - verify the waiting task was executed
-		await NotifyService.Received().Notify(
+		await NotifyService.Received(1).Notify(
 			Arg.Any<AnySharpObject>(),
 			testMessage, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -65,7 +65,7 @@ public class SemaphoreCommandTests
 			MModule.single($"@dolist/inline a b c=@pemit #1=Inline{uniqueId}"));
 
 		// Assert - all iterations should have executed (checking for at least one to ensure it ran)
-		await NotifyService.Received().Notify(
+		await NotifyService.Received(1).Notify(
 			TestHelpers.MatchingObject(executor),
 			$"Inline{uniqueId}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -153,7 +153,7 @@ public class SemaphoreCommandTests
 
 		// Assert - verify the task executed with the correct Q-register value
 		// The waiting task should have been executed with %q0 set to our test value
-		await NotifyService.Received().Notify(
+		await NotifyService.Received(1).Notify(
 			Arg.Any<AnySharpObject>(),
 			$"QRegValue:{testValue}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}

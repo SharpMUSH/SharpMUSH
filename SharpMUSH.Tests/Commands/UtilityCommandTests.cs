@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -26,9 +25,9 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkBasic Test output"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
-				=> x.Value.ToString()!.Contains("ThinkBasic Test output")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				=> TestHelpers.MessagePlainTextEquals(x, "ThinkBasic Test output")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -38,10 +37,10 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkWithFunction [add(2,3)]"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(x
-					=> x.Value.ToString()!.Contains("ThinkWithFunction 5")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+					=> TestHelpers.MessagePlainTextEquals(x, "ThinkWithFunction 5")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -55,7 +54,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(x
-				=> x.Value.ToString()!.Contains($"This is a comment {guid}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				=> TestHelpers.MessagePlainTextEquals(x, $"This is a comment {guid}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -67,7 +66,7 @@ public class UtilityCommandTests
 		// look shows the current room name with dbref and flag symbols
 		// Use StartsWith because HALT flag ('h') gets set on Room Zero by other tests in the shared session
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero(#0")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -81,7 +80,7 @@ public class UtilityCommandTests
 		// The room name must be sent as an MString that, when rendered as ANSI, contains escape codes
 		// because name.Hilight() applies bold+bright-white (ansi("hw", …) → ESC[1;37m).
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.IsT0 &&
 				TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero(#0") &&
@@ -97,7 +96,7 @@ public class UtilityCommandTests
 
 		// looking at player #1 (God) shows the player name with dbref and flag symbols
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -112,9 +111,9 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "God(#1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -126,11 +125,11 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.IsT0 &&
-				TestHelpers.MessagePlainTextContains(msg, "God(#1") &&
-				msg.AsT0.Render("ansi").Contains("\x1b[")),
+				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1") &&
+				msg.AsT0.Render("ansi").Contains("\x1b[")), 
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -142,9 +141,9 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Owner: ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "Owner: ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -155,13 +154,13 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Zone: *NOTHING*")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "Zone: *NOTHING*")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Powers: ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "Powers: ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -172,9 +171,9 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Warnings checked:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "Warnings checked:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -185,9 +184,9 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Last modified:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "Last modified:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -198,9 +197,9 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Quota:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "Quota:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -219,9 +218,9 @@ public class UtilityCommandTests
 
 		// The Exits: section should appear because the new room has the return exit (South;S)
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Exits:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "Exits:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -232,9 +231,9 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/brief #1"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Last modified:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "Last modified:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -256,13 +255,13 @@ public class UtilityCommandTests
 
 		// Plain-text content of the attribute value must appear in examine output
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// The ANSI-rendered output must contain actual ANSI escape codes
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText") &&
 				msg.IsT0 && msg.AsT0.ToString().Contains("\x1b[")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -283,9 +282,9 @@ public class UtilityCommandTests
 
 		// Brief MUST show owner header (in plain text because owner name is hilighted)
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Owner: ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "Owner: ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Brief must NOT show description text
 		await NotifyService
@@ -302,7 +301,7 @@ public class UtilityCommandTests
 
 		// /opaque sends a combined multi-line output starting with "God(#1..."
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -316,7 +315,7 @@ public class UtilityCommandTests
 
 		// Should display header with "God(#1..." followed by matching attributes
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -330,7 +329,7 @@ public class UtilityCommandTests
 
 		// Should display current location with "Room Zero(#0..." header
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero(#0")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -344,7 +343,7 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@find #0"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "***")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -358,7 +357,7 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "@search: Advanced database search", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -371,7 +370,7 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances #0"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Entrances to")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -385,7 +384,7 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Database Statistics:", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -396,9 +395,9 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@version"));
 
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SharpMUSH version 0")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "SharpMUSH version 0")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -439,9 +438,9 @@ public class UtilityCommandTests
 
 		// Should receive notifications for decompiled output
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Any<OneOf.OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "@pcreate God")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -453,7 +452,7 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "God is in")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}

@@ -31,7 +31,7 @@ public class CommunicationFunctionUnitTests
 		// Verify NotifyService.Notify was called (message now passed through function)
 		// We check that Notify was called at least once with any AnySharpObject
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(x => x.Value.ToString()!.Contains(uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -105,7 +105,7 @@ public class CommunicationFunctionUnitTests
 		// Verify NotifyService.Notify was called (message now passed through function)
 		// We check that Notify was called at least once with any AnySharpObject
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>

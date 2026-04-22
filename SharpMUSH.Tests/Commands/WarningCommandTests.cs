@@ -1,7 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -21,116 +21,142 @@ public class WarningCommandTests
 	private IWarningService WarningService => WebAppFactoryArg.Services.GetRequiredService<IWarningService>();
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
+	/// <summary>
+	/// Creates a fresh player with a registered connection handle so that
+	/// <c>Parser.CommandParse(testPlayer.Handle, …)</c> executes as that player.
+	/// Pattern C: using a unique receiver makes Received(1) unambiguous even when
+	/// the message text is a fixed server-generated string.
+	/// </summary>
+	private Task<TestIsolationHelpers.TestPlayer> CreateFreshPlayerAsync(string prefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+
 	[Test]
 	public async Task WarningsCommand_SetToNormal()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Arrange - set warnings to normal on object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@warnings #1=normal"));
+		// Pattern C: fresh player is the unique receiver/sender for this test's notification.
+		// ParseWarnings("normal") → WarningType.Normal; UnparseWarnings → "normal".
+		var freshPlayer = await CreateFreshPlayerAsync("WT_Normal");
 
-		// Assert - should notify user
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings #1=normal"));
+
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Warnings set to")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: normal")),
+				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async Task WarningsCommand_SetToAll()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Arrange - set warnings to all on object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@warnings #1=all"));
+		// Pattern C: fresh player is the unique receiver/sender for this test's notification.
+		// ParseWarnings("all") → WarningType.All; UnparseWarnings → "all".
+		var freshPlayer = await CreateFreshPlayerAsync("WT_All");
 
-		// Assert - should notify user
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings #1=all"));
+
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Warnings set to")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: all")),
+				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async Task WarningsCommand_SetToNone()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Arrange - clear warnings on object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@warnings #1=none"));
+		// Pattern C: fresh player is the unique receiver/sender for this test's notification.
+		// ParseWarnings("none") → WarningType.None → "Warnings cleared." branch.
+		var freshPlayer = await CreateFreshPlayerAsync("WT_None");
 
-		// Assert - should notify user about clearing
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings #1=none"));
+
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "cleared") || TestHelpers.MessageContains(s, "none")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings cleared.")),
+				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async Task WarningsCommand_WithNegation()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Arrange - set warnings with negation
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@warnings #1=all !exit-desc"));
+		// Pattern C: fresh player is the unique receiver/sender for this test's notification.
+		// ParseWarnings("all !exit-desc") → All & ~ExitDesc = Extra; UnparseWarnings → "extra".
+		var freshPlayer = await CreateFreshPlayerAsync("WT_Negate");
 
-		// Assert - should notify user
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings #1=all !exit-desc"));
+
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Warnings set to")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: extra")),
+				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async Task WarningsCommand_WithUnknownWarning()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Arrange - try to set unknown warning
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@warnings #1=unknown-warning"));
+		// Pattern C: fresh player is the unique receiver/sender for this test's notification.
+		// @warnings sends "Unknown warning: unknown-warning" for each unrecognised token.
+		var freshPlayer = await CreateFreshPlayerAsync("WT_Unknown");
 
-		// Assert - should notify about unknown warning
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings #1=unknown-warning"));
+
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Unknown warning")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Unknown warning: unknown-warning")),
+				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async Task WarningsCommand_NoArguments_ShowsUsage()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Arrange - call without arguments
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@warnings"));
+		// Pattern C: fresh player is the unique receiver/sender for this test's notification.
+		// @warnings with no object arg sends "Usage: @warnings <object>=<warning list>" as the first line.
+		var freshPlayer = await CreateFreshPlayerAsync("WT_Usage");
 
-		// Assert - should show usage
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings"));
+
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Usage")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Usage: @warnings <object>=<warning list>")),
+				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async Task WCheckCommand_SpecificObject()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Arrange - check warnings on specific object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@wcheck #1"));
+		// Pattern C: fresh player is the unique receiver/sender for this test's notification.
+		// Fresh player checks their own DBRef (they own themselves → permission passes).
+		var freshPlayer = await CreateFreshPlayerAsync("WT_WCheck");
 
-		// Assert - should complete check
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService,
+			MModule.single($"@wcheck #{freshPlayer.DbRef.Number}"));
+
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@wcheck complete") || TestHelpers.MessageContains(s, "Warning")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "@wcheck complete.")),
+				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async Task WCheckCommand_NoArguments_ShowsUsage()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Arrange - call without arguments
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@wcheck"));
+		// Pattern C: fresh player is the unique receiver/sender for this test's notification.
+		// @wcheck with no argument sends the usage string.
+		var freshPlayer = await CreateFreshPlayerAsync("WT_WCheckUsage");
 
-		// Assert - should show usage
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@wcheck"));
+
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Usage")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all")),
+				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -144,9 +170,10 @@ public class WarningCommandTests
 
 		// Assert - should complete check
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Checking objects")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Checking objects you own...")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

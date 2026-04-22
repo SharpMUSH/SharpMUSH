@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -32,6 +31,13 @@ public class ZoneCommandTests
 	/// </summary>
 	private Task<DBRef> CreateTestPlayerAsync(string namePrefix) =>
 		TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, namePrefix);
+
+	/// <summary>
+	/// Creates a fresh player with a registered connection handle so that
+	/// <c>Parser.CommandParse(testPlayer.Handle, …)</c> executes as that player.
+	/// </summary>
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerWithHandleAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	[Test]
 	public async ValueTask ChzoneSetZone()
@@ -100,11 +106,13 @@ public class ZoneCommandTests
 		// Clear zone by setting to "none"
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}=none"));
 
-		// Verify zone cleared notification was received with specific text indicating clearing
+		// Pattern B: "Zone cleared." is the exact string from BuildingCommands.cs:872.
+		// Only this test clears a zone in the session, so the message is unique to executor #1.
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "Zone cleared")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "Zone cleared.")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify the zone was actually cleared in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -146,36 +154,44 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzoneInvalidObject()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Try to set zone on non-existent object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #99999=#1"));
+		// Pattern C: "I don't see that here." is sent by many LocateService calls across the session
+		// to executor #1. Use a unique receiver (fresh player) so Received(1) is sound.
+		var freshPlayer = await CreateTestPlayerWithHandleAsync("ZT_InvalidObj");
 
-		// Should receive an error notification - LocateService handles this with standard error messages
+		// Try to set zone on non-existent object as the fresh player
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@chzone #99999=#1"));
+
+		// Should receive exactly one "I don't see that here." notification addressed to the fresh player.
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(TestHelpers.MessageContains(msg, "don't see") || TestHelpers.MessageContains(msg, "can't see") || TestHelpers.MessageContains(msg, "NO SUCH OBJECT"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
+				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask ChzoneInvalidZone()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create unique object
+		// Pattern C: "I don't see that here." is sent by many LocateService calls to #1 across the
+		// session. Use a fresh player as the unique executor so Received(1) is unambiguous.
+		var freshPlayer = await CreateTestPlayerWithHandleAsync("ZT_InvalidZone");
+
+		// Create a unique object as the fresh player (they will own it → controls check passes)
 		var objName = TestIsolationHelpers.GenerateUniqueName("InvalidZoneTest");
-		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
+		var objResult = await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single($"@create {objName}"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		await Assert.That(obj.IsNone).IsFalse();
 
 		// Try to set zone to non-existent zone
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}=#99999"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single($"@chzone {objDbRef}=#99999"));
 
-		// Should receive an error notification about not being able to see the object
+		// Should receive exactly one "I don't see that here." notification to the fresh player.
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "don't see") || TestHelpers.MessageContains(msg, "can't see")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
+				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -265,9 +281,10 @@ public class ZoneCommandTests
 		// Move the object to the ZMR
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@tel {cmdObjDbRef}={zmrDbRef}"));
 
-		// Set a $-command on the object with unique command name
+		// Set a $-command on the object with unique command name.
+		// Pattern A: embed the unique token into the @pemit body so the full message is globally unique.
 		var cmdName = TestIsolationHelpers.GenerateUniqueName("zmrtest");
-		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {cmdObjDbRef}=${cmdName}:@pemit #{testPlayer.Number}=ZMR command executed"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {cmdObjDbRef}=${cmdName}:@pemit #{testPlayer.Number}={cmdName}: ZMR command executed"));
 
 		// Teleport the test player to the zoned room
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@tel {zonedRoomDbRef}"));
@@ -275,11 +292,12 @@ public class ZoneCommandTests
 		// Execute the $-command - it should be available through ZMR
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single(cmdName));
 
-		// Verify the command was executed - check for the unique command output
+		// Pattern A: the emitted string is unique because cmdName (a generated unique token) is embedded.
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "ZMR command executed")), TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: ZMR command executed")),
+				TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -317,9 +335,10 @@ public class ZoneCommandTests
 		// Move the object to the personal ZMR
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@tel {personalCmdObjDbRef}={personalZMRDbRef}"));
 
-		// Set a $-command on the object with unique command name
+		// Set a $-command on the object with unique command name.
+		// Pattern A: embed the unique token into the @pemit body so the full message is globally unique.
 		var cmdName = TestIsolationHelpers.GenerateUniqueName("personaltest");
-		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {personalCmdObjDbRef}=${cmdName}:@pemit #{testPlayer.Number}=Personal zone command executed"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {personalCmdObjDbRef}=${cmdName}:@pemit #{testPlayer.Number}={cmdName}: Personal zone command executed"));
 
 		// Create a unique room to test from (separate from the ZMR)
 		var testRoomName = TestIsolationHelpers.GenerateUniqueName("PersonalZoneTestRoom");
@@ -337,11 +356,12 @@ public class ZoneCommandTests
 		// Execute the $-command - it should be available through the player's personal zone
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single(cmdName));
 
-		// Verify the command was executed
+		// Pattern A: the emitted string is unique because cmdName (a generated unique token) is embedded.
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "Personal zone command executed")), TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: Personal zone command executed")),
+				TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -378,9 +398,10 @@ public class ZoneCommandTests
 		var roomZone = await zonedRoom.Known.Object().Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(roomZone.IsNone).IsFalse();
 
-		// Set a $-command directly on the ZMR itself with unique command name (should be ignored per spec)
+		// Set a $-command directly on the ZMR itself with unique command name (should be ignored per spec).
+		// Pattern A: embed the unique token into the @pemit body.
 		var cmdName = TestIsolationHelpers.GenerateUniqueName("zmrselftest");
-		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {zmrDbRef}=${cmdName}:@pemit #{testPlayer.Number}=This should not execute"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {zmrDbRef}=${cmdName}:@pemit #{testPlayer.Number}={cmdName}: This should not execute"));
 
 		// Teleport the test player to the zoned room
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@tel {zonedRoomDbRef}"));
@@ -388,11 +409,11 @@ public class ZoneCommandTests
 		// Try to execute the $-command - it should NOT be available
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single(cmdName));
 
-		// Verify the command was NOT executed (per PennMUSH spec, commands on ZMR itself are ignored)
-		// Check that the specific unique error message was not sent
+		// Pattern A: the unique token in the message makes this a precise negative assertion.
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "This should not execute")), TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: This should not execute")),
+				TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
 	}
 }

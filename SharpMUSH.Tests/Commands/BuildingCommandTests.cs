@@ -64,26 +64,20 @@ public class BuildingCommandTests
 
 		// Use unique room name in assertions to avoid pollution from other tests
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number {newDb.Number}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, $"DoDigTestRoom created with room number {newDb.Number}.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
-				msg.Match(
-					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number + 1}") && mstr.ToString().Contains($"#{newDb.Number}"),
-					str => str.Contains($"Linked exit #{newDb.Number + 1}") && str.Contains($"#{newDb.Number}")
-				)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, $"Linked exit #{newDb.Number + 1} to #{newDb.Number}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(executor, "Trying to link...", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
-				msg.Match(
-					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number + 2}") && mstr.ToString().Contains($"#{currentLocationDbRef.Number}"),
-					str => str.Contains($"Linked exit #{newDb.Number + 2}") && str.Contains($"#{currentLocationDbRef.Number}")
-				)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, $"Linked exit #{newDb.Number + 2} to #{currentLocationDbRef.Number}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	// Something is getting created before this one can trigger...
@@ -103,16 +97,16 @@ public class BuildingCommandTests
 		// Match against the specific executor DBRef instead of Arg.Any<DBRef>() to verify
 		// that notifications are sent to the correct recipient.
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(executor, $"Foo Room created with room number {newDb.Number}.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(executor, $"Linked exit #{newDb.Number + 1} to #{newDb.Number}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(executor, "Trying to link...", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(executor, $"Linked exit #{newDb.Number + 2} to #{currentLocationDbRef.Number}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -173,7 +167,7 @@ public class BuildingCommandTests
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(executor, $"Room With Exits created with room number {newObject.Object()!.DBRef.Number}.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -473,7 +467,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Zoned")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -652,7 +646,7 @@ public class BuildingCommandTests
 
 		// Verify look displayed "10" (the evaluated result of [mul(2,5)])
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "10")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -670,7 +664,7 @@ public class BuildingCommandTests
 		// Verify error notification was sent ("I don't see that here." or similar)
 		// The locate service sends the error with a sender parameter
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "don't see") ||
 				TestHelpers.MessageContains(msg, "can't see") ||

@@ -121,7 +121,7 @@ public class PlayerDestructionTests
 
 		// The NotifyService mock should have received the "must use @nuke" notification
 		await NotifyService
-			.Received()
+			.Received(1)
 			.NotifyAndReturn(
 				Arg.Any<DBRef>(),
 				Arg.Is<string>(s => s.Contains("#-1")),

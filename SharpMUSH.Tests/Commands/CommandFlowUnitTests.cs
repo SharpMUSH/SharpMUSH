@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -33,7 +32,7 @@ public class CommandFlowUnitTests
 		Console.WriteLine("Testing: {0}", str);
 		await Parser.CommandListParse(MModule.single(str));
 
-		await NotifyService.Received()
+		await NotifyService.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
 				(msg.IsT1 && msg.AsT1 == expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -45,11 +44,11 @@ public class CommandFlowUnitTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
 
-		await NotifyService.Received()
+		await NotifyService.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
-		await NotifyService.Received()
+		await NotifyService.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}

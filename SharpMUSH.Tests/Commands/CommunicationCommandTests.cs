@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -73,7 +72,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -89,9 +88,9 @@ public class CommunicationCommandTests
 		// @emit broadcasts to room via CommunicationService.SendToRoomAsync which calls
 		// Notify(AnySharpObject, ..., NotificationType.Emit)
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
@@ -103,10 +102,10 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
@@ -118,10 +117,10 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
@@ -139,10 +138,10 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@oemit {excludeDbRef}={expectedMsg}"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
@@ -165,10 +164,10 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@zemit {zmoDbRef}={expectedMsg}"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 
 		// Clean up: remove the temporary zone from room #0.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #0=none"));
@@ -183,7 +182,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -199,7 +198,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -215,7 +214,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -231,7 +230,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -247,7 +246,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
@@ -274,10 +273,10 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nszemit {zmoDbRef}={expectedMsg}"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 
 		// Clean up: remove the temporary zone from room #0.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #0=none"));
@@ -311,7 +310,7 @@ public class CommunicationCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_ADDCOM3=NonExistentChannel"));
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Channel not found.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -357,7 +356,7 @@ public class CommunicationCommandTests
 
 		// Verify a notification was sent (channel list output contains "Name: Public")
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "Name: Public")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -415,7 +414,7 @@ public class CommunicationCommandTests
 		// The output is sent as a multi-line MString containing all aliases (in lowercase)
 		// Note: Aliases are stored in uppercase but displayed in lowercase
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.IsT0 &&
 				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist1") &&

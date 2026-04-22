@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -25,7 +24,7 @@ public class NetworkCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@http https://example.com"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "What do you want to query?", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -38,7 +37,7 @@ public class NetworkCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM test"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "#-1 SQL IS NOT ENABLED", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -51,7 +50,7 @@ public class NetworkCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql SELECT * FROM test"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "#-1 SQL IS NOT ENABLED", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -63,7 +62,7 @@ public class NetworkCommandTests
 
 		// Verify the command executed and sent output to the user
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Any<OneOf.OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -77,7 +76,7 @@ public class NetworkCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sockset #1=option"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "@SOCKSET: Socket option configuration not yet implemented.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -90,7 +89,7 @@ public class NetworkCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@slave"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Slave command does nothing for SharpMUSH.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

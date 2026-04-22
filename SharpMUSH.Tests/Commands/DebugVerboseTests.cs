@@ -42,21 +42,21 @@ public class DebugVerboseTests
 
 		// Assert - Verify debug output contains the specific function call
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("! add(123,456) :"),
-						str => str.Contains("! add(123,456) :"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(123,456\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +add\(123,456\) :$"))), null, INotifyService.NotificationType.Announce);
 
 		// Assert - Verify debug output contains the specific result
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("! add(123,456) => 579"),
-						str => str.Contains("! add(123,456) => 579"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(123,456\) => 579$"),
+						str => Regex.IsMatch(str, @"^#\d+! +add\(123,456\) => 579$"))), null, INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugEvalObj"));
@@ -79,28 +79,30 @@ public class DebugVerboseTests
 
 		// Assert - Outer function
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("! mul(add(11,22),3) :"),
-						str => str.Contains("! mul(add(11,22),3) :"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +mul\(add\(11,22\),3\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +mul\(add\(11,22\),3\) :$"))), null, INotifyService.NotificationType.Announce);
 
 		// Assert - Inner function (has extra space for nesting indentation, matching PennMUSH)
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("!  add(11,22) :"),
-						str => str.Contains("!  add(11,22) :"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! {2,}add\(11,22\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! {2,}add\(11,22\) :$"))), null, INotifyService.NotificationType.Announce);
 
 		// Assert - Final result should be 99
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "=> 99")), null, INotifyService.NotificationType.Announce);
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +mul\(add\(11,22\),3\) => 99$"),
+						str => Regex.IsMatch(str, @"^#\d+! +mul\(add\(11,22\),3\) => 99$"))), null, INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugNestObj"));
@@ -119,12 +121,12 @@ public class DebugVerboseTests
 
 		// Assert - Verify VERBOSE output (format: "#dbref] command")
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("] ") && mstr.ToString().Contains("@pemit me=UniqueTestMessage789"),
-						str => str.Contains("] ") && str.Contains("@pemit me=UniqueTestMessage789"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+\] @pemit me=UniqueTestMessage789$"),
+						str => Regex.IsMatch(str, @"^#\d+\] @pemit me=UniqueTestMessage789$"))), null, INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerboseObj"));
@@ -143,12 +145,12 @@ public class DebugVerboseTests
 
 		// Assert - Verbose output should show "think UniqueNoDup777" NOT "think think UniqueNoDup777"
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("] think UniqueNoDup777"),
-						str => str.Contains("] think UniqueNoDup777"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+\] think UniqueNoDup777$"),
+						str => Regex.IsMatch(str, @"^#\d+\] think UniqueNoDup777$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.DidNotReceive()
@@ -175,12 +177,12 @@ public class DebugVerboseTests
 
 		// Assert - Verbose output should show "@emit/noeval UniqueNoDupSwitch555" NOT "@emit/noeval @emit/noeval UniqueNoDupSwitch555"
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("] @emit/noeval UniqueNoDupSwitch555"),
-						str => str.Contains("] @emit/noeval UniqueNoDupSwitch555"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+\] @emit/noeval UniqueNoDupSwitch555$"),
+						str => Regex.IsMatch(str, @"^#\d+\] @emit/noeval UniqueNoDupSwitch555$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.DidNotReceive()
@@ -278,12 +280,12 @@ public class DebugVerboseTests
 
 		// Assert - Should see debug output despite object not having DEBUG
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("add(88,77) => 165"),
-						str => str.Contains("add(88,77) => 165"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(88,77\) => 165$"),
+						str => Regex.IsMatch(str, @"^#\d+! +add\(88,77\) => 165$"))), null, INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy AttrDebugForceTest"));
@@ -370,7 +372,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugFmtPre=dbgfmtprecmd"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
@@ -392,7 +394,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugFmtPost=dbgfmtpostcmd"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
@@ -414,7 +416,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugNestFmt=dbgnestfmtcmd"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
@@ -422,7 +424,7 @@ public class DebugVerboseTests
 						str => Regex.IsMatch(str, @"^#\d+! +strlen\(add\(2,3\)\) :$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
@@ -430,7 +432,7 @@ public class DebugVerboseTests
 						str => Regex.IsMatch(str, @"^#\d+! {2,}add\(2,3\) :$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
@@ -438,7 +440,7 @@ public class DebugVerboseTests
 						str => Regex.IsMatch(str, @"^#\d+! {2,}add\(2,3\) => 5$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
@@ -458,7 +460,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force VerboseFmtObj=@pemit me=VerbFmtTest444"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
@@ -471,34 +473,34 @@ public class DebugVerboseTests
 	[Test]
 	public async Task PuppetFlag_CannotBeSetOnPlayer()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=PUPPET"));
+		// Pattern C: unique receiver isolates the generic "Permission denied." message in the shared session.
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PuppetNoSet");
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set me=PUPPET"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg =>
-					msg.Match(
-						mstr => mstr.ToString().Contains("Permission denied"),
-						str => str.Contains("Permission denied"))), null, INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), "Permission denied.", (AnySharpObject?)null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async Task PuppetFlag_CanBeSetOnThing()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create PuppetThingObj"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set PuppetThingObj=PUPPET"));
+		// Pattern B: unique object name is embedded in the flag-set message, making it globally unique.
+		var uniqueName = TestIsolationHelpers.GenerateUniqueName("PuppetThing");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {uniqueName}=PUPPET"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					msg.Match(
-						mstr => mstr.ToString().Contains("PUPPET") && mstr.ToString().Contains("set."),
-						str => str.Contains("PUPPET") && str.Contains("set."))), null, INotifyService.NotificationType.Announce);
+					TestHelpers.MessagePlainTextEquals(msg, $"{uniqueName} - PUPPET set.")),
+				(AnySharpObject?)null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy PuppetThingObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {uniqueName}"));
 	}
 
 	[Test]
@@ -547,18 +549,20 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugPctQ=pctqcmd"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "strlen(%qa)")), null, INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"strlen\(%qa\) => \d+"),
-						str => Regex.IsMatch(str, @"strlen\(%qa\) => \d+"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(%qa\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +strlen\(%qa\) :$"))), null, INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(%qa\) => \d+$"),
+						str => Regex.IsMatch(str, @"^#\d+! +strlen\(%qa\) => \d+$"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugPctQ"));
 	}
@@ -577,16 +581,20 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugPct0=pct0testcmd World"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "strlen(%0)")), null, INotifyService.NotificationType.Announce);
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(%0\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +strlen\(%0\) :$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "strlen(%0) => 5")), null, INotifyService.NotificationType.Announce);
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(%0\) => 5$"),
+						str => Regex.IsMatch(str, @"^#\d+! +strlen\(%0\) => 5$"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugPct0"));
 	}
@@ -605,24 +613,28 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugPctIter=pctitercmd"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "iter(")), null, INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "strlen(##)")), null, INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"strlen\(.+\) => 5"),
-						str => Regex.IsMatch(str, @"strlen\(.+\) => 5"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +iter\(Hello,strlen\(##\)\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +iter\(Hello,strlen\(##\)\) :$"))), null, INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! {2,}strlen\(##\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! {2,}strlen\(##\) :$"))), null, INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! {2,}strlen\(Hello\) => 5$"),
+						str => Regex.IsMatch(str, @"^#\d+! {2,}strlen\(Hello\) => 5$"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugPctIter"));
 	}
@@ -641,18 +653,20 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugSetq=setqcmd"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "setq(a,TestVal123) :")), null, INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"setq\(a,TestVal123\) => $"),
-						str => Regex.IsMatch(str, @"setq\(a,TestVal123\) => $"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +setq\(a,TestVal123\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +setq\(a,TestVal123\) :$"))), null, INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +setq\(a,TestVal123\) => $"),
+						str => Regex.IsMatch(str, @"^#\d+! +setq\(a,TestVal123\) => $"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugSetq"));
 	}
@@ -668,12 +682,12 @@ public class DebugVerboseTests
 			MModule.single("@force VerbosePctObj=think [add(10,20)]"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("] think 30"),
-						str => str.Contains("] think 30"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+\] think 30$"),
+						str => Regex.IsMatch(str, @"^#\d+\] think 30$"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerbosePctObj"));
 	}

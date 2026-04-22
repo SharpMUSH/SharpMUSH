@@ -28,7 +28,7 @@ public class NewsCommandTests
 
 		// Verify that NotifyService was called with content about news
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("news")) ||
 				(msg.IsT1 && msg.AsT1.Contains("news"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -43,7 +43,7 @@ public class NewsCommandTests
 
 		// Verify that NotifyService was called with content about welcome
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("SharpMUSH")) ||
 				(msg.IsT1 && msg.AsT1.Contains("SharpMUSH"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -91,7 +91,7 @@ public class AhelpCommandTests
 
 		// Verify that NotifyService was called with content about ahelp
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && (msg.AsT0.ToString().Contains("ahelp") || msg.AsT0.ToString().Contains("admin"))) ||
 				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -106,7 +106,7 @@ public class AhelpCommandTests
 
 		// Verify that NotifyService was called with content about security
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Security")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Security"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -121,7 +121,7 @@ public class AhelpCommandTests
 
 		// Verify that NotifyService was called with ahelp content
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && (msg.AsT0.ToString().Contains("ahelp") || msg.AsT0.ToString().Contains("admin"))) ||
 				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
