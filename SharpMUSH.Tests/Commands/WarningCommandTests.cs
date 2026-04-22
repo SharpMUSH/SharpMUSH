@@ -37,7 +37,7 @@ public class WarningCommandTests
 		// ParseWarnings("normal") → WarningType.Normal; UnparseWarnings → "normal".
 		var freshPlayer = await CreateFreshPlayerAsync("WT_Normal");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings #1=normal"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings me=normal"));
 
 		await NotifyService
 			.Received(1)
@@ -53,7 +53,7 @@ public class WarningCommandTests
 		// ParseWarnings("all") → WarningType.All; UnparseWarnings → "all".
 		var freshPlayer = await CreateFreshPlayerAsync("WT_All");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings #1=all"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings me=all"));
 
 		await NotifyService
 			.Received(1)
@@ -69,7 +69,7 @@ public class WarningCommandTests
 		// ParseWarnings("none") → WarningType.None → "Warnings cleared." branch.
 		var freshPlayer = await CreateFreshPlayerAsync("WT_None");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings #1=none"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings me=none"));
 
 		await NotifyService
 			.Received(1)
@@ -85,7 +85,7 @@ public class WarningCommandTests
 		// ParseWarnings("all !exit-desc") → All & ~ExitDesc = Extra; UnparseWarnings → "extra".
 		var freshPlayer = await CreateFreshPlayerAsync("WT_Negate");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings #1=all !exit-desc"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings me=all !exit-desc"));
 
 		await NotifyService
 			.Received(1)
@@ -101,7 +101,7 @@ public class WarningCommandTests
 		// @warnings sends "Unknown warning: unknown-warning" for each unrecognised token.
 		var freshPlayer = await CreateFreshPlayerAsync("WT_Unknown");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings #1=unknown-warning"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings me=unknown-warning"));
 
 		await NotifyService
 			.Received(1)

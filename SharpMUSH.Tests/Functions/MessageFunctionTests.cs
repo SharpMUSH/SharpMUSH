@@ -33,7 +33,6 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageBasicSendsNotification()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "MsgFuncSends");
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGFUNC2_37291 {objDbRef}=MessageFuncSends_Value_37291"));
 

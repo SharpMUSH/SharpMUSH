@@ -64,8 +64,9 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@dolist/inline a b c=@pemit #1=Inline{uniqueId}"));
 
-		// Assert - all iterations should have executed (checking for at least one to ensure it ran)
-		await NotifyService.Received(1).Notify(
+		// Assert - @dolist/inline a b c fires 3 iterations, each @pemit emits the same unique string.
+		// Received(3) is the exact count: one for element "a", one for "b", one for "c".
+		await NotifyService.Received(3).Notify(
 			TestHelpers.MatchingObject(executor),
 			$"Inline{uniqueId}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}

@@ -80,23 +80,26 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzoneClearZone()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create unique zone master object
+		// Pattern C: "Zone cleared." is a fixed server string that executor #1 may receive in
+		// other tests (any @chzone …=none). Use a fresh player as the unique receiver/sender.
+		var freshPlayer = await CreateTestPlayerWithHandleAsync("ZT_ClearZone");
+
+		// Create unique zone master object as the fresh player (they own it → controls check passes)
 		var zoneName = TestIsolationHelpers.GenerateUniqueName("ZoneMasterClear");
-		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zoneName}"));
+		var zoneResult = await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single($"@create {zoneName}"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 		var zoneObject = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
 		await Assert.That(zoneObject.IsNone).IsFalse();
 
 		// Create unique object to be zoned
 		var objName = TestIsolationHelpers.GenerateUniqueName("ZonedClearObject");
-		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
+		var objResult = await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single($"@create {objName}"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var zonedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		await Assert.That(zonedObject.IsNone).IsFalse();
 
 		// Set zone first
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
 		// Verify zone was set
 		var withZone = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -104,15 +107,14 @@ public class ZoneCommandTests
 		await Assert.That(zoneCheck.IsNone).IsFalse();
 
 		// Clear zone by setting to "none"
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}=none"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single($"@chzone {objDbRef}=none"));
 
-		// Pattern B: "Zone cleared." is the exact string from BuildingCommands.cs:872.
-		// Only this test clears a zone in the session, so the message is unique to executor #1.
+		// Pattern C: freshPlayer.DbRef is unique to this test so Received(1) is unambiguous.
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "Zone cleared.")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		// Verify the zone was actually cleared in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
