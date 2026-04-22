@@ -96,8 +96,7 @@ public class ChannelCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString() == $"<{TestChannelName}> CemitCommand: Test message") ||
-				(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> CemitCommand: Test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> CemitCommand: Test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
@@ -109,8 +108,7 @@ public class ChannelCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("NscemitCommand: Test message")) ||
-				(msg.IsT1 && msg.AsT1.Contains("NscemitCommand: Test message"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> NscemitCommand: Test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]

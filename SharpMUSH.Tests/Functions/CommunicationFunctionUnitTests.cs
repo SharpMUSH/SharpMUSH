@@ -33,8 +33,8 @@ public class CommunicationFunctionUnitTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf.OneOf<MString, string>>(x => x.Value.ToString()!.Contains(uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf.OneOf<MString, string>>(x => TestHelpers.MessagePlainTextEquals(x, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -107,7 +107,7 @@ public class CommunicationFunctionUnitTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageEquals(msg, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
 	}

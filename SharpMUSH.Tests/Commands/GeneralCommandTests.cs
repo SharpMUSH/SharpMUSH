@@ -1,7 +1,6 @@
 ﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -602,7 +601,7 @@ public class GeneralCommandTests
 		// Verify that Notify was called 3 times (once per iteration)
 		// All three should have been batched together internally, but we verify they all went through
 		await NotifyService
-			.Received(Quantity.Exactly(3))
+			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Batched test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -617,8 +616,8 @@ public class GeneralCommandTests
 
 		// Verify all three notifications were called (target is #2, not the executor)
 		await NotifyService
-			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(3)
+			.Notify(TestHelpers.MatchingObject(new DBRef(2)), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Message to other player")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -635,7 +634,7 @@ public class GeneralCommandTests
 
 		// Verify 4 notifications were called (2 outer * 2 inner)
 		await NotifyService
-			.Received(Quantity.Exactly(4))
+			.Received(4)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Nested message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -651,7 +650,7 @@ public class GeneralCommandTests
 
 		// Should receive exactly 3 messages (one per iteration)
 		await NotifyService
-			.Received(Quantity.Exactly(3))
+			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "DoListWithoutBreak_AllMessagesReceived")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -671,17 +670,17 @@ public class GeneralCommandTests
 		// So we get 3 messages (one per loop start) but @break doesn't prevent them
 		// This is the actual MUSH behavior - @break affects the next iteration, not current
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -701,7 +700,7 @@ public class GeneralCommandTests
 		// With command list {@pemit; @break}, both execute in each iteration
 		// So we get 3 messages, and batching still works
 		await NotifyService
-			.Received(Quantity.Exactly(3))
+			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Message before break")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -724,7 +723,7 @@ public class GeneralCommandTests
 		// Should receive 6 messages (all inner iterations run, @break is after @pemit)
 		// This validates that batching still works and flushes correctly even with @break
 		await NotifyService
-			.Received(Quantity.Exactly(6))
+			.Received(6)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Inner message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}

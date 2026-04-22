@@ -49,7 +49,7 @@ public class SemaphoreCommandTests
 
 		// Assert - verify the waiting task was executed
 		await NotifyService.Received(1).Notify(
-			Arg.Any<AnySharpObject>(),
+			TestHelpers.MatchingObject(executor),
 			testMessage, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -74,35 +74,21 @@ public class SemaphoreCommandTests
 	public async ValueTask DolistDefault_ShouldQueueCommands()
 	{
 		// Arrange
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var uniqueId = Guid.NewGuid().ToString("N");
 
 		// Act - @dolist (without /inline) should queue commands
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@dolist a b c=@pemit #1=Queued{uniqueId}"));
 
-		// Assert - verify queuing happened by checking that jobs were scheduled
-		// We verify this indirectly by checking that the command didn't execute inline
-		// (if it executed inline, we would see 3 Notify calls immediately)
-		// Since we're using NSubstitute mock, we can verify the inline calls didn't happen
-		var receivedCalls = NotifyService.ReceivedCalls()
-			.Where(call => call.GetMethodInfo().Name == "Notify")
-			.Where(call =>
-			{
-				var args = call.GetArguments();
-				if (args.Length >= 2 && args[1] != null)
-				{
-					var message = args[1]!.ToString();
-					return message != null && message.Contains($"Queued{uniqueId}");
-				}
-				return false;
-			})
-			.ToList();
-
-		// Should have 0 inline calls (commands are queued, not executed inline)
-		if (receivedCalls.Count != 0)
-		{
-			throw new Exception($"Commands should be queued, not executed inline. Found {receivedCalls.Count} inline calls.");
-		}
+		// Assert - verify queuing happened by checking that jobs were scheduled.
+		// @dolist (without /inline) queues commands; they must NOT execute synchronously.
+		await NotifyService
+			.DidNotReceive()
+			.Notify(
+				TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"Queued{uniqueId}")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -119,12 +105,13 @@ public class SemaphoreCommandTests
 		var result = await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@notify/setq {semObj}/{uniqueAttr}=0,TestValue"));
 
-		// The command should not generate a parsing error about pairs
-		// It might say "no queue entry" but shouldn't say "must be in pairs"
+		// The command should not generate a parsing error about pairs.
+		// It might say "no queue entry" but must NOT say the pairs-error message.
 		await NotifyService.DidNotReceive().Notify(
 			Arg.Any<AnySharpObject>(),
 			Arg.Is<OneOf<MString, string>>(msg =>
-				msg.Value.ToString()!.Contains("must be in pairs")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Q-register assignments must be in pairs: qreg,value[,qreg,value...]")),
+			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -154,7 +141,7 @@ public class SemaphoreCommandTests
 		// Assert - verify the task executed with the correct Q-register value
 		// The waiting task should have been executed with %q0 set to our test value
 		await NotifyService.Received(1).Notify(
-			Arg.Any<AnySharpObject>(),
+			TestHelpers.MatchingObject(executor),
 			$"QRegValue:{testValue}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 

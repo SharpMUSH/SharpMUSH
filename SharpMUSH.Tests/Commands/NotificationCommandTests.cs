@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -26,7 +25,7 @@ public class NotificationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Test message"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "#-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -40,7 +39,7 @@ public class NotificationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond #1=Response"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Status code must be a 3-digit number.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -53,7 +52,7 @@ public class NotificationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@rwall Test message"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Announcement:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -67,7 +66,7 @@ public class NotificationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@warnings"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Usage: @warnings <object>=<warning list>", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -80,7 +79,7 @@ public class NotificationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wcheck #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "@wcheck complete.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -93,7 +92,7 @@ public class NotificationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest Test suggestion"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Category 'test suggestion' does not exist.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

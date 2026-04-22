@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -189,7 +188,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@link {exitDbRef}={roomDbRef}"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains("Linked") && mstr.ToString().Contains($"#{exitDbRef.Number}") && mstr.ToString().Contains($"#{roomDbRef.Number}"),
@@ -212,7 +211,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@clone {sourceDbRef}"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains("Cloned") && mstr.ToString().Contains("CloneObjectTestSource"),
@@ -429,7 +428,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@parent #9=#8"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Parent set.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -448,7 +447,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "PERMISSION DENIED")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Permission denied.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -466,10 +465,8 @@ public class BuildingCommandTests
 		// Set zone
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "Zoned")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// NotifyLocalized sends "Zone changed." via the ZoneChanged key
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ZoneChanged), executor, executor)).IsTrue();
 	}
 
 	[Test]
@@ -477,16 +474,18 @@ public class BuildingCommandTests
 	public async ValueTask RecycleObject()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create an object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Recycle Test"));
+		// Create an object, capture its DBRef so we don't rely on hardcoded #13
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create RecycleTest_Unique"));
+		var recycleDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		// Recycle it
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@recycle #13"));
+		// Recycle it using the captured DBRef
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@recycle {recycleDbRef}"));
 
+		// Implementation sends: string.Format(ObjectScheduledDestroyedFormat, name)
+		// = "RecycleTest_Unique is scheduled to be destroyed."
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "Marked for destruction")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(executor, "RecycleTest_Unique is scheduled to be destroyed.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -504,7 +503,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@unlink Unlink Exit"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Unlinked")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -536,7 +535,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@lock {objDbRef}=#TRUE"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Locked.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -557,7 +556,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@unlock {objDbRef}"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Unlocked.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -582,12 +581,12 @@ public class BuildingCommandTests
 
 		// Use @desc with a function that should be evaluated
 		// @desc should match DESCRIBE (not DESCFORMAT) due to length sorting in prefix matching
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[add(1,2)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[add(47119,82)]"));
 
 		// Verify the notification shows it was set
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeSet))).IsTrue();
 
-		// Retrieve the attribute and verify the stored value is "3" (evaluated), not "[add(1,2)]"
+		// Retrieve the attribute and verify the stored value is "47201" (evaluated), not "[add(47119,82)]"
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 		var descAttr = await attributeService.GetAttributeAsync(
 			obj.Known, obj.Known, "DESCRIBE",
@@ -595,7 +594,7 @@ public class BuildingCommandTests
 
 		await Assert.That(descAttr.IsAttribute).IsTrue();
 		var storedValue = descAttr.AsAttribute.Last().Value.ToPlainText();
-		await Assert.That(storedValue).IsEqualTo("3");
+		await Assert.That(storedValue).IsEqualTo("47201");
 	}
 
 	/// <summary>
@@ -638,17 +637,18 @@ public class BuildingCommandTests
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LookDescTestObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
-		// Use @desc with a function - this should be evaluated to "10"
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[mul(2,5)]"));
+		// Use @desc with a unique value - stored as-is (no function evaluation tested here)
+		// to verify look displays the stored description without re-evaluation
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=LookDesc_UniqueTestValue_38471"));
 
 		// Look at the object
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"look {objDbRef}"));
 
-		// Verify look displayed "10" (the evaluated result of [mul(2,5)])
+		// Verify look displayed the stored description exactly
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "10")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "LookDesc_UniqueTestValue_38471")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -661,16 +661,11 @@ public class BuildingCommandTests
 		// Try to @desc an object that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@desc #99999=test description"));
 
-		// Verify error notification was sent ("I don't see that here." or similar)
-		// The locate service sends the error with a sender parameter
+		// Verify error notification was sent: "I don't see that here." (ErrorMessages.Notifications.NoMatch)
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "don't see") ||
-				TestHelpers.MessageContains(msg, "can't see") ||
-				TestHelpers.MessageContains(msg, "not found") ||
-				TestHelpers.MessageContains(msg, "Invalid") ||
-				TestHelpers.MessageContains(msg, "No match")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>

@@ -104,7 +104,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
@@ -119,7 +119,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
@@ -140,7 +140,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
@@ -166,7 +166,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 
 		// Clean up: remove the temporary zone from room #0.
@@ -184,7 +184,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageEquals(msg, "Test nospoof emit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
@@ -200,7 +200,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageEquals(msg, "Test nospoof local")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
@@ -216,7 +216,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageEquals(msg, "Test nospoof remote")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
@@ -248,7 +248,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageEquals(msg, "Test nospoof pemit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
 	}
@@ -275,7 +275,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 
 		// Clean up: remove the temporary zone from room #0.
@@ -358,7 +358,7 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Name: Public")),
+				TestHelpers.MessagePlainTextEquals(msg, "Name: Public")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -416,9 +416,8 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				msg.IsT0 &&
-				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist1") &&
-				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist2")),
+				TestHelpers.MessagePlainTextContains(msg, "test_alias_comlist1") &&
+				TestHelpers.MessagePlainTextContains(msg, "test_alias_comlist2")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 

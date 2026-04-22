@@ -327,7 +327,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(executor.Number, Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, token)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, $"Announcement: {token}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -341,7 +341,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(executor.Number, Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, token)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, $"Broadcast: {token}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
