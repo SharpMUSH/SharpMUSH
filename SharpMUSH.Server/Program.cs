@@ -19,8 +19,10 @@ public class Program
 		// Determine database provider from environment variable
 		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
 		var databaseProvider = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase)
-		? DatabaseProvider.Memgraph
-		: DatabaseProvider.ArangoDB;
+			? DatabaseProvider.Memgraph
+			: string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase)
+				? DatabaseProvider.SurrealDB
+				: DatabaseProvider.ArangoDB;
 
 		ArangoConfiguration? arangoConfig = null;
 		string? memgraphUri = null;
@@ -29,10 +31,11 @@ public class Program
 		{
 			memgraphUri = Environment.GetEnvironmentVariable("MEMGRAPH_URI") ?? "bolt://localhost:7687";
 		}
-		else
+		else if (databaseProvider == DatabaseProvider.ArangoDB)
 		{
 			arangoConfig = await ArangoStartupStrategyProvider.GetStrategy().ConfigureArango();
 		}
+		// SurrealDB uses embedded in-memory mode, no external configuration needed
 
 		// Resolve the NATS URL.  Ownership of the testcontainer (when NATS_URL is not set)
 		// belongs to ConnectionServer; Server only needs the URL to connect.

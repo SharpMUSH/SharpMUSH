@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Serilog;
+using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -41,7 +42,8 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	{
 		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
-			.MinimumLevel.Verbose();
+			.MinimumLevel.Verbose()
+			.MinimumLevel.Override("SurrealDb", LogEventLevel.Error);
 
 		// Only write to console if explicitly enabled via environment variable
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
