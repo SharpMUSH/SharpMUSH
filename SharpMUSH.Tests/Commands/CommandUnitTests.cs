@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -16,6 +17,8 @@ public class CommandUnitTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	[Arguments("think add(1,2)1",
@@ -57,18 +60,20 @@ public class CommandUnitTests
 		"Command4 Arg.")]
 	public async Task TestSingle(string str, string expected1, string expected2)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CmdListParse");
+		var testParser = WebAppFactoryArg.CommandParserFor(testPlayer.DbRef, testPlayer.Handle);
 		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandListParse(MModule.single(str));
+		await testParser.CommandListParse(MModule.single(str));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
-				=> x.Value.ToString()!.Contains(expected1)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(x
+				=> x.Value.ToString()!.Contains(expected1)), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
-				=> x.Value.ToString()!.Contains(expected2)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(x
+				=> x.Value.ToString()!.Contains(expected2)), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 }

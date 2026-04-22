@@ -26,14 +26,16 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask FlagCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SysFlagCmd");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/list"));
 
 		await NotifyService
 			.Received(1)
 			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Object Flags:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Object Flags:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_power with SWITCH_LIST calls do_list_flags("POWER", ..., FLAG_LIST_NAMECHAR, T("Powers"))
@@ -41,14 +43,16 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask PowerCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SysPowerCmd");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@power/list"));
 
 		await NotifyService
 			.Received(1)
 			.Notify(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Object Powers:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Object Powers:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_hook with SWITCH_LIST calls do_hook_list(executor, arg_left, 1).

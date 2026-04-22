@@ -37,16 +37,17 @@ public class NewsCommandTests
 	[Test]
 	public async ValueTask NewsWithTopicWorks()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NewsTopic");
 		// Test news with the "welcome" topic
-		await Parser.CommandParse(1, ConnectionService, MModule.single("news welcome"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("news welcome"));
 
 		// Verify that NotifyService was called with content about welcome
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("SharpMUSH")) ||
-				(msg.IsT1 && msg.AsT1.Contains("SharpMUSH"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("SharpMUSH"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

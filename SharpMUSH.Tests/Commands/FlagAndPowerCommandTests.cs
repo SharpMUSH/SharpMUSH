@@ -27,15 +27,17 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_List_DisplaysAllFlags()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagListCmd");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		// Execute @flag/list
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/list"));
 
 		// Verify that a notification was sent with the flag list
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Flags:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Flags:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
