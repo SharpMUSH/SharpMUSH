@@ -55,6 +55,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.IntegrationTests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Tests.Infrastructure", "SharpMUSH.Tests.Infrastructure\SharpMUSH.Tests.Infrastructure.csproj", "{71393B85-8409-49EF-BC10-9BB04E71B035}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Database.SurrealDB", "SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj", "{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -305,6 +307,18 @@ Global
 		{71393B85-8409-49EF-BC10-9BB04E71B035}.Release|x64.Build.0 = Release|Any CPU
 		{71393B85-8409-49EF-BC10-9BB04E71B035}.Release|x86.ActiveCfg = Release|Any CPU
 		{71393B85-8409-49EF-BC10-9BB04E71B035}.Release|x86.Build.0 = Release|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Debug|x64.Build.0 = Debug|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Debug|x86.Build.0 = Debug|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Release|x64.ActiveCfg = Release|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Release|x64.Build.0 = Release|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Release|x86.ActiveCfg = Release|Any CPU
+		{9B4A888C-BA7F-4F5A-A357-BCB127197D7C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

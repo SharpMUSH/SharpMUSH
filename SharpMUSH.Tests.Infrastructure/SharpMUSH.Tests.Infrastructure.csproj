@@ -28,6 +28,7 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
 		<PackageReference Include="Serilog" Version="4.3.1" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+		<PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -41,6 +42,7 @@
 		<ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Server\SharpMUSH.Server.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
+		<ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
 	</ItemGroup>
 
 </Project>

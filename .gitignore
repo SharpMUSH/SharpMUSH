@@ -413,3 +413,4 @@ gen
 TextFiles/
 /nul
 test_output.txt
+TestResults/
