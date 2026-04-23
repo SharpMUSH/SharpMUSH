@@ -41,7 +41,7 @@ public static class ChannelList
 				: MModule.concat(MModule.single("Name: "), channel.Name))
 			.ToArrayAsync();
 
-		var result = MModule.MultipleWithDelimiter(MModule.single("\n"), channelList);
+		var result = MModule.multipleWithDelimiter(MModule.single("\n"), channelList);
 		await NotifyService.Notify(executor, result, executor);
 		return new CallState(result);
 	}
