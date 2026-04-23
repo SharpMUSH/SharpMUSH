@@ -147,70 +147,75 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsOwnerRow()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Owner row uses proper MModule composition; plain-text must contain "Owner: "
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamOwnerRow");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Owner: ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "Owner: ")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsZoneAndPowers()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Zone and Powers are always shown (even when empty/nothing)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamZonePowers");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Zone: *NOTHING*")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "Zone: *NOTHING*")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Powers: ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "Powers: ")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsWarningsChecked()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// "Warnings checked:" is always shown (even when empty)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamWarnings");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Warnings checked:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "Warnings checked:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsLastModified()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// "Last modified:" is always shown in both examine and brief
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamLastMod");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Last modified:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "Last modified:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask ExaminePlayer_HeaderContainsQuota()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// "Quota:" is shown for player objects (God is player #1)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamQuota");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Quota:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "Quota:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -240,14 +245,15 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject_BriefSwitch_AlsoShowsLastModified()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Brief mode should also show Last modified: (it's a header field)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/brief #1"));
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamBriefMod");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine/brief #1"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Last modified:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "Last modified:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -269,14 +275,15 @@ public class UtilityCommandTests
 			MModule.single($"examine {objDbRef}"));
 
 		// Plain-text content of the attribute value must appear in examine output
+		// Examine produces 2 notifications containing "AnsiColorText": the header block and the attribute row
 		await NotifyService
-			.Received(1)
+			.Received(2)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
-		// The ANSI-rendered output must contain actual ANSI escape codes
+		// Both notifications are MStrings with ANSI markup (header has hilighted name, attribute has ansi value)
 		await NotifyService
-			.Received(1)
+			.Received(2)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText") &&
 				msg.IsT0 && msg.AsT0.ToString().Contains("\x1b[")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
@@ -285,27 +292,28 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject_BriefSwitch_ShowsHeaderNotDescription()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		var createResult = await Parser.CommandParse(1, ConnectionService,
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamBriefHeader");
+		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single("@create BriefExamineTestObj"));
 		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"@desc {objDbRef}=BriefShouldNotSeeThis"));
 
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"examine/brief {objDbRef}"));
 
 		// Brief MUST show owner header (in plain text because owner name is hilighted)
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Owner: ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "Owner: ")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		// Brief must NOT show description text
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "BriefShouldNotSeeThis")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "BriefShouldNotSeeThis")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -412,13 +420,14 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask VersionCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@version"));
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "VersionCmd");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@version"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "SharpMUSH version 0")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "SharpMUSH version 0")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

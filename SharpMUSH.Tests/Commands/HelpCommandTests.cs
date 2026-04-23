@@ -107,7 +107,7 @@ public class HelpCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("MUSH")) ||
-				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToString().Contains("If you are new to MUSHing")) ||
+				(msg.IsT1 && msg.AsT1.Contains("If you are new to MUSHing"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

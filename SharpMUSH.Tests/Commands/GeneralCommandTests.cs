@@ -328,7 +328,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "One is in Room Zero.")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "One is in Room Zero.")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -620,13 +620,13 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Send to player #2 (different from enactor #1) — receiver is #2, not the executor
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline a b c=@pemit #2=Message to other player"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline a b c=@pemit #2=DoListBatchesToOtherPlayers: Message to other player"));
 
 		// Verify all three notifications were called (target is #2, not the executor)
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(new DBRef(2)), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Message to other player")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "DoListBatchesToOtherPlayers: Message to other player")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

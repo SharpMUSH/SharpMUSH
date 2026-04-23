@@ -230,7 +230,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await NotifyService
-			.Received(1)
+			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
