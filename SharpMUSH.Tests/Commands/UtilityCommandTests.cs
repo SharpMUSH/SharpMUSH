@@ -337,13 +337,14 @@ public class UtilityCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test examining with attribute pattern (e.g., examine #1/DESC*)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1/DESC*"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&examinewithattributepattern #1=jim"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1/exa*"));
 
 		// Should display header with "God(#1..." followed by matching attributes
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "God(#1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "EXAMINEWITHATTRIBUTEPATTERN")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
