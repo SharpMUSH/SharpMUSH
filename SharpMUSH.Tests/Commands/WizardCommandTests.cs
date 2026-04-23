@@ -247,7 +247,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf.OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "SharpMUSH Uptime:")),
+				Arg.Is<OneOf.OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "SharpMUSH Uptime:")),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 

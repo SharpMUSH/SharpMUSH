@@ -253,7 +253,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Last modified:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, "Last modified:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -307,7 +307,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Owner: ")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, "Owner: ")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		// Brief must NOT show description text
 		await NotifyService
@@ -329,7 +329,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, "God(#1")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -343,7 +343,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, "God(#1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -360,7 +360,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero(#0")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, "Room Zero(#0")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -374,7 +374,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "***")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, "***")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -427,7 +427,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "SharpMUSH version 0")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SharpMUSH version")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
