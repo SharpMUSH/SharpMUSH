@@ -30,7 +30,9 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	/// </summary>
 	protected override void ConfigureStartupConfiguration(IConfigurationBuilder configurationBuilder)
 	{
-		// No Prometheus configuration needed anymore
+		// PARSER_STRICT_MODE is applied via the post-ReadPennMushConfig.Create
+		// config record override (lines 99-117) to avoid duplicated env-var parsing
+		// and configuration precedence issues.
 	}
 
 	/// <summary>
@@ -81,6 +83,23 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 			{
 				var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 				var config = ReadPennMushConfig.Create(configFile);
+
+				// Apply PARSER_STRICT_MODE environment variable if set
+				var parserStrictMode = Environment.GetEnvironmentVariable("PARSER_STRICT_MODE");
+				var isStrictMode = !string.IsNullOrEmpty(parserStrictMode) &&
+				                   (parserStrictMode.Equals("true", StringComparison.OrdinalIgnoreCase) || parserStrictMode == "1");
+
+				if (isStrictMode)
+				{
+					// Override Debug options to enable strict mode
+					config = config with
+					{
+						Debug = config.Debug with
+						{
+							ParserStrictMode = true
+						}
+					};
+				}
 
 				// Create IOptionsMonitor for SqlService with test connection string
 				var sqlOptionsMonitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();

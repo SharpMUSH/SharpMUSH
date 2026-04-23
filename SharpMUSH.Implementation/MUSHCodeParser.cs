@@ -161,6 +161,18 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
 
+		// Apply StrictErrorStrategy if parser strict mode is enabled
+		var strictModeEnabled = Configuration.CurrentValue.Debug.ParserStrictMode;
+		
+		if (strictModeEnabled)
+		{
+			if (Configuration.CurrentValue.Debug.DebugSharpParser)
+			{
+				Logger.LogDebug("PARSER: STRICT MODE ACTIVE - Applying StrictErrorStrategy for {MethodName}", methodName);
+			}
+			sharpParser.ErrorHandler = new StrictErrorStrategy();
+		}
+
 		if (Configuration.CurrentValue.Debug.DebugSharpParser)
 		{
 			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
