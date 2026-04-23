@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -45,23 +44,25 @@ public class FlagWildcardMatchingTests
 	public async ValueTask UnsetFlag_PartialMatch_NoCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a thing to test with
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing2"));
+		// Create a thing with a unique name so the flag-reset message is unique in the session.
+		// Pattern B: "{uniqueName} - NO_COMMAND reset." appears exactly once across the session.
+		var uniqueName = TestIsolationHelpers.GenerateUniqueName("FlagTest2");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
 
 		// Set NO_COMMAND flag first
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set FlagTestThing2=NO_COMMAND"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {uniqueName}=NO_COMMAND"));
 
 		// Test that "@set thing=!no_com" unsets the NO_COMMAND flag (partial match with negation)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set FlagTestThing2=!no_com"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {uniqueName}=!no_com"));
 
-		// Verify using notification - the DebugVerboseTests style doesn't query back
+		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
+		// The message "{uniqueName} - NO_COMMAND reset." is globally unique due to the generated name.
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					msg.Match(
-						s => s.ToPlainText()!.Contains("Unset", StringComparison.OrdinalIgnoreCase),
-						s => s.Contains("Unset", StringComparison.OrdinalIgnoreCase))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+					TestHelpers.MessagePlainTextEquals(msg, $"{uniqueName} - NO_COMMAND reset.")),
+				(AnySharpObject?)null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -85,23 +86,25 @@ public class FlagWildcardMatchingTests
 	public async ValueTask UnsetFlag_PartialMatch_Visual()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a thing to test with
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing4"));
+		// Create a thing with a unique name so the flag-reset message is unique in the session.
+		// Pattern B: "{uniqueName} - VISUAL reset." appears exactly once across the session.
+		var uniqueName = TestIsolationHelpers.GenerateUniqueName("FlagTest4");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
 
 		// Set VISUAL flag first
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set FlagTestThing4=VISUAL"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {uniqueName}=VISUAL"));
 
 		// Test that "@set thing=!vis" unsets the VISUAL flag (partial match with negation)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set FlagTestThing4=!vis"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {uniqueName}=!vis"));
 
-		// Verify using notification - the DebugVerboseTests style doesn't query back
+		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
+		// The message "{uniqueName} - VISUAL reset." is globally unique due to the generated name.
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					msg.Match(
-						s => s.ToPlainText()!.Contains("Unset", StringComparison.OrdinalIgnoreCase),
-						s => s.Contains("Unset", StringComparison.OrdinalIgnoreCase))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+					TestHelpers.MessagePlainTextEquals(msg, $"{uniqueName} - VISUAL reset.")),
+				(AnySharpObject?)null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

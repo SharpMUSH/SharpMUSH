@@ -21,46 +21,55 @@ public class HelpCommandTests
 	[Test]
 	public async ValueTask HelpCommandWorks()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HelpWorks");
 		// Test that help command runs and returns the main help page
-		await Parser.CommandParse(1, ConnectionService, MModule.single("help"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help"));
 
 		// Verify that NotifyService was called with content containing "help newbie"
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("help newbie")) ||
-				(msg.IsT1 && msg.AsT1.Contains("help newbie"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("help newbie"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask HelpWithTopicWorks()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HelpTopic");
 		// Test help with the "newbie" topic
-		await Parser.CommandParse(1, ConnectionService, MModule.single("help newbie"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help newbie"));
 
 		// Verify that NotifyService was called with content about newbie help
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("MUSH")) ||
-				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask HelpWithWildcardWorks()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HelpWildcard");
 		// Test help with wildcard pattern - should list matching topics
-		await Parser.CommandParse(1, ConnectionService, MModule.single("help help*"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help help*"));
 
 		// Verify that NotifyService was called with a list of matching topics
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && (msg.AsT0.ToString().Contains("help") || msg.AsT0.ToString().Contains("helpfile"))) ||
-				(msg.IsT1 && (msg.AsT1.Contains("help") || msg.AsT1.Contains("helpfile")))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Here are the entries which match 'help*'")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Here are the entries which match 'help*'"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains("help, help query, help search, help/search, helpfile, helpfile2")) ||
+				(msg.IsT1 && msg.AsT1.Contains("help, help query, help search, help/search, helpfile, helpfile2"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -72,7 +81,7 @@ public class HelpCommandTests
 
 		// Verify that NotifyService was called with "Matches:" format (content search result)
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Matches:")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Matches:"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -87,7 +96,7 @@ public class HelpCommandTests
 
 		// Verify that NotifyService was called with "No entry for" (PennMUSH-compatible message)
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("No entry for")) ||
 				(msg.IsT1 && msg.AsT1.Contains("No entry for"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -102,9 +111,9 @@ public class HelpCommandTests
 
 		// Should show the 'newbie' entry content (contains "MUSHing")
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("MUSH")) ||
-				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToString().Contains("If you are new to MUSHing")) ||
+				(msg.IsT1 && msg.AsT1.Contains("If you are new to MUSHing"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

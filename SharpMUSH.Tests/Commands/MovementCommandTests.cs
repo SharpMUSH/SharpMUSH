@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -35,7 +34,7 @@ public class MovementCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("goto #0"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "You can't go that way.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -193,7 +192,7 @@ public class MovementCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("enter #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "You can't enter that.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 

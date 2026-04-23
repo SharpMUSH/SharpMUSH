@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -26,7 +25,7 @@ public class SocialCommandTests
 
 		// Sender sees "You say, ..." while others see "Name says, ..."
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), MModule.single("You say, \"Hello world\""), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -39,7 +38,7 @@ public class SocialCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("pose waves hello"));
 
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), MModule.single("One waves hello"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -52,7 +51,7 @@ public class SocialCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("semipose 's greeting"));
 
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), MModule.single("One's greeting"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -65,7 +64,7 @@ public class SocialCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("whisper #1=Secret message"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "You can't whisper to yourself.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -78,7 +77,7 @@ public class SocialCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("page #1=Hello there"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<MString>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

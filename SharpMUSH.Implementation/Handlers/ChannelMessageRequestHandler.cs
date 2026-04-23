@@ -29,9 +29,16 @@ public class ChannelMessageRequestHandler(
 		var chatType = notification.MessageType switch
 		{
 			INotifyService.NotificationType.Pose => ":",
+			INotifyService.NotificationType.NSPose => ":",
 			INotifyService.NotificationType.SemiPose => ";",
+			INotifyService.NotificationType.NSSemiPose => ";",
 			INotifyService.NotificationType.Emit => "@",
-			_ => "\""
+			INotifyService.NotificationType.NSEmit => "@",
+			INotifyService.NotificationType.Announce => "|",
+			INotifyService.NotificationType.NSAnnounce => "|",
+			INotifyService.NotificationType.Say => "\"",
+			INotifyService.NotificationType.NSSay => "\"",
+			_ => throw new ArgumentOutOfRangeException()
 		};
 
 		// Initialize mogrified values with defaults
@@ -338,7 +345,7 @@ public class ChannelMessageRequestHandler(
 	{
 		return chatType switch
 		{
-			"@" => MModule.multiple([chanName, MModule.single(" "), message]),
+			"@" or "|" => MModule.multiple([chanName, MModule.single(" "), message]),
 			":" => MModule.multiple([chanName, MModule.single(" "), MModule.getLength(title) > 0 ? MModule.multiple([title, MModule.single(" ")]) : MModule.empty(), playerName, MModule.single(" "), message]),
 			";" => MModule.multiple([chanName, MModule.single(" "), MModule.getLength(title) > 0 ? MModule.multiple([title, MModule.single(" ")]) : MModule.empty(), playerName, message]),
 			_ => MModule.multiple([chanName, MModule.single(" "), MModule.getLength(title) > 0 ? MModule.multiple([title, MModule.single(" ")]) : MModule.empty(), playerName, MModule.single(" "), says, MModule.single(", \""), message, MModule.single("\"")])

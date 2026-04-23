@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -25,7 +24,7 @@ public class QuotaCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@squota #1=100"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Quota system disabled.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

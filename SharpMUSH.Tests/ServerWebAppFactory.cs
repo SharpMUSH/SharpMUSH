@@ -160,6 +160,46 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		}
 	}
 
+	/// <summary>
+	/// Creates a command parser whose initial state is bound to the given <paramref name="executor"/>
+	/// and connection <paramref name="handle"/>.  Use this in tests that need an isolated executor
+	/// (unique player) so that <see cref="INotifyService"/> mock assertions remain per-player.
+	/// </summary>
+	public IMUSHCodeParser CommandParserFor(DBRef executor, long handle)
+	{
+		var integrationServer = _server!;
+		return new MUSHCodeParser(
+			integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
+			integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
+			integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
+			integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
+			integrationServer.Services,
+			state: new ParserState(
+				Registers: new([[]]),
+				IterationRegisters: [],
+				RegexRegisters: [],
+				SwitchStack: [],
+				ExecutionStack: [],
+				EnvironmentRegisters: [],
+				CurrentEvaluation: null,
+				ParserFunctionDepth: 0,
+				Function: null,
+				Command: null,
+				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
+				Switches: [],
+				Arguments: [],
+				Executor: executor,
+				Enactor: executor,
+				Caller: executor,
+				Handle: handle,
+				CallDepth: new InvocationCounter(),
+				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+				TotalInvocations: new InvocationCounter(),
+				LimitExceeded: new LimitExceededFlag(),
+				Flags: ParserStateFlags.DirectInput
+			));
+	}
+
 	public virtual async Task InitializeAsync()
 	{
 		// Set up a MeterListener to collect SharpMUSH metrics synchronously.

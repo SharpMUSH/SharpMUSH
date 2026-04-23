@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -28,7 +27,7 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@select 1=1,@pemit #1=One,@pemit #1=Other"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "One", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -39,7 +38,7 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@switch 1=1,@pemit #1=One,@pemit #1=Other"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "One", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -78,7 +77,7 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@retry 1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Nothing to retry.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -89,11 +88,11 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@skip 0=@pemit #1=SkipCommand False; @pemit #1=SkipCommand Rest"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "SkipCommand False", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "SkipCommand Rest", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -106,7 +105,7 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@include #1/ATTRIBUTE"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "No such attribute: ATTRIBUTE", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -117,7 +116,7 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ifelse 1=@pemit #1=IfElseCommand True,@pemit #1=IfElseCommand False"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "IfElseCommand True", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -136,9 +135,9 @@ public class ControlFlowCommandTests
 			MModule.single($"@include {objDbRef}/INCL_DOLLAR_TEST"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeDollarPrefix_Executed_71934")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeDollarPrefix_Executed_71934")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -156,9 +155,9 @@ public class ControlFlowCommandTests
 			MModule.single($"@include {objDbRef}/INCL_CARET_TEST"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeCaretPrefix_Executed_82045")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeCaretPrefix_Executed_82045")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -176,9 +175,9 @@ public class ControlFlowCommandTests
 			MModule.single($"@include {objDbRef}/INCL_NOPREFIX_TEST"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeNoPrefix_Executed_93156")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeNoPrefix_Executed_93156")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -196,15 +195,15 @@ public class ControlFlowCommandTests
 			MModule.single($"@include/nobreak {objDbRef}/INCL_NOBRK_TEST;@pemit #1=IncludeNobreak_After_14267"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeNobreak_Before_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeNobreak_Before_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// The command after @include/nobreak should still execute
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeNobreak_After_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeNobreak_After_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -222,9 +221,9 @@ public class ControlFlowCommandTests
 			MModule.single($"@include {objDbRef}/INCL_DOLLARARG_TEST=Hello"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeDollarArg_Hello_25378")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeDollarArg_Hello_25378")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -237,15 +236,15 @@ public class ControlFlowCommandTests
 
 		// The command before @break should execute
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "BreakQueued_Before_36489")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "BreakQueued_Before_36489")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// The command after @break should NOT execute (break stops the list)
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "BreakQueued_After_36489")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "BreakQueued_After_36489")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -257,14 +256,14 @@ public class ControlFlowCommandTests
 			MModule.single("@switch/first 1=1,@pemit #1=SwFirst_A_47592,1,@pemit #1=SwFirst_B_47592"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwFirst_A_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwFirst_A_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwFirst_B_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwFirst_B_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -276,14 +275,14 @@ public class ControlFlowCommandTests
 			MModule.single("@switch/all 1=1,@pemit #1=SwAll_A_58603,1,@pemit #1=SwAll_B_58603"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwAll_A_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwAll_A_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwAll_B_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwAll_B_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -295,14 +294,14 @@ public class ControlFlowCommandTests
 			MModule.single("@switch/regexp hello=HEL+O,@pemit #1=SwRegexp_Match_69714,world,@pemit #1=SwRegexp_NoMatch_69714"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwRegexp_Match_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwRegexp_Match_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwRegexp_NoMatch_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwRegexp_NoMatch_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -314,14 +313,14 @@ public class ControlFlowCommandTests
 			MModule.single("@switch/regexp HELLO=hello,@pemit #1=SwRegexpCI_Match_70825,world,@pemit #1=SwRegexpCI_NoMatch_70825"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwRegexpCI_Match_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwRegexpCI_Match_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwRegexpCI_NoMatch_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwRegexpCI_NoMatch_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -333,9 +332,9 @@ public class ControlFlowCommandTests
 			MModule.single("@switch hello=hel*,@pemit #1=SwHashDollar_#$_81936,nomatch,@pemit #1=SwHashDollar_NoMatch_81936"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwHashDollar_hello_81936")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwHashDollar_hello_81936")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -347,9 +346,9 @@ public class ControlFlowCommandTests
 			MModule.single("@switch goodbye=hello,@pemit #1=SwHashDollarDef_NoMatch_92047,@pemit #1=SwHashDollarDef_#$_92047"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwHashDollarDef_goodbye_92047")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwHashDollarDef_goodbye_92047")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -362,13 +361,13 @@ public class ControlFlowCommandTests
 			MModule.single("@switch/notify 1=1,@pemit #1=SwNotify_Match_93158,@pemit #1=SwNotify_Default_93158"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwNotify_Match_93158")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwNotify_Match_93158")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwNotify_Default_93158")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwNotify_Default_93158")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }
