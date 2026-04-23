@@ -25,7 +25,7 @@ public class MessageCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message {objDbRef}=Default,TESTFORMAT_MSGBASIC_93751"));
 
-		// "Default" target = executor; sender = executor (not spoofed).
+		// First argument is the recipient list, so target = objDbRef; sender = executor (not spoofed).
 		await NotifyService
 			.Received(1)
 			.Notify(
@@ -44,7 +44,7 @@ public class MessageCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message {objDbRef}=Default,TESTFORMAT_MSGATTR_84729"));
 
-		// "Default" target = executor; sender = executor; [add(5,10)] evaluates to 15.
+		// First argument is the recipient list, so target = objDbRef; sender = executor; [add(5,10)] evaluates to 15.
 		await NotifyService
 			.Received(1)
 			.Notify(
@@ -62,7 +62,7 @@ public class MessageCommandTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgMissingAttr");
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message {objDbRef}=DefaultMessage_UniqueValue_72914,NONEXISTENT_ATTR_72914"));
 
-		// Attribute is absent — falls back to the default message string; target = executor.
+		// Attribute is absent — falls back to the default message string; first argument still targets objDbRef.
 		await NotifyService
 			.Received(1)
 			.Notify(
