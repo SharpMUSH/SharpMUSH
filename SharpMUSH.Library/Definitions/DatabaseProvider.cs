@@ -13,5 +13,10 @@ public enum DatabaseProvider
 	/// <summary>
 	/// Memgraph - a Cypher-compatible graph database using the Bolt protocol.
 	/// </summary>
-	Memgraph
+	Memgraph,
+
+	/// <summary>
+	/// SurrealDB - a multi-model database using embedded in-memory mode.
+	/// </summary>
+	SurrealDB
 }
