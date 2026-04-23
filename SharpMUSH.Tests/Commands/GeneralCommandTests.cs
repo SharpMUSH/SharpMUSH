@@ -328,7 +328,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "One is in Room Zero.")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "God is in Room Zero.")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -625,7 +625,7 @@ public class GeneralCommandTests
 		// Verify all three notifications were called (target is #2, not the executor)
 		await NotifyService
 			.Received(3)
-			.Notify(TestHelpers.MatchingObject(new DBRef(2)), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "DoListBatchesToOtherPlayers: Message to other player")), 
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}

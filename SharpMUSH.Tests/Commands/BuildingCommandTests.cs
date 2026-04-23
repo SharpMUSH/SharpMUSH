@@ -661,8 +661,8 @@ public class BuildingCommandTests
 		var testParser = WebAppFactoryArg.CommandParserFor(testPlayer.DbRef, testPlayer.Handle);
 		
 		// Try to @desc an object that doesn't exist
-		await testParser.CommandParse(1, ConnectionService, MModule.single("@desc #99999=test description"));
-
+		await testParser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@desc #99999=test description"));
+	
 		// Verify error notification was sent: "I don't see that here." (ErrorMessages.Notifications.NoMatch)
 		await NotifyService
 			.Received(1)
