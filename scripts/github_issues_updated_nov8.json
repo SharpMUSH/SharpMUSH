@@ -1,0 +1,103 @@
+{
+  "repository": "SharpMUSH/SharpMUSH",
+  "assignee": "@copilot",
+  "update_date": "2025-11-08",
+  "progress": {
+    "original_total": 224,
+    "original_commands": 107,
+    "original_functions": 117,
+    "completed_commands": 50,
+    "completed_functions": 117,
+    "remaining_commands": 57,
+    "remaining_functions": 0,
+    "remaining_total": 57,
+    "completion_percentage": 74.6,
+    "notimplementedexception_count": 64,
+    "todo_count": 289
+  },
+  "remaining_commands": {
+    "General Commands": [
+      "@DECOMPILE",
+      "@EDIT",
+      "@GREP"
+    ],
+    "Administrative/Other": [
+      "@ALLHALT",
+      "@ALLQUOTA",
+      "@BOOT",
+      "@CHOWNALL",
+      "@CHZONEALL",
+      "@CLOCK",
+      "@DBCK",
+      "@DISABLE",
+      "@DUMP",
+      "@ENABLE",
+      "@HOOK",
+      "@KICK",
+      "@LIST",
+      "@LOG",
+      "@LOGWIPE",
+      "@LSET",
+      "@MALIAS",
+      "@MOTD",
+      "@POLL",
+      "@POOR",
+      "@PURGE",
+      "@QUOTA",
+      "@READCACHE",
+      "@REJECTMOTD",
+      "@SHUTDOWN",
+      "@SITELOCK",
+      "@SLAVE",
+      "@SOCKSET",
+      "@SQUOTA",
+      "@SUGGEST",
+      "@UNRECYCLE",
+      "@WARNINGS",
+      "@WCHECK",
+      "@WIZMOTD",
+      "BRIEF",
+      "BUY",
+      "DESERT",
+      "DISMISS",
+      "DOING",
+      "EMPTY",
+      "FOLLOW",
+      "GET",
+      "GIVE",
+      "HOME",
+      "INVENTORY",
+      "LEAVE",
+      "SCORE",
+      "SESSION",
+      "TEACH",
+      "UNFOLLOW",
+      "USE",
+      "WARN_ON_MISSING",
+      "WHISPER",
+      "WITH"
+    ]
+  },
+  "issues": [
+    {
+      "title": "Complete Remaining General Commands",
+      "body": "## Category: General Commands\n\nThis issue tracks the final 3 unimplemented commands in the General Commands category.\n\n**Progress Update (Nov 8):** All 117 functions are complete! 50 of 107 commands implemented (46.7%). Only 57 commands remain.\n\n### Remaining Commands to Implement (3 items)\n\n- [ ] `@DECOMPILE` - Decompile object attributes for inspection\n- [ ] `@EDIT` - Edit attribute values interactively\n- [ ] `@GREP` - Search for patterns across attributes\n\n### Implementation Requirements\n\n1. **Implementation**: Each command must be fully implemented according to PennMUSH specifications\n2. **Unit Tests**: Include comprehensive unit tests with:\n   - Test cases using actual/expected values\n   - Unique test strings for easy comparison (e.g., \"test_string_DECOMPILE_case1\")\n   - Edge case testing (invalid arguments, permissions, etc.)\n3. **Documentation**: Update help files if needed\n4. **Compatibility**: Ensure PennMUSH compatibility where applicable\n\n### File Location\nCommands are located in: `SharpMUSH.Implementation/Commands/GeneralCommands.cs`\n\n### Testing Guidelines\n- Use descriptive test names: `Test_CommandName_Scenario`\n- Include unique identifiable strings in test data\n- Test both success and failure cases\n- Validate error messages and return values\n\n### Context\nThese are high-value commands commonly used for debugging and development.\n\n**Priority: HIGH**\n",
+      "labels": [
+        "enhancement",
+        "commands",
+        "general-commands",
+        "high-priority"
+      ]
+    },
+    {
+      "title": "Implement Remaining Administrative & Gameplay Commands",
+      "body": "## Category: Administrative & Gameplay Commands\n\nThis issue tracks the remaining 54 unimplemented commands across administrative and gameplay categories.\n\n**Progress Update (Nov 8):** 74.6% of all features complete. 6 commands implemented since Nov 6.\n\n### Remaining Commands to Implement (54 items)\n\n#### Administrative Commands (34 items)\n- [ ] `@ALLHALT`, `@ALLQUOTA`, `@BOOT`, `@CHOWNALL`, `@CHZONEALL`, `@CLOCK`\n- [ ] `@DBCK`, `@DISABLE`, `@DUMP`, `@ENABLE`, `@HOOK`, `@KICK`\n- [ ] `@LIST`, `@LOG`, `@LOGWIPE`, `@LSET`, `@MALIAS`, `@MOTD`\n- [ ] `@POLL`, `@POOR`, `@PURGE`, `@QUOTA`, `@READCACHE`, `@REJECTMOTD`\n- [ ] `@SHUTDOWN`, `@SITELOCK`, `@SLAVE`, `@SOCKSET`, `@SQUOTA`, `@SUGGEST`\n- [ ] `@UNRECYCLE`, `@WARNINGS`, `@WCHECK`, `@WIZMOTD`\n\n#### Gameplay Commands (20 items)\n- [ ] `BRIEF`, `BUY`, `DESERT`, `DISMISS`, `DOING`, `EMPTY`, `FOLLOW`\n- [ ] `GET`, `GIVE`, `HOME`, `INVENTORY`, `LEAVE`, `SCORE`, `SESSION`\n- [ ] `TEACH`, `UNFOLLOW`, `USE`, `WARN_ON_MISSING`, `WHISPER`, `WITH`\n\n### Phased Implementation Recommended\n\n**Phase 1: Core Administrative (10-12 commands)**\n- @SHUTDOWN, @DUMP, @KICK, @BOOT - Server management\n- @QUOTA, @PURGE - Resource management\n- @LOG, @LOGWIPE - Logging\n- @DISABLE, @ENABLE - Feature management\n\n**Phase 2: Essential Gameplay (8-10 commands)**\n- GET, INVENTORY, GIVE - Object manipulation\n- HOME, LEAVE - Movement\n- DOING, SESSION - Status\n- WHISPER - Communication\n\n**Phase 3: Advanced Administrative (Remaining)**\n- Extended administrative commands\n- Advanced gameplay commands\n\n### Implementation Requirements\n\n1. **Implementation**: Each command according to PennMUSH specifications\n2. **Unit Tests**: Comprehensive tests with unique strings\n3. **Documentation**: Update help files\n4. **Compatibility**: PennMUSH parity verification\n\n### File Location\nCommands are located in: `SharpMUSH.Implementation/Commands/`\n\n### Total Remaining: 54 commands\n**Current Completion: 74.6% overall (167/224 features)**\n",
+      "labels": [
+        "enhancement",
+        "commands",
+        "administrative",
+        "gameplay"
+      ]
+    }
+  ]
+}
