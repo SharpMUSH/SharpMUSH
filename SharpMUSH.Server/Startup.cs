@@ -8,6 +8,8 @@ using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using SurrealDb.Net;
+using SurrealDb.Embedded.InMemory;
 using OpenTelemetry.ResourceDetectors.Container;
 using Quartz;
 using Serilog;
@@ -16,6 +18,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
 using SharpMUSH.Database.ArangoDB;
 using SharpMUSH.Database.Memgraph;
+using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Functions;
@@ -68,6 +71,21 @@ var dbLogger = x.GetRequiredService<ILogger<MemgraphDatabase>>();
 var neo4JDriver = x.GetRequiredService<IDriver>();
 var password = x.GetRequiredService<IPasswordService>();
 var db = new MemgraphDatabase(dbLogger, neo4JDriver, password);
+db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+return db;
+});
+}
+else if (databaseProvider == DatabaseProvider.SurrealDB)
+{
+services.AddSurreal("Endpoint=mem://;Namespace=sharpmush;Database=world")
+.AddInMemoryProvider();
+services.AddSingleton<ISharpDatabase, SurrealDatabase>(x =>
+{
+var dbLogger = x.GetRequiredService<ILogger<SurrealDatabase>>();
+var surrealClient = x.GetRequiredService<ISurrealDbClient>();
+surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
+var password = x.GetRequiredService<IPasswordService>();
+var db = new SurrealDatabase(dbLogger, surrealClient, password);
 db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 return db;
 });
