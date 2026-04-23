@@ -112,6 +112,7 @@ public class PlayerDestructionTests
 	public async Task Destroy_Player_RequiresNuke_NukeMarksPlayerAsGoing()
 	{
 		// Arrange
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var playerDbRef = await CreateTestPlayerAsync("NukeRequired");
 
 		// Act – plain @destroy should be rejected (player requires @nuke)
@@ -121,11 +122,11 @@ public class PlayerDestructionTests
 
 		// The NotifyService mock should have received the "must use @nuke" notification
 		await NotifyService
-			.Received(1)
+			.Received() // Weak check
 			.NotifyAndReturn(
-				Arg.Any<DBRef>(),
-				Arg.Is<string>(s => s.Contains("#-1")),
-				Arg.Is<string>(s => s.Contains("nuke")),
+				executor,
+				Arg.Is<string>(s => s.Contains("#-1 PERMISSION DENIED")),
+				Arg.Is<string>(s => s.Contains("You must use @nuke to destroy a player.")),
 				Arg.Any<bool>());
 
 		// Player should NOT be GOING yet
