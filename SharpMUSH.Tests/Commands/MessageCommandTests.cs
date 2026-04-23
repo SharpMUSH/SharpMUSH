@@ -29,7 +29,7 @@ public class MessageCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				TestHelpers.MatchingObject(executor),
+				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageBasic_UniqueValue_93751")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.Announce);
@@ -48,13 +48,14 @@ public class MessageCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				TestHelpers.MatchingObject(executor),
+				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageWithAttribute_Result_84729:15")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
+	
 	public async ValueTask MessageUsesDefaultWhenAttributeMissing()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
@@ -65,7 +66,7 @@ public class MessageCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				TestHelpers.MatchingObject(executor),
+				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "DefaultMessage_UniqueValue_72914")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.Announce);
@@ -96,7 +97,7 @@ public class MessageCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				TestHelpers.MatchingObject(executor),
+				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageSilent_Value_61829")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.Announce);
@@ -128,7 +129,7 @@ public class MessageCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				TestHelpers.MatchingObject(executor),
+				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNoisy_Value_55193")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.Announce);
@@ -167,7 +168,7 @@ public class MessageCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(
-				TestHelpers.MatchingObject(executor),
+				TestHelpers.MatchingObject(objDbRef),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNospoof_Value_48203")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.NSAnnounce);
