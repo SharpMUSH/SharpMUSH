@@ -311,7 +311,7 @@ public class ZoneCommandTests
 		// Create a unique personal Zone Master Room (ZMR)
 		var personalZMRName = TestIsolationHelpers.GenerateUniqueName("PersonalZMR");
 		var personalZMRResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@dig {personalZMRName}"));
-		var personalZMRDbRefText = personalZMRResult.Message!.ToPlainText()!;
+		var personalZMRDbRefText = personalZMRResult.Message!.ToPlainText();
 		var personalZMRMatch = System.Text.RegularExpressions.Regex.Match(personalZMRDbRefText, @"#(\d+)");
 		if (!personalZMRMatch.Success) return;
 		var personalZMRDbRef = new DBRef(int.Parse(personalZMRMatch.Groups[1].Value));
