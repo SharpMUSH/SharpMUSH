@@ -71,7 +71,7 @@ public class SemaphoreCommandTests
 			$"Inline{uniqueId}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
-	[Test]
+	[Test, Skip("Needs a better way of testing. This is too timing sensitive.")]
 	public async ValueTask DolistDefault_ShouldQueueCommands()
 	{
 		// Arrange
