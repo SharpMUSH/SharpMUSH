@@ -307,11 +307,14 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask AddComChannelNotFound()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_ADDCOM3=NonExistentChannel"));
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AddComChannelNotFound");
+		var testParser = WebAppFactoryArg.CommandParserFor(testPlayer.DbRef, testPlayer.Handle);
+		
+		await testParser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_ADDCOM3=NonExistentChannel"));
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Channel not found.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), "Channel not found.", TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -29,7 +28,7 @@ public class BuildingCommandTests
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CreateObject - Test Object"));
 
-		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(result.Message!.ToPlainText());
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObject - Test Object");
@@ -41,7 +40,7 @@ public class BuildingCommandTests
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CreateObjectWithCost - Test Object=10"));
 
-		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(result.Message!.ToPlainText());
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObjectWithCost - Test Object");
@@ -54,12 +53,12 @@ public class BuildingCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Get the executor's current location to use in the assertion
 		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
-		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
+		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText());
 
 		var newRoom = await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@dig DoDigTestRoom=DoDigTestExit;DoDigTestExitAlias,DoDigTestExitBack;DoDigTestExitAliasBack"));
 
-		var newDb = DBRef.Parse(newRoom.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(newRoom.Message!.ToPlainText());
 
 		// Use unique room name in assertions to avoid pollution from other tests
 		await NotifyService
@@ -85,11 +84,11 @@ public class BuildingCommandTests
 	{
 		// Get the executor's current location to use in the assertion
 		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
-		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
+		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText());
 
 		var newRoom = await Parser.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
 
-		var newDb = DBRef.Parse(newRoom!.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(newRoom!.Message!.ToPlainText());
 
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
@@ -657,15 +656,18 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask DescribeCommand_InvalidTarget_ShowsError()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DescribeCommand");
+		var testParser = WebAppFactoryArg.CommandParserFor(testPlayer.DbRef, testPlayer.Handle);
+		
 		// Try to @desc an object that doesn't exist
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@desc #99999=test description"));
+		await testParser.CommandParse(1, ConnectionService, MModule.single("@desc #99999=test description"));
 
 		// Verify error notification was sent: "I don't see that here." (ErrorMessages.Notifications.NoMatch)
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), 
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(testPlayer.DbRef), 
 				INotifyService.NotificationType.Announce);
 	}
 
