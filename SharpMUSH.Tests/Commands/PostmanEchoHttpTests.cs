@@ -331,7 +331,7 @@ public class PostmanEchoHttpTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessagePlainTextEquals(msg, "GET requests cannot have a body")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+					TestHelpers.MessagePlainTextEquals(msg, "GET requests cannot have a body.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

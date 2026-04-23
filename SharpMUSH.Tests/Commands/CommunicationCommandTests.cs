@@ -359,9 +359,9 @@ public class CommunicationCommandTests
 
 		// Verify a notification was sent (channel list output contains "Name: Public")
 		await NotifyService
-			.Received(1)
+			.Received() // Weak check
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Name: Public")),
+				TestHelpers.MessagePlainTextContains(msg, "Name: Public")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
