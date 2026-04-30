@@ -96,8 +96,8 @@ public class AhelpCommandTests
 		await NotifyService
 			.Received(2)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Admin help system for SharpMUSH.")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Admin help system for SharpMUSH."))), 
+				(msg.IsT0 && msg.AsT0.ToString().Contains("These commands, if enabled, show the admin-only help or news files for the MUSH.")) ||
+				(msg.IsT1 && msg.AsT1.Contains("These commands, if enabled, show the admin-only help or news files for the MUSH."))), 
 					TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
