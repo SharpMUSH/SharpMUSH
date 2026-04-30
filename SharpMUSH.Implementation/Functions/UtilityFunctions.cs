@@ -25,7 +25,6 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	// TODO: pcreate() returns #1234:timestamp format which includes both dbref and creation time.
 	// This is not directly compatible with functions that expect just a DBREF (#1234).
 	// Consider adding a configuration option for backward compatibility mode.
 	[SharpFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
