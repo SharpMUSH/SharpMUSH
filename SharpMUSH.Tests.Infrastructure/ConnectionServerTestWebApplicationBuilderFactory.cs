@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Serilog;
+using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
 using TUnit.AspNetCore;
 
@@ -23,7 +24,9 @@ public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
 	{
 		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
-			.MinimumLevel.Verbose();
+			.MinimumLevel.Verbose()
+			.MinimumLevel.Override("SurrealDb", LogEventLevel.Error)
+			.MinimumLevel.Override("NATS", LogEventLevel.Error);
 
 		// Only write to console if explicitly enabled via environment variable
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
