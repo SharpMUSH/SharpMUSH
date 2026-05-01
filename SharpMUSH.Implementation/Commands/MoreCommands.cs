@@ -2413,54 +2413,30 @@ public partial class Commands
 				{
 					var failureAttr = await AttributeService!.GetAttributeAsync(executor, recipient, "PAGE_LOCK`FAILURE", IAttributeService.AttributeMode.Read);
 
-					switch (failureAttr)
+					if (failureAttr.IsAttribute)
 					{
-						case { IsError: true }:
-						case { IsNone: true }:
-							{
-								break;
-							}
-						case { IsAttribute: true, AsAttribute: var attr }:
-							{
-								await NotifyService!.Notify(executor, attr.Last().Value, executor);
-								break;
-							}
+						var attr = failureAttr.AsAttribute;
+						await NotifyService!.Notify(executor, attr.Last().Value, executor);
 					}
 
 					var oFailureAttr = await AttributeService.GetAttributeAsync(executor, recipient, "PAGE_LOCK`OFAILURE", IAttributeService.AttributeMode.Read);
 
-					switch (oFailureAttr)
+					if (oFailureAttr.IsAttribute)
 					{
-						case { IsError: true }:
-						case { IsNone: true }:
-							{
-								break;
-							}
-						case { IsAttribute: true, AsAttribute: var attr }:
-							{
-								await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), _ => attr.Last().Value,
-									INotifyService.NotificationType.Emit, excludeObjects: [executor, recipient]);
-								break;
-							}
+						var attr = oFailureAttr.AsAttribute;
+						await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), _ => attr.Last().Value,
+							INotifyService.NotificationType.Emit, excludeObjects: [executor, recipient]);
 					}
 
 					var aFailureAttr = await AttributeService.GetAttributeAsync(executor, recipient, "PAGE_LOCK`AFAILURE", IAttributeService.AttributeMode.Read);
 
-					switch (aFailureAttr)
+					if (aFailureAttr.IsAttribute)
 					{
-						case { IsError: true }:
-						case { IsNone: true }:
-							{
-								break;
-							}
-						case { IsAttribute: true, AsAttribute: var attr }:
-							{
-								// Executor = the recipient (PAGE_LOCK`AFAILURE is on the recipient); enactor = pager
-								await parser.With(
-									state => state with { Executor = recipient.Object().DBRef, Caller = state.Executor },
-									async p => await p.CommandParse(attr.Last().Value));
-								break;
-							}
+						var attr = aFailureAttr.AsAttribute;
+						// Executor = the recipient (PAGE_LOCK`AFAILURE is on the recipient); enactor = pager
+						await parser.With(
+							state => state with { Executor = recipient.Object().DBRef, Caller = state.Executor },
+							async p => await p.CommandParse(attr.Last().Value));
 					}
 
 					continue;
@@ -3086,11 +3062,9 @@ public partial class Commands
 			mode: IAttributeService.AttributeMode.Read,
 			parent: false);
 
-		return doingAttr switch
-		{
-			{ IsError: true } or { IsNone: true } => string.Empty,
-			_ => doingAttr.AsAttribute.Last().Value.ToPlainText()
-		};
+		return (doingAttr.IsError || doingAttr.IsNone)
+			? string.Empty
+			: doingAttr.AsAttribute.Last().Value.ToPlainText();
 	}
 
 	[SharpCommand(Name = "SESSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]

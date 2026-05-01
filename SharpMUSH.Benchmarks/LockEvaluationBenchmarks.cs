@@ -60,21 +60,21 @@ public class LockEvaluationBenchmarks : BaseBenchmark
 
 	[Benchmark(Description = "Evaluate: simple #1 lock")]
 	public bool EvaluateSimple() =>
-		_simpleLock!(_godPlayer!, _godPlayer!);
+		_simpleLock!(_godPlayer!.Value, _godPlayer!.Value);
 
 	[Benchmark(Description = "Evaluate: AND lock (#1&#1&#1)")]
 	public bool EvaluateAndLock() =>
-		_andLock!(_godPlayer!, _godPlayer!);
+		_andLock!(_godPlayer!.Value, _godPlayer!.Value);
 
 	[Benchmark(Description = "Evaluate: OR lock (#1|#2)")]
 	public bool EvaluateOrLock() =>
-		_orLock!(_godPlayer!, _godPlayer!);
+		_orLock!(_godPlayer!.Value, _godPlayer!.Value);
 
 	[Benchmark(Description = "Evaluate: nested lock (A|B)&!B")]
 	public bool EvaluateNestedLock() =>
-		_nestedLock!(_godPlayer!, _godPlayer!);
+		_nestedLock!(_godPlayer!.Value, _godPlayer!.Value);
 
 	[Benchmark(Description = "Evaluate: complex 8-term lock")]
 	public bool EvaluateComplexLock() =>
-		_complexLock!(_godPlayer!, _godPlayer!);
+		_complexLock!(_godPlayer!.Value, _godPlayer!.Value);
 }

@@ -248,12 +248,16 @@ public static partial class ArgHelpers
 		=> NameList(list)
 			.ToAsyncEnumerable()
 			.Select<DbRefOrName, SharpPlayer?>(async (x, ct) =>
-				x.Value switch
+			{
+				if (x.IsDBRef)
 				{
-					DBRef dbref => (await mediator.Send(new GetObjectNodeQuery(dbref), ct)).TryGetValue(out var player) ? player : null,
-					string name => await mediator.CreateStream(new GetPlayerQuery(name), ct).FirstOrDefaultAsync(cancellationToken: ct),
-					_ => null
-				});
+					var result = await mediator.Send(new GetObjectNodeQuery(x.AsDBRef), ct);
+					return result.IsPlayer ? result.AsPlayer : null;
+				}
+				return x.IsName
+					? await mediator.CreateStream(new GetPlayerQuery(x.AsName), ct).FirstOrDefaultAsync(cancellationToken: ct)
+					: null;
+			});
 
 	public static async ValueTask<CallState> ForHandleOrPlayer(IMUSHCodeParser parser, IMediator mediator,
 		IConnectionService connectionService, ILocateService locateService, CallState value,

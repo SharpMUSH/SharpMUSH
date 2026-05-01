@@ -1208,7 +1208,7 @@ public class SharpMUSHParserVisitor(
 		var handle2 = prs.CurrentState.Handle;
 		if (handle2.HasValue)
 		{
-			if (setResult.TryPickT0(out _, out var error))
+			if (setResult.IsSuccess)
 			{
 				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet), executor, targetObject.Object().Name, matchedEntry.Name);
 			}

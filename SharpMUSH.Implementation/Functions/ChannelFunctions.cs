@@ -436,7 +436,7 @@ public partial class Functions
 		}
 
 		// Get player's status on this channel
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!, channel!);
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!.Value, channel!);
 
 		if (maybeMemberStatus is null)
 		{
@@ -470,7 +470,7 @@ public partial class Functions
 		}
 
 		// Get player's status on this channel
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!, channel!);
+		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!.Value, channel!);
 
 		if (maybeMemberStatus is null)
 		{

@@ -132,7 +132,7 @@ public static class MessageHelpers
 			attrToEvaluate = string.Join("/", attrObjSplit.Skip(1));
 
 			var attr = await attributeService.GetAttributeAsync(
-				executor, objToEvaluate, attrToEvaluate, IAttributeService.AttributeMode.Execute);
+				executor, objToEvaluate.Value, attrToEvaluate, IAttributeService.AttributeMode.Execute);
 
 			if (!attr.IsError)
 			{

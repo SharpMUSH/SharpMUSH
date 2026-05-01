@@ -72,7 +72,8 @@ public partial class Functions
 					_ => null
 				};
 
-				if (MModule.isWildcardMatch2(MModule.single(addressValue), pattern)
+				if (addressValue is not null
+						&& MModule.isWildcardMatch2(MModule.single(addressValue), pattern)
 						&& uniqueAddresses.Add(addressValue)
 						&& !isCount)
 				{
@@ -353,11 +354,7 @@ public partial class Functions
 				mode: IAttributeService.AttributeMode.Read,
 				parent: false);
 
-			return maybeAttr switch
-			{
-				OptionalSharpAttributeOrError mae when mae.IsError || mae.IsNone => new CallState(string.Empty),
-				_ => new CallState(maybeAttr.AsAttribute.Last().Value)
-			};
+			return (maybeAttr.IsError || maybeAttr.IsNone) ? new CallState(string.Empty) : new CallState(maybeAttr.AsAttribute.Last().Value);
 		}
 
 		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
@@ -375,11 +372,7 @@ public partial class Functions
 			mode: IAttributeService.AttributeMode.Read,
 			parent: false);
 
-		return doingAttr switch
-		{
-			OptionalSharpAttributeOrError mae when mae.IsError || mae.IsNone => new CallState(string.Empty),
-			_ => new CallState(doingAttr.AsAttribute.Last().Value)
-		};
+		return (doingAttr.IsError || doingAttr.IsNone) ? new CallState(string.Empty) : new CallState(doingAttr.AsAttribute.Last().Value);
 	}
 
 	[SharpFunction(Name = "host", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

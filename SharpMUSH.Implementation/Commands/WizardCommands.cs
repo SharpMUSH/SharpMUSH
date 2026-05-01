@@ -409,7 +409,7 @@ public partial class Commands
 			output.AppendLine($"Symbol: {flag.Symbol}");
 			output.AppendLine($"System: {(flag.System ? "Yes" : "No")}");
 			output.AppendLine($"Disabled: {(flag.Disabled ? "Yes" : "No")}");
-			output.AppendLine($"Aliases: {(flag.flag.Aliases.Length > 0 ? string.Join(", ", flag.Aliases) : "none")}");
+			output.AppendLine($"Aliases: {(flag.Aliases != null && flag.Aliases.Length > 0 ? string.Join(", ", flag.Aliases) : "none")}");
 			output.AppendLine($"Type Restrictions: {string.Join(", ", flag.TypeRestrictions)}");
 			output.AppendLine($"Set Permissions: {string.Join(", ", flag.SetPermissions)}");
 			output.AppendLine($"Unset Permissions: {string.Join(", ", flag.UnsetPermissions)}");
@@ -487,7 +487,7 @@ public partial class Commands
 			output.AppendLine($"Symbol: {flag.Symbol}");
 			output.AppendLine($"System: {(flag.System ? "Yes" : "No")}");
 			output.AppendLine($"Disabled: {(flag.Disabled ? "Yes" : "No")}");
-			output.AppendLine($"Aliases: {(flag.flag.Aliases.Length > 0 ? string.Join(", ", flag.Aliases) : "none")}");
+			output.AppendLine($"Aliases: {(flag.Aliases != null && flag.Aliases.Length > 0 ? string.Join(", ", flag.Aliases) : "none")}");
 			output.AppendLine($"Type Restrictions: {string.Join(", ", flag.TypeRestrictions)}");
 			output.AppendLine($"Set Permissions: {string.Join(", ", flag.SetPermissions)}");
 			output.AppendLine($"Unset Permissions: {string.Join(", ", flag.UnsetPermissions)}");

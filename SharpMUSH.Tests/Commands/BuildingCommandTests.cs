@@ -1,13 +1,13 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -63,18 +63,18 @@ public class BuildingCommandTests
 		// Use unique room name in assertions to avoid pollution from other tests
 		await NotifyService
 			.Received(1)
-			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"DoDigTestRoom created with room number {newDb.Number}.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(1)
-			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"Linked exit #{newDb.Number + 1} to #{newDb.Number}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(1)
 			.Notify(executor, "Trying to link...", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(1)
-			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"Linked exit #{newDb.Number + 2} to #{currentLocationDbRef.Number}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -188,7 +188,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<SharpMessage>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains("Linked") && mstr.ToString().Contains($"#{exitDbRef.Number}") && mstr.ToString().Contains($"#{roomDbRef.Number}"),
 					str => str.Contains("Linked") && str.Contains($"#{exitDbRef.Number}") && str.Contains($"#{roomDbRef.Number}")
@@ -211,7 +211,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains("Cloned") && mstr.ToString().Contains("CloneObjectTestSource"),
 					str => str.Contains("Cloned") && str.Contains("CloneObjectTestSource")
@@ -445,7 +445,7 @@ public class BuildingCommandTests
 		// Verify command executed without permission error
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Permission denied.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -503,7 +503,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageContains(msg, "Unlinked")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -646,7 +646,7 @@ public class BuildingCommandTests
 		// Verify look displayed the stored description exactly
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "LookDesc_UniqueTestValue_38471")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -666,7 +666,7 @@ public class BuildingCommandTests
 		// Verify error notification was sent: "I don't see that here." (ErrorMessages.Notifications.NoMatch)
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(testPlayer.DbRef), 
 				INotifyService.NotificationType.Announce);
 	}

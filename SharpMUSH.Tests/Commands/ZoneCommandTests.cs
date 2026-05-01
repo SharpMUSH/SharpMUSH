@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -113,7 +112,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "Zone cleared.")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "Zone cleared.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		// Verify the zone was actually cleared in the database
@@ -167,7 +166,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -192,7 +191,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -297,7 +296,7 @@ public class ZoneCommandTests
 		// Pattern A: the emitted string is unique because cmdName (a generated unique token) is embedded.
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: ZMR command executed")),
 				TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
 	}
@@ -362,7 +361,7 @@ public class ZoneCommandTests
 		// Pattern A: the emitted string is unique because cmdName (a generated unique token) is embedded.
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: Personal zone command executed")),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -415,7 +414,7 @@ public class ZoneCommandTests
 		// Pattern A: the unique token in the message makes this a precise negative assertion.
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: This should not execute")),
 				TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
 	}

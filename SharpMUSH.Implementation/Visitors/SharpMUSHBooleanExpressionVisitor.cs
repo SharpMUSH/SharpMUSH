@@ -50,7 +50,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 	{
 		var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
 		return Regex.IsMatch(dbRef.Object().Name, regexPattern, RegexOptions.IgnoreCase)
-			|| (dbRef.dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), regexPattern, RegexOptions.IgnoreCase)));
+			|| (dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), regexPattern, RegexOptions.IgnoreCase)));
 	}
 
 	private static readonly string[] defaultStringArrayValue = [];
@@ -519,7 +519,7 @@ if (parsedCarryOpt.IsSome())
 				return true;
 
 			// Check aliases
-			if (unlockerObj.unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
+			if (unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
 				return true;
 
 			return false;
@@ -679,7 +679,7 @@ if (parsedIndirectOpt.IsSome())
 					return false;
 
 				// Get the lock from the target object
-				var lockData = targetObj.Object().Locks.GetValueOrDefault(lockType, new Library.Models.SharpLockData("#TRUE"));
+				var lockData = targetObj.Value.Object().Locks.GetValueOrDefault(lockType, new Library.Models.SharpLockData("#TRUE"));
 				var lockString = lockData.LockString;
 
 				// Use mediator query to recursively evaluate the lock

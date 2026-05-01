@@ -193,7 +193,7 @@ public partial class Functions
 				LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
-					splitTransform.AsT0.db,
+					splitTransform.AsT0.Db,
 					LocateFlags.All);
 
 			if (transformationObject.IsError)
@@ -220,7 +220,7 @@ public partial class Functions
 				LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
-					splitNull.AsT0.db,
+					splitNull.AsT0.Db,
 					LocateFlags.All);
 
 			if (nullObject.IsError)
@@ -248,7 +248,7 @@ public partial class Functions
 				if (actualNullAttribute is not null)
 				{
 					var nullEvaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
-						parser, executor, actualNullObject!, actualNullAttribute,
+						parser, executor, actualNullObject!.Value, actualNullAttribute,
 						new Dictionary<string, CallState>
 						{
 							{ "0", args["0"] },
@@ -260,7 +260,7 @@ public partial class Functions
 				}
 
 				var evaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
-					parser, executor, actualTransformationObject!, actualTransformAttribute ?? string.Empty,
+					parser, executor, actualTransformationObject!.Value, actualTransformAttribute ?? string.Empty,
 					new Dictionary<string, CallState>
 					{
 						{ "0", args["0"] },

@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -40,7 +39,7 @@ public class GuestLoginTests
 		await NotifyService
 		.Received(1)
 		.Notify(Arg.Is<long>(h => h == guestHandle),
-		Arg.Is<OneOf<MString, string>>(s =>
+		Arg.Is<SharpMessage>(s =>
 		TestHelpers.MessagePlainTextEquals(s, "Sorry, there are no guest characters available.")), null, INotifyService.NotificationType.Announce);
 	}
 

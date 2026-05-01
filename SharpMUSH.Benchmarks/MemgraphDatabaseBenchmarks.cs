@@ -26,7 +26,7 @@ public class MemgraphReadBenchmarks : MemgraphBaseBenchmark
 	[Benchmark(Description = "GetContentsAsync(Master Room)")]
 	public async Task GetRoomContents()
 	{
-		await foreach (var _ in _database!.GetContentsAsync(_masterRoom!))
+		await foreach (var _ in _database!.GetContentsAsync(_masterRoom!.Value))
 		{ /* enumerate */ }
 	}
 
@@ -64,7 +64,7 @@ public class MemgraphWriteBenchmarks : MemgraphBaseBenchmark
 	public async ValueTask<DBRef> CreateThing()
 	{
 		var name = $"bench_{Interlocked.Increment(ref _counter):X8}";
-		return await _database!.CreateThingAsync(name, _masterRoom!, _godPlayer!, _masterRoom!);
+		return await _database!.CreateThingAsync(name, _masterRoom!.Value, _godPlayer!, _masterRoom!.Value);
 	}
 
 	[Benchmark(Description = "SetAttributeAsync on #1")]

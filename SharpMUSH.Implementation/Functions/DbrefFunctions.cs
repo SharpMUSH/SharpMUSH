@@ -1380,15 +1380,15 @@ LOCATE()
 					// Found valid object
 					resolvedDbref = locateResult.AsAnyObject.Object().DBRef;
 				}
-				else if (locateResult.IsT4)
+				else if (locateResult.IsNone)
 				{
 					// None - not found
 					errorCode = -1;
 				}
-				else if (locateResult.IsT5)
+				else if (locateResult.IsError)
 				{
 					// Error occurred - check if ambiguous or not found
-					var error = locateResult.AsT5;
+					var error = locateResult.AsError;
 					if (error.Value.Contains("ambiguous", StringComparison.OrdinalIgnoreCase) ||
 							error.Value.Contains("#-2"))
 					{
@@ -1420,7 +1420,7 @@ LOCATE()
 				if (hasErrorCallback && callbackAttribute != null)
 				{
 					var attrResult = await AttributeService!.GetAttributeAsync(
-						executor, callbackObject, string.Join("`", callbackAttribute),
+						executor, callbackObject!.Value, string.Join("`", callbackAttribute),
 						IAttributeService.AttributeMode.Read, true);
 
 					if (!attrResult.IsNone && !attrResult.IsError)

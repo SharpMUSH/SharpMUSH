@@ -1313,15 +1313,15 @@ public partial class Functions
 			_ => await SetObjectFlag()
 		};
 
-		async ValueTask<CallState> SetAttributeFlag(OneOf.OneOf<(string db, string Attribute), None> split)
+		async ValueTask<CallState> SetAttributeFlag(ObjAttrPair split)
 		{
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser, executor, executor,
-				split.AsValue().Db, LocateFlags.All,
+				split.Db, LocateFlags.All,
 				async found =>
 				{
 					var result =
-						await AttributeService!.SetAttributeFlagAsync(executor, found, split.AsValue().Attribute, arg1.ToPlainText());
+						await AttributeService!.SetAttributeFlagAsync(executor, found, split.Attribute, arg1.ToPlainText());
 					return result.IsError ? new CallState(result.AsError.Value) : new CallState(string.Empty);
 				});
 		}

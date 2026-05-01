@@ -3,7 +3,6 @@ using Core.Arango.Serialization.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using OneOf.Types;
 using Quartz;
 using Serilog;
 using Serilog.Events;

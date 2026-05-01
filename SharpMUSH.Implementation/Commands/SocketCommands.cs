@@ -54,7 +54,7 @@ public partial class Commands
 				if (isWizard)
 				{
 					var location = obj.Known.IsContent
-						? (await obj.Known.AsContent.Location())?.Object().DBRef.ToString() ?? "*NOWHERE*"
+						? (await obj.Known.AsContent.Location()).Object().DBRef.ToString()
 						: "*NOWHERE*";
 					var doing = await AttributeService!.GetAttributeAsync(executor, obj.Known, "DOING",
 						IAttributeService.AttributeMode.Read, false);
@@ -151,9 +151,7 @@ public partial class Commands
 		var nameItem = nameItems.First();
 
 		var foundDB = await nameItem.Match(
-			async dbref => (await Mediator!.Send(new GetObjectNodeQuery(dbref))).TryGetValue(out var player)
-				? player
-				: null,
+			async dbref => { var r = await Mediator!.Send(new GetObjectNodeQuery(dbref)); return r.IsPlayer ? r.AsPlayer : null; },
 			async name => await (Mediator!.CreateStream(new GetPlayerQuery(name))).FirstOrDefaultAsync());
 
 		if (foundDB is null)

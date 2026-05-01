@@ -772,7 +772,7 @@ public partial class Functions
 			if (classObj != null)
 			{
 				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
-				if (owner.Object.DBRef != classObj.Object().DBRef)
+				if (owner.Object.DBRef != classObj!.Value.Object().DBRef)
 				{
 					continue;
 				}

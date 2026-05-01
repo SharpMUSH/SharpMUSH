@@ -773,7 +773,7 @@ public partial class Commands
 					{
 						var exitObj = exit.WithRoomOption().Object();
 						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
-						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
+						var destName = destination is not null ? destination.Object().Name : "*UNLINKED*";
 
 						if (await exit.WithRoomOption().IsOpaque())
 						{
@@ -805,7 +805,7 @@ public partial class Commands
 					{
 						var exitObj = exit.WithRoomOption().Object();
 						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
-						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
+						var destName = destination is not null ? destination.Object().Name : "*UNLINKED*";
 
 						if (await exit.WithRoomOption().IsOpaque())
 						{
@@ -1278,7 +1278,7 @@ public partial class Commands
 
 		await Mediator!.Send(new MoveObjectCommand(executor.AsContent, destination));
 
-		return new CallState(destination.ToString());
+		return new CallState(destination.ToString()!);
 	}
 
 
@@ -1294,7 +1294,7 @@ public partial class Commands
 
 		var isList = parser.CurrentState.Switches.Contains("LIST");
 
-		IEnumerable<OneOf<DBRef, string>> toTeleportList;
+		IEnumerable<DbRefOrName> toTeleportList;
 		if (isList)
 		{
 			toTeleportList = ArgHelpers.NameList(toTeleport);
@@ -1302,7 +1302,8 @@ public partial class Commands
 		else
 		{
 			var isDbRef = DBRef.TryParse(toTeleport, out var objToTeleport);
-			toTeleportList = [isDbRef ? objToTeleport!.Value : toTeleport];
+			DbRefOrName singleItem = isDbRef ? (DbRefOrName)objToTeleport!.Value : toTeleport!;
+			toTeleportList = [singleItem];
 		}
 
 		var toTeleportStringList = toTeleportList.Select(x => x.Match(
@@ -1428,7 +1429,8 @@ public partial class Commands
 
 				if (sourceLocation is not null)
 				{
-					var sourceObj = sourceLocation.WithExitOption();
+					AnySharpContainer nonNullSourceLocation = sourceLocation!.Value;
+					var sourceObj = nonNullSourceLocation.WithExitOption();
 
 					// NO_TEL flag on source room blocks teleport
 					if (await sourceObj.HasFlag("NO_TEL"))
@@ -1512,7 +1514,7 @@ public partial class Commands
 			}
 		}
 
-		return new CallState(destination.ToString());
+		return new CallState(destination.ToString()!);
 	}
 
 	[SharpCommand(Name = "@FIND", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
@@ -1788,7 +1790,7 @@ public partial class Commands
 		}
 
 		var objectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText());
-		if (objectAndAttribute.IsNone() && objectAndAttribute.AsT1 == false)
+		if (objectAndAttribute.IsNone())
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifyValidObjectAttribute), executor);
 			return new None();
@@ -2205,8 +2207,8 @@ public partial class Commands
 			// Restore Q-registers if /localize was set
 			if (hasLocalize && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
 			{
-				regsToRestore.Clear();
-				foreach (var (key, value) in savedRegisters)
+				regsToRestore!.Clear();
+				foreach (var (key, value) in savedRegisters ?? [])
 				{
 					regsToRestore[key] = value;
 				}
@@ -2670,9 +2672,9 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMinArgsFormat), executor, attr.MinArgs);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMaxArgsFormat), executor, attr.MaxArgs);
 
-		if (attr.attr.Switches.Length > 0)
+		if (attr.Switches?.Length > 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoSwitchesFormat), executor, string.Join(", ", attr.Switches));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoSwitchesFormat), executor, string.Join(", ", attr.Switches!));
 		}
 
 		var behaviors = new List<string>();
@@ -2724,13 +2726,8 @@ public partial class Commands
 		var maybeObject = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, target!,
 			LocateFlags.All);
 
-		switch (maybeObject)
-		{
-			case _ when maybeObject.IsError:
-				return new CallState(maybeObject.AsError.Value);
-			case _ when maybeObject.IsNone:
-				return new CallState(Errors.ErrorCantSeeThat);
-		}
+		if (maybeObject.IsError) return new CallState(maybeObject.AsError.Value);
+		if (maybeObject.IsNone) return new CallState(Errors.ErrorCantSeeThat);
 
 		var objectToDrain = maybeObject.AsAnyObject;
 		var attribute = maybeAttribute?.Split("`") ?? DefaultSemaphoreAttributeArray;
@@ -2925,8 +2922,8 @@ public partial class Commands
 			// Restore Q-registers if /localize was set
 			if (hasLocalize && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
 			{
-				regsToRestore.Clear();
-				foreach (var (key, value) in savedRegisters)
+				regsToRestore!.Clear();
+				foreach (var (key, value) in savedRegisters ?? [])
 				{
 					regsToRestore[key] = value;
 				}
@@ -3472,7 +3469,7 @@ public partial class Commands
 
 		// Get matching attributes
 		var attributes = await AttributeService!.GetAttributePatternAsync(
-			executor, targetObject, attrPattern, false, IAttributeService.AttributePatternMode.Wildcard);
+			executor, targetObject, attrPattern!, false, IAttributeService.AttributePatternMode.Wildcard);
 
 		if (attributes.IsError)
 		{
@@ -3889,7 +3886,7 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoFlagsFormat), executor, string.Join(" | ", flags));
 		}
 
-		if (attr.attr.Restrict.Length > 0)
+		if (attr.Restrict.Length > 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoRestrictionsFormat), executor, string.Join(", ", attr.Restrict));
 		}
@@ -4376,7 +4373,7 @@ public partial class Commands
 			// Restore Q-registers if /localize was set
 			if (localizeRegs && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
 			{
-				regsToRestore.Clear();
+				regsToRestore!.Clear();
 				foreach (var (key, value) in savedRegisters ?? [])
 				{
 					regsToRestore[key] = value;
@@ -5917,7 +5914,7 @@ public partial class Commands
 			// Restore Q-registers if /localize was set
 			if (hasLocalize && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
 			{
-				regsToRestore.Clear();
+				regsToRestore!.Clear();
 				foreach (var (key, value) in savedRegisters ?? [])
 				{
 					regsToRestore[key] = value;
@@ -6861,9 +6858,9 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitPatternValueFormat), executor, attrEntry.Limit);
 		}
 
-		if (attrEntry.attrEntry.Enum.Any())
+		if (attrEntry.Enum?.Length > 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumValuesFormat), executor, string.Join(" ", attrEntry.Enum));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumValuesFormat), executor, string.Join(" ", attrEntry.Enum!));
 		}
 
 		return CallState.Empty;

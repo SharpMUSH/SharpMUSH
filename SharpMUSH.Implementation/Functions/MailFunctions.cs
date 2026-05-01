@@ -309,13 +309,13 @@ public partial class Functions
 			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!.Value, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!.Value, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
@@ -542,13 +542,13 @@ public partial class Functions
 			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!.Value, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!.Value, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
@@ -575,13 +575,13 @@ public partial class Functions
 			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!.Value, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!.Value, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
@@ -601,13 +601,13 @@ public partial class Functions
 			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!.Value, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!.Value, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
