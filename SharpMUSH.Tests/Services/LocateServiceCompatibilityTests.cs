@@ -1076,7 +1076,7 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { sword1, sword2, sword3 }.ToAsyncEnumerable();
 
 		// final=2 means "2nd" — Match_List in English mode counts up to final
-		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, ControlFlow flow) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, LocateService.ControlFlow flow) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 2, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
@@ -1101,7 +1101,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, ControlFlow flow) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, LocateService.ControlFlow flow) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 1, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
@@ -1128,7 +1128,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		(_, _, int curr, _, _, ControlFlow flow) = await _locateService.Match_List(
+		(_, _, int curr, _, _, LocateService.ControlFlow flow) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 5, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 

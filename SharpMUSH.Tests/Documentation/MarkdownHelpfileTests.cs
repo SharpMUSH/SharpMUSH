@@ -27,9 +27,9 @@ This is another topic.
 			var fileInfo = new FileInfo(testFilePath);
 			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
 
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
+			await Assert.That(maybeIndexes.IsIndex).IsTrue();
 
-			var indexes = maybeIndexes.AsT0;
+			var indexes = maybeIndexes.AsIndex;
 
 			await Assert.That(indexes.Count).IsEqualTo(3);
 			await Assert.That(indexes).ContainsKey("help");
@@ -68,9 +68,9 @@ The look command allows you to see your surroundings.
 			var fileInfo = new FileInfo(testFilePath);
 			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
 
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
+			await Assert.That(maybeIndexes.IsIndex).IsTrue();
 
-			var indexes = maybeIndexes.AsT0;
+			var indexes = maybeIndexes.AsIndex;
 			var lookEntry = indexes["look"];
 
 			await Assert.That(lookEntry).Contains("# look");
@@ -105,9 +105,9 @@ Displays the description of an object.
 			var fileInfo = new FileInfo(testFilePath);
 			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
 
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
+			await Assert.That(maybeIndexes.IsIndex).IsTrue();
 
-			var indexes = maybeIndexes.AsT0;
+			var indexes = maybeIndexes.AsIndex;
 
 			// Both 'look' and 'read' should be present.
 			await Assert.That(indexes.Count).IsEqualTo(2);
@@ -273,9 +273,9 @@ The look command lets you examine your surroundings.
 			var fileInfo = new FileInfo(testFilePath);
 			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
 
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
+			await Assert.That(maybeIndexes.IsIndex).IsTrue();
 
-			var indexes = maybeIndexes.AsT0;
+			var indexes = maybeIndexes.AsIndex;
 
 			// All three aliases should be present.
 			await Assert.That(indexes).ContainsKey("Getting Started");
@@ -328,9 +328,9 @@ Existing games which have softcoded 'who' commands.
 			var fileInfo = new FileInfo(testFilePath);
 			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
 
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
+			await Assert.That(maybeIndexes.IsIndex).IsTrue();
 
-			var indexes = maybeIndexes.AsT0;
+			var indexes = maybeIndexes.AsIndex;
 
 			await Assert.That(indexes).ContainsKey("WHO");
 			await Assert.That(indexes).ContainsKey("DOING");
@@ -379,9 +379,9 @@ Existing games which have softcoded 'who' commands.
 			var fileInfo = new FileInfo(testFilePath);
 			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
 
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
+			await Assert.That(maybeIndexes.IsIndex).IsTrue();
 
-			var indexes = maybeIndexes.AsT0;
+			var indexes = maybeIndexes.AsIndex;
 
 			await Assert.That(indexes).ContainsKey("FUNCTION LIST");
 			await Assert.That(indexes).ContainsKey("FUNCTION TYPES");
@@ -650,9 +650,9 @@ Existing games which have softcoded 'who' commands.
 			var fileInfo = new FileInfo(filePath);
 			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
 
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
+			await Assert.That(maybeIndexes.IsIndex).IsTrue();
 
-			var indexes = maybeIndexes.AsT0;
+			var indexes = maybeIndexes.AsIndex;
 			if (indexes.Count == 0)
 			{
 				continue;

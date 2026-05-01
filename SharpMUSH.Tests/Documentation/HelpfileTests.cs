@@ -39,9 +39,9 @@ public class HelpfileTests
 
 		var maybeIndexes = Helpfiles.Index(fileInfo);
 
-		await Assert.That(maybeIndexes.IsT1).IsNotEqualTo(true);
+		await Assert.That(maybeIndexes.IsError).IsNotEqualTo(true);
 
-		var indexes = maybeIndexes.AsT0;
+		var indexes = maybeIndexes.AsIndex;
 
 		await Assert.That(indexes).IsNotEmpty();
 

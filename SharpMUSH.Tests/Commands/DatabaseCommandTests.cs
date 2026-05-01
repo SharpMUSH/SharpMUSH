@@ -497,7 +497,7 @@ public class DatabaseCommandTests
 				var args = call.GetArguments();
 				if (args.Length < 2) return false;
 				return args[1] is SharpMessage msg &&
-					msg.Match(m => messagePredicate(m.ToString()), s => messagePredicate(s));
+					messagePredicate(msg.ToString());
 			});
 			if (found) return;
 			scannedCount = calls.Count;

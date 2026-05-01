@@ -25,7 +25,7 @@ public class TelDiagnosticTests
 		var args = call.GetArguments();
 		if (args.Length < 2) return null;
 		if (args[1] is SharpMessage oneOf)
-			return oneOf.Match(mstr => mstr.ToString(), str => str);
+			return oneOf.ToString();
 		if (args[1] is string str2) return str2;
 		if (args[1] is MString mstr2) return mstr2.ToString();
 		return null;
