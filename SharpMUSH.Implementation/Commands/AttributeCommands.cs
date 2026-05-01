@@ -473,7 +473,7 @@ public partial class Commands
 		else
 		{
 			// Use the object's owner
-			newOwnerPlayer = await newOwnerObject.Object().Owner.WithCancellation(CancellationToken.None);
+			newOwnerPlayer = await newOwnerObject.Object.Owner.WithCancellation(CancellationToken.None);
 		}
 
 		// Check permissions
@@ -498,7 +498,7 @@ public partial class Commands
 			}
 			else if (!executor.IsPlayer)
 			{
-				var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+				var executorOwner = await executor.Object.Owner.WithCancellation(CancellationToken.None);
 				if (executorOwner.Object.DBRef != newOwnerPlayer.Object.DBRef)
 				{
 					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CanOnlyChownToYourself), executor);

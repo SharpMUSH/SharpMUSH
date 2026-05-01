@@ -44,26 +44,26 @@ public class MoveService(
 			return false;
 		}
 
-		var objectDBRef = objectToMove.Object().DBRef;
+		var objectDBRef = objectToMove.Object.DBRef;
 
 		var current = destination;
-		var visited = new HashSet<string> { current.Object().DBRef.ToString() };
+		var visited = new HashSet<string> { current.Object.DBRef.ToString() };
 
 		while (true)
 		{
-			if (current.Object().DBRef.Equals(objectDBRef))
+			if (current.Object.DBRef.Equals(objectDBRef))
 			{
 				return true; // Found a loop
 			}
 
 			var location = await current.Location();
 
-			if (location.IsRoom || visited.Contains(location.Object().DBRef.ToString()))
+			if (location.IsRoom || visited.Contains(location.Object.DBRef.ToString()))
 			{
 				return false;
 			}
 
-			visited.Add(location.Object().DBRef.ToString());
+			visited.Add(location.Object.DBRef.ToString());
 			current = location;
 		}
 	}
@@ -80,8 +80,8 @@ public class MoveService(
 		string cause = "move",
 		bool silent = false)
 	{
-		var targetObj = objectToMove.Object();
-		var destObj = destination.Object();
+		var targetObj = objectToMove.Object;
+		var destObj = destination.Object;
 		var enactorRef = enactor ?? targetObj.DBRef;
 
 		var enactorQuery = await mediator.Send(new GetObjectNodeQuery(enactorRef));
@@ -110,7 +110,7 @@ public class MoveService(
 		// For now, moves are allowed regardless of quota status.
 
 		// 4. Get old location for hooks
-		var oldLocation = (await objectToMove.Location()).Object().DBRef;
+		var oldLocation = (await objectToMove.Location()).Object.DBRef;
 
 		// 5. Trigger LEAVE hooks on old location (if not silent)
 		if (!silent && oldLocation != destObj.DBRef)
@@ -177,7 +177,7 @@ public class MoveService(
 			return false;
 		}
 
-		var currentLocation = (await objectToMove.Location()).Object().DBRef;
+		var currentLocation = (await objectToMove.Location()).Object.DBRef;
 		var locQuery = await mediator.Send(new GetObjectNodeQuery(currentLocation));
 		if (!locQuery.IsNone)
 		{
@@ -215,7 +215,7 @@ public class MoveService(
 		string cause)
 	{
 		var targetObj = objectToMove.WithRoomOption();
-		var targetDBRef = objectToMove.Object().DBRef;
+		var targetDBRef = objectToMove.Object.DBRef;
 
 		// @LEAVE - message seen by the object leaving
 		var leaveAttr = await attributeService.GetAttributeAsync(
@@ -243,9 +243,9 @@ public class MoveService(
 		{
 			// Get contents of old location to notify
 			var contents = new List<AnySharpContent>();
-			await foreach (var content in mediator.CreateStream(new GetContentsQuery(oldLocation.Object().DBRef)))
+			await foreach (var content in mediator.CreateStream(new GetContentsQuery(oldLocation.Object.DBRef)))
 			{
-				if (!content.Object().DBRef.Equals(targetDBRef))
+				if (!content.Object.DBRef.Equals(targetDBRef))
 				{
 					contents.Add(content);
 				}
@@ -266,19 +266,19 @@ public class MoveService(
 
 				if (!string.IsNullOrEmpty(message.ToPlainText()))
 				{
-					await notifyService.Notify(content.Object().DBRef, message);
+					await notifyService.Notify(content.Object.DBRef, message);
 				}
 			}
 		}
 		else
 		{
 			// Default OLEAVE: "{name} has left." (PennMUSH src/move.c)
-			var defaultMsg = $"{objectToMove.Object().Name} {ErrorMessages.Notifications.DefaultOLeave}";
-			await foreach (var content in mediator.CreateStream(new GetContentsQuery(oldLocation.Object().DBRef)))
+			var defaultMsg = $"{objectToMove.Object.Name} {ErrorMessages.Notifications.DefaultOLeave}";
+			await foreach (var content in mediator.CreateStream(new GetContentsQuery(oldLocation.Object.DBRef)))
 			{
-				if (!content.Object().DBRef.Equals(targetDBRef))
+				if (!content.Object.DBRef.Equals(targetDBRef))
 				{
-					await notifyService.Notify(content.Object().DBRef, defaultMsg);
+					await notifyService.Notify(content.Object.DBRef, defaultMsg);
 				}
 			}
 		}
@@ -317,7 +317,7 @@ public class MoveService(
 		string cause)
 	{
 		var targetObj = objectToMove.WithRoomOption();
-		var targetDBRef = objectToMove.Object().DBRef;
+		var targetDBRef = objectToMove.Object.DBRef;
 
 		// @ENTER - message seen by the object entering
 		var enterAttr = await attributeService.GetAttributeAsync(
@@ -345,9 +345,9 @@ public class MoveService(
 		{
 			// Get contents of new location to notify
 			var contents = new List<AnySharpContent>();
-			await foreach (var content in mediator.CreateStream(new GetContentsQuery(newLocation.Object().DBRef)))
+			await foreach (var content in mediator.CreateStream(new GetContentsQuery(newLocation.Object.DBRef)))
 			{
-				if (!content.Object().DBRef.Equals(targetDBRef))
+				if (!content.Object.DBRef.Equals(targetDBRef))
 				{
 					contents.Add(content);
 				}
@@ -368,19 +368,19 @@ public class MoveService(
 
 				if (!string.IsNullOrEmpty(message.ToPlainText()))
 				{
-					await notifyService.Notify(content.Object().DBRef, message);
+					await notifyService.Notify(content.Object.DBRef, message);
 				}
 			}
 		}
 		else
 		{
 			// Default OENTER: "{name} has arrived." (PennMUSH src/move.c)
-			var defaultMsg = $"{objectToMove.Object().Name} {ErrorMessages.Notifications.DefaultOEnter}";
-			await foreach (var content in mediator.CreateStream(new GetContentsQuery(newLocation.Object().DBRef)))
+			var defaultMsg = $"{objectToMove.Object.Name} {ErrorMessages.Notifications.DefaultOEnter}";
+			await foreach (var content in mediator.CreateStream(new GetContentsQuery(newLocation.Object.DBRef)))
 			{
-				if (!content.Object().DBRef.Equals(targetDBRef))
+				if (!content.Object.DBRef.Equals(targetDBRef))
 				{
-					await notifyService.Notify(content.Object().DBRef, defaultMsg);
+					await notifyService.Notify(content.Object.DBRef, defaultMsg);
 				}
 			}
 		}
@@ -418,7 +418,7 @@ public class MoveService(
 		DBRef enactor)
 	{
 		var targetObj = objectToMove.WithRoomOption();
-		var targetDBRef = objectToMove.Object().DBRef;
+		var targetDBRef = objectToMove.Object.DBRef;
 
 		// @OTELEPORT - message seen by others in destination
 		var oteleportAttr = await attributeService.GetAttributeAsync(
@@ -428,9 +428,9 @@ public class MoveService(
 		if (oteleportAttr.IsAttribute)
 		{
 			var contents = new List<AnySharpContent>();
-			await foreach (var content in mediator.CreateStream(new GetContentsQuery(newLocation.Object().DBRef)))
+			await foreach (var content in mediator.CreateStream(new GetContentsQuery(newLocation.Object.DBRef)))
 			{
-				if (!content.Object().DBRef.Equals(targetDBRef))
+				if (!content.Object.DBRef.Equals(targetDBRef))
 				{
 					contents.Add(content);
 				}
@@ -451,7 +451,7 @@ public class MoveService(
 
 				if (!string.IsNullOrEmpty(message.ToPlainText()))
 				{
-					await notifyService.Notify(content.Object().DBRef, message);
+					await notifyService.Notify(content.Object.DBRef, message);
 				}
 			}
 		}
@@ -490,7 +490,7 @@ public class MoveService(
 	{
 		// Get contents of the container
 		var contents = new List<AnySharpContent>();
-		await foreach (var content in mediator.CreateStream(new GetContentsQuery(container.Object().DBRef)))
+		await foreach (var content in mediator.CreateStream(new GetContentsQuery(container.Object.DBRef)))
 		{
 			contents.Add(content);
 		}
@@ -506,15 +506,15 @@ public class MoveService(
 
 		if (!oldLocQuery.IsNone && !newLocQuery.IsNone)
 		{
-			var oldLocName = oldLocQuery.Known.Object().Name;
-			var newLocName = newLocQuery.Known.Object().Name;
+			var oldLocName = oldLocQuery.Known.Object.Name;
+			var newLocName = newLocQuery.Known.Object.Name;
 
 			foreach (var content in contents)
 			{
 				// Notify each content that they have moved
 				// This is typically used for players inside vehicles or containers
 				await notifyService.Notify(
-					content.Object().DBRef,
+					content.Object.DBRef,
 					$"You sense that you have moved from {oldLocName} to {newLocName}.");
 			}
 		}
@@ -532,7 +532,7 @@ public class MoveService(
 		try
 		{
 			var location = await player.AsPlayer.Location.WithCancellation(CancellationToken.None);
-			var locationDbRef = location.Object().DBRef;
+			var locationDbRef = location.Object.DBRef;
 
 			// Valid location - not in the void
 			if (locationDbRef.Number >= 0)
@@ -553,7 +553,7 @@ public class MoveService(
 		try
 		{
 			var home = await player.AsPlayer.Home.WithCancellation(CancellationToken.None);
-			var homeDbRef = home.Object().DBRef;
+			var homeDbRef = home.Object.DBRef;
 
 			if (homeDbRef.Number >= 0)
 			{

@@ -443,8 +443,8 @@ public class FlagAndPowerCommandTests
 
 		// Verify the TRUST flag was set by checking the database state directly
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
-		await Assert.That(newObject.Object()).IsNotNull();
-		var flags = await newObject.Object()!.Flags.Value.ToArrayAsync();
+		await Assert.That(newObject.Object).IsNotNull();
+		var flags = await newObject.Object!.Flags.Value.ToArrayAsync();
 
 		await Assert.That(flags.Any(f => f.Name.Equals("TRUST", StringComparison.OrdinalIgnoreCase))).IsTrue();
 

@@ -58,7 +58,7 @@ public static class TestHelpers
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static AnySharpObject MatchingObject(DBRef dbRef) =>
-		Arg.Is<AnySharpObject>(o => o.Object().DBRef == dbRef);
+		Arg.Is<AnySharpObject>(o => o.Object.DBRef == dbRef);
 
 	/// <summary>
 	/// Polls the NSubstitute <paramref name="notifyService"/> mock until a Notify call matching
@@ -81,7 +81,7 @@ public static class TestHelpers
 				var args = call.GetArguments();
 				if (args.Length < 2) continue;
 				if (args[0] is not AnySharpObject obj) continue;
-				if (obj.Object().DBRef != executor) continue;
+				if (obj.Object.DBRef != executor) continue;
 				if (args[1] is not SharpMessage msg) continue;
 				var text = msg.ToString();
 				if (text.Contains(containsText)) return;
@@ -147,10 +147,10 @@ public static class TestHelpers
 				c.GetArguments().Length >= 2 &&
 				c.GetArguments()[1] is string k && k == key &&
 				(receiverDbRef == null ||
-				 (c.GetArguments()[0] is AnySharpObject obj && obj.Object().DBRef == receiverDbRef) ||
+				 (c.GetArguments()[0] is AnySharpObject obj && obj.Object.DBRef == receiverDbRef) ||
 				 (c.GetArguments()[0] is DBRef d && d == receiverDbRef)) &&
 				(senderDbRef == null ||
 				 (c.GetArguments().Length >= 3 &&
-				  ((c.GetArguments()[2] is AnySharpObject sObj && sObj.Object().DBRef == senderDbRef) ||
+				  ((c.GetArguments()[2] is AnySharpObject sObj && sObj.Object.DBRef == senderDbRef) ||
 				   (c.GetArguments()[2] is DBRef sd && sd == senderDbRef)))));
 }

@@ -275,7 +275,7 @@ public partial class ValidateService(
 
 		var tryFindPlayerByName = mediator
 			.CreateStream(new GetPlayerQuery(plainName))
-			.Where(x => x.Object.DBRef != target.Object().DBRef);
+			.Where(x => x.Object.DBRef != target.Object.DBRef);
 
 		return !await tryFindPlayerByName
 			.AnyAsync(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase));

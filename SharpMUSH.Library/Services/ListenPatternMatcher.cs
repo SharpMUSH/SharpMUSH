@@ -30,7 +30,7 @@ public class ListenPatternMatcher(IMediator mediator) : IListenPatternMatcher
 		foreach (var listenAttr in listenAttributes)
 		{
 			// Check if this pattern should trigger based on speaker
-			var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
+			var isSelf = listener.Object.DBRef == speaker.Object.DBRef;
 			var shouldTrigger = listenAttr.Behavior switch
 			{
 				ListenBehavior.AHear => !isSelf,   // Only others
@@ -65,18 +65,18 @@ public class ListenPatternMatcher(IMediator mediator) : IListenPatternMatcher
 		if (checkParents)
 		{
 			var currentObject = listener;
-			var visitedObjects = new HashSet<int> { currentObject.Object().DBRef.Number };
+			var visitedObjects = new HashSet<int> { currentObject.Object.DBRef.Number };
 			const int maxParentDepth = 10; // Prevent infinite loops
 			var depth = 0;
 
 			while (depth < maxParentDepth)
 			{
-				var parentAsync = await currentObject.Object().Parent.WithCancellation(CancellationToken.None);
+				var parentAsync = await currentObject.Object.Parent.WithCancellation(CancellationToken.None);
 				if (parentAsync.IsNone)
 					break;
 
 				var parent = parentAsync.Known;
-				var parentObject = parent.Object();
+				var parentObject = parent.Object;
 
 				// Prevent infinite loops from circular parent relationships
 				if (visitedObjects.Contains(parentObject.DBRef.Number))
@@ -94,7 +94,7 @@ public class ListenPatternMatcher(IMediator mediator) : IListenPatternMatcher
 				foreach (var listenAttr in parentListenAttributes)
 				{
 					// Check if this pattern should trigger based on speaker
-					var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
+					var isSelf = listener.Object.DBRef == speaker.Object.DBRef;
 					var shouldTrigger = listenAttr.Behavior switch
 					{
 						ListenBehavior.AHear => !isSelf,   // Only others

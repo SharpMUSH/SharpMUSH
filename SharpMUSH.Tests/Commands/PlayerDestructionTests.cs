@@ -61,7 +61,7 @@ public class PlayerDestructionTests
 		var playerNode = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
 		await Assert.That(playerNode.IsNone).IsFalse();
 
-		var owner = await playerNode.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await playerNode.Known.Object.Owner.WithCancellation(CancellationToken.None);
 
 		// Assert: the player owns themselves
 		await Assert.That(owner.Object.DBRef.Number).IsEqualTo(playerDbRef.Number);
@@ -76,7 +76,7 @@ public class PlayerDestructionTests
 		var godNode = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		await Assert.That(godNode.IsNone).IsFalse();
 
-		var owner = await godNode.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await godNode.Known.Object.Owner.WithCancellation(CancellationToken.None);
 
 		await Assert.That(owner.Object.DBRef.Number).IsEqualTo(1);
 	}
@@ -221,7 +221,7 @@ public class PlayerDestructionTests
 
 		// Verify ownership was transferred
 		var thingBeforeNuke = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
-		var ownerBefore = await thingBeforeNuke.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var ownerBefore = await thingBeforeNuke.Known.Object.Owner.WithCancellation(CancellationToken.None);
 		await Assert.That(ownerBefore.Object.DBRef.Number).IsEqualTo(playerDbRef.Number);
 
 		// Act: nuke the player  (destroy_possessions=yes)
@@ -270,7 +270,7 @@ public class PlayerDestructionTests
 		var isGoing = await thingAfterNuke.Known.HasFlag("GOING");
 		await Assert.That(isGoing).IsFalse();
 
-		var ownerAfter = await thingAfterNuke.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var ownerAfter = await thingAfterNuke.Known.Object.Owner.WithCancellation(CancellationToken.None);
 		await Assert.That(ownerAfter.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
 	}
 
@@ -371,7 +371,7 @@ public class PlayerDestructionTests
 		var probateNode = await Mediator.Send(new GetObjectNodeQuery(new DBRef(ProbateJudgeDbRefNumber)));
 		var attrName = "PDT_COMBINED_ATTR_TEST";
 		await Database.SetAttributeAsync(
-			probateNode.Known.Object().DBRef,
+			probateNode.Known.Object.DBRef,
 			[attrName],
 			A.single("PDT combined test attribute value"),
 			testPlayer);
@@ -398,12 +398,12 @@ public class PlayerDestructionTests
 		// Assert – SAFE thing → chowned to probate, not GOING
 		var safeObj = await Mediator.Send(new GetObjectNodeQuery(safeDbRef));
 		await Assert.That(await safeObj.Known.HasFlag("GOING")).IsFalse();
-		var safeOwner = await safeObj.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var safeOwner = await safeObj.Known.Object.Owner.WithCancellation(CancellationToken.None);
 		await Assert.That(safeOwner.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
 
 		// Assert – attribute ownership → probate (#1)
 		var attr = await Database.GetAttributeAsync(
-			probateNode.Known.Object().DBRef,
+			probateNode.Known.Object.DBRef,
 			[attrName]).LastOrDefaultAsync();
 		await Assert.That(attr).IsNotNull();
 		var attrOwner = await attr!.Owner.WithCancellation(CancellationToken.None);

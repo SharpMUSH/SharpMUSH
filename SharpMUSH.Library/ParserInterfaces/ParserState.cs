@@ -257,7 +257,7 @@ public partial record ParserState(
 		{
 			try
 			{
-				var cachedDBRef = cachedObject.Value.Known().Object().DBRef;
+				var cachedDBRef = cachedObject.Value.Known().Object.DBRef;
 				if (!cachedDBRef.Equals(expectedDBRef.Value))
 				{
 					cachedObject = null;

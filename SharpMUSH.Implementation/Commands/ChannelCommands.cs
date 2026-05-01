@@ -58,7 +58,7 @@ public partial class Commands
 			INotifyService.NotificationType.Emit,
 			message,
 			status.Title ?? MModule.empty(),
-			MModule.single(executor.Object().Name),
+			MModule.single(executor.Object.Name),
 			MModule.single("says"),
 			[]
 		));
@@ -110,7 +110,7 @@ public partial class Commands
 			INotifyService.NotificationType.Emit,
 			message,
 			status.Title ?? MModule.empty(),
-			MModule.single(executor.Object().Name),
+			MModule.single(executor.Object.Name),
 			MModule.single("says"),
 			[]
 		));
@@ -166,7 +166,7 @@ public partial class Commands
 				: INotifyService.NotificationType.Emit,
 			message,
 			status.Title ?? MModule.empty(),
-			MModule.single(executor.Object().Name),
+			MModule.single(executor.Object.Name),
 			MModule.single("says"),
 			[]
 		));

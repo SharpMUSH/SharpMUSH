@@ -5,48 +5,6 @@ namespace SharpMUSH.Library.Extensions;
 
 public static class OneOfExtensions
 {
-	public static SharpObject? Object(this AnyOptionalSharpObject union) => union.Value switch
-	{
-		SharpPlayer p => p.Object,
-		SharpRoom   r => r.Object,
-		SharpExit   e => e.Object,
-		SharpThing  t => t.Object,
-		_ => null
-	};
-
-	public static SharpObject Object(this AnySharpContainer union) => union.Value switch
-	{
-		SharpPlayer p => p.Object,
-		SharpRoom   r => r.Object,
-		SharpThing  t => t.Object,
-		_ => throw new InvalidOperationException()
-	};
-
-	public static SharpObject Object(this AnySharpContent union) => union.Value switch
-	{
-		SharpPlayer p => p.Object,
-		SharpExit   e => e.Object,
-		SharpThing  t => t.Object,
-		_ => throw new InvalidOperationException()
-	};
-
-	public static SharpObject? Object(this AnyOptionalSharpContainer union) => union.Value switch
-	{
-		SharpPlayer p => p.Object,
-		SharpRoom   r => r.Object,
-		SharpThing  t => t.Object,
-		_ => null
-	};
-
-	public static SharpObject Object(this AnySharpObject union) => union.Value switch
-	{
-		SharpPlayer p => p.Object,
-		SharpRoom   r => r.Object,
-		SharpExit   e => e.Object,
-		SharpThing  t => t.Object,
-		_ => throw new InvalidOperationException()
-	};
-
 	public static AnySharpObject WithExitOption(this AnySharpContainer union) => union.Value switch
 	{
 		SharpPlayer p => p,
@@ -118,15 +76,6 @@ public static class OneOfExtensions
 		_ => throw new InvalidOperationException()
 	};
 
-	public static AnySharpObject Known(this AnyOptionalSharpObject union) => union.Value switch
-	{
-		SharpPlayer p => p,
-		SharpRoom   r => r,
-		SharpExit   e => e,
-		SharpThing  t => t,
-		_ => throw new ArgumentNullException(nameof(union))
-	};
-
 	public static Option<SharpObject> ObjectOption(this AnyOptionalSharpObject union) => union.Value switch
 	{
 		SharpPlayer p => Option<SharpObject>.FromOption(p.Object),
@@ -136,34 +85,6 @@ public static class OneOfExtensions
 		_ => new None()
 	};
 
-	public static string? Id(this AnyOptionalSharpObject union) => union.Value switch
-	{
-		SharpPlayer p => p.Id,
-		SharpRoom   r => r.Id,
-		SharpExit   e => e.Id,
-		SharpThing  t => t.Id,
-		_ => null
-	};
-
-	public static string? Id(this AnyOptionalSharpContainer union) => union.Value switch
-	{
-		SharpPlayer p => p.Id,
-		SharpRoom   r => r.Id,
-		SharpThing  t => t.Id,
-		_ => null
-	};
-
-	public static string? Id(this AnySharpObject union) => union.Value switch
-	{
-		SharpPlayer p => p.Id,
-		SharpRoom   r => r.Id,
-		SharpExit   e => e.Id,
-		SharpThing  t => t.Id,
-		_ => null
-	};
-
-	public static bool IsNone(this AnyOptionalSharpObject union)   => union.IsNone;
-	public static bool IsNone(this AnyOptionalSharpContainer union) => union.IsNone;
 	public static bool IsNone(this AnyOptionalSharpObjectOrError union) => union.IsNone;
 	public static bool IsError(this AnyOptionalSharpObjectOrError union) => union.IsError;
 	public static bool IsValid(this AnyOptionalSharpObjectOrError union) => !(union.IsNone || union.IsError);

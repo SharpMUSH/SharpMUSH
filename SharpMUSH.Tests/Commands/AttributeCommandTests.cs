@@ -32,7 +32,7 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrBasic");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var objName = obj.Known.Object().Name;
+		var objName = obj.Known.Object.Name;
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TEST_ATTRSET_UNIQUE {objDbRef}=Test Value"));
 
@@ -54,7 +54,7 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrEmpty");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var objName = obj.Known.Object().Name;
+		var objName = obj.Known.Object.Name;
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTCLEAR_ATTRSET_UNIQUE {objDbRef}="));
 
@@ -71,7 +71,7 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrComplex");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var objName = obj.Known.Object().Name;
+		var objName = obj.Known.Object.Name;
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&COMPLEX {objDbRef}=This is a [add(1,2)] test"));
 

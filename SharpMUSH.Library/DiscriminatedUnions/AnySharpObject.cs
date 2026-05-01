@@ -1,5 +1,4 @@
 using Mediator;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 
@@ -13,9 +12,9 @@ public union AnySharpObject(SharpPlayer, SharpRoom, SharpExit, SharpThing)
 {
 	public bool Equals(AnySharpObject other) =>
 		Value is null ? other.Value is null :
-		other.Value is not null && this.Object().DBRef == other.Object().DBRef;
+		other.Value is not null && this.Object.DBRef == other.Object.DBRef;
 	public override bool Equals(object? o) => o is AnySharpObject other && Equals(other);
-	public override int GetHashCode() => Value is null ? 0 : this.Object().DBRef.GetHashCode();
+	public override int GetHashCode() => Value is null ? 0 : this.Object.DBRef.GetHashCode();
 	public static bool operator ==(AnySharpObject a, AnySharpObject b) => a.Equals(b);
 	public static bool operator !=(AnySharpObject a, AnySharpObject b) => !a.Equals(b);
 
@@ -31,6 +30,24 @@ public union AnySharpObject(SharpPlayer, SharpRoom, SharpExit, SharpThing)
 	public SharpRoom   AsRoom   => (SharpRoom)Value!;
 	public SharpExit   AsExit   => (SharpExit)Value!;
 	public SharpThing  AsThing  => (SharpThing)Value!;
+
+	public SharpObject Object => Value switch
+	{
+		SharpPlayer p => p.Object,
+		SharpRoom   r => r.Object,
+		SharpExit   e => e.Object,
+		SharpThing  t => t.Object,
+		_ => throw new InvalidOperationException()
+	};
+
+	public string? Id => Value switch
+	{
+		SharpPlayer p => p.Id,
+		SharpRoom   r => r.Id,
+		SharpExit   e => e.Id,
+		SharpThing  t => t.Id,
+		_ => null
+	};
 
 	public string[] Aliases => (Value switch
 	{
@@ -53,9 +70,9 @@ public union AnySharpObject(SharpPlayer, SharpRoom, SharpExit, SharpThing)
 	public async ValueTask<AnySharpContainer> OutermostWhere()
 	{
 		var where = await Where();
-		for (DBRef? tmpWhere = null; where.Object().DBRef != tmpWhere;)
+		for (DBRef? tmpWhere = null; where.Object.DBRef != tmpWhere;)
 		{
-			tmpWhere = where.Object().DBRef;
+			tmpWhere = where.Object.DBRef;
 			where = await where.Location();
 		}
 		return where;

@@ -50,7 +50,7 @@ public class LockObjIdTests
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
 		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
-		var testObjFullDbRef = testObj.Object().DBRef;
+		var testObjFullDbRef = testObj.Object.DBRef;
 
 		// Lock string with full objid (dbref:creationtime)
 		var lockString = $"=#{testObjFullDbRef.Number}:{testObjFullDbRef.CreationMilliseconds}";
@@ -74,7 +74,7 @@ public class LockObjIdTests
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
 		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
-		var testObjFullDbRef = testObj.Object().DBRef;
+		var testObjFullDbRef = testObj.Object.DBRef;
 
 		// Lock string with full objid but DIFFERENT creation time
 		var differentCreationTime = (testObjFullDbRef.CreationMilliseconds ?? 0) + 1000;
@@ -128,7 +128,7 @@ public class LockObjIdTests
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
 		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
-		var testObjFullDbRef = testObj.Object().DBRef;
+		var testObjFullDbRef = testObj.Object.DBRef;
 
 		// Create an object to hold the dbref list
 		var lockHolderResult = (await Parser.FunctionParse(MModule.single("create(LockHolderObjId1)")))?.Message!;
@@ -159,7 +159,7 @@ public class LockObjIdTests
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
 		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
-		var testObjFullDbRef = testObj.Object().DBRef;
+		var testObjFullDbRef = testObj.Object.DBRef;
 
 		// Create an object to hold the dbref list
 		var lockHolderResult = (await Parser.FunctionParse(MModule.single("create(LockHolderObjId2)")))?.Message!;
@@ -191,13 +191,13 @@ public class LockObjIdTests
 		var testObjDbRef1 = HelperFunctions.ParseDbRef(testObjDbRefStr1).AsValue();
 		var testObj1 = (await Database.GetObjectNodeAsync(testObjDbRef1)).Known();
 		// Get creation times from database objects (create() returns bare #N; objid includes timestamp)
-		var testObjFullDbRef1 = testObj1.Object().DBRef;
+		var testObjFullDbRef1 = testObj1.Object.DBRef;
 
 		var createResult2 = (await Parser.FunctionParse(MModule.single("create(LockTestMulti2)")))?.Message!;
 		var testObjDbRefStr2 = createResult2.ToPlainText();
 		var testObjDbRef2 = HelperFunctions.ParseDbRef(testObjDbRefStr2).AsValue();
 		var testObj2 = (await Database.GetObjectNodeAsync(testObjDbRef2)).Known();
-		var testObjFullDbRef2 = testObj2.Object().DBRef;
+		var testObjFullDbRef2 = testObj2.Object.DBRef;
 
 		// Create an object to hold the dbref list
 		var lockHolderResult = (await Parser.FunctionParse(MModule.single("create(LockHolderMulti)")))?.Message!;

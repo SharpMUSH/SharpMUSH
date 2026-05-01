@@ -36,9 +36,9 @@ public partial class Functions
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
 			found => utc
-				? found.Object().CreationTime.ToString()
+				? found.Object.CreationTime.ToString()
 				: DateTimeOffset
-					.FromUnixTimeMilliseconds(found.Object().CreationTime)
+					.FromUnixTimeMilliseconds(found.Object.CreationTime)
 					.ToLocalTime()
 					.ToString());
 	}
@@ -75,9 +75,9 @@ public partial class Functions
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
 			found => utc
-				? found.Object().CreationTime.ToString()
+				? found.Object.CreationTime.ToString()
 				: DateTimeOffset
-					.FromUnixTimeMilliseconds(found.Object().ModifiedTime)
+					.FromUnixTimeMilliseconds(found.Object.ModifiedTime)
 					.ToLocalTime()
 					.ToString());
 	}
@@ -584,9 +584,9 @@ public partial class Functions
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
 			found => utc
-				? found.Object().CreationTime.ToString()
+				? found.Object.CreationTime.ToString()
 				: DateTimeOffset
-					.FromUnixTimeMilliseconds(found.Object().CreationTime)
+					.FromUnixTimeMilliseconds(found.Object.CreationTime)
 					.ToLocalTime()
 					.ToUnixTimeMilliseconds()
 					.ToString());
@@ -602,9 +602,9 @@ public partial class Functions
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
 			found => utc
-				? found.Object().CreationTime.ToString()
+				? found.Object.CreationTime.ToString()
 				: DateTimeOffset
-					.FromUnixTimeMilliseconds(found.Object().ModifiedTime)
+					.FromUnixTimeMilliseconds(found.Object.ModifiedTime)
 					.ToLocalTime()
 					.ToUnixTimeMilliseconds()
 					.ToString());

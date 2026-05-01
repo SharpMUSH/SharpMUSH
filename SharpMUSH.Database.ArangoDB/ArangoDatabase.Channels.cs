@@ -108,7 +108,7 @@ public partial class ArangoDatabase
 				$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN v",
 				new Dictionary<string, object>
 				{
-					{ StartVertex, obj.Object().Id! }
+					{ StartVertex, obj.Object.Id! }
 				}, cancellationToken: ct)
 			.Select(SharpChannelQueryToSharpChannel);
 
@@ -197,7 +197,7 @@ public partial class ArangoDatabase
 			handle,
 			DatabaseConstants.GraphChannels,
 			DatabaseConstants.OnChannel,
-			new SharpEdgeCreateRequest(obj.Object().Id!, channel.Id!),
+			new SharpEdgeCreateRequest(obj.Object.Id!, channel.Id!),
 			cancellationToken: ct);
 
 	public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj,
@@ -207,7 +207,7 @@ public partial class ArangoDatabase
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
 			new Dictionary<string, object>
 			{
-				{ StartVertex, obj.Object().Id! }
+				{ StartVertex, obj.Object.Id! }
 			}, cancellationToken: ct);
 
 		// Find all edges connecting to the specific channel (there might be duplicates)
@@ -230,7 +230,7 @@ public partial class ArangoDatabase
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
 			new Dictionary<string, object>
 			{
-				{ StartVertex, obj.Object().Id! }
+				{ StartVertex, obj.Object.Id! }
 			}, cancellationToken: ct);
 
 		// Find the edge connecting to the specific channel

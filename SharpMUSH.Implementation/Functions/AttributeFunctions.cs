@@ -64,12 +64,12 @@ public partial class Functions
 
 				await NotifyService!.Notify(enactor,
 					setResult.Match(
-						_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
+						_ => $"{realLocated.Object.Name}/{args["0"].Message} - Set.",
 						failure => failure.Value)
 				);
 
 				return new CallState(setResult.Match(
-					_ => string.Empty, // $"{realLocated.Object().Name}/{args["0"].Message}",
+					_ => string.Empty, // $"{realLocated.Object.Name}/{args["0"].Message}",
 					failure => failure.Value));
 			});
 	}
@@ -105,12 +105,12 @@ public partial class Functions
 
 				await NotifyService!.Notify(enactor,
 					setResult.Match(
-						_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
+						_ => $"{realLocated.Object.Name}/{args["0"].Message} - Set.",
 						failure => failure.Value)
 				);
 
 				return new CallState(setResult.Match(
-					_ => $"{realLocated.Object().Name}/{args["0"].Message}",
+					_ => $"{realLocated.Object.Name}/{args["0"].Message}",
 					failure => failure.Value));
 			});
 	}
@@ -267,7 +267,7 @@ public partial class Functions
 			{
 				if (attributePattern is null)
 				{
-					var flags = found.Object().Flags.Value;
+					var flags = found.Object.Flags.Value;
 					return string.Join("", await flags.Select(x => x.Symbol).ToArrayAsync());
 				}
 
@@ -540,7 +540,7 @@ public partial class Functions
 
 		async ValueTask<CallState> HasObjectFlag(AnySharpObject realLocated)
 		{
-			return await realLocated.Object().Flags.Value.AnyAsync(f =>
+			return await realLocated.Object.Flags.Value.AnyAsync(f =>
 				string.Equals(f.Name, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase) ||
 				string.Equals(f.Symbol.ToString(), flagNameOrSymbol, StringComparison.OrdinalIgnoreCase));
 		}
@@ -653,7 +653,7 @@ public partial class Functions
 				// Object Flags
 				if (attributePattern is null)
 				{
-					var flags = found.Object().Flags.Value;
+					var flags = found.Object.Flags.Value;
 					return string.Join(" ", await flags.Select(x => x.Name).ToArrayAsync());
 				}
 
@@ -771,7 +771,7 @@ public partial class Functions
 					return (await parser.With(state =>
 							state with
 							{
-								Executor = found.Object().DBRef
+								Executor = found.Object.DBRef
 							},
 						async newParser => await newParser.FunctionParse(arg1.Message!)))!;
 				}
@@ -788,7 +788,7 @@ public partial class Functions
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, arg0, LocateFlags.All,
-			found => ValueTask.FromResult<CallState>(found.Object().DBRef));
+			found => ValueTask.FromResult<CallState>(found.Object.DBRef));
 	}
 
 	[SharpFunction(Name = "objmem", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -817,7 +817,7 @@ public partial class Functions
 			{
 				if (dbrefAndMaybeArg.AsValue().Attribute is null)
 				{
-					var objOwner = await actualObject.Object().Owner.WithCancellation(CancellationToken.None);
+					var objOwner = await actualObject.Object.Owner.WithCancellation(CancellationToken.None);
 					return new CallState($"#{objOwner.Object.DBRef.Number}");
 				}
 
@@ -1425,10 +1425,10 @@ public partial class Functions
 
 				return (await parser.With(s => s with
 				{
-					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
+					CurrentEvaluation = new DBAttribute(actualObject.Object.DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
-					Executor = actualObject.Object().DBRef,
+					Executor = actualObject.Object.DBRef,
 					Caller = s.Executor
 				},
 					async np => await np.FunctionParse(get.Value)))!;
@@ -1480,11 +1480,11 @@ public partial class Functions
 
 				return (await parser.With(s => s with
 				{
-					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
+					CurrentEvaluation = new DBAttribute(actualObject.Object.DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
 					Registers = new([[]]),
-					Executor = actualObject.Object().DBRef,
+					Executor = actualObject.Object.DBRef,
 					Caller = s.Executor
 				},
 					async np => await np.FunctionParse(get.Value)))!;
@@ -1514,7 +1514,7 @@ public partial class Functions
 		var dbrefAndAttr = parser.CurrentState.Arguments["0"].Message!;
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var parentObject = await executor.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentObject = await executor.Object.Parent.WithCancellation(CancellationToken.None);
 
 		if (parentObject.IsNone)
 		{
@@ -1575,15 +1575,15 @@ public partial class Functions
 		switch (plainText)
 		{
 			case "#":
-				return (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object().DBRef;
+				return (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object.DBRef;
 			case "@":
-				return (await parser.CurrentState.KnownCallerObject(Mediator!)).Object().DBRef;
+				return (await parser.CurrentState.KnownCallerObject(Mediator!)).Object.DBRef;
 			case "!":
-				return (await parser.CurrentState.KnownExecutorObject(Mediator!)).Object().DBRef;
+				return (await parser.CurrentState.KnownExecutorObject(Mediator!)).Object.DBRef;
 			case "n" or "N":
-				return (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object().Name;
+				return (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object.Name;
 			case "l" or "L":
-				return (await (await parser.CurrentState.KnownEnactorObject(Mediator!)).Where()).Object().DBRef;
+				return (await (await parser.CurrentState.KnownEnactorObject(Mediator!)).Where()).Object.DBRef;
 			case "c" or "C":
 				return Substitutions.Substitutions.LastCommandBeforeEvaluation(parser);
 			default:
@@ -1918,7 +1918,7 @@ public partial class Functions
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
 		// Get the zone object from enactor
-		var zone = await enactor.Object().Zone.WithCancellation(CancellationToken.None);
+		var zone = await enactor.Object.Zone.WithCancellation(CancellationToken.None);
 
 		if (zone.IsNone)
 		{

@@ -135,14 +135,14 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				.OrderByAwait(async (key, ct) =>
 				{
 					var located = await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All);
-					return located.IsAnyObject ? located.AsAnyObject.Object().Name : await keySelector(key, ct);
+					return located.IsAnyObject ? located.AsAnyObject.Object.Name : await keySelector(key, ct);
 				}, StringComparer.Ordinal, direction),
 
 			ISortService.SortType.UncasedName => source
 				.OrderByAwait(async (key, ct) =>
 				{
 					var located = await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All);
-					return located.IsAnyObject ? located.AsAnyObject.Object().Name : await keySelector(key, ct);
+					return located.IsAnyObject ? located.AsAnyObject.Object.Name : await keySelector(key, ct);
 				}, StringComparer.OrdinalIgnoreCase, direction),
 
 			ISortService.SortType.Conn => source
@@ -168,7 +168,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				{
 					var located = await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All);
 					return located.IsAnyObject
-						? (await located.AsAnyObject.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number
+						? (await located.AsAnyObject.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number
 						: -1;
 				}, direction),
 
@@ -177,7 +177,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				{
 					var located = await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All);
 					return located.IsAnyObject
-						? (await located.AsAnyObject.Where()).Object().DBRef.Number
+						? (await located.AsAnyObject.Where()).Object.DBRef.Number
 						: -1;
 				}, direction),
 
@@ -185,14 +185,14 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				.OrderByAwait(async (key, ct) =>
 				{
 					var located = await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All);
-					return located.IsAnyObject ? located.AsAnyObject.Object().CreationTime : -1L;
+					return located.IsAnyObject ? located.AsAnyObject.Object.CreationTime : -1L;
 				}, direction),
 
 			ISortService.SortType.ModifiedTime => source
 				.OrderByAwait(async (key, ct) =>
 				{
 					var located = await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All);
-					return located.IsAnyObject ? located.AsAnyObject.Object().ModifiedTime : -1L;
+					return located.IsAnyObject ? located.AsAnyObject.Object.ModifiedTime : -1L;
 				}, direction),
 
 			ISortService.SortType.AttributeName => source

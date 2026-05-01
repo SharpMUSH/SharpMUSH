@@ -23,7 +23,7 @@ public static class MessageListHelper
 {
 	public static async ValueTask<string> CurrentMailFolder(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, AnySharpObject executor)
 	{
-		var mailData = await objectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object());
+		var mailData = await objectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object);
 
 		if (mailData?.ActiveFolder != null)
 		{
@@ -31,7 +31,7 @@ public static class MessageListHelper
 		}
 
 		mailData = new ExpandedMailData(Folders: ["INBOX"], ActiveFolder: "INBOX");
-		await objectDataService.SetExpandedDataAsync(mailData, executor.Object());
+		await objectDataService.SetExpandedDataAsync(mailData, executor.Object);
 
 		return mailData.ActiveFolder!;
 	}
@@ -111,16 +111,16 @@ public static class MessageListHelper
 
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
-			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object(), target));
+			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object, target));
 			msgList = folderSplit[1];
 		}
 		else if (msgList == "all")
 		{
-			mailList = mediator!.CreateStream(new GetAllSentMailListQuery(executor.Object()));
+			mailList = mediator!.CreateStream(new GetAllSentMailListQuery(executor.Object));
 		}
 		else
 		{
-			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object(), target));
+			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object, target));
 		}
 
 		ErrorOrMailList filteredList = msgList switch
@@ -180,7 +180,7 @@ public static class MessageListHelper
 				.Where(async (x, _) =>
 				{
 					var from = await x.From.WithCancellation(CancellationToken.None);
-					return from.Object()?.Name.StartsWith(personName, StringComparison.OrdinalIgnoreCase) ?? false;
+					return from.Object?.Name.StartsWith(personName, StringComparison.OrdinalIgnoreCase) ?? false;
 				}));
 		}
 
@@ -190,7 +190,7 @@ public static class MessageListHelper
 			.Where(async (x, _) =>
 			{
 				var fromPlayer = await x.From.WithCancellation(CancellationToken.None);
-				return fromPlayer.Object()?.DBRef == targetPlayerDbref;
+				return fromPlayer.Object?.DBRef == targetPlayerDbref;
 			}));
 	}
 }

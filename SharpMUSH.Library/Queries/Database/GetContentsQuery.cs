@@ -9,6 +9,6 @@ namespace SharpMUSH.Library.Queries.Database;
 public record GetContentsQuery(DbRefOrContainer DBRef)
 	: IStreamQuery<AnySharpContent>, ICacheable
 {
-	public string CacheKey => $"object-contents:{(DBRef.Value is DBRef d ? d : ((AnySharpContainer)DBRef.Value!).Object().DBRef)}";
+	public string CacheKey => $"object-contents:{(DBRef.Value is DBRef d ? d : ((AnySharpContainer)DBRef.Value!).Object.DBRef)}";
 	public string[] CacheTags => [Definitions.CacheTags.ObjectContents];
 }

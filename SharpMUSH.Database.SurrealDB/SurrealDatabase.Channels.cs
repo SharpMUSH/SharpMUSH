@@ -42,7 +42,7 @@ public partial class SurrealDatabase
 
 	public async IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 		var response = await ExecuteAsync(
 			"SELECT * FROM object:$key->member_of_channel->channel",
@@ -140,7 +140,7 @@ public partial class SurrealDatabase
 	public async ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default)
 	{
 		var channelName = channel.Name.ToPlainText();
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 
 		var parameters = new Dictionary<string, object?>
 		{
@@ -156,7 +156,7 @@ public partial class SurrealDatabase
 	public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default)
 	{
 		var channelName = channel.Name.ToPlainText();
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 
 		var parameters = new Dictionary<string, object?>
 		{
@@ -172,7 +172,7 @@ public partial class SurrealDatabase
 	public async ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj, SharpChannelStatus status, CancellationToken cancellationToken = default)
 	{
 		var channelName = channel.Name.ToPlainText();
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 
 		var setClauses = new List<string>();
 		var parameters = new Dictionary<string, object?>

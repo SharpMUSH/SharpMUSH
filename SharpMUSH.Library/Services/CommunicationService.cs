@@ -117,7 +117,7 @@ public class CommunicationService(
 		{
 			if (notifyOnPermissionFailure)
 			{
-				await notifyService.Notify(executor, $"{target.Object().Name} does not want to hear from you.");
+				await notifyService.Notify(executor, $"{target.Object.Name} does not want to hear from you.");
 			}
 
 			return false;

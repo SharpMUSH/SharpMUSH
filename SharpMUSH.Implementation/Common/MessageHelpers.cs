@@ -270,7 +270,7 @@ public static class MessageHelpers
 			{
 				return new KeyValuePair<string, CallState>(
 					kvp.Key,
-					new CallState(MModule.single(recipient.Object().DBRef.ToString()!)));
+					new CallState(MModule.single(recipient.Object.DBRef.ToString()!)));
 			}
 			return kvp;
 		}).ToDictionary();
@@ -280,8 +280,8 @@ public static class MessageHelpers
 			var result = await parser.With(
 				state => state with
 				{
-					Executor = finalObjToEvaluate.Object().DBRef,
-					Enactor = enactor.Object().DBRef,
+					Executor = finalObjToEvaluate.Object.DBRef,
+					Enactor = enactor.Object.DBRef,
 					Caller = state.Executor,
 					Arguments = processedArgs
 				},
@@ -304,7 +304,7 @@ public static class MessageHelpers
 				var result = await parser.With(
 					state => state with
 					{
-						Enactor = enactor.Object().DBRef,
+						Enactor = enactor.Object.DBRef,
 						Caller = state.Executor
 					},
 					newParser => attributeService.EvaluateAttributeFunctionAsync(

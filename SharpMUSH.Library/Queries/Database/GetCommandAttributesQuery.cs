@@ -14,7 +14,7 @@ namespace SharpMUSH.Library.Queries.Database;
 /// </summary>
 public record GetCommandAttributesQuery(AnySharpObject SharpObject) : IQuery<CommandAttributeCache[]>, ICacheable
 {
-	public string CacheKey => $"commands:{SharpObject.Object().DBRef}";
+	public string CacheKey => $"commands:{SharpObject.Object.DBRef}";
 	public string[] CacheTags => [];
 }
 

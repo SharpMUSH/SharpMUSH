@@ -16,6 +16,14 @@ public union AnySharpContent(SharpPlayer, SharpExit, SharpThing)
 	public SharpExit   AsExit   => (SharpExit)Value!;
 	public SharpThing  AsThing  => (SharpThing)Value!;
 
+	public SharpObject Object => Value switch
+	{
+		SharpPlayer p => p.Object,
+		SharpExit   e => e.Object,
+		SharpThing  t => t.Object,
+		_ => throw new InvalidOperationException()
+	};
+
 	public string Id => Value switch
 	{
 		SharpPlayer p => p.Id,

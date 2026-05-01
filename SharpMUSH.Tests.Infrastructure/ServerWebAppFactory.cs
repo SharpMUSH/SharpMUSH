@@ -284,7 +284,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		await databaseService.Migrate();
 
 		var realOne = await databaseService.GetObjectNodeAsync(new DBRef(1));
-		_one = realOne.Object()!.DBRef;
+		_one = realOne.Object!.DBRef;
 		await connectionService.Register(1, "localhost", "locahost", "test", _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await connectionService.Bind(1, _one);
 

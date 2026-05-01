@@ -9,7 +9,7 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 {
 	public static implicit operator CallState(MString? m) => new(m);
 	public static implicit operator CallState(DBRef m) => new(m);
-	public static implicit operator CallState(AnySharpObject m) => new(m.Object().DBRef);
+	public static implicit operator CallState(AnySharpObject m) => new(m.Object.DBRef);
 	public static implicit operator CallState(bool m) => new(m);
 	public static implicit operator CallState(int m) => new(m);
 	public static implicit operator CallState(long m) => new(m);

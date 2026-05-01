@@ -76,7 +76,7 @@ public class LocateServiceCompatibilityTests
 
 		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -155,7 +155,7 @@ public class LocateServiceCompatibilityTests
 		// Assert
 		await Assert.That(resultWithNoTypePreference.IsNone || resultWithNoTypePreference.IsError).IsTrue();
 		await Assert.That(resultWithoutNoTypePreference.IsValid()).IsTrue();
-		await Assert.That(resultWithoutNoTypePreference.WithoutError().WithoutNone().Object().DBRef)
+		await Assert.That(resultWithoutNoTypePreference.WithoutError().WithoutNone().Object.DBRef)
 			.IsEqualTo(new DBRef(1, 0));
 	}
 
@@ -243,7 +243,7 @@ public class LocateServiceCompatibilityTests
 		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().IsRoom).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(999);
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef.Number).IsEqualTo(999);
 	}
 
 	[Test]
@@ -280,7 +280,7 @@ public class LocateServiceCompatibilityTests
 
 		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(42, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(42, 0));
 	}
 
 	[Test]
@@ -325,7 +325,7 @@ public class LocateServiceCompatibilityTests
 		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().IsPlayer).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
@@ -363,7 +363,7 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsFalse();
 		await Assert.That(bestMatch.IsValid()).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -519,7 +519,7 @@ public class LocateServiceCompatibilityTests
 
 		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -562,7 +562,7 @@ public class LocateServiceCompatibilityTests
 
 		// Assert - with UseLastIfAmbiguous should return the second one (thing2 with key 4)
 		await Assert.That(resultLast.IsValid()).IsTrue();
-		await Assert.That(resultLast.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(4);
+		await Assert.That(resultLast.WithoutError().WithoutNone().Object.DBRef.Number).IsEqualTo(4);
 	}
 
 	[Test]
@@ -728,7 +728,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(10, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(10, 0));
 	}
 
 	[Test]
@@ -752,7 +752,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(10, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(10, 0));
 	}
 
 	[Test]
@@ -803,7 +803,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
@@ -828,7 +828,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsFalse(); // partial match
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
@@ -855,7 +855,7 @@ public class LocateServiceCompatibilityTests
 		// After both are processed: exact match resets counter, partial removed
 		await Assert.That(exact).IsTrue();
 		await Assert.That(curr).IsEqualTo(1);
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	// ─── Ambiguous matches ───────────────────────────────────────────────────────
@@ -912,7 +912,7 @@ public class LocateServiceCompatibilityTests
 		// Both matched → bestMatch is the last one (coin2 = #4)
 		await Assert.That(curr).IsEqualTo(2);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(4);
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef.Number).IsEqualTo(4);
 	}
 
 	[Test]
@@ -968,7 +968,7 @@ public class LocateServiceCompatibilityTests
 		// Exact match resets: curr=1, exact=true, bestMatch = exactMatch
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(4, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(4, 0));
 	}
 
 	// ─── OnlyMatchLookerControlledObjects per-candidate check ───────────────────
@@ -1006,7 +1006,7 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
 		await Assert.That(bestMatch.IsValid()).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	// ─── Case-insensitive matching ────────────────────────────────────────────────
@@ -1030,7 +1030,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -1052,7 +1052,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	// ─── English-style ordinal matching ─────────────────────────────────────────
@@ -1082,7 +1082,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(2);
 		await Assert.That(flow).IsEqualTo(LocateService.ControlFlow.Break); // found exact nth → Break
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(4, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(4, 0));
 	}
 
 	[Test]
@@ -1107,7 +1107,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(flow).IsEqualTo(LocateService.ControlFlow.Break);
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -1162,7 +1162,7 @@ public class LocateServiceCompatibilityTests
 		// Only the Thing should be matched
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(bestMatch.WithoutError().WithoutNone().IsPlayer).IsFalse();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(6, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(6, 0));
 	}
 
 	[Test]
@@ -1187,7 +1187,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(bestMatch.WithoutError().WithoutNone().IsPlayer).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	// ─── Locate() higher-level edge cases ────────────────────────────────────────
@@ -1237,7 +1237,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
 
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(1, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(1, 0));
 	}
 
 	[Test]
@@ -1269,7 +1269,7 @@ public class LocateServiceCompatibilityTests
 
 		// Absolute DBRef always returns the object regardless of visibility
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(42, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(42, 0));
 	}
 
 	[Test]
@@ -1300,7 +1300,7 @@ public class LocateServiceCompatibilityTests
 		// Object found — NoVisibilityCheck does not affect Match_List itself
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(bestMatch.IsValid()).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	// ─── ParseEnglish ordinal validation ────────────────────────────────────────

@@ -59,12 +59,12 @@ public class ListenerRoutingService(
 		var actualSender = sender ?? location;
 
 		// Get all objects in the location
-		await foreach (var obj in mediator.CreateStream(new GetContentsQuery(location.Object().DBRef)))
+		await foreach (var obj in mediator.CreateStream(new GetContentsQuery(location.Object.DBRef)))
 		{
 			var objAsObject = obj.WithRoomOption();
 
 			// Skip excluded objects
-			if (context.ExcludedObjects.Contains(objAsObject.Object().DBRef))
+			if (context.ExcludedObjects.Contains(objAsObject.Object.DBRef))
 				continue;
 
 			// Skip if can't interact
@@ -114,7 +114,7 @@ public class ListenerRoutingService(
 			return;
 
 		// Determine which action attribute to trigger
-		var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
+		var isSelf = listener.Object.DBRef == speaker.Object.DBRef;
 
 		// Priority: AAHEAR > (AMHEAR if self) > AHEAR
 		string triggerAttrName;
@@ -135,8 +135,8 @@ public class ListenerRoutingService(
 		var registers = new Dictionary<string, CallState>
 		{
 			["0"] = new CallState(message),
-			["#"] = new CallState(speaker.Object().DBRef.ToString()),
-			["!"] = new CallState(listener.Object().DBRef.ToString())
+			["#"] = new CallState(speaker.Object.DBRef.ToString()),
+			["!"] = new CallState(listener.Object.DBRef.ToString())
 		};
 
 		// Fire and forget - execute via Mediator command
@@ -163,7 +163,7 @@ public class ListenerRoutingService(
 		AnySharpObject speaker)
 	{
 		// Check if object has MONITOR flag
-		var hasMonitor = await listener.Object().Flags.Value.AnyAsync(f => f.Name == "MONITOR");
+		var hasMonitor = await listener.Object.Flags.Value.AnyAsync(f => f.Name == "MONITOR");
 		if (!hasMonitor)
 			return;
 
@@ -190,8 +190,8 @@ public class ListenerRoutingService(
 			}
 
 			// Set %# (speaker DBRef) and %! (listener DBRef)
-			registers["#"] = new CallState(speaker.Object().DBRef.ToString());
-			registers["!"] = new CallState(listener.Object().DBRef.ToString());
+			registers["#"] = new CallState(speaker.Object.DBRef.ToString());
+			registers["!"] = new CallState(listener.Object.DBRef.ToString());
 
 			// Fire and forget - execute via Mediator command
 			_ = mediator.Send(new ExecuteListenPatternCommand(
@@ -210,12 +210,12 @@ public class ListenerRoutingService(
 		NotificationType type)
 	{
 		// Check if object has PUPPET flag
-		var hasPuppet = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "PUPPET");
+		var hasPuppet = await puppet.Object.Flags.Value.AnyAsync(f => f.Name == "PUPPET");
 		if (!hasPuppet)
 			return;
 
 		// Get owner
-		var owner = await puppet.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await puppet.Object.Owner.WithCancellation(CancellationToken.None);
 
 		// Check if owner is connected
 		var connections = connectionService.Get(owner.Object.DBRef);
@@ -224,7 +224,7 @@ public class ListenerRoutingService(
 			return;
 
 		// Check if puppet and owner are in same location (unless VERBOSE)
-		var hasVerbose = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "VERBOSE");
+		var hasVerbose = await puppet.Object.Flags.Value.AnyAsync(f => f.Name == "VERBOSE");
 		if (!hasVerbose)
 		{
 			// Get puppet's location  
@@ -234,7 +234,7 @@ public class ListenerRoutingService(
 			var ownerLocation = await owner.Location.WithCancellation(CancellationToken.None);
 
 			// Don't relay if in same room
-			if (puppetLocation?.Object().DBRef == ownerLocation.Object().DBRef)
+			if (puppetLocation?.Object.DBRef == ownerLocation.Object.DBRef)
 				return;
 		}
 
@@ -246,7 +246,7 @@ public class ListenerRoutingService(
 
 		var prefix = prefixAttr.IsAttribute
 			? prefixAttr.AsAttribute.Last().Value.ToPlainText()
-			: $"{puppet.Object().Name}> ";
+			: $"{puppet.Object.Name}> ";
 
 		// Relay message to owner with prefix
 		var relayedText = prefix + message.ToString();

@@ -578,8 +578,8 @@ public partial class Commands
 		using (Logger!.BeginScope(new Dictionary<string, string>
 		{
 			["Category"] = category,
-			["ExecutorDBRef"] = executor.Object().DBRef.ToString(),
-			["ExecutorName"] = executor.Object().Name
+			["ExecutorDBRef"] = executor.Object.DBRef.ToString(),
+			["ExecutorName"] = executor.Object.Name
 		}))
 		{
 			Logger.LogInformation("{LogMessage}", MModule.serialize(logMessage));
@@ -599,7 +599,7 @@ public partial class Commands
 		if (!await executor.IsWizard())
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 				shouldNotify: true);
@@ -632,7 +632,7 @@ public partial class Commands
 		await Mediator!.Send(new SetPlayerQuotaCommand(player, 0));
 
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerSetToPoorFormat), executor, player.Object.Name);
-		await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToZeroByFormat), executor.Object().Name);
+		await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToZeroByFormat), executor.Object.Name);
 
 		return CallState.Empty;
 	}
@@ -758,7 +758,7 @@ public partial class Commands
 
 			if (!isQuiet)
 			{
-				await NotifyService!.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.AllQuotaSetForPlayerFormat), amount, executor.Object().Name);
+				await NotifyService!.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.AllQuotaSetForPlayerFormat), amount, executor.Object.Name);
 			}
 		}
 
@@ -1572,7 +1572,7 @@ public partial class Commands
 		if (!await executor.IsWizard())
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 				shouldNotify: true);
@@ -1661,7 +1661,7 @@ public partial class Commands
 		}
 
 		var targetObject = maybeObject.WithoutError().Known();
-		var dbref = targetObject.Object().DBRef;
+		var dbref = targetObject.Object.DBRef;
 
 		var attributeName = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
 			? parts[1].Trim()
@@ -1702,7 +1702,7 @@ public partial class Commands
 
 		if (isGenerate && parser.CurrentState.Arguments.Count > 1)
 		{
-			await NotifyService!.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordGenerateSwitchConflict), executor);
+			await NotifyService!.NotifyLocalized(executor.Object.DBRef, nameof(ErrorMessages.Notifications.NewPasswordGenerateSwitchConflict), executor);
 		}
 
 		var maybePlayer =
@@ -1723,7 +1723,7 @@ public partial class Commands
 				new SetPlayerPasswordCommand(asPlayer,
 					PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
 
-			await NotifyService!.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordGeneratedFormat), executor, asPlayer.Object.Name, generatedPassword);
+			await NotifyService!.NotifyLocalized(executor.Object.DBRef, nameof(ErrorMessages.Notifications.NewPasswordGeneratedFormat), executor, asPlayer.Object.Name, generatedPassword);
 
 			return new CallState(generatedPassword);
 		}
@@ -1733,7 +1733,7 @@ public partial class Commands
 
 		await Mediator!.Send(new SetPlayerPasswordCommand(asPlayer, newHashedPassword));
 
-		await NotifyService!.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordSetFormat), executor, asPlayer.Object.Name, arg1);
+		await NotifyService!.NotifyLocalized(executor.Object.DBRef, nameof(ErrorMessages.Notifications.NewPasswordSetFormat), executor, asPlayer.Object.Name, arg1);
 
 		return new CallState(arg1);
 	}
@@ -1781,7 +1781,7 @@ public partial class Commands
 		// @shutdown/paranoid - Paranoid dump before shutdown
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
-		var executorName = executor.Object().Name;
+		var executorName = executor.Object.Name;
 
 		// Check for panic shutdown (God only)
 		if (switches.Contains("PANIC"))
@@ -1789,7 +1789,7 @@ public partial class Commands
 			if (!executor.IsGod())
 			{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.ShutdownOnlyGodPanic,
 				shouldNotify: true);
@@ -1941,7 +1941,7 @@ public partial class Commands
 
 		await foreach (var obj in objects)
 		{
-			var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+			var objOwner = await obj.Object.Owner.WithCancellation(CancellationToken.None);
 
 			if (objOwner.Object.DBRef.Number != oldOwner.Object.DBRef.Number)
 			{
@@ -1987,7 +1987,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, count, oldOwner.Object.Name, newOwner.Object().Name);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, count, oldOwner.Object.Name, newOwner.Object.Name);
 
 		return CallState.Empty;
 	}
@@ -2047,7 +2047,7 @@ public partial class Commands
 		await EventService!.TriggerEventAsync(
 			parser,
 			"PLAYER`CREATE",
-			executor.Object().DBRef, // Enactor is the wizard who did @pcreate
+			executor.Object.DBRef, // Enactor is the wizard who did @pcreate
 			player.ToString(),
 			name,
 			"pcreate",
@@ -2081,7 +2081,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 					shouldNotify: true);
@@ -2114,7 +2114,7 @@ public partial class Commands
 			await Mediator!.Send(new SetPlayerQuotaCommand(player, amount));
 
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaForPlayerSetFormat), executor, player.Object.Name, amount);
-			await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToByFormat), amount, executor.Object().Name);
+			await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToByFormat), amount, executor.Object.Name);
 
 			return CallState.Empty;
 		}
@@ -2125,7 +2125,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 					shouldNotify: true);
@@ -2379,7 +2379,7 @@ public partial class Commands
 				if (!player.IsPlayer)
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.InvalidPlayer,
 						notifyMessage: ErrorMessages.Notifications.MustBePlayer,
 						shouldNotify: true);
@@ -2394,8 +2394,8 @@ public partial class Commands
 
 					await foreach (var obj in allObjects)
 					{
-						var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-						if (objOwner.Object.DBRef.Number == player.Object().DBRef.Number)
+						var objOwner = await obj.Object.Owner.WithCancellation(CancellationToken.None);
+						if (objOwner.Object.DBRef.Number == player.Object.DBRef.Number)
 						{
 							// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
 							// Clear the zone
@@ -2404,7 +2404,7 @@ public partial class Commands
 						}
 					}
 
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZonesClearedForOwnerFormat), executor, count, player.Object().Name);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZonesClearedForOwnerFormat), executor, count, player.Object.Name);
 					return CallState.Empty;
 				}
 
@@ -2419,8 +2419,8 @@ public partial class Commands
 
 						await foreach (var obj in allObjects)
 						{
-							var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-							if (objOwner.Object.DBRef.Number == player.Object().DBRef.Number)
+							var objOwner = await obj.Object.Owner.WithCancellation(CancellationToken.None);
+							if (objOwner.Object.DBRef.Number == player.Object.DBRef.Number)
 							{
 								// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
 
@@ -2458,7 +2458,7 @@ public partial class Commands
 							}
 						}
 
-						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneSetForOwnerFormat), executor, zoneObj.Object().Name, count, player.Object().Name);
+						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneSetForOwnerFormat), executor, zoneObj.Object.Name, count, player.Object.Name);
 						return CallState.Empty;
 					}
 				);
@@ -2529,7 +2529,7 @@ public partial class Commands
 			if (!await executor.IsWizard() && !await executor.HasPower("POLL"))
 			{
 				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 					shouldNotify: true);
@@ -2559,7 +2559,7 @@ public partial class Commands
 		if (!await executor.IsWizard() && !await executor.HasPower("POLL"))
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 				shouldNotify: true);

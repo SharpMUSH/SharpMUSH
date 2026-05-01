@@ -28,10 +28,10 @@ public static partial class Substitutions
 			"T" or "t" => "\t",
 			"#" => $"#{parser.CurrentState.Enactor!.Value.Number}",
 			":" => parser.CurrentState.Enactor!.Value.ToString(),
-			"n" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name,
-			"N" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name.ApplyCase(LetterCasing.Sentence),
-			"~" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // Accented name - using regular name as fallback
-			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // Moniker - using regular name as fallback
+			"n" => (await parser.CurrentState.EnactorObject(mediator)).Object!.Name,
+			"N" => (await parser.CurrentState.EnactorObject(mediator)).Object!.Name.ApplyCase(LetterCasing.Sentence),
+			"~" => (await parser.CurrentState.EnactorObject(mediator)).Object!.Name, // Accented name - using regular name as fallback
+			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object!.Name, // Moniker - using regular name as fallback
 			"S" or "s" =>
 				await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
 					await parser.CurrentState.KnownEnactorObject(mediator),
@@ -92,7 +92,7 @@ public static partial class Substitutions
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
 		var location = await enactor.Where();
-		var locationDbRef = location.Object().DBRef.Number.ToString();
+		var locationDbRef = location.Object.DBRef.Number.ToString();
 		return $"#{locationDbRef}";
 	}
 

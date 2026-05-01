@@ -304,7 +304,7 @@ public partial class LocateService(
 			}
 
 			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
-					&& location.Object().DBRef != where.Object().DBRef)
+					&& location.Object.DBRef != where.Object.DBRef)
 			{
 				var contents = mediator
 					.CreateStream(new GetContentsQuery(location))
@@ -343,7 +343,7 @@ public partial class LocateService(
 																LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
 						// Check if the location has a zone and if that zone is a room (ZMR)
-						var locationZone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
+						var locationZone = await location.WithExitOption().Object.Zone.WithCancellation(CancellationToken.None);
 						if (!locationZone.IsNone && locationZone.Known.IsRoom)
 						{
 							// Zone Master Room: Match exits in the ZMR
@@ -386,7 +386,7 @@ public partial class LocateService(
 			{
 				if (flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
 						&& where.IsRoom
-						&& ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
+						&& ((location.Object.DBRef != where.Object.DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
 					var exits = (mediator.CreateStream(new GetContentsQuery(where.AsContainer)))
 						.Where(x => x.IsExit)
@@ -445,7 +445,7 @@ public partial class LocateService(
 			}
 
 			var abs = HelperFunctions.ParseDbRef(name);
-			if (abs.IsSome() && cur.Object().DBRef.Matches(abs.AsValue()))
+			if (abs.IsSome() && cur.Object.DBRef.Matches(abs.AsValue()))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
@@ -462,8 +462,8 @@ public partial class LocateService(
 			else if (
 				(cur.IsPlayer && cur.Aliases.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase)))
 				|| (cur.IsExit && (cur.Aliases.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase)) ||
-													 cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-				|| (!cur.IsExit && string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
+													 cur.Object.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+				|| (!cur.IsExit && string.Equals(cur.Object.Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
@@ -475,7 +475,7 @@ public partial class LocateService(
 			// Partial (prefix) match for non-exit objects and player aliases, matching PennMUSH string_match() behavior
 			else if (!flags.HasFlag(LocateFlags.NoPartialMatches)
 							 && ((cur.IsPlayer && cur.Aliases.Any(a => a.StartsWith(name, StringComparison.OrdinalIgnoreCase)))
-									 || (!cur.IsExit && cur.Object().Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))))
+									 || (!cur.IsExit && cur.Object.Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
@@ -498,9 +498,9 @@ public partial class LocateService(
 		if (thing1.IsNone) return thing2;
 		if (thing2.IsNone) return thing1;
 
-		if (TypePreferences(flags).Contains(thing1.Object()!.Type) &&
-				!TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing1;
-		if (TypePreferences(flags).Contains(thing2.Object()!.Type)
+		if (TypePreferences(flags).Contains(thing1.Object!.Type) &&
+				!TypePreferences(flags).Contains(thing2.Object!.Type)) return thing1;
+		if (TypePreferences(flags).Contains(thing2.Object!.Type)
 				|| !flags.HasFlag(LocateFlags.PreferLockPass)) return thing2;
 
 		var key = await permissionService.CouldDoIt(who, thing1);
@@ -540,7 +540,7 @@ public partial class LocateService(
 		{
 			bestMatch = (await ChooseThing(parser, looker, flags, bestMatch.WithoutError(), cur.WithNoneOption()))
 				.WithErrorOption();
-			if (bestMatch.IsValid() && bestMatch.WithoutError().WithoutNone().Object().DBRef != cur.Object().DBRef)
+			if (bestMatch.IsValid() && bestMatch.WithoutError().WithoutNone().Object.DBRef != cur.Object.DBRef)
 			{
 				return (bestMatch, final, curr, right_type, exact, ControlFlow.Continue);
 			}
@@ -568,7 +568,7 @@ public partial class LocateService(
 
 			if (!flags.HasFlag(LocateFlags.NoTypePreference)
 					&& bestMatch.IsValid()
-					&& bestMatch.WithoutError().WithoutNone().Object().Type == cur.Object().Type)
+					&& bestMatch.WithoutError().WithoutNone().Object.Type == cur.Object.Type)
 			{
 				right_type++;
 			}
@@ -591,8 +591,8 @@ public partial class LocateService(
 		if (thing.IsRoom) return null;
 		var minusRoom = thing.MinusRoom();
 		return thing.IsExit
-			? (await minusRoom.Home()).Object().DBRef
-			: (await minusRoom.Location()).Object().DBRef;
+			? (await minusRoom.Home()).Object.DBRef
+			: (await minusRoom.Location()).Object.DBRef;
 	}
 
 	public async ValueTask<AnySharpContainer> Room(AnySharpObject content)
@@ -603,7 +603,7 @@ public partial class LocateService(
 		// PennMUSH uses MAX_PARENTS (10) as a depth limit for similar traversals.
 		const int maxDepth = 50;
 		var depth = 0;
-		var visited = new HashSet<string> { currentLocation.Object().DBRef.ToString() };
+		var visited = new HashSet<string> { currentLocation.Object.DBRef.ToString() };
 
 		while (currentLocation.Id != (await currentLocation.Location()).Id)
 		{
@@ -617,7 +617,7 @@ public partial class LocateService(
 			currentLocation = await currentLocation.Location();
 
 			// Also guard against cycles via visited set
-			var dbRefStr = currentLocation.Object().DBRef.ToString();
+			var dbRefStr = currentLocation.Object.DBRef.ToString();
 			if (!visited.Add(dbRefStr))
 			{
 				break;
@@ -642,13 +642,13 @@ public partial class LocateService(
 	{
 		if (obj1.IsRoom && obj2.IsRoom) return false;
 
-		var loc1 = (await FriendlyWhereIs(obj1)).Object().DBRef;
+		var loc1 = (await FriendlyWhereIs(obj1)).Object.DBRef;
 
-		if (loc1 == obj2.Object().DBRef) return true;
+		if (loc1 == obj2.Object.DBRef) return true;
 
-		var loc2 = (await FriendlyWhereIs(obj2)).Object().DBRef;
+		var loc2 = (await FriendlyWhereIs(obj2)).Object.DBRef;
 
-		return loc2 == obj1.Object().DBRef || loc2 == loc1;
+		return loc2 == obj1.Object.DBRef || loc2 == loc1;
 	}
 
 	public static IEnumerable<string> TypePreferences(LocateFlags flags) =>

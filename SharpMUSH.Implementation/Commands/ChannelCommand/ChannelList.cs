@@ -24,7 +24,7 @@ public static class ChannelList
 		if (onSwitch && offSwitch)
 		{
 			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.TooManySwitches,
 				notifyMessage: "You can only use one of /on or /off.",
 				shouldNotify: true);
@@ -33,9 +33,9 @@ public static class ChannelList
 		var channelList = await channels
 			.Where(async (x, _) => await PermissionService.ChannelCanSeeAsync(executor, x))
 			.Where(async (x, ct) => !offSwitch || await x.Members.Value
-				.AllAsync(m => m.Member.Object().Id != executor.Object().Id, ct))
+				.AllAsync(m => m.Member.Object.Id != executor.Object.Id, ct))
 			.Where(async (x, ct) => !onSwitch || await x.Members.Value
-				.AnyAsync(m => m.Member.Object().Id == executor.Object().Id, ct))
+				.AnyAsync(m => m.Member.Object.Id == executor.Object.Id, ct))
 			.Select((channel, _) => quietSwitch
 				? channel.Name
 				: MModule.concat(MModule.single("Name: "), channel.Name))

@@ -1095,7 +1095,7 @@ public partial class Functions
 		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
 		{
 			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsValue()));
-			return (dbref.AsValue(), item.Object()!.Name);
+			return (dbref.AsValue(), item.Object!.Name);
 		});
 
 		var exact = await locatedNames.FirstOrDefaultAsync(async (x, ct)
@@ -1137,7 +1137,7 @@ public partial class Functions
 		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
 		{
 			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsValue()));
-			return (dbref.AsValue(), item.Object()!.Name);
+			return (dbref.AsValue(), item.Object!.Name);
 		});
 
 		var exact = locatedNames.Where(async (x, ct)

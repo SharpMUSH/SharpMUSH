@@ -64,8 +64,8 @@ public partial class SurrealDatabase
 	public async ValueTask<bool> IsReachableViaParentOrZoneAsync(AnySharpObject startObject, AnySharpObject targetObject,
 		int maxDepth = 100, CancellationToken cancellationToken = default)
 	{
-		var currentKey = startObject.Object().Key;
-		var targetKey = targetObject.Object().Key;
+		var currentKey = startObject.Object.Key;
+		var targetKey = targetObject.Object.Key;
 		var visited = new HashSet<int>();
 		var depth = 0;
 
@@ -110,7 +110,7 @@ public partial class SurrealDatabase
 
 	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var zoneKey = zone.Object().Key;
+		var zoneKey = zone.Object.Key;
 		var parameters = new Dictionary<string, object?> { ["key"] = zoneKey };
 		var response = await ExecuteAsync(
 			"SELECT * FROM object:$key<-has_zone<-object",
@@ -130,12 +130,12 @@ public partial class SurrealDatabase
 		var baseObject = await GetObjectNodeAsync(obj, cancellationToken);
 		if (baseObject.IsNone) return new None();
 
-		var typedId = baseObject.Id()!;
+		var typedId = baseObject.Id!;
 		return await GetLocationFromTypedIdAsync(typedId, depth, cancellationToken);
 	}
 
 	public async ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1, CancellationToken cancellationToken = default)
-		=> (await GetLocationAsync(obj.Object().DBRef, depth, cancellationToken)).WithoutNone();
+		=> (await GetLocationAsync(obj.Object.DBRef, depth, cancellationToken)).WithoutNone();
 
 	public async ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default)
 	{
@@ -182,7 +182,7 @@ public partial class SurrealDatabase
 		var baseObject = await GetObjectNodeAsync(obj, cancellationToken);
 		if (baseObject.IsNone) yield break;
 
-		var containerKey = ExtractKey(baseObject.Id()!);
+		var containerKey = ExtractKey(baseObject.Id!);
 		await foreach (var item in GetContentsForKeyAsync(containerKey, cancellationToken))
 			yield return item;
 	}
@@ -216,7 +216,7 @@ public partial class SurrealDatabase
 		var baseObject = await GetObjectNodeAsync(obj, cancellationToken);
 		if (baseObject.IsNone) yield break;
 
-		var containerKey = ExtractKey(baseObject.Known.Id()!);
+		var containerKey = ExtractKey(baseObject.Known.Id!);
 		await foreach (var exit in GetExitsForKeyAsync(containerKey, cancellationToken))
 			yield return exit;
 	}
@@ -281,10 +281,10 @@ public partial class SurrealDatabase
 
 		yield return self;
 
-		await foreach (var item in GetContentsAsync(self.Object().DBRef, cancellationToken))
+		await foreach (var item in GetContentsAsync(self.Object.DBRef, cancellationToken))
 			yield return item.WithRoomOption();
 
-		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
+		await foreach (var item in GetContentsAsync(location.Object.DBRef, cancellationToken))
 			yield return item.WithRoomOption();
 	}
 
@@ -294,10 +294,10 @@ public partial class SurrealDatabase
 
 		yield return obj;
 
-		await foreach (var item in GetContentsAsync(obj.Object().DBRef, cancellationToken))
+		await foreach (var item in GetContentsAsync(obj.Object.DBRef, cancellationToken))
 			yield return item.WithRoomOption();
 
-		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
+		await foreach (var item in GetContentsAsync(location.Object.DBRef, cancellationToken))
 			yield return item.WithRoomOption();
 	}
 

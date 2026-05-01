@@ -19,6 +19,24 @@ public union AnyOptionalSharpObject(SharpPlayer, SharpRoom, SharpExit, SharpThin
 	public SharpExit   AsExit   => (SharpExit)Value!;
 	public SharpThing  AsThing  => (SharpThing)Value!;
 
+	public SharpObject? Object => Value switch
+	{
+		SharpPlayer p => p.Object,
+		SharpRoom   r => r.Object,
+		SharpExit   e => e.Object,
+		SharpThing  t => t.Object,
+		_ => null
+	};
+
+	public string? Id => Value switch
+	{
+		SharpPlayer p => p.Id,
+		SharpRoom   r => r.Id,
+		SharpExit   e => e.Id,
+		SharpThing  t => t.Id,
+		_ => null
+	};
+
 	public AnySharpObject Known => Value switch
 	{
 		SharpPlayer p => p,

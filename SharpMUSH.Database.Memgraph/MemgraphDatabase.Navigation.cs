@@ -39,8 +39,8 @@ public partial class MemgraphDatabase
 	public async ValueTask<bool> IsReachableViaParentOrZoneAsync(AnySharpObject startObject, AnySharpObject targetObject,
 	int maxDepth = 100, CancellationToken cancellationToken = default)
 	{
-		var startKey = startObject.Object().Key;
-		var targetKey = targetObject.Object().Key;
+		var startKey = startObject.Object.Key;
+		var targetKey = targetObject.Object.Key;
 		var result = await ExecuteWithRetryAsync("""
 MATCH path = (start:Object {key: $startKey})-[:HAS_PARENT|HAS_ZONE*1..100]->(target:Object {key: $targetKey})
 RETURN count(path) AS cnt
@@ -51,7 +51,7 @@ LIMIT 1
 
 	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var zoneKey = zone.Object().Key;
+		var zoneKey = zone.Object.Key;
 		var result = await ExecuteWithRetryAsync("MATCH (o:Object)-[:HAS_ZONE]->(z:Object {key: $key}) RETURN o", new { key = zoneKey }, cancellationToken);
 		foreach (var record in result.Result)
 			yield return MapNodeToSharpObject(record["o"].As<INode>());
@@ -66,7 +66,7 @@ LIMIT 1
 		var baseObject = await GetObjectNodeAsync(obj, cancellationToken);
 		if (baseObject.IsNone) return new None();
 
-		var typedId = baseObject.Id()!;
+		var typedId = baseObject.Id!;
 		var key = ExtractKey(typedId);
 
 		var maxHops = depth == -1 ? 999 : depth;
@@ -83,7 +83,7 @@ LIMIT 1
 	}
 
 	public async ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1, CancellationToken cancellationToken = default)
-	=> (await GetLocationAsync(obj.Object().DBRef, depth, cancellationToken)).WithoutNone();
+	=> (await GetLocationAsync(obj.Object.DBRef, depth, cancellationToken)).WithoutNone();
 
 	public async ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default)
 	{
@@ -104,7 +104,7 @@ LIMIT 1
 		var baseObject = await GetObjectNodeAsync(obj, cancellationToken);
 		if (baseObject.IsNone) yield break;
 
-		var typedKey = ExtractKey(baseObject.Id()!);
+		var typedKey = ExtractKey(baseObject.Id!);
 		var result = await ExecuteWithRetryAsync("""
 MATCH (content)-[:AT_LOCATION]->(container {key: $key})
 MATCH (content)-[:IS_OBJECT]->(contentObj:Object)
@@ -139,7 +139,7 @@ RETURN contentObj
 		var baseObject = await GetObjectNodeAsync(obj, cancellationToken);
 		if (baseObject.IsNone) yield break;
 
-		var containerKey = ExtractKey(baseObject.Known.Id()!);
+		var containerKey = ExtractKey(baseObject.Known.Id!);
 		var result = await ExecuteWithRetryAsync("""
 MATCH (e:Exit)-[:AT_LOCATION]->(container {key: $key})
 MATCH (e)-[:IS_OBJECT]->(o:Object {type: 'EXIT'})
@@ -196,10 +196,10 @@ CREATE (src)-[:AT_LOCATION]->(dest)
 
 		yield return self;
 
-		await foreach (var item in GetContentsAsync(self.Object().DBRef, cancellationToken))
+		await foreach (var item in GetContentsAsync(self.Object.DBRef, cancellationToken))
 			yield return item.WithRoomOption();
 
-		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
+		await foreach (var item in GetContentsAsync(location.Object.DBRef, cancellationToken))
 			yield return item.WithRoomOption();
 	}
 
@@ -209,10 +209,10 @@ CREATE (src)-[:AT_LOCATION]->(dest)
 
 		yield return obj;
 
-		await foreach (var item in GetContentsAsync(obj.Object().DBRef, cancellationToken))
+		await foreach (var item in GetContentsAsync(obj.Object.DBRef, cancellationToken))
 			yield return item.WithRoomOption();
 
-		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
+		await foreach (var item in GetContentsAsync(location.Object.DBRef, cancellationToken))
 			yield return item.WithRoomOption();
 	}
 

@@ -191,7 +191,7 @@ public partial class SurrealDatabase
 		await UnlinkRoomAsync(room, cancellationToken);
 
 		var roomKey = ExtractKey(room.Id!);
-		var destKey = ExtractKey(location.Id()!);
+		var destKey = ExtractKey(location.Id!);
 
 		var destTable = GetContainerTable(location.WithoutNone());
 
@@ -532,7 +532,7 @@ public partial class SurrealDatabase
 	{
 		var parameters = new Dictionary<string, object?>
 		{
-			["key"] = obj.Object().Key,
+			["key"] = obj.Object.Key,
 			["name"] = MModule.plainText(value)
 		};
 		await ExecuteAsync("UPDATE object:$key SET name = $name", parameters, cancellationToken);
@@ -578,7 +578,7 @@ public partial class SurrealDatabase
 
 	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken cancellationToken = default)
 	{
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 
 		// Remove existing parent edge
@@ -586,7 +586,7 @@ public partial class SurrealDatabase
 
 		if (parent != null)
 		{
-			var parentKey = parent.Value.Object().Key;
+			var parentKey = parent.Value.Object.Key;
 			var parentParams = new Dictionary<string, object?>
 			{
 				["key"] = objKey,
@@ -603,14 +603,14 @@ public partial class SurrealDatabase
 
 	public async ValueTask SetObjectZone(AnySharpObject obj, AnySharpObject? zone, CancellationToken cancellationToken = default)
 	{
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 
 		await ExecuteAsync("DELETE has_zone WHERE in = object:$key", parameters, cancellationToken);
 
 		if (zone != null)
 		{
-			var zoneKey = zone.Value.Object().Key;
+			var zoneKey = zone.Value.Object.Key;
 			var zoneParams = new Dictionary<string, object?>
 			{
 				["key"] = objKey,
@@ -627,7 +627,7 @@ public partial class SurrealDatabase
 
 	public async ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner, CancellationToken cancellationToken = default)
 	{
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 		var ownerKey = ExtractKey(owner.Id!);
 		var parameters = new Dictionary<string, object?>
 		{
@@ -645,7 +645,7 @@ public partial class SurrealDatabase
 	{
 		var parameters = new Dictionary<string, object?>
 		{
-			["key"] = obj.Object().Key,
+			["key"] = obj.Object.Key,
 			["warnings"] = (int)warnings
 		};
 		await ExecuteAsync("UPDATE object:$key SET warnings = $warnings", parameters, cancellationToken);

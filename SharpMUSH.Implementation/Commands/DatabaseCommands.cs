@@ -247,7 +247,7 @@ public partial class Commands
 									};
 									return ValueTask.FromResult(newState);
 								},
-								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`"))));
+								new DbRefAttribute(found.Object.DBRef, attribute.LongName!.Split("`"))));
 
 							firstRow = false;
 						}
@@ -272,7 +272,7 @@ public partial class Commands
 									EnvironmentRegisters = dict
 								});
 							},
-							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`"))));
+							new DbRefAttribute(found.Object.DBRef, attribute.LongName!.Split("`"))));
 
 						rowNumber++;
 					}
@@ -283,7 +283,7 @@ public partial class Commands
 						await Mediator!.Send(new QueueCommandListRequest(
 							MModule.single("@notify me"),
 							parser.CurrentState,
-							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")),
+							new DbRefAttribute(found.Object.DBRef, attribute.LongName!.Split("`")),
 							-1));
 					}
 

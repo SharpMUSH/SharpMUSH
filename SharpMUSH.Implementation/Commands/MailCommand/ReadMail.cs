@@ -39,7 +39,7 @@ public static class ReadMail
 		var messageBuilder = new List<MString>
 		{
 			line,
-			MModule.single($"From: {mailFrom.Object()!.Name}"),
+			MModule.single($"From: {mailFrom.Object!.Name}"),
 			MModule.single($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {messageNumber + 1,5}"),
 			MModule.single($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
 			MModule.concat(MModule.single("Subject: "), actualMail.Subject),

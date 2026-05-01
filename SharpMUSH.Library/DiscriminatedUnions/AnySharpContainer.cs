@@ -18,6 +18,14 @@ public union AnySharpContainer(SharpPlayer, SharpRoom, SharpThing)
 	public SharpRoom   AsRoom   => (SharpRoom)Value!;
 	public SharpThing  AsThing  => (SharpThing)Value!;
 
+	public SharpObject Object => Value switch
+	{
+		SharpPlayer p => p.Object,
+		SharpRoom   r => r.Object,
+		SharpThing  t => t.Object,
+		_ => throw new InvalidOperationException()
+	};
+
 	public string Id => Value switch
 	{
 		SharpPlayer p => p.Id!,

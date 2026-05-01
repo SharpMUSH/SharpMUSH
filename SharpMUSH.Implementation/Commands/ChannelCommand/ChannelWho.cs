@@ -23,7 +23,7 @@ public static class ChannelWho
 
 
 		var delimitedMembers = MModule.multipleWithDelimiter(MModule.single(", "),
-			memberArray.Select(x => MModule.single(x.Member.Object().Name)));
+			memberArray.Select(x => MModule.single(x.Member.Object.Name)));
 
 		var memberOutput =
 			MModule.multiple([
@@ -33,7 +33,7 @@ public static class ChannelWho
 
 		await notifyService.Notify(executor, memberOutput);
 
-		var memberList = memberArray.Select(x => x.Member.Object().DBRef).ToList();
+		var memberList = memberArray.Select(x => x.Member.Object.DBRef).ToList();
 		return new CallState(string.Join(", ", memberList));
 	}
 }

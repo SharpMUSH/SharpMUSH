@@ -67,7 +67,7 @@ public partial class Functions
 		}
 
 		using (Logger!.BeginScope("<{DbRef}> {Category}: {Channel}.",
-						 executor.Object().ToString(),
+						 executor.Object.ToString(),
 						 "Channel",
 						 channel.Name.ToPlainText()))
 		{
@@ -114,14 +114,14 @@ public partial class Functions
 			INotifyService.NotificationType.Emit,
 			message,
 			status.Title ?? MModule.empty(),
-			MModule.single(executor.Object().Name),
+			MModule.single(executor.Object.Name),
 			MModule.single("says"),
 			[]
 		));
 
 
 		using (Logger!.BeginScope("<{DbRef} {Category}: {Channel}.",
-						 executor.Object().DBRef.ToString(),
+						 executor.Object.DBRef.ToString(),
 						 "Channel",
 						 channel.Name.ToPlainText()))
 		{
@@ -512,7 +512,7 @@ public partial class Functions
 			: outputSep;
 
 		// Build list of members
-		var memberList = members.Select(x => x.Member.Object().DBRef.ToString()).ToList();
+		var memberList = members.Select(x => x.Member.Object.DBRef.ToString()).ToList();
 
 		return new CallState(string.Join(outputSep, memberList));
 	}
@@ -558,7 +558,7 @@ public partial class Functions
 				: INotifyService.NotificationType.Emit,
 			message,
 			status.Title ?? MModule.empty(),
-			MModule.single(executor.Object().Name),
+			MModule.single(executor.Object.Name),
 			MModule.single("says"),
 			[]
 		));

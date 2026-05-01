@@ -17,6 +17,22 @@ public union AnyOptionalSharpContainer(SharpPlayer, SharpRoom, SharpThing, None)
 	public SharpRoom   AsRoom   => (SharpRoom)Value!;
 	public SharpThing  AsThing  => (SharpThing)Value!;
 
+	public SharpObject? Object => Value switch
+	{
+		SharpPlayer p => p.Object,
+		SharpRoom   r => r.Object,
+		SharpThing  t => t.Object,
+		_ => null
+	};
+
+	public string? Id => Value switch
+	{
+		SharpPlayer p => p.Id,
+		SharpRoom   r => r.Id,
+		SharpThing  t => t.Id,
+		_ => null
+	};
+
 	// Backward-compat alias
 	public bool IsT3 => IsNone;
 

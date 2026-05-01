@@ -54,13 +54,13 @@ public partial class Commands
 				if (isWizard)
 				{
 					var location = obj.Known.IsContent
-						? (await obj.Known.AsContent.Location()).Object().DBRef.ToString()
+						? (await obj.Known.AsContent.Location()).Object.DBRef.ToString()
 						: "*NOWHERE*";
 					var doing = await AttributeService!.GetAttributeAsync(executor, obj.Known, "DOING",
 						IAttributeService.AttributeMode.Read, false);
 					var doingLength = doing.IsAttribute ? MModule.getLength(doing.AsAttribute.Last().Value) : 0;
 					line = string.Format(wizFmt,
-						obj.Known.Object().Name,
+						obj.Known.Object.Name,
 						location,
 						TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
 						TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
@@ -71,7 +71,7 @@ public partial class Commands
 				else
 				{
 					line = string.Format(mortFmt,
-						obj.Known.Object().Name,
+						obj.Known.Object.Name,
 						TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
 						TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
 						doingText);

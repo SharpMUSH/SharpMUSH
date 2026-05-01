@@ -66,7 +66,7 @@ public static class ListMail
 		var forwarded = mail.Forwarded ? "F" : "-";
 		var tagged = mail.Tagged ? "+" : "-";
 		var date = mail.DateSent.ToString("ddd MMM dd HH:mm", CultureInfo.InvariantCulture);
-		var fromName = (await mail.From.WithCancellation(CancellationToken.None)).Object()!.Name.Truncate(15);
+		var fromName = (await mail.From.WithCancellation(CancellationToken.None)).Object!.Name.Truncate(15);
 		var subject = mail.Subject.ToString().Truncate(30);
 
 		var result =

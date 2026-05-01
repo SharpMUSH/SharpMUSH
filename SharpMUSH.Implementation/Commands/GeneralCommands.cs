@@ -305,7 +305,7 @@ public partial class Commands
 
 		if (attributeResult.IsNone || attributeResult.IsError)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat), executor, attrName, target.Object().Name);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat), executor, attrName, target.Object.Name);
 			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 
@@ -334,7 +334,7 @@ public partial class Commands
 				var stateForElement = parser.CurrentState with
 				{
 					Registers = registerStack,
-					Executor = target.Object().DBRef,
+					Executor = target.Object.DBRef,
 					Caller = parser.CurrentState.Executor
 				};
 
@@ -357,7 +357,7 @@ public partial class Commands
 				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single("@notify me"),
 					parser.CurrentState,
-					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					new DbRefAttribute(executor.Object.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 
@@ -376,14 +376,14 @@ public partial class Commands
 				var stateForElement = parser.CurrentState with
 				{
 					Registers = registerStack,
-					Executor = target.Object().DBRef,
+					Executor = target.Object.DBRef,
 					Caller = parser.CurrentState.Executor
 				};
 
 				await Mediator!.Send(new QueueCommandListRequest(
 					attribute.Value,
 					stateForElement,
-					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
+					new DbRefAttribute(target.Object.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 
@@ -393,7 +393,7 @@ public partial class Commands
 				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single("@notify me"),
 					parser.CurrentState,
-					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					new DbRefAttribute(executor.Object.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 
@@ -485,7 +485,7 @@ public partial class Commands
 				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single("@notify me"),
 					parser.CurrentState,
-					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					new DbRefAttribute(enactor.Object.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 			else if (hasPid && !string.IsNullOrEmpty(notifyPid))
@@ -493,7 +493,7 @@ public partial class Commands
 				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single($"@notify {notifyPid}"),
 					parser.CurrentState,
-					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					new DbRefAttribute(enactor.Object.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 
@@ -527,7 +527,7 @@ public partial class Commands
 				await Mediator!.Send(new QueueCommandListRequest(
 					command,
 					stateForIteration,
-					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					new DbRefAttribute(enactor.Object.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 
@@ -537,7 +537,7 @@ public partial class Commands
 				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single("@notify me"),
 					parser.CurrentState,
-					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					new DbRefAttribute(enactor.Object.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 			else if (hasPid && !string.IsNullOrEmpty(notifyPid))
@@ -545,7 +545,7 @@ public partial class Commands
 				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single($"@notify {notifyPid}"),
 					parser.CurrentState,
-					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					new DbRefAttribute(enactor.Object.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 
@@ -601,7 +601,7 @@ public partial class Commands
 		}
 		else
 		{
-			viewing = (await Mediator!.Send(new GetCertainLocationQuery(executor.Id()!))).WithExitOption()
+			viewing = (await Mediator!.Send(new GetCertainLocationQuery(executor.Id!))).WithExitOption()
 				.WithNoneOption();
 		}
 
@@ -611,12 +611,12 @@ public partial class Commands
 		}
 
 		var realViewing = viewing.Known;
-		var viewingObject = realViewing.Object();
+		var viewingObject = realViewing.Object;
 
 		var executorLocation = executor.IsContent
 			? await executor.AsContent.Location()
 			: null;
-		var viewingFromInside = executorLocation.Object().DBRef == viewingObject.DBRef;
+		var viewingFromInside = executorLocation.Object.DBRef == viewingObject.DBRef;
 
 		var baseName = viewingObject.Name;
 		var baseDesc = MModule.empty();
@@ -725,8 +725,8 @@ public partial class Commands
 
 			if (visibleContents.Count > 0)
 			{
-				var contentDbrefs = string.Join(" ", visibleContents.Select(x => x.Object().DBRef.ToString()));
-				var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
+				var contentDbrefs = string.Join(" ", visibleContents.Select(x => x.Object.DBRef.ToString()));
+				var contentNames = string.Join("|", visibleContents.Select(x => x.Object.Name));
 				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
 
 				// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
@@ -734,9 +734,9 @@ public partial class Commands
 				{
 					if (canSeeAll)
 					{
-						return await MessageHelpers.FormatObjectWithDbrefMString(item.Object());
+						return await MessageHelpers.FormatObjectWithDbrefMString(item.Object);
 					}
-					return MModule.single(item.Object().Name);
+					return MModule.single(item.Object.Name);
 				}));
 				var defaultContents = MModule.multipleWithDelimiter(
 					MModule.single("\n"),
@@ -757,7 +757,7 @@ public partial class Commands
 
 			if (visibleExits.Count > 0 && realViewing.IsRoom)
 			{
-				var exitDbrefs = string.Join(" ", visibleExits.Select(x => x.Object().DBRef.ToString()));
+				var exitDbrefs = string.Join(" ", visibleExits.Select(x => x.Object.DBRef.ToString()));
 				var exitFormatArgs = new Dictionary<string, CallState>
 				{
 					["0"] = new CallState(exitDbrefs)
@@ -771,9 +771,9 @@ public partial class Commands
 					var exitDisplays = new List<string>();
 					foreach (var exit in visibleExits)
 					{
-						var exitObj = exit.WithRoomOption().Object();
+						var exitObj = exit.WithRoomOption().Object;
 						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
-						var destName = destination is not null ? destination.Object().Name : "*UNLINKED*";
+						var destName = destination is not null ? destination.Object.Name : "*UNLINKED*";
 
 						if (await exit.WithRoomOption().IsOpaque())
 						{
@@ -788,7 +788,7 @@ public partial class Commands
 				}
 				else
 				{
-					var names = visibleExits.Select(x => x.Object().Name).ToList();
+					var names = visibleExits.Select(x => x.Object.Name).ToList();
 					defaultExits = MModule.single($"Obvious exits:\n{MessageHelpers.FormatWithOxfordComma(names)}");
 				}
 
@@ -803,9 +803,9 @@ public partial class Commands
 					// Original behavior: one notification per exit in transparent rooms
 					foreach (var exit in visibleExits)
 					{
-						var exitObj = exit.WithRoomOption().Object();
+						var exitObj = exit.WithRoomOption().Object;
 						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
-						var destName = destination is not null ? destination.Object().Name : "*UNLINKED*";
+						var destName = destination is not null ? destination.Object.Name : "*UNLINKED*";
 
 						if (await exit.WithRoomOption().IsOpaque())
 						{
@@ -884,7 +884,7 @@ public partial class Commands
 		}
 		else
 		{
-			viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
+			viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object.DBRef))).WithExitOption();
 		}
 
 		if (viewing.IsNone())
@@ -903,7 +903,7 @@ public partial class Commands
 
 		if (!canExamine)
 		{
-			var limitedObj = viewingKnown.Object();
+			var limitedObj = viewingKnown.Object;
 			var limitedOwnerObj = (await limitedObj.Owner.WithCancellation(CancellationToken.None)).Object;
 			await NotifyService!.Notify(enactor,
 				Format($"{limitedObj.Name.Hilight()} is owned by {limitedOwnerObj.Name.Hilight()}."),
@@ -916,7 +916,7 @@ public partial class Commands
 			: await Mediator!.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
 				.ToArrayAsync();
 
-		var obj = viewingKnown.Object()!;
+		var obj = viewingKnown.Object!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
@@ -963,7 +963,7 @@ public partial class Commands
 		}
 		else
 		{
-			var zoneObject = objZone.Known.Object();
+			var zoneObject = objZone.Known.Object;
 			var zoneFlags = await zoneObject.Flags.Value.ToArrayAsync();
 			var zoneFlagStr = string.Join(string.Empty, zoneFlags.Select(x => x.Symbol));
 			zoneSection = Format($"  Zone: {zoneObject.Name.Hilight()}(#{zoneObject.DBRef.Number}{zoneFlagStr})");
@@ -975,7 +975,7 @@ public partial class Commands
 		outputSections.Add(ownerRow);
 
 		// Parent row: "Parent: Name(#flags)" or "Parent: *NOTHING*"
-		var parentObject = objParent.Object();
+		var parentObject = objParent.Object;
 		if (parentObject == null)
 		{
 			outputSections.Add(MModule.single("Parent: *NOTHING*"));
@@ -1083,8 +1083,8 @@ public partial class Commands
 
 				if (conFormatResult.IsAttribute)
 				{
-					var contentDbrefs = string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
-					var contentNames = string.Join("|", contents.Select(x => x.Object().Name));
+					var contentDbrefs = string.Join(" ", contents.Select(x => x.Object.DBRef.ToString()));
+					var contentNames = string.Join("|", contents.Select(x => x.Object.Name));
 
 					var formatArgs = new Dictionary<string, CallState>
 					{
@@ -1103,7 +1103,7 @@ public partial class Commands
 					var contentsLabel = viewingKnown.IsRoom ? "Contents:" : "Carrying:";
 					async ValueTask<MString> BuildContentLine(AnySharpContent content, CancellationToken _)
 					{
-						var cObj = content.Object();
+						var cObj = content.Object;
 						var cFlags = await cObj.Flags.Value.ToArrayAsync();
 						var cFlagStr = string.Join(string.Empty, cFlags.Select(x => x.Symbol));
 						return Format($"{cObj.Name.Hilight()}(#{cObj.DBRef.Number}{cFlagStr})");
@@ -1149,8 +1149,8 @@ public partial class Commands
 				var homeContainer = await viewingKnown.MinusRoom().Home();
 				var locationContainer = await viewingKnown.AsContent.Location();
 
-				var homeObject = homeContainer.Object();
-				var locationObject = locationContainer.Object();
+				var homeObject = homeContainer.Object;
+				var locationObject = locationContainer.Object;
 				var homeFlags = await homeObject.Flags.Value.ToArrayAsync();
 				var locationFlags = await locationObject.Flags.Value.ToArrayAsync();
 
@@ -1225,7 +1225,7 @@ public partial class Commands
 		var homeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
 		AnySharpContainer destination;
 
-		if (homeLocation.Object().DBRef.Number == -1)
+		if (homeLocation.Object.DBRef.Number == -1)
 		{
 			var destAttr = await AttributeService!.GetAttributeAsync(
 				executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
@@ -1290,7 +1290,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var destinationString = MModule.plainText(args.Count == 1 ? args["0"].Message : args["1"].Message);
-		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(executor.Object().DBRef.ToString()) : args["0"].Message);
+		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(executor.Object.DBRef.ToString()) : args["0"].Message);
 
 		var isList = parser.CurrentState.Switches.Contains("LIST");
 
@@ -1331,7 +1331,7 @@ public partial class Commands
 			var exitObj = validDestination.AsExit;
 			var homeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
 
-			if (homeLocation.Object().DBRef.Number == -1)
+			if (homeLocation.Object.DBRef.Number == -1)
 			{
 				// Exit is unlinked - check for DESTINATION attribute
 				var destAttr = await AttributeService!.GetAttributeAsync(
@@ -1441,13 +1441,13 @@ public partial class Commands
 
 					// Zone mismatch check: if source room has a zone that differs from destination's zone,
 					// evaluate the Zone lock on the source room. Failure blocks teleport.
-					var sourceZone = await sourceObj.Object().Zone.WithCancellation(CancellationToken.None);
+					var sourceZone = await sourceObj.Object.Zone.WithCancellation(CancellationToken.None);
 					if (!sourceZone.IsNone)
 					{
 						var destObj = destinationContainer.WithExitOption();
-						var destZone = await destObj.Object().Zone.WithCancellation(CancellationToken.None);
-						var sourceZoneDbRef = sourceZone.Known.Object().DBRef;
-						var destZoneDbRef = destZone.IsNone ? new DBRef(-1) : destZone.Known.Object().DBRef;
+						var destZone = await destObj.Object.Zone.WithCancellation(CancellationToken.None);
+						var sourceZoneDbRef = sourceZone.Known.Object.DBRef;
+						var destZoneDbRef = destZone.IsNone ? new DBRef(-1) : destZone.Known.Object.DBRef;
 
 						if (!sourceZoneDbRef.Equals(destZoneDbRef))
 						{
@@ -1483,7 +1483,7 @@ public partial class Commands
 				parser,
 				targetContent,
 				destinationContainer,
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				"teleport",
 				isSilent);
 
@@ -1497,19 +1497,19 @@ public partial class Commands
 			if (target.IsPlayer && !isSilent)
 			{
 				// Notify the target player that they were teleported
-				await NotifyService!.NotifyLocalized(target.Object().DBRef, nameof(ErrorMessages.Notifications.TeleportedPlayerNotified));
+				await NotifyService!.NotifyLocalized(target.Object.DBRef, nameof(ErrorMessages.Notifications.TeleportedPlayerNotified));
 
 				// Show the target player their new location by executing LOOK as them
 				var targetPlayerState = parser.CurrentState with
 				{
-					Executor = target.Object().DBRef,
-					Enactor = target.Object().DBRef
+					Executor = target.Object.DBRef,
+					Enactor = target.Object.DBRef
 				};
 
 				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single("look"),
 					targetPlayerState,
-					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
+					new DbRefAttribute(target.Object.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 		}
@@ -1658,7 +1658,7 @@ public partial class Commands
 		// @halt with no arguments - clear executor's queue without setting HALT flag
 		if (args.Count == 0)
 		{
-			await Mediator!.Send(new HaltObjectQueueRequest(executor.Object().DBRef));
+			await Mediator!.Send(new HaltObjectQueueRequest(executor.Object.DBRef));
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Halted), executor);
 			return CallState.Empty;
 		}
@@ -1695,7 +1695,7 @@ public partial class Commands
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		var targetObject = target.Object();
+		var targetObject = target.Object;
 		var hasReplacementActions = args.Count >= 2;
 		var replacementActions = hasReplacementActions ? args["1"].Message : null;
 
@@ -1860,7 +1860,7 @@ public partial class Commands
 			}
 		}
 
-		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
+		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object.DBRef, attribute.Split("`"));
 
 		switch (notifyType)
 		{
@@ -1923,7 +1923,7 @@ public partial class Commands
 
 		if (!await PermissionService!.CanInteract(executor, found, InteractType.Hear))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectDoesNotWantToHearFromYouFormat), executor, found.Object().Name);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectDoesNotWantToHearFromYouFormat), executor, found.Object.Name);
 			return CallState.Empty;
 		}
 
@@ -1932,7 +1932,7 @@ public partial class Commands
 		// SILENT: Don't notify the executor
 		if (!switches.Contains("SILENT"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouPromptedFormat), executor, found.Object().Name);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouPromptedFormat), executor, found.Object.Name);
 		}
 
 		return new CallState(message);
@@ -1979,9 +1979,9 @@ public partial class Commands
 					// Check permission before showing
 					if (await CanScan(obj))
 					{
-						runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+						runningOutput.Add($"#{obj.Object.DBRef.Number}/{attr.LongName}");
 						await NotifyService!.Notify(executor,
-							$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]", executor);
+							$"{obj.Object.Name}\t[{i}: #{obj.Object.DBRef.Number}/{attr.LongName}]", executor);
 					}
 				}
 			}
@@ -2004,9 +2004,9 @@ public partial class Commands
 					// Check permission before showing
 					if (await CanScan(obj))
 					{
-						runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+						runningOutput.Add($"#{obj.Object.DBRef.Number}/{attr.LongName}");
 						await NotifyService!.Notify(executor,
-							$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]", executor);
+							$"{obj.Object.Name}\t[{i}: #{obj.Object.DBRef.Number}/{attr.LongName}]", executor);
 					}
 				}
 			}
@@ -2018,14 +2018,14 @@ public partial class Commands
 			if (executor.IsContent)
 			{
 				var location = await executor.AsContent.Location();
-				var locationZone = await location.Object().Zone.WithCancellation(CancellationToken.None);
+				var locationZone = await location.Object.Zone.WithCancellation(CancellationToken.None);
 
 				if (!locationZone.IsNone)
 				{
 					var zoneObject = locationZone.Known;
 
 					// Get contents of the zone master object
-					var zoneContents = Mediator!.CreateStream(new GetContentsQuery(zoneObject.Object().DBRef))
+					var zoneContents = Mediator!.CreateStream(new GetContentsQuery(zoneObject.Object.DBRef))
 						?? AsyncEnumerable.Empty<AnySharpContent>();
 
 					// Match user-defined commands in zone contents
@@ -2041,9 +2041,9 @@ public partial class Commands
 							// Check permission before showing
 							if (await CanScan(obj))
 							{
-								runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+								runningOutput.Add($"#{obj.Object.DBRef.Number}/{attr.LongName}");
 								await NotifyService!.Notify(executor,
-									$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]", executor);
+									$"{obj.Object.Name}\t[{i}: #{obj.Object.DBRef.Number}/{attr.LongName}]", executor);
 							}
 						}
 					}
@@ -2067,9 +2067,9 @@ public partial class Commands
 				// Check permission before showing
 				if (await CanScan(obj))
 				{
-					runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
+					runningOutput.Add($"#{obj.Object.DBRef.Number}/{attr.LongName}");
 					await NotifyService!.Notify(executor,
-						$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]", executor);
+						$"{obj.Object.Name}\t[{i}: #{obj.Object.DBRef.Number}/{attr.LongName}]", executor);
 				}
 			}
 		}
@@ -2193,7 +2193,7 @@ public partial class Commands
 				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single("@notify me"),
 					parser.CurrentState,
-					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					new DbRefAttribute(executor.Object.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
 
@@ -2395,16 +2395,16 @@ public partial class Commands
 		var stateForCallback = callbackState ?? parser.CurrentState;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
+		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object.DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
 		{
 
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+			await Mediator.Send(new SetAttributeCommand(located.Object.DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
 
-			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
+			var dbRefAttr = new DbRefAttribute(located.Object.DBRef, attribute);
 
 			await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
 				dbRefAttr, 0));
@@ -2418,10 +2418,10 @@ public partial class Commands
 			return;
 		}
 
-		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
+		await Mediator.Send(new SetAttributeCommand(located.Object.DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
 
-		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
+		var dbRefAttr2 = new DbRefAttribute(located.Object.DBRef, attribute);
 
 		await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
 			dbRefAttr2, last));
@@ -2434,15 +2434,15 @@ public partial class Commands
 		var stateForCallback = callbackState ?? parser.CurrentState;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
+		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object.DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
 		{
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+			await Mediator.Send(new SetAttributeCommand(located.Object.DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
 			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
-				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
+				new DbRefAttribute(located.Object.DBRef, attribute), 0, delay));
 			return;
 		}
 
@@ -2452,10 +2452,10 @@ public partial class Commands
 			return;
 		}
 
-		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
+		await Mediator.Send(new SetAttributeCommand(located.Object.DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
 		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
-			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
+			new DbRefAttribute(located.Object.DBRef, attribute), last, delay));
 	}
 
 	private static async ValueTask<Option<CallState>> AtWaitForPid(IMUSHCodeParser parser, string? arg0,
@@ -2764,7 +2764,7 @@ public partial class Commands
 		if (hasAny)
 		{
 			// Drain all semaphores on the object
-			var pids = Mediator!.CreateStream(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
+			var pids = Mediator!.CreateStream(new ScheduleSemaphoreQuery(objectToDrain.Object.DBRef));
 			var filteredPids = pids
 				.GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
 				.Select(x => x.First());
@@ -2776,7 +2776,7 @@ public partial class Commands
 				{
 					// Drain all entries and clear attribute
 					await Mediator.Send(new DrainSemaphoreRequest(dbRefAttrToDrain, null));
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object.DBRef, dbRefAttrToDrain.Attribute,
 						MModule.single("0"),
 						one.AsPlayer));
 				}
@@ -2786,11 +2786,11 @@ public partial class Commands
 					await Mediator.Send(new DrainSemaphoreRequest(dbRefAttrToDrain, drainCount.Value));
 					// Adjust semaphore count
 					var currentAttr = await Mediator.CreateStream(
-						new GetAttributeQuery(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute)).LastOrDefaultAsync();
+						new GetAttributeQuery(objectToDrain.Object.DBRef, dbRefAttrToDrain.Attribute)).LastOrDefaultAsync();
 					if (currentAttr is not null && int.TryParse(currentAttr.Value.ToPlainText(), out var currentCount))
 					{
 						var newCount = currentCount + drainCount.Value;
-						await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
+						await Mediator.Send(new SetAttributeCommand(objectToDrain.Object.DBRef, dbRefAttrToDrain.Attribute,
 							MModule.single(newCount.ToString()),
 							one.AsPlayer));
 					}
@@ -2800,7 +2800,7 @@ public partial class Commands
 		else
 		{
 			// Drain specific semaphore (or SEMAPHORE if not specified)
-			var dbRefAttribute = new DbRefAttribute(objectToDrain.Object().DBRef, attribute);
+			var dbRefAttribute = new DbRefAttribute(objectToDrain.Object.DBRef, attribute);
 
 			if (hasAll || !drainCount.HasValue)
 			{
@@ -2809,14 +2809,14 @@ public partial class Commands
 				if (hasAll)
 				{
 					// /all also clears the semaphore attribute
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object.DBRef, attribute,
 						MModule.single("0"),
 						one.AsPlayer));
 				}
 				else
 				{
 					// Without /all, just set to -1 to indicate no tasks waiting
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object.DBRef, attribute,
 						MModule.single("-1"),
 						one.AsPlayer));
 				}
@@ -2827,11 +2827,11 @@ public partial class Commands
 				await Mediator!.Send(new DrainSemaphoreRequest(dbRefAttribute, drainCount.Value));
 				// Adjust semaphore count
 				var currentAttr = await Mediator.CreateStream(
-					new GetAttributeQuery(objectToDrain.Object().DBRef, attribute)).LastOrDefaultAsync();
+					new GetAttributeQuery(objectToDrain.Object.DBRef, attribute)).LastOrDefaultAsync();
 				if (currentAttr is not null && int.TryParse(currentAttr.Value.ToPlainText(), out var currentCount))
 				{
 					var newCount = currentCount + drainCount.Value;
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object.DBRef, attribute,
 						MModule.single(newCount.ToString()),
 						one.AsPlayer));
 				}
@@ -2912,7 +2912,7 @@ public partial class Commands
 			await parser.With(
 				state => state with
 				{
-					Executor = found.Object().DBRef,
+					Executor = found.Object.DBRef,
 					Caller = state.Executor
 				},
 				async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
@@ -3076,7 +3076,7 @@ public partial class Commands
 
 			if (!await PermissionService!.CanInteract(executor, locateTarget, InteractType.Hear))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectDoesNotWantToHearFromYouFormat), executor, locateTarget.Object().Name);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectDoesNotWantToHearFromYouFormat), executor, locateTarget.Object.Name);
 				continue;
 			}
 
@@ -3206,7 +3206,7 @@ public partial class Commands
 		}
 
 		var targetPlayer = target.AsPlayer;
-		var targetObject = target.Object();
+		var targetObject = target.Object;
 
 		// Check if target is UNFINDABLE
 		var targetFlags = await targetObject.Flags.Value.ToListAsync();
@@ -3216,7 +3216,7 @@ public partial class Commands
 		if (isUnfindable)
 		{
 			await NotifyService!.Notify(target,
-				$"{executor.Object().Name} tried to locate you, but was unable to.");
+				$"{executor.Object.Name} tried to locate you, but was unable to.");
 			await NotifyService.Notify(executor,
 				$"{targetObject.Name} is UNFINDABLE.", executor);
 			return new CallState("#-1 UNFINDABLE");
@@ -3224,17 +3224,17 @@ public partial class Commands
 
 		// Get the target's location
 		var targetLocation = await target.AsContent.Location();
-		var locationName = targetLocation.Object().Name;
+		var locationName = targetLocation.Object.Name;
 
 		// Notify the target that they were found
 		await NotifyService!.Notify(target,
-			$"{executor.Object().Name} has just located your position.");
+			$"{executor.Object.Name} has just located your position.");
 
 		// Notify the executor of the target's location
 		await NotifyService.Notify(executor,
 			$"{targetObject.Name} is in {locationName}.", executor);
 
-		return new CallState(targetLocation.Object().DBRef.ToString());
+		return new CallState(targetLocation.Object.DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "@BREAK", Switches = ["INLINE", "QUEUED"],
@@ -4080,7 +4080,7 @@ public partial class Commands
 			target = executor;
 		}
 
-		var targetDbRef = target.Object().DBRef;
+		var targetDbRef = target.Object.DBRef;
 
 		// Get queue counts
 		var semaphoreTasks = await Mediator!.CreateStream(new ScheduleSemaphoreQuery(targetDbRef)).ToArrayAsync();
@@ -4130,7 +4130,7 @@ public partial class Commands
 		}
 
 		// Show detailed queue for target
-		var targetName = target.Object().DBRef.ToString();
+		var targetName = target.Object.DBRef.ToString();
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQueueForTargetFormat), executor, targetName);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
@@ -4328,7 +4328,7 @@ public partial class Commands
 						await Mediator!.Send(new QueueCommandListRequest(
 							actionMString,
 							parser.CurrentState,
-							new DbRefAttribute(executor.Object().DBRef, []),
+							new DbRefAttribute(executor.Object.DBRef, []),
 							0));
 					}
 
@@ -4357,7 +4357,7 @@ public partial class Commands
 						await Mediator!.Send(new QueueCommandListRequest(
 							actionMString,
 							parser.CurrentState,
-							new DbRefAttribute(executor.Object().DBRef, []),
+							new DbRefAttribute(executor.Object.DBRef, []),
 							0));
 					}
 				}
@@ -4461,7 +4461,7 @@ public partial class Commands
 		// PennMUSH semantics (@trigger2 help):
 		//   No /spoof (default): the object USING @trigger (executor) becomes the enactor (%#)
 		//   /spoof: preserve the current enactor (the original player who started the chain)
-		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : executor.Object().DBRef;
+		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object.DBRef : executor.Object.DBRef;
 
 		// Build argument registers from all provided arguments.
 		// args["0"] is the object/attribute path (LHS); args["1"] onward are the comma-separated
@@ -4540,7 +4540,7 @@ public partial class Commands
 		{
 			var stateWithRegisters = parser.CurrentState with
 			{
-				Executor = targetObject.Object().DBRef,
+				Executor = targetObject.Object.DBRef,
 				Enactor = executionEnactor,
 				Caller = parser.CurrentState.Executor,
 				Registers = registerStack,
@@ -4767,7 +4767,7 @@ public partial class Commands
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		var obj = targetKnown.Object();
+		var obj = targetKnown.Object;
 		var useDbRef = switches.Contains("DB");
 		var useName = switches.Contains("NAME") || !useDbRef; // NAME is default
 		var showFlags = switches.Contains("FLAGS") || (!switches.Contains("ATTRIBS") && string.IsNullOrEmpty(attributePattern));
@@ -4833,7 +4833,7 @@ public partial class Commands
 			var parent = await obj.Parent.WithCancellation(CancellationToken.None);
 			if (!parent.IsNone)
 			{
-				var parentObj = parent.Known.Object();
+				var parentObj = parent.Known.Object;
 				outputs.Add($"{prefix}@parent {objectRef}={parentObj.DBRef}");
 			}
 		}
@@ -5374,7 +5374,7 @@ public partial class Commands
 		var isWizard = await executor.IsWizard();
 		var controlsBoth = await PermissionService!.Controls(executor, actor) &&
 											 await PermissionService!.Controls(executor, victim);
-		var enactorIsActor = enactor.Object().DBRef == actor.Object().DBRef;
+		var enactorIsActor = enactor.Object.DBRef == actor.Object.DBRef;
 		var executorPrivileged = await executor.IsRoyalty();
 		var executorControlsVictim = await PermissionService!.Controls(executor, victim);
 
@@ -5396,7 +5396,7 @@ public partial class Commands
 		var othersMessage = await GetAttributeOrDefault(
 			parser, AttributeService!, executor, victim, actor, owhat, owhatd, stackArgs);
 
-		var prependedMessage = MModule.single($"{actor.Object().Name} {othersMessage.ToPlainText()}");
+		var prependedMessage = MModule.single($"{actor.Object.Name} {othersMessage.ToPlainText()}");
 
 		await CommunicationService!.SendToRoomAsync(
 			actor, actorLocation, _ => prependedMessage,
@@ -5414,8 +5414,8 @@ public partial class Commands
 				await parser.With(
 					state => state with
 					{
-						Executor = victim.Object().DBRef,
-						Enactor = actor.Object().DBRef,
+						Executor = victim.Object.DBRef,
+						Enactor = actor.Object.DBRef,
 						Caller = state.Executor,
 						Arguments = stackArgs
 					},
@@ -5453,8 +5453,8 @@ public partial class Commands
 		var result = await parser.With(
 			state => state with
 			{
-				Executor = victim.Object().DBRef,
-				Enactor = actor.Object().DBRef,
+				Executor = victim.Object.DBRef,
+				Enactor = actor.Object.DBRef,
 				Caller = state.Executor,
 				Arguments = stackArgs
 			},
@@ -5527,7 +5527,7 @@ public partial class Commands
 			}
 		}
 
-		var targetObj = targetObject.Object();
+		var targetObj = targetObject.Object;
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesToFormat), executor, targetObj.Name);
 
 		// Filter by switch type
@@ -6096,7 +6096,7 @@ public partial class Commands
 			return new CallState("#-1 INVALID OBJECT TYPE.");
 		}
 
-		var isValidPassword = PasswordService!.PasswordIsValid(executor.Object().DBRef.ToString(), oldPassword,
+		var isValidPassword = PasswordService!.PasswordIsValid(executor.Object.DBRef.ToString(), oldPassword,
 			executor.AsPlayer.PasswordHash);
 		if (!isValidPassword)
 		{
@@ -6104,7 +6104,7 @@ public partial class Commands
 			return new CallState("#-1 INVALID PASSWORD.");
 		}
 
-		var hashedPassword = PasswordService.HashPassword(executor.Object().DBRef.ToString(), newPassword);
+		var hashedPassword = PasswordService.HashPassword(executor.Object.DBRef.ToString(), newPassword);
 		await PasswordService.SetPassword(executor.AsPlayer, hashedPassword);
 
 		return new CallState(string.Empty);
@@ -6131,7 +6131,7 @@ public partial class Commands
 			await foreach (var obj in Mediator!.CreateStream(new GetAllTypedObjectsQuery()))
 			{
 				// Halt the object's queue
-				await Mediator.Send(new HaltObjectQueueRequest(obj.Object().DBRef));
+				await Mediator.Send(new HaltObjectQueueRequest(obj.Object.DBRef));
 
 				// Trigger @STARTUP attribute if it exists (non-inherited)
 				// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
@@ -6183,7 +6183,7 @@ public partial class Commands
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		var targetObject = target.Object();
+		var targetObject = target.Object;
 
 		// Halt the object's queue first
 		await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
@@ -6194,10 +6194,10 @@ public partial class Commands
 			// Halt and restart all objects owned by the player
 			await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
 			{
-				var owner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+				var owner = await obj.Object.Owner.WithCancellation(CancellationToken.None);
 				if (owner.Object.DBRef == targetObject.DBRef)
 				{
-					await Mediator.Send(new HaltObjectQueueRequest(obj.Object().DBRef));
+					await Mediator.Send(new HaltObjectQueueRequest(obj.Object.DBRef));
 
 					// Trigger @STARTUP if it exists
 					// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
@@ -6251,7 +6251,7 @@ public partial class Commands
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var location = await executor.Where();
-		var locationObj = location.Object();
+		var locationObj = location.Object;
 		var locationAnyObject = location.WithRoomOption();
 		var locationOwner = await locationObj.Owner.WithCancellation(CancellationToken.None);
 
@@ -6296,18 +6296,18 @@ public partial class Commands
 			await foreach (var obj in contents)
 			{
 				var fullObj = obj.WithRoomOption();
-				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+				var objOwner = await obj.Object.Owner.WithCancellation(CancellationToken.None);
 				if (connectFlag)
 				{
 					if (await IsConnectedOrPuppetConnected(fullObj))
 					{
 						if (obj.IsPlayer)
 						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, obj.Object.Name);
 						}
 						else
 						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object().Name, objOwner.Object.Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object.Name, objOwner.Object.Name);
 						}
 					}
 				}
@@ -6316,13 +6316,13 @@ public partial class Commands
 					if (await fullObj.IsHearer(ConnectionService!, AttributeService!) || await fullObj.IsListener())
 					{
 						if (await ConnectionService!.IsConnected(fullObj))
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), executor, obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), executor, obj.Object.Name);
 						else
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), executor, obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), executor, obj.Object.Name);
 					}
 
 					if (await fullObj.HasActiveCommands(AttributeService!))
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, obj.Object().Name);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, obj.Object.Name);
 				}
 			}
 		}
@@ -6338,7 +6338,7 @@ public partial class Commands
 				{
 					if (await exit.WithRoomOption().IsAudible())
 					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepExitBroadcastingFormat), executor, exit.Object().Name);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepExitBroadcastingFormat), executor, exit.Object.Name);
 					}
 				}
 			}
@@ -6351,18 +6351,18 @@ public partial class Commands
 			await foreach (var obj in executor.AsContainer.Content(Mediator!))
 			{
 				var fullObj = obj.WithRoomOption();
-				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+				var objOwner = await obj.Object.Owner.WithCancellation(CancellationToken.None);
 				if (connectFlag)
 				{
 					if (await IsConnectedOrPuppetConnected(fullObj))
 					{
 						if (obj.IsPlayer)
 						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, obj.Object.Name);
 						}
 						else
 						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object().Name, objOwner.Object.Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object.Name, objOwner.Object.Name);
 						}
 					}
 				}
@@ -6371,13 +6371,13 @@ public partial class Commands
 					if (await fullObj.IsHearer(ConnectionService!, AttributeService!) || await fullObj.IsListener())
 					{
 						if (await ConnectionService!.IsConnected(fullObj))
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), executor, obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), executor, obj.Object.Name);
 						else
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), executor, obj.Object().Name);
+							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), executor, obj.Object.Name);
 					}
 
 					if (await fullObj.HasActiveCommands(AttributeService!))
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, obj.Object().Name);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, obj.Object.Name);
 				}
 			}
 		}
@@ -6389,7 +6389,7 @@ public partial class Commands
 			if (await ConnectionService!.IsConnected(obj)) return true;
 
 			return await obj.IsPuppet()
-						 && await ConnectionService!.IsConnected(await obj.Object().Owner.WithCancellation(CancellationToken.None));
+						 && await ConnectionService!.IsConnected(await obj.Object.Owner.WithCancellation(CancellationToken.None));
 		}
 	}
 

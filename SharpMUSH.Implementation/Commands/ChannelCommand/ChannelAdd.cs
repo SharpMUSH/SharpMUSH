@@ -20,7 +20,7 @@ public static class ChannelAdd
 		IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName, MString privileges)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		var executorOwner = await executor.Object.Owner.WithCancellation(CancellationToken.None);
 		if (await executor.IsGuest())
 		{
 			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);

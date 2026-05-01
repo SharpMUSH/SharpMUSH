@@ -31,7 +31,7 @@ public class BuildingCommandTests
 		var newDb = DBRef.Parse(result.Message!.ToPlainText());
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
-		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObject - Test Object");
+		await Assert.That(newObject.Object!.Name).IsEqualTo("CreateObject - Test Object");
 	}
 
 	[Test]
@@ -43,7 +43,7 @@ public class BuildingCommandTests
 		var newDb = DBRef.Parse(result.Message!.ToPlainText());
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
-		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObjectWithCost - Test Object");
+		await Assert.That(newObject.Object!.Name).IsEqualTo("CreateObjectWithCost - Test Object");
 	}
 
 	[Test]
@@ -139,7 +139,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@name {newDbRef}=DigAndMoveTest - New Name"));
 
 		var renamedObject = await Mediator.Send(new GetObjectNodeQuery(newDbRef));
-		await Assert.That(renamedObject.Object()!.Name).IsEqualTo("DigAndMoveTest - New Name");
+		await Assert.That(renamedObject.Object!.Name).IsEqualTo("DigAndMoveTest - New Name");
 	}
 
 	[Test]
@@ -151,7 +151,7 @@ public class BuildingCommandTests
 		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
-		await Assert.That(newObject.Object()!.Name).IsEqualTo("DigRoom - Test Room");
+		await Assert.That(newObject.Object!.Name).IsEqualTo("DigRoom - Test Room");
 	}
 
 	[Test]
@@ -166,7 +166,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(executor, $"Room With Exits created with room number {newObject.Object()!.DBRef.Number}.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(executor, $"Room With Exits created with room number {newObject.Object!.DBRef.Number}.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -231,7 +231,7 @@ public class BuildingCommandTests
 		await Assert.That(childObj.IsNone).IsFalse();
 
 		// Verify child has no parent initially
-		var initialParent = await childObj.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var initialParent = await childObj.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(initialParent.IsNone).IsTrue();
 
 		// Set parent using @parent command
@@ -239,9 +239,9 @@ public class BuildingCommandTests
 
 		// Verify parent was set by querying database directly
 		var updatedChild = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var setParent = await updatedChild.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var setParent = await updatedChild.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(setParent.IsNone).IsFalse();
-		await Assert.That(setParent.Known.Object().DBRef.Number).IsEqualTo(parentDbRef.Number);
+		await Assert.That(setParent.Known.Object.DBRef.Number).IsEqualTo(parentDbRef.Number);
 	}
 
 	[Test]
@@ -260,7 +260,7 @@ public class BuildingCommandTests
 
 		// Verify parent was set
 		var childWithParent = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var parentSet = await childWithParent.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentSet = await childWithParent.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentSet.IsNone).IsFalse();
 
 		// Unset parent
@@ -268,7 +268,7 @@ public class BuildingCommandTests
 
 		// Verify parent was cleared
 		var childNoParent = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var parentCleared = await childNoParent.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentCleared = await childNoParent.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentCleared.IsNone).IsTrue();
 	}
 
@@ -289,16 +289,16 @@ public class BuildingCommandTests
 
 		// Verify A's parent is B
 		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
-		var parentOfA = await objA.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOfA = await objA.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfA.IsNone).IsFalse();
-		await Assert.That(parentOfA.Known.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
+		await Assert.That(parentOfA.Known.Object.DBRef.Number).IsEqualTo(objBDbRef.Number);
 
 		// Try to set B's parent to A (would create direct cycle: A -> B -> A)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objBDbRef}={objADbRef}"));
 
 		// Verify B's parent was NOT set (cycle prevention)
 		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
-		var parentOfB = await objB.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOfB = await objB.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfB.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle
@@ -326,21 +326,21 @@ public class BuildingCommandTests
 
 		// Verify the chain is established
 		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
-		var parentOfA = await objA.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOfA = await objA.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfA.IsNone).IsFalse();
-		await Assert.That(parentOfA.Known.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
+		await Assert.That(parentOfA.Known.Object.DBRef.Number).IsEqualTo(objBDbRef.Number);
 
 		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
-		var parentOfB = await objB.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOfB = await objB.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfB.IsNone).IsFalse();
-		await Assert.That(parentOfB.Known.Object().DBRef.Number).IsEqualTo(objCDbRef.Number);
+		await Assert.That(parentOfB.Known.Object.DBRef.Number).IsEqualTo(objCDbRef.Number);
 
 		// Try to set C's parent to A (would create indirect cycle: A -> B -> C -> A)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objCDbRef}={objADbRef}"));
 
 		// Verify C's parent was NOT set (cycle prevention)
 		var objC = await Mediator.Send(new GetObjectNodeQuery(objCDbRef));
-		var parentOfC = await objC.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOfC = await objC.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfC.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle (via NotifyLocalized)
@@ -361,7 +361,7 @@ public class BuildingCommandTests
 
 		// Verify parent was NOT set (self-cycle prevention)
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parent = await obj.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parent.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle (via NotifyLocalized)
@@ -391,9 +391,9 @@ public class BuildingCommandTests
 		for (int i = 0; i < 4; i++)
 		{
 			var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRefs[i]));
-			var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
+			var parent = await obj.Known.Object.Parent.WithCancellation(CancellationToken.None);
 			await Assert.That(parent.IsNone).IsFalse();
-			await Assert.That(parent.Known.Object().DBRef.Number).IsEqualTo(objDbRefs[i + 1].Number);
+			await Assert.That(parent.Known.Object.DBRef.Number).IsEqualTo(objDbRefs[i + 1].Number);
 		}
 
 		// Try to set 4's parent to 0 (would create long cycle: 0 -> 1 -> 2 -> 3 -> 4 -> 0)
@@ -401,7 +401,7 @@ public class BuildingCommandTests
 
 		// Verify 4's parent was NOT set (cycle prevention)
 		var obj4 = await Mediator.Send(new GetObjectNodeQuery(objDbRefs[4]));
-		var parentOf4 = await obj4.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOf4 = await obj4.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOf4.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle (via NotifyLocalized)

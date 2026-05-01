@@ -40,7 +40,7 @@ internal static class BenchmarkHelpers
 		IServiceProvider services)
 	{
 		var realOne = await database.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false);
-		var one = realOne.Object()!.DBRef;
+		var one = realOne.Object!.DBRef;
 
 		var parser = services.GetRequiredService<IMUSHCodeParser>();
 		return parser.FromState(new ParserState(

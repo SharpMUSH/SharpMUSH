@@ -55,7 +55,7 @@ public class AttributeService(
 		};
 
 		var attributeResult = mediator.CreateStream(
-			new GetAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, checkParent));
+			new GetAttributeWithInheritanceQuery(obj.Object.DBRef, attributePath, checkParent));
 
 		var result = await attributeResult.FirstOrDefaultAsync();
 
@@ -94,7 +94,7 @@ public class AttributeService(
 		};
 
 		var attributeResult = mediator.CreateStream(
-			new GetLazyAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, checkParent));
+			new GetLazyAttributeWithInheritanceQuery(obj.Object.DBRef, attributePath, checkParent));
 
 		var result = await attributeResult.FirstOrDefaultAsync();
 
@@ -169,9 +169,9 @@ public class AttributeService(
 					{
 						Arguments = args,
 						EnvironmentRegisters = args,
-						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attributeName),
+						CurrentEvaluation = new DBAttribute(obj.Object.DBRef, attributeName),
 						Function = attributeName,
-						Executor = obj.Object().DBRef,
+						Executor = obj.Object.DBRef,
 						Caller = s.Executor
 					},
 				async newParser =>
@@ -193,7 +193,7 @@ public class AttributeService(
 	public async ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj,
 		int depth = 1)
 	{
-		var actualObject = obj.Object();
+		var actualObject = obj.Object;
 		var attributes = actualObject.Attributes.Value;
 
 		return depth <= 1
@@ -208,7 +208,7 @@ public class AttributeService(
 		AnySharpObject obj, int depth = 1)
 	{
 		await ValueTask.CompletedTask;
-		var actualObject = obj.Object();
+		var actualObject = obj.Object;
 		var attributes = actualObject.LazyAttributes.Value;
 
 		return depth <= 1
@@ -420,7 +420,7 @@ public class AttributeService(
 	{
 		// Create stream of attributes matching the pattern
 		var attributes = mediator.CreateStream(
-			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
+			new GetAttributesQuery(obj.Object.DBRef, attributePattern.ToUpper(), checkParents, mode));
 
 		// Filter based on permissions and return sorted results
 		// Permission check is done per-attribute for fine-grained access control
@@ -445,7 +445,7 @@ public class AttributeService(
 	{
 		// Create lazy stream of attributes
 		var attributes = mediator.CreateStream(
-			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
+			new GetLazyAttributesQuery(obj.Object.DBRef, attributePattern.ToUpper(), checkParents, mode));
 
 		// Return lazy-evaluated, permission-filtered, sorted results
 		return LazySharpAttributesOrError
@@ -487,7 +487,7 @@ public class AttributeService(
 			return new SharpSuccess();
 		}
 
-		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
+		await mediator.Send(new SetAttributeFlagCommand(obj.Object.DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag));
 
 		await notifyService.Notify(executor,
@@ -529,7 +529,7 @@ public class AttributeService(
 			return new SharpSuccess();
 		}
 
-		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
+		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object.DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag));
 
 		await notifyService.Notify(executor,
@@ -549,7 +549,7 @@ public class AttributeService(
 		}
 
 		var attrPath = attribute.Split('`');
-		var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath));
+		var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object.DBRef, attrPath));
 
 		// Check both attribute permissions AND object permissions
 		// Attribute permissions: executor must be able to set each attribute in the path
@@ -561,8 +561,8 @@ public class AttributeService(
 			return new SharpError(Errors.ErrorAttrSetPermissions);
 		}
 
-		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
+		await mediator.Send(new SetAttributeCommand(obj.Object.DBRef, attrPath, value,
+			await executor.Object.Owner.WithCancellation(CancellationToken.None)));
 
 		return new SharpSuccess();
 	}
@@ -589,7 +589,7 @@ public class AttributeService(
 			return new SharpError(Errors.ErrorAttrSetPermissions);
 		}
 
-		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
+		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object.DBRef, attributePattern, false, patternMode));
 
 		var attrArr = await attr.ToArrayAsync();
 
@@ -607,9 +607,9 @@ public class AttributeService(
 		{
 			var pathParts = attrItem.LongName!.Split('`');
 			if (isWipe)
-				await mediator.Send(new WipeAttributeCommand(obj.Object().DBRef, pathParts));
+				await mediator.Send(new WipeAttributeCommand(obj.Object.DBRef, pathParts));
 			else
-				await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, pathParts));
+				await mediator.Send(new ClearAttributeCommand(obj.Object.DBRef, pathParts));
 		}
 
 		return new SharpSuccess();

@@ -74,7 +74,7 @@ public partial class Commands
 		var channel = maybeChannel.AsChannel;
 
 		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
-		var isOwner = owner.Object.DBRef.Equals(executor.Object().DBRef);
+		var isOwner = owner.Object.DBRef.Equals(executor.Object.DBRef);
 		var passesModLock = string.IsNullOrEmpty(channel.ModLock) ||
 												LockService!.Evaluate(channel.ModLock, channel, executor);
 
@@ -354,7 +354,7 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "  Available log types: CMD, CONN, ERR, TRACE, WIZ", executor);
 			await NotifyService!.Notify(executor, "  Available actions: ROTATE, TRIM, WIPE", executor);
 			await NotifyService!.Notify(executor, "  Note: Direct log file manipulation not yet implemented", executor);
-			Logger?.LogInformation("@LOGWIPE/CHECK executed by {Executor}", executor.Object().Name);
+			Logger?.LogInformation("@LOGWIPE/CHECK executed by {Executor}", executor.Object.Name);
 		}
 		else
 		{
@@ -363,7 +363,7 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "Direct log file manipulation not yet implemented.", executor);
 			await NotifyService!.Notify(executor, "Configure log rotation through appsettings.json or hosting provider.", executor);
 			Logger?.LogWarning("@LOGWIPE/{Action} requested for {LogType} by {Executor} - not implemented",
-				specifiedAction, logDesc, executor.Object().Name);
+				specifiedAction, logDesc, executor.Object.Name);
 		}
 
 		return CallState.Empty;
@@ -405,13 +405,13 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				if (!obj.Object().Locks.TryGetValue(lockType, out var lockData))
+				if (!obj.Object.Locks.TryGetValue(lockType, out var lockData))
 				{
 					await NotifyService!.Notify(executor, $"No such lock: {lockType}", executor);
 					return new CallState("#-1 NO SUCH LOCK");
@@ -426,7 +426,7 @@ public partial class Commands
 				var updatedLockData = new Library.Models.SharpLockData(lockData.LockString, newFlags);
 
 				// Save to database via mediator command
-				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, updatedLockData.LockString));
+				await Mediator!.Send(new SetLockCommand(obj.Object, lockType, updatedLockData.LockString));
 
 				await NotifyService!.Notify(executor, $"Flag {flagName} {(isClearing ? "cleared" : "set")} on {lockType} lock.", executor);
 				return CallState.Empty;
@@ -535,7 +535,7 @@ public partial class Commands
 			return target.AsError;
 		}
 
-		var targetObj = target.AsSharpObject.Object();
+		var targetObj = target.AsSharpObject.Object;
 
 		// Check permissions
 		if (!await PermissionService!.Controls(executor, target.AsSharpObject))
@@ -572,7 +572,7 @@ public partial class Commands
 		}
 
 		Logger?.LogInformation("@WARNINGS: {Executor} set warnings on {Target} from {Old} to {New}",
-			executor.Object().Name, targetObj.Name, oldWarnings, newWarnings);
+			executor.Object.Name, targetObj.Name, oldWarnings, newWarnings);
 
 		return CallState.Empty;
 	}
@@ -601,7 +601,7 @@ public partial class Commands
 			await NotifyService!.Notify(executor, $"Warning checks complete. Checked {checkedCount} objects.", executor);
 
 			Logger?.LogInformation("@WCHECK/ALL executed by {Executor}, checked {Count} objects",
-				executor.Object().Name, checkedCount);
+				executor.Object.Name, checkedCount);
 		}
 		else if (checkMe)
 		{
@@ -610,7 +610,7 @@ public partial class Commands
 			var warningCount = await WarningService!.CheckOwnedObjectsAsync(executor);
 
 			Logger?.LogInformation("@WCHECK/ME executed by {Executor}, found {Count} warnings",
-				executor.Object().Name, warningCount);
+				executor.Object.Name, warningCount);
 		}
 		else
 		{
@@ -631,11 +631,11 @@ public partial class Commands
 				return target.AsError;
 			}
 
-			var targetObj = target.AsSharpObject.Object();
+			var targetObj = target.AsSharpObject.Object;
 			var targetOwner = await targetObj.Owner.WithCancellation(CancellationToken.None);
 
 			// Check permissions - must own or have see_all
-			if (!(await executor.IsSee_All() || targetOwner.Object.DBRef.Equals(executor.Object().DBRef)))
+			if (!(await executor.IsSee_All() || targetOwner.Object.DBRef.Equals(executor.Object.DBRef)))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -645,7 +645,7 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "@wcheck complete.", executor);
 
 			Logger?.LogInformation("@WCHECK executed by {Executor} on {Target}",
-				executor.Object().Name, targetObj.Name);
+				executor.Object.Name, targetObj.Name);
 		}
 
 		return CallState.Empty;
@@ -707,7 +707,7 @@ public partial class Commands
 		else
 		{
 			// No argument - examine current location ("here")
-			viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
+			viewing = (await Mediator!.Send(new GetLocationQuery(enactor.Object.DBRef))).WithExitOption();
 		}
 
 		if (viewing.IsNone())
@@ -722,7 +722,7 @@ public partial class Commands
 
 		if (!canExamine)
 		{
-			var limitedObj = viewingKnown.Object();
+			var limitedObj = viewingKnown.Object;
 			var limitedOwnerObj = (await limitedObj.Owner.WithCancellation(CancellationToken.None)).Object;
 			await NotifyService!.Notify(enactor, $"{limitedObj.Name} is owned by {limitedOwnerObj.Name}.", enactor);
 			return new CallState(limitedObj.DBRef.ToString());
@@ -734,7 +734,7 @@ public partial class Commands
 			: await Mediator!.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
 				.ToArrayAsync();
 
-		var obj = viewingKnown.Object()!;
+		var obj = viewingKnown.Object!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
@@ -776,7 +776,7 @@ public partial class Commands
 		outputSections.Add(ownerRow);
 
 		// Parent row
-		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
+		outputSections.Add(MModule.single($"Parent: {objParent.Object?.Name ?? "*NOTHING*"}"));
 
 		// Display locks with flags
 		if (obj.Locks.Count > 0)
@@ -810,14 +810,14 @@ public partial class Commands
 		if (viewingKnown.IsPlayer || viewingKnown.IsThing)
 		{
 			var homeObj = await viewingKnown.MinusRoom().Home();
-			outputSections.Add(MModule.single($"Home: {homeObj.Object().Name}(#{homeObj.Object().DBRef.Number})"));
+			outputSections.Add(MModule.single($"Home: {homeObj.Object.Name}(#{homeObj.Object.DBRef.Number})"));
 
 			var locationObj = await viewingKnown.Match(
 				async player => await player.Location.WithCancellation(CancellationToken.None),
 				async room => await ValueTask.FromResult<AnySharpContainer>(room),
 				async exit => await exit.Home.WithCancellation(CancellationToken.None),
 				async thing => await thing.Location.WithCancellation(CancellationToken.None));
-			outputSections.Add(MModule.single($"Location: {locationObj.Object().Name}(#{locationObj.Object().DBRef.Number})"));
+			outputSections.Add(MModule.single($"Location: {locationObj.Object.Name}(#{locationObj.Object.DBRef.Number})"));
 		}
 
 		// Created timestamp
@@ -829,7 +829,7 @@ public partial class Commands
 		// Contents (unless /opaque)
 		if (!switches.Contains("OPAQUE") && contents.Length > 0)
 		{
-			var contentNames = contents.Select(x => x.Object().Name);
+			var contentNames = contents.Select(x => x.Object.Name);
 			await NotifyService!.Notify(enactor, $"Contents:", enactor);
 			foreach (var contentName in contentNames)
 			{
@@ -856,7 +856,7 @@ public partial class Commands
 			// Clear all FOLLOWING attributes pointing to us
 			var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
 			var clearedCount = 0;
-			var executorDbref = executor.Object().DBRef.ToString();
+			var executorDbref = executor.Object.DBRef.ToString();
 
 			await foreach (var obj in allObjects)
 			{
@@ -906,11 +906,11 @@ public partial class Commands
 		if (followingAttr.IsAttribute)
 		{
 			var followingDbref = followingAttr.AsAttribute.Last().Value.ToPlainText();
-			if (followingDbref == target.Object().DBRef.ToString())
+			if (followingDbref == target.Object.DBRef.ToString())
 			{
 				await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
 					IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
-				await NotifyService!.Notify(executor, $"You stop following {target.Object().Name}.", executor);
+				await NotifyService!.Notify(executor, $"You stop following {target.Object.Name}.", executor);
 			}
 		}
 
@@ -921,12 +921,12 @@ public partial class Commands
 		if (targetFollowingAttr.IsAttribute)
 		{
 			var targetFollowingDbref = targetFollowingAttr.AsAttribute.Last().Value.ToPlainText();
-			if (targetFollowingDbref == executor.Object().DBRef.ToString())
+			if (targetFollowingDbref == executor.Object.DBRef.ToString())
 			{
 				await AttributeService!.ClearAttributeAsync(executor, target, "FOLLOWING",
 					IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
-				await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
-				await NotifyService!.Notify(target, $"{executor.Object().Name} deserts you. You stop following.");
+				await NotifyService!.Notify(executor, $"You dismiss {target.Object.Name}.", executor);
+				await NotifyService!.Notify(target, $"{executor.Object.Name} deserts you. You stop following.");
 			}
 		}
 
@@ -945,7 +945,7 @@ public partial class Commands
 			// Iterate through all objects with FOLLOWING attribute pointing to us
 			var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
 			var dismissedCount = 0;
-			var executorDbref = executor.Object().DBRef.ToString();
+			var executorDbref = executor.Object.DBRef.ToString();
 
 			await foreach (var obj in allObjects)
 			{
@@ -962,7 +962,7 @@ public partial class Commands
 							var objAny = locateResult.AsAnyObject;
 							await AttributeService!.ClearAttributeAsync(executor, objAny, "FOLLOWING",
 								IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
-							await NotifyService!.Notify(objAny, $"{executor.Object().Name} dismisses you. You stop following.");
+							await NotifyService!.Notify(objAny, $"{executor.Object.Name} dismisses you. You stop following.");
 							dismissedCount++;
 						}
 						break;
@@ -994,14 +994,14 @@ public partial class Commands
 
 		if (followingAttr.IsNone || followingAttr.IsError)
 		{
-			await NotifyService!.Notify(executor, $"{target.Object().Name} is not following you.", executor);
+			await NotifyService!.Notify(executor, $"{target.Object.Name} is not following you.", executor);
 			return CallState.Empty;
 		}
 
 		var followingDbref = followingAttr.AsAttribute.Last().Value.ToPlainText();
-		if (followingDbref != executor.Object().DBRef.ToString())
+		if (followingDbref != executor.Object.DBRef.ToString())
 		{
-			await NotifyService!.Notify(executor, $"{target.Object().Name} is not following you.", executor);
+			await NotifyService!.Notify(executor, $"{target.Object.Name} is not following you.", executor);
 			return CallState.Empty;
 		}
 
@@ -1009,8 +1009,8 @@ public partial class Commands
 		await AttributeService!.ClearAttributeAsync(executor, target, "FOLLOWING",
 			IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
 
-		await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
-		await NotifyService!.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.");
+		await NotifyService!.Notify(executor, $"You dismiss {target.Object.Name}.", executor);
+		await NotifyService!.Notify(target, $"{executor.Object.Name} dismisses you. You stop following.");
 
 		return CallState.Empty;
 	}
@@ -1048,9 +1048,9 @@ public partial class Commands
 
 		// Check if object is in our inventory (its location is us)
 		bool isCarrying = objectLocation.Match(
-			player => player.Object.DBRef.Equals(executor.Object().DBRef),
-			room => room.Object.DBRef.Equals(executor.Object().DBRef),
-			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
+			player => player.Object.DBRef.Equals(executor.Object.DBRef),
+			room => room.Object.DBRef.Equals(executor.Object.DBRef),
+			thing => thing.Object.DBRef.Equals(executor.Object.DBRef));
 
 		if (!isCarrying)
 		{
@@ -1081,7 +1081,7 @@ public partial class Commands
 			parser,
 			contentToDrop,
 			currentRoom,
-			executor.Object().DBRef,
+			executor.Object.DBRef,
 			"drop",
 			silent: false);
 
@@ -1128,7 +1128,7 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(adropActions.ToPlainText()))
 			{
 				await parser.With(
-					state => state with { Executor = objectToDrop.Object().DBRef, Caller = state.Executor },
+					state => state with { Executor = objectToDrop.Object.DBRef, Caller = state.Executor },
 					async p => await p.CommandParse(adropActions));
 			}
 		}
@@ -1154,13 +1154,13 @@ public partial class Commands
 					// Check for containment loops before dropping to the destination
 					if (await MoveService!.WouldCreateLoop(contentToDrop, dropToContainer))
 					{
-						await NotifyService!.Notify(executor, $"Cannot drop {objectToDrop.Object().Name} there - it would create a containment loop.", executor);
+						await NotifyService!.Notify(executor, $"Cannot drop {objectToDrop.Object.Name} there - it would create a containment loop.", executor);
 						return CallState.Empty;
 					}
 
 					await Mediator!.Send(new MoveObjectCommand(contentToDrop, dropToContainer));
 
-					await NotifyService!.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.", executor);
+					await NotifyService!.Notify(executor, $"Dropped. {objectToDrop.Object.Name} was sent to {dropToContainer.Object.Name}.", executor);
 					return CallState.Empty;
 				}
 			}
@@ -1218,15 +1218,15 @@ public partial class Commands
 
 		// Check if we're holding the object (its location is us)
 		bool isHolding = objectLocation.Match(
-			player => player.Object.DBRef.Equals(executor.Object().DBRef),
-			room => room.Object.DBRef.Equals(executor.Object().DBRef),
-			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
+			player => player.Object.DBRef.Equals(executor.Object.DBRef),
+			room => room.Object.DBRef.Equals(executor.Object.DBRef),
+			thing => thing.Object.DBRef.Equals(executor.Object.DBRef));
 
 		// Check if we're in the same location as the object
 		bool sameLocation = objectLocation.Match(
-			player => player.Object.DBRef.Equals(executorLocation.Object().DBRef),
-			room => room.Object.DBRef.Equals(executorLocation.Object().DBRef),
-			thing => thing.Object.DBRef.Equals(executorLocation.Object().DBRef));
+			player => player.Object.DBRef.Equals(executorLocation.Object.DBRef),
+			room => room.Object.DBRef.Equals(executorLocation.Object.DBRef),
+			thing => thing.Object.DBRef.Equals(executorLocation.Object.DBRef));
 
 		if (!isHolding && !sameLocation)
 		{
@@ -1235,7 +1235,7 @@ public partial class Commands
 		}
 
 		// Check if we can access the object's contents
-		var objectFlags = await objectToEmpty.Object().Flags.Value.ToArrayAsync();
+		var objectFlags = await objectToEmpty.Object.Flags.Value.ToArrayAsync();
 		var hasEnterOk = objectFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
 
 		if (!hasEnterOk && !await PermissionService!.Controls(executor, objectToEmpty))
@@ -1250,7 +1250,7 @@ public partial class Commands
 
 		if (contents.Count == 0)
 		{
-			await NotifyService!.Notify(executor, $"{objectToEmpty.Object().Name} is already empty.", executor);
+			await NotifyService!.Notify(executor, $"{objectToEmpty.Object.Name} is already empty.", executor);
 			return CallState.Empty;
 		}
 
@@ -1329,7 +1329,7 @@ public partial class Commands
 					if (!string.IsNullOrEmpty(asuccessActions.ToPlainText()))
 					{
 						await parser.With(
-							state => state with { Executor = itemObj.Object().DBRef, Caller = state.Executor },
+							state => state with { Executor = itemObj.Object.DBRef, Caller = state.Executor },
 							async p => await p.CommandParse(asuccessActions));
 					}
 				}
@@ -1408,7 +1408,7 @@ public partial class Commands
 					if (!string.IsNullOrEmpty(adropActions.ToPlainText()))
 					{
 						await parser.With(
-							state => state with { Executor = itemObj.Object().DBRef, Caller = state.Executor },
+							state => state with { Executor = itemObj.Object.DBRef, Caller = state.Executor },
 							async p => await p.CommandParse(adropActions));
 					}
 				}
@@ -1420,15 +1420,15 @@ public partial class Commands
 		// Notify the player about the results
 		if (movedCount > 0 && failedCount == 0)
 		{
-			await NotifyService!.Notify(executor, $"Emptied {objectToEmpty.Object().Name}.", executor);
+			await NotifyService!.Notify(executor, $"Emptied {objectToEmpty.Object.Name}.", executor);
 		}
 		else if (movedCount > 0 && failedCount > 0)
 		{
-			await NotifyService!.Notify(executor, $"Emptied {movedCount} item(s) from {objectToEmpty.Object().Name}. {failedCount} item(s) could not be moved.", executor);
+			await NotifyService!.Notify(executor, $"Emptied {movedCount} item(s) from {objectToEmpty.Object.Name}. {failedCount} item(s) could not be moved.", executor);
 		}
 		else if (movedCount == 0 && failedCount > 0)
 		{
-			await NotifyService!.Notify(executor, $"Could not empty {objectToEmpty.Object().Name}.", executor);
+			await NotifyService!.Notify(executor, $"Could not empty {objectToEmpty.Object.Name}.", executor);
 		}
 
 		return CallState.Empty;
@@ -1465,7 +1465,7 @@ public partial class Commands
 		if (!canEnter)
 		{
 			// Check for ENTER_OK flag
-			var objFlags = await objectToEnter.Object().Flags.Value.ToArrayAsync();
+			var objFlags = await objectToEnter.Object.Flags.Value.ToArrayAsync();
 			var hasEnterOk = objFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
 
 			if (!hasEnterOk)
@@ -1520,7 +1520,7 @@ public partial class Commands
 				if (!string.IsNullOrEmpty(aefailActions.ToPlainText()))
 				{
 					await parser.With(
-						state => state with { Executor = objectToEnter.Object().DBRef, Caller = state.Executor },
+						state => state with { Executor = objectToEnter.Object.DBRef, Caller = state.Executor },
 						async p => await p.CommandParse(aefailActions));
 				}
 			}
@@ -1542,7 +1542,7 @@ public partial class Commands
 			parser,
 			executorAsContent,
 			containerToEnter,
-			executor.Object().DBRef,
+			executor.Object.DBRef,
 			"enter",
 			silent: false);
 
@@ -1606,12 +1606,12 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(aenterActions.ToPlainText()))
 			{
 				await parser.With(
-					state => state with { Executor = objectToEnter.Object().DBRef, Caller = state.Executor },
+					state => state with { Executor = objectToEnter.Object.DBRef, Caller = state.Executor },
 					async p => await p.CommandParse(aenterActions));
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"You enter {objectToEnter.Object().Name}.", executor);
+		await NotifyService!.Notify(executor, $"You enter {objectToEnter.Object.Name}.", executor);
 		return CallState.Empty;
 	}
 
@@ -1643,7 +1643,7 @@ public partial class Commands
 		var target = targetResult.WithoutError().WithoutNone();
 
 		// Can't follow yourself
-		if (target.Object().DBRef.Equals(executor.Object().DBRef))
+		if (target.Object.DBRef.Equals(executor.Object.DBRef))
 		{
 			await NotifyService!.Notify(executor, "You can't follow yourself.", executor);
 			return CallState.Empty;
@@ -1658,10 +1658,10 @@ public partial class Commands
 
 		// Store the target in a FOLLOWING attribute
 		await AttributeService!.SetAttributeAsync(executor, executor, "FOLLOWING",
-			MModule.single(target.Object().DBRef.ToString()));
+			MModule.single(target.Object.DBRef.ToString()));
 
-		await NotifyService!.Notify(executor, $"You are now following {target.Object().Name}.", executor);
-		await NotifyService!.Notify(target, $"{executor.Object().Name} is now following you.");
+		await NotifyService!.Notify(executor, $"You are now following {target.Object.Name}.", executor);
+		await NotifyService!.Notify(target, $"{executor.Object.Name} is now following you.");
 
 		return CallState.Empty;
 	}
@@ -1709,7 +1709,7 @@ public partial class Commands
 			var container = containerResult.WithoutError().WithoutNone();
 
 			// Check if container is ENTER_OK
-			var containerFlags = await container.Object().Flags.Value.ToArrayAsync();
+			var containerFlags = await container.Object.Flags.Value.ToArrayAsync();
 			var hasEnterOk = containerFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
 
 			if (!hasEnterOk && !await PermissionService!.Controls(executor, container))
@@ -1750,9 +1750,9 @@ public partial class Commands
 			async thing => await thing.Location.WithCancellation(CancellationToken.None));
 
 		var alreadyCarrying = objectLocation.Match(
-			player => player.Object.DBRef.Equals(executor.Object().DBRef),
-			room => room.Object.DBRef.Equals(executor.Object().DBRef),
-			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
+			player => player.Object.DBRef.Equals(executor.Object.DBRef),
+			room => room.Object.DBRef.Equals(executor.Object.DBRef),
+			thing => thing.Object.DBRef.Equals(executor.Object.DBRef));
 
 		if (alreadyCarrying)
 		{
@@ -1781,7 +1781,7 @@ public partial class Commands
 			parser,
 			contentToGet,
 			executorContainer,
-			executor.Object().DBRef,
+			executor.Object.DBRef,
 			"get",
 			silent: false);
 
@@ -1832,7 +1832,7 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(asuccessActions.ToPlainText()))
 			{
 				await parser.With(
-					state => state with { Executor = objectToGet.Object().DBRef, Caller = state.Executor },
+					state => state with { Executor = objectToGet.Object.DBRef, Caller = state.Executor },
 					async p => await p.CommandParse(asuccessActions));
 			}
 		}
@@ -1909,9 +1909,9 @@ public partial class Commands
 			async thing => await thing.Location.WithCancellation(CancellationToken.None));
 
 		var isCarrying = objectLocation.Match(
-			player => player.Object.DBRef.Equals(executor.Object().DBRef),
-			room => room.Object.DBRef.Equals(executor.Object().DBRef),
-			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
+			player => player.Object.DBRef.Equals(executor.Object.DBRef),
+			room => room.Object.DBRef.Equals(executor.Object.DBRef),
+			thing => thing.Object.DBRef.Equals(executor.Object.DBRef));
 
 		if (!isCarrying)
 		{
@@ -1920,12 +1920,12 @@ public partial class Commands
 		}
 
 		// Check recipient is ENTER_OK
-		var recipientFlags = await recipient.Object().Flags.Value.ToArrayAsync();
+		var recipientFlags = await recipient.Object.Flags.Value.ToArrayAsync();
 		var hasEnterOk = recipientFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
 
 		if (!hasEnterOk && !await PermissionService!.Controls(executor, recipient))
 		{
-			await NotifyService!.Notify(executor, $"{recipient.Object().Name} is not accepting things.", executor);
+			await NotifyService!.Notify(executor, $"{recipient.Object.Name} is not accepting things.", executor);
 			return CallState.Empty;
 		}
 
@@ -1946,7 +1946,7 @@ public partial class Commands
 		// Check @lock/receive on recipient (object must pass this)
 		if (!LockService!.Evaluate(LockType.Receive, recipient, objectToGive))
 		{
-			await NotifyService!.Notify(executor, $"{recipient.Object().Name} doesn't want that.", executor);
+			await NotifyService!.Notify(executor, $"{recipient.Object.Name} doesn't want that.", executor);
 			return CallState.Empty;
 		}
 
@@ -2018,7 +2018,7 @@ public partial class Commands
 		}
 		else if (!isSilent)
 		{
-			await NotifyService!.Notify(recipient, $"{executor.Object().Name} gave you {objectToGive.Object().Name}.");
+			await NotifyService!.Notify(recipient, $"{executor.Object.Name} gave you {objectToGive.Object.Name}.");
 		}
 
 		// Trigger @oreceive attribute (shown to others in room)
@@ -2048,7 +2048,7 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(areceiveActions.ToPlainText()))
 			{
 				await parser.With(
-					state => state with { Executor = recipient.Object().DBRef, Caller = state.Executor },
+					state => state with { Executor = recipient.Object.DBRef, Caller = state.Executor },
 					async p => await p.CommandParse(areceiveActions));
 			}
 		}
@@ -2062,7 +2062,7 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(successActions.ToPlainText()))
 			{
 				await parser.With(
-					state => state with { Executor = objectToGive.Object().DBRef, Caller = state.Executor },
+					state => state with { Executor = objectToGive.Object.DBRef, Caller = state.Executor },
 					async p => await p.CommandParse(successActions));
 			}
 		}
@@ -2084,7 +2084,7 @@ public partial class Commands
 
 		// Get the home location
 		var homeLocation = await executor.MinusRoom().Home();
-		var homeObj = homeLocation.Object();
+		var homeObj = homeLocation.Object;
 
 		// Check if home is set (not NOTHING)
 		if (homeObj.DBRef.Number < 0)
@@ -2100,7 +2100,7 @@ public partial class Commands
 			async exit => await exit.Home.WithCancellation(CancellationToken.None),
 			async thing => await thing.Location.WithCancellation(CancellationToken.None));
 
-		if (currentLocation.Object().DBRef.Equals(homeObj.DBRef))
+		if (currentLocation.Object.DBRef.Equals(homeObj.DBRef))
 		{
 			await NotifyService!.Notify(executor, "You are already home.", executor);
 			return CallState.Empty;
@@ -2148,7 +2148,7 @@ public partial class Commands
 		var items = new System.Collections.Generic.List<string>();
 		await foreach (var item in contents)
 		{
-			items.Add(await MessageHelpers.FormatObjectWithDbref(item.Object()));
+			items.Add(await MessageHelpers.FormatObjectWithDbref(item.Object));
 		}
 
 		if (items.Count == 0)
@@ -2241,7 +2241,7 @@ public partial class Commands
 				if (!string.IsNullOrEmpty(alfailActions.ToPlainText()))
 				{
 					await parser.With(
-						state => state with { Executor = container.Object().DBRef, Caller = state.Executor },
+						state => state with { Executor = container.Object.DBRef, Caller = state.Executor },
 						async p => await p.CommandParse(alfailActions));
 				}
 			}
@@ -2254,7 +2254,7 @@ public partial class Commands
 			parser,
 			executor.AsContent,
 			destinationLocation,
-			executor.Object().DBRef,
+			executor.Object.DBRef,
 			"leave",
 			silent: false);
 
@@ -2276,7 +2276,7 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"You leave {currentLocation.Object().Name}.", executor);
+			await NotifyService!.Notify(executor, $"You leave {currentLocation.Object.Name}.", executor);
 		}
 
 		// Trigger @oleave attribute (shown to others inside the container)
@@ -2314,7 +2314,7 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(aleaveActions.ToPlainText()))
 			{
 				await parser.With(
-					state => state with { Executor = container.Object().DBRef, Caller = state.Executor },
+					state => state with { Executor = container.Object.DBRef, Caller = state.Executor },
 					async p => await p.CommandParse(aleaveActions));
 			}
 		}
@@ -2325,7 +2325,7 @@ public partial class Commands
 			await parser.CommandParse(MModule.single("look"));
 		}
 
-		return new CallState(destinationLocation.Object().DBRef.ToString());
+		return new CallState(destinationLocation.Object.DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "PAGE", Switches = ["LIST", "NOEVAL", "PORT", "OVERRIDE"],
@@ -2397,10 +2397,10 @@ public partial class Commands
 			// Check HAVEN flag unless OVERRIDE switch is used
 			if (!isOverride)
 			{
-				var recipientFlags = recipient.Object().Flags.Value;
+				var recipientFlags = recipient.Object.Flags.Value;
 				if (await recipientFlags.AnyAsync(f => f.Name.Equals("HAVEN", StringComparison.OrdinalIgnoreCase)))
 				{
-					await NotifyService!.Notify(executor, $"{recipient.Object().Name} is not accepting pages.", executor);
+					await NotifyService!.Notify(executor, $"{recipient.Object.Name} is not accepting pages.", executor);
 					continue;
 				}
 			}
@@ -2435,7 +2435,7 @@ public partial class Commands
 						var attr = aFailureAttr.AsAttribute;
 						// Executor = the recipient (PAGE_LOCK`AFAILURE is on the recipient); enactor = pager
 						await parser.With(
-							state => state with { Executor = recipient.Object().DBRef, Caller = state.Executor },
+							state => state with { Executor = recipient.Object.DBRef, Caller = state.Executor },
 							async p => await p.CommandParse(attr.Last().Value));
 					}
 
@@ -2444,7 +2444,7 @@ public partial class Commands
 			}
 
 			// Send the page
-			var pageMessage = $"From afar, {executor.Object().Name} pages: {messageArg}";
+			var pageMessage = $"From afar, {executor.Object.Name} pages: {messageArg}";
 			await NotifyService!.Notify(recipient, pageMessage, executor, INotifyService.NotificationType.Say);
 
 			successfulRecipients.Add(recipient);
@@ -2453,11 +2453,11 @@ public partial class Commands
 		// Notify executor
 		if (successfulRecipients.Count > 0)
 		{
-			var recipientList = string.Join(", ", successfulRecipients.Select(r => r.Object().DBRef));
+			var recipientList = string.Join(", ", successfulRecipients.Select(r => r.Object.DBRef));
 			await NotifyService!.Notify(executor, $"You paged {recipientList} with '{messageArg}'.", executor);
 
 			// Store LASTPAGED attribute
-			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
+			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object.DBRef));
 			await AttributeService!.SetAttributeAsync(executor, executor, "LASTPAGED", MModule.single(lastPagedText));
 		}
 		else if (recipientNames.Length > 0)
@@ -2488,7 +2488,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var executorName = MModule.single(executor.Object().Name);
+		var executorName = MModule.single(executor.Object.Name);
 		var poseMessage = isNoSpace
 			? MModule.concat(executorName, MModule.trim(message, " ", global::MarkupString.TrimType.TrimStart))
 			: MModule.ConcatMany([executorName, MModule.Space(), message]);
@@ -2530,7 +2530,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var executorName = MModule.single(executor.Object().Name);
+		var executorName = MModule.single(executor.Object.Name);
 		var youSayMessage = MModule.multiple([MModule.single("You say, \""), message, MModule.single("\"")]);
 		var namesSaysMessage = MModule.multiple([executorName, MModule.single(" says, \""), message, MModule.single("\"")]);
 
@@ -2565,7 +2565,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var executorName = MModule.single(executor.Object().Name);
+		var executorName = MModule.single(executor.Object.Name);
 		var semiposeMessage = MModule.concat(executorName, message);
 
 		await CommunicationService!.SendToRoomAsync(executor, executorLocation,
@@ -2596,7 +2596,7 @@ public partial class Commands
 			// Show others what we're teaching (unparsed)
 			var executorLocation = await executor.Where();
 			await CommunicationService!.SendToRoomAsync(executor, executorLocation,
-				_ => MModule.single($"{executor.Object().Name} types --> {actionList}"),
+				_ => MModule.single($"{executor.Object.Name} types --> {actionList}"),
 				INotifyService.NotificationType.Emit, excludeObjects: [executor]);
 
 			// Execute the action list
@@ -2617,7 +2617,7 @@ public partial class Commands
 		// Show others what we're teaching (unparsed)
 		var location = await executor.Where();
 		await CommunicationService!.SendToRoomAsync(executor, location,
-			_ => MModule.single($"{executor.Object().Name} types --> {command}"),
+			_ => MModule.single($"{executor.Object.Name} types --> {command}"),
 			INotifyService.NotificationType.Emit, excludeObjects: [executor]);
 
 		// Execute the command
@@ -2716,7 +2716,7 @@ public partial class Commands
 				if (!string.IsNullOrEmpty(aufailActions.ToPlainText()))
 				{
 					await parser.With(
-						state => state with { Executor = objectToUse.Object().DBRef, Caller = state.Executor },
+						state => state with { Executor = objectToUse.Object.DBRef, Caller = state.Executor },
 						async p => await p.CommandParse(aufailActions));
 				}
 			}
@@ -2736,7 +2736,7 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"You use {objectToUse.Object().Name}.", executor);
+			await NotifyService!.Notify(executor, $"You use {objectToUse.Object.Name}.", executor);
 		}
 
 		// Trigger @OUSE attribute (others see this)
@@ -2761,7 +2761,7 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(auseActions.ToPlainText()))
 			{
 				await parser.With(
-					state => state with { Executor = objectToUse.Object().DBRef, Caller = state.Executor },
+					state => state with { Executor = objectToUse.Object.DBRef, Caller = state.Executor },
 					async p => await p.CommandParse(auseActions));
 			}
 		}
@@ -2788,9 +2788,9 @@ public partial class Commands
 
 			await foreach (var obj in contents)
 			{
-				if (obj.IsPlayer && !obj.Object().DBRef.Equals(executor.Object().DBRef))
+				if (obj.IsPlayer && !obj.Object.DBRef.Equals(executor.Object.DBRef))
 				{
-					players.Add(obj.Object().Name);
+					players.Add(obj.Object.Name);
 				}
 			}
 
@@ -2846,7 +2846,7 @@ public partial class Commands
 			var target = targetResult.WithoutError().WithoutNone();
 
 			// Can't whisper to self
-			if (target.Object().DBRef.Equals(executor.Object().DBRef))
+			if (target.Object.DBRef.Equals(executor.Object.DBRef))
 			{
 				await NotifyService!.Notify(executor, "You can't whisper to yourself.", executor);
 				continue;
@@ -2854,9 +2854,9 @@ public partial class Commands
 
 			// Check if target is in same location
 			var targetLocation = await target.Where();
-			if (!targetLocation.Object().DBRef.Equals(executorLocation.Object().DBRef))
+			if (!targetLocation.Object.DBRef.Equals(executorLocation.Object.DBRef))
 			{
-				await NotifyService!.Notify(executor, $"{target.Object().Name} is not here.", executor);
+				await NotifyService!.Notify(executor, $"{target.Object.Name} is not here.", executor);
 				continue;
 			}
 
@@ -2879,20 +2879,20 @@ public partial class Commands
 
 		// Extract pose text if needed (reuse this value)
 		var displayText = (isPose || isSemiPose)
-			? $"{executor.Object().Name}{messageText.Substring(1)}"
+			? $"{executor.Object.Name}{messageText.Substring(1)}"
 			: messageText;
 
 		// Send whisper to each target
 		foreach (var target in successfulTargets)
 		{
-			var whisperMsg = $"{executor.Object().Name} whispers, \"{displayText}\"";
+			var whisperMsg = $"{executor.Object.Name} whispers, \"{displayText}\"";
 			await NotifyService!.Notify(target, whisperMsg, executor, INotifyService.NotificationType.Say);
 		}
 
 		// Notify executor unless SILENT
 		if (!isSilent)
 		{
-			var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
+			var targetList = string.Join(", ", successfulTargets.Select(t => t.Object.Name));
 			await NotifyService!.Notify(executor, $"You whisper \"{displayText}\" to {targetList}.", executor);
 		}
 
@@ -2903,15 +2903,15 @@ public partial class Commands
 			await foreach (var obj in contents)
 			{
 				// Skip executor and targets
-				if (obj.Object().DBRef.Equals(executor.Object().DBRef) ||
-						successfulTargets.Any(t => t.Object().DBRef.Equals(obj.Object().DBRef)))
+				if (obj.Object.DBRef.Equals(executor.Object.DBRef) ||
+						successfulTargets.Any(t => t.Object.DBRef.Equals(obj.Object.DBRef)))
 				{
 					continue;
 				}
 
-				var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
+				var targetList = string.Join(", ", successfulTargets.Select(t => t.Object.Name));
 				await NotifyService!.Notify(obj.WithRoomOption(),
-					$"{executor.Object().Name} whispers something to {targetList}.");
+					$"{executor.Object.Name} whispers something to {targetList}.");
 			}
 		}
 
@@ -2977,8 +2977,8 @@ public partial class Commands
 		// Switch context: target becomes executor, original executor becomes enactor
 		await parser.With(s => s with
 		{
-			Executor = target.Object().DBRef,
-			Enactor = executor.Object().DBRef
+			Executor = target.Object.DBRef,
+			Enactor = executor.Object.DBRef
 		},
 		async np => await np.CommandParse(command));
 
@@ -3008,7 +3008,7 @@ public partial class Commands
 		await foreach (var connection in everyone.Where(player => player.Ref.HasValue))
 		{
 			var obj = await Mediator!.Send(new GetObjectNodeQuery(connection.Ref!.Value));
-			var playerName = obj.Known.Object().Name;
+			var playerName = obj.Known.Object.Name;
 
 			// Filter by visibility: mortals can't see DARK players, admins can see all
 			if (!isAdmin && await obj.Known.HasFlag("DARK"))
@@ -3078,7 +3078,7 @@ public partial class Commands
 
 		await foreach (var conn in allConnections)
 		{
-			if (conn.Ref.HasValue && conn.Ref.Value.Equals(executor.Object().DBRef))
+			if (conn.Ref.HasValue && conn.Ref.Value.Equals(executor.Object.DBRef))
 			{
 				connection = conn;
 				break;
@@ -3093,7 +3093,7 @@ public partial class Commands
 
 		var output = new System.Text.StringBuilder();
 		output.AppendLine("Session Information:");
-		output.AppendLine($"  Player: {executor.Object().Name} (#{executor.Object().DBRef.Number})");
+		output.AppendLine($"  Player: {executor.Object.Name} (#{executor.Object.DBRef.Number})");
 
 		if (connection.Connected.HasValue)
 		{
@@ -3122,7 +3122,7 @@ public partial class Commands
 		var prefix = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToPlainText().Trim();
 
 		// Find the connection handle for this executor.
-		await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+		await foreach (var conn in ConnectionService!.Get(executor.Object.DBRef))
 		{
 			if (conn.State == IConnectionService.ConnectionState.LoggedIn)
 			{
@@ -3151,7 +3151,7 @@ public partial class Commands
 		var suffix = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToPlainText().Trim();
 
 		// Find the connection handle for this executor.
-		await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+		await foreach (var conn in ConnectionService!.Get(executor.Object.DBRef))
 		{
 			if (conn.State == IConnectionService.ConnectionState.LoggedIn)
 			{
@@ -3203,7 +3203,7 @@ public partial class Commands
 			else
 			{
 				// No direct handle (e.g. @force context) — fall back to persisted LOCALE attribute.
-				var localeAttrs = Database!.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None);
+				var localeAttrs = Database!.GetAttributeAsync(executor.Object.DBRef, ["LOCALE"], CancellationToken.None);
 				await foreach (var attr in localeAttrs)
 				{
 					var saved = attr.Value.ToPlainText();
@@ -3227,7 +3227,7 @@ public partial class Commands
 				IAttributeService.AttributePatternMode.Exact,
 				IAttributeService.AttributeClearMode.Safe);
 
-			await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+			await foreach (var conn in ConnectionService!.Get(executor.Object.DBRef))
 			{
 				if (conn.State == IConnectionService.ConnectionState.LoggedIn)
 				{
@@ -3257,7 +3257,7 @@ public partial class Commands
 		await AttributeService!.SetAttributeAsync(executor, executor, "LOCALE", MModule.single(canonicalLocale));
 
 		// Update every active connection handle for this player immediately.
-		await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+		await foreach (var conn in ConnectionService!.Get(executor.Object.DBRef))
 		{
 			if (conn.State == IConnectionService.ConnectionState.LoggedIn)
 			{

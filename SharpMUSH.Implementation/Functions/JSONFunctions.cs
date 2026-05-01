@@ -98,7 +98,7 @@ public partial class Functions
 			}
 
 			var (dbref, attrName) = objAttr.AsT0;
-			dbref ??= executor.Object().DBRef.ToString();
+			dbref ??= executor.Object.DBRef.ToString();
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, enactor, executor, dbref, LocateFlags.All);
 			if (!locate.IsValid())
@@ -524,7 +524,7 @@ public partial class Functions
 		}
 
 		var isWizard = await executor.IsWizard();
-		var hasSendOOBPower = await ArgHelpers.HasObjectPowers(executor.Object(), "Send_OOB");
+		var hasSendOOBPower = await ArgHelpers.HasObjectPowers(executor.Object, "Send_OOB");
 
 		int sentCount = 0;
 
@@ -549,14 +549,14 @@ public partial class Functions
 				continue;
 			}
 
-			var isSelf = executor.Object().DBRef == located.Object().DBRef;
+			var isSelf = executor.Object.DBRef == located.Object.DBRef;
 
 			if (!isWizard && !isSelf && !hasSendOOBPower)
 			{
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 
-			await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
+			await foreach (var connection in ConnectionService!.Get(located.Object.DBRef))
 			{
 				if (connection.Metadata.GetValueOrDefault("GMCP", "0") != "1")
 				{

@@ -47,7 +47,7 @@ public class ManipulateSharpObjectService(
 		if (obj.IsThing || obj.IsRoom)
 		{
 				await mediator.Send(new SetNameCommand(obj, name));
-				return obj.Object().DBRef;
+				return obj.Object.DBRef;
 
 			}
 		if (obj.IsPlayer)
@@ -71,7 +71,7 @@ public class ManipulateSharpObjectService(
 
 				if (playerSplit.Length <= 1)
 				{
-					return obj.Object().DBRef;
+					return obj.Object.DBRef;
 				}
 
 				var aliases = playerSplit.Skip(1).Select(x => x.ToPlainText()).ToArray();
@@ -92,7 +92,7 @@ public class ManipulateSharpObjectService(
 				await attributeService.SetAttributeAsync(executor, obj, "ALIAS",
 					MModule.multipleWithDelimiter(MModule.single(";"), aliases.Select(MModule.single)));
 
-					return obj.Object().DBRef;
+					return obj.Object.DBRef;
 		}
 
 		// Default case: any other object type
@@ -103,7 +103,7 @@ public class ManipulateSharpObjectService(
 			await attributeService.SetAttributeAsync(executor, obj, "ALIAS",
 				MModule.multipleWithDelimiter(MModule.single(";"), split.Skip(1)));
 		}
-		return obj.Object().DBRef;
+		return obj.Object.DBRef;
 	}
 
 	public async ValueTask<CallState> SetPassword(AnySharpObject executor, SharpPlayer player, string newPassword,
@@ -160,7 +160,7 @@ public class ManipulateSharpObjectService(
 			if (notify)
 			{
 				await notifyService.Notify(executor,
-					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizeFlag, obj.Object().Name));
+					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizeFlag, obj.Object.Name));
 			}
 
 			return Errors.ErrorNoSuchFlag;
@@ -215,7 +215,7 @@ public class ManipulateSharpObjectService(
 					if (notify)
 					{
 						await notifyService.Notify(executor,
-							string.Format(Definitions.ErrorMessages.Notifications.FlagAlreadyReset, obj.Object().Name, realFlag.Name));
+							string.Format(Definitions.ErrorMessages.Notifications.FlagAlreadyReset, obj.Object.Name, realFlag.Name));
 					}
 
 					break;
@@ -225,7 +225,7 @@ public class ManipulateSharpObjectService(
 					if (notify)
 					{
 						await notifyService.Notify(executor,
-							string.Format(Definitions.ErrorMessages.Notifications.FlagReset, obj.Object().Name, realFlag.Name));
+							string.Format(Definitions.ErrorMessages.Notifications.FlagReset, obj.Object.Name, realFlag.Name));
 					}
 
 					await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
@@ -236,7 +236,7 @@ public class ManipulateSharpObjectService(
 						realFlag.Name,
 						"FLAG",
 						false, // IsSet = false (clearing)
-						executor.Object().DBRef));
+						executor.Object.DBRef));
 
 					break;
 				}
@@ -245,7 +245,7 @@ public class ManipulateSharpObjectService(
 					if (notify)
 					{
 						await notifyService.Notify(executor,
-							string.Format(Definitions.ErrorMessages.Notifications.FlagAlreadySet, obj.Object().Name, realFlag.Name));
+							string.Format(Definitions.ErrorMessages.Notifications.FlagAlreadySet, obj.Object.Name, realFlag.Name));
 					}
 
 					break;
@@ -254,7 +254,7 @@ public class ManipulateSharpObjectService(
 				if (notify)
 				{
 					await notifyService.Notify(executor,
-						string.Format(Definitions.ErrorMessages.Notifications.FlagSet, obj.Object().Name, realFlag.Name));
+						string.Format(Definitions.ErrorMessages.Notifications.FlagSet, obj.Object.Name, realFlag.Name));
 				}
 
 				await mediator.Send(new SetObjectFlagCommand(obj, realFlag));
@@ -265,7 +265,7 @@ public class ManipulateSharpObjectService(
 					realFlag.Name,
 					"FLAG",
 					true, // IsSet = true (setting)
-					executor.Object().DBRef));
+					executor.Object.DBRef));
 
 				break;
 		}
@@ -311,7 +311,7 @@ public class ManipulateSharpObjectService(
 			if (notify)
 			{
 				await notifyService.Notify(executor,
-					string.Format(Definitions.ErrorMessages.Notifications.PowerAlreadySet, obj.Object().Name, powerOrPowerAlias));
+					string.Format(Definitions.ErrorMessages.Notifications.PowerAlreadySet, obj.Object.Name, powerOrPowerAlias));
 			}
 			return true;
 		}
@@ -328,7 +328,7 @@ public class ManipulateSharpObjectService(
 			if (notify)
 			{
 				await notifyService.Notify(executor,
-					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, obj.Object().Name));
+					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, obj.Object.Name));
 			}
 			return Errors.ErrorNoSuchPower;
 		}
@@ -336,7 +336,7 @@ public class ManipulateSharpObjectService(
 		if (notify)
 		{
 			await notifyService.Notify(executor,
-				string.Format(Definitions.ErrorMessages.Notifications.PowerSet, obj.Object().Name, powerOrPowerAlias));
+				string.Format(Definitions.ErrorMessages.Notifications.PowerSet, obj.Object.Name, powerOrPowerAlias));
 		}
 
 		await mediator.Send(new SetObjectPowerCommand(obj, found));
@@ -347,7 +347,7 @@ public class ManipulateSharpObjectService(
 			found.Name,
 			"POWER",
 			true, // IsSet = true (setting)
-			executor.Object().DBRef));
+			executor.Object.DBRef));
 
 		return true;
 	}
@@ -379,7 +379,7 @@ public class ManipulateSharpObjectService(
 			if (notify)
 			{
 				await notifyService.Notify(executor,
-					string.Format(Definitions.ErrorMessages.Notifications.FlagAlreadyReset, obj.Object().Name, powerOrPowerAlias));
+					string.Format(Definitions.ErrorMessages.Notifications.FlagAlreadyReset, obj.Object.Name, powerOrPowerAlias));
 			}
 			return true;
 		}
@@ -396,7 +396,7 @@ public class ManipulateSharpObjectService(
 			if (notify)
 			{
 				await notifyService.Notify(executor,
-					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, obj.Object().Name));
+					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, obj.Object.Name));
 			}
 			return Errors.ErrorNoSuchPower;
 		}
@@ -404,7 +404,7 @@ public class ManipulateSharpObjectService(
 		if (notify)
 		{
 			await notifyService.Notify(executor,
-				string.Format(Definitions.ErrorMessages.Notifications.FlagReset, obj.Object().Name, powerOrPowerAlias));
+				string.Format(Definitions.ErrorMessages.Notifications.FlagReset, obj.Object.Name, powerOrPowerAlias));
 		}
 
 		await mediator.Send(new UnsetObjectPowerCommand(obj, found));
@@ -415,7 +415,7 @@ public class ManipulateSharpObjectService(
 			found.Name,
 			"POWER",
 			false, // IsSet = false (clearing)
-			executor.Object().DBRef));
+			executor.Object.DBRef));
 
 		return true;
 	}
@@ -432,13 +432,13 @@ public class ManipulateSharpObjectService(
 		}
 
 		// Early return if object has no powers
-		if (!await obj.Object().Powers.Value.AnyAsync())
+		if (!await obj.Object.Powers.Value.AnyAsync())
 		{
 			return true;
 		}
 
 		// Materialize the powers collection to avoid modification during iteration
-		var objectPowers = await obj.Object().Powers.Value.ToArrayAsync();
+		var objectPowers = await obj.Object.Powers.Value.ToArrayAsync();
 		var powersCleared = 0;
 
 		foreach (var power in objectPowers)
@@ -452,14 +452,14 @@ public class ManipulateSharpObjectService(
 				power.Name,
 				"POWER",
 				false, // IsSet = false (clearing)
-				executor.Object().DBRef));
+				executor.Object.DBRef));
 
 			powersCleared++;
 		}
 
 		if (notify && powersCleared > 0)
 		{
-			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ClearedPowersFromFormat), executor, powersCleared, obj.Object().Name);
+			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ClearedPowersFromFormat), executor, powersCleared, obj.Object.Name);
 		}
 
 		return true;

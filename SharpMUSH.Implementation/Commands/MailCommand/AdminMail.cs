@@ -18,7 +18,7 @@ public static class AdminMail
 		if (!await executor.IsWizard())
 		{
 			var errorResult = await notifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 				shouldNotify: true);

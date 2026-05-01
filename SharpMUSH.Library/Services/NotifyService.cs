@@ -57,7 +57,7 @@ public class NotifyService(
 		{
 			try
 			{
-				var location = (await sender.Value.Where()).Object().DBRef;
+				var location = (await sender.Value.Where()).Object.DBRef;
 				var notificationContext = new NotificationContext(Target: who, Location: location, IsRoomBroadcast: false, ExcludedObjects: []);
 				await listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
 			}
@@ -73,7 +73,7 @@ public class NotifyService(
 	}
 
 	public ValueTask Notify(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
-		=> Notify(who.Object().DBRef, what, sender, type);
+		=> Notify(who.Object.DBRef, what, sender, type);
 
 	public async ValueTask Notify(long handle, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
@@ -102,7 +102,7 @@ public class NotifyService(
 	}
 
 	public ValueTask Prompt(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
-		=> Prompt(who.Object().DBRef, what, sender, type);
+		=> Prompt(who.Object.DBRef, what, sender, type);
 
 	public async ValueTask Prompt(long handle, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> await Prompt([handle], what, sender, type);
@@ -128,10 +128,10 @@ public class NotifyService(
 	}
 
 	public ValueTask NotifyExcept(AnySharpObject who, SharpMessage what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
-		=> NotifyExcept(who.Object().DBRef, what, except, sender, type);
+		=> NotifyExcept(who.Object.DBRef, what, except, sender, type);
 
 	public async ValueTask NotifyExcept(AnySharpObject who, SharpMessage what, AnySharpObject[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
-		=> await NotifyExcept(who.Object().DBRef, what, except.Select(x => x.Object().DBRef).ToArray(), sender, type);
+		=> await NotifyExcept(who.Object.DBRef, what, except.Select(x => x.Object.DBRef).ToArray(), sender, type);
 
 	public async ValueTask<CallState> NotifyAndReturn(DBRef target, string errorReturn, string notifyMessage, bool shouldNotify)
 	{
@@ -149,7 +149,7 @@ public class NotifyService(
 	}
 
 	public ValueTask NotifyLocalized(AnySharpObject who, string key, params object[] args)
-		=> NotifyLocalized(who.Object().DBRef, key, args);
+		=> NotifyLocalized(who.Object.DBRef, key, args);
 
 	public async ValueTask NotifyLocalized(long handle, string key, params object[] args)
 	{
@@ -168,7 +168,7 @@ public class NotifyService(
 	}
 
 	public ValueTask NotifyLocalized(AnySharpObject who, string key, AnySharpObject? sender, params object[] args)
-		=> NotifyLocalized(who.Object().DBRef, key, sender, args);
+		=> NotifyLocalized(who.Object.DBRef, key, sender, args);
 
 	public async ValueTask NotifyLocalized(long handle, string key, AnySharpObject? sender, params object[] args)
 	{

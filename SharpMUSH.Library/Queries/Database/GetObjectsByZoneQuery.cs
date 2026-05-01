@@ -12,6 +12,6 @@ namespace SharpMUSH.Library.Queries.Database;
 public record GetObjectsByZoneQuery(DbRefOrObject Zone)
 	: IStreamQuery<SharpObject>, ICacheable
 {
-	public string CacheKey => $"zone-objects:{(Zone.IsDBRef ? Zone.AsDBRef : Zone.AsObject.Object().DBRef)}";
+	public string CacheKey => $"zone-objects:{(Zone.IsDBRef ? Zone.AsDBRef : Zone.AsObject.Object.DBRef)}";
 	public string[] CacheTags => [Definitions.CacheTags.ZoneObjects];
 }

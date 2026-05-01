@@ -42,7 +42,7 @@ public partial class Commands
 		if (location.IsNone || location.IsExit)
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.NotARoom,
 				notifyMessage: ErrorMessages.Notifications.DefaultHomeLocationInvalid,
 				shouldNotify: true);
@@ -51,7 +51,7 @@ public partial class Commands
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.BadObjectName,
 				notifyMessage: ErrorMessages.Notifications.InvalidNameThing,
 				shouldNotify: true);
@@ -59,10 +59,10 @@ public partial class Commands
 
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
 			await executor.Where(),
-			await executor.Object().Owner.WithCancellation(CancellationToken.None),
+			await executor.Object.Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
 
-		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
+		var creatorZone = await executor.Object.Zone.WithCancellation(CancellationToken.None);
 		if (!creatorZone.IsNone)
 		{
 			var newThing = await Mediator.Send(new GetObjectNodeQuery(thing));
@@ -81,7 +81,7 @@ public partial class Commands
 		await EventService!.TriggerEventAsync(
 			parser,
 			"OBJECT`CREATE",
-			executor.Object().DBRef,
+			executor.Object.DBRef,
 			thing.ToString(),
 			""); // null for cloned-from (not a clone)
 
@@ -126,7 +126,7 @@ public partial class Commands
 			LocateFlags.All,
 			async found =>
 			{
-				var oldName = found.Object().Name;
+				var oldName = found.Object.Name;
 				var result = await ManipulateSharpObjectService!.SetName(executor, found, name, true);
 
 				// If rename was successful, trigger OBJECT`RENAME event
@@ -136,8 +136,8 @@ public partial class Commands
 					await EventService!.TriggerEventAsync(
 						parser,
 						"OBJECT`RENAME",
-						executor.Object().DBRef,
-						found.Object().DBRef.ToString(),
+						executor.Object.DBRef,
+						found.Object.DBRef.ToString(),
 						name.ToPlainText(),
 						oldName);
 				}
@@ -208,7 +208,7 @@ public partial class Commands
 		if (setResult.IsSuccess)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-				realLocated.Object().Name, MModule.plainText(attribute));
+				realLocated.Object.Name, MModule.plainText(attribute));
 		}
 		else
 		{
@@ -216,7 +216,7 @@ public partial class Commands
 		}
 
 		return new CallState(setResult.Match(
-			_ => $"{realLocated.Object().Name}/{args["0"].Message}",
+			_ => $"{realLocated.Object.Name}/{args["0"].Message}",
 			failure => failure.Value));
 		}
 
@@ -247,7 +247,7 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
@@ -260,7 +260,7 @@ public partial class Commands
 						if (!newOwnerObj.IsPlayer)
 						{
 							return await NotifyService!.NotifyAndReturn(
-								executor.Object().DBRef,
+								executor.Object.DBRef,
 								errorReturn: ErrorMessages.Returns.InvalidPlayer,
 								notifyMessage: ErrorMessages.Notifications.MustBePlayer,
 								shouldNotify: true);
@@ -326,7 +326,7 @@ public partial class Commands
 		if (await executor.IsGuest())
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.GuestCantDestroy,
 				shouldNotify: true);
@@ -336,7 +336,7 @@ public partial class Commands
 		if (obj.IsGod())
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.DestroyGodBlasphemous,
 				shouldNotify: true);
@@ -346,7 +346,7 @@ public partial class Commands
 		if (await obj.HasFlag("GOING_TWICE"))
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.AlreadyDestroyed,
 				shouldNotify: true);
@@ -354,12 +354,12 @@ public partial class Commands
 
 		// Protect special configuration objects (player_start, master_room, base_room, default_home).
 		var dbConfig = Configuration!.CurrentValue.Database;
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 		if (objKey == dbConfig.PlayerStart || objKey == dbConfig.MasterRoom
 			|| objKey == dbConfig.BaseRoom || objKey == dbConfig.DefaultHome)
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.TooSpecialToDestroy,
 				shouldNotify: true);
@@ -370,7 +370,7 @@ public partial class Commands
 		if (!await PermissionService!.Controls(executor, obj))
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 				shouldNotify: true);
@@ -379,7 +379,7 @@ public partial class Commands
 		if (await obj.HasFlag("SAFE") && !override_)
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.SafeObject,
 				notifyMessage: ErrorMessages.Notifications.SafeObjectUseNuke,
 				shouldNotify: true);
@@ -392,7 +392,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.NoSuicideAllowed,
 					shouldNotify: true);
@@ -402,7 +402,7 @@ public partial class Commands
 			if (await obj.IsWizard() && !executor.IsGod())
 			{
 				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.EvenYouCantDoThat,
 					shouldNotify: true);
@@ -410,12 +410,12 @@ public partial class Commands
 
 			// Connected players may not be destroyed.
 			var isConnected = await ConnectionService!
-				.Get(obj.Object().DBRef)
+				.Get(obj.Object.DBRef)
 				.AnyAsync(x => x.State == IConnectionService.ConnectionState.LoggedIn);
 			if (isConnected)
 			{
 				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.MayNotDestroyConnectedPlayer,
 					shouldNotify: true);
@@ -425,7 +425,7 @@ public partial class Commands
 			if (!override_)
 			{
 				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.MustUseNukeToDestroyPlayer,
 					shouldNotify: true);
@@ -454,8 +454,8 @@ public partial class Commands
 		await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
 
 		var destroyMsg = obj.IsPlayer
-			? string.Format(ErrorMessages.Notifications.ObjectAndPossessionsScheduledDestroyedFormat, obj.Object().Name)
-			: string.Format(ErrorMessages.Notifications.ObjectScheduledDestroyedFormat, obj.Object().Name);
+			? string.Format(ErrorMessages.Notifications.ObjectAndPossessionsScheduledDestroyedFormat, obj.Object.Name)
+			: string.Format(ErrorMessages.Notifications.ObjectScheduledDestroyedFormat, obj.Object.Name);
 		await NotifyService!.Notify(executor, destroyMsg, executor);
 
 		try
@@ -500,7 +500,7 @@ public partial class Commands
 		AnySharpObject playerObj)
 	{
 		var config = Configuration!.CurrentValue.Command;
-		var playerDbRefNumber = playerObj.Object().DBRef.Number;
+		var playerDbRefNumber = playerObj.Object.DBRef.Number;
 
 		// Resolve the probate player; fall back to God (#1) if the config value is invalid.
 		var probateDbRef = new DBRef((int)config.ProbateJudge);
@@ -540,12 +540,12 @@ public partial class Commands
 		var objects = Mediator.CreateStream(new GetAllTypedObjectsQuery());
 		await foreach (var obj in objects)
 		{
-			var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+			var objOwner = await obj.Object.Owner.WithCancellation(CancellationToken.None);
 
 			if (objOwner.Object.DBRef.Number != playerDbRefNumber)
 				continue;
 
-			if (obj.Object().DBRef.Number == playerDbRefNumber)
+			if (obj.Object.DBRef.Number == playerDbRefNumber)
 				continue; // Never process the player themselves.
 
 			// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
@@ -605,7 +605,7 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, exitObj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
@@ -634,7 +634,7 @@ public partial class Commands
 							if (!destObj.IsRoom)
 							{
 						return await NotifyService!.NotifyAndReturn(
-								executor.Object().DBRef,
+								executor.Object.DBRef,
 								errorReturn: ErrorMessages.Returns.InvalidDestination,
 								notifyMessage: ErrorMessages.Notifications.InvalidDestinationExit,
 								shouldNotify: true);
@@ -652,7 +652,7 @@ public partial class Commands
 								if (!hasLinkOk)
 								{
 								return await NotifyService!.NotifyAndReturn(
-									executor.Object().DBRef,
+									executor.Object.DBRef,
 									errorReturn: ErrorMessages.Returns.PermissionDenied,
 									notifyMessage: ErrorMessages.Notifications.CantLinkToThat,
 									shouldNotify: true);
@@ -660,8 +660,8 @@ public partial class Commands
 							}
 
 							// Get exit owner and check if it's owned by someone else
-							var exitOwner = await exitObj.Object().Owner.WithCancellation(CancellationToken.None);
-							var executorObj = executor.Object();
+							var exitOwner = await exitObj.Object.Owner.WithCancellation(CancellationToken.None);
+							var executorObj = executor.Object;
 							var executorOwner = await executorObj.Owner.WithCancellation(CancellationToken.None);
 
 							// Check if exit is owned by someone else and executor doesn't control it
@@ -677,7 +677,7 @@ public partial class Commands
 								if (!linkLockPasses)
 								{
 								return await NotifyService!.NotifyAndReturn(
-									executor.Object().DBRef,
+									executor.Object.DBRef,
 									errorReturn: ErrorMessages.Returns.PermissionDenied,
 									notifyMessage: ErrorMessages.Notifications.DontPassLinkLock,
 									shouldNotify: true);
@@ -693,7 +693,7 @@ public partial class Commands
 									catch (Exception)
 									{
 									return await NotifyService!.NotifyAndReturn(
-										executor.Object().DBRef,
+										executor.Object.DBRef,
 										errorReturn: ErrorMessages.Returns.PermissionDenied,
 										notifyMessage: ErrorMessages.Notifications.FailedToTransferOwnership,
 										shouldNotify: true);
@@ -708,7 +708,7 @@ public partial class Commands
 
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
-							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, exitObj.Object().DBRef.Number, destinationRoom.Object.DBRef.Number);
+							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, exitObj.Object.DBRef.Number, destinationRoom.Object.DBRef.Number);
 							return CallState.Empty;
 						}
 					);
@@ -722,7 +722,7 @@ public partial class Commands
 							if (!destObj.IsRoom)
 							{
 						return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
+							executor.Object.DBRef,
 							errorReturn: ErrorMessages.Returns.InvalidDestination,
 							notifyMessage: ErrorMessages.Notifications.HomeMustBeRoom,
 							shouldNotify: true);
@@ -746,7 +746,7 @@ public partial class Commands
 							if (!destObj.IsRoom)
 							{
 						return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
+							executor.Object.DBRef,
 							errorReturn: ErrorMessages.Returns.InvalidDestination,
 							notifyMessage: ErrorMessages.Notifications.DropToMustBeRoom,
 							shouldNotify: true);
@@ -761,7 +761,7 @@ public partial class Commands
 				}
 
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.InvalidObjectType,
 				notifyMessage: ErrorMessages.Notifications.InvalidObjectTypeForLinking,
 				shouldNotify: true);
@@ -797,7 +797,7 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
@@ -807,7 +807,7 @@ public partial class Commands
 				if (!await obj.HasFlag("GOING"))
 				{
 				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.NotGoing,
 					notifyMessage: ErrorMessages.Notifications.NotMarkedForDestruction,
 					shouldNotify: true);
@@ -823,7 +823,7 @@ public partial class Commands
 					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!GOING_TWICE", false);
 				}
 
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SparedFromDestructionFormat), executor, obj.Object().Name);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SparedFromDestructionFormat), executor, obj.Object.Name);
 
 				// Trigger @startup attribute if it exists
 				try
@@ -858,7 +858,7 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
@@ -883,7 +883,7 @@ public partial class Commands
 						if (!canZone && !LockService!.Evaluate(LockType.ChZone, zoneObj, executor))
 						{
 					return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
+							executor.Object.DBRef,
 							errorReturn: ErrorMessages.Returns.PermissionDenied,
 							notifyMessage: ErrorMessages.Notifications.PermissionDeniedCannotZoneTo,
 							shouldNotify: true);
@@ -893,7 +893,7 @@ public partial class Commands
 						if (!await HelperFunctions.SafeToAddZone(Mediator!, Database!, obj, zoneObj))
 						{
 							return await NotifyService!.NotifyAndReturn(
-								executor.Object().DBRef,
+								executor.Object.DBRef,
 								errorReturn: Errors.ZoneLoop,
 								notifyMessage: ErrorMessages.Notifications.CantMakeCircularZones,
 								shouldNotify: true);
@@ -904,9 +904,9 @@ public partial class Commands
 
 						// Auto-set ChZone lock if not present on zone object
 						// Default ChZone lock is the zone object itself (allows controlled objects)
-						if (!zoneObj.Object().Locks.ContainsKey("ChZone"))
+						if (!zoneObj.Object.Locks.ContainsKey("ChZone"))
 						{
-							await Mediator.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
+							await Mediator.Send(new SetLockCommand(zoneObj.Object, "ChZone", zoneObj.Object.DBRef.ToString()));
 						}
 
 						// Clear privileged flags and powers unless /preserve is used
@@ -927,7 +927,7 @@ public partial class Commands
 							}
 
 							// Strip all powers from the object
-							var allPowers = obj.Object().Powers.Value;
+							var allPowers = obj.Object.Powers.Value;
 							await foreach (var power in allPowers)
 							{
 								await Mediator!.Send(new UnsetObjectPowerCommand(obj, power));
@@ -948,7 +948,7 @@ public partial class Commands
 	{
 		// NOTE: We discard arguments 4-6.
 		var executorBase = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var executor = executorBase.Object();
+		var executor = executorBase.Object;
 		var roomName = parser.CurrentState.Arguments["0"].Message!;
 		parser.CurrentState.Arguments.TryGetValue("1", out var exitToCallState);
 		parser.CurrentState.Arguments.TryGetValue("2", out var exitFromCallState);
@@ -1024,7 +1024,7 @@ public partial class Commands
 		var where = await executorBase.Where();
 			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
 
-			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, fromExitResponse.Number, where.Object().DBRef.Number);
+			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, fromExitResponse.Number, where.Object.DBRef.Number);
 		}
 
 		return new CallState(response.ToString());
@@ -1053,14 +1053,14 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, lockKey));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, lockType);
+				await Mediator!.Send(new SetLockCommand(obj.Object, lockType, lockKey));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object.Name, obj.Object.DBRef.Number, lockType);
 				return CallState.Empty;
 			}
 		);
@@ -1088,14 +1088,14 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new UnsetLockCommand(obj.Object(), lockType));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, lockType);
+				await Mediator!.Send(new UnsetLockCommand(obj.Object, lockType));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object.Name, obj.Object.DBRef.Number, lockType);
 				return CallState.Empty;
 			}
 		);
@@ -1118,14 +1118,14 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new SetLockCommand(obj.Object(), "Enter", lockKey));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Enter");
+				await Mediator!.Send(new SetLockCommand(obj.Object, "Enter", lockKey));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object.Name, obj.Object.DBRef.Number, "Enter");
 				return CallState.Empty;
 			}
 		);
@@ -1147,14 +1147,14 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Enter"));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Enter");
+				await Mediator!.Send(new UnsetLockCommand(obj.Object, "Enter"));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object.Name, obj.Object.DBRef.Number, "Enter");
 				return CallState.Empty;
 			}
 		);
@@ -1177,14 +1177,14 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new SetLockCommand(obj.Object(), "Use", lockKey));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Use");
+				await Mediator!.Send(new SetLockCommand(obj.Object, "Use", lockKey));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object.Name, obj.Object.DBRef.Number, "Use");
 				return CallState.Empty;
 			}
 		);
@@ -1206,14 +1206,14 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Use"));
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Use");
+				await Mediator!.Send(new UnsetLockCommand(obj.Object, "Use"));
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object.Name, obj.Object.DBRef.Number, "Use");
 				return CallState.Empty;
 			}
 		);
@@ -1252,7 +1252,7 @@ public partial class Commands
 		if (!await PermissionService!.Controls(executor, sourceRoom.WithExitOption()))
 		{
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 				shouldNotify: true);
@@ -1263,11 +1263,11 @@ public partial class Commands
 			primaryName,
 			aliases,
 			sourceRoom,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)
+			await executor.Object.Owner.WithCancellation(CancellationToken.None)
 		));
 
 		// Inherit zone from creator
-		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
+		var creatorZone = await executor.Object.Zone.WithCancellation(CancellationToken.None);
 		if (!creatorZone.IsNone)
 		{
 			var newExit = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
@@ -1317,7 +1317,7 @@ public partial class Commands
 		if (location.IsNone || location.IsExit)
 		{
 			return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.NotARoom,
 					notifyMessage: ErrorMessages.Notifications.DefaultHomeLocationInvalid,
 					shouldNotify: true);
@@ -1330,7 +1330,7 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
@@ -1339,21 +1339,21 @@ public partial class Commands
 				if (obj.IsPlayer)
 				{
 			return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.InvalidObjectType,
 					notifyMessage: ErrorMessages.Notifications.CannotClonePlayers,
 					shouldNotify: true);
 				}
 
 				// Determine new name
-				var newName = obj.Object().Name;
+				var newName = obj.Object.Name;
 				if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 				{
 					newName = args["1"].Message!.ToPlainText();
 				}
 
 				DBRef cloneDbRef;
-				var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+				var owner = await executor.Object.Owner.WithCancellation(CancellationToken.None);
 
 				// Create the appropriate object type
 				if (obj.IsThing)
@@ -1385,7 +1385,7 @@ public partial class Commands
 				else
 				{
 				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.InvalidObjectType,
 					notifyMessage: ErrorMessages.Notifications.CannotCloneThisObjectType,
 					shouldNotify: true);
@@ -1396,7 +1396,7 @@ public partial class Commands
 				var clonedObj = clonedObjOptional.WithoutNone();
 
 				// Copy attributes (excluding system attributes)
-				await foreach (var attr in obj.Object().Attributes.Value)
+				await foreach (var attr in obj.Object.Attributes.Value)
 				{
 					if (!attr.Name.StartsWith("_"))
 					{
@@ -1406,7 +1406,7 @@ public partial class Commands
 				}
 
 				// Copy flags (excluding privileged ones unless /preserve)
-				await foreach (var flag in obj.Object().Flags.Value)
+				await foreach (var flag in obj.Object.Flags.Value)
 				{
 					if (preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
 					{
@@ -1434,7 +1434,7 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
@@ -1469,7 +1469,7 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, target))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
@@ -1509,7 +1509,7 @@ public partial class Commands
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
+						executor.Object.DBRef,
 						errorReturn: ErrorMessages.Returns.PermissionDenied,
 						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 						shouldNotify: true);
@@ -1521,7 +1521,7 @@ public partial class Commands
 					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
 
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UnlinkedExit), executor, obj.Object().DBRef.Number);
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UnlinkedExit), executor, obj.Object.DBRef.Number);
 					return CallState.Empty;
 				}
 				else if (obj.IsRoom)
@@ -1533,7 +1533,7 @@ public partial class Commands
 				}
 
 			return await NotifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
+				executor.Object.DBRef,
 				errorReturn: ErrorMessages.Returns.InvalidObjectType,
 				notifyMessage: ErrorMessages.Notifications.InvalidObjectTypeGeneric,
 				shouldNotify: true);

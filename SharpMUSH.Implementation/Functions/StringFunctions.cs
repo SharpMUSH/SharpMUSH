@@ -124,7 +124,7 @@ public partial class Functions
 				speakerObject = found;
 			}
 
-			speakerName = MModule.single(speakerObject.Object().Name);
+			speakerName = MModule.single(speakerObject.Object.Name);
 		}
 		else
 		{
@@ -252,7 +252,7 @@ public partial class Functions
 						new Dictionary<string, CallState>
 						{
 							{ "0", args["0"] },
-							{ "1", new CallState(MModule.single(speakerObject.Object().DBRef.ToString())) },
+							{ "1", new CallState(MModule.single(speakerObject.Object.DBRef.ToString())) },
 							{ "2", new CallState(content) }
 						});
 
@@ -264,7 +264,7 @@ public partial class Functions
 					new Dictionary<string, CallState>
 					{
 						{ "0", args["0"] },
-						{ "1", new CallState(MModule.single(speakerObject.Object().DBRef.ToString())) },
+						{ "1", new CallState(MModule.single(speakerObject.Object.DBRef.ToString())) },
 						{ "2", new CallState(content) }
 					});
 

@@ -12,7 +12,7 @@ public class MoveObjectCommandHandler(ISharpDatabase database, IPublisher publis
 	public async ValueTask<DBRef> Handle(MoveObjectCommand request, CancellationToken cancellationToken)
 	{
 		// Use the OldContainer supplied by the caller when available; otherwise look it up.
-		var oldLocation = request.OldContainer ?? (await request.Target.Location()).Object().DBRef;
+		var oldLocation = request.OldContainer ?? (await request.Target.Location()).Object.DBRef;
 
 		await database.MoveObjectAsync(request.Target, request.Destination, cancellationToken);
 
@@ -26,6 +26,6 @@ public class MoveObjectCommandHandler(ISharpDatabase database, IPublisher publis
 			request.Cause),
 			cancellationToken);
 
-		return request.Destination.Object().DBRef;
+		return request.Destination.Object.DBRef;
 	}
 }

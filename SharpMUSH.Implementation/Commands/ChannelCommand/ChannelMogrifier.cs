@@ -53,7 +53,7 @@ public static class ChannelMogrifier
 					null,
 					null,
 					null,
-					locate.Object().DBRef.ToString(),
+					locate.Object.DBRef.ToString(),
 					null));
 
 				return new CallState("Channel Mogrifier has been updated.");

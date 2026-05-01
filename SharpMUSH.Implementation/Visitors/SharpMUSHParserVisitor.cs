@@ -99,7 +99,7 @@ public class SharpMUSHParserVisitor(
 	/// <param name="message">The message to send</param>
 	private async ValueTask SendDebugOrVerboseOutput(AnySharpObject executor, string message)
 	{
-		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await executor.Object.Owner.WithCancellation(CancellationToken.None);
 		await NotifyService.Notify(owner, MModule.single(message));
 
 		var debugForwardAttr = await AttributeService.GetAttributeAsync(
@@ -349,7 +349,7 @@ public class SharpMUSHParserVisitor(
 			if (shouldDebug)
 			{
 				indent = new string(' ', _debugNestDepth);
-				dbrefNumber = executorObj!.Value.Object().DBRef.Number;
+				dbrefNumber = executorObj!.Value.Object.DBRef.Number;
 			}
 		}
 
@@ -856,7 +856,7 @@ public class SharpMUSHParserVisitor(
 			// Optimistic that the command still exists, until we try and it no longer does?
 			// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
 			// It needs to take an area to search in. So this is definitely its own service.
-			var nearbyObjects = Mediator.CreateStream(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
+			var nearbyObjects = Mediator.CreateStream(new GetNearbyObjectsQuery(executorObject.Object.DBRef));
 
 			var userDefinedCommandMatches = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
@@ -874,7 +874,7 @@ public class SharpMUSHParserVisitor(
 			{
 				// Get the location's zone
 				var executorLocation = await executorObject.AsContent.Location();
-				var locationZone = await executorLocation.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
+				var locationZone = await executorLocation.WithExitOption().Object.Zone.WithCancellation(CancellationToken.None);
 
 				// If the location has a zone that is a room (ZMR), check for $-commands in ZMR contents
 				if (!locationZone.IsNone && locationZone.Known.IsRoom)
@@ -912,7 +912,7 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 13: User defined commands on the player's personal zone.
-			var executorZone = await executorObject.Object().Zone.WithCancellation(CancellationToken.None);
+			var executorZone = await executorObject.Object.Zone.WithCancellation(CancellationToken.None);
 			if (!executorZone.IsNone && executorZone.Known.IsRoom)
 			{
 				// If player has a ZMR as their personal zone, check for $-commands in ZMR contents
@@ -1014,11 +1014,11 @@ public class SharpMUSHParserVisitor(
 		{
 			var newParser = prs.Push(prs.CurrentState with
 			{
-				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
+				CurrentEvaluation = new DBAttribute(obj.Object.DBRef, attr.Name),
 				EnvironmentRegisters = arguments,
 				Arguments = arguments,
 				Function = null,
-				Executor = obj.Object().DBRef,
+				Executor = obj.Object.DBRef,
 				Caller = prs.CurrentState.Executor
 			});
 
@@ -1159,7 +1159,7 @@ public class SharpMUSHParserVisitor(
 			{
 			if (clearResult.IsSuccess)
 			{
-				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared), clearExecutor, clearTargetObject.Object().Name, matchedEntry.Name);
+				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared), clearExecutor, clearTargetObject.Object.Name, matchedEntry.Name);
 			}
 			else
 			{
@@ -1210,7 +1210,7 @@ public class SharpMUSHParserVisitor(
 		{
 			if (setResult.IsSuccess)
 			{
-				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet), executor, targetObject.Object().Name, matchedEntry.Name);
+				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet), executor, targetObject.Object.Name, matchedEntry.Name);
 			}
 			else
 			{
@@ -1404,7 +1404,7 @@ public class SharpMUSHParserVisitor(
 					var executorObj = executor.Known();
 					if (await executorObj.HasFlag("VERBOSE"))
 					{
-						var verboseOutput = $"#{executorObj.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
+						var verboseOutput = $"#{executorObj.Object.DBRef.Number}] {commandWithSwitches.ToPlainText()}";
 						await SendDebugOrVerboseOutput(executorObj, verboseOutput);
 					}
 				}
@@ -1548,11 +1548,11 @@ public class SharpMUSHParserVisitor(
 		{
 			var newParser = prs.Push(prs.CurrentState with
 			{
-				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
+				CurrentEvaluation = new DBAttribute(obj.Object.DBRef, attr.Name),
 				EnvironmentRegisters = arguments,
 				Arguments = arguments,
 				Function = null,
-				Executor = obj.Object().DBRef,
+				Executor = obj.Object.DBRef,
 				Caller = prs.CurrentState.Executor
 			});
 
