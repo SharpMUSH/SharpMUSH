@@ -1,10 +1,10 @@
-using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.DependencyInjection;
 using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using System.Collections.Concurrent;
+using Testcontainers.Nats;
 
 namespace SharpMUSH.Benchmarks;
 
@@ -13,17 +13,14 @@ namespace SharpMUSH.Benchmarks;
 /// </summary>
 internal static class BenchmarkHelpers
 {
-	private static readonly byte[] NatsConfig =
-		"max_payload: 6291456\njetstream: true\n"u8.ToArray();
+	private const string NatsImage = "nats:2.14-alpine";
+	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
 
-	/// <summary>Starts a NATS 2 container with JetStream enabled on a random host port.</summary>
+	/// <summary>Starts a NATS container with JetStream enabled on a random host port.</summary>
 	public static async Task<IContainer> StartNatsContainerAsync()
 	{
-		var container = new ContainerBuilder("nats:2-alpine")
-			.WithPortBinding(4222, true)
-			.WithResourceMapping(NatsConfig, "/etc/nats/nats.conf")
-			.WithCommand("-c", "/etc/nats/nats.conf")
-			.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Server is ready"))
+		var container = new NatsBuilder(NatsImage)
+			.WithCommand("--max_payload", MaxPayloadBytes.ToString())
 			.WithReuse(false)
 			.Build();
 

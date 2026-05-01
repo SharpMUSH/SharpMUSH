@@ -19,6 +19,7 @@
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
 		<PackageReference Include="Testcontainers" Version="4.11.0" />
 		<PackageReference Include="Testcontainers.ArangoDb" Version="4.11.0" />
+		<PackageReference Include="Testcontainers.Nats" Version="4.11.0" />
 	</ItemGroup>
 
 	<ItemGroup>
