@@ -379,7 +379,6 @@ public class SharpMUSHParserVisitor(
 	/// Parses and executes a function call.
 	/// </summary>
 	/// <remarks>
-	/// TODO: Move function resolution to a dedicated Library Service for better separation of concerns.
 	/// </remarks>
 	/// <param name="name">Function Name</param>
 	/// <param name="src">The source MarkupString</param>
@@ -499,7 +498,6 @@ public class SharpMUSHParserVisitor(
 				return new CallState(string.Format(Errors.ErrorGotUnEvenArgs, name), contextDepth);
 			}
 
-			// TODO: Depth checking is done here before argument refinement.
 			// Consider moving after RefinedArguments to avoid extra parsing. However, each
 			// RefinedArguments call creates a new FunctionParser call without depth info.
 

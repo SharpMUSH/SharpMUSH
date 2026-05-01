@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -27,7 +26,7 @@ public class AdminCommandTests
 
 		// @pcreate returns the dbref of the newly created player
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "#")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -41,7 +40,7 @@ public class AdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@newpassword #1=newpassNewpassword"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Set new password for God: newpassNewpassword")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -56,7 +55,7 @@ public class AdminCommandTests
 
 		// @password changes the executor's own password
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Password changed.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -70,7 +69,7 @@ public class AdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "SHUTDOWN initiated.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -83,7 +82,7 @@ public class AdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "All objects restarted.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -96,7 +95,7 @@ public class AdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@purge"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Purge complete.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -111,7 +110,7 @@ public class AdminCommandTests
 
 		// @poor sets a player to poor status (quota: 0)
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "The quota system is disabled") ||
 				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -126,7 +125,7 @@ public class AdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@readcache"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Reindexing text files")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -141,7 +140,7 @@ public class AdminCommandTests
 
 		// @chownall changes ownership — with invalid dbrefs expects locate error
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -156,7 +155,7 @@ public class AdminCommandTests
 
 		// @chzoneall changes zone — with invalid dbrefs expects locate error
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}

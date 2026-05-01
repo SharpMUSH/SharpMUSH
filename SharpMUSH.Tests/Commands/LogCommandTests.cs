@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -83,7 +82,7 @@ public class LogCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@logwipe command"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Log Management Status:", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 

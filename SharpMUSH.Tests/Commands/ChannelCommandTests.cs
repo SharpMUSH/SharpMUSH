@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -83,7 +82,7 @@ public class ChannelCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/list"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Name:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -96,9 +95,9 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString() == $"<{TestChannelName}> CemitCommand: Test message") ||
-				(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> CemitCommand: Test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> CemitCommand: Test message")), 
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
@@ -109,9 +108,8 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("NscemitCommand: Test message")) ||
-				(msg.IsT1 && msg.AsT1.Contains("NscemitCommand: Test message"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> NscemitCommand: Test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
@@ -123,7 +121,7 @@ public class ChannelCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom pub=Public"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Channel not found.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -136,7 +134,7 @@ public class ChannelCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("delcom pub"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Alias 'pub' not found.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -149,7 +147,7 @@ public class ChannelCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@clist"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Name:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -163,7 +161,7 @@ public class ChannelCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("comlist"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "You have no channel aliases.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -176,7 +174,7 @@ public class ChannelCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"comtitle {TestChannelName}=Title"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Alias '")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}

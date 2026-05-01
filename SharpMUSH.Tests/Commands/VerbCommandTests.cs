@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
@@ -26,16 +27,14 @@ public class VerbCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@verb {verbObj}={verbObj},,VerbActorDefault_Value_52830,,VerbOthersDefault_Value_52830,,"));
 
-		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c =>
-		{
-			var args = c.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is not OneOf<MString, string> msg) return false;
-			return TestHelpers.MessageContains(msg, "VerbActorDefault_Value_52830");
-		});
-
-		await Assert.That(messageCall).IsNotNull();
+		// The actor message goes to the actor (verbObj) with no explicit sender (null).
+		await NotifyService
+			.Received(1)
+			.Notify(
+				TestHelpers.MatchingObject(verbObj),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbActorDefault_Value_52830")),
+				Arg.Is<AnySharpObject?>(s => s == null),
+				INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -50,16 +49,14 @@ public class VerbCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@verb {verbObj}={verbObj},WHAT_74102,DefaultWhat,OWHAT_74102,DefaultOwhat,,"));
 
-		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c =>
-		{
-			var args = c.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is not OneOf<MString, string> msg) return false;
-			return TestHelpers.MessageContains(msg, "VerbAction_Value_74102");
-		});
-
-		await Assert.That(messageCall).IsNotNull();
+		// The actor message comes from WHAT_74102 attribute and is sent to actor (verbObj) with null sender.
+		await NotifyService
+			.Received(1)
+			.Notify(
+				TestHelpers.MatchingObject(verbObj),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbAction_Value_74102")),
+				Arg.Is<AnySharpObject?>(s => s == null),
+				INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -73,36 +70,33 @@ public class VerbCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@verb {verbObj}={verbObj},WHAT_ARGS_91605,Default,,,,"));
 
-		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c =>
-		{
-			var args = c.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is not OneOf<MString, string> msg) return false;
-			return TestHelpers.MessageContains(msg, "VerbArgs_Value_91605");
-		});
-
-		await Assert.That(messageCall).IsNotNull();
+		// The actor message comes from WHAT_ARGS_91605 attribute and is sent to actor (verbObj) with null sender.
+		await NotifyService
+			.Received(1)
+			.Notify(
+				TestHelpers.MatchingObject(verbObj),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbArgs_Value_91605")),
+				Arg.Is<AnySharpObject?>(s => s == null),
+				INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask VerbInsufficientArgs()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbInsuf");
 
 		// Provide only the victim with no actor/message args — args.Count < 2 triggers the Usage error
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@verb {verbObj}"));
 
-		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c =>
-		{
-			var args = c.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is not OneOf<MString, string> msg) return false;
-			return TestHelpers.MessageContains(msg, "Usage: @verb");
-		});
-
-		await Assert.That(messageCall).IsNotNull();
+		// Usage error is sent to executor with executor as sender.
+		await NotifyService
+			.Received(1)
+			.Notify(
+				TestHelpers.MatchingObject(executor),
+				"Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]",
+				TestHelpers.MatchingObject(executor),
+				INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

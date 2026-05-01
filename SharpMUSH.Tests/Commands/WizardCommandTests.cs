@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -33,7 +32,7 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@halt {thingDbRef}"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Halted God and all their objects.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -54,7 +53,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "#-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "#-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -66,7 +65,7 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "@ps")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -80,7 +79,7 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "@ps")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -98,7 +97,7 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger #1/TRIGGER_TEST_WIZ_UNIQUE"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Triggered!", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -106,11 +105,15 @@ public class WizardCommandTests
 	public async ValueTask ForceCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force #1=think Forced!"));
+		// Pattern A: embed unique token so the think output is globally unique in the session.
+		var token = TestIsolationHelpers.GenerateUniqueName("Forced");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@force #1=think {token}"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf.OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf.OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, token)),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -154,7 +157,7 @@ public class WizardCommandTests
 		// Note: This test doesn't verify the wait actually happened, just that the command executed
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "#-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "#-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -235,12 +238,17 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask UptimeCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@uptime"));
+		// Pattern C: unique receiver (non-wizard) isolates the notification — content is dynamic timestamps.
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "UptimeTest");
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@uptime"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf.OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<OneOf.OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "SharpMUSH Uptime:")),
+				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -252,7 +260,7 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dbck"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Not Supported for SharpMUSH.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -265,7 +273,7 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dump"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Dump command does nothing for SharpMUSH. Consider using @backup.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -278,7 +286,7 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@quota #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "The quota system is disabled on this server.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -291,7 +299,7 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@allquota"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Usage: @allquota <amount>", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -304,7 +312,7 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@boot #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "That player is not connected.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -312,24 +320,28 @@ public class WizardCommandTests
 	public async ValueTask WallCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@wall Test wall message"));
+		// Pattern A: embed unique token so the wall output is session-unique.
+		var token = TestIsolationHelpers.GenerateUniqueName("Wall");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@wall {token}"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(executor.Number, Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Test wall message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, $"Announcement: {token}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask WizwallCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@wizwall Test wizwall message"));
+		// Pattern A: embed unique token so the wizwall output is session-unique.
+		var token = TestIsolationHelpers.GenerateUniqueName("Wizwall");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@wizwall {token}"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(executor.Number, Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Test wizwall message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, $"Broadcast: {token}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

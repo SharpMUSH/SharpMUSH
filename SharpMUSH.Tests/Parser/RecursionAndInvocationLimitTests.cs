@@ -395,8 +395,8 @@ public class RecursionAndInvocationLimitTests
 
 		// Verify the composed output was sent as a notification
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "CMDTRACK_A_LIM_UNIQUE_B_OK")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "CMDTRACK_A_LIM_UNIQUE_B_OK")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

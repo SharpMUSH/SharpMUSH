@@ -1,8 +1,8 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using NSubstitute;
 using NSubstitute.Core;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -23,6 +23,22 @@ public class DatabaseCommandTests
 	private INotifyService NotifyService => SqlWebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => SqlWebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => SqlWebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
+	private IMediator Mediator => SqlWebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	/// <summary>
+	/// Creates a unique test player and grants them the WIZARD flag so they can execute
+	/// privileged commands like <c>@sql</c> and <c>@mapsql</c>. Using a per-test wizard player
+	/// means <see cref="INotifyService"/> mock assertions against that player's DBRef are
+	/// isolated from all other tests in the session.
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> CreateWizardTestPlayerAsync(string prefix)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+		// Grant WIZARD using God's (handle 1) privileged parser
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {player.DbRef}=WIZARD"));
+		return player;
+	}
 
 	[Before(Test)]
 	public async Task InitializeAsync()
@@ -99,7 +115,7 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list commands"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Current Message of the Day settings:", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -112,7 +128,7 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@unrecycle #100"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "@UNRECYCLE: Object recovery system not yet implemented.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -125,7 +141,7 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable TestCommand"));
 		
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "No configuration option named 'TestCommand'.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -138,7 +154,7 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable TestCommand"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "No configuration option named 'TestCommand'.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -158,130 +174,137 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_SelectSingleRow()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT name, value FROM test_sql_data_cmd WHERE id = 1"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlSelSingle");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql SELECT name, value FROM test_sql_data_cmd WHERE id = 1"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("test_sql_row1")) ||
-				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask Test_Sql_SelectMultipleRows()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT name FROM test_sql_data_cmd ORDER BY id"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlSelMulti");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql SELECT name FROM test_sql_data_cmd ORDER BY id"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("test_sql_row1") && msg.AsT0.ToString().Contains("test_sql_row2")) ||
-				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1") && msg.AsT1.Contains("test_sql_row2"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1") && msg.AsT1.Contains("test_sql_row2"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask Test_Sql_SelectWithWhere()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT value FROM test_sql_data_cmd WHERE name = 'test_sql_row2'"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlSelWhere");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql SELECT value FROM test_sql_data_cmd WHERE name = 'test_sql_row2'"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("200")) ||
-				(msg.IsT1 && msg.AsT1.Contains("200"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("200"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask Test_Sql_Count()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT COUNT(*) as total FROM test_sql_data_cmd"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlCount");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql SELECT COUNT(*) as total FROM test_sql_data_cmd"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("3")) ||
-				(msg.IsT1 && msg.AsT1.Contains("3"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("3"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask Test_Sql_NoResults()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM test_sql_data_cmd WHERE id = 999"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlNoResults");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql SELECT * FROM test_sql_data_cmd WHERE id = 999"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == "") ||
-				(msg.IsT1 && msg.AsT1 == "")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1 == "")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[NotInParallel]
 	public async ValueTask Test_MapSql_Basic()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var wizardPlayer = await CreateWizardTestPlayerAsync("MapSqlBasic");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlCmdBasic");
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_test_attr_basic {objDbRef}=think Test_MapSql_Basic: %0 - %1 - %2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data_cmd WHERE id = 1"));
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Poll until the channel consumer has processed the queued attribute execution
 		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_Basic"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_Basic")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_Basic"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_Basic"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[NotInParallel]
 	public async ValueTask Test_MapSql_WithMultipleRows()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var wizardPlayer = await CreateWizardTestPlayerAsync("MapSqlMultiRow");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlCmdMulti");
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_test_attr_mr {objDbRef}=think Test_MapSql_WithMultipleRows: %0 - %1 - %2 - %3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
 		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1"));
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().StartsWith("Test_MapSql_WithMultipleRows: 0 ")) ||
-				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithMultipleRows: 0"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithMultipleRows: 0"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		// TODO: There is a bug here. It keeps reading and loops around somehow. I don't get how.
 		/*
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().StartsWith("Test_MapSql_WithMultipleRows: 4")) ||
-				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithMultipleRows: 4"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithMultipleRows: 4"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 				*/
 	}
 
@@ -289,52 +312,55 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_MapSql_WithColnamesSwitch()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var wizardPlayer = await CreateWizardTestPlayerAsync("MapSqlColnames");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlCmdColnames");
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_test_attr_cn {objDbRef}=think Test_MapSql_WithColnamesSwitch: %0 - %1 - %2 - %3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/colnames {objDbRef}/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data_cmd WHERE id = 1"));
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single($"@mapsql/colnames {objDbRef}/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
 		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithColnamesSwitch: 0 - col1 - col2 - col3")) ||
-				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithColnamesSwitch: 0 - col1 - col2 - col3"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithColnamesSwitch: 0 - col1 - col2 - col3"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1 - data1_col2 - 10")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1 - data1_col2 - 10"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1 - data1_col2 - 10"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[NotInParallel]
 	public async ValueTask Test_MapSql_InvalidObjectAttribute()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql invalid=SELECT * FROM test_mapsql_data_cmd"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("MapSqlInvalidObj");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@mapsql invalid=SELECT * FROM test_mapsql_data_cmd"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1 INVALID OBJECT/ATTRIBUTE")) ||
-				(msg.IsT1 && msg.AsT1.Contains("#-1 INVALID OBJECT/ATTRIBUTE"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("#-1 INVALID OBJECT/ATTRIBUTE"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask Test_Sql_InvalidQuery()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM nonexistent_table"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlInvalidQuery");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql SELECT * FROM nonexistent_table"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1 SQL ERROR")) ||
-				(msg.IsT1 && msg.AsT1.Contains("#-1 SQL ERROR"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("#-1 SQL ERROR"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	// ===== Prepared Statement Command Tests =====
@@ -343,128 +369,136 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_SelectWithParameter()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlPrepSelParam");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
 		// Test using lit() to protect the query
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id = ?),1"));
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id = ?),1"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("test_sql_row1")) ||
-				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_SelectWithMultipleParameters()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id >= ? AND id <= ? ORDER BY id),1,2"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlPrepSelMulti");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id >= ? AND id <= ? ORDER BY id),1,2"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("test_sql_row1") && msg.AsT0.ToString().Contains("test_sql_row2")) ||
-				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1") && msg.AsT1.Contains("test_sql_row2"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1") && msg.AsT1.Contains("test_sql_row2"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_WhereClauseWithStringParameter()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT value FROM test_sql_data_cmd WHERE name = ?),test_sql_row2"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlPrepWhereStr");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT value FROM test_sql_data_cmd WHERE name = ?),test_sql_row2"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("200")) ||
-				(msg.IsT1 && msg.AsT1.Contains("200"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("200"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_NoResults()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT * FROM test_sql_data_cmd WHERE id = ?),999"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlPrepNoRes");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT * FROM test_sql_data_cmd WHERE id = ?),999"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == "") ||
-				(msg.IsT1 && msg.AsT1 == "")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1 == "")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[NotInParallel]
 	public async ValueTask Test_MapSql_PrepareSwitch_Basic()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var wizardPlayer = await CreateWizardTestPlayerAsync("MapSqlPrepBasic");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlCmdPrepBasic");
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_prepare_test_attr_basic {objDbRef}=think Test_MapSql_PrepareSwitch_Basic: %0 - %1 - %2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id = ?),1"));
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id = ?),1"));
 
 		// Poll until the channel consumer has processed the queued attribute execution
 		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_PrepareSwitch_Basic"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_PrepareSwitch_Basic")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_Basic"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_Basic"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[NotInParallel]
 	public async ValueTask Test_MapSql_PrepareSwitch_WithMultipleRows()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var wizardPlayer = await CreateWizardTestPlayerAsync("MapSqlPrepMulti");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlCmdPrepMulti");
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_prepare_test_attr_mr {objDbRef}=think Test_MapSql_PrepareSwitch_WithMultipleRows: %0 - %1 - %2 - %3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id <= ? ORDER BY id),2"));
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id <= ? ORDER BY id),2"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
 		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 1 - data1_col1")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 1 - data1_col1"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 1 - data1_col1"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[NotInParallel]
 	public async ValueTask Test_MapSql_PrepareSwitch_InvalidObjectAttribute()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE invalid=SELECT * FROM test_mapsql_data_cmd"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("MapSqlPrepInvalid");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@mapsql/PREPARE invalid=SELECT * FROM test_mapsql_data_cmd"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1 INVALID OBJECT/ATTRIBUTE")) ||
-				(msg.IsT1 && msg.AsT1.Contains("#-1 INVALID OBJECT/ATTRIBUTE"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("#-1 INVALID OBJECT/ATTRIBUTE"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask Test_Sql_PrepareSwitch_InvalidQuery()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE SELECT * FROM nonexistent_table"));
+		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlPrepInvalidQ");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
+		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE SELECT * FROM nonexistent_table"));
 
 		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1 SQL ERROR")) ||
-				(msg.IsT1 && msg.AsT1.Contains("#-1 SQL ERROR"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("#-1 SQL ERROR"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>

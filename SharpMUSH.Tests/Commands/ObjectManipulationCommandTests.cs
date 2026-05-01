@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -104,7 +103,7 @@ public class ObjectManipulationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("use test object"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "I don't see that here.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -177,7 +176,7 @@ public class ObjectManipulationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy #100"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "I don't see that here.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -190,7 +189,7 @@ public class ObjectManipulationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@nuke #100"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "I don't see that here.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -203,7 +202,7 @@ public class ObjectManipulationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@undestroy #100"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "I don't see that here.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

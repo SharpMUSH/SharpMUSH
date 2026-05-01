@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -28,15 +27,17 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_List_DisplaysAllFlags()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagListCmd");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		// Execute @flag/list
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/list"));
 
 		// Verify that a notification was sent with the flag list
 		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Flags:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Flags:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -164,9 +165,9 @@ public class FlagAndPowerCommandTests
 
 		// Verify that a notification was sent with the power list
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Powers:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Powers:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -309,9 +310,9 @@ public class FlagAndPowerCommandTests
 
 		// Verify notification was sent
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' disabled")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
@@ -339,9 +340,9 @@ public class FlagAndPowerCommandTests
 
 		// Verify notification was sent
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' enabled")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
@@ -381,9 +382,9 @@ public class FlagAndPowerCommandTests
 
 		// Verify notification was sent
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' disabled")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Mediator.Send(new DeletePowerCommand(powerName));
@@ -411,9 +412,9 @@ public class FlagAndPowerCommandTests
 
 		// Verify notification was sent
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' enabled")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Mediator.Send(new DeletePowerCommand(powerName));

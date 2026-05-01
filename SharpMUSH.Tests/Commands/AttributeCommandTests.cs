@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -39,7 +38,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TEST_ATTRSET_UNIQUE {objDbRef}=Test Value"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, $"{objName}/TEST_ATTRSET_UNIQUE - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
@@ -62,7 +61,7 @@ public class AttributeCommandTests
 
 		// Setting to empty still says "Set." per parser visitor implementation
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, $"{objName}/TESTCLEAR_ATTRSET_UNIQUE - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -78,7 +77,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&COMPLEX {objDbRef}=This is a [add(1,2)] test"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, $"{objName}/COMPLEX - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}

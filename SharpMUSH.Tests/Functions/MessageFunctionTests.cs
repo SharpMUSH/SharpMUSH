@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
@@ -36,16 +38,12 @@ public class MessageFunctionTests
 
 		await Parser.FunctionParse(MModule.single($"message({objDbRef},Default,TESTFORMAT_MSGFUNC2_37291)"));
 
-		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c =>
-		{
-			var args = c.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is not OneOf<MString, string> msg) return false;
-			return TestHelpers.MessageContains(msg, "MessageFuncSends_Value_37291");
-		});
-
-		await Assert.That(messageCall).IsNotNull();
+		// The message() function sends the attribute value exactly to objDbRef
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(objDbRef),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageFuncSends_Value_37291")),
+				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -56,16 +54,12 @@ public class MessageFunctionTests
 
 		await Parser.FunctionParse(MModule.single($"message({objDbRef},Default,TESTFORMAT_MSGEVAL_82044)"));
 
-		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c =>
-		{
-			var args = c.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is not OneOf<MString, string> msg) return false;
-			return TestHelpers.MessageContains(msg, "MessageEval_Result_82044:21");
-		});
-
-		await Assert.That(messageCall).IsNotNull();
+		// The attribute evaluates [mul(3,7)] = 21, so the sent message is "MessageEval_Result_82044:21"
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(objDbRef),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageEval_Result_82044:21")),
+				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -75,16 +69,12 @@ public class MessageFunctionTests
 
 		await Parser.FunctionParse(MModule.single($"message({objDbRef},MessageDefault_Value_91847,MISSING_ATTR_91847)"));
 
-		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c =>
-		{
-			var args = c.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is not OneOf<MString, string> msg) return false;
-			return TestHelpers.MessageContains(msg, "MessageDefault_Value_91847");
-		});
-
-		await Assert.That(messageCall).IsNotNull();
+		// When the attribute is missing, the default message is sent verbatim
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(objDbRef),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageDefault_Value_91847")),
+				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -95,16 +85,12 @@ public class MessageFunctionTests
 
 		await Parser.FunctionParse(MModule.single($"message({objDbRef},Default,TESTFORMAT_MSGARGS_63018)"));
 
-		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c =>
-		{
-			var args = c.GetArguments();
-			if (args.Length < 2) return false;
-			if (args[1] is not OneOf<MString, string> msg) return false;
-			return TestHelpers.MessageContains(msg, "MessageArgs_Value_63018");
-		});
-
-		await Assert.That(messageCall).IsNotNull();
+		// The attribute sends the stored value exactly
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(objDbRef),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageArgs_Value_63018")),
+				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

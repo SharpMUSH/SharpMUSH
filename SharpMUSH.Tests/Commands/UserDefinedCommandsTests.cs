@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -32,9 +31,9 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} a=b"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token} Boo! a - b")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Boo! a - b")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -55,9 +54,9 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} World"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token} Hello, World!")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Hello, World!")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -76,9 +75,9 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} Alice to Bob"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token}: Message from Alice to Bob")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Message from Alice to Bob")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -97,9 +96,9 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token} Pong!")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Pong!")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -118,9 +117,9 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} foo bar baz"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token}: A=foo B=bar C=baz")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: A=foo B=bar C=baz")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -143,9 +142,9 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} hello world"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token}: You said: hello world")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: You said: hello world")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -168,9 +167,9 @@ public class UserDefinedCommandsTests
 
 		// %0 is the full match which includes the command token: "{token} prefix_42"
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"Full: {token} prefix_42, Part: 42")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Full: {token} prefix_42, Part: 42")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -192,9 +191,9 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} Alice Bob"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token}: Alice messaged Bob")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Alice messaged Bob")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -216,9 +215,9 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} 3d6"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"{token}: Rolling 3d6")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Rolling 3d6")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -237,14 +236,14 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("test2"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText() == "Value 1 received") ||
-				(msg.IsT1 && msg.AsT1 == "Value 1 received")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Value 1 received")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText() == "Value 2 received") ||
-				(msg.IsT1 && msg.AsT1 == "Value 2 received")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Value 2 received")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

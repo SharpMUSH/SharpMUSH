@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -25,7 +24,7 @@ public class GameCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("buy sword"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "You try to buy 'sword'.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -38,7 +37,7 @@ public class GameCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("score"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "The SCORE command is not supported.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -51,7 +50,7 @@ public class GameCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("teach #1=skill"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Teach what?", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -64,7 +63,7 @@ public class GameCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("follow #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "You can't follow yourself.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -77,7 +76,7 @@ public class GameCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("unfollow"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "You aren't following anyone.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -90,7 +89,7 @@ public class GameCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("desert"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "You stop following and dismiss all followers.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -103,7 +102,7 @@ public class GameCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("dismiss #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "You dismiss all your followers. (0 dismissed)", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -164,7 +163,7 @@ public class GameCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("with #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Do what with them?", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

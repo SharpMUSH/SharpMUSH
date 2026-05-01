@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -27,7 +26,7 @@ public class MiscCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=greet,greets,greeting"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -40,7 +39,7 @@ public class MiscCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sweep"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Listening in ROOM:", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -53,7 +52,7 @@ public class MiscCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/DESC=old=new"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "No matching attributes found.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -120,7 +119,7 @@ public class MiscCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("brief"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -134,7 +133,7 @@ public class MiscCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("who"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Player")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -148,7 +147,7 @@ public class MiscCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("session"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Player")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -162,7 +161,7 @@ public class MiscCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("quit"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "GOODBYE.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -176,7 +175,7 @@ public class MiscCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("connect player password"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 

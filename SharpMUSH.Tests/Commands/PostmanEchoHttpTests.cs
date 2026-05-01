@@ -121,9 +121,9 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "postman-echo.com/get")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -144,9 +144,9 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "postman-echo.com/post")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -167,9 +167,9 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "postman-echo.com/put")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -190,9 +190,9 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "postman-echo.com/delete")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -213,9 +213,9 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "postman-echo.com/patch")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -241,9 +241,9 @@ public class PostmanEchoHttpTests
 			TestHelpers.MessageContains(msg, "gzipped"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "gzipped")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -269,9 +269,9 @@ public class PostmanEchoHttpTests
 			TestHelpers.MessageContains(msg, "deflated"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "deflated")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -293,9 +293,9 @@ public class PostmanEchoHttpTests
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -327,11 +327,11 @@ public class PostmanEchoHttpTests
 
 		// GET with a body is refused before the task is queued — error message is immediate.
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "GET requests cannot have a body")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+					TestHelpers.MessagePlainTextEquals(msg, "GET requests cannot have a body.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -353,12 +353,11 @@ public class PostmanEchoHttpTests
 			TestHelpers.MessageContains(msg, "200"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "200")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+					TestHelpers.MessagePlainTextEquals(msg, $"{token} 200")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -381,12 +380,11 @@ public class PostmanEchoHttpTests
 			TestHelpers.MessageContains(msg, "404"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "404")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+					TestHelpers.MessagePlainTextEquals(msg, $"{token} 404")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }
 

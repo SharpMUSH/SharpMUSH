@@ -306,7 +306,6 @@ public partial class Functions
 					return Errors.ErrorNotARoom;
 				}
 
-				// Todo: Turn Content into async enumerable.
 				var exits = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
 					.Select(x => x.Object().DBRef)

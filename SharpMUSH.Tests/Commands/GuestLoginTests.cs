@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
@@ -37,13 +36,12 @@ public class GuestLoginTests
 		await Assert.That(resultMessage.Contains("NO GUEST CHARACTERS")).IsTrue();
 
 		// Should receive error message about no guest characters
+		// Implementation sends exactly: "Sorry, there are no guest characters available."
 		await NotifyService
-		.Received()
+		.Received(1)
 		.Notify(Arg.Is<long>(h => h == guestHandle),
 		Arg.Is<OneOf<MString, string>>(s =>
-		TestHelpers.MessageContains(s, "guest") ||
-		TestHelpers.MessageContains(s, "available") ||
-		TestHelpers.MessageContains(s, "find")), null, INotifyService.NotificationType.Announce);
+		TestHelpers.MessagePlainTextEquals(s, "Sorry, there are no guest characters available.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
