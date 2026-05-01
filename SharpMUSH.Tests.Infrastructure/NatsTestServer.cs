@@ -1,6 +1,6 @@
 using System.Text;
-using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using Testcontainers.Nats;
 using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests;
@@ -11,20 +11,19 @@ namespace SharpMUSH.Tests;
 /// </summary>
 public class NatsTestServer : IAsyncInitializer, IAsyncDisposable
 {
-	private const int NatsPort = 4222;
-	private const string NatsConfigPath = "/etc/nats/nats.conf";
+	private const string NatsImage = "nats:2.14-alpine";
 	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
-	private static readonly byte[] NatsConfig = Encoding.UTF8.GetBytes($"max_payload: {MaxPayloadBytes}\njetstream: true\n");
+	private const string NatsConfigPath = "/etc/nats/nats.conf";
+	private static readonly byte[] NatsConfig = Encoding.UTF8.GetBytes(
+		$"max_payload: {MaxPayloadBytes}\njetstream: true\n");
 
 	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
 	public required DockerNetwork DockerNetwork { get; init; }
 
-	public IContainer Instance => field ??= new ContainerBuilder("nats:2-alpine")
+	public IContainer Instance => field ??= new NatsBuilder(NatsImage)
 		.WithNetwork(DockerNetwork.Instance)
-		.WithPortBinding(NatsPort, true) // Random host port
-		.WithResourceMapping(NatsConfig, NatsConfigPath) // Embed config with max_payload and JetStream
-		.WithCommand("-c", NatsConfigPath)               // Load config file
-		.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Server is ready"))
+		.WithResourceMapping(NatsConfig, NatsConfigPath)
+		.WithCommand("-c", NatsConfigPath)
 		.WithReuse(false)
 		.Build();
 

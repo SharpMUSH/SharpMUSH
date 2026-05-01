@@ -13,8 +13,8 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="11.0.0-preview.3.26207.106" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="11.0.0-preview.3.26207.106" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0-preview.3.26207.106" />
-    <PackageReference Include="NATS.Net" Version="2.7.2" />
-    <PackageReference Include="Testcontainers" Version="4.10.0" />
+    <PackageReference Include="NATS.Net" Version="2.7.3" />
+    <PackageReference Include="Testcontainers.Nats" Version="4.11.0" />
   </ItemGroup>
 
 

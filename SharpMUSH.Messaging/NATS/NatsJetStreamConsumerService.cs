@@ -107,18 +107,18 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 			_logger.LogInformation("[NATS-CONSUMER] Consumer active — subject: {Subject}, durable: {Durable}",
 				reg.Subject, reg.DurableName);
 
-			await foreach (var msg in consumer.ConsumeAsync<string>(cancellationToken: ct))
+			await foreach (var msg in consumer.ConsumeAsync<JsonElement>(cancellationToken: ct))
 			{
 				try
 				{
-					if (msg.Data is null)
+					if (msg.Data.ValueKind == JsonValueKind.Undefined || msg.Data.ValueKind == JsonValueKind.Null)
 					{
 						_logger.LogWarning("[NATS-CONSUMER] Null payload on subject {Subject}; acking and skipping.", reg.Subject);
 						await msg.AckAsync(cancellationToken: ct);
 						continue;
 					}
 
-					var message = JsonSerializer.Deserialize(msg.Data, reg.MessageType);
+					var message = msg.Data.Deserialize(reg.MessageType);
 					if (message is null)
 					{
 						_logger.LogWarning("[NATS-CONSUMER] Deserialisation returned null on subject {Subject}; acking and skipping.", reg.Subject);
