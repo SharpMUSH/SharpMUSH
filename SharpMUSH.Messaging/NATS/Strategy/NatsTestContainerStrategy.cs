@@ -1,3 +1,4 @@
+using System.Text;
 using Testcontainers.Nats;
 
 namespace SharpMUSH.Messaging.NATS.Strategy;
@@ -15,9 +16,14 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 	private const string NatsImage = "nats:2.14-alpine";
 
 	/// <summary>
-	/// Maximum message payload size sent to the NATS server via <c>--max_payload</c>.
+	/// Maximum message payload size configured via a NATS config file.
 	/// </summary>
 	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
+
+	private const string NatsConfigPath = "/etc/nats/nats.conf";
+
+	private static readonly byte[] NatsConfig = Encoding.UTF8.GetBytes(
+		$"max_payload: {MaxPayloadBytes}\njetstream: true\n");
 
 	private NatsContainer? _container;
 
@@ -26,7 +32,8 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 		if (_container is null)
 		{
 			_container = new NatsBuilder(NatsImage)
-				.WithCommand("--max_payload", MaxPayloadBytes.ToString())
+				.WithResourceMapping(NatsConfig, NatsConfigPath)
+				.WithCommand("-c", NatsConfigPath)
 				.WithLabel("reuse-id", "SharpMUSH-NATS")
 				.WithReuse(true)   // shared across Server and ConnectionServer processes
 				.Build();
