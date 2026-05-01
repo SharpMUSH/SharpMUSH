@@ -55,7 +55,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 		{
 			var json = JsonSerializer.Serialize(data);
 			await _store.PutAsync(GetKey(handle), json, cancellationToken: ct);
-			_logger.LogDebug("Stored connection state for handle {Handle}", handle);
+			_logger.LogTrace("Stored connection state for handle {Handle}", handle);
 		}
 		catch (Exception ex)
 		{
@@ -71,7 +71,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			var result = await _store.TryGetEntryAsync<string>(GetKey(handle), cancellationToken: ct);
 			if (!result.Success)
 			{
-				_logger.LogDebug("No connection state found for handle {Handle}", handle);
+				_logger.LogTrace("No connection state found for handle {Handle}", handle);
 				return null;
 			}
 
@@ -90,7 +90,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 		try
 		{
 			await _store.DeleteAsync(GetKey(handle), cancellationToken: ct);
-			_logger.LogDebug("Removed connection state for handle {Handle}", handle);
+			_logger.LogTrace("Removed connection state for handle {Handle}", handle);
 		}
 		catch (Exception ex)
 		{
@@ -162,7 +162,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			data.State = playerRef.HasValue ? "LoggedIn" : "Connected";
 			data.LastSeen = DateTimeOffset.UtcNow;
 			await SetConnectionAsync(handle, data, ct);
-			_logger.LogDebug("Updated player binding for handle {Handle} to {PlayerRef}", handle, playerRef);
+			_logger.LogTrace("Updated player binding for handle {Handle} to {PlayerRef}", handle, playerRef);
 		}
 		catch (Exception ex)
 		{
@@ -198,7 +198,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 				var updateResult = await _store.TryUpdateAsync(connectionKey, newJson, entry.Revision, cancellationToken: ct);
 				if (updateResult.Success)
 				{
-					_logger.LogDebug("Updated metadata for handle {Handle}: {Key}={Value}", handle, key, value);
+					_logger.LogTrace("Updated metadata for handle {Handle}: {Key}={Value}", handle, key, value);
 					return;
 				}
 
