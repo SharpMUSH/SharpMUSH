@@ -4,7 +4,6 @@ using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
-using System.Text.Json;
 
 namespace SharpMUSH.Messaging.NATS;
 
@@ -70,12 +69,11 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 	public async Task Publish<T>(T message, CancellationToken cancellationToken = default) where T : class
 	{
 		var subject = GetSubjectForMessageType<T>();
-		var json = JsonSerializer.Serialize(message);
 
 		_logger.LogTrace("[NATS-SEND] Publishing message to subject {Subject} - Type: {MessageType}",
 			subject, typeof(T).Name);
 
-		await _js.PublishAsync(subject, json, cancellationToken: cancellationToken);
+		await _js.PublishAsync(subject, message, cancellationToken: cancellationToken);
 
 		_logger.LogTrace("[NATS-SEND] Successfully published message to subject {Subject} - Type: {MessageType}",
 			subject, typeof(T).Name);
@@ -85,14 +83,13 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 	public async Task HandlePublish<T>(T message, CancellationToken cancellationToken = default) where T : IHandleMessage
 	{
 		var subject = GetSubjectForMessageType<T>();
-		var json = JsonSerializer.Serialize(message);
 
 		_logger.LogTrace("[NATS-SEND] Publishing handle-based message to subject {Subject} - Type: {MessageType}, Handle: {Handle}",
 			subject, typeof(T).Name, message.Handle);
 
 		// Include handle in a header so consumers can route by connection
 		var headers = new NatsHeaders { { "X-Handle", message.Handle.ToString() } };
-		await _js.PublishAsync(subject, json, headers: headers, cancellationToken: cancellationToken);
+		await _js.PublishAsync(subject, message, headers: headers, cancellationToken: cancellationToken);
 
 		_logger.LogTrace("[NATS-SEND] Successfully published handle-based message to subject {Subject} - Type: {MessageType}, Handle: {Handle}",
 			subject, typeof(T).Name, message.Handle);

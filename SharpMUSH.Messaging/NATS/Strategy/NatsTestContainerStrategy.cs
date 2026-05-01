@@ -1,6 +1,4 @@
-using System.Text;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
+using Testcontainers.Nats;
 
 namespace SharpMUSH.Messaging.NATS.Strategy;
 
@@ -11,37 +9,32 @@ namespace SharpMUSH.Messaging.NATS.Strategy;
 /// </summary>
 public sealed class NatsTestContainerStrategy : NatsStrategy
 {
-	private const int NatsPort = 4222;
-	private const string NatsConfigPath = "/etc/nats/nats.conf";
-	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
-	private static readonly byte[] NatsConfig = Encoding.UTF8.GetBytes($"max_payload: {MaxPayloadBytes}\njetstream: true\n");
+	/// <summary>
+	/// The NATS docker image to use. Pinned to the latest 2.x Alpine release.
+	/// </summary>
+	private const string NatsImage = "nats:2.14-alpine";
 
 	/// <summary>
-	/// The log message emitted by NATS when it is ready to accept connections.
-	/// Used as the container readiness signal. Valid for nats:2-alpine.
+	/// Maximum message payload size sent to the NATS server via <c>--max_payload</c>.
 	/// </summary>
-	private const string NatsReadyMessage = "Server is ready";
+	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
 
-	private IContainer? _container;
+	private NatsContainer? _container;
 
 	public override async ValueTask<string> GetUrlAsync()
 	{
 		if (_container is null)
 		{
-			_container = new ContainerBuilder("nats:2-alpine")
-				.WithPortBinding(NatsPort, true)   // random host port to avoid collisions
-				.WithResourceMapping(NatsConfig, NatsConfigPath) // Embed config with max_payload and JetStream
-				.WithCommand("-c", NatsConfigPath)               // Load config file
-				.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged(NatsReadyMessage))
+			_container = new NatsBuilder(NatsImage)
+				.WithCommand("--max_payload", MaxPayloadBytes.ToString())
 				.WithLabel("reuse-id", "SharpMUSH-NATS")
-				.WithReuse(true)                   // shared across Server and ConnectionServer processes
+				.WithReuse(true)   // shared across Server and ConnectionServer processes
 				.Build();
 
 			await _container.StartAsync();
 		}
 
-		var port = _container.GetMappedPublicPort(NatsPort);
-		return $"nats://localhost:{port}";
+		return _container.GetConnectionString();
 	}
 
 	public override async ValueTask DisposeAsync()
