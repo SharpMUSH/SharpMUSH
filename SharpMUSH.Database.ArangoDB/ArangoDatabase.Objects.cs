@@ -120,20 +120,28 @@ public partial class ArangoDatabase
 				}
 			}, ct);
 
-		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		try
+		{
+			var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-		var obj = await arangoDb.Document.CreateAsync(transaction, DatabaseConstants.Objects,
-			new SharpObjectCreateRequest(name, DatabaseConstants.TypeRoom, [], time, time), cancellationToken: ct);
-		var room = await arangoDb.Document.CreateAsync(transaction, DatabaseConstants.Rooms, new SharpRoomCreateRequest(),
-			cancellationToken: ct);
+			var obj = await arangoDb.Document.CreateAsync(transaction, DatabaseConstants.Objects,
+				new SharpObjectCreateRequest(name, DatabaseConstants.TypeRoom, [], time, time), cancellationToken: ct);
+			var room = await arangoDb.Document.CreateAsync(transaction, DatabaseConstants.Rooms, new SharpRoomCreateRequest(),
+				cancellationToken: ct);
 
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
-			new SharpEdgeCreateRequest(room.Id, obj.Id), cancellationToken: ct);
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
-			new SharpEdgeCreateRequest(obj.Id, creator.Id!), cancellationToken: ct);
+			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
+				new SharpEdgeCreateRequest(room.Id, obj.Id), cancellationToken: ct);
+			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
+				new SharpEdgeCreateRequest(obj.Id, creator.Id!), cancellationToken: ct);
 
-		await arangoDb.Transaction.CommitAsync(transaction, ct);
-		return new DBRef(int.Parse(obj.Key), time);
+			await arangoDb.Transaction.CommitAsync(transaction, ct);
+			return new DBRef(int.Parse(obj.Key), time);
+		}
+		catch
+		{
+			await arangoDb.Transaction.AbortAsync(transaction, ct);
+			throw;
+		}
 	}
 
 	public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
@@ -251,25 +259,33 @@ public partial class ArangoDatabase
 				}
 			}, ct);
 
-		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		try
+		{
+			var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-		var obj = await arangoDb.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(transaction,
-			DatabaseConstants.Objects,
-			new SharpObjectCreateRequest(name, DatabaseConstants.TypeExit, [], time, time), cancellationToken: ct);
-		var exit = await arangoDb.Document.CreateAsync(transaction, DatabaseConstants.Exits,
-			new SharpExitCreateRequest(aliases), cancellationToken: ct);
+			var obj = await arangoDb.Document.CreateAsync<SharpObjectCreateRequest, SharpObjectQueryResult>(transaction,
+				DatabaseConstants.Objects,
+				new SharpObjectCreateRequest(name, DatabaseConstants.TypeExit, [], time, time), cancellationToken: ct);
+			var exit = await arangoDb.Document.CreateAsync(transaction, DatabaseConstants.Exits,
+				new SharpExitCreateRequest(aliases), cancellationToken: ct);
 
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
-			new SharpEdgeCreateRequest(exit.Id, obj.Id), cancellationToken: ct);
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphLocations, DatabaseConstants.AtLocation,
-			new SharpEdgeCreateRequest(exit.Id, location.Id), cancellationToken: ct);
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
-			new SharpEdgeCreateRequest(exit.Id, location.Id), cancellationToken: ct);
-		await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
-			new SharpEdgeCreateRequest(obj.Id, creator.Id!), cancellationToken: ct);
+			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
+				new SharpEdgeCreateRequest(exit.Id, obj.Id), cancellationToken: ct);
+			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphLocations, DatabaseConstants.AtLocation,
+				new SharpEdgeCreateRequest(exit.Id, location.Id), cancellationToken: ct);
+			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
+				new SharpEdgeCreateRequest(exit.Id, location.Id), cancellationToken: ct);
+			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
+				new SharpEdgeCreateRequest(obj.Id, creator.Id!), cancellationToken: ct);
 
-		await arangoDb.Transaction.CommitAsync(transaction, ct);
-		return new DBRef(int.Parse(obj.Key), time);
+			await arangoDb.Transaction.CommitAsync(transaction, ct);
+			return new DBRef(int.Parse(obj.Key), time);
+		}
+		catch
+		{
+			await arangoDb.Transaction.AbortAsync(transaction, ct);
+			throw;
+		}
 	}
 	public async ValueTask SetObjectName(AnySharpObject obj, MString value,
 		CancellationToken ct = default)
@@ -413,17 +429,25 @@ public partial class ArangoDatabase
 				}
 			}, ct);
 
-		var response = await arangoDb.Query.ExecuteAsync<string>(transaction,
-			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphObjectOwners} RETURN e._key",
-			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
+		try
+		{
+			var response = await arangoDb.Query.ExecuteAsync<string>(transaction,
+				$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphObjectOwners} RETURN e._key",
+				new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
 
-		var contentEdgeKey = response.FirstOrDefault()
-			?? throw new InvalidOperationException($"No owner edge found for object {obj.Object().Id}");
+			var contentEdgeKey = response.FirstOrDefault()
+				?? throw new InvalidOperationException($"No owner edge found for object {obj.Object().Id}");
 
-		await arangoDb.Graph.Edge.UpdateAsync(transaction, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
-			contentEdgeKey, new { To = owner.Id }, cancellationToken: ct);
+			await arangoDb.Graph.Edge.UpdateAsync(transaction, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
+				contentEdgeKey, new { To = owner.Id }, cancellationToken: ct);
 
-		await arangoDb.Transaction.CommitAsync(transaction, ct);
+			await arangoDb.Transaction.CommitAsync(transaction, ct);
+		}
+		catch
+		{
+			await arangoDb.Transaction.AbortAsync(transaction, ct);
+			throw;
+		}
 	}
 
 	public async ValueTask SetObjectWarnings(AnySharpObject obj, WarningType warnings, CancellationToken ct = default)
