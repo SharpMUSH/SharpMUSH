@@ -180,7 +180,7 @@ public class ChannelMessageRequestHandler(
 		// If message was blocked, send block message to speaker only and return
 		if (!notification.Source.IsNone)
 		{
-			await notifyService.Notify(notification.Source.Known(), blockMessage, notification.Source.Known, notification.MessageType);
+			await notifyService.Notify(notification.Source.Known(), blockMessage!, notification.Source.Known, notification.MessageType);
 			return;
 		}
 

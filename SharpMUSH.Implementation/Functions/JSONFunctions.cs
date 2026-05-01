@@ -244,10 +244,10 @@ public partial class Functions
 
 			// Evaluate path to see if it exists
 			var pathResult = jsonPath.Evaluate(jsonDoc);
-			var pathExists = pathResult.pathResult.Matches.Count > 0;
+			var pathExists = pathResult.Matches.Count > 0;
 
 			// For modification operations with found matches, we need exactly one
-			if (pathExists && pathResult.Matches!.Count > 1)
+			if (pathExists && pathResult.Matches.Count > 1)
 			{
 				return new CallState("#-1 PATH MUST BE SINGULAR");
 			}

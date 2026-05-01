@@ -787,7 +787,7 @@ public partial class Functions
 			dateTime = new DateTimeOffset(dt, TimeSpan.Zero);
 		}
 
-		if (timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
+		if (timezone is not null && timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
 		{
 			return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
 		}

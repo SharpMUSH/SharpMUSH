@@ -321,7 +321,7 @@ public partial class Commands
 
 			if (result)
 			{
-				var aliasStr = aliases.Length > 0 ? string.Join(", ", aliases) : "none";
+				var aliasStr = aliases?.Length > 0 ? string.Join(", ", aliases) : "none";
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAliasesSetFormat), executor, flagName, aliasStr);
 				return new CallState(MModule.single(flagName));
 			}

@@ -1313,7 +1313,7 @@ public partial class Functions
 			_ => await SetObjectFlag()
 		};
 
-		async ValueTask<CallState> SetAttributeFlag(OneOf<(string db, string Attribute), None> split)
+		async ValueTask<CallState> SetAttributeFlag(OneOf.OneOf<(string db, string Attribute), None> split)
 		{
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser, executor, executor,

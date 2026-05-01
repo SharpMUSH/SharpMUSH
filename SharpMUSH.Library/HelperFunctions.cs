@@ -288,7 +288,9 @@ public static partial class HelperFunctions
 		var obj = match.Groups["Object"].Value;
 		var attr = match.Groups["Attribute"].Value;
 		if (!string.IsNullOrEmpty(attr) && !IsValidAttributeName(attr)) return new None();
-		return string.IsNullOrEmpty(obj) ? new None() : new DbRefOptionalAttr(obj, string.IsNullOrEmpty(attr) ? null : attr);
+		return string.IsNullOrEmpty(obj) 
+			? new None() 
+			: new DbRefOptionalAttr(obj, string.IsNullOrEmpty(attr) ? null : attr);
 	}
 
 	public static Option<DBRef> ParseDbRef(string dbrefStr)

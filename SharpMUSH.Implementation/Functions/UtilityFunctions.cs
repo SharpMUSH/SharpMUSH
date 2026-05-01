@@ -102,7 +102,7 @@ public partial class Functions
 			{
 				// Handle named color from colors.json
 				var colorName = code[1..].ToString();
-				if (colorsConfig.ColorsByName.TryGetValue(colorName, out var colorIdentity))
+				if (colorsConfig is not null && colorsConfig.ColorsByName.TryGetValue(colorName, out var colorIdentity))
 				{
 					var hexColor = colorIdentity.rgb;
 					var color = new AnsiColor.RGB(ColorTranslator.FromHtml(hexColor));
@@ -120,7 +120,7 @@ public partial class Functions
 				(code.StartsWith("+xterm") && int.TryParse(code[6..], out xterm) && xterm >= 0 && xterm < 256))
 			{
 				// Handle xterm color (0-255)
-				if (colorsConfig.ColorsByXterm.TryGetValue(xterm.ToString(), out var xtermColors) && xtermColors.Length > 0)
+				if (colorsConfig is not null && colorsConfig.ColorsByXterm.TryGetValue(xterm.ToString(), out var xtermColors) && xtermColors.Length > 0)
 				{
 					var hexColor = xtermColors[0].rgb;
 					var color = new AnsiColor.RGB(ColorTranslator.FromHtml(hexColor));

@@ -247,7 +247,7 @@ public partial class Functions
 				}
 
 				return ValueTask.FromResult(new CallState(
-					index <= aliases.Length
+					index <= aliases?.Length
 						? aliases[index - 1]
 						: string.Empty));
 			});

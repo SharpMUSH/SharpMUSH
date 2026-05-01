@@ -345,7 +345,7 @@ public partial class Commands
 						async p => await p.CommandListParse(attribute.Value));
 				});
 
-				if (result.Message != null)
+				if (result?.Message is not null)
 				{
 					results.Add(result.Message.ToPlainText() ?? string.Empty);
 				}
@@ -4377,7 +4377,7 @@ public partial class Commands
 			if (localizeRegs && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
 			{
 				regsToRestore.Clear();
-				foreach (var (key, value) in savedRegisters)
+				foreach (var (key, value) in savedRegisters ?? [])
 				{
 					regsToRestore[key] = value;
 				}
@@ -5918,7 +5918,7 @@ public partial class Commands
 			if (hasLocalize && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
 			{
 				regsToRestore.Clear();
-				foreach (var (key, value) in savedRegisters)
+				foreach (var (key, value) in savedRegisters ?? [])
 				{
 					regsToRestore[key] = value;
 				}
@@ -6612,7 +6612,7 @@ public partial class Commands
 				}
 
 				// Include enum values if present
-				if (entry.entry.Enum.Length > 0)
+				if (entry.Enum?.Length > 0)
 				{
 					var enumList = string.Join(" ", entry.Enum);
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileEnumFormat), executor, entry.Name, enumList);

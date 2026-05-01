@@ -48,9 +48,15 @@ public partial class Commands
 
 		var targetObject = locate.AsSharpObject;
 
+		if (attrName is null)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
+			return new CallState(ErrorMessages.Returns.NoMatch);
+		}
+		
 		// Check if attribute exists
-		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName!,
-		IAttributeService.AttributeMode.Read);
+		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName,
+			IAttributeService.AttributeMode.Read);
 
 		if (!attribute.IsAttribute)
 		{
@@ -99,14 +105,14 @@ public partial class Commands
 		if (shouldLock)
 		{
 			// Lock the attribute and change ownership to executor
-			await AttributeService!.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
+			await AttributeService.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
 
 			// Change ownership to executor (if executor is a player)
 			if (executor.IsPlayer)
 			{
 				// Re-set the attribute with new owner to change ownership
 				var currentValue = attribute.AsAttribute.Last().Value;
-				await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
+				await AttributeService.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 			}
 
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeLocked), executor);
@@ -157,6 +163,12 @@ public partial class Commands
 			return sourceLocate.AsError;
 		}
 
+		if (sourceAttr is null)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
+			return new CallState(ErrorMessages.Returns.NoMatch);
+		}
+		
 		var sourceObject = sourceLocate.AsSharpObject;
 
 		// Get the source attribute
@@ -290,12 +302,12 @@ public partial class Commands
 		var sourceObject = sourceLocate.AsSharpObject;
 
 		// Get the source attribute
-		var sourceAttribute = await AttributeService!.GetAttributeAsync(executor, sourceObject, sourceAttr,
+		var sourceAttribute = await AttributeService!.GetAttributeAsync(executor, sourceObject, sourceAttr!,
 		IAttributeService.AttributeMode.Read);
 
 		if (!sourceAttribute.IsAttribute)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr!);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
@@ -347,7 +359,7 @@ public partial class Commands
 			}
 
 			// Set the attribute value
-			var setResult = await AttributeService!.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
+			var setResult = await AttributeService.SetAttributeAsync(executor, destObject, targetAttrName!, attrValue);
 
 			if (setResult.IsError)
 			{
@@ -360,7 +372,7 @@ public partial class Commands
 			{
 				foreach (var flag in attrFlags)
 				{
-					await AttributeService!.SetAttributeFlagAsync(executor, destObject, targetAttrName, flag.Name);
+					await AttributeService.SetAttributeFlagAsync(executor, destObject, targetAttrName!, flag.Name);
 				}
 			}
 
@@ -370,7 +382,7 @@ public partial class Commands
 		if (copiedCount > 0)
 		{
 			// Remove the source attribute after successful copy
-			var clearResult = await AttributeService!.ClearAttributeAsync(executor, sourceObject, sourceAttr,
+			var clearResult = await AttributeService.ClearAttributeAsync(executor, sourceObject, sourceAttr!,
 			IAttributeService.AttributePatternMode.Exact,
 			IAttributeService.AttributeClearMode.Safe);
 
@@ -497,7 +509,7 @@ public partial class Commands
 
 		// Change ownership by re-setting the attribute with new owner
 		var currentValue = attribute.AsAttribute.Last().Value;
-		var setResult = await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
+		var setResult = await AttributeService.SetAttributeAsync(executor, targetObject, attrName!, currentValue);
 
 		if (setResult.IsError)
 		{

@@ -369,7 +369,7 @@ public partial class Commands
 		var result = await ChannelTitle.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, title);
 
 		// Send custom notification that includes the alias name
-		if (result.!result.Message.ToPlainText().StartsWith("#-1"))
+		if (result.Message != null && !result.Message.ToPlainText().StartsWith("#-1"))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TitleSetForAliasChannelFormat), executor, title.ToPlainText(), alias, channel.Name.ToPlainText());
 		}

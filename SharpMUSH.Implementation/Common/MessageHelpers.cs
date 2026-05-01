@@ -128,7 +128,7 @@ public static class MessageHelpers
 				return new CallState(Errors.ErrorNotVisible);
 			}
 
-			objToEvaluate = maybeLocateTarget.AsSharpObject;
+			objToEvaluate = maybeLocateTarget.AsSharpObject!;
 			attrToEvaluate = string.Join("/", attrObjSplit.Skip(1));
 
 			var attr = await attributeService.GetAttributeAsync(
