@@ -58,8 +58,8 @@ public class ChannelMessageRequestHandler(
 			var mogrifierResult = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(notification.Channel.Mogrifier)), cancellationToken);
 			if (!mogrifierResult.IsNone)
 			{
-				var mogrifierObj = mogrifierResult.Known();
-				var source = notification.Source.IsNone ? mogrifierObj : notification.Source.Known();
+				var mogrifierObj = mogrifierResult.Known;
+				var source = notification.Source.IsNone ? mogrifierObj : notification.Source.Known;
 
 				// Check if speaker passes Use lock on mogrifier
 				var passesUseLock = permissionService.PassesLock(source, mogrifierObj, LockType.Use);
@@ -180,7 +180,7 @@ public class ChannelMessageRequestHandler(
 		// If message was blocked, send block message to speaker only and return
 		if (blockMessage != null && !notification.Source.IsNone)
 		{
-			await notifyService.Notify(notification.Source.Known(), blockMessage, notification.Source.Known, notification.MessageType);
+			await notifyService.Notify(notification.Source.Known, blockMessage, notification.Source.Known, notification.MessageType);
 			return;
 		}
 
@@ -198,7 +198,7 @@ public class ChannelMessageRequestHandler(
 			{
 				var isGagged = status.Gagged ?? false;
 				var wantsToHear = notification.Source.IsNone ||
-													await permissionService.CanInteract(notification.Source.Known(), member,
+													await permissionService.CanInteract(notification.Source.Known, member,
 														IPermissionService.InteractType.Hear);
 
 				if (!isGagged && wantsToHear)
@@ -288,7 +288,7 @@ public class ChannelMessageRequestHandler(
 			["7"] = new CallState(MModule.single(string.Join(" ", options)))
 		};
 
-		var sourceObj = source.IsNone ? player : source.Known();
+		var sourceObj = source.IsNone ? player : source.Known;
 		return await AttributeHelpers.EvaluateFormatAttribute(
 			attributeService,
 			null, // parser - not needed for attribute evaluation

@@ -307,7 +307,7 @@ public partial class ArangoDatabase
 		var baseObject = await GetObjectNodeAsync(obj, ct);
 		if (baseObject.IsNone) yield break;
 
-		await foreach (var exit in GetExitsBatchAsync(baseObject.Known().Id!, ct))
+		await foreach (var exit in GetExitsBatchAsync(baseObject.Known.Id!, ct))
 		{
 			yield return exit;
 		}
@@ -344,7 +344,7 @@ public partial class ArangoDatabase
 			var objEl = result.GetProperty("obj");
 			var node = HydrateObjectFromElements(typedEl, objEl);
 			if (node.IsNone) continue;
-			yield return node.Known().AsExit;
+			yield return node.Known.AsExit;
 		}
 	}
 	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone,

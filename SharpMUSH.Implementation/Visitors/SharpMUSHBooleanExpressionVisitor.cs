@@ -137,7 +137,7 @@ if (parsedTargetOpt.IsSome())
 					if (targetObjResult.IsNone())
 						return false;
 
-					var targetObj = targetObjResult.Known();
+					var targetObj = targetObjResult.Known;
 					var targetOwner = targetObj.Object.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
 					return unlockerOwnerDbRef == targetOwner.Object.DBRef;
 				}
@@ -650,7 +650,7 @@ if (parsedIndirectOpt.IsSome())
 					if (targetObjResult.IsNone())
 						return false;
 
-					targetObj = targetObjResult.Known();
+					targetObj = targetObjResult.Known;
 				}
 				else
 				{

@@ -715,7 +715,7 @@ public partial class Commands
 			return new None();
 		}
 
-		var viewingKnown = viewing.Known();
+		var viewingKnown = viewing.Known;
 
 		// Check permission to examine 
 		var canExamine = await PermissionService!.CanExamine(executor, viewingKnown);

@@ -1660,7 +1660,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var targetObject = maybeObject.WithoutError().Known();
+		var targetObject = maybeObject.WithoutError().Known;
 		var dbref = targetObject.Object.DBRef;
 
 		var attributeName = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])

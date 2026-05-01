@@ -85,6 +85,8 @@ public static class OneOfExtensions
 		_ => new None()
 	};
 
+	public static bool IsNone(this AnyOptionalSharpObject union) => union.IsNone;
+	public static bool IsNone(this AnyOptionalSharpContainer union) => union.IsNone;
 	public static bool IsNone(this AnyOptionalSharpObjectOrError union) => union.IsNone;
 	public static bool IsError(this AnyOptionalSharpObjectOrError union) => union.IsError;
 	public static bool IsValid(this AnyOptionalSharpObjectOrError union) => !(union.IsNone || union.IsError);

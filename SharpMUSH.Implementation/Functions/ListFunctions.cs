@@ -123,7 +123,7 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(sep, filteredItems));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr.IsNone())
@@ -214,7 +214,7 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(sep, filteredItems));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr.IsNone())
@@ -379,7 +379,7 @@ public partial class Functions
 			return new CallState(accumulator);
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr.IsNone())
@@ -734,7 +734,7 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(sep, lambdaResults));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr.IsNone())
 		{
@@ -896,7 +896,7 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(delimiter, result));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr.IsNone())
@@ -1001,7 +1001,7 @@ public partial class Functions
 		}
 		else
 		{
-			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 			var objAttr =
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr.IsNone())
@@ -1368,7 +1368,7 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(sep, sorted));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr.IsNone())
@@ -1488,7 +1488,7 @@ public partial class Functions
 		}
 		else
 		{
-			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 			var objAttr =
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr.IsNone())
@@ -1629,7 +1629,7 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(sep, result));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr.IsNone())

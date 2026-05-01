@@ -892,7 +892,7 @@ public partial class Commands
 			return new None();
 		}
 
-		var viewingKnown = viewing.Known();
+		var viewingKnown = viewing.Known;
 
 		var canExamine = await PermissionService!.CanExamine(executor, viewingKnown);
 
@@ -4758,7 +4758,7 @@ public partial class Commands
 			return new None();
 		}
 
-		var targetKnown = target.Known();
+		var targetKnown = target.Known;
 
 		var canExamine = await PermissionService!.CanExamine(executor, targetKnown);
 		if (!canExamine)
@@ -5937,7 +5937,7 @@ public partial class Commands
 		MString? arg0, arg1;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var caller = (await parser.CurrentState.CallerObject(Mediator!)).Known();
+		var caller = (await parser.CurrentState.CallerObject(Mediator!)).Known;
 		string[] sendSwitches = ["SEND", "URGENT", "NOSIG", "SILENT", "NOEVAL"];
 
 		if (switches.Except(sendSwitches).Any() && switches.Length > 1)

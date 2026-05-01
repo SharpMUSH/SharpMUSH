@@ -56,7 +56,7 @@ public partial class ArangoDatabase
 
 		var result = stream
 			.Select<SharpChannelMemberListQueryResult, SharpChannel.MemberAndStatus>(async (x, cancelToken) =>
-				new SharpChannel.MemberAndStatus((await GetObjectNodeAsync(x.Id, cancelToken)).Known(),
+				new SharpChannel.MemberAndStatus((await GetObjectNodeAsync(x.Id, cancelToken)).Known,
 					new SharpChannelStatus(
 						Combine: x.Status.Combine,
 						Gagged: x.Status.Gagged,

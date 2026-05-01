@@ -327,7 +327,7 @@ public class SharpMUSHParserVisitor(
 
 		if (!executor.IsNone)
 		{
-			executorObj = executor.Known();
+			executorObj = executor.Known;
 
 			var stateFlags = parser.CurrentState.Flags;
 			if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
@@ -935,7 +935,7 @@ public class SharpMUSHParserVisitor(
 			// Step 15: Global User-defined commands
 			var goConfig = Configuration.CurrentValue.Database.MasterRoom;
 			var maybeGlobalObject = await Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
-			var globalObject = maybeGlobalObject.Known();
+			var globalObject = maybeGlobalObject.Known;
 			AnySharpObject[] globalObjects = [globalObject];
 			var globalObjectContent = globalObject.AsContainer
 				.Content(Mediator)
@@ -1384,7 +1384,7 @@ public class SharpMUSHParserVisitor(
 				var commandLockStr = libraryCommandDefinition.Attribute.CommandLock;
 				if (!string.IsNullOrEmpty(commandLockStr) && !executor.IsNone)
 				{
-					var executorObj = executor.Known();
+					var executorObj = executor.Known;
 					var passesLock = await Mediator.Send(
 						new SharpMUSH.Library.Queries.EvaluateLockQuery(commandLockStr, executorObj, executorObj));
 					if (!passesLock)
@@ -1401,7 +1401,7 @@ public class SharpMUSHParserVisitor(
 
 				if (!executor.IsNone)
 				{
-					var executorObj = executor.Known();
+					var executorObj = executor.Known;
 					if (await executorObj.HasFlag("VERBOSE"))
 					{
 						var verboseOutput = $"#{executorObj.Object.DBRef.Number}] {commandWithSwitches.ToPlainText()}";
@@ -1453,8 +1453,8 @@ public class SharpMUSHParserVisitor(
 			return new None();
 		}
 
-		var targetObj = targetObject.Known();
-		var executorObj = executor.IsNone ? targetObj : executor.Known();
+		var targetObj = targetObject.Known;
+		var executorObj = executor.IsNone ? targetObj : executor.Known;
 
 		// Save q-registers if /localize is set
 		Dictionary<string, MString>? savedRegisters = null;

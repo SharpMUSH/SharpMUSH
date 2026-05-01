@@ -242,7 +242,7 @@ RETURN o, r
 			Title: MModule.deserialize(
 			rel.Properties.ContainsKey("title") ? rel["title"].As<string>() ?? "" : ""));
 
-			yield return new SharpChannel.MemberAndStatus(memberObj.Known(), status);
+			yield return new SharpChannel.MemberAndStatus(memberObj.Known, status);
 		}
 	}
 
