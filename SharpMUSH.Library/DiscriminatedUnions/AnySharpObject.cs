@@ -11,9 +11,11 @@ namespace SharpMUSH.Library.DiscriminatedUnions;
 /// </summary>
 public union AnySharpObject(SharpPlayer, SharpRoom, SharpExit, SharpThing)
 {
-	public bool Equals(AnySharpObject other) => this.Object().DBRef == other.Object().DBRef;
+	public bool Equals(AnySharpObject other) =>
+		Value is null ? other.Value is null :
+		other.Value is not null && this.Object().DBRef == other.Object().DBRef;
 	public override bool Equals(object? o) => o is AnySharpObject other && Equals(other);
-	public override int GetHashCode() => this.Object().DBRef.GetHashCode();
+	public override int GetHashCode() => Value is null ? 0 : this.Object().DBRef.GetHashCode();
 	public static bool operator ==(AnySharpObject a, AnySharpObject b) => a.Equals(b);
 	public static bool operator !=(AnySharpObject a, AnySharpObject b) => !a.Equals(b);
 

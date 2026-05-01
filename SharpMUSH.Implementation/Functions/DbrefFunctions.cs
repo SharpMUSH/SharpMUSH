@@ -1142,7 +1142,7 @@ LOCATE()
 				foreach (var (evalExpression, typeFilter) in compiledEvals)
 				{
 					// Check type filter if specified
-					if (!typedObj.Object().Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
+					if (typeFilter != null && !typedObj.Object().Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
 					{
 						matches = false;
 						break;

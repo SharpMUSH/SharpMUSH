@@ -264,10 +264,14 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		var natsUrl = $"nats://localhost:{natsPort}";
 		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
+		var notifyMock = Substitute.For<INotifyService>();
+		notifyMock.NotifyAndReturn(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
+			.ReturnsForAnyArgs(info => ValueTask.FromResult(new CallState((string)info[1])));
+
 		_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
-			Substitute.For<INotifyService>(),
+			notifyMock,
 			_customDatabaseName,
 			_sqlPlatform);
 
