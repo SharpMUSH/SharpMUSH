@@ -55,7 +55,7 @@ public static class ChannelAdd
 		var parsedPrivileges = ChannelHelper.StringToChannelPrivileges(privileges);
 		if (parsedPrivileges.IsError)
 		{
-			await NotifyService.Notify(executor, $"Invalid privileges: {string.Join(", ", parsedPrivileges.AsError.Value)}.", executor);
+			await NotifyService.Notify(executor, $"Invalid privileges: {string.Join(", ", parsedPrivileges.AsError)}.", executor);
 			return new CallState("#-1 Invalid privileges.");
 		}
 

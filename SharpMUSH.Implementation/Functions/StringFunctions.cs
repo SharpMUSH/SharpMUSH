@@ -815,7 +815,7 @@ public partial class Functions
 			var exprIndex = i * 2 + 1;
 
 			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
-			if (condition != null && Predicates.Truthy(condition.Message!))
+			if (Predicates.Truthy(condition.Message!))
 			{
 				var result = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
 				return result ?? CallState.Empty;
@@ -865,7 +865,7 @@ public partial class Functions
 			var exprIndex = i * 2 + 1;
 
 			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
-			if (condition != null && Predicates.Truthy(condition.Message!))
+			if (Predicates.Truthy(condition.Message!))
 			{
 				var expr = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
 				if (expr != null)
@@ -1504,7 +1504,7 @@ public partial class Functions
 
 			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
 			// Return expression when condition is TRUTHY
-			if (condition != null && Predicates.Truthy(condition.Message!))
+			if (Predicates.Truthy(condition.Message!))
 			{
 				var result = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
 				return result ?? CallState.Empty;

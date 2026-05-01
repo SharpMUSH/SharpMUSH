@@ -19,4 +19,9 @@ public union Option<T>(T, None)
 		value = default;
 		return false;
 	}
+
+	// Backward-compat aliases
+	public T    AsT0 => AsValue();
+	public bool IsT0 => IsSome();
+	public bool IsT1 => IsNone();
 }

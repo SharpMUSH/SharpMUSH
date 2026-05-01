@@ -72,8 +72,7 @@ public partial class Functions
 					_ => null
 				};
 
-				if (addressValue != null
-						&& MModule.isWildcardMatch2(MModule.single(addressValue), pattern)
+				if (MModule.isWildcardMatch2(MModule.single(addressValue), pattern)
 						&& uniqueAddresses.Add(addressValue)
 						&& !isCount)
 				{
@@ -356,7 +355,7 @@ public partial class Functions
 
 			return maybeAttr switch
 			{
-				{ IsError: true } or { IsNone: true } => new CallState(string.Empty),
+				OptionalSharpAttributeOrError mae when mae.IsError || mae.IsNone => new CallState(string.Empty),
 				_ => new CallState(maybeAttr.AsAttribute.Last().Value)
 			};
 		}
@@ -378,7 +377,7 @@ public partial class Functions
 
 		return doingAttr switch
 		{
-			{ IsError: true } or { IsNone: true } => new CallState(string.Empty),
+			OptionalSharpAttributeOrError mae when mae.IsError || mae.IsNone => new CallState(string.Empty),
 			_ => new CallState(doingAttr.AsAttribute.Last().Value)
 		};
 	}

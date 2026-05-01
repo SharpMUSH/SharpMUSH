@@ -92,7 +92,7 @@ public partial class Functions
 		{
 			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-			if (objAttr is { IsT1: true, AsT1: false })
+			if (objAttr.IsNone())
 			{
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
@@ -107,7 +107,7 @@ public partial class Functions
 			}
 
 			var located = locate.WithoutError().WithoutNone();
-			var maybeAttr = await AttributeService!.GetAttributeAsync(executor, located, attrName,
+			var maybeAttr = await AttributeService!.GetAttributeAsync(executor, located, attrName!,
 				mode: IAttributeService.AttributeMode.Execute, parent: true);
 
 			if (maybeAttr.IsNone)
@@ -244,7 +244,7 @@ public partial class Functions
 
 			// Evaluate path to see if it exists
 			var pathResult = jsonPath.Evaluate(jsonDoc);
-			var pathExists = pathResult.Matches != null && pathResult.Matches.Count > 0;
+			var pathExists = pathResult.pathResult.Matches.Count > 0;
 
 			// For modification operations with found matches, we need exactly one
 			if (pathExists && pathResult.Matches!.Count > 1)

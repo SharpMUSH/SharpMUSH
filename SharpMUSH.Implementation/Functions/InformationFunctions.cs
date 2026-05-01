@@ -226,10 +226,10 @@ public partial class Functions
 			{
 				var aliases = found switch
 				{
-					{ IsExit: true, AsExit: var exit } => exit.Aliases,
-					{ IsThing: true, AsThing: var thing } => thing.Aliases,
-					{ IsPlayer: true, AsPlayer: var player } => player.Aliases,
-					{ IsRoom: true, AsRoom: var room } => room.Aliases,
+					SharpExit exit => exit.Aliases,
+					SharpThing thing => thing.Aliases,
+					SharpPlayer player => player.Aliases,
+					SharpRoom room => room.Aliases,
 					_ => null
 				};
 
@@ -247,7 +247,7 @@ public partial class Functions
 				}
 
 				return ValueTask.FromResult(new CallState(
-					aliases != null && index <= aliases.Length
+					index <= aliases.Length
 						? aliases[index - 1]
 						: string.Empty));
 			});
@@ -291,10 +291,10 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState(
 					string.Join(" ", found switch
 					{
-						{ IsExit: true, AsExit: var exit } => exit.Aliases ?? [],
-						{ IsThing: true, AsThing: var thing } => thing.Aliases ?? [],
-						{ IsPlayer: true, AsPlayer: var player } => player.Aliases ?? [],
-						{ IsRoom: true, AsRoom: var room } => room.Aliases ?? [],
+						SharpExit exit => exit.Aliases ?? [],
+						SharpThing thing => thing.Aliases ?? [],
+						SharpPlayer player => player.Aliases ?? [],
+						SharpRoom room => room.Aliases ?? [],
 						_ => throw new ArgumentOutOfRangeException()
 					})));
 			});
@@ -314,7 +314,7 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState(
 					string.Join(" ", found switch
 					{
-						{ IsExit: true, AsExit: var exit } => [name, .. exit.Aliases ?? []],
+						SharpExit exit => [name, .. exit.Aliases ?? []],
 						_ => [name]
 					})));
 			});

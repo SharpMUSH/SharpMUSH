@@ -17,6 +17,9 @@ public union AnyOptionalSharpContainer(SharpPlayer, SharpRoom, SharpThing, None)
 	public SharpRoom   AsRoom   => (SharpRoom)Value!;
 	public SharpThing  AsThing  => (SharpThing)Value!;
 
+	// Backward-compat alias
+	public bool IsT3 => IsNone;
+
 	public AnyOptionalSharpObject WithExitOption() => Value switch
 	{
 		SharpPlayer p => p,

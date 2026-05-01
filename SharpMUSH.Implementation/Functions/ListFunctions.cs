@@ -126,7 +126,7 @@ public partial class Functions
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
@@ -217,7 +217,7 @@ public partial class Functions
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
@@ -382,7 +382,7 @@ public partial class Functions
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
@@ -736,7 +736,7 @@ public partial class Functions
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 		var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
@@ -899,7 +899,7 @@ public partial class Functions
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
@@ -1004,7 +1004,7 @@ public partial class Functions
 			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 			var objAttr =
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-			if (objAttr is { IsT1: true, AsT1: false })
+			if (objAttr.IsNone())
 			{
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
@@ -1103,7 +1103,7 @@ public partial class Functions
 
 		if (exact != null)
 		{
-			return (await exact).AsValue();
+			var (exactDbref, _) = (await exact); return exactDbref.ToString();
 		}
 
 		var partial = await locatedNames.FirstOrDefaultAsync(async (x, ct)
@@ -1111,7 +1111,7 @@ public partial class Functions
 
 		if (partial != null)
 		{
-			return (await partial).AsValue();
+			var (partialDbref, _) = (await partial); return partialDbref.ToString();
 		}
 
 		return CallState.Empty;
@@ -1145,7 +1145,7 @@ public partial class Functions
 
 		if (await exact.AnyAsync())
 		{
-			return string.Join(" ", exact.Select(async x => (await x).AsValue().ToString()));
+			return string.Join(" ", exact.Select(async x => { var (xDbref, _) = (await x); return xDbref.ToString(); }));
 		}
 
 		var partial = locatedNames.Where(async (x, ct)
@@ -1153,7 +1153,7 @@ public partial class Functions
 
 		if (await partial.AnyAsync())
 		{
-			return string.Join(" ", partial.Select(async x => (await x).AsValue().ToString()));
+			return string.Join(" ", partial.Select(async x => { var (xDbref, _) = (await x); return xDbref.ToString(); }));
 		}
 
 		return CallState.Empty;
@@ -1371,7 +1371,7 @@ public partial class Functions
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
@@ -1491,7 +1491,7 @@ public partial class Functions
 			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 			var objAttr =
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-			if (objAttr is { IsT1: true, AsT1: false })
+			if (objAttr.IsNone())
 			{
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
@@ -1632,7 +1632,7 @@ public partial class Functions
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}

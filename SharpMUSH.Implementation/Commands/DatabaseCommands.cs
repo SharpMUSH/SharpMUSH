@@ -164,7 +164,7 @@ public partial class Commands
 			LocateFlags.All,
 			async found =>
 			{
-				var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, found, attrName,
+				var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, found, attrName!,
 					IAttributeService.AttributeMode.Execute, true);
 
 				if (!maybeAttribute.IsAttribute)

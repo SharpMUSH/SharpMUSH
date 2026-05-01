@@ -389,7 +389,7 @@ public partial class Functions
 				foreach (var attr in attributes.AsAttributes)
 				{
 					var value = attr.Value.ToPlainText();
-					if (value != null && value.Contains(substring!, comparison))
+					if (value.Contains(substring!, comparison))
 					{
 						matchingAttrs.Add(attr.LongName!);
 					}
@@ -802,7 +802,7 @@ public partial class Functions
 			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
-		if (dbrefAndMaybeArg is { IsT1: true, AsT1: false })
+		if (dbrefAndMaybeArg.IsNone())
 		{
 			return new CallState(Errors.ErrorCantSeeThat);
 		}

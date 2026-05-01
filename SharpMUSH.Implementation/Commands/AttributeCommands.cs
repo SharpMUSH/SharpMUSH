@@ -49,7 +49,7 @@ public partial class Commands
 		var targetObject = locate.AsSharpObject;
 
 		// Check if attribute exists
-		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName,
+		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName!,
 		IAttributeService.AttributeMode.Read);
 
 		if (!attribute.IsAttribute)
@@ -430,7 +430,7 @@ public partial class Commands
 		var targetObject = locate.AsSharpObject;
 
 		// Check if attribute exists
-		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName,
+		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName!,
 		IAttributeService.AttributeMode.Read);
 
 		if (!attribute.IsAttribute)

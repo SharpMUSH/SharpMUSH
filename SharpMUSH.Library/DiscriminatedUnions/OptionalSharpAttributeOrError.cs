@@ -31,4 +31,11 @@ public union OptionalSharpAttributeOrError(SharpAttribute[], None, SharpError)
 		SharpError e => new CallState(e.Value),
 		_ => new CallState(Errors.ErrorNoSuchAttribute)
 	};
+
+	// Backward-compat aliases (callers written against OneOf's index-based API)
+	public bool           IsT0 => IsAttribute;
+	public bool           IsT1 => IsNone;
+	public bool           IsT2 => IsError;
+	public SharpAttribute[] AsT0 => AsAttribute;
+	public SharpError       AsT2 => AsError;
 }

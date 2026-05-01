@@ -1142,7 +1142,7 @@ LOCATE()
 				foreach (var (evalExpression, typeFilter) in compiledEvals)
 				{
 					// Check type filter if specified
-					if (typeFilter != null && !typedObj.Object().Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
+					if (!typedObj.Object().Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
 					{
 						matches = false;
 						break;
@@ -1417,7 +1417,7 @@ LOCATE()
 				resultList.Add($"#{errorCode}");
 
 				// Call error callback if provided
-				if (hasErrorCallback && callbackObject != null && callbackAttribute != null)
+				if (hasErrorCallback && callbackAttribute != null)
 				{
 					var attrResult = await AttributeService!.GetAttributeAsync(
 						executor, callbackObject, string.Join("`", callbackAttribute),

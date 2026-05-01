@@ -624,7 +624,7 @@ public partial class Functions
 			return new ValueTask<CallState>(Errors.ErrorInteger);
 		}
 
-		var maxWidth = width != null && int.TryParse(width, out var w) ? w : int.MaxValue;
+		var maxWidth = int.TryParse(width, out var w) ? w : int.MaxValue;
 
 		// Calculate time components
 		var timeSpan = TimeSpan.FromSeconds(totalSecs);
@@ -787,7 +787,7 @@ public partial class Functions
 			dateTime = new DateTimeOffset(dt, TimeSpan.Zero);
 		}
 
-		if (timezone != null && timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
+		if (timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
 		{
 			return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
 		}

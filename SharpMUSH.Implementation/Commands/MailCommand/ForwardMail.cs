@@ -18,7 +18,7 @@ public static class ForwardMail
 		int mailNumber, string target)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
-		var maybeLocate = await locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target,
+		var maybeLocate = await locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target!,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
 		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
 

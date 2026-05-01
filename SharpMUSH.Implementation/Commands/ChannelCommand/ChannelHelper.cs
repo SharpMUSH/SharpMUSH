@@ -10,34 +10,22 @@ using System.Collections.ObjectModel;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
-public class ChannelOrError : OneOfBase<SharpChannel, Error<CallState>>
+public union ChannelOrError(SharpChannel, SharpErrorCallState)
 {
-	public ChannelOrError(SharpChannel channel) : base(channel)
-	{
-	}
-
-	public ChannelOrError(Error<CallState> error) : base(error)
-	{
-	}
-
-	public bool IsError => IsT1;
-	public SharpChannel AsChannel => AsT0;
-	public Error<CallState> AsError => AsT1;
+	public bool IsError    => Value is SharpErrorCallState;
+	public SharpChannel        AsChannel => (SharpChannel)Value!;
+	public SharpErrorCallState AsError   => (SharpErrorCallState)Value!;
 }
 
-public class PrivilegeOrError : OneOfBase<string[], Error<string[]>>
+/// <summary>Thin wrappers so PrivilegeOrError can have two distinct string[] cases.</summary>
+public readonly record struct GrantedPrivileges(string[] Values);
+public readonly record struct DeniedPrivileges(string[] Values);
+
+public union PrivilegeOrError(GrantedPrivileges, DeniedPrivileges)
 {
-	public PrivilegeOrError(string[] channel) : base(channel)
-	{
-	}
-
-	public PrivilegeOrError(Error<string[]> error) : base(error)
-	{
-	}
-
-	public bool IsError => IsT1;
-	public string[] AsPrivileges => AsT0;
-	public Error<string[]> AsError => AsT1;
+	public bool    IsError      => Value is DeniedPrivileges;
+	public string[] AsPrivileges => ((GrantedPrivileges)Value!).Values;
+	public string[] AsError      => ((DeniedPrivileges)Value!).Values;
 }
 
 public static class ChannelHelper
@@ -46,17 +34,17 @@ public static class ChannelHelper
 		new Dictionary<string, char>(StringComparer.OrdinalIgnoreCase)
 		{
 			{ "Disabled", 'D' },
-			{ "Player", 'P' },
-			{ "Admin", 'A' },
-			{ "Wizard", 'W' },
-			{ "Thing", 'T' },
-			{ "Object", 'O' },
-			{ "Quiet", 'Q' },
-			{ "Open", 'o' },
-			{ "Hide_Ok", 'H' },
+			{ "Player",   'P' },
+			{ "Admin",    'A' },
+			{ "Wizard",   'W' },
+			{ "Thing",    'T' },
+			{ "Object",   'O' },
+			{ "Quiet",    'Q' },
+			{ "Open",     'o' },
+			{ "Hide_Ok",  'H' },
 			{ "NoTitles", 'T' },
-			{ "NoNames", 'N' },
-			{ "NoCemit", 'C' },
+			{ "NoNames",  'N' },
+			{ "NoCemit",  'C' },
 			{ "Interact", 'I' }
 		});
 
@@ -64,11 +52,7 @@ public static class ChannelHelper
 		new(ChannelPrivileges.ToDictionary(x => x.Value, string? (x) => x.Key));
 
 	public static async ValueTask<bool> IsMemberOfChannel(AnySharpObject member, SharpChannel channel)
-		=> await channel.Members
-			.Value
-			.AnyAsync(x =>
-				x.Member.Id() == member.Id()
-				);
+		=> await channel.Members.Value.AnyAsync(x => x.Member.Id() == member.Id());
 
 	public static async ValueTask<SharpChannel.MemberAndStatus?> ChannelMemberStatus(
 		AnySharpObject member, SharpChannel channel) =>
@@ -77,26 +61,21 @@ public static class ChannelHelper
 	public static PrivilegeOrError StringToChannelPrivileges(MString channelName)
 	{
 		var plainText = channelName.ToPlainText();
-		var list = plainText
-			.Split(' ')
-			.Where(x => !string.IsNullOrWhiteSpace(x))
-			.ToArray();
+		var list = plainText.Split(' ').Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
 
 		var badList = list.Where(x => x.Length == 1
 			? !ChannelPrivilegesReverse.ContainsKey(x.ToUpper()[0])
 			: !ChannelPrivileges.ContainsKey(x)).ToArray();
 
 		if (badList.Length != 0)
-		{
-			return new PrivilegeOrError(new Error<string[]>(badList));
-		}
+			return new DeniedPrivileges(badList);
 
 		var validatedList = list.Select(x => x.Length == 1
 				? ChannelPrivilegesReverse.GetValueOrDefault(x.ToUpper()[0], null)
 				: (ChannelPrivileges.ContainsKey(x) ? x : null))
 			.Where(x => x != null).ToArray();
 
-		return new PrivilegeOrError(validatedList!);
+		return new GrantedPrivileges(validatedList!);
 	}
 
 	public static bool IsValidChannelName(IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName)
@@ -121,20 +100,15 @@ public static class ChannelHelper
 		switch (channel, notify)
 		{
 			case (null, true):
-				{
-					var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-					await NotifyService.Notify(executor,
-						"Channel not found.", executor);
-					return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
-				}
+			{
+				var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+				await NotifyService.Notify(executor, "Channel not found.", executor);
+				return new SharpErrorCallState(new CallState("#-1 Channel not found."));
+			}
 			case (null, false):
-				{
-					return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
-				}
+				return new SharpErrorCallState(new CallState("#-1 Channel not found."));
 			case ({ } foundChannel, _):
-				{
-					return new ChannelOrError(foundChannel);
-				}
+				return foundChannel;
 		}
 	}
 }

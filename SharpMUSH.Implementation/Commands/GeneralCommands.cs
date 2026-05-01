@@ -132,14 +132,14 @@ public partial class Commands
 	/// 2. If already set, must have numeric or empty value
 	/// 3. If not set, cannot be a built-in attribute (unless it is SEMAPHORE)
 	/// </summary>
-	private static async ValueTask<OneOf<Success, Error<string>>> ValidateSemaphoreAttribute(
+	private static async ValueTask<SharpResult> ValidateSemaphoreAttribute(
 		AnySharpObject targetObject,
 		string[] attributePath)
 	{
 		// SEMAPHORE attribute is always valid
 		if (attributePath.Length == 1 && attributePath[0].Equals(DefaultSemaphoreAttribute, StringComparison.OrdinalIgnoreCase))
 		{
-			return new Success();
+			return new SharpSuccess();
 		}
 
 		// Check if this is a built-in standard attribute
@@ -157,15 +157,15 @@ public partial class Commands
 			// Attribute not set - check if it's a built-in
 			if (isStandardAttribute)
 			{
-				return new Error<string>($"Cannot use built-in attribute '{attributePath[0]}' as semaphore.");
+				return new SharpError($"Cannot use built-in attribute '{attributePath[0]}' as semaphore.");
 			}
 			// Not set and not built-in - valid
-			return new Success();
+			return new SharpSuccess();
 		}
 
 		if (attrResult.IsError)
 		{
-			return new Error<string>(attrResult.AsError.Value);
+			return new SharpError(attrResult.AsError.Value);
 		}
 
 		// Attribute exists - validate owner, flags, and value
@@ -176,14 +176,14 @@ public partial class Commands
 		var owner = await attribute.Owner.WithCancellation(CancellationToken.None);
 		if (owner!.Object.Key != 1)
 		{
-			return new Error<string>($"Semaphore attribute must be owned by God (#1). Current owner: #{owner.Object.Key}");
+			return new SharpError($"Semaphore attribute must be owned by God (#1). Current owner: #{owner.Object.Key}");
 		}
 
 		// Check value (must be numeric or empty)
 		var value = attribute.Value.ToPlainText();
 		if (!string.IsNullOrEmpty(value) && !int.TryParse(value, out _))
 		{
-			return new Error<string>($"Semaphore attribute must have a numeric or empty value. Current value: {value}");
+			return new SharpError($"Semaphore attribute must have a numeric or empty value. Current value: {value}");
 		}
 
 		// Check flags (must have no_inherit, no_clone, and locked)
@@ -193,10 +193,10 @@ public partial class Commands
 
 		if (missingFlags.Any())
 		{
-			return new Error<string>($"Semaphore attribute must have flags: {string.Join(", ", requiredFlags)}. Missing: {string.Join(", ", missingFlags)}");
+			return new SharpError($"Semaphore attribute must have flags: {string.Join(", ", requiredFlags)}. Missing: {string.Join(", ", missingFlags)}");
 		}
 
-		return new Success();
+		return new SharpSuccess();
 	}
 
 	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["comment"])]
@@ -345,7 +345,7 @@ public partial class Commands
 						async p => await p.CommandListParse(attribute.Value));
 				});
 
-				if (result != null && result.Message != null)
+				if (result.Message != null)
 				{
 					results.Add(result.Message.ToPlainText() ?? string.Empty);
 				}
@@ -616,8 +616,7 @@ public partial class Commands
 		var executorLocation = executor.IsContent
 			? await executor.AsContent.Location()
 			: null;
-		var viewingFromInside = executorLocation != null
-			&& executorLocation.Object().DBRef == viewingObject.DBRef;
+		var viewingFromInside = executorLocation.Object().DBRef == viewingObject.DBRef;
 
 		var baseName = viewingObject.Name;
 		var baseDesc = MModule.empty();
@@ -1910,7 +1909,7 @@ public partial class Commands
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
 		var maybeFound =
-			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target,
+			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target!,
 				LocateFlags.All);
 
 		if (maybeFound.IsError)
@@ -2204,7 +2203,7 @@ public partial class Commands
 			parser.CurrentState.SwitchStack.TryPop(out _);
 
 			// Restore Q-registers if /localize was set
-			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
+			if (hasLocalize && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
 			{
 				regsToRestore.Clear();
 				foreach (var (key, value) in savedRegisters)
@@ -2671,7 +2670,7 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMinArgsFormat), executor, attr.MinArgs);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMaxArgsFormat), executor, attr.MaxArgs);
 
-		if (attr.Switches != null && attr.Switches.Length > 0)
+		if (attr.attr.Switches.Length > 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoSwitchesFormat), executor, string.Join(", ", attr.Switches));
 		}
@@ -2715,21 +2714,21 @@ public partial class Commands
 		}
 
 		var maybeObjectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
-		if (maybeObjectAndAttribute is { IsT1: true, AsT1: false })
+		if (maybeObjectAndAttribute.IsNone())
 		{
 			await NotifyService!.Notify(executor, Errors.ErrorCantSeeThat, executor);
 			return new CallState(Errors.ErrorCantSeeThat);
 		}
 
-		var (target, maybeAttribute) = maybeObjectAndAttribute.AsT0;
-		var maybeObject = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, target,
+		var _moa = maybeObjectAndAttribute.AsT0; var target = _moa.Db; var maybeAttribute = _moa.Attribute;
+		var maybeObject = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, target!,
 			LocateFlags.All);
 
 		switch (maybeObject)
 		{
-			case { IsError: true }:
+			case _ when maybeObject.IsError:
 				return new CallState(maybeObject.AsError.Value);
-			case { IsNone: true }:
+			case _ when maybeObject.IsNone:
 				return new CallState(Errors.ErrorCantSeeThat);
 		}
 
@@ -2924,7 +2923,7 @@ public partial class Commands
 		finally
 		{
 			// Restore Q-registers if /localize was set
-			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
+			if (hasLocalize && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
 			{
 				regsToRestore.Clear();
 				foreach (var (key, value) in savedRegisters)
@@ -3890,7 +3889,7 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoFlagsFormat), executor, string.Join(" | ", flags));
 		}
 
-		if (attr.Restrict != null && attr.Restrict.Length > 0)
+		if (attr.attr.Restrict.Length > 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoRestrictionsFormat), executor, string.Join(", ", attr.Restrict));
 		}
@@ -4375,7 +4374,7 @@ public partial class Commands
 			parser.CurrentState.SwitchStack.TryPop(out _);
 
 			// Restore Q-registers if /localize was set
-			if (localizeRegs && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
+			if (localizeRegs && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
 			{
 				regsToRestore.Clear();
 				foreach (var (key, value) in savedRegisters)
@@ -5916,7 +5915,7 @@ public partial class Commands
 		finally
 		{
 			// Restore Q-registers if /localize was set
-			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
+			if (hasLocalize && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
 			{
 				regsToRestore.Clear();
 				foreach (var (key, value) in savedRegisters)
@@ -6613,7 +6612,7 @@ public partial class Commands
 				}
 
 				// Include enum values if present
-				if (entry.Enum != null && entry.Enum.Length > 0)
+				if (entry.entry.Enum.Length > 0)
 				{
 					var enumList = string.Join(" ", entry.Enum);
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileEnumFormat), executor, entry.Name, enumList);
@@ -6862,7 +6861,7 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitPatternValueFormat), executor, attrEntry.Limit);
 		}
 
-		if (attrEntry.Enum != null && attrEntry.Enum.Any())
+		if (attrEntry.attrEntry.Enum.Any())
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumValuesFormat), executor, string.Join(" ", attrEntry.Enum));
 		}

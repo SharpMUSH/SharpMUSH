@@ -50,7 +50,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 	{
 		var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
 		return Regex.IsMatch(dbRef.Object().Name, regexPattern, RegexOptions.IgnoreCase)
-			|| (dbRef.Aliases != null && dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), regexPattern, RegexOptions.IgnoreCase)));
+			|| (dbRef.dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), regexPattern, RegexOptions.IgnoreCase)));
 	}
 
 	private static readonly string[] defaultStringArrayValue = [];
@@ -519,7 +519,7 @@ if (parsedCarryOpt.IsSome())
 				return true;
 
 			// Check aliases
-			if (unlockerObj.Aliases != null && unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
+			if (unlockerObj.unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
 				return true;
 
 			return false;
