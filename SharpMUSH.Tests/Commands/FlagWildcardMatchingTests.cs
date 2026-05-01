@@ -47,13 +47,14 @@ public class FlagWildcardMatchingTests
 		// Create a thing with a unique name so the flag-reset message is unique in the session.
 		// Pattern B: "{uniqueName} - NO_COMMAND reset." appears exactly once across the session.
 		var uniqueName = TestIsolationHelpers.GenerateUniqueName("FlagTest2");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		// Set NO_COMMAND flag first
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {uniqueName}=NO_COMMAND"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=NO_COMMAND"));
 
 		// Test that "@set thing=!no_com" unsets the NO_COMMAND flag (partial match with negation)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {uniqueName}=!no_com"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=!no_com"));
 
 		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
 		// The message "{uniqueName} - NO_COMMAND reset." is globally unique due to the generated name.
