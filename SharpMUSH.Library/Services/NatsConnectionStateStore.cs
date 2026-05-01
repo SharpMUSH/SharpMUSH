@@ -176,37 +176,28 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 		try
 		{
 			var connectionKey = GetKey(handle);
-			const int maxRetries = 10;
 
-			for (var retries = 0; retries < maxRetries; retries++)
+			var readResult = await _store.TryGetEntryAsync<string>(connectionKey, cancellationToken: ct);
+			if (!readResult.Success)
 			{
-				// Read current entry including revision for CAS
-				var readResult = await _store.TryGetEntryAsync<string>(connectionKey, cancellationToken: ct);
-				if (!readResult.Success)
-				{
-					_logger.LogWarning("Cannot update metadata for non-existent connection {Handle}", handle);
-					return;
-				}
-
-				var entry = readResult.Value;
-				var data = JsonSerializer.Deserialize<ConnectionStateData>(entry.Value!)!;
-				data.Metadata[key] = value;
-				data.LastSeen = DateTimeOffset.UtcNow;
-				var newJson = JsonSerializer.Serialize(data);
-
-				// CAS: only succeeds if no concurrent write occurred
-				var updateResult = await _store.TryUpdateAsync(connectionKey, newJson, entry.Revision, cancellationToken: ct);
-				if (updateResult.Success)
-				{
-					_logger.LogTrace("Updated metadata for handle {Handle}: {Key}={Value}", handle, key, value);
-					return;
-				}
-
-				// Concurrent modification — back off and retry
-				await Task.Delay(10 * (retries + 1), ct);
+				_logger.LogWarning("Cannot update metadata for non-existent connection {Handle}", handle);
+				return;
 			}
 
-			_logger.LogWarning("Failed to update metadata after {Retries} retries for handle {Handle}", maxRetries, handle);
+			var data = JsonSerializer.Deserialize<ConnectionStateData>(readResult.Value.Value!)!;
+			data.Metadata[key] = value;
+			data.LastSeen = DateTimeOffset.UtcNow;
+			var newJson = JsonSerializer.Serialize(data);
+
+			// Use a revision-checked update so a connection deleted or changed after the read
+			// is not recreated/resurrected by this metadata write. If the conditional update
+			// fails, another actor won the race (including deletion), so treat it as a no-op.
+			var updated = await _store.TryUpdateAsync(connectionKey, newJson, readResult.Value.Revision, cancellationToken: ct);
+			if (!updated.Success)
+			{
+				return;
+			}
+			_logger.LogTrace("Updated metadata for handle {Handle}: {Key}={Value}", handle, key, value);
 		}
 		catch (Exception ex)
 		{
