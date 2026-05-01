@@ -94,13 +94,18 @@ public class FlagWildcardMatchingTests
 		// Create a thing with a unique name so the flag-reset message is unique in the session.
 		// Pattern B: "{uniqueName} - VISUAL reset." appears exactly once across the session.
 		var uniqueName = TestIsolationHelpers.GenerateUniqueName("FlagTest4");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		var createMessage = createResult.Message
+			?? throw new InvalidOperationException($"@create {uniqueName} returned a null message.");
+		var createPlainText = createMessage.ToPlainText()
+			?? throw new InvalidOperationException($"@create {uniqueName} message could not be converted to plain text.");
+		var thingDbRef = DBRef.Parse(createPlainText);
 
-		// Set VISUAL flag first
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {uniqueName}=VISUAL"));
+		// Set VISUAL flag first using DBRef for deterministic lookup
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=VISUAL"));
 
 		// Test that "@set thing=!vis" unsets the VISUAL flag (partial match with negation)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {uniqueName}=!vis"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=!vis"));
 
 		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
 		// The message "{uniqueName} - VISUAL reset." is globally unique due to the generated name.
