@@ -16,8 +16,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
-		<PackageReference Include="Microsoft.Extensions.Options" Version="10.0.7" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0-preview.3.26207.106" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="11.0.0-preview.3.26207.106" />
 	</ItemGroup>
 
 	<ItemGroup>
