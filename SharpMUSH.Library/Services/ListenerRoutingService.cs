@@ -228,14 +228,7 @@ public class ListenerRoutingService(
 		if (!hasVerbose)
 		{
 			// Get puppet's location  
-			var puppetLocation = puppet.Value switch
-			{
-				SharpPlayer p => (AnySharpContainer?)(await p.Location.WithCancellation(CancellationToken.None)),
-				SharpRoom r   => (AnySharpContainer?)r,
-				SharpExit e   => (AnySharpContainer?)(await e.Location.WithCancellation(CancellationToken.None)),
-				SharpThing t  => (AnySharpContainer?)(await t.Location.WithCancellation(CancellationToken.None)),
-				_             => null
-			};
+			var puppetLocation = (AnySharpContainer?)(await puppet.Where());
 
 			// Get owner's location
 			var ownerLocation = await owner.Location.WithCancellation(CancellationToken.None);

@@ -79,7 +79,7 @@ LIMIT 1
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
 		var located = await BuildTypedObjectFromObjectNode(destObjNode, cancellationToken);
-		return located.Value switch { SharpPlayer p => (AnyOptionalSharpContainer)p, SharpRoom r => (AnyOptionalSharpContainer)r, SharpThing t => (AnyOptionalSharpContainer)t, _ => new None() };
+		return located.AsOptionalContainer;
 	}
 
 	public async ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1, CancellationToken cancellationToken = default)
@@ -96,7 +96,7 @@ LIMIT 1
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
 		var located = await BuildTypedObjectFromObjectNode(destObjNode, cancellationToken);
-		return located.Value switch { SharpPlayer p => (AnySharpContainer)p, SharpRoom r => (AnySharpContainer)r, SharpThing t => (AnySharpContainer)t, _ => throw new InvalidOperationException("Invalid container") };
+		return located.WithoutNone().AsContainer;
 	}
 
 	public async IAsyncEnumerable<AnySharpContent> GetContentsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -114,7 +114,7 @@ RETURN contentObj
 		foreach (var contentObjNode in result.Result.Select(r => r["contentObj"].As<INode>()))
 		{
 			var contentObj = await BuildTypedObjectFromObjectNode(contentObjNode, cancellationToken);
-			yield return contentObj.Value switch { SharpPlayer p => (AnySharpContent)p, SharpExit e => (AnySharpContent)e, SharpThing t => (AnySharpContent)t, _ => throw new InvalidOperationException("Invalid content") };
+			yield return contentObj.WithoutNone().AsContent;
 		}
 	}
 
@@ -130,7 +130,7 @@ RETURN contentObj
 		foreach (var contentObjNode in result.Result.Select(r => r["contentObj"].As<INode>()))
 		{
 			var contentObj = await BuildTypedObjectFromObjectNode(contentObjNode, cancellationToken);
-			yield return contentObj.Value switch { SharpPlayer p => (AnySharpContent)p, SharpExit e => (AnySharpContent)e, SharpThing t => (AnySharpContent)t, _ => throw new InvalidOperationException("Invalid content") };
+			yield return contentObj.WithoutNone().AsContent;
 		}
 	}
 

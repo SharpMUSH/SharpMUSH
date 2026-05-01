@@ -144,7 +144,7 @@ RETURN count(r) AS cnt
 		await UnlinkRoomAsync(room, cancellationToken);
 
 		var roomKey = ExtractKey(room.Id!);
-		var destKey = location.Value switch { SharpPlayer p => ExtractKey(p.Id!), SharpRoom r => ExtractKey(r.Id!), SharpThing t => ExtractKey(t.Id!), _ => throw new InvalidOperationException() };
+		var destKey = ExtractKey(location.Id()!);
 
 		await ExecuteWithRetryAsync("""
 MATCH (r:Room {key: $roomKey}), (dest {key: $destKey})

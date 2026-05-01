@@ -57,14 +57,7 @@ public class NotifyService(
 		{
 			try
 			{
-				var location = sender.Value switch
-				{
-					SharpPlayer p => (await p.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-					SharpRoom r   => r.Object.DBRef,
-					SharpExit e   => (await e.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-					SharpThing t  => (await t.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-					_             => throw new InvalidOperationException()
-				};
+				var location = (await sender!.Value.Where()).Object().DBRef;
 				var notificationContext = new NotificationContext(Target: who, Location: location, IsRoomBroadcast: false, ExcludedObjects: []);
 				await listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
 			}

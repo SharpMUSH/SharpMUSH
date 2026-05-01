@@ -174,7 +174,7 @@ public partial class SurrealDatabase
 		var typed = await BuildTypedObjectFromKey(lastValidContainerKey.Value, ct);
 		if (typed.IsNone) return new None();
 
-		return typed.Value switch { SharpPlayer p => (AnyOptionalSharpContainer)p, SharpRoom r => (AnyOptionalSharpContainer)r, SharpThing t => (AnyOptionalSharpContainer)t, _ => new None() };
+		return typed.AsOptionalContainer;
 	}
 
 	public async IAsyncEnumerable<AnySharpContent> GetContentsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -207,14 +207,7 @@ public partial class SurrealDatabase
 			var typed = await BuildTypedObjectFromKey(contentKey, ct);
 			if (typed.IsNone) continue;
 
-			var content = (AnySharpContent?)(typed.Value switch
-			{
-				SharpPlayer p => (AnySharpContent?)p,
-				SharpRoom   => null,
-				SharpExit e => (AnySharpContent?)e,
-				SharpThing t => (AnySharpContent?)t,
-				_ => null
-			});
+			var content = (AnySharpContent?)(typed.IsRoom || typed.IsNone ? null : (AnySharpContent?)typed.WithoutNone().AsContent);
 
 			if (content != null)
 				yield return content.Value;

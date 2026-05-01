@@ -27,4 +27,16 @@ public union AnyOptionalSharpObject(SharpPlayer, SharpRoom, SharpExit, SharpThin
 		SharpThing  t => t,
 		_ => throw new ArgumentOutOfRangeException()
 	};
+
+	/// <summary>
+	/// Converts Player, Room, or Thing to an <see cref="AnyOptionalSharpContainer"/>.
+	/// Exit and None both map to <see cref="None"/>.
+	/// </summary>
+	public AnyOptionalSharpContainer AsOptionalContainer => Value switch
+	{
+		SharpPlayer p => (AnyOptionalSharpContainer)p,
+		SharpRoom   r => (AnyOptionalSharpContainer)r,
+		SharpThing  t => (AnyOptionalSharpContainer)t,
+		_ => new None()
+	};
 }

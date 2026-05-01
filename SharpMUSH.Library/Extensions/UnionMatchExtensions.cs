@@ -231,6 +231,28 @@ public static class UnionMatchExtensions
 		_ => throw new InvalidOperationException("Unexpected DbRefOrName case")
 	};
 
+	// ── DbRefOrContainer ─────────────────────────────────────────────────────
+
+	public static T Match<T>(this DbRefOrContainer u,
+		Func<DBRef,             T> dbref,
+		Func<AnySharpContainer, T> container) => u.Value switch
+	{
+		DBRef              d => dbref(d),
+		AnySharpContainer  c => container(c),
+		_ => throw new InvalidOperationException("Unexpected DbRefOrContainer case")
+	};
+
+	// ── DbRefOrObject ────────────────────────────────────────────────────────
+
+	public static T Match<T>(this DbRefOrObject u,
+		Func<DBRef,          T> dbref,
+		Func<AnySharpObject, T> obj) => u.Value switch
+	{
+		DBRef           d => dbref(d),
+		AnySharpObject  o => obj(o),
+		_ => throw new InvalidOperationException("Unexpected DbRefOrObject case")
+	};
+
 	// ── SharpResult ──────────────────────────────────────────────────────────
 
 	public static T Match<T>(this SharpResult u,

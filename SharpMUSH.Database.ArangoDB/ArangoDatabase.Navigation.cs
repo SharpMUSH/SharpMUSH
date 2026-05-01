@@ -97,7 +97,7 @@ public partial class ArangoDatabase
 			cancellationToken: ct)).First();
 		var homeObject = await GetObjectNodeAsync(homeId, ct);
 
-		return homeObject.Value switch { SharpPlayer p => (AnySharpContainer)p, SharpRoom r => (AnySharpContainer)r, SharpThing t => (AnySharpContainer)t, _ => throw new InvalidOperationException("Invalid container") };
+		return homeObject.WithoutNone().AsContainer;
 	}
 
 	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string id, CancellationToken ct = default)
@@ -114,7 +114,7 @@ public partial class ArangoDatabase
 		var dropToId = dropToResult.First();
 		var dropToObject = await GetObjectNodeAsync(dropToId, ct);
 
-		return dropToObject.Value switch { SharpPlayer p => (AnyOptionalSharpContainer)p, SharpRoom r => (AnyOptionalSharpContainer)r, SharpThing t => (AnyOptionalSharpContainer)t, _ => new None() };
+		return dropToObject.AsOptionalContainer;
 	}
 	public async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(DBRef obj,
 		[EnumeratorCancellation] CancellationToken ct = default)
@@ -174,7 +174,7 @@ public partial class ArangoDatabase
 			{ StartVertex, baseObject.Id()! }
 		}, cancellationToken: ct);
 		var locationBaseObj = await GetObjectNodeAsync(query.Last(), CancellationToken.None);
-		var trueLocation = locationBaseObj.Value switch { SharpPlayer p => (AnyOptionalSharpContainer)p, SharpRoom r => (AnyOptionalSharpContainer)r, SharpThing t => (AnyOptionalSharpContainer)t, _ => new None() };
+		var trueLocation = locationBaseObj.AsOptionalContainer;
 
 		return trueLocation;
 	}
@@ -196,7 +196,7 @@ public partial class ArangoDatabase
 			{ StartVertex, id }
 		}, cancellationToken: ct);
 		var locationBaseObj = await GetObjectNodeAsync(query.Last(), CancellationToken.None);
-		var trueLocation = locationBaseObj.Value switch { SharpPlayer p => (AnySharpContainer)p, SharpRoom r => (AnySharpContainer)r, SharpThing t => (AnySharpContainer)t, _ => throw new InvalidOperationException("Invalid container") };
+		var trueLocation = locationBaseObj.WithoutNone().AsContainer;
 
 		return trueLocation;
 	}
@@ -245,7 +245,7 @@ public partial class ArangoDatabase
 			var typedEl = result.GetProperty("typed");
 			var objEl = result.GetProperty("obj");
 			var node = HydrateObjectFromElements(typedEl, objEl);
-			yield return node.Value switch { SharpPlayer p => (AnySharpContent)p, SharpExit e => (AnySharpContent)e, SharpThing t => (AnySharpContent)t, _ => throw new InvalidOperationException("Invalid content") };
+			yield return node.WithoutNone().AsContent;
 		}
 	}
 

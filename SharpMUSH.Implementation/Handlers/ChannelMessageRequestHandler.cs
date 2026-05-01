@@ -232,7 +232,7 @@ public class ChannelMessageRequestHandler(
 				// Add to channel recall buffer - only if there's an actual source
 				if (!notification.Source.IsNone)
 				{
-					var sourceDbRef = notification.Source.Value switch { SharpPlayer p => p.Object.DBRef, SharpRoom r => r.Object.DBRef, SharpExit e => e.Object.DBRef, SharpThing t => t.Object.DBRef, _ => new DBRef(0) };
+					var sourceDbRef = notification.Source.Object()?.DBRef ?? new DBRef(0);
 
 					var channelMessage = new SharpChannelMessage
 					{

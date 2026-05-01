@@ -495,12 +495,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 							if (hasContent)
 							{
-								var content = sharpObj.Value switch {
-								SharpPlayer p => (AnySharpContent)p,
-								SharpExit e => (AnySharpContent)e,
-								SharpThing t => (AnySharpContent)t,
-								_ => throw new InvalidOperationException("Cannot convert to content")
-							};
+								var content = sharpObj.WithoutNone().AsContent;
 
 								// Use MoveService to properly move the object
 								// Note: Passing null for parser as this is a system operation during conversion
@@ -765,13 +760,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return null;
 		}
 
-		return obj.Value switch {
-			SharpPlayer p => (AnySharpContainer)p,
-			SharpRoom r   => (AnySharpContainer)r,
-			SharpThing t  => (AnySharpContainer)t,
-			SharpExit     => throw new InvalidOperationException("Exit cannot be container"),
-			_             => throw new InvalidOperationException("None cannot be container")
-		};
+		return obj.WithoutNone().AsContainer;
 	}
 
 	/// <summary>

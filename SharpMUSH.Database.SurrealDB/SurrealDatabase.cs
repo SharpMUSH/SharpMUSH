@@ -407,7 +407,7 @@ public partial class SurrealDatabase(
 
 		var destKey = destKeys[0];
 		var located = await BuildTypedObjectFromKey(destKey, ct);
-		return located.Value switch { SharpPlayer p => (AnySharpContainer)p, SharpRoom r => (AnySharpContainer)r, SharpThing t => (AnySharpContainer)t, _ => throw new InvalidOperationException("Invalid container") };
+		return located.WithoutNone().AsContainer;
 	}
 
 	private async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct)
@@ -425,7 +425,7 @@ public partial class SurrealDatabase(
 
 		var destKey = destKeys[0];
 		var homeObj = await BuildTypedObjectFromKey(destKey, ct);
-		return homeObj.Value switch { SharpPlayer p => (AnySharpContainer)p, SharpRoom r => (AnySharpContainer)r, SharpThing t => (AnySharpContainer)t, _ => throw new InvalidOperationException("Invalid container") };
+		return homeObj.WithoutNone().AsContainer;
 	}
 
 	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct)
@@ -441,7 +441,7 @@ public partial class SurrealDatabase(
 
 		var destKey = destKeys[0];
 		var dropToObj = await BuildTypedObjectFromKey(destKey, ct);
-		return dropToObj.Value switch { SharpPlayer p => (AnyOptionalSharpContainer)p, SharpRoom r => (AnyOptionalSharpContainer)r, SharpThing t => (AnyOptionalSharpContainer)t, _ => new None() };
+		return dropToObj.AsOptionalContainer;
 	}
 
 	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct)

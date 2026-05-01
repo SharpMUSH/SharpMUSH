@@ -1,11 +1,11 @@
 using Mediator;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
-
-using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Implementation.Handlers;
 
@@ -34,7 +34,10 @@ public class GetScheduledTasksHandler(ITaskScheduler scheduler)
 {
 	public IAsyncEnumerable<SemaphoreTaskData> Handle(ScheduleSemaphoreQuery query,
 		CancellationToken cancellationToken)
-		=> query.Query.Value switch { long l => scheduler.GetSemaphoreTasks(l), DBRef d => scheduler.GetSemaphoreTasks(d), DbRefAttribute a => scheduler.GetSemaphoreTasks(a), _ => throw new InvalidOperationException() };
+		=> query.Query.Match(
+			handle => scheduler.GetSemaphoreTasks(handle),
+			dbref  => scheduler.GetSemaphoreTasks(dbref),
+			attr   => scheduler.GetSemaphoreTasks(attr));
 }
 
 public class GetDelayTasksHandler(ITaskScheduler scheduler)

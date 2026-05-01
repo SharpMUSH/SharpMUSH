@@ -1,8 +1,8 @@
 using Mediator;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers;
@@ -24,8 +24,8 @@ public class ObjectEventHandlers(
 			parser,
 			"OBJECT`MOVE",
 			notification.Enactor,
-			notification.Target.Value switch { SharpPlayer p => p.Object.DBRef.ToString(), SharpExit e => e.Object.DBRef.ToString(), SharpThing t => t.Object.DBRef.ToString(), _ => throw new InvalidOperationException() },
-			notification.NewLocation.Value switch { SharpPlayer p => p.Object.DBRef.ToString(), SharpRoom r => r.Object.DBRef.ToString(), SharpThing t => t.Object.DBRef.ToString(), _ => throw new InvalidOperationException() },
+			notification.Target.Object().DBRef.ToString(),
+			notification.NewLocation.Object().DBRef.ToString(),
 			notification.OldLocation.ToString(),
 			notification.IsSilent ? "1" : "0",
 			notification.Cause);
@@ -39,7 +39,7 @@ public class ObjectEventHandlers(
 			parser,
 			"OBJECT`FLAG",
 			notification.Enactor,
-			notification.Target.Value switch { SharpPlayer p => p.Object.DBRef.ToString(), SharpRoom r => r.Object.DBRef.ToString(), SharpExit e => e.Object.DBRef.ToString(), SharpThing t => t.Object.DBRef.ToString(), _ => throw new InvalidOperationException() },
+			notification.Target.Object().DBRef.ToString(),
 			notification.FlagName,
 			notification.Type,
 			notification.IsSet ? "1" : "0",

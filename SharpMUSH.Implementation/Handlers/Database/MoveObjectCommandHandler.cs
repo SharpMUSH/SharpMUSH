@@ -2,7 +2,6 @@ using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 
@@ -13,7 +12,7 @@ public class MoveObjectCommandHandler(ISharpDatabase database, IPublisher publis
 	public async ValueTask<DBRef> Handle(MoveObjectCommand request, CancellationToken cancellationToken)
 	{
 		// Use the OldContainer supplied by the caller when available; otherwise look it up.
-		var oldLocation = request.OldContainer ?? (request.Target.Value switch { SharpPlayer p => (await p.Location.WithCancellation(cancellationToken)).Object().DBRef, SharpExit e => (await e.Location.WithCancellation(cancellationToken)).Object().DBRef, SharpThing t => (await t.Location.WithCancellation(cancellationToken)).Object().DBRef, _ => throw new InvalidOperationException() });
+		var oldLocation = request.OldContainer ?? (await request.Target.Location()).Object().DBRef;
 
 		await database.MoveObjectAsync(request.Target, request.Destination, cancellationToken);
 
@@ -27,6 +26,6 @@ public class MoveObjectCommandHandler(ISharpDatabase database, IPublisher publis
 			request.Cause),
 			cancellationToken);
 
-		return request.Destination.Value switch { SharpPlayer p => p.Object.DBRef, SharpRoom r => r.Object.DBRef, SharpThing t => t.Object.DBRef, _ => throw new InvalidOperationException() };
+		return request.Destination.Object().DBRef;
 	}
 }

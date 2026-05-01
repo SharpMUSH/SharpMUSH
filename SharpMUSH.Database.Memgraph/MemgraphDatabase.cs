@@ -318,7 +318,7 @@ RETURN destObj
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
 		var located = await BuildTypedObjectFromObjectNode(destObjNode, ct);
-		return located.Value switch { SharpPlayer p => (AnySharpContainer)p, SharpRoom r => (AnySharpContainer)r, SharpThing t => (AnySharpContainer)t, _ => throw new InvalidOperationException("Invalid container") };
+		return located.WithoutNone().AsContainer;
 	}
 
 	private async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct)
@@ -335,7 +335,7 @@ RETURN destObj
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
 		var homeObj = await BuildTypedObjectFromObjectNode(destObjNode, ct);
-		return homeObj.Value switch { SharpPlayer p => (AnySharpContainer)p, SharpRoom r => (AnySharpContainer)r, SharpThing t => (AnySharpContainer)t, _ => throw new InvalidOperationException("Invalid container") };
+		return homeObj.WithoutNone().AsContainer;
 	}
 
 	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct)
@@ -351,7 +351,7 @@ RETURN destObj
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
 		var dropToObj = await BuildTypedObjectFromObjectNode(destObjNode, ct);
-		return dropToObj.Value switch { SharpPlayer p => (AnyOptionalSharpContainer)p, SharpRoom r => (AnyOptionalSharpContainer)r, SharpThing t => (AnyOptionalSharpContainer)t, _ => new None() };
+		return dropToObj.AsOptionalContainer;
 	}
 
 	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct)

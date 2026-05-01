@@ -316,7 +316,7 @@ public class WarningService(
 				try
 				{
 					var destination = await exit.Location.WithCancellation(CancellationToken.None);
-					var destObj = destination.Value switch { SharpPlayer p => p.Object, SharpRoom r => r.Object, SharpThing t => t.Object, _ => throw new InvalidOperationException() };
+					var destObj = destination.Object();
 
 					// Check if destination DBRef is -1 (NOTHING) or 0 (invalid)
 					if (destObj.DBRef.Number <= 0)
@@ -404,9 +404,9 @@ public class WarningService(
 				var destination = await exit.Location.WithCancellation(CancellationToken.None);
 				var source = await exit.Home.WithCancellation(CancellationToken.None);
 
-				var destObj = destination.Value switch { SharpPlayer p => p.Object, SharpRoom r => r.Object, SharpThing t => t.Object, _ => throw new InvalidOperationException() };
+			var destObj = destination.Object();
 
-				var sourceObj = source.Value switch { SharpPlayer p => p.Object, SharpRoom r => r.Object, SharpThing t => t.Object, _ => throw new InvalidOperationException() };
+			var sourceObj = source.Object();
 
 				// Only check if we have valid source and destination (not NOTHING)
 				if (destObj.DBRef.Number > 0 && sourceObj.DBRef.Number > 0)
@@ -420,7 +420,7 @@ public class WarningService(
 						try
 						{
 							var returnDest = await returnExit.Location.WithCancellation(CancellationToken.None);
-							var returnDestObj = returnDest.Value switch { SharpPlayer p => p.Object, SharpRoom r => r.Object, SharpThing t => t.Object, _ => throw new InvalidOperationException() };
+							var returnDestObj = returnDest.Object();
 
 							if (returnDestObj.DBRef.Equals(sourceObj.DBRef))
 							{

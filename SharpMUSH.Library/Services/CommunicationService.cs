@@ -139,7 +139,7 @@ public class CommunicationService(
 	{
 		await foreach (var target in targets)
 		{
-			var targetString = target.Value switch { DBRef d => d.ToString(), string s => s, _ => string.Empty };
+			var targetString = target.Match(d => d.ToString(), s => s);
 			await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc, notificationType,
 				notifyOnPermissionFailure);
 		}

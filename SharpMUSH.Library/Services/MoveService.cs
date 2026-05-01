@@ -56,13 +56,7 @@ public class MoveService(
 				return true; // Found a loop
 			}
 
-			var location = current.Value switch
-			{
-				SharpPlayer p => await p.Location.WithCancellation(CancellationToken.None),
-				SharpRoom r   => (AnySharpContainer)r,
-				SharpThing t  => await t.Location.WithCancellation(CancellationToken.None),
-				_             => throw new InvalidOperationException()
-			};
+			var location = await current.Location();
 
 			if (location.IsRoom || visited.Contains(location.Object().DBRef.ToString()))
 			{
@@ -116,13 +110,7 @@ public class MoveService(
 		// For now, moves are allowed regardless of quota status.
 
 		// 4. Get old location for hooks
-		var oldLocation = objectToMove.Value switch
-		{
-			SharpPlayer p => (await p.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			SharpExit   e => (await e.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			SharpThing  t => (await t.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			_             => throw new InvalidOperationException()
-		};
+		var oldLocation = (await objectToMove.Location()).Object().DBRef;
 
 		// 5. Trigger LEAVE hooks on old location (if not silent)
 		if (!silent && oldLocation != destObj.DBRef)
@@ -189,24 +177,14 @@ public class MoveService(
 			return false;
 		}
 
-		var currentLocation = objectToMove.Value switch
+		var currentLocation = (await objectToMove.Location()).Object().DBRef;
+		var locQuery = await mediator.Send(new GetObjectNodeQuery(currentLocation));
+		if (!locQuery.IsNone)
 		{
-			SharpPlayer p => (DBRef?)(await p.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			SharpExit   e => (DBRef?)(await e.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			SharpThing  t => (DBRef?)(await t.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			_             => (DBRef?)null
-		};
-
-		if (currentLocation.HasValue)
-		{
-			var locQuery = await mediator.Send(new GetObjectNodeQuery(currentLocation.Value));
-			if (!locQuery.IsNone)
+			var locObj = locQuery.Known;
+			if (!permissionService.PassesLock(who, locObj, LockType.Leave))
 			{
-				var locObj = locQuery.Known;
-				if (!permissionService.PassesLock(who, locObj, LockType.Leave))
-				{
-					return false;
-				}
+				return false;
 			}
 		}
 

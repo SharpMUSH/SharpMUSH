@@ -79,9 +79,9 @@ public partial class ArangoDatabase
 			DatabaseConstants.HasObjectOwner, new SharpEdgeCreateRequest(obj.New.Id, playerResult.Id),
 			cancellationToken: ct);
 
-		var idx = objectLocation.Value switch { SharpPlayer p => p.Id, SharpRoom r => r.Id, SharpThing t => t.Id, _ => throw new ArgumentException("Invalid location") };
+		var idx = objectLocation.Id()!;
 
-		var homeIdx = objectHome.Value switch { SharpPlayer p => p.Id, SharpRoom r => r.Id, SharpThing t => t.Id, _ => throw new ArgumentException("Invalid location") };
+		var homeIdx = objectHome.Id()!;
 
 		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphLocations,
 			DatabaseConstants.AtLocation, new SharpEdgeCreateRequest(playerResult.Id, idx!), cancellationToken: ct);
@@ -205,7 +205,7 @@ public partial class ArangoDatabase
 		await UnlinkRoomAsync(room, ct);
 
 		// Create edge for location (drop-to)
-		var locationId = location.Value switch { SharpPlayer p => p.Id!, SharpRoom r => r.Id!, SharpThing t => t.Id!, _ => throw new InvalidOperationException("Invalid location type") };
+		var locationId = location.Id()!;
 
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
 			new SharpEdgeCreateRequest(room.Id!, locationId), cancellationToken: ct);
