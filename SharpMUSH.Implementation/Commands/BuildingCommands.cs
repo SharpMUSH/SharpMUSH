@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -156,7 +155,7 @@ public partial class Commands
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
-		if (!split.TryPickT0(out var details, out _))
+		if (!split.TryGetValue(out var details))
 		{
 			return new CallState("#-1 BAD ARGUMENT FORMAT TO @SET");
 		}
@@ -206,14 +205,14 @@ public partial class Commands
 			var setResult =
 				await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(attribute), content);
 
-		if (setResult.IsT0)
+		if (setResult.IsSuccess)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
 				realLocated.Object().Name, MModule.plainText(attribute));
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, setResult.AsT1.Value, executor);
+			await NotifyService!.Notify(executor, setResult.AsError.Value, executor);
 		}
 
 		return new CallState(setResult.Match(

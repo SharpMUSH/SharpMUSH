@@ -20,13 +20,8 @@ public static class ChannelOff
 			var maybeTarget =
 				await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName);
 
-			switch (maybeTarget)
-			{
-				case { IsError: true }:
-					return new CallState(maybeTarget.AsError.Value);
-				case { IsNone: true }:
-					return new CallState("#-1 PLAYER NOT FOUND");
-			}
+			if (maybeTarget.IsError) return new CallState(maybeTarget.AsError.Value);
+			if (maybeTarget.IsNone) return new CallState("#-1 PLAYER NOT FOUND");
 
 			target = maybeTarget.AsAnyObject;
 		}

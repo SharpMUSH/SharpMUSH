@@ -56,7 +56,7 @@ public class ChannelMessageRequestHandler(
 		if (!string.IsNullOrEmpty(notification.Channel.Mogrifier))
 		{
 			var mogrifierResult = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(notification.Channel.Mogrifier)), cancellationToken);
-			if (mogrifierResult != null && !mogrifierResult.IsNone)
+			if (!mogrifierResult.IsNone)
 			{
 				var mogrifierObj = mogrifierResult.Known();
 				var source = notification.Source.IsNone ? mogrifierObj : notification.Source.Known();
@@ -232,12 +232,7 @@ public class ChannelMessageRequestHandler(
 				// Add to channel recall buffer - only if there's an actual source
 				if (!notification.Source.IsNone)
 				{
-					var sourceDbRef = notification.Source.Match(
-						player => player.Object.DBRef,
-						room => room.Object.DBRef,
-						exit => exit.Object.DBRef,
-						thing => thing.Object.DBRef,
-						_ => new DBRef(0));
+					var sourceDbRef = notification.Source.Value switch { SharpPlayer p => p.Object.DBRef, SharpRoom r => r.Object.DBRef, SharpExit e => e.Object.DBRef, SharpThing t => t.Object.DBRef, _ => new DBRef(0) };
 
 					var channelMessage = new SharpChannelMessage
 					{

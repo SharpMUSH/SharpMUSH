@@ -205,7 +205,7 @@ public partial class Functions
 
 			foreach (var obj in objectList)
 			{
-				var objName = obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1;
+				var objName = obj.IsSuccess ? obj.AsValue().ToString() : obj.AsT1;
 
 				await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 					parser,
@@ -265,7 +265,7 @@ public partial class Functions
 
 		foreach (var recipient in recipientList)
 		{
-			var recipientName = recipient.IsT0 ? recipient.AsT0.ToString() : recipient.AsT1;
+			var recipientName = recipient.IsSuccess ? recipient.AsValue().ToString() : recipient.AsT1;
 
 			// Use LocateAndNotifyIfInvalidWithCallStateFunction for proper error handling
 			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -310,7 +310,7 @@ public partial class Functions
 
 		foreach (var recipient in recipientList)
 		{
-			var recipientName = recipient.IsT0 ? recipient.AsT0.ToString() : recipient.AsT1;
+			var recipientName = recipient.IsSuccess ? recipient.AsValue().ToString() : recipient.AsT1;
 
 			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser,
@@ -490,7 +490,7 @@ public partial class Functions
 			// Resolve all objects to exclude
 			foreach (var obj in objectList)
 			{
-				var objName = obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1;
+				var objName = obj.IsSuccess ? obj.AsValue().ToString() : obj.AsT1;
 
 				await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 					parser,

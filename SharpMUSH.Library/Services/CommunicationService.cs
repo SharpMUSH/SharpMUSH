@@ -1,5 +1,4 @@
 using Mediator;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -20,7 +19,7 @@ public class CommunicationService(
 	public async ValueTask SendToPortsAsync(
 		AnySharpObject executor,
 		long[] ports,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType)
 	{
 		var validPorts = new List<long>();
@@ -60,7 +59,7 @@ public class CommunicationService(
 	public async ValueTask SendToRoomAsync(
 		AnySharpObject executor,
 		AnySharpContainer room,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		AnySharpObject? sender = null,
 		IEnumerable<AnySharpObject>? excludeObjects = null)
@@ -99,7 +98,7 @@ public class CommunicationService(
 		AnySharpObject executor,
 		AnySharpObject enactor,
 		string targetName,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
 	{
@@ -133,14 +132,14 @@ public class CommunicationService(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
-		IAsyncEnumerable<OneOf<DBRef, string>> targets,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		IAsyncEnumerable<DbRefOrName> targets,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
 	{
 		await foreach (var target in targets)
 		{
-			var targetString = target.Match(dbref => dbref.ToString(), str => str);
+			var targetString = target.Value switch { DBRef d => d.ToString(), string s => s, _ => string.Empty };
 			await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc, notificationType,
 				notifyOnPermissionFailure);
 		}

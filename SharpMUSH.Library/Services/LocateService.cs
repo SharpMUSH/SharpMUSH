@@ -1,5 +1,4 @@
 ﻿using Mediator;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -62,7 +61,7 @@ public partial class LocateService(
 		await notifyService.Notify(executor, LocateNotifyMessage(loc), caller.WithoutNone());
 		var callStateMessage = loc.IsError ? loc.AsError.Value : ErrorMessages.Returns.NoMatch;
 
-		return new Error<CallState>(new CallState(callStateMessage));
+		return new SharpErrorCallState(new CallState(callStateMessage));
 	}
 
 	public async ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
@@ -70,8 +69,8 @@ public partial class LocateService(
 		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, ValueTask<CallState>> foundFunc)
 		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => await foundFunc(obj),
+			SharpErrorCallState errorCs => errorCs.Value,
+			AnySharpObject obj => await foundFunc(obj),
 			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
 		};
 
@@ -81,8 +80,8 @@ public partial class LocateService(
 		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, CallState> foundFunc)
 		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => foundFunc(obj),
+			SharpErrorCallState errorCs => errorCs.Value,
+			AnySharpObject obj => foundFunc(obj),
 			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
 		};
 
@@ -109,7 +108,7 @@ public partial class LocateService(
 				!await Nearby(executor, looker) && !await executor.IsSee_All() &&
 				!await permissionService.Controls(executor, looker))
 		{
-			return new Error<string>("#-1 NOT PERMITTED TO EVALUATE ON LOOKER");
+			return new SharpError("#-1 NOT PERMITTED TO EVALUATE ON LOOKER");
 		}
 
 		var match = await LocateMatch(parser, executor, looker, flags, name, (flags & LocateFlags.UseLastIfAmbiguous) != 0);
@@ -133,7 +132,7 @@ public partial class LocateService(
 			return result.WithNoneOption().WithErrorOption();
 		}
 
-		return new Error<string>(ErrorMessages.Returns.CantSeeThat);
+		return new SharpError(ErrorMessages.Returns.CantSeeThat);
 	}
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(IMUSHCodeParser parser,
@@ -155,8 +154,8 @@ public partial class LocateService(
 		AnySharpObject executor, string name, Func<SharpPlayer, ValueTask<CallState>> foundFunc)
 		=> await LocatePlayerAndNotifyIfInvalidWithCallState(parser, looker, executor, name) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => await foundFunc(obj.AsPlayer),
+			SharpErrorCallState errorCs => errorCs.Value,
+			AnySharpObject obj => await foundFunc(obj.AsPlayer),
 			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
 		};
 
@@ -208,7 +207,7 @@ public partial class LocateService(
 				return looker.WithNoneOption().WithErrorOption();
 			}
 
-			return new Error<string>(Errors.ErrorPerm);
+			return new SharpError(Errors.ErrorPerm);
 		}
 
 		if (flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
@@ -221,7 +220,7 @@ public partial class LocateService(
 				return (await FriendlyWhereIs(looker)).WithExitOption().WithNoneOption().WithErrorOption();
 			}
 
-			return new Error<string>(Errors.ErrorPerm);
+			return new SharpError(Errors.ErrorPerm);
 		}
 
 		if ((flags.HasFlag(LocateFlags.MatchOptionalWildCardForPlayerName) || flags.HasFlag(LocateFlags.PlayersPreference)
@@ -254,7 +253,7 @@ public partial class LocateService(
 						return match;
 					}
 
-					return new Error<string>(Errors.ErrorPerm);
+					return new SharpError(Errors.ErrorPerm);
 				}
 
 				bestMatch = match;
@@ -266,7 +265,7 @@ public partial class LocateService(
 		{
 			var absObject = await mediator.Send(new GetObjectNodeQuery(abs.AsValue()));
 			match = absObject.WithErrorOption();
-			if (!match.IsT4 && (flags & LocateFlags.AbsoluteMatch) != 0)
+			if (!match.IsNone && (flags & LocateFlags.AbsoluteMatch) != 0)
 			{
 				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
 						|| await looker.HasLongFingers()
@@ -279,7 +278,7 @@ public partial class LocateService(
 						return match;
 					}
 
-					return new Error<string>(Errors.ErrorPerm);
+					return new SharpError(Errors.ErrorPerm);
 				}
 			}
 		}
@@ -411,7 +410,7 @@ public partial class LocateService(
 
 		if (right_type != 1 && !flags.HasFlag(LocateFlags.UseLastIfAmbiguous))
 		{
-			return new Error<string>(Errors.ErrorAmbiguous);
+			return new SharpError(Errors.ErrorAmbiguous);
 		}
 
 		return bestMatch;
@@ -495,12 +494,9 @@ public partial class LocateService(
 		LocateFlags flags,
 		AnyOptionalSharpObject thing1, AnyOptionalSharpObject thing2)
 	{
-		switch (thing1, thing2)
-		{
-			case ({ IsNone: true }, { IsNone: true }): return new None();
-			case ({ IsNone: true }, _): return thing2;
-			case (_, { IsNone: true }): return thing1;
-		}
+		if (thing1.IsNone && thing2.IsNone) return new None();
+		if (thing1.IsNone) return thing2;
+		if (thing2.IsNone) return thing1;
 
 		if (TypePreferences(flags).Contains(thing1.Object()!.Type) &&
 				!TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing1;
@@ -631,12 +627,14 @@ public partial class LocateService(
 		return currentLocation;
 	}
 
-	public static async ValueTask<AnySharpContainer> FriendlyWhereIs(AnySharpObject obj) => await obj.Match(
-		async player => await player.Location.WithCancellation(CancellationToken.None),
-		async room => await ValueTask.FromResult<AnySharpContainer>(room),
-		async exit => await exit.Home.WithCancellation(CancellationToken.None),
-		async thing => await thing.Location.WithCancellation(CancellationToken.None)
-	);
+	public static async ValueTask<AnySharpContainer> FriendlyWhereIs(AnySharpObject obj) => obj.Value switch
+	{
+		SharpPlayer p => await p.Location.WithCancellation(CancellationToken.None),
+		SharpRoom r   => r,
+		SharpExit e   => await e.Home.WithCancellation(CancellationToken.None),
+		SharpThing t  => await t.Location.WithCancellation(CancellationToken.None),
+		_             => throw new InvalidOperationException()
+	};
 
 	public static async ValueTask<bool> Nearby(
 		AnySharpObject obj1,

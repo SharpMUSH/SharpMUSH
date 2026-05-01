@@ -5,7 +5,6 @@ using DotNext.Threading;
 using MarkupString;
 using Mediator;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -80,19 +79,9 @@ public partial class ArangoDatabase
 			DatabaseConstants.HasObjectOwner, new SharpEdgeCreateRequest(obj.New.Id, playerResult.Id),
 			cancellationToken: ct);
 
-		var idx = objectLocation.Match(
-			player => player.Id,
-			room => room.Id,
-			_ => throw new ArgumentException("An Exit is not a valid location to create a player!"),
-			thing => thing.Id,
-			_ => throw new ArgumentException("A player must have a valid creation location!"));
+		var idx = objectLocation.Value switch { SharpPlayer p => p.Id, SharpRoom r => r.Id, SharpThing t => t.Id, _ => throw new ArgumentException("Invalid location") };
 
-		var homeIdx = objectHome.Match(
-			player => player.Id,
-			room => room.Id,
-			_ => throw new ArgumentException("An Exit is not a valid location to create a player!"),
-			thing => thing.Id,
-			_ => throw new ArgumentException("A player must have a valid creation location!"));
+		var homeIdx = objectHome.Value switch { SharpPlayer p => p.Id, SharpRoom r => r.Id, SharpThing t => t.Id, _ => throw new ArgumentException("Invalid location") };
 
 		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphLocations,
 			DatabaseConstants.AtLocation, new SharpEdgeCreateRequest(playerResult.Id, idx!), cancellationToken: ct);
@@ -207,7 +196,7 @@ public partial class ArangoDatabase
 	public async ValueTask<bool> LinkRoomAsync(SharpRoom room, AnyOptionalSharpContainer location, CancellationToken ct = default)
 	{
 		// If location is None, just unlink any existing location
-		if (location.IsT3) // None
+		if (location.IsNone) // None
 		{
 			return await UnlinkRoomAsync(room, ct);
 		}
@@ -216,11 +205,7 @@ public partial class ArangoDatabase
 		await UnlinkRoomAsync(room, ct);
 
 		// Create edge for location (drop-to)
-		var locationId = location.Match(
-			player => player.Id!,
-			room => room.Id!,
-			thing => thing.Id!,
-			_ => throw new InvalidOperationException("Invalid location type"));
+		var locationId = location.Value switch { SharpPlayer p => p.Id!, SharpRoom r => r.Id!, SharpThing t => t.Id!, _ => throw new InvalidOperationException("Invalid location type") };
 
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
 			new SharpEdgeCreateRequest(room.Id!, locationId), cancellationToken: ct);
@@ -375,7 +360,7 @@ public partial class ArangoDatabase
 		{
 			// No existing zone, create new edge
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				new { _from = obj.Object().Id, _to = zone!.Object().Id }, cancellationToken: ct);
+				new { _from = obj.Object().Id, _to = zone!.Value.Object().Id }, cancellationToken: ct);
 		}
 		else if (zone is null)
 		{
@@ -387,7 +372,7 @@ public partial class ArangoDatabase
 		{
 			// Updating zone - edge exists (zoneEdge is not null at this point)
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				zoneEdge!.Key, new { _to = zone.Object().Id }, cancellationToken: ct);
+				zoneEdge!.Key, new { _to = zone.Value.Object().Id }, cancellationToken: ct);
 		}
 	}
 

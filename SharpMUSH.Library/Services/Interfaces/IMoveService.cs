@@ -1,6 +1,4 @@
-﻿using OneOf;
-using OneOf.Types;
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -29,7 +27,7 @@ public interface IMoveService
 	/// <param name="cause">The cause of the move (e.g., "teleport", "get", "drop")</param>
 	/// <param name="silent">If true, suppress notifications and some hooks</param>
 	/// <returns>Success if move completed, Error with message if failed</returns>
-	ValueTask<OneOf<Success, Error<string>>> ExecuteMoveAsync(
+	ValueTask<SharpResult> ExecuteMoveAsync(
 		IMUSHCodeParser parser,
 		AnySharpContent objectToMove,
 		AnySharpContainer destination,

@@ -277,13 +277,13 @@
 
             // Fetch current config values
             var result = await AdminConfigService.GetOptionsAsync();
-            if (result.IsT1)
+            if (result == null)
             {
                 Snackbar.Add(Loc["FailedToLoadValues"].Value, Severity.Error);
                 return;
             }
 
-            var config = result.AsT0;
+            var config = result;
             
             // Extract current values
             foreach (var prop in _categoryProperties.Values)

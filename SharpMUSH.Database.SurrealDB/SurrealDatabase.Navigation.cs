@@ -1,7 +1,6 @@
 using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -175,12 +174,7 @@ public partial class SurrealDatabase
 		var typed = await BuildTypedObjectFromKey(lastValidContainerKey.Value, ct);
 		if (typed.IsNone) return new None();
 
-		return typed.Match<AnyOptionalSharpContainer>(
-			player => player,
-			room => room,
-			_ => throw new Exception("Invalid Location: Exit"),
-			thing => thing,
-			_ => new None());
+		return typed.Value switch { SharpPlayer p => (AnyOptionalSharpContainer)p, SharpRoom r => (AnyOptionalSharpContainer)r, SharpThing t => (AnyOptionalSharpContainer)t, _ => new None() };
 	}
 
 	public async IAsyncEnumerable<AnySharpContent> GetContentsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -213,15 +207,17 @@ public partial class SurrealDatabase
 			var typed = await BuildTypedObjectFromKey(contentKey, ct);
 			if (typed.IsNone) continue;
 
-			var content = typed.Match<AnySharpContent?>(
-				player => player,
-				_ => null, // Room cannot be content
-				exit => exit,
-				thing => thing,
-				_ => null);
+			var content = (AnySharpContent?)(typed.Value switch
+			{
+				SharpPlayer p => (AnySharpContent?)p,
+				SharpRoom   => null,
+				SharpExit e => (AnySharpContent?)e,
+				SharpThing t => (AnySharpContent?)t,
+				_ => null
+			});
 
 			if (content != null)
-				yield return content;
+				yield return content.Value;
 		}
 	}
 

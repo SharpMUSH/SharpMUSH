@@ -675,7 +675,7 @@ if (parsedIndirectOpt.IsSome())
 					}
 				}
 
-				if (targetObj == null)
+				if (!targetObj.HasValue)
 					return false;
 
 				// Get the lock from the target object
@@ -685,7 +685,7 @@ if (parsedIndirectOpt.IsSome())
 				// Use mediator query to recursively evaluate the lock
 				// This breaks the circular dependency between parser and lock service
 				var evaluateResult = med.Send(
-					new EvaluateLockQuery(lockString, targetObj, unlockerObj),
+					new EvaluateLockQuery(lockString, targetObj!.Value, unlockerObj),
 					CancellationToken.None)
 					.AsTask()
 					.ConfigureAwait(false).GetAwaiter().GetResult();

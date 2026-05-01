@@ -29,7 +29,7 @@ public partial class Commands
 		var objAttrText = MModule.plainText(objAttrArg.Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
-		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
+		if (!split.TryGetValue(out var details) || string.IsNullOrEmpty(details.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState("#-1 INVALID FORMAT");
@@ -140,7 +140,7 @@ public partial class Commands
 		var sourceText = MModule.plainText(sourceArg.Message!);
 		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
 
-		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
+		if (!sourceSplit.TryGetValue(out var sourceDetails) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
 			return new CallState("#-1 INVALID SOURCE");
@@ -186,7 +186,7 @@ public partial class Commands
 		{
 			var destSplit = HelperFunctions.SplitDbRefAndOptionalAttr(dest);
 
-			if (!destSplit.TryPickT0(out var destDetails, out _))
+			if (!destSplit.TryGetValue(out var destDetails))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
 				continue;
@@ -219,9 +219,9 @@ public partial class Commands
 			// Set the attribute value
 			var setResult = await AttributeService!.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
-			if (setResult.IsT1)
+			if (setResult.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsT1.Value);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsError.Value);
 				continue;
 			}
 
@@ -270,7 +270,7 @@ public partial class Commands
 		var sourceText = MModule.plainText(sourceArg.Message!);
 		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
 
-		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
+		if (!sourceSplit.TryGetValue(out var sourceDetails) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
 			return new CallState("#-1 INVALID SOURCE");
@@ -316,7 +316,7 @@ public partial class Commands
 		{
 			var destSplit = HelperFunctions.SplitDbRefAndOptionalAttr(dest);
 
-			if (!destSplit.TryPickT0(out var destDetails, out _))
+			if (!destSplit.TryGetValue(out var destDetails))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
 				continue;
@@ -349,9 +349,9 @@ public partial class Commands
 			// Set the attribute value
 			var setResult = await AttributeService!.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
-			if (setResult.IsT1)
+			if (setResult.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsT1.Value);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsError.Value);
 				continue;
 			}
 
@@ -375,9 +375,9 @@ public partial class Commands
 			IAttributeService.AttributeClearMode.Safe);
 
 			var destWord = copiedCount == 1 ? "destination" : "destinations";
-			if (clearResult.IsT1)
+			if (clearResult.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, clearResult.AsT1.Value);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, clearResult.AsError.Value);
 			}
 			else
 			{
@@ -410,7 +410,7 @@ public partial class Commands
 		var objAttrText = MModule.plainText(objAttrArg.Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
-		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
+		if (!split.TryGetValue(out var details) || string.IsNullOrEmpty(details.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState("#-1 INVALID FORMAT");
@@ -499,9 +499,9 @@ public partial class Commands
 		var currentValue = attribute.AsAttribute.Last().Value;
 		var setResult = await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 
-		if (setResult.IsT1)
+		if (setResult.IsError)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToChangeOwnershipFormat), executor, setResult.AsT1.Value);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToChangeOwnershipFormat), executor, setResult.AsError.Value);
 			return new CallState("#-1 FAILED");
 		}
 
@@ -525,7 +525,7 @@ public partial class Commands
 		var objAttr = MModule.plainText(args["0"].Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttr);
 
-		if (!split.TryPickT0(out var details, out _))
+		if (!split.TryGetValue(out var details))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return new CallState("#-1 INVALID OBJECT");

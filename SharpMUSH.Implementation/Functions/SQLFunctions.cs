@@ -148,12 +148,12 @@ public partial class Functions
 		var isPreparedStatement = args.Count > 4;
 
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
-		if (maybeObjAttr.IsT1)
+		if (maybeObjAttr.IsNone())
 		{
 			return new CallState("#-1 INVALID OBJECT/ATTRIBUTE");
 		}
 
-		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
+		var (targetObjRef, attrName) = maybeObjAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,

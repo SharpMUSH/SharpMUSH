@@ -268,10 +268,10 @@ public partial class Commands
 		// Delete the alias attribute
 		var clearResult = await AttributeService!.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
 
-		if (clearResult.IsT1)
+		if (clearResult.IsError)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorDeletingAliasFormat), executor, clearResult.AsT1.Value);
-			return new CallState($"#-1 Error deleting alias: {clearResult.AsT1.Value}");
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorDeletingAliasFormat), executor, clearResult.AsError.Value);
+			return new CallState($"#-1 Error deleting alias: {clearResult.AsError.Value}");
 		}
 
 		// Check if this was the last alias for this channel

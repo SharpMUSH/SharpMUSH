@@ -1,6 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Database;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
@@ -250,7 +248,7 @@ public partial class Commands
 
 		// Parse object/attribute path
 		var pathSplit = HelperFunctions.SplitDbRefAndOptionalAttr(attributePath);
-		if (!pathSplit.TryPickT0(out var pathDetails, out _))
+		if (!pathSplit.TryGetValue(out var pathDetails))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapInvalidObjectAttributePath), executor);
 			return new CallState("#-1 INVALID PATH");
@@ -845,7 +843,7 @@ public partial class Commands
 			var argText = args["0"].Message!.ToPlainText();
 			var split = HelperFunctions.SplitDbRefAndOptionalAttr(argText);
 
-			if (split.TryPickT0(out var details, out _))
+			if (split.TryGetValue(out var details))
 			{
 				var (objectName, maybeAttributePattern) = details;
 				attributePattern = maybeAttributePattern;
@@ -1488,9 +1486,9 @@ public partial class Commands
 				"teleport",
 				isSilent);
 
-			if (moveResult.IsT1)
+			if (moveResult.IsError)
 			{
-				await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
+				await NotifyService!.Notify(executor, moveResult.AsError.Value, executor);
 				continue;
 			}
 
@@ -1791,13 +1789,13 @@ public partial class Commands
 		}
 
 		var objectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText());
-		if (objectAndAttribute.IsT1 && objectAndAttribute.AsT1 == false)
+		if (objectAndAttribute.IsNone() && objectAndAttribute.AsT1 == false)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifyValidObjectAttribute), executor);
 			return new None();
 		}
 
-		var (db, maybeAttributeString) = objectAndAttribute.AsT0;
+		var (db, maybeAttributeString) = objectAndAttribute.AsValue();
 		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 			db, LocateFlags.All);
 
@@ -3432,7 +3430,7 @@ public partial class Commands
 		var objAttrText = MModule.plainText(objAttrArg.Message);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
-		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
+		if (!split.TryGetValue(out var details) || string.IsNullOrEmpty(details.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat), executor);
 			return new CallState("#-1 INVALID FORMAT");
@@ -4719,7 +4717,7 @@ public partial class Commands
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec);
 		AnyOptionalSharpObject target;
 
-		if (split.TryPickT0(out var details, out _))
+		if (split.TryGetValue(out var details))
 		{
 			var (objectName, maybeAttributePattern) = details;
 			attributePattern = maybeAttributePattern;
@@ -5610,7 +5608,7 @@ public partial class Commands
 		var pattern = MModule.plainText(patternArg.Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
-		if (!split.TryPickT0(out var details, out _))
+		if (!split.TryGetValue(out var details))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return new CallState("#-1 INVALID OBJECT");

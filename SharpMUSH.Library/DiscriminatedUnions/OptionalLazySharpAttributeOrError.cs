@@ -1,32 +1,34 @@
-﻿using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class OptionalLazySharpAttributeOrError(OneOf<LazySharpAttribute[], None, Error<string>> input)
-	: OneOfBase<LazySharpAttribute[], None, Error<string>>(input)
+/// <summary>
+/// A union of LazySharpAttribute[], None, and SharpError.
+/// Replaces OptionalLazySharpAttributeOrError : OneOfBase&lt;LazySharpAttribute[], None, Error&lt;string&gt;&gt;.
+/// </summary>
+public union OptionalLazySharpAttributeOrError(LazySharpAttribute[], None, SharpError)
 {
-	public static implicit operator OptionalLazySharpAttributeOrError(LazySharpAttribute[] x) => new(x);
-	public static implicit operator OptionalLazySharpAttributeOrError(None x) => new(x);
-	public static implicit operator OptionalLazySharpAttributeOrError(Error<string> x) => new(x);
+	public bool IsAttribute => Value is LazySharpAttribute[];
+	public bool IsNone      => Value is null or None;
+	public bool IsError     => Value is SharpError;
 
-	public bool IsAttribute => IsT0;
-	public bool IsNone => IsT1;
-	public bool IsError => IsT2;
+	public LazySharpAttribute[] AsAttribute => (LazySharpAttribute[])Value!;
+	public SharpError           AsError      => (SharpError)Value!;
 
-	public LazySharpAttribute[] AsAttribute => AsT0;
-	public Error<string> AsError => AsT2;
+	public CallState AsCallStateError => Value switch
+	{
+		None => new CallState(Errors.ErrorNoSuchAttribute),
+		SharpError e => new CallState(e.Value),
+		_ => new CallState(Errors.ErrorNoSuchAttribute)
+	};
 
-	public CallState AsCallStateError => IsT1
-		? new CallState(Errors.ErrorNoSuchAttribute)
-		: new CallState(AsT2.Value);
-
-	public async ValueTask<CallState> AsCallStateAsync() => await Match<ValueTask<CallState>>(
-			async attributes => await attributes.Last().Value.WithCancellation(CancellationToken.None),
-			none => ValueTask.FromResult<CallState>(Errors.ErrorNoSuchAttribute),
-			error => ValueTask.FromResult<CallState>(AsT2.Value));
+	public async ValueTask<CallState> AsCallStateAsync() => Value switch
+	{
+		LazySharpAttribute[] attrs => await attrs.Last().Value.WithCancellation(CancellationToken.None),
+		None => new CallState(Errors.ErrorNoSuchAttribute),
+		SharpError e => new CallState(e.Value),
+		_ => new CallState(Errors.ErrorNoSuchAttribute)
+	};
 }

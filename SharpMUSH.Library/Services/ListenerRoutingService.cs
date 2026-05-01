@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
 using SharpMUSH.Library.Commands.ListenPattern;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -37,7 +36,7 @@ public class ListenerRoutingService(
 	private IAttributeService AttributeService => _attributeService ??= serviceProvider.GetRequiredService<IAttributeService>();
 	public async ValueTask ProcessNotificationAsync(
 		NotificationContext context,
-		OneOf<MString, string> message,
+		SharpMessage message,
 		AnySharpObject? sender,
 		NotificationType type)
 	{
@@ -49,10 +48,7 @@ public class ListenerRoutingService(
 		if (context.Location is null)
 			return;
 
-		var messageText = message.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
+		var messageText = message.ToString();
 
 		// Get the location object
 		var locationResult = await mediator.Send(new GetObjectNodeQuery(context.Location.Value));
@@ -209,7 +205,7 @@ public class ListenerRoutingService(
 
 	private async ValueTask ProcessPuppetRelayAsync(
 		AnySharpObject puppet,
-		OneOf<MString, string> message,
+		SharpMessage message,
 		AnySharpObject speaker,
 		NotificationType type)
 	{
@@ -232,12 +228,14 @@ public class ListenerRoutingService(
 		if (!hasVerbose)
 		{
 			// Get puppet's location  
-			var puppetLocation = await puppet.Match<ValueTask<AnySharpContainer?>>(
-				async player => await player.Location.WithCancellation(CancellationToken.None),
-				room => ValueTask.FromResult<AnySharpContainer?>(room),
-				async exit => await exit.Location.WithCancellation(CancellationToken.None),
-				async thing => await thing.Location.WithCancellation(CancellationToken.None)
-			);
+			var puppetLocation = puppet.Value switch
+			{
+				SharpPlayer p => (AnySharpContainer?)(await p.Location.WithCancellation(CancellationToken.None)),
+				SharpRoom r   => (AnySharpContainer?)r,
+				SharpExit e   => (AnySharpContainer?)(await e.Location.WithCancellation(CancellationToken.None)),
+				SharpThing t  => (AnySharpContainer?)(await t.Location.WithCancellation(CancellationToken.None)),
+				_             => null
+			};
 
 			// Get owner's location
 			var ownerLocation = await owner.Location.WithCancellation(CancellationToken.None);
@@ -258,10 +256,7 @@ public class ListenerRoutingService(
 			: $"{puppet.Object().Name}> ";
 
 		// Relay message to owner with prefix
-		var relayedText = message.Match(
-			markupString => prefix + markupString.ToString(),
-			str => prefix + str
-		);
+		var relayedText = prefix + message.ToString();
 
 		var bytes = System.Text.Encoding.UTF8.GetBytes(relayedText);
 

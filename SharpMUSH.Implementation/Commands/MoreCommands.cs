@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -1086,9 +1085,9 @@ public partial class Commands
 			"drop",
 			silent: false);
 
-		if (moveResult.IsT1)
+		if (moveResult.IsError)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
+			await NotifyService!.Notify(executor, moveResult.AsError.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -1547,9 +1546,9 @@ public partial class Commands
 			"enter",
 			silent: false);
 
-		if (moveResult.IsT1)
+		if (moveResult.IsError)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
+			await NotifyService!.Notify(executor, moveResult.AsError.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -1786,9 +1785,9 @@ public partial class Commands
 			"get",
 			silent: false);
 
-		if (moveResult.IsT1)
+		if (moveResult.IsError)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
+			await NotifyService!.Notify(executor, moveResult.AsError.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -2259,9 +2258,9 @@ public partial class Commands
 			"leave",
 			silent: false);
 
-		if (moveResult.IsT1)
+		if (moveResult.IsError)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
+			await NotifyService!.Notify(executor, moveResult.AsError.Value, executor);
 			return CallState.Empty;
 		}
 

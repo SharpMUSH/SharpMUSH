@@ -1,6 +1,4 @@
 using Mediator;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -58,11 +56,13 @@ public class MoveService(
 				return true; // Found a loop
 			}
 
-			var location = await current.Match<ValueTask<AnySharpContainer>>(
-				async player => await player.Location.WithCancellation(CancellationToken.None),
-				room => ValueTask.FromResult<AnySharpContainer>(room),
-				async thing => await thing.Location.WithCancellation(CancellationToken.None)
-			);
+			var location = current.Value switch
+			{
+				SharpPlayer p => await p.Location.WithCancellation(CancellationToken.None),
+				SharpRoom r   => (AnySharpContainer)r,
+				SharpThing t  => await t.Location.WithCancellation(CancellationToken.None),
+				_             => throw new InvalidOperationException()
+			};
 
 			if (location.IsRoom || visited.Contains(location.Object().DBRef.ToString()))
 			{
@@ -78,7 +78,7 @@ public class MoveService(
 	/// Executes a complete move operation including permission checks, cost calculation,
 	/// hook triggering, and notifications.
 	/// </summary>
-	public async ValueTask<OneOf<Success, Error<string>>> ExecuteMoveAsync(
+	public async ValueTask<SharpResult> ExecuteMoveAsync(
 		IMUSHCodeParser parser,
 		AnySharpContent objectToMove,
 		AnySharpContainer destination,
@@ -93,20 +93,20 @@ public class MoveService(
 		var enactorQuery = await mediator.Send(new GetObjectNodeQuery(enactorRef));
 		if (enactorQuery.IsNone)
 		{
-			return new Error<string>("Invalid enactor");
+			return new SharpError("Invalid enactor");
 		}
 		var enactorObj = enactorQuery.Known;
 
 		// 1. Check for containment loops
 		if (await WouldCreateLoop(objectToMove, destination))
 		{
-			return new Error<string>("Cannot move - it would create a containment loop.");
+			return new SharpError("Cannot move - it would create a containment loop.");
 		}
 
 		// 2. Check permissions
 		if (!await CanMoveAsync(enactorObj, objectToMove, destination))
 		{
-			return new Error<string>("Permission denied.");
+			return new SharpError("Permission denied.");
 		}
 
 		// 3. Check and track move cost (quota system integration point)
@@ -116,22 +116,13 @@ public class MoveService(
 		// For now, moves are allowed regardless of quota status.
 
 		// 4. Get old location for hooks
-		var oldLocation = await objectToMove.Match<ValueTask<DBRef>>(
-			async player =>
-			{
-				var location = await player.Location.WithCancellation(CancellationToken.None);
-				return location.Object().DBRef;
-			},
-			async exit =>
-			{
-				var location = await exit.Location.WithCancellation(CancellationToken.None);
-				return location.Object().DBRef;
-			},
-			async thing =>
-			{
-				var location = await thing.Location.WithCancellation(CancellationToken.None);
-				return location.Object().DBRef;
-			});
+		var oldLocation = objectToMove.Value switch
+		{
+			SharpPlayer p => (await p.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			SharpExit   e => (await e.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			SharpThing  t => (await t.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			_             => throw new InvalidOperationException()
+		};
 
 		// 5. Trigger LEAVE hooks on old location (if not silent)
 		if (!silent && oldLocation != destObj.DBRef)
@@ -156,20 +147,14 @@ public class MoveService(
 		// 7. Trigger ENTER hooks on new location (if not silent)
 		if (!silent)
 		{
-			var destObjAny = destination.Match<AnySharpObject>(
-				player => player,
-				room => room,
-				thing => thing);
+			var destObjAny = destination.WithExitOption();
 			await TriggerEnterHooksAsync(parser, objectToMove, destObjAny, enactorRef, cause);
 		}
 
 		// 8. Trigger teleport hooks if this is a teleport
 		if (!silent && cause.Equals("teleport", StringComparison.OrdinalIgnoreCase))
 		{
-			var destObjAny = destination.Match<AnySharpObject>(
-				player => player,
-				room => room,
-				thing => thing);
+			var destObjAny = destination.WithExitOption();
 			await TriggerTeleportHooksAsync(parser, objectToMove, destObjAny, enactorRef);
 		}
 
@@ -179,7 +164,7 @@ public class MoveService(
 			await NotifyContentsOfMoveAsync(parser, objectToMove, oldLocation, destObj.DBRef);
 		}
 
-		return new Success();
+		return new SharpSuccess();
 	}
 
 	/// <summary>
@@ -190,15 +175,9 @@ public class MoveService(
 		AnySharpContent objectToMove,
 		AnySharpContainer destination)
 	{
-		var target = objectToMove.Match<AnySharpObject>(
-			player => player,
-			exit => exit,
-			thing => thing);
+		var target = objectToMove.WithRoomOption();
 
-		var dest = destination.Match<AnySharpObject>(
-			player => player,
-			room => room,
-			thing => thing);
+		var dest = destination.WithExitOption();
 
 		if (!await permissionService.Controls(who, target))
 		{
@@ -210,22 +189,13 @@ public class MoveService(
 			return false;
 		}
 
-		var currentLocation = await objectToMove.Match<ValueTask<DBRef?>>(
-			async player =>
-			{
-				var location = await player.Location.WithCancellation(CancellationToken.None);
-				return (DBRef?)location.Object().DBRef;
-			},
-			async exit =>
-			{
-				var location = await exit.Location.WithCancellation(CancellationToken.None);
-				return (DBRef?)location.Object().DBRef;
-			},
-			async thing =>
-			{
-				var location = await thing.Location.WithCancellation(CancellationToken.None);
-				return (DBRef?)location.Object().DBRef;
-			});
+		var currentLocation = objectToMove.Value switch
+		{
+			SharpPlayer p => (DBRef?)(await p.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			SharpExit   e => (DBRef?)(await e.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			SharpThing  t => (DBRef?)(await t.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			_             => (DBRef?)null
+		};
 
 		if (currentLocation.HasValue)
 		{
@@ -266,10 +236,7 @@ public class MoveService(
 		DBRef enactor,
 		string cause)
 	{
-		var targetObj = objectToMove.Match<AnySharpObject>(
-			player => player,
-			exit => exit,
-			thing => thing);
+		var targetObj = objectToMove.WithRoomOption();
 		var targetDBRef = objectToMove.Object().DBRef;
 
 		// @LEAVE - message seen by the object leaving
@@ -308,10 +275,7 @@ public class MoveService(
 
 			foreach (var content in contents)
 			{
-				var contentObj = content.Match<AnySharpObject>(
-					player => player,
-					exit => exit,
-					thing => thing);
+				var contentObj = content.WithRoomOption();
 
 				var message = await attributeService.EvaluateAttributeFunctionAsync(
 					parser, contentObj, oldLocation, MoveAttributes.OLeave,
@@ -374,10 +338,7 @@ public class MoveService(
 		DBRef enactor,
 		string cause)
 	{
-		var targetObj = objectToMove.Match<AnySharpObject>(
-			player => player,
-			exit => exit,
-			thing => thing);
+		var targetObj = objectToMove.WithRoomOption();
 		var targetDBRef = objectToMove.Object().DBRef;
 
 		// @ENTER - message seen by the object entering
@@ -416,10 +377,7 @@ public class MoveService(
 
 			foreach (var content in contents)
 			{
-				var contentObj = content.Match<AnySharpObject>(
-					player => player,
-					exit => exit,
-					thing => thing);
+				var contentObj = content.WithRoomOption();
 
 				var message = await attributeService.EvaluateAttributeFunctionAsync(
 					parser, contentObj, newLocation, MoveAttributes.OEnter,
@@ -481,10 +439,7 @@ public class MoveService(
 		AnySharpObject newLocation,
 		DBRef enactor)
 	{
-		var targetObj = objectToMove.Match<AnySharpObject>(
-			player => player,
-			exit => exit,
-			thing => thing);
+		var targetObj = objectToMove.WithRoomOption();
 		var targetDBRef = objectToMove.Object().DBRef;
 
 		// @OTELEPORT - message seen by others in destination
@@ -505,10 +460,7 @@ public class MoveService(
 
 			foreach (var content in contents)
 			{
-				var contentObj = content.Match<AnySharpObject>(
-					player => player,
-					exit => exit,
-					thing => thing);
+				var contentObj = content.WithRoomOption();
 
 				var message = await attributeService.EvaluateAttributeFunctionAsync(
 					parser, contentObj, newLocation, MoveAttributes.OTeleport,

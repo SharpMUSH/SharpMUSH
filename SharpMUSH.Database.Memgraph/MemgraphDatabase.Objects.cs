@@ -2,7 +2,6 @@ using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -145,11 +144,7 @@ RETURN count(r) AS cnt
 		await UnlinkRoomAsync(room, cancellationToken);
 
 		var roomKey = ExtractKey(room.Id!);
-		var destKey = location.Match(
-		player => ExtractKey(player.Id!),
-		rm => ExtractKey(rm.Id!),
-		thing => ExtractKey(thing.Id!),
-		_ => throw new InvalidOperationException());
+		var destKey = location.Value switch { SharpPlayer p => ExtractKey(p.Id!), SharpRoom r => ExtractKey(r.Id!), SharpThing t => ExtractKey(t.Id!), _ => throw new InvalidOperationException() };
 
 		await ExecuteWithRetryAsync("""
 MATCH (r:Room {key: $roomKey}), (dest {key: $destKey})
@@ -432,7 +427,7 @@ CREATE (src)-[:AT_LOCATION]->(dest)
 
 		if (parent != null)
 		{
-			var parentKey = parent.Object().Key;
+			var parentKey = parent!.Value.Object().Key;
 			await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (p:Object {key: $parentKey})
 CREATE (o)-[:HAS_PARENT]->(p)
@@ -450,7 +445,7 @@ CREATE (o)-[:HAS_PARENT]->(p)
 
 		if (zone != null)
 		{
-			var zoneKey = zone.Object().Key;
+			var zoneKey = zone!.Value.Object().Key;
 			await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (z:Object {key: $zoneKey})
 CREATE (o)-[:HAS_ZONE]->(z)

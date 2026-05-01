@@ -1,8 +1,8 @@
 ﻿using Mediator;
-using OneOf;
 using Quartz;
 using Quartz.Impl.Matchers;
 using Quartz.Lambda;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
@@ -522,7 +522,7 @@ int oldValue)
 				.WithIdentity($"dbref:{state.Executor}-{pid}", $"{DelayGroup}:{state.Executor}"));
 	}
 
-	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> GetAllTasks()
+	public async IAsyncEnumerable<(string Group, (DateTimeOffset, DbRefOrName)[])> GetAllTasks()
 	{
 		var translate = new Func<string, string>(x =>
 			new string(x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
@@ -538,8 +538,8 @@ int oldValue)
 			yield return (key.Key, key.Select(x => (
 				x.Value,
 				DBRef.TryParse(translate(x.Name), out var dbref)
-					? OneOf<string, DBRef>.FromT1(dbref!.Value)
-					: OneOf<string, DBRef>.FromT0(x.Name)
+					? (DbRefOrName)dbref!.Value
+					: (DbRefOrName)x.Name
 			)).ToArray());
 		}
 
@@ -549,8 +549,8 @@ int oldValue)
 			yield return (group.Key, group.Select(e => (
 				DateTimeOffset.UtcNow,
 				DBRef.TryParse(translate(e.TriggerName), out var dbref)
-					? OneOf<string, DBRef>.FromT1(dbref!.Value)
-					: OneOf<string, DBRef>.FromT0(e.TriggerName)
+					? (DbRefOrName)dbref!.Value
+					: (DbRefOrName)e.TriggerName
 			)).ToArray());
 		}
 	}

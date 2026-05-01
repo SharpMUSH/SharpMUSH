@@ -1,5 +1,4 @@
 ﻿using Mediator;
-using OneOf;
 using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -248,7 +247,7 @@ public static partial class ArgHelpers
 			.ToAsyncEnumerable()
 			.Select<OneOf<DBRef, string>, SharpPlayer?>(async (x, ct) =>
 				await x.Match(
-					async dbref => (await mediator.Send(new GetObjectNodeQuery(dbref), ct)).TryPickT0(out var player, out _)
+					async dbref => (await mediator.Send(new GetObjectNodeQuery(dbref), ct)).TryGetValue(out var player)
 						? player
 						: null,
 					async name => await mediator.CreateStream(new GetPlayerQuery(name), ct).FirstOrDefaultAsync(cancellationToken: ct)));

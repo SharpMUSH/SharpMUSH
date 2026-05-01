@@ -287,13 +287,13 @@ public class TextFileService : ITextFileService
 		var fileInfo = new FileInfo(filePath);
 		var result = Helpfiles.IndexMarkdownPositions(fileInfo);
 
-		if (result.IsT1)
+		if (result.IsError)
 		{
 			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, result.AsT1.Value);
 			return Task.CompletedTask;
 		}
 
-		var entries = result.AsT0;
+		var entries = result.AsIndex;
 
 		foreach (var (entryName, positions) in entries)
 		{

@@ -1,10 +1,11 @@
 using Mediator;
-using OneOf;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
+
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Implementation.Handlers;
 
@@ -33,7 +34,7 @@ public class GetScheduledTasksHandler(ITaskScheduler scheduler)
 {
 	public IAsyncEnumerable<SemaphoreTaskData> Handle(ScheduleSemaphoreQuery query,
 		CancellationToken cancellationToken)
-		=> query.Query.Match(scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks);
+		=> query.Query.Value switch { long l => scheduler.GetSemaphoreTasks(l), DBRef d => scheduler.GetSemaphoreTasks(d), DbRefAttribute a => scheduler.GetSemaphoreTasks(a), _ => throw new InvalidOperationException() };
 }
 
 public class GetDelayTasksHandler(ITaskScheduler scheduler)
@@ -117,9 +118,9 @@ public class GetEnqueueTasksHandler(ITaskScheduler scheduler)
 }
 
 public class GetAllTasksHandler(ITaskScheduler scheduler)
-	: IStreamQueryHandler<ScheduleAllTasksQuery, (string Group, (DateTimeOffset, OneOf<string, DBRef>)[])>
+	: IStreamQueryHandler<ScheduleAllTasksQuery, (string Group, (DateTimeOffset, DbRefOrName)[])>
 {
-	public IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> Handle(ScheduleAllTasksQuery query,
+	public IAsyncEnumerable<(string Group, (DateTimeOffset, DbRefOrName)[])> Handle(ScheduleAllTasksQuery query,
 		CancellationToken cancellationToken)
 		=> scheduler.GetAllTasks();
 }

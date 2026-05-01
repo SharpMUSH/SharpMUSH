@@ -327,12 +327,12 @@ public partial class Functions
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
-		if (split.IsT1)
+		if (split.IsNone())
 		{
 			return string.Format(Errors.ErrorBadArgumentFormat, "getpids");
 		}
 
-		var (db, attr) = split.AsT0;
+		var (db, attr) = split.AsValue();
 
 		if (attr is null)
 		{

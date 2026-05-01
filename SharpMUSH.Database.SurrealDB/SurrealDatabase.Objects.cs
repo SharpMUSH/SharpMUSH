@@ -1,7 +1,6 @@
 using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -192,17 +191,9 @@ public partial class SurrealDatabase
 		await UnlinkRoomAsync(room, cancellationToken);
 
 		var roomKey = ExtractKey(room.Id!);
-		var destKey = location.Match(
-		player => ExtractKey(player.Id!),
-		rm => ExtractKey(rm.Id!),
-		thing => ExtractKey(thing.Id!),
-		_ => throw new InvalidOperationException());
+		var destKey = location.Value switch { SharpPlayer p => ExtractKey(p.Id!), SharpRoom r => ExtractKey(r.Id!), SharpThing t => ExtractKey(t.Id!), _ => throw new InvalidOperationException() };
 
-		var destTable = location.Match(
-		_ => "player",
-		_ => "room",
-		_ => "thing",
-		_ => throw new InvalidOperationException());
+		var destTable = location.Value switch { SharpPlayer => "player", SharpRoom => "room", SharpThing => "thing", _ => throw new InvalidOperationException() };
 
 		var parameters = new Dictionary<string, object?>
 		{
@@ -595,7 +586,7 @@ public partial class SurrealDatabase
 
 		if (parent != null)
 		{
-			var parentKey = parent.Object().Key;
+			var parentKey = parent!.Value.Object().Key;
 			var parentParams = new Dictionary<string, object?>
 			{
 				["key"] = objKey,
@@ -619,7 +610,7 @@ public partial class SurrealDatabase
 
 		if (zone != null)
 		{
-			var zoneKey = zone.Object().Key;
+			var zoneKey = zone!.Value.Object().Key;
 			var zoneParams = new Dictionary<string, object?>
 			{
 				["key"] = objKey,
@@ -666,18 +657,12 @@ public partial class SurrealDatabase
 
 	private static string GetContainerTable(AnySharpContainer container)
 	{
-		return container.Match(
-			_ => "player",
-			_ => "room",
-			_ => "thing");
+		return container.Value switch { SharpPlayer => "player", SharpRoom => "room", SharpThing => "thing", _ => throw new InvalidOperationException() };
 	}
 
 	private static string GetContentTable(AnySharpContent content)
 	{
-		return content.Match(
-			_ => "player",
-			_ => "exit",
-			_ => "thing");
+		return content.Value switch { SharpPlayer => "player", SharpExit => "exit", SharpThing => "thing", _ => throw new InvalidOperationException() };
 	}
 
 	#endregion

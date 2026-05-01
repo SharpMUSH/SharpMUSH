@@ -4,7 +4,6 @@ using Antlr4.Runtime.Tree;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -344,20 +343,20 @@ public class SharpMUSHParserVisitor(
 			else
 			{
 				// No attribute override — fall back to the executor's DEBUG object flag
-				shouldDebug = await executorObj.HasFlag("DEBUG");
+				shouldDebug = await executorObj!.Value.HasFlag("DEBUG");
 			}
 
 			if (shouldDebug)
 			{
 				indent = new string(' ', _debugNestDepth);
-				dbrefNumber = executorObj.Object().DBRef.Number;
+				dbrefNumber = executorObj!.Value.Object().DBRef.Number;
 			}
 		}
 
-		if (shouldDebug && executorObj != null && indent != null)
+		if (shouldDebug && executorObj.HasValue && indent != null)
 		{
 			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} :";
-			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+			await SendDebugOrVerboseOutput(executorObj!.Value, debugOutput);
 		}
 
 		if (shouldDebug) _debugNestDepth++;
@@ -366,10 +365,10 @@ public class SharpMUSHParserVisitor(
 
 		if (shouldDebug) _debugNestDepth--;
 
-		if (shouldDebug && executorObj != null && indent != null)
+		if (shouldDebug && executorObj.HasValue && indent != null)
 		{
 			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}";
-			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+			await SendDebugOrVerboseOutput(executorObj!.Value, debugOutput);
 		}
 
 		return result;
@@ -400,7 +399,7 @@ public class SharpMUSHParserVisitor(
 			{
 				var discoveredFunction = DiscoverBuiltInFunction(name);
 
-				if (!discoveredFunction.TryPickT0(out var functionValue, out _))
+				if (!discoveredFunction.TryGetValue(out var functionValue))
 				{
 					success = false;
 					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
@@ -1158,13 +1157,13 @@ public class SharpMUSHParserVisitor(
 			var clearHandle = prs.CurrentState.Handle;
 			if (clearHandle.HasValue)
 			{
-			if (clearResult.TryPickT0(out _, out var clearError))
+			if (clearResult.IsSuccess)
 			{
 				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared), clearExecutor, clearTargetObject.Object().Name, matchedEntry.Name);
 			}
 			else
 			{
-				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), clearExecutor, clearError.Value);
+				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), clearExecutor, clearResult.AsError.Value);
 			}
 			}
 
@@ -1215,7 +1214,7 @@ public class SharpMUSHParserVisitor(
 			}
 			else
 			{
-				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), executor, error.Value);
+				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), executor, setResult.AsError.Value);
 			}
 		}
 
@@ -1449,7 +1448,7 @@ public class SharpMUSHParserVisitor(
 	{
 		// Get the target object
 		var targetObject = await Mediator.Send(new GetObjectNodeQuery(hook.TargetObject));
-		if (targetObject == null || targetObject.IsNone)
+		if (targetObject.IsNone)
 		{
 			return new None();
 		}
@@ -1968,10 +1967,7 @@ public class SharpMUSHParserVisitor(
 		var isCommandList = context.Parent is CommandListContext;
 
 		var result = await EvaluateCommands(source, context, isCommandList, VisitChildren);
-		return result
-			.Match<CallState?>(
-				x => x,
-				_ => CallState.Empty);
+		return result.IsSome() ? result.AsValue() : CallState.Empty;
 	}
 
 	public override async ValueTask<CallState?> VisitStartCommandString(

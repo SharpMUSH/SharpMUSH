@@ -1,6 +1,5 @@
-﻿using OneOf;
-using OneOf.Types;
-using SharpMUSH.Client.Models;
+﻿using SharpMUSH.Client.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
@@ -26,12 +25,12 @@ public class WikiService
 	};
 
 
-	public async ValueTask<OneOf<WikiArticle, None>> GetWikiArticle(string slug)
+	public async ValueTask<Option<WikiArticle>> GetWikiArticle(string slug)
 	{
 		await ValueTask.CompletedTask;
 
 		return _articles.TryGetValue(slug, out var article)
-			? article
+			? Option<WikiArticle>.FromOption(article)
 			: new None();
 	}
 }

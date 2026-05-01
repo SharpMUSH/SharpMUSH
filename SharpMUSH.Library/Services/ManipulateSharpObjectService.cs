@@ -1,5 +1,4 @@
 using Mediator;
-using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -45,14 +44,15 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 
-		switch (obj)
+		if (obj.IsThing || obj.IsRoom)
 		{
-			case { IsThing: true } or { IsRoom: true }:
 				await mediator.Send(new SetNameCommand(obj, name));
 				return obj.Object().DBRef;
 
-			case { IsPlayer: true }:
-				var tryFindPlayerByName = await (mediator.CreateStream(new GetPlayerQuery(name.ToPlainText())))
+			}
+		if (obj.IsPlayer)
+		{
+			var tryFindPlayerByName = await (mediator.CreateStream(new GetPlayerQuery(name.ToPlainText())))
 					.ToArrayAsync();
 				if (tryFindPlayerByName.Any(x =>
 							x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
@@ -92,19 +92,18 @@ public class ManipulateSharpObjectService(
 				await attributeService.SetAttributeAsync(executor, obj, "ALIAS",
 					MModule.multipleWithDelimiter(MModule.single(";"), aliases.Select(MModule.single)));
 
-				return obj.Object().DBRef;
-
-			default:
-				var split = MModule.split(";", name);
-				await mediator.Send(new SetNameCommand(obj, split.First()));
-				if (split.Length > 1)
-				{
-					await attributeService.SetAttributeAsync(executor, obj, "ALIAS",
-						MModule.multipleWithDelimiter(MModule.single(";"), split.Skip(1)));
-				}
-
-				return obj.Object().DBRef;
+					return obj.Object().DBRef;
 		}
+
+		// Default case: any other object type
+		var split = MModule.split(";", name);
+		await mediator.Send(new SetNameCommand(obj, split.First()));
+		if (split.Length > 1)
+		{
+			await attributeService.SetAttributeAsync(executor, obj, "ALIAS",
+				MModule.multipleWithDelimiter(MModule.single(";"), split.Skip(1)));
+		}
+		return obj.Object().DBRef;
 	}
 
 	public async ValueTask<CallState> SetPassword(AnySharpObject executor, SharpPlayer player, string newPassword,

@@ -1,9 +1,8 @@
 using Mediator;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Queries.Database;
 
-public record GetExitsQuery(OneOf<DBRef, AnySharpContainer> DBRef)
+public record GetExitsQuery(DbRefOrContainer DBRef)
 	: IStreamQuery<SharpExit>;

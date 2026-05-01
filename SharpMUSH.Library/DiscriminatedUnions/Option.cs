@@ -1,20 +1,22 @@
-﻿using OneOf;
-using OneOf.Types;
-
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public partial class Option<T> : OneOfBase<T, None>
+/// <summary>
+/// A simple Option type: either a value of T or None.
+/// Replaces the OneOfBase&lt;T, None&gt; class.
+/// </summary>
+public union Option<T>(T, None)
 {
-	public bool IsSome() => IsT0;
-	public bool IsNone() => IsT1;
-	public T AsValue() => AsT0;
+	public bool IsSome() => Value is T;
+	public bool IsNone() => Value is null or None;
 
-	public static Option<T> FromOption(T some) => new(some);
+	public T AsValue() => (T)Value!;
+
+	public static Option<T> FromOption(T some) => some;
 
 	public bool TryGetValue(out T? value)
 	{
-		value = IsT0 ? AsT0 : default;
-		return IsT0;
+		if (Value is T t) { value = t; return true; }
+		value = default;
+		return false;
 	}
 }

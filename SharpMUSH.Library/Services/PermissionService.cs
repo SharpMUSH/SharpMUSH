@@ -270,11 +270,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	/// <param name="thing">Against what thing?</param>
 	/// <returns>Whether or not they pass te basic lock.</returns>
 	public ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing)
-		=> ValueTask.FromResult(thing switch
-		{
-			{ IsNone: true } => false,
-			_ => PassesLock(who, thing.Known, LockType.Basic)
-		});
+		=> ValueTask.FromResult(thing.IsNone ? false : PassesLock(who, thing.Known, LockType.Basic));
 
 	public ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
 	{

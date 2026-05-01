@@ -20,11 +20,11 @@ public static class ListMail
 
 		if (filteredList.IsError)
 		{
-			await notifyService!.Notify(executor, filteredList.AsT0.Value);
-			return MModule.single(filteredList.AsT0.Value);
+			await notifyService!.Notify(executor, filteredList.AsError);
+			return MModule.single(filteredList.AsError);
 		}
 
-		var list = filteredList.AsT1 ?? AsyncEnumerable.Empty<SharpMail>();
+		var list = filteredList.IsError ? AsyncEnumerable.Empty<SharpMail>() : filteredList.AsMailList;
 
 		var foundAny = false;
 		await foreach (var folder in list.GroupBy(x => x.Folder))

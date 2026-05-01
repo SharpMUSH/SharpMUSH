@@ -1,5 +1,4 @@
-﻿using OneOf.Types;
-using SharpMUSH.Configuration;
+﻿using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
 using System.Net.Http.Json;
@@ -11,7 +10,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 	private SharpMUSHOptions? _currentOptions = null;
 	private Dictionary<string, SharpConfigAttribute> _metadata = [];
 
-	public async Task<OneOf.OneOf<IEnumerable<ConfigItem>, Error<string>>> GetOptionsAsync()
+	public async Task<IEnumerable<ConfigItem>> GetOptionsAsync()
 	{
 		try
 		{
@@ -24,7 +23,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error fetching options from server, using defaults");
-			return OneOf.OneOf<IEnumerable<ConfigItem>, Error<string>>.FromT0([]);
+			return [];
 		}
 	}
 
@@ -95,7 +94,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 
 public static class SharpMUSHOptionsExtension
 {
-	public static OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>> ToConfigItems(this ConfigurationResponse options)
+	public static IEnumerable<AdminConfigService.ConfigItem> ToConfigItems(this ConfigurationResponse options)
 	{
 		var configItems = new List<AdminConfigService.ConfigItem>();
 
@@ -181,7 +180,7 @@ public static class SharpMUSHOptionsExtension
 		catch (Exception ex)
 		{
 			// If everything fails, return a single error item
-			return OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>>.FromT0([new AdminConfigService.ConfigItem
+			return [new AdminConfigService.ConfigItem
 			{
 				Section = "Error",
 				Key = "ConfigurationError",
@@ -189,11 +188,11 @@ public static class SharpMUSHOptionsExtension
 				Type = "Error",
 				Description = "Critical configuration error",
 				Category = "Error"
-			}]);
+			}];
 		}
 
-		return OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>>.FromT0(configItems
+		return configItems
 			.OrderBy(x => x.Section)
-			.ThenBy(x => x.Key));
+			.ThenBy(x => x.Key);
 	}
 }

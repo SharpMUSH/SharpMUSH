@@ -1,6 +1,5 @@
 ﻿using MarkupString;
 using Mediator;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -28,270 +27,122 @@ public class NotifyService(
 	/// </summary>
 	private static string NormalizeLineEnding(string text)
 	{
-		// Replace all standalone \n with \r\n (but don't double-up existing \r\n)
-		text = text.Replace("\r\n", "\n"); // First normalize everything to \n
-		text = text.Replace("\n", "\r\n");  // Then convert all to \r\n
-
-		// Ensure it ends with exactly one \r\n
+		text = text.Replace("\r\n", "\n");
+		text = text.Replace("\n", "\r\n");
 		text = text.TrimEnd('\r', '\n');
 		return text;
 	}
 
-	/// <summary>
-	/// Wraps text with OUTPUTPREFIX / OUTPUTSUFFIX if set on the connection.
-	/// Mirrors PennMUSH's per-command output wrapping (src/bsd.c).
-	/// The prefix is emitted as a separate line before the output,
-	/// and the suffix as a separate line after.
-	/// </summary>
 	private string ApplyOutputPrefixSuffix(long handle, string text)
 	{
 		var conn = connections.Get(handle);
-		if (conn is null)
-		{
-			return text;
-		}
+		if (conn is null) return text;
 
 		var hasPrefix = conn.Metadata.TryGetValue("OutputPrefix", out var prefix);
 		var hasSuffix = conn.Metadata.TryGetValue("OutputSuffix", out var suffix);
-
-		if (!hasPrefix && !hasSuffix)
-		{
-			return text;
-		}
+		if (!hasPrefix && !hasSuffix) return text;
 
 		var sb = new StringBuilder();
-		if (hasPrefix && !string.IsNullOrEmpty(prefix))
-		{
-			sb.Append(NormalizeLineEnding(prefix));
-			sb.Append("\r\n");
-		}
+		if (hasPrefix && !string.IsNullOrEmpty(prefix)) { sb.Append(NormalizeLineEnding(prefix)); sb.Append("\r\n"); }
 		sb.Append(text);
-		if (hasSuffix && !string.IsNullOrEmpty(suffix))
-		{
-			sb.Append("\r\n");
-			sb.Append(NormalizeLineEnding(suffix));
-		}
+		if (hasSuffix && !string.IsNullOrEmpty(suffix)) { sb.Append("\r\n"); sb.Append(NormalizeLineEnding(suffix)); }
 		return sb.ToString();
 	}
 
-	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Notify(DBRef who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
-			str => str.Length == 0
-		))
-		{
-			return;
-		}
+		if (what.IsEmpty) return;
 
-		// Route to listeners if service is available and we have location context
 		if (listenerRoutingService != null && mediator != null && sender != null)
 		{
 			try
 			{
-				// Determine the location for listener routing
-				var location = await sender.Match<ValueTask<DBRef>>(
-					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-					room => ValueTask.FromResult(room.Object.DBRef),
-					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
-				);
-
-				var notificationContext = new NotificationContext(
-					Target: who,
-					Location: location,
-					IsRoomBroadcast: false,
-					ExcludedObjects: []
-				);
-
-				// Fire and forget - don't await to avoid blocking notification
+				var location = sender.Value switch
+				{
+					SharpPlayer p => (await p.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+					SharpRoom r   => r.Object.DBRef,
+					SharpExit e   => (await e.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+					SharpThing t  => (await t.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+					_             => throw new InvalidOperationException()
+				};
+				var notificationContext = new NotificationContext(Target: who, Location: location, IsRoomBroadcast: false, ExcludedObjects: []);
 				await listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
 			}
-			catch
-			{
-				// Silently ignore errors in listener routing to not block notifications
-			}
+			catch { }
 		}
 
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
-
-		text = NormalizeLineEnding(text);
-
-		// Apply OUTPUTPREFIX/OUTPUTSUFFIX per-connection since each may have different settings
+		var text = NormalizeLineEnding(what.ToString());
 		await foreach (var conn in connections.Get(who))
 		{
 			var wrapped = ApplyOutputPrefixSuffix(conn.Handle, text);
-			var bytes = Encoding.UTF8.GetBytes(wrapped);
-			await publishEndpoint.HandlePublish(new TelnetOutputMessage(conn.Handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetOutputMessage(conn.Handle, Encoding.UTF8.GetBytes(wrapped)));
 		}
 	}
 
-	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public ValueTask Notify(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Notify(who.Object().DBRef, what, sender, type);
 
-	public async ValueTask Notify(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Notify(long handle, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
-			str => str.Length == 0
-		))
-		{
-			return;
-		}
-
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
-
-		text = NormalizeLineEnding(text);
-		text = ApplyOutputPrefixSuffix(handle, text);
-		var bytes = Encoding.UTF8.GetBytes(text);
-
-		// Publish directly to Kafka - batching is handled by KafkaFlow producer
-		await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
+		if (what.IsEmpty) return;
+		var text = NormalizeLineEnding(ApplyOutputPrefixSuffix(handle, what.ToString()));
+		await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, Encoding.UTF8.GetBytes(text)));
 	}
 
-	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Notify(long[] handles, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
-			str => str.Length == 0
-		))
-		{
-			return;
-		}
-
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
-
-		text = NormalizeLineEnding(text);
-
-		// Apply OUTPUTPREFIX/OUTPUTSUFFIX per-handle since each may have different settings
+		if (what.IsEmpty) return;
+		var text = NormalizeLineEnding(what.ToString());
 		foreach (var handle in handles)
 		{
 			var wrapped = ApplyOutputPrefixSuffix(handle, text);
-			var bytes = Encoding.UTF8.GetBytes(wrapped);
-			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, Encoding.UTF8.GetBytes(wrapped)));
 		}
 	}
 
-	public async ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Prompt(DBRef who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
-			str => str.Length == 0
-		))
-		{
-			return;
-		}
-
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
-
-		// Prompts typically don't need newlines, but ensure consistency
-		// (Prompts are usually things like "> " without line breaks)
-		var bytes = Encoding.UTF8.GetBytes(text);
-
+		if (what.IsEmpty) return;
+		var bytes = Encoding.UTF8.GetBytes(what.ToString());
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
-		{
 			await publishEndpoint.HandlePublish(new TelnetPromptMessage(handle, bytes));
-		}
 	}
 
-	public ValueTask Prompt(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public ValueTask Prompt(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Prompt(who.Object().DBRef, what, sender, type);
 
-	public async ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Prompt(long handle, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> await Prompt([handle], what, sender, type);
 
-	public async ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Prompt(long[] handles, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
-			str => str.Length == 0
-		))
-		{
-			return;
-		}
-
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
-
-		// Prompts typically don't need newlines
-		var bytes = Encoding.UTF8.GetBytes(text);
-
-		// Publish prompt message to each handle
+		if (what.IsEmpty) return;
+		var bytes = Encoding.UTF8.GetBytes(what.ToString());
 		foreach (var handle in handles)
-		{
 			await publishEndpoint.HandlePublish(new TelnetPromptMessage(handle, bytes));
-		}
 	}
 
-	public async ValueTask NotifyExcept(DBRef who, OneOf<MString, string> what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask NotifyExcept(DBRef who, SharpMessage what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
-			str => str.Length == 0
-		))
-		{
-			return;
-		}
-
-		// Get all handles for the target location/object
+		if (what.IsEmpty) return;
 		var targetHandles = await connections.Get(who).Select(x => x.Handle).ToArrayAsync();
-
-		// Get all handles to exclude using async LINQ SelectMany over all except-DBRefs
 		var excludeHandles = await except.ToAsyncEnumerable()
 			.SelectMany(dbRef => connections.Get(dbRef))
 			.Select(conn => conn.Handle)
 			.ToHashSetAsync();
-
-		// Filter out excluded handles and notify the rest
 		var notifyHandles = targetHandles.Where(h => !excludeHandles.Contains(h)).ToArray();
-
-		if (notifyHandles.Length > 0)
-		{
-			await Notify(notifyHandles, what, sender, type);
-		}
+		if (notifyHandles.Length > 0) await Notify(notifyHandles, what, sender, type);
 	}
 
-	public ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public ValueTask NotifyExcept(AnySharpObject who, SharpMessage what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> NotifyExcept(who.Object().DBRef, what, except, sender, type);
 
-	public async ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, AnySharpObject[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask NotifyExcept(AnySharpObject who, SharpMessage what, AnySharpObject[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> await NotifyExcept(who.Object().DBRef, what, except.Select(x => x.Object().DBRef).ToArray(), sender, type);
 
-	/// <summary>
-	/// Unified error handling: optionally notify user, then return error.
-	/// The notify message and error return are SEPARATE and can be different strings.
-	/// Callers choose which error and notification to use via ErrorMessages constants.
-	/// </summary>
-	/// <param name="target">Object to notify (DBRef)</param>
-	/// <param name="errorReturn">Error string for return value (e.g., "#-1 PERMISSION DENIED")</param>
-	/// <param name="notifyMessage">Message to show user (e.g., "You don't have permission to do that.")</param>
-	/// <param name="shouldNotify">Whether to send notification to user (required parameter)</param>
-	/// <returns>CallState with error return string</returns>
-	public async ValueTask<CallState> NotifyAndReturn(
-		DBRef target,
-		string errorReturn,
-		string notifyMessage,
-		bool shouldNotify)
+	public async ValueTask<CallState> NotifyAndReturn(DBRef target, string errorReturn, string notifyMessage, bool shouldNotify)
 	{
-		if (shouldNotify)
-		{
-			await Notify(target, notifyMessage, sender: null);
-		}
-
+		if (shouldNotify) await Notify(target, notifyMessage, sender: null);
 		return new CallState(errorReturn);
 	}
 
@@ -300,8 +151,7 @@ public class NotifyService(
 		await foreach (var conn in connections.Get(who))
 		{
 			conn.Metadata.TryGetValue("Locale", out var locale);
-			var message = localizationService.Format(key, locale, args);
-			await Notify(conn.Handle, message, sender: null);
+			await Notify(conn.Handle, localizationService.Format(key, locale, args), sender: null);
 		}
 	}
 
@@ -312,8 +162,7 @@ public class NotifyService(
 	{
 		var conn = connections.Get(handle);
 		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
-		var message = localizationService.Format(key, locale, args);
-		await Notify(handle, message, sender: null);
+		await Notify(handle, localizationService.Format(key, locale, args), sender: null);
 	}
 
 	public async ValueTask NotifyLocalized(DBRef who, string key, AnySharpObject? sender, params object[] args)
@@ -321,8 +170,7 @@ public class NotifyService(
 		await foreach (var conn in connections.Get(who))
 		{
 			conn.Metadata.TryGetValue("Locale", out var locale);
-			var message = localizationService.Format(key, locale, args);
-			await Notify(conn.Handle, message, sender: sender);
+			await Notify(conn.Handle, localizationService.Format(key, locale, args), sender: sender);
 		}
 	}
 
@@ -333,7 +181,6 @@ public class NotifyService(
 	{
 		var conn = connections.Get(handle);
 		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
-		var message = localizationService.Format(key, locale, args);
-		await Notify(handle, message, sender: sender);
+		await Notify(handle, localizationService.Format(key, locale, args), sender: sender);
 	}
 }

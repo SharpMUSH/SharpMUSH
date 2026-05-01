@@ -1,5 +1,4 @@
 ﻿using Mediator;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -254,11 +253,11 @@ public partial record ParserState(
 		ref AnyOptionalSharpObject? cachedObject,
 		DBRef? expectedDBRef)
 	{
-		if (cachedObject is not null && !cachedObject.IsNone && expectedDBRef is not null)
+		if (cachedObject is not null && !cachedObject.Value.IsNone && expectedDBRef is not null)
 		{
 			try
 			{
-				var cachedDBRef = cachedObject.Known().Object().DBRef;
+				var cachedDBRef = cachedObject.Value.Known().Object().DBRef;
 				if (!cachedDBRef.Equals(expectedDBRef.Value))
 				{
 					cachedObject = null;

@@ -290,7 +290,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.RoomDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "room-desc", "Room has no description.");
 				hasWarnings = true;
@@ -316,11 +316,7 @@ public class WarningService(
 				try
 				{
 					var destination = await exit.Location.WithCancellation(CancellationToken.None);
-					var destObj = destination.Match(
-						player => player.Object,
-						room => room.Object,
-						thing => thing.Object
-					);
+					var destObj = destination.Value switch { SharpPlayer p => p.Object, SharpRoom r => r.Object, SharpThing t => t.Object, _ => throw new InvalidOperationException() };
 
 					// Check if destination DBRef is -1 (NOTHING) or 0 (invalid)
 					if (destObj.DBRef.Number <= 0)
@@ -368,7 +364,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.ExitDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "exit-desc", "Exit has no description.");
 				hasWarnings = true;
@@ -383,7 +379,7 @@ public class WarningService(
 			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, false);
 			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
 
-			if (success.IsT1 || osuccess.IsT1 || odrop.IsT1)
+			if (success.IsNone || osuccess.IsNone || odrop.IsNone)
 			{
 				await Complain(checker, target, "exit-msgs", "Exit is missing messages (SUCCESS, OSUCCESS, or ODROP).");
 				hasWarnings = true;
@@ -391,7 +387,7 @@ public class WarningService(
 
 			// Check locked exit messages: FAILURE
 			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
-			if (failure.IsT1)
+			if (failure.IsNone)
 			{
 				await Complain(checker, target, "exit-msgs", "Exit is missing FAILURE message.");
 				hasWarnings = true;
@@ -408,17 +404,9 @@ public class WarningService(
 				var destination = await exit.Location.WithCancellation(CancellationToken.None);
 				var source = await exit.Home.WithCancellation(CancellationToken.None);
 
-				var destObj = destination.Match(
-					player => player.Object,
-					room => room.Object,
-					thing => thing.Object
-				);
+				var destObj = destination.Value switch { SharpPlayer p => p.Object, SharpRoom r => r.Object, SharpThing t => t.Object, _ => throw new InvalidOperationException() };
 
-				var sourceObj = source.Match(
-					player => player.Object,
-					room => room.Object,
-					thing => thing.Object
-				);
+				var sourceObj = source.Value switch { SharpPlayer p => p.Object, SharpRoom r => r.Object, SharpThing t => t.Object, _ => throw new InvalidOperationException() };
 
 				// Only check if we have valid source and destination (not NOTHING)
 				if (destObj.DBRef.Number > 0 && sourceObj.DBRef.Number > 0)
@@ -432,11 +420,7 @@ public class WarningService(
 						try
 						{
 							var returnDest = await returnExit.Location.WithCancellation(CancellationToken.None);
-							var returnDestObj = returnDest.Match(
-								player => player.Object,
-								room => room.Object,
-								thing => thing.Object
-							);
+							var returnDestObj = returnDest.Value switch { SharpPlayer p => p.Object, SharpRoom r => r.Object, SharpThing t => t.Object, _ => throw new InvalidOperationException() };
 
 							if (returnDestObj.DBRef.Equals(sourceObj.DBRef))
 							{
@@ -486,7 +470,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.ThingDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				// Skip things in player inventory as per PennMUSH behavior
 				if (target.IsThing)
@@ -518,7 +502,7 @@ public class WarningService(
 			var drop = await attributeService.GetAttributeAsync(checker, target, "DROP", IAttributeService.AttributeMode.Read, false);
 			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
 
-			if (success.IsT1 || osuccess.IsT1 || drop.IsT1 || odrop.IsT1)
+			if (success.IsNone || osuccess.IsNone || drop.IsNone || odrop.IsNone)
 			{
 				await Complain(checker, target, "thing-msgs", "Thing is missing messages (SUCCESS, OSUCCESS, DROP, or ODROP).");
 				hasWarnings = true;
@@ -526,7 +510,7 @@ public class WarningService(
 
 			// Check locked thing messages: FAILURE
 			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
-			if (failure.IsT1)
+			if (failure.IsNone)
 			{
 				await Complain(checker, target, "thing-msgs", "Thing is missing FAILURE message.");
 				hasWarnings = true;
@@ -546,7 +530,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.PlayerDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "my-desc", "Player is missing description.");
 				hasWarnings = true;
