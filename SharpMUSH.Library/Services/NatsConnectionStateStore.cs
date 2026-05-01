@@ -189,11 +189,14 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			data.LastSeen = DateTimeOffset.UtcNow;
 			var newJson = JsonSerializer.Serialize(data);
 
-			// Unconditional put: ConnectionService already owns the authoritative in-memory
-			// state; NATS is a best-effort replica used for cross-process visibility only.
-			// Under high parallelism the CAS retry loop would fail repeatedly for the same
-			// hot handle (e.g., handle 1 in tests), producing spurious WRN log spam.
-			await _store.PutAsync(connectionKey, newJson, cancellationToken: ct);
+			// Use a revision-checked update so a connection deleted or changed after the read
+			// is not recreated/resurrected by this metadata write. If the conditional update
+			// fails, another actor won the race (including deletion), so treat it as a no-op.
+			var updated = await _store.TryUpdateAsync(connectionKey, newJson, readResult.Value.Revision, cancellationToken: ct);
+			if (!updated.Success)
+			{
+				return;
+			}
 			_logger.LogTrace("Updated metadata for handle {Handle}: {Key}={Value}", handle, key, value);
 		}
 		catch (Exception ex)

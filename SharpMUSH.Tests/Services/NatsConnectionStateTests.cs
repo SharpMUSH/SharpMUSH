@@ -322,10 +322,11 @@ public class NatsConnectionStateTests
 		await store.SetConnectionAsync(handle, connectionData);
 
 		// Act — 10 concurrent metadata updates.
-		// UpdateMetadataAsync uses an unconditional put (last-writer-wins) because
-		// ConnectionService holds the authoritative in-memory state; NATS is a
-		// best-effort cross-process replica only.  Under high concurrency, writes
-		// to the same handle can race and some keys may be overwritten.
+		// UpdateMetadataAsync uses a single-shot revision-checked update (no retry loop)
+		// because ConnectionService holds the authoritative in-memory state; NATS is a
+		// best-effort cross-process replica only. Under high concurrency, writes
+		// to the same handle can race and a later whole-state write can drop keys
+		// added by an earlier writer.
 		// This test verifies the operation completes without errors.
 		var tasks = new List<Task>();
 		for (var i = 0; i < 10; i++)
@@ -339,8 +340,11 @@ public class NatsConnectionStateTests
 
 		var result = await store.GetConnectionAsync(handle);
 
-		// Assert — the store is not corrupted and at least one key was written.
+		// Assert — the store is not corrupted and at least one Key{n}=Value{n} pair survived.
 		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Metadata.Count).IsGreaterThan(0);
+		var survivedKeys = Enumerable.Range(0, 10)
+			.Where(i => result!.Metadata.TryGetValue($"Key{i}", out var v) && v == $"Value{i}")
+			.ToList();
+		await Assert.That(survivedKeys.Count).IsGreaterThan(0);
 	}
 }
