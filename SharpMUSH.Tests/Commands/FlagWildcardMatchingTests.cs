@@ -48,7 +48,11 @@ public class FlagWildcardMatchingTests
 		// Pattern B: "{uniqueName} - NO_COMMAND reset." appears exactly once across the session.
 		var uniqueName = TestIsolationHelpers.GenerateUniqueName("FlagTest2");
 		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
-		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var createMessage = createResult.Message
+			?? throw new InvalidOperationException($"@create {uniqueName} returned a null message.");
+		var createPlainText = createMessage.ToPlainText()
+			?? throw new InvalidOperationException($"@create {uniqueName} message could not be converted to plain text.");
+		var thingDbRef = DBRef.Parse(createPlainText);
 
 		// Set NO_COMMAND flag first
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=NO_COMMAND"));
