@@ -111,7 +111,7 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 			{
 				try
 				{
-					if (msg.Data.ValueKind == JsonValueKind.Undefined)
+					if (msg.Data.ValueKind == JsonValueKind.Undefined || msg.Data.ValueKind == JsonValueKind.Null)
 					{
 						_logger.LogWarning("[NATS-CONSUMER] Null payload on subject {Subject}; acking and skipping.", reg.Subject);
 						await msg.AckAsync(cancellationToken: ct);

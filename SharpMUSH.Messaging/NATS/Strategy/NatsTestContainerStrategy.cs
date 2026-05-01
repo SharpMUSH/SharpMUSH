@@ -10,7 +10,7 @@ namespace SharpMUSH.Messaging.NATS.Strategy;
 public sealed class NatsTestContainerStrategy : NatsStrategy
 {
 	/// <summary>
-	/// The NATS docker image to use. Pinned to the latest 2.x Alpine release.
+	/// The NATS docker image to use. Pinned to a specific 2.x Alpine release.
 	/// </summary>
 	private const string NatsImage = "nats:2.14-alpine";
 
