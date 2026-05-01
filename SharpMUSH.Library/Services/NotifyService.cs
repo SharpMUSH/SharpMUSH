@@ -57,7 +57,7 @@ public class NotifyService(
 		{
 			try
 			{
-				var location = (await sender!.Value.Where()).Object().DBRef;
+				var location = (await sender.Value.Where()).Object().DBRef;
 				var notificationContext = new NotificationContext(Target: who, Location: location, IsRoomBroadcast: false, ExcludedObjects: []);
 				await listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
 			}

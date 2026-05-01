@@ -205,12 +205,9 @@ public partial class SurrealDatabase
 		foreach (var contentKey in records)
 		{
 			var typed = await BuildTypedObjectFromKey(contentKey, ct);
-			if (typed.IsNone) continue;
+			if (typed.IsNone || typed.IsRoom) continue;
 
-			var content = (AnySharpContent?)(typed.IsRoom || typed.IsNone ? null : (AnySharpContent?)typed.WithoutNone().AsContent);
-
-			if (content != null)
-				yield return content.Value;
+			yield return typed.WithoutNone().AsContent;
 		}
 	}
 
