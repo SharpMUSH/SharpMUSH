@@ -1,6 +1,5 @@
 using Mediator;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
@@ -347,7 +346,7 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { thing }.ToAsyncEnumerable();
 
 		// Act - directly exercise Match_List with a prefix
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser,
 			list,
 			player,
@@ -384,7 +383,7 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { thing }.ToAsyncEnumerable();
 
 		// Act - NoPartialMatches disables prefix matching
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser,
 			list,
 			player,
@@ -673,7 +672,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing, hiddenThing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "HiddenObject");
 
@@ -700,7 +699,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Nor"); // prefix — must not match exit
 
@@ -723,7 +722,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "North");
 
@@ -747,7 +746,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "n");
 
@@ -773,7 +772,7 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { exit }.ToAsyncEnumerable();
 
 		// "north" is a prefix of alias "northwest", but exits use exact matching only
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "north");
 
@@ -798,7 +797,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { target }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Admin");
 
@@ -823,7 +822,7 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { target }.ToAsyncEnumerable();
 
 		// "Admin" is a prefix of alias "Administrator"
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Admin");
 
@@ -849,7 +848,7 @@ public class LocateServiceCompatibilityTests
 		// Put prefix first, exact second — exact should win regardless of list order
 		var list = new[] { prefixPlayer, exactPlayer }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Wiz");
 
@@ -878,7 +877,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { coin1, coin2 }.ToAsyncEnumerable();
 
-		var (_, _, curr, rightType, exact, _) = await _locateService.Match_List(
+		(_, _, int curr, int rightType, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Coin");
 
@@ -906,7 +905,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { coin1, coin2 }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.UseLastIfAmbiguous, "Coin");
 
@@ -932,7 +931,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var (_, _, curr, rightType, exact, _) = await _locateService.Match_List(
+		(_, _, int curr, int rightType, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
@@ -962,7 +961,7 @@ public class LocateServiceCompatibilityTests
 		// Partial first, then exact
 		var list = new[] { partialMatch, exactMatch }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
@@ -999,7 +998,7 @@ public class LocateServiceCompatibilityTests
 		// Put ownedThing first so it is found, then foreignThing should be skipped
 		var list = new[] { ownedThing, foreignThing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.OnlyMatchLookerControlledObjects, "Widget");
 
@@ -1025,7 +1024,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "testobject");
 
@@ -1047,7 +1046,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "MYWIDGET");
 
@@ -1077,7 +1076,7 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { sword1, sword2, sword3 }.ToAsyncEnumerable();
 
 		// final=2 means "2nd" — Match_List in English mode counts up to final
-		var (bestMatch, _, curr, _, _, flow) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, ControlFlow flow) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 2, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
@@ -1102,7 +1101,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, flow) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, ControlFlow flow) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 1, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
@@ -1129,7 +1128,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var (_, _, curr, _, _, flow) = await _locateService.Match_List(
+		(_, _, int curr, _, _, ControlFlow flow) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 5, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
@@ -1156,7 +1155,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { targetPlayer, thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.ThingsPreference, "Widget");
 
@@ -1182,7 +1181,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing, targetPlayer }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.PlayersPreference, "Widget");
 
@@ -1294,7 +1293,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference | LocateFlags.NoVisibilityCheck, "TargetObject");
 

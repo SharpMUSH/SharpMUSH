@@ -189,10 +189,8 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(executor, Arg.Is<SharpMessage>(msg =>
-				msg.Match(
-					mstr => mstr.ToString().Contains("Linked") && mstr.ToString().Contains($"#{exitDbRef.Number}") && mstr.ToString().Contains($"#{roomDbRef.Number}"),
-					str => str.Contains("Linked") && str.Contains($"#{exitDbRef.Number}") && str.Contains($"#{roomDbRef.Number}")
-				)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				msg.ToString().Contains("Linked") && msg.ToString().Contains($"#{exitDbRef.Number}") && msg.ToString().Contains($"#{roomDbRef.Number}")
+				), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -212,10 +210,8 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				msg.Match(
-					mstr => mstr.ToString().Contains("Cloned") && mstr.ToString().Contains("CloneObjectTestSource"),
-					str => str.Contains("Cloned") && str.Contains("CloneObjectTestSource")
-				)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				msg.ToString().Contains("Cloned") && msg.ToString().Contains("CloneObjectTestSource")
+				), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

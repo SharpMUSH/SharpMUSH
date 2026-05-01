@@ -60,7 +60,7 @@ public class CachingBehaviorTests
 		// Second call – should come from cache
 		var result2 = await mediator.Send(new GetObjectNodeQuery(dbRef));
 
-		await Assert.That(result1.IsT0).IsEqualTo(result2.IsT0);
+		await Assert.That(result1.IsPlayer).IsEqualTo(result2.IsPlayer);
 	}
 
 	/// <summary>

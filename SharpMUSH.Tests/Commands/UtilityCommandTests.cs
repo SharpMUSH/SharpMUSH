@@ -85,9 +85,8 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				msg.IsT0 &&
 				TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero(#0") &&
-				msg.AsT0.Render("ansi").Contains("\x1b[")),
+				msg.ToMString().Render("ansi").Contains("\x1b[")),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -137,9 +136,8 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				msg.IsT0 &&
 				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1") &&
-				msg.AsT0.Render("ansi").Contains("\x1b[")), 
+				msg.ToMString().Render("ansi").Contains("\x1b[")), 
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -285,7 +283,7 @@ public class UtilityCommandTests
 			.Received(2)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText") &&
-				msg.IsT0 && msg.AsT0.ToString().Contains("\x1b[")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				msg.ToString().Contains("\x1b[")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

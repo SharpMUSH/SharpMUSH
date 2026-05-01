@@ -87,7 +87,7 @@ public class MessageCommandTests
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not SharpMessage msg) return false;
-			var text = msg.Match(ms => ms.ToPlainText(), s => s);
+			var text = msg.ToPlainText();
 			return text == "Message sent to 1 recipient(s).";
 		});
 
@@ -109,7 +109,7 @@ public class MessageCommandTests
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not SharpMessage msg) return false;
-			var text = msg.Match(ms => ms.ToPlainText(), s => s);
+			var text = msg.ToPlainText();
 			return text == "Message sent to 1 recipient(s).";
 		});
 
