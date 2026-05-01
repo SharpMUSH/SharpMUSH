@@ -427,7 +427,7 @@ CREATE (src)-[:AT_LOCATION]->(dest)
 
 		if (parent != null)
 		{
-			var parentKey = parent!.Value.Object().Key;
+			var parentKey = parent.Value.Object().Key;
 			await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (p:Object {key: $parentKey})
 CREATE (o)-[:HAS_PARENT]->(p)
@@ -445,7 +445,7 @@ CREATE (o)-[:HAS_PARENT]->(p)
 
 		if (zone != null)
 		{
-			var zoneKey = zone!.Value.Object().Key;
+			var zoneKey = zone.Value.Object().Key;
 			await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (z:Object {key: $zoneKey})
 CREATE (o)-[:HAS_ZONE]->(z)

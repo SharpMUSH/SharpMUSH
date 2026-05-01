@@ -586,7 +586,7 @@ public partial class SurrealDatabase
 
 		if (parent != null)
 		{
-			var parentKey = parent!.Value.Object().Key;
+			var parentKey = parent.Value.Object().Key;
 			var parentParams = new Dictionary<string, object?>
 			{
 				["key"] = objKey,
@@ -610,7 +610,7 @@ public partial class SurrealDatabase
 
 		if (zone != null)
 		{
-			var zoneKey = zone!.Value.Object().Key;
+			var zoneKey = zone.Value.Object().Key;
 			var zoneParams = new Dictionary<string, object?>
 			{
 				["key"] = objKey,

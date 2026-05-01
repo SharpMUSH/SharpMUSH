@@ -330,12 +330,12 @@ public partial class ArangoDatabase
 		else if (parent is null)
 		{
 			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				parentEdge!.Key, cancellationToken: ct);
+				parentEdge.Key, cancellationToken: ct);
 		}
 		else
 		{
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				parentEdge!.Key, new { _to = toId }, cancellationToken: ct);
+				parentEdge.Key, new { _to = toId }, cancellationToken: ct);
 		}
 	}
 
@@ -360,19 +360,19 @@ public partial class ArangoDatabase
 		{
 			// No existing zone, create new edge
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				new { _from = obj.Object().Id, _to = zone!.Value.Object().Id }, cancellationToken: ct);
+				new { _from = obj.Object().Id, _to = zone.Value.Object().Id }, cancellationToken: ct);
 		}
 		else if (zone is null)
 		{
 			// Removing zone - edge exists (zoneEdge is not null at this point)
 			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				zoneEdge!.Key, cancellationToken: ct);
+				zoneEdge.Key, cancellationToken: ct);
 		}
 		else
 		{
 			// Updating zone - edge exists (zoneEdge is not null at this point)
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				zoneEdge!.Key, new { _to = zone.Value.Object().Id }, cancellationToken: ct);
+				zoneEdge.Key, new { _to = zone.Value.Object().Id }, cancellationToken: ct);
 		}
 	}
 

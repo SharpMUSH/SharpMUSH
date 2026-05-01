@@ -7,7 +7,7 @@ namespace SharpMUSH.Benchmarks;
 [BenchmarkCategory("Database Read", "Memgraph")]
 public class MemgraphReadBenchmarks : MemgraphBaseBenchmark
 {
-	private AnySharpContainer? _masterRoom;
+	private AnySharpContainer _masterRoom;
 
 	public override async ValueTask Setup()
 	{
@@ -26,7 +26,7 @@ public class MemgraphReadBenchmarks : MemgraphBaseBenchmark
 	[Benchmark(Description = "GetContentsAsync(Master Room)")]
 	public async Task GetRoomContents()
 	{
-		await foreach (var _ in _database!.GetContentsAsync(_masterRoom!.Value))
+		await foreach (var _ in _database!.GetContentsAsync(_masterRoom))
 		{ /* enumerate */ }
 	}
 
@@ -50,7 +50,7 @@ public class MemgraphReadBenchmarks : MemgraphBaseBenchmark
 public class MemgraphWriteBenchmarks : MemgraphBaseBenchmark
 {
 	private SharpPlayer? _godPlayer;
-	private AnySharpContainer? _masterRoom;
+	private AnySharpContainer _masterRoom;
 	private int _counter;
 
 	public override async ValueTask Setup()
@@ -64,7 +64,7 @@ public class MemgraphWriteBenchmarks : MemgraphBaseBenchmark
 	public async ValueTask<DBRef> CreateThing()
 	{
 		var name = $"bench_{Interlocked.Increment(ref _counter):X8}";
-		return await _database!.CreateThingAsync(name, _masterRoom!.Value, _godPlayer!, _masterRoom!.Value);
+		return await _database!.CreateThingAsync(name, _masterRoom, _godPlayer!, _masterRoom);
 	}
 
 	[Benchmark(Description = "SetAttributeAsync on #1")]
