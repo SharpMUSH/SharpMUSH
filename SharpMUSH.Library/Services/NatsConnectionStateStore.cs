@@ -176,37 +176,25 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 		try
 		{
 			var connectionKey = GetKey(handle);
-			const int maxRetries = 10;
 
-			for (var retries = 0; retries < maxRetries; retries++)
+			var readResult = await _store.TryGetEntryAsync<string>(connectionKey, cancellationToken: ct);
+			if (!readResult.Success)
 			{
-				// Read current entry including revision for CAS
-				var readResult = await _store.TryGetEntryAsync<string>(connectionKey, cancellationToken: ct);
-				if (!readResult.Success)
-				{
-					_logger.LogWarning("Cannot update metadata for non-existent connection {Handle}", handle);
-					return;
-				}
-
-				var entry = readResult.Value;
-				var data = JsonSerializer.Deserialize<ConnectionStateData>(entry.Value!)!;
-				data.Metadata[key] = value;
-				data.LastSeen = DateTimeOffset.UtcNow;
-				var newJson = JsonSerializer.Serialize(data);
-
-				// CAS: only succeeds if no concurrent write occurred
-				var updateResult = await _store.TryUpdateAsync(connectionKey, newJson, entry.Revision, cancellationToken: ct);
-				if (updateResult.Success)
-				{
-					_logger.LogTrace("Updated metadata for handle {Handle}: {Key}={Value}", handle, key, value);
-					return;
-				}
-
-				// Concurrent modification — back off and retry
-				await Task.Delay(10 * (retries + 1), ct);
+				_logger.LogWarning("Cannot update metadata for non-existent connection {Handle}", handle);
+				return;
 			}
 
-			_logger.LogWarning("Failed to update metadata after {Retries} retries for handle {Handle}", maxRetries, handle);
+			var data = JsonSerializer.Deserialize<ConnectionStateData>(readResult.Value.Value!)!;
+			data.Metadata[key] = value;
+			data.LastSeen = DateTimeOffset.UtcNow;
+			var newJson = JsonSerializer.Serialize(data);
+
+			// Unconditional put: ConnectionService already owns the authoritative in-memory
+			// state; NATS is a best-effort replica used for cross-process visibility only.
+			// Under high parallelism the CAS retry loop would fail repeatedly for the same
+			// hot handle (e.g., handle 1 in tests), producing spurious WRN log spam.
+			await _store.PutAsync(connectionKey, newJson, cancellationToken: ct);
+			_logger.LogTrace("Updated metadata for handle {Handle}: {Key}={Value}", handle, key, value);
 		}
 		catch (Exception ex)
 		{
