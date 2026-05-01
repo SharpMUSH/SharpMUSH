@@ -229,7 +229,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 			.Enrich.FromLogContext()
 			.MinimumLevel.Verbose()
 			.MinimumLevel.Override("SurrealDb", LogEventLevel.Error)
-		.MinimumLevel.Override("NATS", LogEventLevel.Error);
+			.MinimumLevel.Override("NATS", LogEventLevel.Error);
 
 		// Only write to console if explicitly enabled via environment variable
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
