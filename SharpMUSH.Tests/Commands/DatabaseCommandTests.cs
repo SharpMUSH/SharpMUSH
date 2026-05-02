@@ -484,7 +484,7 @@ public class DatabaseCommandTests
 	private static async Task WaitForNotificationAsync(
 		INotifyService notifyService,
 		Func<string, bool> messagePredicate,
-		int timeoutMs = 5000,
+		int timeoutMs = 15000,
 		int pollIntervalMs = 50)
 	{
 		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);

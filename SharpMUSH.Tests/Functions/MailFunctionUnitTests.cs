@@ -243,12 +243,19 @@ public class MailFunctionUnitTests
 	}
 
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test has race condition with parallel test execution - needs investigation")]
 	public async Task Mailstatus_ValidMessage_ReturnsStatusFormat()
 	{
-		// Get status of any message
-		var result = (await Parser.FunctionParse(MModule.single("mailstatus(1)")))?.Message!;
+		// Use maillist() to obtain the actual mail number rather than assuming it is always 1.
+		var listResult = (await Parser.FunctionParse(MModule.single("maillist()")))?.Message!;
+		var mailList = listResult.ToPlainText()!.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(mailList.Length).IsGreaterThan(0).Because("EnsureTestMailSetup should have created at least one mail");
+
+		// maillist() returns entries in "folder:number" format — take the number part of the first entry.
+		var firstEntry = mailList[0].Split(':');
+		await Assert.That(firstEntry.Length).IsEqualTo(2).Because("each maillist entry should be in folder:number format");
+		var mailNumber = firstEntry[1];
+
+		var result = (await Parser.FunctionParse(MModule.single($"mailstatus({mailNumber})")))?.Message!;
 		var status = result.ToPlainText();
 		// Status should be 5 characters in NCUF+ format
 		await Assert.That(status).Length().IsEqualTo(5);

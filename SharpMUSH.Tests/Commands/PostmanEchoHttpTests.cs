@@ -20,6 +20,7 @@ namespace SharpMUSH.Tests.Commands;
 /// can key on a string that is guaranteed to belong to that test's own response.
 /// </summary>
 [NotInParallel]
+[Category("External")]
 public class PostmanEchoHttpTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -31,7 +32,7 @@ public class PostmanEchoHttpTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	private const string PostmanEchoBase = "https://postman-echo.com";
-	private const int MaxWaitSeconds = 15;
+	private const int MaxWaitSeconds = 60;
 
 	/// <summary>
 	/// Generates a unique MUSH attribute name for a test (max 20 uppercase chars).
@@ -84,8 +85,9 @@ public class PostmanEchoHttpTests
 		Func<SharpMessage, bool> predicate,
 		TimeSpan? timeout = null)
 	{
+		var timeoutSeconds = timeout?.TotalSeconds ?? MaxWaitSeconds;
 		var deadline = Stopwatch.GetTimestamp()
-			+ Stopwatch.Frequency * (long)(timeout?.TotalSeconds ?? MaxWaitSeconds);
+			+ Stopwatch.Frequency * (long)timeoutSeconds;
 
 		while (Stopwatch.GetTimestamp() < deadline)
 		{
@@ -103,6 +105,9 @@ public class PostmanEchoHttpTests
 
 			await Task.Delay(200);
 		}
+
+		throw new TimeoutException(
+			$"Timed out after {timeoutSeconds}s waiting for expected @http callback notification from postman-echo.");
 	}
 
 	[Test]

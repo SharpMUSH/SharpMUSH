@@ -91,14 +91,50 @@ public static partial class HelperFunctions
 		=> await obj.HasPower("Puppet");
 
 	public static async ValueTask<bool> HasPower(this AnySharpObject obj, string power)
-		=> await obj.Object.Powers.Value
-			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
+	{
+		try
+		{
+			return await obj.Object.Powers.Value
+				.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
 										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
+		}
+		catch (NotSupportedException)
+		{
+			// Core.Arango 3.12.x can throw NotSupportedException (or InvalidOperationException) from
+			// ExecuteStreamAsync.DisposeAsync() in a race condition. Treat as "no power" so callers
+			// (e.g. PermissionService.Controls) degrade gracefully instead of crashing or silently
+			// aborting the enclosing operation.
+			return false;
+		}
+		catch (InvalidOperationException)
+		{
+			// Same as NotSupportedException above.
+			return false;
+		}
+	}
 
 	public static async ValueTask<bool> HasPower(this SharpObject obj, string power)
-		=> await obj.Powers.Value
-			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
+	{
+		try
+		{
+			return await obj.Powers.Value
+				.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
 										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
+		}
+		catch (NotSupportedException)
+		{
+			// Core.Arango 3.12.x can throw NotSupportedException (or InvalidOperationException) from
+			// ExecuteStreamAsync.DisposeAsync() in a race condition. Treat as "no power" so callers
+			// (e.g. PermissionService.Controls) degrade gracefully instead of crashing or silently
+			// aborting the enclosing operation.
+			return false;
+		}
+		catch (InvalidOperationException)
+		{
+			// Same as NotSupportedException above.
+			return false;
+		}
+	}
 
 	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections,
 		IAttributeService attributes)
