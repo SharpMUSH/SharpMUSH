@@ -73,7 +73,7 @@ public class TextFileService : ITextFileService
 
 		lock (_indexLock)
 		{
-			if (category != null && _categoryIndexes.TryGetValue(category, out var entries))
+			if (category is not null && _categoryIndexes.TryGetValue(category, out var entries))
 			{
 				return string.Join(separator, entries.Keys.OrderBy(k => k));
 			}
@@ -97,7 +97,7 @@ public class TextFileService : ITextFileService
 		IndexEntry? indexEntry = null;
 		lock (_indexLock)
 		{
-			if (category != null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
+			if (category is not null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
 			{
 				categoryEntries.TryGetValue(entryName, out indexEntry);
 			}
@@ -177,7 +177,7 @@ public class TextFileService : ITextFileService
 		{
 			IEnumerable<string> entries;
 
-			if (category != null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
+			if (category is not null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
 			{
 				entries = categoryEntries.Keys;
 			}
@@ -201,7 +201,7 @@ public class TextFileService : ITextFileService
 		IEnumerable<KeyValuePair<string, IndexEntry>> entries;
 		lock (_indexLock)
 		{
-			if (category != null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
+			if (category is not null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
 			{
 				entries = categoryEntries.ToList();
 			}
@@ -287,13 +287,13 @@ public class TextFileService : ITextFileService
 		var fileInfo = new FileInfo(filePath);
 		var result = Helpfiles.IndexMarkdownPositions(fileInfo);
 
-		if (result.IsT1)
+		if (result.IsError)
 		{
-			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, result.AsT1.Value);
+			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, result.AsError.Value);
 			return Task.CompletedTask;
 		}
 
-		var entries = result.AsT0;
+		var entries = result.AsIndex;
 
 		foreach (var (entryName, positions) in entries)
 		{

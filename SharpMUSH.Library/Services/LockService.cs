@@ -110,7 +110,7 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 	public static string Get(LockType standardType, AnySharpObject lockee)
 	{
 		var defaultLockData = new Models.SharpLockData { LockString = "#TRUE", Flags = LockFlags.Default };
-		return lockee.Object().Locks.GetValueOrDefault(standardType.ToString(), defaultLockData).LockString;
+		return lockee.Object.Locks.GetValueOrDefault(standardType.ToString(), defaultLockData).LockString;
 	}
 
 	public bool Evaluate(
@@ -148,7 +148,7 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE")
 			return true;
 
-		return cache.GetOrSet($"lock:{gated.Object().DBRef}:{standardType.ToString()}", bep.Compile(lockString))(
+		return cache.GetOrSet($"lock:{gated.Object.DBRef}:{standardType.ToString()}", bep.Compile(lockString))(
 			gated, unlocker);
 	}
 
@@ -157,7 +157,7 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		IEnumerable<AnySharpObject> gated,
 		AnySharpObject unlocker)
 		=> gated.Select(g =>
-			cache.GetOrSet($"lock:{g.Object().DBRef}:{standardType.ToString()}", bep.Compile(Get(standardType, g)))(g,
+			cache.GetOrSet($"lock:{g.Object.DBRef}:{standardType.ToString()}", bep.Compile(Get(standardType, g)))(g,
 				unlocker));
 
 	public bool Validate(string lockString, AnySharpObject lockee)
@@ -171,8 +171,8 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		// BEP is in charge of notifying as of this current draft.
 		if (!bep.Validate(lockString, lockee)) return false;
 
-		cache.Set($"lock:{lockee.Object().DBRef}:{standardType.ToString()}", bep.Compile(lockString));
-		_ = med.Send(new SetLockCommand(lockee.Object(), standardType.ToString(), lockString)).AsTask().Result;
+		cache.Set($"lock:{lockee.Object.DBRef}:{standardType.ToString()}", bep.Compile(lockString));
+		_ = med.Send(new SetLockCommand(lockee.Object, standardType.ToString(), lockString)).AsTask().Result;
 
 		return true;
 	}

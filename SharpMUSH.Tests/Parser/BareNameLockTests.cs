@@ -47,7 +47,7 @@ public class BareNameLockTests
 	{
 		var bep = BooleanParser;
 		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
-		var dbRef = player.Object().DBRef;
+		var dbRef = player.Object.DBRef;
 
 		var normalized = bep.Normalize($"#{dbRef.Number}");
 

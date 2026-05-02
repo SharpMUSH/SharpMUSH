@@ -5,7 +5,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<IsPackable>false</IsPackable>
-		<LangVersion>default</LangVersion>
+		<LangVersion>preview</LangVersion>
 		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
 		<NoWarn>TUnit0038</NoWarn>
 	</PropertyGroup>

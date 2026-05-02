@@ -1,7 +1,5 @@
 ﻿using Mediator;
 using NaturalSort.Extension;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -36,7 +34,7 @@ public class AttributeService(
 
 		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new SharpError(Errors.ErrorObjectAttributeString);
 		}
 
 		Func<AnySharpObject, AnySharpObject, SharpAttribute[], ValueTask<bool>> permissionPredicate = mode switch
@@ -57,7 +55,7 @@ public class AttributeService(
 		};
 
 		var attributeResult = mediator.CreateStream(
-			new GetAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, checkParent));
+			new GetAttributeWithInheritanceQuery(obj.Object.DBRef, attributePath, checkParent));
 
 		var result = await attributeResult.FirstOrDefaultAsync();
 
@@ -68,7 +66,7 @@ public class AttributeService(
 
 		return await permissionPredicate(executor, obj, result.Attributes)
 			? result.Attributes
-			: new Error<string>(permissionFailureType);
+			: new SharpError(permissionFailureType);
 	}
 
 	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor,
@@ -77,7 +75,7 @@ public class AttributeService(
 	{
 		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new SharpError(Errors.ErrorObjectAttributeString);
 		}
 
 		var attributePath = attribute.Split('`');
@@ -96,7 +94,7 @@ public class AttributeService(
 		};
 
 		var attributeResult = mediator.CreateStream(
-			new GetLazyAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, checkParent));
+			new GetLazyAttributeWithInheritanceQuery(obj.Object.DBRef, attributePath, checkParent));
 
 		var result = await attributeResult.FirstOrDefaultAsync();
 
@@ -107,7 +105,7 @@ public class AttributeService(
 
 		return await permissionPredicate(executor, obj, result.Attributes)
 			? result.Attributes
-			: new Error<string>(permissionFailureType);
+			: new SharpError(permissionFailureType);
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -171,9 +169,9 @@ public class AttributeService(
 					{
 						Arguments = args,
 						EnvironmentRegisters = args,
-						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attributeName),
+						CurrentEvaluation = new DBAttribute(obj.Object.DBRef, attributeName),
 						Function = attributeName,
-						Executor = obj.Object().DBRef,
+						Executor = obj.Object.DBRef,
 						Caller = s.Executor
 					},
 				async newParser =>
@@ -195,7 +193,7 @@ public class AttributeService(
 	public async ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj,
 		int depth = 1)
 	{
-		var actualObject = obj.Object();
+		var actualObject = obj.Object;
 		var attributes = actualObject.Attributes.Value;
 
 		return depth <= 1
@@ -210,7 +208,7 @@ public class AttributeService(
 		AnySharpObject obj, int depth = 1)
 	{
 		await ValueTask.CompletedTask;
-		var actualObject = obj.Object();
+		var actualObject = obj.Object;
 		var attributes = actualObject.LazyAttributes.Value;
 
 		return depth <= 1
@@ -351,12 +349,8 @@ public class AttributeService(
 			await locateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objPlainText,
 				LocateFlags.All);
 
-		return maybeObject switch
-		{
-			{ IsError: true } => maybeObject.AsError.Message!,
-			_ => await EvaluateAttributeFunctionAsync(parser, executor, maybeObject.AsSharpObject, attribute.ToPlainText(),
-				args, evalParent, ignorePermissions)
-		};
+		if (maybeObject.IsError) return maybeObject.AsError.Message!;
+		return await EvaluateAttributeFunctionAsync(parser, executor, maybeObject.AsSharpObject, attribute.ToPlainText(), args, evalParent, ignorePermissions);
 	}
 
 	private async ValueTask<ImmutableList<SharpAttribute>> GetVisibleAttributesAsync(
@@ -426,7 +420,7 @@ public class AttributeService(
 	{
 		// Create stream of attributes matching the pattern
 		var attributes = mediator.CreateStream(
-			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
+			new GetAttributesQuery(obj.Object.DBRef, attributePattern.ToUpper(), checkParents, mode));
 
 		// Filter based on permissions and return sorted results
 		// Permission check is done per-attribute for fine-grained access control
@@ -451,7 +445,7 @@ public class AttributeService(
 	{
 		// Create lazy stream of attributes
 		var attributes = mediator.CreateStream(
-			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
+			new GetLazyAttributesQuery(obj.Object.DBRef, attributePattern.ToUpper(), checkParents, mode));
 
 		// Return lazy-evaluated, permission-filtered, sorted results
 		return LazySharpAttributesOrError
@@ -460,7 +454,7 @@ public class AttributeService(
 				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
 	}
 
-	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
+	public async ValueTask<SharpResult> SetAttributeFlagAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, string flag)
 	{
 		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Execute);
@@ -471,7 +465,7 @@ public class AttributeService(
 
 		if (returnedAttribute.IsNone)
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new SharpError(Errors.ErrorObjectAttributeString);
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
@@ -481,7 +475,7 @@ public class AttributeService(
 
 		if (returnedFlag is null)
 		{
-			return new Error<string>("Flag Found");
+			return new SharpError("Flag Found");
 		}
 
 		// Check if the flag is already set to avoid redundant operations
@@ -490,19 +484,19 @@ public class AttributeService(
 		{
 			await notifyService.Notify(executor,
 				$"Flag {returnedFlag.Name} is already set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
-			return new Success();
+			return new SharpSuccess();
 		}
 
-		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
+		await mediator.Send(new SetAttributeFlagCommand(obj.Object.DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag));
 
 		await notifyService.Notify(executor,
 			$"Flag {returnedFlag.Name} set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
 
-		return new Success();
+		return new SharpSuccess();
 	}
 
-	public async ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor,
+	public async ValueTask<SharpResult> UnsetAttributeFlagAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, string flag)
 	{
 		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Execute);
@@ -513,7 +507,7 @@ public class AttributeService(
 
 		if (returnedAttribute.IsNone)
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new SharpError(Errors.ErrorObjectAttributeString);
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
@@ -523,7 +517,7 @@ public class AttributeService(
 
 		if (returnedFlag is null)
 		{
-			return new Error<string>("Flag Found");
+			return new SharpError("Flag Found");
 		}
 
 		// Check if the flag is actually set before unsetting
@@ -532,30 +526,30 @@ public class AttributeService(
 		{
 			await notifyService.Notify(executor,
 				$"Flag {returnedFlag.Name} is not set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
-			return new Success();
+			return new SharpSuccess();
 		}
 
-		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
+		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object.DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag));
 
 		await notifyService.Notify(executor,
 			$"Flag {returnedFlag.Name} unset from attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
 
-		return new Success();
+		return new SharpSuccess();
 	}
 
-	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor,
+	public async ValueTask<SharpResult> SetAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attribute,
 		MString value)
 	{
 		if (!await ps.Controls(executor, obj))
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new SharpError(Errors.ErrorAttrSetPermissions);
 		}
 
 		var attrPath = attribute.Split('`');
-		var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath));
+		var attr = mediator.CreateStream(new GetAttributeQuery(obj.Object.DBRef, attrPath));
 
 		// Check both attribute permissions AND object permissions
 		// Attribute permissions: executor must be able to set each attribute in the path
@@ -564,13 +558,13 @@ public class AttributeService(
 
 		if (!permission)
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new SharpError(Errors.ErrorAttrSetPermissions);
 		}
 
-		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
+		await mediator.Send(new SetAttributeCommand(obj.Object.DBRef, attrPath, value,
+			await executor.Object.Owner.WithCancellation(CancellationToken.None)));
 
-		return new Success();
+		return new SharpSuccess();
 	}
 
 	/// <summary>
@@ -582,7 +576,7 @@ public class AttributeService(
 	/// <param name="patternMode"></param>
 	/// <param name="clearMode"></param>
 	/// <returns></returns>
-	public async ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor,
+	public async ValueTask<SharpResult> ClearAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attributePattern,
 		IAttributeService.AttributePatternMode patternMode,
@@ -592,17 +586,17 @@ public class AttributeService(
 
 		if (!await ps.Controls(executor, obj))
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new SharpError(Errors.ErrorAttrSetPermissions);
 		}
 
-		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
+		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object.DBRef, attributePattern, false, patternMode));
 
 		var attrArr = await attr.ToArrayAsync();
 
 		if (attrArr.Length == 0
 				|| !await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new SharpError(Errors.ErrorAttrSetPermissions);
 		}
 
 		// For wildcard patterns (used by @wipe), use WipeAttributeCommand to fully delete the
@@ -613,11 +607,11 @@ public class AttributeService(
 		{
 			var pathParts = attrItem.LongName!.Split('`');
 			if (isWipe)
-				await mediator.Send(new WipeAttributeCommand(obj.Object().DBRef, pathParts));
+				await mediator.Send(new WipeAttributeCommand(obj.Object.DBRef, pathParts));
 			else
-				await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, pathParts));
+				await mediator.Send(new ClearAttributeCommand(obj.Object.DBRef, pathParts));
 		}
 
-		return new Success();
+		return new SharpSuccess();
 	}
 }

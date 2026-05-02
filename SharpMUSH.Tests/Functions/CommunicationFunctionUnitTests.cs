@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -34,7 +33,7 @@ public class CommunicationFunctionUnitTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(x => TestHelpers.MessagePlainTextEquals(x, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(x => TestHelpers.MessagePlainTextEquals(x, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -108,7 +107,7 @@ public class CommunicationFunctionUnitTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg =>
+				Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessageEquals(msg, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
 	}
 

@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -65,7 +64,7 @@ public class FlagWildcardMatchingTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg =>
+				Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessagePlainTextEquals(msg, $"{uniqueName} - NO_COMMAND reset.")),
 				(AnySharpObject?)null, INotifyService.NotificationType.Announce);
 	}
@@ -112,7 +111,7 @@ public class FlagWildcardMatchingTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg =>
+				Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessagePlainTextEquals(msg, $"{uniqueName} - VISUAL reset.")),
 				(AnySharpObject?)null, INotifyService.NotificationType.Announce);
 	}

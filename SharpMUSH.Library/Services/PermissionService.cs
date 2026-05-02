@@ -34,7 +34,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 									|| (!compressedAttribute.IsWizard()
 											&& (!compressedAttribute.IsLocked()
 													|| await compressedAttribute.Owner.WithCancellation(CancellationToken.None) ==
-													await target.Object().Owner.WithCancellation(CancellationToken.None)))));
+													await target.Object.Owner.WithCancellation(CancellationToken.None)))));
 	}
 
 	public async ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
@@ -56,8 +56,8 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (finalAttr.IsLocked())
 		{
 			var attrOwner = await finalAttr.Owner.WithCancellation(CancellationToken.None);
-			var targetOwner = await target.Object().Owner.WithCancellation(CancellationToken.None);
-			return (attrOwner?.Id == executor.Id())
+			var targetOwner = await target.Object.Owner.WithCancellation(CancellationToken.None);
+			return (attrOwner?.Id == executor.Id)
 						 || (attrOwner?.Id == targetOwner?.Id && await executor.Owns(target));
 		}
 
@@ -158,7 +158,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (await who.HasPower("guest"))
 			return false;
 
-		if (who.Id() == target.Id())
+		if (who.Id == target.Id)
 			return true;
 
 		if (who.IsGod())
@@ -186,7 +186,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		// If zone_control_zmp_only is false, check if target has a zone and if who passes the Zone_Lock
 		if (!options.CurrentValue.Database.ZoneControlZmpOnly)
 		{
-			var targetZone = await target.Object().Zone.WithCancellation(CancellationToken.None);
+			var targetZone = await target.Object.Zone.WithCancellation(CancellationToken.None);
 			if (!targetZone.IsNone && lockService.Evaluate(LockType.Zone, targetZone.Known, who))
 			{
 				return true;
@@ -197,7 +197,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		// If target's owner has SHARED flag and who passes the owner's Zone_Lock
 		if (!target.IsPlayer)
 		{
-			var targetOwner = await target.Object().Owner.WithCancellation(CancellationToken.None);
+			var targetOwner = await target.Object.Owner.WithCancellation(CancellationToken.None);
 			var ownerObject = new AnySharpObject(targetOwner);
 			if (await ownerObject.HasFlag("SHARED"))
 			{
@@ -212,14 +212,14 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	}
 
 	public async ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee)
-		=> examiner.Object().DBRef == examinee.Object().DBRef
+		=> examiner.Object.DBRef == examinee.Object.DBRef
 			 || await Controls(examiner, examinee)
 			 || await examiner.IsSee_All()
 			 || (await examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
 
 	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
 	{
-		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;
+		if (from.Id == to.Id || from.IsRoom || to.IsRoom) return true;
 
 		if (type.HasFlag(IPermissionService.InteractType.Hear) && !lockService.Evaluate(LockType.Interact, to, from))
 			return false;
@@ -230,8 +230,8 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		var fromStep = from.MinusRoom();
 		var toStep = to.MinusRoom();
 		
-		 return fromStep.Object().Id == (await toStep.Location()).Object().Id
-		    || toStep.Object().Id == (await fromStep.Location()).Object().Id
+		 return fromStep.Object.Id == (await toStep.Location()).Object.Id
+		    || toStep.Object.Id == (await fromStep.Location()).Object.Id
 		    || await Controls(to, from);
 		    */
 		return await ValueTask.FromResult(true);
@@ -270,11 +270,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	/// <param name="thing">Against what thing?</param>
 	/// <returns>Whether or not they pass te basic lock.</returns>
 	public ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing)
-		=> ValueTask.FromResult(thing switch
-		{
-			{ IsNone: true } => false,
-			_ => PassesLock(who, thing.Known, LockType.Basic)
-		});
+		=> ValueTask.FromResult(thing.IsNone ? false : PassesLock(who, thing.Known, LockType.Basic));
 
 	public ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
 	{
@@ -329,7 +325,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	public async ValueTask<bool> ChannelCanModifyAsync(AnySharpObject target, SharpChannel channel) =>
 		await target.IsWizard()
-		|| (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id()
+		|| (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id
 		|| (
 			!await target.HasPower("guest")
 			&& await ChannelCanAccess(target, channel)
@@ -344,7 +340,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 				 && lockService.Evaluate(channel.SeeLock, channel, target)
 			 )
 			 || (
-				 await channel.Members.Value.AnyAsync(x => x.Member.Id() == target.Id())
+				 await channel.Members.Value.AnyAsync(x => x.Member.Id == target.Id)
 				 && await ChannelCanSpeak(target, channel)
 			 );
 
@@ -359,11 +355,11 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> ChannelCanNukeAsync(AnySharpObject target, SharpChannel channel)
 		=> await target.IsWizard()
 			 || (await channel.Owner.WithCancellation(CancellationToken.None)).Id ==
-			 (await target.Object().Owner.WithCancellation(CancellationToken.None)).Id;
+			 (await target.Object.Owner.WithCancellation(CancellationToken.None)).Id;
 
 	public async ValueTask<bool> ChannelCanDecomposeAsync(AnySharpObject target, SharpChannel channel)
 		=> await target.IsSee_All()
-			 || (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id()
+			 || (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id
 			 || await ChannelCanModifyAsync(target, channel);
 
 	public async ValueTask<bool> CanNoSpoof(AnySharpObject executor)

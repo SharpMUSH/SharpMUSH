@@ -5,7 +5,6 @@ using DotNext.Threading;
 using MarkupString;
 using Mediator;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -69,7 +68,7 @@ public partial class ArangoDatabase
 		CancellationToken ct = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v,e IN 1..1 OUTBOUND {target.Object().Id} GRAPH {DatabaseConstants.GraphFlags} FILTER v._id == {flag.Id} RETURN e._key",
+			$"FOR v,e IN 1..1 OUTBOUND {target.Object.Id} GRAPH {DatabaseConstants.GraphFlags} FILTER v._id == {flag.Id} RETURN e._key",
 			cancellationToken: ct);
 		return result.FirstOrDefault();
 	}
@@ -78,7 +77,7 @@ public partial class ArangoDatabase
 		CancellationToken ct = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v,e IN 1..1 OUTBOUND {target.Object().Id} GRAPH {DatabaseConstants.GraphPowers} FILTER v._id == {flag.Id} RETURN e._key",
+			$"FOR v,e IN 1..1 OUTBOUND {target.Object.Id} GRAPH {DatabaseConstants.GraphPowers} FILTER v._id == {flag.Id} RETURN e._key",
 			cancellationToken: ct);
 		return result.FirstOrDefault();
 	}
@@ -90,7 +89,7 @@ public partial class ArangoDatabase
 		if (edge is not null) return false;
 
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphFlags, DatabaseConstants.HasFlags,
-			new SharpEdgeCreateRequest(target.Object().Id!, flag.Id!), cancellationToken: ct);
+			new SharpEdgeCreateRequest(target.Object.Id!, flag.Id!), cancellationToken: ct);
 
 		return true;
 	}
@@ -102,7 +101,7 @@ public partial class ArangoDatabase
 		if (edge is not null) return false;
 
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphPowers, DatabaseConstants.HasPowers,
-			new SharpEdgeCreateRequest(dbref.Object().Id!, power.Id!), cancellationToken: ct);
+			new SharpEdgeCreateRequest(dbref.Object.Id!, power.Id!), cancellationToken: ct);
 
 		return true;
 	}

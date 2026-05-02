@@ -37,7 +37,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Flags:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Flags:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -167,7 +167,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Powers:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Powers:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -312,7 +312,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
@@ -342,7 +342,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
@@ -384,7 +384,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Mediator.Send(new DeletePowerCommand(powerName));
@@ -414,7 +414,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Mediator.Send(new DeletePowerCommand(powerName));
@@ -443,8 +443,8 @@ public class FlagAndPowerCommandTests
 
 		// Verify the TRUST flag was set by checking the database state directly
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
-		await Assert.That(newObject.Object()).IsNotNull();
-		var flags = await newObject.Object()!.Flags.Value.ToArrayAsync();
+		await Assert.That(newObject.Object).IsNotNull();
+		var flags = await newObject.Object!.Flags.Value.ToArrayAsync();
 
 		await Assert.That(flags.Any(f => f.Name.Equals("TRUST", StringComparison.OrdinalIgnoreCase))).IsTrue();
 

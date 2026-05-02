@@ -59,13 +59,13 @@ public class ChannelMembershipDebugTests
 		Console.WriteLine($"Initial member count: {initialMembers.Count}");
 		foreach (var member in initialMembers)
 		{
-			Console.WriteLine($"  Member Object ID: {member.Member.Object().Id}");
-			Console.WriteLine($"  Member DBRef: {member.Member.Object().DBRef}");
-			Console.WriteLine($"  Member Id(): {member.Member.Id()}");
+			Console.WriteLine($"  Member Object ID: {member.Member.Object.Id}");
+			Console.WriteLine($"  Member DBRef: {member.Member.Object.DBRef}");
+			Console.WriteLine($"  Member Id(): {member.Member.Id}");
 		}
 		Console.WriteLine($"Expected: 1 member (the owner)");
 		await Assert.That(initialMembers.Count).IsEqualTo(1);
-		await Assert.That(initialMembers[0].Member.Id()).IsEqualTo(player.Id);
+		await Assert.That(initialMembers[0].Member.Id).IsEqualTo(player.Id);
 
 		// Step 4: Check via GetMemberChannelsAsync
 		Console.WriteLine("\n--- Step 4: Checking player's channel list via GetMemberChannelsAsync ---");
@@ -91,8 +91,8 @@ public class ChannelMembershipDebugTests
 		Console.WriteLine($"Member count after remove: {membersAfterRemove.Count}");
 		foreach (var member in membersAfterRemove)
 		{
-			Console.WriteLine($"  Member Object ID: {member.Member.Object().Id}");
-			Console.WriteLine($"  Member DBRef: {member.Member.Object().DBRef}");
+			Console.WriteLine($"  Member Object ID: {member.Member.Object.Id}");
+			Console.WriteLine($"  Member DBRef: {member.Member.Object.DBRef}");
 		}
 
 		// Step 7: Check player's channel list after removal via GetMemberChannelsAsync
@@ -121,8 +121,8 @@ public class ChannelMembershipDebugTests
 		Console.WriteLine($"Member count after add: {membersAfterAdd.Count}");
 		foreach (var member in membersAfterAdd)
 		{
-			Console.WriteLine($"  Member Object ID: {member.Member.Object().Id}");
-			Console.WriteLine($"  Member DBRef: {member.Member.Object().DBRef}");
+			Console.WriteLine($"  Member Object ID: {member.Member.Object.Id}");
+			Console.WriteLine($"  Member DBRef: {member.Member.Object.DBRef}");
 		}
 
 		// Step 10: Check player's channel list after adding back
@@ -135,7 +135,7 @@ public class ChannelMembershipDebugTests
 		// ASSERTION: Member should be added back
 		Console.WriteLine("\n--- Asserting: Member should be added back ---");
 		await Assert.That(membersAfterAdd.Count).IsEqualTo(1);
-		await Assert.That(membersAfterAdd[0].Member.Id()).IsEqualTo(player.Id);
+		await Assert.That(membersAfterAdd[0].Member.Id).IsEqualTo(player.Id);
 		await Assert.That(isInListAfterAdd).IsTrue();
 
 		// Cleanup

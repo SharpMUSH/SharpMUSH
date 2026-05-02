@@ -2,7 +2,6 @@ using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -141,20 +140,21 @@ CREATE (m)-[:SENT_MAIL]->(o)
 	public async ValueTask UpdateMailAsync(string mailId, MailUpdate commandMail, CancellationToken cancellationToken = default)
 	{
 		var mailKey = ExtractKeyString(mailId);
-		switch (commandMail)
+		if (commandMail.IsReadEdit)
 		{
-			case { IsReadEdit: true }:
-				await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.read = $val, m.fresh = false", new { key = mailKey, val = commandMail.AsReadEdit }, cancellationToken);
-				return;
-			case { IsClearEdit: true }:
-				await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.cleared = $val", new { key = mailKey, val = commandMail.AsClearEdit }, cancellationToken);
-				return;
-			case { IsTaggedEdit: true }:
-				await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.tagged = $val", new { key = mailKey, val = commandMail.AsTaggedEdit }, cancellationToken);
-				return;
-			case { IsUrgentEdit: true }:
-				await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.urgent = $val", new { key = mailKey, val = commandMail.AsUrgentEdit }, cancellationToken);
-				return;
+			await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.read = $val, m.fresh = false", new { key = mailKey, val = commandMail.AsReadEdit }, cancellationToken);
+		}
+		else if (commandMail.IsClearEdit)
+		{
+			await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.cleared = $val", new { key = mailKey, val = commandMail.AsClearEdit }, cancellationToken);
+		}
+		else if (commandMail.IsTaggedEdit)
+		{
+			await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.tagged = $val", new { key = mailKey, val = commandMail.AsTaggedEdit }, cancellationToken);
+		}
+		else if (commandMail.IsUrgentEdit)
+		{
+			await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.urgent = $val", new { key = mailKey, val = commandMail.AsUrgentEdit }, cancellationToken);
 		}
 	}
 

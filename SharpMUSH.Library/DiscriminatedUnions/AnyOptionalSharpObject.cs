@@ -1,34 +1,60 @@
-﻿using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnyOptionalSharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>
+/// <summary>
+/// A union of SharpPlayer, SharpRoom, SharpExit, SharpThing, and None.
+/// Replaces AnyOptionalSharpObject : OneOfBase&lt;SharpPlayer, SharpRoom, SharpExit, SharpThing, None&gt;.
+/// </summary>
+public union AnyOptionalSharpObject(SharpPlayer, SharpRoom, SharpExit, SharpThing, None)
 {
-	public AnyOptionalSharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> input) : base(input) { }
-	public static implicit operator AnyOptionalSharpObject(SharpPlayer x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(SharpRoom x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(SharpExit x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(SharpThing x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(None x) => new(x);
+	public bool IsPlayer => Value is SharpPlayer;
+	public bool IsRoom   => Value is SharpRoom;
+	public bool IsExit   => Value is SharpExit;
+	public bool IsThing  => Value is SharpThing;
+	public bool IsNone   => Value is null or None;
 
-	public bool IsPlayer => IsT0;
-	public bool IsRoom => IsT1;
-	public bool IsExit => IsT2;
-	public bool IsThing => IsT3;
-	public bool IsNone => IsT4;
+	public SharpPlayer AsPlayer => (SharpPlayer)Value!;
+	public SharpRoom   AsRoom   => (SharpRoom)Value!;
+	public SharpExit   AsExit   => (SharpExit)Value!;
+	public SharpThing  AsThing  => (SharpThing)Value!;
 
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpRoom AsRoom => AsT1;
-	public SharpExit AsExit => AsT2;
-	public SharpThing AsThing => AsT3;
-	public AnySharpObject Known => Match(
-		player => new AnySharpObject(player),
-		room => new AnySharpObject(room),
-		exit => new AnySharpObject(exit),
-		thing => new AnySharpObject(thing),
+	public SharpObject? Object => Value switch
+	{
+		SharpPlayer p => p.Object,
+		SharpRoom   r => r.Object,
+		SharpExit   e => e.Object,
+		SharpThing  t => t.Object,
+		_ => null
+	};
+
+	public string? Id => Value switch
+	{
+		SharpPlayer p => p.Id,
+		SharpRoom   r => r.Id,
+		SharpExit   e => e.Id,
+		SharpThing  t => t.Id,
+		_ => null
+	};
+
+	public AnySharpObject Known => Value switch
+	{
+		SharpPlayer p => p,
+		SharpRoom   r => r,
+		SharpExit   e => e,
+		SharpThing  t => t,
 		_ => throw new ArgumentOutOfRangeException()
-		);
+	};
+
+	/// <summary>
+	/// Converts Player, Room, or Thing to an <see cref="AnyOptionalSharpContainer"/>.
+	/// Exit and None both map to <see cref="None"/>.
+	/// </summary>
+	public AnyOptionalSharpContainer AsOptionalContainer => Value switch
+	{
+		SharpPlayer p => (AnyOptionalSharpContainer)p,
+		SharpRoom   r => (AnyOptionalSharpContainer)r,
+		SharpThing  t => (AnyOptionalSharpContainer)t,
+		_ => new None()
+	};
 }

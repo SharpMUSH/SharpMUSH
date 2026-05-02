@@ -1,5 +1,4 @@
 ﻿using Mediator;
-using OneOf;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
@@ -14,26 +13,25 @@ public record RenameMailFolderCommand(SharpPlayer Owner, string FolderName, stri
 
 public record MoveMailFolderCommand(SharpMail Mail, string NewFolderName) : ICommand;
 
-[GenerateOneOf]
-public class MailUpdate : OneOfBase<bool?, bool?, bool?, bool?>
+public record MailReadEdit(bool Value);
+public record MailClearEdit(bool Value);
+public record MailTaggedEdit(bool Value);
+public record MailUrgentEdit(bool Value);
+
+public union MailUpdate(MailReadEdit, MailClearEdit, MailTaggedEdit, MailUrgentEdit)
 {
-	private MailUpdate(OneOf<bool?, bool?, bool?, bool?> input) : base(input) { }
+	public bool IsReadEdit  => Value is MailReadEdit;
+	public bool IsClearEdit  => Value is MailClearEdit;
+	public bool IsTaggedEdit => Value is MailTaggedEdit;
+	public bool IsUrgentEdit => Value is MailUrgentEdit;
 
-	public static MailUpdate ReadEdit(bool read) => new(OneOf<bool?, bool?, bool?, bool?>.FromT0(read));
-	public static MailUpdate ClearEdit(bool clear) => new(OneOf<bool?, bool?, bool?, bool?>.FromT1(clear));
-	public static MailUpdate TaggedEdit(bool tagged) => new(OneOf<bool?, bool?, bool?, bool?>.FromT2(tagged));
-	public static MailUpdate UrgentEdit(bool urgent) => new(OneOf<bool?, bool?, bool?, bool?>.FromT3(urgent));
+	public bool AsReadEdit  => ((MailReadEdit)Value!).Value;
+	public bool AsClearEdit  => ((MailClearEdit)Value!).Value;
+	public bool AsTaggedEdit => ((MailTaggedEdit)Value!).Value;
+	public bool AsUrgentEdit => ((MailUrgentEdit)Value!).Value;
 
-	public bool IsReadEdit => IsT0;
-	public bool IsClearEdit => IsT1;
-	public bool IsTaggedEdit => IsT2;
-	public bool IsUrgentEdit => IsT3;
-
-	public bool AsReadEdit => AsT0!.Value;
-
-	public bool AsClearEdit => AsT1!.Value;
-
-	public bool AsTaggedEdit => AsT2!.Value;
-
-	public bool AsUrgentEdit => AsT3!.Value;
+	public static MailUpdate ReadEdit(bool read)   => new MailReadEdit(read);
+	public static MailUpdate ClearEdit(bool clear)  => new MailClearEdit(clear);
+	public static MailUpdate TaggedEdit(bool tagged) => new MailTaggedEdit(tagged);
+	public static MailUpdate UrgentEdit(bool urgent) => new MailUrgentEdit(urgent);
 }

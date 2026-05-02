@@ -251,7 +251,7 @@ public class ZoneFunctionTests
 
 		await foreach (var zone in obj.Known.GetZoneChain())
 		{
-			zoneChain.Add(zone.Object().DBRef.Number);
+			zoneChain.Add(zone.Object.DBRef.Number);
 		}
 
 		// Should have both ZoneB and ZoneA in the chain
@@ -332,19 +332,19 @@ public class ZoneFunctionTests
 
 		// Verify parent was set by querying database directly
 		var childFromDB = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var parentFromDB = await childFromDB.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentFromDB = await childFromDB.Known.Object.Parent.WithCancellation(CancellationToken.None);
 
 		// Parent must be set for this test to work
 		await Assert.That(parentFromDB.IsNone).IsFalse();
-		await Assert.That(parentFromDB.Known.Object().DBRef.Number).IsEqualTo(parentDbRef.Number);
+		await Assert.That(parentFromDB.Known.Object.DBRef.Number).IsEqualTo(parentDbRef.Number);
 
 		// Set zone
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {childDbRef}={zoneDbRef}"));
 
 		// Verify zone was set
-		var childZoneFromDB = await childFromDB.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var childZoneFromDB = await childFromDB.Known.Object.Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(childZoneFromDB.IsNone).IsFalse();
-		await Assert.That(childZoneFromDB.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		await Assert.That(childZoneFromDB.Known.Object.DBRef.Number).IsEqualTo(zoneDbRef.Number);
 
 		// Test attribute inheritance using get_eval which checks parent and zone chains
 		// Parent attributes should take precedence over zone attributes

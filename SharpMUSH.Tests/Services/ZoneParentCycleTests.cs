@@ -174,13 +174,13 @@ public class ZoneParentCycleTests
 
 		// Verify both are set
 		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var objParent = await updated.Known.Object().Parent.WithCancellation(CancellationToken.None);
-		var objZone = await updated.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var objParent = await updated.Known.Object.Parent.WithCancellation(CancellationToken.None);
+		var objZone = await updated.Known.Object.Zone.WithCancellation(CancellationToken.None);
 
 		await Assert.That(objParent.IsNone).IsFalse();
-		await Assert.That(objParent.Known.Object().DBRef.Number).IsEqualTo(parentDbRef.Number);
+		await Assert.That(objParent.Known.Object.DBRef.Number).IsEqualTo(parentDbRef.Number);
 		await Assert.That(objZone.IsNone).IsFalse();
-		await Assert.That(objZone.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		await Assert.That(objZone.Known.Object.DBRef.Number).IsEqualTo(zoneDbRef.Number);
 	}
 
 	[Test]
@@ -247,11 +247,11 @@ public class ZoneParentCycleTests
 
 		// Verify zone1.zone was set to zone2 (use parsed DBRef for query)
 		var zone1Obj = await Mediator.Send(new GetObjectNodeQuery(zone1DbRefParsed));
-		var zone1Zone = await zone1Obj.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zone1Zone = await zone1Obj.Known.Object.Zone.WithCancellation(CancellationToken.None);
 		Console.WriteLine($"zone1.zone IsNone: {zone1Zone.IsNone}");
 		if (!zone1Zone.IsNone)
 		{
-			Console.WriteLine($"zone1.zone = #{zone1Zone.Known.Object().DBRef.Number}");
+			Console.WriteLine($"zone1.zone = #{zone1Zone.Known.Object.DBRef.Number}");
 		}
 
 		// Try to set zone2's zone to zone1 (should fail with cycle detection)
@@ -262,11 +262,11 @@ public class ZoneParentCycleTests
 
 		// Check if zone2.zone was actually set (it shouldn't be! - cycle prevention)
 		var zone2Obj = await Mediator.Send(new GetObjectNodeQuery(zone2DbRefParsed));
-		var zone2Zone = await zone2Obj.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zone2Zone = await zone2Obj.Known.Object.Zone.WithCancellation(CancellationToken.None);
 		Console.WriteLine($"zone2.zone IsNone: {zone2Zone.IsNone}");
 		if (!zone2Zone.IsNone)
 		{
-			Console.WriteLine($"zone2.zone = #{zone2Zone.Known.Object().DBRef.Number} (SHOULD NOT BE SET!)");
+			Console.WriteLine($"zone2.zone = #{zone2Zone.Known.Object.DBRef.Number} (SHOULD NOT BE SET!)");
 		}
 
 		// The key assertion: zone2's zone should NOT be set (cycle was prevented)
@@ -296,10 +296,10 @@ public class ZoneParentCycleTests
 
 		// Verify zone was set
 		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var objZone = await updated.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var objZone = await updated.Known.Object.Zone.WithCancellation(CancellationToken.None);
 
 		await Assert.That(objZone.IsNone).IsFalse();
-		await Assert.That(objZone.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		await Assert.That(objZone.Known.Object.DBRef.Number).IsEqualTo(zoneDbRef.Number);
 	}
 
 	[Test]
@@ -324,16 +324,16 @@ public class ZoneParentCycleTests
 
 		// Verify zone was set
 		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
-		var obj1Zone = await obj1.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var obj1Zone = await obj1.Known.Object.Zone.WithCancellation(CancellationToken.None);
 
 		Console.WriteLine($"obj1.zone IsNone: {obj1Zone.IsNone}");
 		if (!obj1Zone.IsNone)
 		{
-			Console.WriteLine($"obj1.zone DBRef: {obj1Zone.Known.Object().DBRef}");
+			Console.WriteLine($"obj1.zone DBRef: {obj1Zone.Known.Object.DBRef}");
 			Console.WriteLine($"Expected: {obj2DbRef}");
 		}
 
 		await Assert.That(obj1Zone.IsNone).IsFalse();
-		await Assert.That(obj1Zone.Known.Object().DBRef.Number).IsEqualTo(obj2DbRef.Number);
+		await Assert.That(obj1Zone.Known.Object.DBRef.Number).IsEqualTo(obj2DbRef.Number);
 	}
 }

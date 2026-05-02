@@ -96,7 +96,7 @@ public partial class Functions
 
 		// Check permissions
 		var isWizard = await executor.IsWizard();
-		var isSelf = executor.Object().DBRef == located.Object().DBRef;
+		var isSelf = executor.Object.DBRef == located.Object.DBRef;
 
 		if (!isWizard && !isSelf)
 		{
@@ -126,7 +126,7 @@ public partial class Functions
 		});
 
 		// Send to all WebSocket connections for the target player
-		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
+		await foreach (var connection in ConnectionService!.Get(located.Object.DBRef))
 		{
 			if (connection.ConnectionType != "websocket")
 			{
@@ -178,7 +178,7 @@ public partial class Functions
 
 		// Check permissions
 		var isWizard = await executor.IsWizard();
-		var isSelf = executor.Object().DBRef == located.Object().DBRef;
+		var isSelf = executor.Object.DBRef == located.Object.DBRef;
 
 		if (!isWizard && !isSelf)
 		{
@@ -193,7 +193,7 @@ public partial class Functions
 		});
 
 		// Send to all WebSocket connections for the target player
-		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
+		await foreach (var connection in ConnectionService!.Get(located.Object.DBRef))
 		{
 			if (connection.ConnectionType != "websocket")
 			{

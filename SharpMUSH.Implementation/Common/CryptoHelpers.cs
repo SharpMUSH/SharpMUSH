@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -9,33 +8,25 @@ public static class CryptoHelpers
 {
 	public static readonly Dictionary<string, HashAlgorithm> hashAlgorithms = new(StringComparer.InvariantCultureIgnoreCase)
 	{
-		{"MD5", MD5.Create()},
-		{"SHA1", SHA1.Create()},
+		{"MD5",    MD5.Create()},
+		{"SHA1",   SHA1.Create()},
 		{"SHA256", SHA256.Create()},
 		{"SHA384", SHA384.Create()},
 		{"SHA512", SHA512.Create()}
 	};
 
-	public static OneOf<string, None> Digest(string type, MString str)
+	public static Option<string> Digest(string type, MString str)
 	{
 		if (!hashAlgorithms.TryGetValue(type, out var hashAlgorithm))
-		{
 			return new None();
-		}
 
 		hashAlgorithm.Initialize();
-
 		var data = hashAlgorithm.ComputeHash(Encoding.UTF8.GetBytes(str.ToPlainText()));
 
-		var sBuilder = new StringBuilder();
-
-		// Loop through each byte of the hashed data and format each one as a hexadecimal string.
+		var sb = new StringBuilder();
 		foreach (var bt in data)
-		{
-			sBuilder.Append(bt.ToString("x2")); // "x2" formats as a two-digit hexadecimal number
-		}
+			sb.Append(bt.ToString("x2"));
 
-		// Return the hexadecimal string.
-		return sBuilder.ToString();
+		return sb.ToString();
 	}
 }

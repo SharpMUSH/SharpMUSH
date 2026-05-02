@@ -38,7 +38,7 @@ else
     {
         var article = await Wiki.GetWikiArticle(Slug);
         
-        _article = article.IsT0 ? article.AsT0 : null;
+        _article = article.IsSome() ? article.AsValue() : null;
 
         await base.OnInitializedAsync();
     }

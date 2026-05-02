@@ -27,7 +27,7 @@ public static class StatsMail
 			if (!await executor.IsWizard())
 			{
 				var errorResult = await notifyService.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 					shouldNotify: true);
@@ -46,7 +46,7 @@ public static class StatsMail
 			if (maybeTarget.IsNone)
 			{
 				var noTargetError = await notifyService.NotifyAndReturn(
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					errorReturn: ErrorMessages.Returns.NoSuchObject,
 					notifyMessage: ErrorMessages.Notifications.CantSeeThat,
 					shouldNotify: true);
@@ -62,9 +62,9 @@ public static class StatsMail
 				return await CStats(parser, objectDataService, mediator, notifyService, executor, target);
 		}
 
-		var allSentMail = mediator.CreateStream(new GetAllSentMailListQuery(target.Object()));
+		var allSentMail = mediator.CreateStream(new GetAllSentMailListQuery(target.Object));
 		var allReceivedMail = mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer));
-		var targetName = target.Object().Name;
+		var targetName = target.Object.Name;
 
 		return switches switch
 		{

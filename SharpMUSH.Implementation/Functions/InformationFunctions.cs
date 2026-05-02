@@ -45,7 +45,7 @@ public partial class Functions
 					}
 				}
 
-				return new CallState(found.Object().Name);
+				return new CallState(found.Object.Name);
 			});
 	}
 
@@ -226,10 +226,10 @@ public partial class Functions
 			{
 				var aliases = found switch
 				{
-					{ IsExit: true, AsExit: var exit } => exit.Aliases,
-					{ IsThing: true, AsThing: var thing } => thing.Aliases,
-					{ IsPlayer: true, AsPlayer: var player } => player.Aliases,
-					{ IsRoom: true, AsRoom: var room } => room.Aliases,
+					SharpExit exit => exit.Aliases,
+					SharpThing thing => thing.Aliases,
+					SharpPlayer player => player.Aliases,
+					SharpRoom room => room.Aliases,
 					_ => null
 				};
 
@@ -247,7 +247,7 @@ public partial class Functions
 				}
 
 				return ValueTask.FromResult(new CallState(
-					aliases != null && index <= aliases.Length
+					index <= aliases?.Length
 						? aliases[index - 1]
 						: string.Empty));
 			});
@@ -291,10 +291,10 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState(
 					string.Join(" ", found switch
 					{
-						{ IsExit: true, AsExit: var exit } => exit.Aliases ?? [],
-						{ IsThing: true, AsThing: var thing } => thing.Aliases ?? [],
-						{ IsPlayer: true, AsPlayer: var player } => player.Aliases ?? [],
-						{ IsRoom: true, AsRoom: var room } => room.Aliases ?? [],
+						SharpExit exit => exit.Aliases ?? [],
+						SharpThing thing => thing.Aliases ?? [],
+						SharpPlayer player => player.Aliases ?? [],
+						SharpRoom room => room.Aliases ?? [],
 						_ => throw new ArgumentOutOfRangeException()
 					})));
 			});
@@ -310,11 +310,11 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			found =>
 			{
-				var name = found.Object().Name;
+				var name = found.Object.Name;
 				return ValueTask.FromResult(new CallState(
 					string.Join(" ", found switch
 					{
-						{ IsExit: true, AsExit: var exit } => [name, .. exit.Aliases ?? []],
+						SharpExit exit => [name, .. exit.Aliases ?? []],
 						_ => [name]
 					})));
 			});
@@ -327,30 +327,30 @@ public partial class Functions
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
-		if (split.IsT1)
+		if (split.IsNone())
 		{
 			return string.Format(Errors.ErrorBadArgumentFormat, "getpids");
 		}
 
-		var (db, attr) = split.AsT0;
+		var infoRefOrAttr = split.AsValue();
 
-		if (attr is null)
+		if (infoRefOrAttr.IsObjectOnly)
 		{
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser, executor, executor, db, LocateFlags.All,
+				parser, executor, executor, infoRefOrAttr.ObjSpecifier, LocateFlags.All,
 				async found =>
 				{
-					var queryResult = Mediator!.CreateStream(new ScheduleSemaphoreQuery(found.Object().DBRef));
+					var queryResult = Mediator!.CreateStream(new ScheduleSemaphoreQuery(found.Object.DBRef));
 					var pids = queryResult.Select(x => MModule.single(x.Pid.ToString()));
 					return MModule.multipleWithDelimiter(MModule.single(" "), await pids.ToArrayAsync());
 				});
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, db, LocateFlags.All,
+			parser, executor, executor, infoRefOrAttr.ObjSpecifier, LocateFlags.All,
 			async found =>
 			{
-				var dbAttr = new DbRefAttribute(found.Object().DBRef, attr.Split("`"));
+				var dbAttr = new DbRefAttribute(found.Object.DBRef, infoRefOrAttr.AttributeArray!);
 				var queryResult = Mediator!.CreateStream(new ScheduleSemaphoreQuery(dbAttr));
 				var pids = queryResult.Select(x => MModule.single(x.Pid.ToString()));
 				return MModule.multipleWithDelimiter(MModule.single(" "), await pids.ToArrayAsync());
@@ -377,7 +377,7 @@ public partial class Functions
 				return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 					parser, executor, executor, obj!.Message!.ToPlainText(), LocateFlags.All,
 					async found => MModule.multipleWithDelimiter(MModule.single(" "),
-						await found.Object()
+						await found.Object
 							.Powers.Value
 							.Select(x => MModule.single(x.Name)).ToArrayAsync()));
 
@@ -452,7 +452,7 @@ public partial class Functions
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, obj, LocateFlags.All,
-			found => ValueTask.FromResult(new CallState(MModule.plainText(MModule.single(found.Object().Name)))));
+			found => ValueTask.FromResult(new CallState(MModule.plainText(MModule.single(found.Object.Name)))));
 	}
 
 	[SharpFunction(Name = "lpids", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
@@ -482,7 +482,7 @@ public partial class Functions
 		}
 
 		var located = maybeLocate.AsSharpObject;
-		var locationDBRef = located.Object().DBRef;
+		var locationDBRef = located.Object.DBRef;
 
 		// Determine which queues to query
 		bool includeWait = queueTypes.Contains("WAIT");
@@ -614,7 +614,7 @@ public partial class Functions
 		{
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 				executor, executor, obj, LocateFlags.All,
-				found => found.Object().Name);
+				found => found.Object.Name);
 		}
 
 		if (Configuration!.CurrentValue.Function.FunctionSideEffects)
@@ -655,7 +655,7 @@ public partial class Functions
 				}
 
 				// Fall back to name
-				return new CallState(found.Object().Name);
+				return new CallState(found.Object.Name);
 			});
 	}
 
@@ -691,7 +691,7 @@ public partial class Functions
 		var room2 = await LocateService.Room(obj2);
 
 		// They're nearby if they're in the same room
-		return new CallState(room1.Object().DBRef == room2.Object().DBRef);
+		return new CallState(room1.Object.DBRef == room2.Object.DBRef);
 	}
 
 	[SharpFunction(Name = "playermem", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
@@ -710,7 +710,7 @@ public partial class Functions
 			async found =>
 			{
 				// Get the player owner of the object
-				var owner = await found.Object().Owner.WithCancellation(CancellationToken.None);
+				var owner = await found.Object.Owner.WithCancellation(CancellationToken.None);
 
 				// Object has no owner - return "0 0" (0 objects owned, 0 quota limit)
 				if (owner is null)
@@ -772,7 +772,7 @@ public partial class Functions
 			if (classObj != null)
 			{
 				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
-				if (owner.Object.DBRef != classObj.Object().DBRef)
+				if (owner.Object.DBRef != classObj!.Value.Object.DBRef)
 				{
 					continue;
 				}

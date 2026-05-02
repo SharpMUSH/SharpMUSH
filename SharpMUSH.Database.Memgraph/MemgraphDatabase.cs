@@ -2,7 +2,6 @@ using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -319,12 +318,7 @@ RETURN destObj
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
 		var located = await BuildTypedObjectFromObjectNode(destObjNode, ct);
-		return located.Match<AnySharpContainer>(
-		player => player,
-		room => room,
-		_ => throw new Exception("Invalid location: Exit"),
-		thing => thing,
-		_ => throw new Exception("No location found"));
+		return located.WithoutNone().AsContainer;
 	}
 
 	private async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct)
@@ -341,12 +335,7 @@ RETURN destObj
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
 		var homeObj = await BuildTypedObjectFromObjectNode(destObjNode, ct);
-		return homeObj.Match<AnySharpContainer>(
-		player => player,
-		room => room,
-		_ => throw new Exception("Invalid home: Exit"),
-		thing => thing,
-		_ => throw new Exception("No home found"));
+		return homeObj.WithoutNone().AsContainer;
 	}
 
 	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct)
@@ -362,12 +351,7 @@ RETURN destObj
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
 		var dropToObj = await BuildTypedObjectFromObjectNode(destObjNode, ct);
-		return dropToObj.Match<AnyOptionalSharpContainer>(
-		player => player,
-		room => room,
-		_ => new None(),
-		thing => thing,
-		_ => new None());
+		return dropToObj.AsOptionalContainer;
 	}
 
 	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct)

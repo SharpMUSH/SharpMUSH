@@ -3,7 +3,6 @@ using Core.Arango.Serialization.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using OneOf.Types;
 using Quartz;
 using Serilog;
 using Serilog.Events;
@@ -266,10 +265,14 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		var natsUrl = $"nats://localhost:{natsPort}";
 		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
+		var notifyMock = Substitute.For<INotifyService>();
+		notifyMock.NotifyAndReturn(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
+			.ReturnsForAnyArgs(info => ValueTask.FromResult(new CallState((string)info[1])));
+
 		_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
-			Substitute.For<INotifyService>(),
+			notifyMock,
 			_customDatabaseName,
 			_sqlPlatform);
 
@@ -281,7 +284,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		await databaseService.Migrate();
 
 		var realOne = await databaseService.GetObjectNodeAsync(new DBRef(1));
-		_one = realOne.Object()!.DBRef;
+		_one = realOne.Object!.DBRef;
 		await connectionService.Register(1, "localhost", "locahost", "test", _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await connectionService.Bind(1, _one);
 

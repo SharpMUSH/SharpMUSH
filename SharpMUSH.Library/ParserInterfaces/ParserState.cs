@@ -1,5 +1,4 @@
 ﻿using Mediator;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -254,11 +253,11 @@ public partial record ParserState(
 		ref AnyOptionalSharpObject? cachedObject,
 		DBRef? expectedDBRef)
 	{
-		if (cachedObject is not null && !cachedObject.IsNone && expectedDBRef is not null)
+		if (cachedObject is not null && !cachedObject.Value.IsNone && expectedDBRef is not null)
 		{
 			try
 			{
-				var cachedDBRef = cachedObject.Known().Object().DBRef;
+				var cachedDBRef = cachedObject.Value.Known.Object.DBRef;
 				if (!cachedDBRef.Equals(expectedDBRef.Value))
 				{
 					cachedObject = null;
@@ -336,7 +335,7 @@ public partial record ParserState(
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or it will throw.</returns>
 	public async ValueTask<AnySharpObject> KnownExecutorObject(IMediator mediator)
-		=> (await ExecutorObject(mediator)).Known();
+		=> (await ExecutorObject(mediator)).Known;
 
 	/// <summary>
 	/// The enactor is the object which causes something to happen: %# or %:
@@ -344,7 +343,7 @@ public partial record ParserState(
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or it will throw.</returns>
 	public async ValueTask<AnySharpObject> KnownEnactorObject(IMediator mediator)
-		=> (await EnactorObject(mediator)).Known();
+		=> (await EnactorObject(mediator)).Known;
 
 	/// <summary>
 	/// The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@
@@ -352,7 +351,7 @@ public partial record ParserState(
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or it will throw.</returns>
 	public async ValueTask<AnySharpObject> KnownCallerObject(IMediator mediator)
-		=> (await CallerObject(mediator)).Known();
+		=> (await CallerObject(mediator)).Known;
 
 	/// <summary>
 	/// Just the numbered arguments, %0-%9 etc., in numerical order. This excludes named arguments.

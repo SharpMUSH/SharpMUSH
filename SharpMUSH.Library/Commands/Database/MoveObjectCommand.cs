@@ -18,13 +18,13 @@ public record MoveObjectCommand(
 	public string[] CacheKeys => OldContainer is not null
 		? [
 			$"object-contents:{OldContainer}",
-			$"object-contents:{Destination.Object().DBRef}",
-			$"object:{Target.Object().DBRef}",
-			$"object:{Destination.Object().DBRef}"
+			$"object-contents:{Destination.Object.DBRef}",
+			$"object:{Target.Object.DBRef}",
+			$"object:{Destination.Object.DBRef}"
 		]
 		: [
-			$"object:{Target.Object().DBRef}",
-			$"object:{Destination.Object().DBRef}"
+			$"object:{Target.Object.DBRef}",
+			$"object:{Destination.Object.DBRef}"
 		];
 
 	/// <summary>

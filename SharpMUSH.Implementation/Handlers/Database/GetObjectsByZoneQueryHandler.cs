@@ -13,9 +13,9 @@ public class GetObjectsByZoneQueryHandler(ISharpDatabase database)
 	{
 		AnySharpObject zone;
 
-		if (request.Zone.IsT0)
+		if (request.Zone.IsDBRef)
 		{
-			var maybeZone = await database.GetObjectNodeAsync(request.Zone.AsT0, cancellationToken);
+			var maybeZone = await database.GetObjectNodeAsync(request.Zone.AsDBRef, cancellationToken);
 			if (maybeZone.IsNone)
 			{
 				yield break;
@@ -24,7 +24,7 @@ public class GetObjectsByZoneQueryHandler(ISharpDatabase database)
 		}
 		else
 		{
-			zone = request.Zone.AsT1;
+			zone = request.Zone.AsObject;
 		}
 
 		await foreach (var obj in database.GetObjectsByZoneAsync(zone, cancellationToken)

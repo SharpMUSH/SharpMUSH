@@ -124,7 +124,7 @@ public partial class Functions
 				speakerObject = found;
 			}
 
-			speakerName = MModule.single(speakerObject.Object().Name);
+			speakerName = MModule.single(speakerObject.Object.Name);
 		}
 		else
 		{
@@ -184,7 +184,7 @@ public partial class Functions
 		{
 			var splitTransform = HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText());
 
-			if (splitTransform.IsT1)
+			if (splitTransform.IsNone())
 			{
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
@@ -193,7 +193,7 @@ public partial class Functions
 				LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
-					splitTransform.AsT0.db,
+					splitTransform.AsValue().Db,
 					LocateFlags.All);
 
 			if (transformationObject.IsError)
@@ -202,25 +202,25 @@ public partial class Functions
 			}
 
 			actualTransformationObject = transformationObject.AsSharpObject;
-			actualTransformAttribute = splitTransform.AsT0.Attribute;
+			actualTransformAttribute = splitTransform.AsValue().Attribute;
 		}
 
 		if (hasTransform && hasNull)
 		{
 			var splitNull = HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText());
 
-			if (splitNull.IsT1)
+			if (splitNull.IsNone())
 			{
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
 
-			actualNullAttribute = splitNull.AsT0.Attribute;
+			actualNullAttribute = splitNull.AsValue().Attribute;
 
 			var nullObject = await
 				LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
-					splitNull.AsT0.db,
+					splitNull.AsValue().Db,
 					LocateFlags.All);
 
 			if (nullObject.IsError)
@@ -248,11 +248,11 @@ public partial class Functions
 				if (actualNullAttribute is not null)
 				{
 					var nullEvaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
-						parser, executor, actualNullObject!, actualNullAttribute,
+						parser, executor, actualNullObject!.Value, actualNullAttribute,
 						new Dictionary<string, CallState>
 						{
 							{ "0", args["0"] },
-							{ "1", new CallState(MModule.single(speakerObject.Object().DBRef.ToString())) },
+							{ "1", new CallState(MModule.single(speakerObject.Object.DBRef.ToString())) },
 							{ "2", new CallState(content) }
 						});
 
@@ -260,11 +260,11 @@ public partial class Functions
 				}
 
 				var evaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
-					parser, executor, actualTransformationObject!, actualTransformAttribute ?? string.Empty,
+					parser, executor, actualTransformationObject!.Value, actualTransformAttribute ?? string.Empty,
 					new Dictionary<string, CallState>
 					{
 						{ "0", args["0"] },
-						{ "1", new CallState(MModule.single(speakerObject.Object().DBRef.ToString())) },
+						{ "1", new CallState(MModule.single(speakerObject.Object.DBRef.ToString())) },
 						{ "2", new CallState(content) }
 					});
 
@@ -815,7 +815,7 @@ public partial class Functions
 			var exprIndex = i * 2 + 1;
 
 			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
-			if (condition != null && Predicates.Truthy(condition.Message!))
+			if (condition is not null && Predicates.Truthy(condition.Message!))
 			{
 				var result = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
 				return result ?? CallState.Empty;
@@ -865,7 +865,7 @@ public partial class Functions
 			var exprIndex = i * 2 + 1;
 
 			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
-			if (condition != null && Predicates.Truthy(condition.Message!))
+			if (condition is not null && Predicates.Truthy(condition.Message!))
 			{
 				var expr = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
 				if (expr != null)
@@ -910,7 +910,7 @@ public partial class Functions
 		}
 
 		return CryptoHelpers.hashAlgorithms.ContainsKey(arg0)
-			? CryptoHelpers.Digest(arg0, arg1!).AsT0
+			? CryptoHelpers.Digest(arg0, arg1!).AsValue()
 			: Errors.ErrorArgRange;
 	}
 
@@ -1504,7 +1504,7 @@ public partial class Functions
 
 			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
 			// Return expression when condition is TRUTHY
-			if (condition != null && Predicates.Truthy(condition.Message!))
+			if (condition is not null && Predicates.Truthy(condition.Message!))
 			{
 				var result = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
 				return result ?? CallState.Empty;

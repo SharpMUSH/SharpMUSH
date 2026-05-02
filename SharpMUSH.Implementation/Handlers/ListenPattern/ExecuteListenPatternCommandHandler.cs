@@ -25,8 +25,8 @@ public class ExecuteListenPatternCommandHandler(
 			var parser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
 
 			// Get the listener's DBRef
-			var listenerDbRef = request.Listener.Object().DBRef;
-			var speakerDbRef = request.Speaker.Object().DBRef;
+			var listenerDbRef = request.Listener.Object.DBRef;
+			var speakerDbRef = request.Speaker.Object.DBRef;
 
 			// Convert CallState registers to MString for parser state
 			var registerDict = new Dictionary<string, MString>();
@@ -63,8 +63,8 @@ public class ExecuteListenPatternCommandHandler(
 			logger.LogError(ex,
 				"Error executing listen pattern {AttributeName} on {Listener} triggered by {Speaker}",
 				request.AttributeName,
-				request.Listener.Object().DBRef,
-				request.Speaker.Object().DBRef);
+				request.Listener.Object.DBRef,
+				request.Speaker.Object.DBRef);
 		}
 
 		return Unit.Value;

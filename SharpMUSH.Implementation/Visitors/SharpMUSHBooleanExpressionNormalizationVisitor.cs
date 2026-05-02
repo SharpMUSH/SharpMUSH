@@ -187,7 +187,7 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 			}
 
 			var obj = objResult.Known;
-			var objDbRef = obj.Object().DBRef;
+			var objDbRef = obj.Object.DBRef;
 
 			// Return objid format
 			return $"#{objDbRef.Number}:{objDbRef.CreationMilliseconds}";

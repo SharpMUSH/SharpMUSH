@@ -1,7 +1,6 @@
 using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -408,12 +407,7 @@ public partial class SurrealDatabase(
 
 		var destKey = destKeys[0];
 		var located = await BuildTypedObjectFromKey(destKey, ct);
-		return located.Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			_ => throw new InvalidOperationException($"Invalid location for {typedId}: Exit objects cannot be locations"),
-			thing => thing,
-			_ => throw new InvalidOperationException($"No location found for {typedId}"));
+		return located.WithoutNone().AsContainer;
 	}
 
 	private async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct)
@@ -431,12 +425,7 @@ public partial class SurrealDatabase(
 
 		var destKey = destKeys[0];
 		var homeObj = await BuildTypedObjectFromKey(destKey, ct);
-		return homeObj.Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			_ => throw new InvalidOperationException($"Invalid home for {typedId}: Exit objects cannot be homes"),
-			thing => thing,
-			_ => throw new InvalidOperationException($"No home found for {typedId}"));
+		return homeObj.WithoutNone().AsContainer;
 	}
 
 	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct)
@@ -452,12 +441,7 @@ public partial class SurrealDatabase(
 
 		var destKey = destKeys[0];
 		var dropToObj = await BuildTypedObjectFromKey(destKey, ct);
-		return dropToObj.Match<AnyOptionalSharpContainer>(
-			player => player,
-			room => room,
-			_ => new None(),
-			thing => thing,
-			_ => new None());
+		return dropToObj.AsOptionalContainer;
 	}
 
 	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct)

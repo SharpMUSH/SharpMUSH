@@ -38,7 +38,7 @@ public class BooleanExpressionUnitTests
 	public async Task SimpleExpressions(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(input, dbn)).IsTrue();
 		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
@@ -53,7 +53,7 @@ public class BooleanExpressionUnitTests
 	public async Task TypeExpressions(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(input, dbn)).IsTrue();
 		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
@@ -68,7 +68,7 @@ public class BooleanExpressionUnitTests
 	public async Task TypeValidation(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
@@ -80,7 +80,7 @@ public class BooleanExpressionUnitTests
 	public async Task NameValidation(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
@@ -92,7 +92,7 @@ public class BooleanExpressionUnitTests
 	public async Task ExactObjectValidation(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
@@ -103,7 +103,7 @@ public class BooleanExpressionUnitTests
 	public async Task NameExpressionMatching(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(input, player)).IsTrue();
 		await Assert.That(bep.Compile(input)(player, player)).IsEqualTo(expected);
@@ -116,7 +116,7 @@ public class BooleanExpressionUnitTests
 	public async Task ExactObjectMatching(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(input, player)).IsTrue();
 		await Assert.That(bep.Compile(input)(player, player)).IsEqualTo(expected);
@@ -127,7 +127,7 @@ public class BooleanExpressionUnitTests
 	public async Task DbRefListValidation(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
@@ -139,7 +139,7 @@ public class BooleanExpressionUnitTests
 	public async Task HostLockValidation(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
@@ -149,7 +149,7 @@ public class BooleanExpressionUnitTests
 	public async Task ChannelValidation(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
@@ -158,7 +158,7 @@ public class BooleanExpressionUnitTests
 	public async Task InvalidateCache_SpecificExpression_AllowsRecompile()
 	{
 		var bep = BooleanParser;
-		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 		var input = "type^Player";
 
 		await Assert.That(bep.Compile(input)(player, player)).IsTrue();
@@ -170,7 +170,7 @@ public class BooleanExpressionUnitTests
 	public async Task InvalidateCache_AllExpressions_AllowsRecompile()
 	{
 		var bep = BooleanParser;
-		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Compile("#TRUE")(player, player)).IsTrue();
 		await Assert.That(bep.Compile("type^Thing")(player, player)).IsFalse();
@@ -186,7 +186,7 @@ public class BooleanExpressionUnitTests
 	{
 		const int iterationCount = 1000;
 		var bep = BooleanParser;
-		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 		var input = "type^Player";
 		var errors = new ConcurrentQueue<Exception>();
 

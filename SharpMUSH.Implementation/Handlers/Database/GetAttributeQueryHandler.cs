@@ -64,13 +64,13 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 		var obj = await database.GetObjectNodeAsync(request.DBRef, cancellationToken);
 		if (obj.IsNone) yield break;
 
-		var current = obj.Known.Object();
+		var current = obj.Known.Object;
 		while (true)
 		{
 			var parent = await current.Parent.WithCancellation(cancellationToken);
 			if (parent.IsNone) break;
 
-			var parentObj = parent.Known.Object();
+			var parentObj = parent.Known.Object;
 			await foreach (var attr in GetAttributesForDbRef(parentObj.DBRef, request, cancellationToken))
 			{
 				if (seen.Add(attr.LongName!))

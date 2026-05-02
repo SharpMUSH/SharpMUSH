@@ -1,6 +1,5 @@
 using Mediator;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
@@ -77,7 +76,7 @@ public class LocateServiceCompatibilityTests
 
 		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -156,7 +155,7 @@ public class LocateServiceCompatibilityTests
 		// Assert
 		await Assert.That(resultWithNoTypePreference.IsNone || resultWithNoTypePreference.IsError).IsTrue();
 		await Assert.That(resultWithoutNoTypePreference.IsValid()).IsTrue();
-		await Assert.That(resultWithoutNoTypePreference.WithoutError().WithoutNone().Object().DBRef)
+		await Assert.That(resultWithoutNoTypePreference.WithoutError().WithoutNone().Object.DBRef)
 			.IsEqualTo(new DBRef(1, 0));
 	}
 
@@ -244,7 +243,7 @@ public class LocateServiceCompatibilityTests
 		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().IsRoom).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(999);
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef.Number).IsEqualTo(999);
 	}
 
 	[Test]
@@ -281,7 +280,7 @@ public class LocateServiceCompatibilityTests
 
 		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(42, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(42, 0));
 	}
 
 	[Test]
@@ -326,7 +325,7 @@ public class LocateServiceCompatibilityTests
 		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().IsPlayer).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
@@ -347,7 +346,7 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { thing }.ToAsyncEnumerable();
 
 		// Act - directly exercise Match_List with a prefix
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser,
 			list,
 			player,
@@ -364,7 +363,7 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsFalse();
 		await Assert.That(bestMatch.IsValid()).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -384,7 +383,7 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { thing }.ToAsyncEnumerable();
 
 		// Act - NoPartialMatches disables prefix matching
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser,
 			list,
 			player,
@@ -520,7 +519,7 @@ public class LocateServiceCompatibilityTests
 
 		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -563,7 +562,7 @@ public class LocateServiceCompatibilityTests
 
 		// Assert - with UseLastIfAmbiguous should return the second one (thing2 with key 4)
 		await Assert.That(resultLast.IsValid()).IsTrue();
-		await Assert.That(resultLast.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(4);
+		await Assert.That(resultLast.WithoutError().WithoutNone().Object.DBRef.Number).IsEqualTo(4);
 	}
 
 	[Test]
@@ -673,7 +672,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing, hiddenThing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "HiddenObject");
 
@@ -700,7 +699,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Nor"); // prefix — must not match exit
 
@@ -723,13 +722,13 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "North");
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(10, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(10, 0));
 	}
 
 	[Test]
@@ -747,13 +746,13 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "n");
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(10, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(10, 0));
 	}
 
 	[Test]
@@ -773,7 +772,7 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { exit }.ToAsyncEnumerable();
 
 		// "north" is a prefix of alias "northwest", but exits use exact matching only
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "north");
 
@@ -798,13 +797,13 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { target }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Admin");
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
@@ -823,13 +822,13 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { target }.ToAsyncEnumerable();
 
 		// "Admin" is a prefix of alias "Administrator"
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Admin");
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsFalse(); // partial match
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
@@ -849,14 +848,14 @@ public class LocateServiceCompatibilityTests
 		// Put prefix first, exact second — exact should win regardless of list order
 		var list = new[] { prefixPlayer, exactPlayer }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Wiz");
 
 		// After both are processed: exact match resets counter, partial removed
 		await Assert.That(exact).IsTrue();
 		await Assert.That(curr).IsEqualTo(1);
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	// ─── Ambiguous matches ───────────────────────────────────────────────────────
@@ -878,7 +877,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { coin1, coin2 }.ToAsyncEnumerable();
 
-		var (_, _, curr, rightType, exact, _) = await _locateService.Match_List(
+		(_, _, int curr, int rightType, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Coin");
 
@@ -906,14 +905,14 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { coin1, coin2 }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.UseLastIfAmbiguous, "Coin");
 
 		// Both matched → bestMatch is the last one (coin2 = #4)
 		await Assert.That(curr).IsEqualTo(2);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(4);
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef.Number).IsEqualTo(4);
 	}
 
 	[Test]
@@ -932,7 +931,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var (_, _, curr, rightType, exact, _) = await _locateService.Match_List(
+		(_, _, int curr, int rightType, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
@@ -962,14 +961,14 @@ public class LocateServiceCompatibilityTests
 		// Partial first, then exact
 		var list = new[] { partialMatch, exactMatch }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
 		// Exact match resets: curr=1, exact=true, bestMatch = exactMatch
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(4, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(4, 0));
 	}
 
 	// ─── OnlyMatchLookerControlledObjects per-candidate check ───────────────────
@@ -999,7 +998,7 @@ public class LocateServiceCompatibilityTests
 		// Put ownedThing first so it is found, then foreignThing should be skipped
 		var list = new[] { ownedThing, foreignThing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.OnlyMatchLookerControlledObjects, "Widget");
 
@@ -1007,7 +1006,7 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
 		await Assert.That(bestMatch.IsValid()).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	// ─── Case-insensitive matching ────────────────────────────────────────────────
@@ -1025,13 +1024,13 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "testobject");
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -1047,13 +1046,13 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, bool exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference, "MYWIDGET");
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	// ─── English-style ordinal matching ─────────────────────────────────────────
@@ -1077,13 +1076,13 @@ public class LocateServiceCompatibilityTests
 		var list = new[] { sword1, sword2, sword3 }.ToAsyncEnumerable();
 
 		// final=2 means "2nd" — Match_List in English mode counts up to final
-		var (bestMatch, _, curr, _, _, flow) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, LocateService.ControlFlow flow) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 2, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
 		await Assert.That(curr).IsEqualTo(2);
 		await Assert.That(flow).IsEqualTo(LocateService.ControlFlow.Break); // found exact nth → Break
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(4, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(4, 0));
 	}
 
 	[Test]
@@ -1102,13 +1101,13 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, flow) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, LocateService.ControlFlow flow) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 1, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(flow).IsEqualTo(LocateService.ControlFlow.Break);
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -1129,7 +1128,7 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
-		var (_, _, curr, _, _, flow) = await _locateService.Match_List(
+		(_, _, int curr, _, _, LocateService.ControlFlow flow) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 5, 0, 0,
 			LocateFlags.NoTypePreference, "Sword");
 
@@ -1156,14 +1155,14 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { targetPlayer, thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.ThingsPreference, "Widget");
 
 		// Only the Thing should be matched
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(bestMatch.WithoutError().WithoutNone().IsPlayer).IsFalse();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(6, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(6, 0));
 	}
 
 	[Test]
@@ -1182,13 +1181,13 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing, targetPlayer }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.PlayersPreference, "Widget");
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(bestMatch.WithoutError().WithoutNone().IsPlayer).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	// ─── Locate() higher-level edge cases ────────────────────────────────────────
@@ -1238,7 +1237,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
 
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(1, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(1, 0));
 	}
 
 	[Test]
@@ -1270,7 +1269,7 @@ public class LocateServiceCompatibilityTests
 
 		// Absolute DBRef always returns the object regardless of visibility
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(42, 0));
+		await Assert.That(result.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(42, 0));
 	}
 
 	[Test]
@@ -1294,14 +1293,14 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
+		(AnyOptionalSharpObjectOrError bestMatch, _, int curr, _, _, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference | LocateFlags.NoVisibilityCheck, "TargetObject");
 
 		// Object found — NoVisibilityCheck does not affect Match_List itself
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(bestMatch.IsValid()).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.WithoutError().WithoutNone().Object.DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	// ─── ParseEnglish ordinal validation ────────────────────────────────────────

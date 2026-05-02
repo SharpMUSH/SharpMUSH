@@ -33,7 +33,7 @@ public class CommandLockTests
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
 		await Assert.That(newObject.IsNone).IsFalse();
-		await Assert.That(newObject.Known.Object().Name).IsEqualTo(uniqueName);
+		await Assert.That(newObject.Known.Object.Name).IsEqualTo(uniqueName);
 	}
 
 	[Test]

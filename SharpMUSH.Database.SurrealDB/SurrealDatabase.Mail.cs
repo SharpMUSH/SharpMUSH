@@ -1,7 +1,6 @@
 using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -171,24 +170,25 @@ public partial class SurrealDatabase
 		var mailKey = ExtractKeyString(mailId);
 		var parameters = new Dictionary<string, object?> { ["key"] = mailKey };
 
-		switch (commandMail)
+		if (commandMail.IsReadEdit)
 		{
-			case { IsReadEdit: true }:
-				parameters["val"] = commandMail.AsReadEdit;
-				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET read = $val, fresh = false", parameters, cancellationToken);
-				return;
-			case { IsClearEdit: true }:
-				parameters["val"] = commandMail.AsClearEdit;
-				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET cleared = $val", parameters, cancellationToken);
-				return;
-			case { IsTaggedEdit: true }:
-				parameters["val"] = commandMail.AsTaggedEdit;
-				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET tagged = $val", parameters, cancellationToken);
-				return;
-			case { IsUrgentEdit: true }:
-				parameters["val"] = commandMail.AsUrgentEdit;
-				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET urgent = $val", parameters, cancellationToken);
-				return;
+			parameters["val"] = commandMail.AsReadEdit;
+			await ExecuteAsync("UPDATE mail:⟨$key⟩ SET read = $val, fresh = false", parameters, cancellationToken);
+		}
+		else if (commandMail.IsClearEdit)
+		{
+			parameters["val"] = commandMail.AsClearEdit;
+			await ExecuteAsync("UPDATE mail:⟨$key⟩ SET cleared = $val", parameters, cancellationToken);
+		}
+		else if (commandMail.IsTaggedEdit)
+		{
+			parameters["val"] = commandMail.AsTaggedEdit;
+			await ExecuteAsync("UPDATE mail:⟨$key⟩ SET tagged = $val", parameters, cancellationToken);
+		}
+		else if (commandMail.IsUrgentEdit)
+		{
+			parameters["val"] = commandMail.AsUrgentEdit;
+			await ExecuteAsync("UPDATE mail:⟨$key⟩ SET urgent = $val", parameters, cancellationToken);
 		}
 	}
 

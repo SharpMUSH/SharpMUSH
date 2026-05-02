@@ -3,7 +3,6 @@ using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using OneOf;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -26,7 +25,7 @@ public class NotificationCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "#-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -53,7 +52,7 @@ public class NotificationCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Announcement:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 

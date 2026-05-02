@@ -7,6 +7,6 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record SetObjectHomeCommand(AnySharpContent Target, AnySharpContainer Home) : ICommand, ICacheInvalidating
 {
-	public string[] CacheKeys => [$"object:{Target.Object().DBRef}", $"object:{Home.Object().DBRef}"];
+	public string[] CacheKeys => [$"object:{Target.Object.DBRef}", $"object:{Home.Object.DBRef}"];
 	public string[] CacheTags => [];
 }

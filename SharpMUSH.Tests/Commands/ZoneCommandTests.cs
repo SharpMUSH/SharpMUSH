@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -51,7 +50,7 @@ public class ZoneCommandTests
 
 		// Validate zone object was created
 		await Assert.That(zoneObject.IsNone).IsFalse();
-		await Assert.That(zoneObject.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		await Assert.That(zoneObject.Known.Object.DBRef.Number).IsEqualTo(zoneDbRef.Number);
 
 		// Create a unique object to be zoned
 		var objName = TestIsolationHelpers.GenerateUniqueName("ZonedObject");
@@ -61,7 +60,7 @@ public class ZoneCommandTests
 
 		// Validate object was created
 		await Assert.That(zonedObject.IsNone).IsFalse();
-		await Assert.That(zonedObject.Known.Object().DBRef.Number).IsEqualTo(objDbRef.Number);
+		await Assert.That(zonedObject.Known.Object.DBRef.Number).IsEqualTo(objDbRef.Number);
 
 		// Set zone
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
@@ -71,10 +70,10 @@ public class ZoneCommandTests
 
 		// Verify the zone was actually set in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zone = await updatedObject.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zone = await updatedObject.Known.Object.Zone.WithCancellation(CancellationToken.None);
 
 		await Assert.That(zone.IsNone).IsFalse();
-		await Assert.That(zone.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		await Assert.That(zone.Known.Object.DBRef.Number).IsEqualTo(zoneDbRef.Number);
 	}
 
 	[Test]
@@ -103,7 +102,7 @@ public class ZoneCommandTests
 
 		// Verify zone was set
 		var withZone = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zoneCheck = await withZone.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zoneCheck = await withZone.Known.Object.Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(zoneCheck.IsNone).IsFalse();
 
 		// Clear zone by setting to "none"
@@ -113,12 +112,12 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "Zone cleared.")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "Zone cleared.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		// Verify the zone was actually cleared in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zone = await updatedObject.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zone = await updatedObject.Known.Object.Zone.WithCancellation(CancellationToken.None);
 
 		await Assert.That(zone.IsNone).IsTrue();
 	}
@@ -149,7 +148,7 @@ public class ZoneCommandTests
 
 		// Verify zone was set
 		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zone = await updated.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zone = await updated.Known.Object.Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(zone.IsNone).IsFalse();
 	}
 
@@ -167,7 +166,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -192,7 +191,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -227,9 +226,9 @@ public class ZoneCommandTests
 
 		// Verify zone was set
 		var zonedRoom = await Mediator.Send(new GetObjectNodeQuery(room1DbRef));
-		var roomZone = await zonedRoom.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var roomZone = await zonedRoom.Known.Object.Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(roomZone.IsNone).IsFalse();
-		await Assert.That(roomZone.Known.Object().DBRef.Number).IsEqualTo(zmrDbRef.Number);
+		await Assert.That(roomZone.Known.Object.DBRef.Number).IsEqualTo(zmrDbRef.Number);
 
 		// Create an exit in the ZMR
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@open zmr_exit_{Random.Shared.Next(1000, 9999)}={room1DbRef},{zmrDbRef}"));
@@ -270,7 +269,7 @@ public class ZoneCommandTests
 
 		// Verify zone was set
 		var zonedRoom = await Mediator.Send(new GetObjectNodeQuery(zonedRoomDbRef));
-		var roomZone = await zonedRoom.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var roomZone = await zonedRoom.Known.Object.Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(roomZone.IsNone).IsFalse();
 
 		// Create a unique object in the ZMR with a $-command
@@ -297,7 +296,7 @@ public class ZoneCommandTests
 		// Pattern A: the emitted string is unique because cmdName (a generated unique token) is embedded.
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: ZMR command executed")),
 				TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
 	}
@@ -324,9 +323,9 @@ public class ZoneCommandTests
 
 		// Verify zone was set on the test player
 		var playerObj = await Mediator.Send(new GetObjectNodeQuery(testPlayer.DbRef));
-		var playerZone = await playerObj.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var playerZone = await playerObj.Known.Object.Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(playerZone.IsNone).IsFalse();
-		await Assert.That(playerZone.Known.Object().DBRef.Number).IsEqualTo(personalZMRDbRef.Number);
+		await Assert.That(playerZone.Known.Object.DBRef.Number).IsEqualTo(personalZMRDbRef.Number);
 
 		// Create a unique object in the personal ZMR with a $-command
 		var personalCmdObjName = TestIsolationHelpers.GenerateUniqueName("PersonalCmdObj");
@@ -362,7 +361,7 @@ public class ZoneCommandTests
 		// Pattern A: the emitted string is unique because cmdName (a generated unique token) is embedded.
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: Personal zone command executed")),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -398,7 +397,7 @@ public class ZoneCommandTests
 
 		// Verify zone was set
 		var zonedRoom = await Mediator.Send(new GetObjectNodeQuery(zonedRoomDbRef));
-		var roomZone = await zonedRoom.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var roomZone = await zonedRoom.Known.Object.Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(roomZone.IsNone).IsFalse();
 
 		// Set a $-command directly on the ZMR itself with unique command name (should be ignored per spec).
@@ -415,7 +414,7 @@ public class ZoneCommandTests
 		// Pattern A: the unique token in the message makes this a precise negative assertion.
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"{cmdName}: This should not execute")),
 				TestHelpers.MatchingObject(testPlayer), INotifyService.NotificationType.Announce);
 	}

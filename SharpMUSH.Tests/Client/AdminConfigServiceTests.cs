@@ -98,7 +98,7 @@ public class AdminConfigServiceTests
 		// Act
 		var options = await service.GetOptionsAsync();
 
-		// Assert - should be T0 (list of config items), not T1 (error)
-		await Assert.That(options.IsT1).IsFalse();
+		// Assert - should return a list of config items (not null/empty)
+		await Assert.That(options).IsNotNull();
 	}
 }

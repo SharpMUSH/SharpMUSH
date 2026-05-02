@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -22,14 +23,8 @@ public class ObjectEventHandlers(
 			parser,
 			"OBJECT`MOVE",
 			notification.Enactor,
-			notification.Target.Match(
-				player => player.Object.DBRef.ToString(),
-				exit => exit.Object.DBRef.ToString(),
-				thing => thing.Object.DBRef.ToString()),
-			notification.NewLocation.Match(
-				player => player.Object.DBRef.ToString(),
-				room => room.Object.DBRef.ToString(),
-				thing => thing.Object.DBRef.ToString()),
+			notification.Target.Object.DBRef.ToString(),
+			notification.NewLocation.Object.DBRef.ToString(),
 			notification.OldLocation.ToString(),
 			notification.IsSilent ? "1" : "0",
 			notification.Cause);
@@ -43,11 +38,7 @@ public class ObjectEventHandlers(
 			parser,
 			"OBJECT`FLAG",
 			notification.Enactor,
-			notification.Target.Match(
-				player => player.Object.DBRef.ToString(),
-				room => room.Object.DBRef.ToString(),
-				thing => thing.Object.DBRef.ToString(),
-				exit => exit.Object.DBRef.ToString()),
+			notification.Target.Object.DBRef.ToString(),
 			notification.FlagName,
 			notification.Type,
 			notification.IsSet ? "1" : "0",

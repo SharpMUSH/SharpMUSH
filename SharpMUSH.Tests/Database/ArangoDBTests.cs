@@ -69,7 +69,7 @@ public class ArangoDBTests
 	public async Task StoreAnsiInAttribute()
 	{
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1)));
-		var playerOneDBRef = playerOne.Object()!.DBRef;
+		var playerOneDBRef = playerOne.Object!.DBRef;
 
 		var ansiString = A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "red");
 		await Database.SetAttributeAsync(playerOneDBRef, ["AnsiTest", "Layers"], ansiString, playerOne.AsPlayer);
@@ -159,7 +159,7 @@ public class ArangoDBTests
 		await Assert.That(existingDeep1.Skip(1).First().LongName).IsEqualTo("THREE`LAYERS");
 		await Assert.That(existingDeep2.Skip(1).First().LongName).IsEqualTo("THREE`LAYERS");
 
-		var attributes = obj.Object()!.Attributes.Value;
+		var attributes = obj.Object!.Attributes.Value;
 
 		await foreach (var attribute in attributes)
 		{

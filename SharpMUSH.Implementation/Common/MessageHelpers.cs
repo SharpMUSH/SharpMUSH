@@ -128,11 +128,11 @@ public static class MessageHelpers
 				return new CallState(Errors.ErrorNotVisible);
 			}
 
-			objToEvaluate = maybeLocateTarget.AsSharpObject;
+			objToEvaluate = maybeLocateTarget.AsSharpObject!;
 			attrToEvaluate = string.Join("/", attrObjSplit.Skip(1));
 
 			var attr = await attributeService.GetAttributeAsync(
-				executor, objToEvaluate, attrToEvaluate, IAttributeService.AttributeMode.Execute);
+				executor, objToEvaluate.Value, attrToEvaluate, IAttributeService.AttributeMode.Execute);
 
 			if (!attr.IsError)
 			{
@@ -270,7 +270,7 @@ public static class MessageHelpers
 			{
 				return new KeyValuePair<string, CallState>(
 					kvp.Key,
-					new CallState(MModule.single(recipient.Object().DBRef.ToString()!)));
+					new CallState(MModule.single(recipient.Object.DBRef.ToString()!)));
 			}
 			return kvp;
 		}).ToDictionary();
@@ -280,8 +280,8 @@ public static class MessageHelpers
 			var result = await parser.With(
 				state => state with
 				{
-					Executor = finalObjToEvaluate.Object().DBRef,
-					Enactor = enactor.Object().DBRef,
+					Executor = finalObjToEvaluate.Object.DBRef,
+					Enactor = enactor.Object.DBRef,
 					Caller = state.Executor,
 					Arguments = processedArgs
 				},
@@ -304,7 +304,7 @@ public static class MessageHelpers
 				var result = await parser.With(
 					state => state with
 					{
-						Enactor = enactor.Object().DBRef,
+						Enactor = enactor.Object.DBRef,
 						Caller = state.Executor
 					},
 					newParser => attributeService.EvaluateAttributeFunctionAsync(

@@ -21,7 +21,7 @@ public static class ChannelRecall
 		var channel = maybeChannel.AsChannel;
 
 		var members = channel.Members.Value;
-		var memberStatus = await members.FirstOrDefaultAsync(x => x.Member.Id() == executor.Id());
+		var memberStatus = await members.FirstOrDefaultAsync(x => x.Member.Id == executor.Id);
 		if (memberStatus is null)
 		{
 			return new CallState("Player is not a member of the channel.");

@@ -20,11 +20,11 @@ public static class ListMail
 
 		if (filteredList.IsError)
 		{
-			await notifyService!.Notify(executor, filteredList.AsT0.Value);
-			return MModule.single(filteredList.AsT0.Value);
+			await notifyService!.Notify(executor, filteredList.AsError);
+			return MModule.single(filteredList.AsError);
 		}
 
-		var list = filteredList.AsT1 ?? AsyncEnumerable.Empty<SharpMail>();
+		var list = filteredList.IsError ? AsyncEnumerable.Empty<SharpMail>() : filteredList.AsMailList;
 
 		var foundAny = false;
 		await foreach (var folder in list.GroupBy(x => x.Folder))
@@ -66,7 +66,7 @@ public static class ListMail
 		var forwarded = mail.Forwarded ? "F" : "-";
 		var tagged = mail.Tagged ? "+" : "-";
 		var date = mail.DateSent.ToString("ddd MMM dd HH:mm", CultureInfo.InvariantCulture);
-		var fromName = (await mail.From.WithCancellation(CancellationToken.None)).Object()!.Name.Truncate(15);
+		var fromName = (await mail.From.WithCancellation(CancellationToken.None)).Object!.Name.Truncate(15);
 		var subject = mail.Subject.ToString().Truncate(30);
 
 		var result =

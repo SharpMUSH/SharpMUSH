@@ -8,6 +8,6 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record SetObjectOwnerCommand(AnySharpObject Target, SharpPlayer Owner) : ICommand, ICacheInvalidating
 {
-	public string[] CacheKeys => [$"object:{Target.Object().DBRef}", $"object:{Owner.Object.DBRef}"];
+	public string[] CacheKeys => [$"object:{Target.Object.DBRef}", $"object:{Owner.Object.DBRef}"];
 	public string[] CacheTags => [];
 }

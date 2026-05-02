@@ -1259,7 +1259,7 @@ public partial class Functions
 				var matches = new List<AnySharpContent>();
 				await foreach (var item in container.AsContainer.Content(Mediator!))
 				{
-					var name = item.Object().Name;
+					var name = item.Object.Name;
 					if (name.Equals(objectArg, StringComparison.OrdinalIgnoreCase) ||
 						name.StartsWith(objectArg, StringComparison.OrdinalIgnoreCase))
 					{
@@ -1273,7 +1273,7 @@ public partial class Functions
 				}
 				else if (matches.Count == 1)
 				{
-					return new CallState($"#{matches[0].Object().DBRef.Number}");
+					return new CallState($"#{matches[0].Object.DBRef.Number}");
 				}
 				else
 				{

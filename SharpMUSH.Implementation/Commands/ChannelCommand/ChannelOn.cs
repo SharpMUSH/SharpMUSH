@@ -20,13 +20,8 @@ public static class ChannelOn
 			var maybeTarget =
 				await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName);
 
-			switch (maybeTarget)
-			{
-				case { IsError: true }:
-					return new CallState(maybeTarget.AsError.Value);
-				case { IsNone: true }:
-					return new CallState("#-1 PLAYER NOT FOUND");
-			}
+			if (maybeTarget.IsError) return new CallState(maybeTarget.AsError.Value);
+			if (maybeTarget.IsNone) return new CallState("#-1 PLAYER NOT FOUND");
 
 			target = maybeTarget.AsAnyObject;
 		}
@@ -42,7 +37,7 @@ public static class ChannelOn
 		// Channel join/leave announcements are handled by the channel system
 		await Mediator.Send(new AddUserToChannelCommand(channel, target));
 
-		await NotifyService.Notify(executor, $"CHAT: {target.Object().Name} has been added to {channelName}.", executor);
-		return new CallState($"{target.Object().Name} has been added to {channelName}.");
+		await NotifyService.Notify(executor, $"CHAT: {target.Object.Name} has been added to {channelName}.", executor);
+		return new CallState($"{target.Object.Name} has been added to {channelName}.");
 	}
 }

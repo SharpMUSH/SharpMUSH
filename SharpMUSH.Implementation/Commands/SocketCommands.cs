@@ -1,6 +1,5 @@
 ﻿using DotNext.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -55,13 +54,13 @@ public partial class Commands
 				if (isWizard)
 				{
 					var location = obj.Known.IsContent
-						? (await obj.Known.AsContent.Location())?.Object().DBRef.ToString() ?? "*NOWHERE*"
+						? (await obj.Known.AsContent.Location()).Object.DBRef.ToString()
 						: "*NOWHERE*";
 					var doing = await AttributeService!.GetAttributeAsync(executor, obj.Known, "DOING",
 						IAttributeService.AttributeMode.Read, false);
 					var doingLength = doing.IsAttribute ? MModule.getLength(doing.AsAttribute.Last().Value) : 0;
 					line = string.Format(wizFmt,
-						obj.Known.Object().Name,
+						obj.Known.Object.Name,
 						location,
 						TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
 						TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
@@ -72,7 +71,7 @@ public partial class Commands
 				else
 				{
 					line = string.Format(mortFmt,
-						obj.Known.Object().Name,
+						obj.Known.Object.Name,
 						TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
 						TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
 						doingText);
@@ -152,9 +151,7 @@ public partial class Commands
 		var nameItem = nameItems.First();
 
 		var foundDB = await nameItem.Match(
-			async dbref => (await Mediator!.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _)
-				? player
-				: null,
+			async dbref => { var r = await Mediator!.Send(new GetObjectNodeQuery(dbref)); return r.IsPlayer ? r.AsPlayer : null; },
 			async name => await (Mediator!.CreateStream(new GetPlayerQuery(name))).FirstOrDefaultAsync());
 
 		if (foundDB is null)

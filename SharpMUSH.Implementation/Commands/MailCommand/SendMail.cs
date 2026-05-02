@@ -39,7 +39,7 @@ public static class SendMail
 
 		if (!noSignature)
 		{
-			var attribute = mediator.CreateStream(new GetAttributeQuery(sender.Object().DBRef, ["MAILSIGNATURE"]));
+			var attribute = mediator.CreateStream(new GetAttributeQuery(sender.Object.DBRef, ["MAILSIGNATURE"]));
 
 			var attributeOpportunity = await attribute.FirstOrDefaultAsync();
 			if (attributeOpportunity is not null)
@@ -79,14 +79,14 @@ public static class SendMail
 				continue;
 			}
 
-			await mediator.Send(new SendMailCommand(sender.Object(), player, mail));
+			await mediator.Send(new SendMailCommand(sender.Object, player, mail));
 			await notifyService.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.");
 
 			if (!silent)
 			{
 				var mailList = mediator.CreateStream(new GetMailListQuery(player, "INBOX"));
 				await notifyService.Notify(player,
-					$"MAIL: You have received a message ({await mailList.CountAsync()}) from {sender.Object().Name}.");
+					$"MAIL: You have received a message ({await mailList.CountAsync()}) from {sender.Object.Name}.");
 			}
 
 			// Trigger AMAIL attribute if configured and present
@@ -107,7 +107,7 @@ public static class SendMail
 					await parser.With(state => state with
 					{
 						Executor = player.Object.DBRef,
-						Enactor = sender.Object().DBRef,
+						Enactor = sender.Object.DBRef,
 						Caller = state.Executor
 					}, async newParser =>
 					{

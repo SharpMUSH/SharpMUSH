@@ -1,4 +1,3 @@
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using System.Collections.Immutable;
@@ -136,7 +135,7 @@ public class TestObjectFactory
 			{
 				await ValueTask.CompletedTask;
 				// Use provided owner or default to null
-				return owner?.IsPlayer == true ? owner.AsPlayer : null!;
+				return owner?.IsPlayer == true ? owner.Value.AsPlayer : null!;
 			}),
 			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),

@@ -2,7 +2,6 @@ using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -145,11 +144,7 @@ RETURN count(r) AS cnt
 		await UnlinkRoomAsync(room, cancellationToken);
 
 		var roomKey = ExtractKey(room.Id!);
-		var destKey = location.Match(
-		player => ExtractKey(player.Id!),
-		rm => ExtractKey(rm.Id!),
-		thing => ExtractKey(thing.Id!),
-		_ => throw new InvalidOperationException());
+		var destKey = ExtractKey(location.Id!);
 
 		await ExecuteWithRetryAsync("""
 MATCH (r:Room {key: $roomKey}), (dest {key: $destKey})
@@ -393,7 +388,7 @@ RETURN o, e
 
 	public async ValueTask SetObjectName(AnySharpObject obj, MString value, CancellationToken cancellationToken = default)
 	{
-		await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) SET o.name = $name", new { key = obj.Object().Key, name = MModule.plainText(value) }, cancellationToken);
+		await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) SET o.name = $name", new { key = obj.Object.Key, name = MModule.plainText(value) }, cancellationToken);
 	}
 
 	public async ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home, CancellationToken cancellationToken = default)
@@ -426,13 +421,13 @@ CREATE (src)-[:AT_LOCATION]->(dest)
 
 	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken cancellationToken = default)
 	{
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 		// Remove existing parent edge
 		await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[r:HAS_PARENT]->() DELETE r", new { key = objKey }, cancellationToken);
 
 		if (parent != null)
 		{
-			var parentKey = parent.Object().Key;
+			var parentKey = parent.Value.Object.Key;
 			await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (p:Object {key: $parentKey})
 CREATE (o)-[:HAS_PARENT]->(p)
@@ -445,12 +440,12 @@ CREATE (o)-[:HAS_PARENT]->(p)
 
 	public async ValueTask SetObjectZone(AnySharpObject obj, AnySharpObject? zone, CancellationToken cancellationToken = default)
 	{
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 		await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[r:HAS_ZONE]->() DELETE r", new { key = objKey }, cancellationToken);
 
 		if (zone != null)
 		{
-			var zoneKey = zone.Object().Key;
+			var zoneKey = zone.Value.Object.Key;
 			await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (z:Object {key: $zoneKey})
 CREATE (o)-[:HAS_ZONE]->(z)
@@ -463,7 +458,7 @@ CREATE (o)-[:HAS_ZONE]->(z)
 
 	public async ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner, CancellationToken cancellationToken = default)
 	{
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 		var ownerKey = ExtractKey(owner.Id!);
 		await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[r:HAS_OWNER]->()
@@ -476,7 +471,7 @@ CREATE (o)-[:HAS_OWNER]->(p)
 
 	public async ValueTask SetObjectWarnings(AnySharpObject obj, WarningType warnings, CancellationToken cancellationToken = default)
 	{
-		await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) SET o.warnings = $warnings", new { key = obj.Object().Key, warnings = (int)warnings }, cancellationToken);
+		await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) SET o.warnings = $warnings", new { key = obj.Object.Key, warnings = (int)warnings }, cancellationToken);
 	}
 
 	#endregion

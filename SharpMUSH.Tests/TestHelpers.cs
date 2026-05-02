@@ -1,6 +1,5 @@
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -19,49 +18,39 @@ public static class TestHelpers
 	/// when rendered as an ANSI string (escape codes included).
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool MessageContains(OneOf<MString, string> msg, string expected) =>
-		msg.Match(
-			ms => ms.ToString().Contains(expected),
-			s => s.Contains(expected));
+	public static bool MessageContains(SharpMessage msg, string expected) =>
+		msg.ToString().Contains(expected);
 
 	/// <summary>
 	/// Checks if the plain-text content of a OneOf&lt;MString, string&gt; message contains
 	/// the expected text, ignoring any ANSI escape sequences.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool MessagePlainTextContains(OneOf<MString, string> msg, string expected) =>
-		msg.Match(
-			ms => ms.ToPlainText().Contains(expected),
-			s => s.Contains(expected));
+	public static bool MessagePlainTextContains(SharpMessage msg, string expected) =>
+		msg.ToPlainText().Contains(expected);
 
 	/// <summary>
 	/// Checks if a OneOf&lt;MString, string&gt; message equals the expected text.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool MessageEquals(OneOf<MString, string> msg, string expected) =>
-		msg.Match(
-			ms => ms.ToString() == expected,
-			s => s == expected);
+	public static bool MessageEquals(SharpMessage msg, string expected) =>
+		msg.ToString() == expected;
 
 	/// <summary>
 	/// Checks if the plain-text content of a OneOf&lt;MString, string&gt; message equals
 	/// the expected text, ignoring any ANSI escape sequences.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool MessagePlainTextEquals(OneOf<MString, string> msg, string expected) =>
-		msg.Match(
-			ms => ms.ToPlainText() == expected,
-			s => s == expected);
+	public static bool MessagePlainTextEquals(SharpMessage msg, string expected) =>
+		msg.ToPlainText() == expected;
 
 	/// <summary>
 	/// Checks if the plain-text content of a OneOf&lt;MString, string&gt; message starts with
 	/// the expected prefix, ignoring any ANSI escape sequences.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool MessagePlainTextStartsWith(OneOf<MString, string> msg, string expectedPrefix) =>
-		msg.Match(
-			ms => ms.ToPlainText().StartsWith(expectedPrefix),
-			s => s.StartsWith(expectedPrefix));
+	public static bool MessagePlainTextStartsWith(SharpMessage msg, string expectedPrefix) =>
+		msg.ToPlainText().StartsWith(expectedPrefix);
 
 	/// <summary>
 	/// Returns an NSubstitute argument matcher for <see cref="AnySharpObject"/> that matches
@@ -69,7 +58,7 @@ public static class TestHelpers
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static AnySharpObject MatchingObject(AnySharpObject expected) =>
-		Arg.Is<AnySharpObject>((AnySharpObject o) => o.Object().DBRef == expected.Object().DBRef);
+		Arg.Is<AnySharpObject>((AnySharpObject o) => o.Object.DBRef == expected.Object.DBRef);
 
 	/// <summary>
 	/// Returns an NSubstitute argument matcher for <see cref="AnySharpObject"/> that matches
@@ -77,7 +66,7 @@ public static class TestHelpers
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static AnySharpObject MatchingObject(DBRef dbRef) =>
-		Arg.Is<AnySharpObject>((AnySharpObject o) => o.Object().DBRef == dbRef);
+		Arg.Is<AnySharpObject>((AnySharpObject o) => o.Object.DBRef == dbRef);
 
 	/// <summary>
 	/// Polls the NSubstitute <paramref name="notifyService"/> mock until a Notify call matching
@@ -100,9 +89,9 @@ public static class TestHelpers
 				var args = call.GetArguments();
 				if (args.Length < 2) continue;
 				if (args[0] is not AnySharpObject obj) continue;
-				if (obj.Object().DBRef != executor) continue;
-				if (args[1] is not OneOf<MString, string> msg) continue;
-				var text = msg.Match(ms => ms.ToString(), s => s);
+				if (obj.Object.DBRef != executor) continue;
+				if (args[1] is not SharpMessage msg) continue;
+				var text = msg.ToString();
 				if (text.Contains(containsText)) return;
 			}
 			await Task.Delay(50);
@@ -166,10 +155,10 @@ public static class TestHelpers
 				c.GetArguments().Length >= 2 &&
 				c.GetArguments()[1] is string k && k == key &&
 				(receiverDbRef == null ||
-				 (c.GetArguments()[0] is AnySharpObject obj && obj.Object().DBRef == receiverDbRef) ||
+				 (c.GetArguments()[0] is AnySharpObject obj && obj.Object.DBRef == receiverDbRef) ||
 				 (c.GetArguments()[0] is DBRef d && d == receiverDbRef)) &&
 				(senderDbRef == null ||
 				 (c.GetArguments().Length >= 3 &&
-				  ((c.GetArguments()[2] is AnySharpObject sObj && sObj.Object().DBRef == senderDbRef) ||
+				  ((c.GetArguments()[2] is AnySharpObject sObj && sObj.Object.DBRef == senderDbRef) ||
 				   (c.GetArguments()[2] is DBRef sd && sd == senderDbRef)))));
 }
