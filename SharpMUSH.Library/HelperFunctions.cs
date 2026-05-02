@@ -291,10 +291,10 @@ public static partial class HelperFunctions
 		var obj = match.Groups["Object"].Value;
 		var attr = match.Groups["Attribute"].Value;
 		if (!string.IsNullOrEmpty(attr) && !IsValidAttributeName(attr)) return new None();
-		if (string.IsNullOrEmpty(obj) || !DBRef.TryParse(obj, out var dbRef) || dbRef is null) return new None();
+		if (string.IsNullOrEmpty(obj)) return new None();
 		if (!string.IsNullOrEmpty(attr))
-			return (DbRefOrAttrRef)new DbRefAttribute(dbRef.Value, attr.ToUpper().Split("`").ToArray());
-		return (DbRefOrAttrRef)dbRef.Value;
+			return (Option<DbRefOrAttrRef>)(DbRefOrAttrRef)new ObjAttrPair(obj, attr);
+		return (Option<DbRefOrAttrRef>)(DbRefOrAttrRef)obj;
 	}
 
 	public static Option<DBRef> ParseDbRef(string dbrefStr)

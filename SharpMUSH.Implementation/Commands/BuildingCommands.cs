@@ -163,7 +163,7 @@ public partial class Commands
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 			enactor,
 			executor,
-			refOrAttr.DbRef.ToString(),
+			refOrAttr.ObjSpecifier,
 			LocateFlags.All);
 
 		if (locate.IsError)

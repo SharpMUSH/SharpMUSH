@@ -334,10 +334,10 @@ public partial class Functions
 
 		var infoRefOrAttr = split.AsValue();
 
-		if (infoRefOrAttr.IsDBRef)
+		if (infoRefOrAttr.IsObjectOnly)
 		{
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser, executor, executor, infoRefOrAttr.DbRef.ToString(), LocateFlags.All,
+				parser, executor, executor, infoRefOrAttr.ObjSpecifier, LocateFlags.All,
 				async found =>
 				{
 					var queryResult = Mediator!.CreateStream(new ScheduleSemaphoreQuery(found.Object.DBRef));
@@ -347,7 +347,7 @@ public partial class Functions
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, infoRefOrAttr.DbRef.ToString(), LocateFlags.All,
+			parser, executor, executor, infoRefOrAttr.ObjSpecifier, LocateFlags.All,
 			async found =>
 			{
 				var dbAttr = new DbRefAttribute(found.Object.DBRef, infoRefOrAttr.AttributeArray!);

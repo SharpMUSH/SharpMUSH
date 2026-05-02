@@ -29,7 +29,7 @@ public partial class Commands
 		var objAttrText = MModule.plainText(objAttrArg.Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
-		if (!split.TryGetValue(out var refOrAttr) || refOrAttr.IsDBRef)
+		if (!split.TryGetValue(out var refOrAttr) || refOrAttr.IsObjectOnly)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState("#-1 INVALID FORMAT");
@@ -37,7 +37,7 @@ public partial class Commands
 
 		// Locate object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, refOrAttr.DbRef.ToString(), LocateFlags.All);
+		enactor, executor, refOrAttr.ObjSpecifier, LocateFlags.All);
 
 		if (locate.IsError)
 		{
@@ -138,7 +138,7 @@ public partial class Commands
 		var sourceText = MModule.plainText(sourceArg.Message!);
 		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
 
-		if (!sourceSplit.TryGetValue(out var sourceRefOrAttr) || sourceRefOrAttr.IsDBRef)
+		if (!sourceSplit.TryGetValue(out var sourceRefOrAttr) || sourceRefOrAttr.IsObjectOnly)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
 			return new CallState("#-1 INVALID SOURCE");
@@ -148,7 +148,7 @@ public partial class Commands
 
 		// Locate source object
 		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, sourceRefOrAttr.DbRef.ToString(), LocateFlags.All);
+		enactor, executor, sourceRefOrAttr.ObjSpecifier, LocateFlags.All);
 
 		if (sourceLocate.IsError)
 		{
@@ -195,11 +195,11 @@ public partial class Commands
 
 			// Locate destination object
 			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor, executor, destRefOrAttr.DbRef.ToString(), LocateFlags.All);
+			enactor, executor, destRefOrAttr.ObjSpecifier, LocateFlags.All);
 
 			if (destLocate.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destRefOrAttr.DbRef.ToString());
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destRefOrAttr.ObjSpecifier);
 				continue;
 			}
 
@@ -209,7 +209,7 @@ public partial class Commands
 			var canSet = await PermissionService!.CanSet(executor, destObject);
 			if (!canSet)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destRefOrAttr.DbRef.ToString());
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destRefOrAttr.ObjSpecifier);
 				continue;
 			}
 
@@ -218,7 +218,7 @@ public partial class Commands
 
 			if (setResult.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destRefOrAttr.DbRef.ToString(), setResult.AsError.Value);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destRefOrAttr.ObjSpecifier, setResult.AsError.Value);
 				continue;
 			}
 
@@ -267,7 +267,7 @@ public partial class Commands
 		var sourceText = MModule.plainText(sourceArg.Message!);
 		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
 
-		if (!sourceSplit.TryGetValue(out var sourceRefOrAttr) || sourceRefOrAttr.IsDBRef)
+		if (!sourceSplit.TryGetValue(out var sourceRefOrAttr) || sourceRefOrAttr.IsObjectOnly)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
 			return new CallState("#-1 INVALID SOURCE");
@@ -277,7 +277,7 @@ public partial class Commands
 
 		// Locate source object
 		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, sourceRefOrAttr.DbRef.ToString(), LocateFlags.All);
+		enactor, executor, sourceRefOrAttr.ObjSpecifier, LocateFlags.All);
 
 		if (sourceLocate.IsError)
 		{
@@ -324,11 +324,11 @@ public partial class Commands
 
 			// Locate destination object
 			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor, executor, destRefOrAttr.DbRef.ToString(), LocateFlags.All);
+			enactor, executor, destRefOrAttr.ObjSpecifier, LocateFlags.All);
 
 			if (destLocate.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destRefOrAttr.DbRef.ToString());
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destRefOrAttr.ObjSpecifier);
 				continue;
 			}
 
@@ -338,7 +338,7 @@ public partial class Commands
 			var canSet = await PermissionService!.CanSet(executor, destObject);
 			if (!canSet)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destRefOrAttr.DbRef.ToString());
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destRefOrAttr.ObjSpecifier);
 				continue;
 			}
 
@@ -347,7 +347,7 @@ public partial class Commands
 
 			if (setResult.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destRefOrAttr.DbRef.ToString(), setResult.AsError.Value);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destRefOrAttr.ObjSpecifier, setResult.AsError.Value);
 				continue;
 			}
 
@@ -406,7 +406,7 @@ public partial class Commands
 		var objAttrText = MModule.plainText(objAttrArg.Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
-		if (!split.TryGetValue(out var refOrAttr) || refOrAttr.IsDBRef)
+		if (!split.TryGetValue(out var refOrAttr) || refOrAttr.IsObjectOnly)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState("#-1 INVALID FORMAT");
@@ -414,7 +414,7 @@ public partial class Commands
 
 		// Locate object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, refOrAttr.DbRef.ToString(), LocateFlags.All);
+		enactor, executor, refOrAttr.ObjSpecifier, LocateFlags.All);
 
 		if (locate.IsError)
 		{
@@ -529,7 +529,7 @@ public partial class Commands
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 		enactor,
 		executor,
-		refOrAttr.DbRef.ToString(),
+		refOrAttr.ObjSpecifier,
 		LocateFlags.All);
 
 		if (locate.IsError)
