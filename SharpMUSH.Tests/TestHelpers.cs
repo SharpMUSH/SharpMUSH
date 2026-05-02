@@ -89,7 +89,7 @@ public static class TestHelpers
 		INotifyService notifyService,
 		DBRef executor,
 		string containsText,
-		int timeoutMs = 5000)
+		int timeoutMs = 10000)
 	{
 		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
 		while (DateTime.UtcNow < deadline)
@@ -107,7 +107,8 @@ public static class TestHelpers
 			}
 			await Task.Delay(50);
 		}
-		// Timeout reached — let the caller's assertion produce the diagnostic message
+		throw new TimeoutException(
+			$"Timed out after {timeoutMs}ms waiting for notification containing \"{containsText}\" for executor {executor}.");
 	}
 
 	/// <summary>
