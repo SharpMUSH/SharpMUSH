@@ -22,7 +22,7 @@ public class WarningService(
 	/// </summary>
 	public async Task<bool> CheckObjectAsync(AnySharpObject checker, AnySharpObject target)
 	{
-		var targetObj = target.Object();
+		var targetObj = target.Object;
 
 		// Skip GOING objects
 		if (await targetObj.IsGoingAsync())
@@ -86,7 +86,7 @@ public class WarningService(
 	public async Task<int> CheckOwnedObjectsAsync(AnySharpObject owner)
 	{
 		var warningCount = 0;
-		var ownerObj = owner.Object();
+		var ownerObj = owner.Object;
 
 		// Use GetAllTypedObjectsQuery to get fully-typed objects directly, avoiding a secondary
 		// per-object GetObjectNodeQuery call inside the loop (which would route through the
@@ -99,7 +99,7 @@ public class WarningService(
 			SharpPlayer objectOwner;
 			try
 			{
-				objectOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+				objectOwner = await obj.Object.Owner.WithCancellation(CancellationToken.None);
 			}
 			catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
 			{
@@ -146,7 +146,7 @@ public class WarningService(
 			SharpPlayer owner;
 			try
 			{
-				owner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+				owner = await obj.Object.Owner.WithCancellation(CancellationToken.None);
 			}
 			catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
 			{
@@ -171,7 +171,7 @@ public class WarningService(
 
 			if (hadWarnings)
 			{
-				var objBase = obj.Object();
+				var objBase = obj.Object;
 				warningsByOwner[ownerDbRef].Warnings.Add($"{objBase.Name}(#{objBase.Key})");
 			}
 		}
@@ -198,7 +198,7 @@ public class WarningService(
 	/// </summary>
 	private static async Task<WarningType> GetWarningsForCheck(AnySharpObject checker, SharpObject target, SharpObject owner)
 	{
-		var checkerObj = checker.Object();
+		var checkerObj = checker.Object;
 
 		SharpPlayer checkerOwner;
 		try
@@ -230,7 +230,7 @@ public class WarningService(
 
 		if (warnings.HasFlag(WarningType.LockProbs))
 		{
-			var targetObj = target.Object();
+			var targetObj = target.Object;
 			var locks = targetObj.Locks;
 
 			// Check each lock on the object
@@ -290,7 +290,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.RoomDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "room-desc", "Room has no description.");
 				hasWarnings = true;
@@ -316,11 +316,7 @@ public class WarningService(
 				try
 				{
 					var destination = await exit.Location.WithCancellation(CancellationToken.None);
-					var destObj = destination.Match(
-						player => player.Object,
-						room => room.Object,
-						thing => thing.Object
-					);
+					var destObj = destination.Object;
 
 					// Check if destination DBRef is -1 (NOTHING) or 0 (invalid)
 					if (destObj.DBRef.Number <= 0)
@@ -344,7 +340,7 @@ public class WarningService(
 				try
 				{
 					var exitLocation = await target.AsExit.Location.WithCancellation(CancellationToken.None);
-					if (exitLocation.Object().DBRef.Number == -1)
+					if (exitLocation.Object.DBRef.Number == -1)
 					{
 						var destAttr = await attributeService.GetAttributeAsync(checker, target, "DESTINATION", IAttributeService.AttributeMode.Read, false);
 						var exitToAttr = await attributeService.GetAttributeAsync(checker, target, "EXITTO", IAttributeService.AttributeMode.Read, false);
@@ -368,7 +364,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.ExitDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "exit-desc", "Exit has no description.");
 				hasWarnings = true;
@@ -383,7 +379,7 @@ public class WarningService(
 			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, false);
 			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
 
-			if (success.IsT1 || osuccess.IsT1 || odrop.IsT1)
+			if (success.IsNone || osuccess.IsNone || odrop.IsNone)
 			{
 				await Complain(checker, target, "exit-msgs", "Exit is missing messages (SUCCESS, OSUCCESS, or ODROP).");
 				hasWarnings = true;
@@ -391,7 +387,7 @@ public class WarningService(
 
 			// Check locked exit messages: FAILURE
 			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
-			if (failure.IsT1)
+			if (failure.IsNone)
 			{
 				await Complain(checker, target, "exit-msgs", "Exit is missing FAILURE message.");
 				hasWarnings = true;
@@ -408,17 +404,9 @@ public class WarningService(
 				var destination = await exit.Location.WithCancellation(CancellationToken.None);
 				var source = await exit.Home.WithCancellation(CancellationToken.None);
 
-				var destObj = destination.Match(
-					player => player.Object,
-					room => room.Object,
-					thing => thing.Object
-				);
+			var destObj = destination.Object;
 
-				var sourceObj = source.Match(
-					player => player.Object,
-					room => room.Object,
-					thing => thing.Object
-				);
+			var sourceObj = source.Object;
 
 				// Only check if we have valid source and destination (not NOTHING)
 				if (destObj.DBRef.Number > 0 && sourceObj.DBRef.Number > 0)
@@ -432,11 +420,7 @@ public class WarningService(
 						try
 						{
 							var returnDest = await returnExit.Location.WithCancellation(CancellationToken.None);
-							var returnDestObj = returnDest.Match(
-								player => player.Object,
-								room => room.Object,
-								thing => thing.Object
-							);
+							var returnDestObj = returnDest.Object;
 
 							if (returnDestObj.DBRef.Equals(sourceObj.DBRef))
 							{
@@ -486,7 +470,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.ThingDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				// Skip things in player inventory as per PennMUSH behavior
 				if (target.IsThing)
@@ -518,7 +502,7 @@ public class WarningService(
 			var drop = await attributeService.GetAttributeAsync(checker, target, "DROP", IAttributeService.AttributeMode.Read, false);
 			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
 
-			if (success.IsT1 || osuccess.IsT1 || drop.IsT1 || odrop.IsT1)
+			if (success.IsNone || osuccess.IsNone || drop.IsNone || odrop.IsNone)
 			{
 				await Complain(checker, target, "thing-msgs", "Thing is missing messages (SUCCESS, OSUCCESS, DROP, or ODROP).");
 				hasWarnings = true;
@@ -526,7 +510,7 @@ public class WarningService(
 
 			// Check locked thing messages: FAILURE
 			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
-			if (failure.IsT1)
+			if (failure.IsNone)
 			{
 				await Complain(checker, target, "thing-msgs", "Thing is missing FAILURE message.");
 				hasWarnings = true;
@@ -546,7 +530,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.PlayerDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "my-desc", "Player is missing description.");
 				hasWarnings = true;
@@ -561,7 +545,7 @@ public class WarningService(
 	/// </summary>
 	private async Task Complain(AnySharpObject checker, AnySharpObject target, string warningName, string message)
 	{
-		var targetObj = target.Object();
+		var targetObj = target.Object;
 		await notifyService.Notify(checker, $"Warning '{warningName}' for {targetObj.Name}(#{targetObj.Key}):");
 		await notifyService.Notify(checker, message);
 	}

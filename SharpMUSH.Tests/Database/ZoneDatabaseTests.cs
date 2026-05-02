@@ -37,10 +37,10 @@ public class ZoneDatabaseTests
 
 		// Verify zone was set
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zone = await updatedObject.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zone = await updatedObject.Known.Object.Zone.WithCancellation(CancellationToken.None);
 
 		await Assert.That(zone.IsNone).IsFalse();
-		await Assert.That(zone.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		await Assert.That(zone.Known.Object.DBRef.Number).IsEqualTo(zoneDbRef.Number);
 	}
 
 	[Test]
@@ -61,7 +61,7 @@ public class ZoneDatabaseTests
 
 		// Verify zone was set
 		var withZone = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zoneCheck = await withZone.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zoneCheck = await withZone.Known.Object.Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(zoneCheck.IsNone).IsFalse();
 
 		// Unset zone using Mediator (like the function does)
@@ -69,7 +69,7 @@ public class ZoneDatabaseTests
 
 		// Verify zone was cleared
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zone = await updatedObject.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zone = await updatedObject.Known.Object.Zone.WithCancellation(CancellationToken.None);
 
 		await Assert.That(zone.IsNone).IsTrue();
 	}
@@ -96,16 +96,16 @@ public class ZoneDatabaseTests
 
 		// Verify initial zone
 		var withZone1 = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zone1Check = await withZone1.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		await Assert.That(zone1Check.Known.Object().DBRef.Number).IsEqualTo(zone1DbRef.Number);
+		var zone1Check = await withZone1.Known.Object.Zone.WithCancellation(CancellationToken.None);
+		await Assert.That(zone1Check.Known.Object.DBRef.Number).IsEqualTo(zone1DbRef.Number);
 
 		// Update zone to zone2 using Mediator
 		await Mediator.Send(new SetObjectZoneCommand(withZone1.Known, zone2Object.Known));
 
 		// Verify updated zone
 		var withZone2 = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zone2Check = await withZone2.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		await Assert.That(zone2Check.Known.Object().DBRef.Number).IsEqualTo(zone2DbRef.Number);
+		var zone2Check = await withZone2.Known.Object.Zone.WithCancellation(CancellationToken.None);
+		await Assert.That(zone2Check.Known.Object.DBRef.Number).IsEqualTo(zone2DbRef.Number);
 	}
 
 	[Test]
@@ -123,7 +123,7 @@ public class ZoneDatabaseTests
 
 		// Verify no zone
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zone = await updatedObject.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zone = await updatedObject.Known.Object.Zone.WithCancellation(CancellationToken.None);
 
 		await Assert.That(zone.IsNone).IsTrue();
 	}
@@ -151,13 +151,13 @@ public class ZoneDatabaseTests
 
 		// Verify both have the same zone
 		var updated1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
-		var zone1 = await updated1.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zone1 = await updated1.Known.Object.Zone.WithCancellation(CancellationToken.None);
 
 		var updated2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
-		var zone2 = await updated2.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zone2 = await updated2.Known.Object.Zone.WithCancellation(CancellationToken.None);
 
-		await Assert.That(zone1.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
-		await Assert.That(zone2.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		await Assert.That(zone1.Known.Object.DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		await Assert.That(zone2.Known.Object.DBRef.Number).IsEqualTo(zoneDbRef.Number);
 	}
 
 	[Test]
@@ -185,11 +185,11 @@ public class ZoneDatabaseTests
 
 		// Verify the chain
 		var updatedMid = await Mediator.Send(new GetObjectNodeQuery(midZoneDbRef));
-		var midZoneZone = await updatedMid.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		await Assert.That(midZoneZone.Known.Object().DBRef.Number).IsEqualTo(topZoneDbRef.Number);
+		var midZoneZone = await updatedMid.Known.Object.Zone.WithCancellation(CancellationToken.None);
+		await Assert.That(midZoneZone.Known.Object.DBRef.Number).IsEqualTo(topZoneDbRef.Number);
 
 		var updatedObj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var objZone = await updatedObj.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		await Assert.That(objZone.Known.Object().DBRef.Number).IsEqualTo(midZoneDbRef.Number);
+		var objZone = await updatedObj.Known.Object.Zone.WithCancellation(CancellationToken.None);
+		await Assert.That(objZone.Known.Object.DBRef.Number).IsEqualTo(midZoneDbRef.Number);
 	}
 }

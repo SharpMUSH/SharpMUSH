@@ -10,7 +10,7 @@ public class SetObjectWarningsCommandHandler(ISharpDatabase database) : ICommand
 	public async ValueTask<Unit> Handle(SetObjectWarningsCommand request, CancellationToken cancellationToken)
 	{
 		// Update the in-memory object
-		request.Target.Object().Warnings = request.Warnings;
+		request.Target.Object.Warnings = request.Warnings;
 
 		// Persist the warnings to the database (best-effort)
 		try

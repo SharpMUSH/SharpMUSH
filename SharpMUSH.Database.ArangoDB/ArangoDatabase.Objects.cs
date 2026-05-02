@@ -5,7 +5,6 @@ using DotNext.Threading;
 using MarkupString;
 using Mediator;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -80,19 +79,9 @@ public partial class ArangoDatabase
 			DatabaseConstants.HasObjectOwner, new SharpEdgeCreateRequest(obj.New.Id, playerResult.Id),
 			cancellationToken: ct);
 
-		var idx = objectLocation.Match(
-			player => player.Id,
-			room => room.Id,
-			_ => throw new ArgumentException("An Exit is not a valid location to create a player!"),
-			thing => thing.Id,
-			_ => throw new ArgumentException("A player must have a valid creation location!"));
+		var idx = objectLocation.Id!;
 
-		var homeIdx = objectHome.Match(
-			player => player.Id,
-			room => room.Id,
-			_ => throw new ArgumentException("An Exit is not a valid location to create a player!"),
-			thing => thing.Id,
-			_ => throw new ArgumentException("A player must have a valid creation location!"));
+		var homeIdx = objectHome.Id!;
 
 		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphLocations,
 			DatabaseConstants.AtLocation, new SharpEdgeCreateRequest(playerResult.Id, idx!), cancellationToken: ct);
@@ -207,7 +196,7 @@ public partial class ArangoDatabase
 	public async ValueTask<bool> LinkRoomAsync(SharpRoom room, AnyOptionalSharpContainer location, CancellationToken ct = default)
 	{
 		// If location is None, just unlink any existing location
-		if (location.IsT3) // None
+		if (location.IsNone) // None
 		{
 			return await UnlinkRoomAsync(room, ct);
 		}
@@ -216,11 +205,7 @@ public partial class ArangoDatabase
 		await UnlinkRoomAsync(room, ct);
 
 		// Create edge for location (drop-to)
-		var locationId = location.Match(
-			player => player.Id!,
-			room => room.Id!,
-			thing => thing.Id!,
-			_ => throw new InvalidOperationException("Invalid location type"));
+		var locationId = location.Id!;
 
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
 			new SharpEdgeCreateRequest(room.Id!, locationId), cancellationToken: ct);
@@ -292,7 +277,7 @@ public partial class ArangoDatabase
 		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects,
 			new
 			{
-				_key = obj.Object().Key.ToString(),
+				_key = obj.Object.Key.ToString(),
 				Name = MModule.plainText(value)
 			}, cancellationToken: ct);
 
@@ -323,8 +308,8 @@ public partial class ArangoDatabase
 
 	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken ct = default)
 	{
-		var fromId = obj.Object().Id!;
-		var toId = parent?.Object().Id;
+		var fromId = obj.Object.Id!;
+		var toId = parent?.Object.Id;
 
 		var response = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e",
@@ -345,12 +330,12 @@ public partial class ArangoDatabase
 		else if (parent is null)
 		{
 			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				parentEdge!.Key, cancellationToken: ct);
+				parentEdge.Key, cancellationToken: ct);
 		}
 		else
 		{
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
-				parentEdge!.Key, new { _to = toId }, cancellationToken: ct);
+				parentEdge.Key, new { _to = toId }, cancellationToken: ct);
 		}
 	}
 
@@ -361,7 +346,7 @@ public partial class ArangoDatabase
 	{
 		var response = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphZones} RETURN e",
-			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
+			new Dictionary<string, object> { { StartVertex, obj.Object.Id! } }, cancellationToken: ct);
 
 		var zoneEdge = response.FirstOrDefault();
 
@@ -375,19 +360,19 @@ public partial class ArangoDatabase
 		{
 			// No existing zone, create new edge
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				new { _from = obj.Object().Id, _to = zone!.Object().Id }, cancellationToken: ct);
+				new { _from = obj.Object.Id, _to = zone!.Value.Object.Id }, cancellationToken: ct);
 		}
 		else if (zone is null)
 		{
 			// Removing zone - edge exists (zoneEdge is not null at this point)
 			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				zoneEdge!.Key, cancellationToken: ct);
+				zoneEdge.Key, cancellationToken: ct);
 		}
 		else
 		{
 			// Updating zone - edge exists (zoneEdge is not null at this point)
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				zoneEdge!.Key, new { _to = zone.Object().Id }, cancellationToken: ct);
+				zoneEdge.Key, new { _to = zone!.Value.Object.Id }, cancellationToken: ct);
 		}
 	}
 
@@ -409,8 +394,8 @@ public partial class ArangoDatabase
 
 		var bindVars = new Dictionary<string, object>
 		{
-			{ "startVertex", startObject.Object().Id! },
-			{ "targetVertex", targetObject.Object().Id! },
+			{ "startVertex", startObject.Object.Id! },
+			{ "targetVertex", targetObject.Object.Id! },
 			{ "maxDepth", maxDepth }
 		};
 
@@ -433,10 +418,10 @@ public partial class ArangoDatabase
 		{
 			var response = await arangoDb.Query.ExecuteAsync<string>(transaction,
 				$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphObjectOwners} RETURN e._key",
-				new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
+				new Dictionary<string, object> { { StartVertex, obj.Object.Id! } }, cancellationToken: ct);
 
 			var contentEdgeKey = response.FirstOrDefault()
-				?? throw new InvalidOperationException($"No owner edge found for object {obj.Object().Id}");
+				?? throw new InvalidOperationException($"No owner edge found for object {obj.Object.Id}");
 
 			await arangoDb.Graph.Edge.UpdateAsync(transaction, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
 				contentEdgeKey, new { To = owner.Id }, cancellationToken: ct);
@@ -454,7 +439,7 @@ public partial class ArangoDatabase
 		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects,
 			new
 			{
-				_key = obj.Object().Key.ToString(),
+				_key = obj.Object.Key.ToString(),
 				Warnings = warnings
 			}, cancellationToken: ct);
 	public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref,
@@ -743,7 +728,7 @@ public partial class ArangoDatabase
 			var optionalObj = await GetObjectNodeAsync(id, ct);
 			if (!optionalObj.IsNone)
 			{
-				yield return optionalObj.Known.Object();
+				yield return optionalObj.Known.Object;
 			}
 		}
 	}
@@ -884,7 +869,7 @@ public partial class ArangoDatabase
 			var optionalObj = await GetObjectNodeAsync(id, ct);
 			if (!optionalObj.IsNone)
 			{
-				yield return optionalObj.Known.Object();
+				yield return optionalObj.Known.Object;
 			}
 		}
 	}

@@ -1,5 +1,4 @@
 ﻿using Mediator;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -62,7 +61,7 @@ public partial class LocateService(
 		await notifyService.Notify(executor, LocateNotifyMessage(loc), caller.WithoutNone());
 		var callStateMessage = loc.IsError ? loc.AsError.Value : ErrorMessages.Returns.NoMatch;
 
-		return new Error<CallState>(new CallState(callStateMessage));
+		return new SharpErrorCallState(new CallState(callStateMessage));
 	}
 
 	public async ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
@@ -70,8 +69,8 @@ public partial class LocateService(
 		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, ValueTask<CallState>> foundFunc)
 		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => await foundFunc(obj),
+			SharpErrorCallState errorCs => errorCs.Value,
+			AnySharpObject obj => await foundFunc(obj),
 			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
 		};
 
@@ -81,8 +80,8 @@ public partial class LocateService(
 		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, CallState> foundFunc)
 		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => foundFunc(obj),
+			SharpErrorCallState errorCs => errorCs.Value,
+			AnySharpObject obj => foundFunc(obj),
 			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
 		};
 
@@ -109,7 +108,7 @@ public partial class LocateService(
 				!await Nearby(executor, looker) && !await executor.IsSee_All() &&
 				!await permissionService.Controls(executor, looker))
 		{
-			return new Error<string>("#-1 NOT PERMITTED TO EVALUATE ON LOOKER");
+			return new SharpError("#-1 NOT PERMITTED TO EVALUATE ON LOOKER");
 		}
 
 		var match = await LocateMatch(parser, executor, looker, flags, name, (flags & LocateFlags.UseLastIfAmbiguous) != 0);
@@ -133,7 +132,7 @@ public partial class LocateService(
 			return result.WithNoneOption().WithErrorOption();
 		}
 
-		return new Error<string>(ErrorMessages.Returns.CantSeeThat);
+		return new SharpError(ErrorMessages.Returns.CantSeeThat);
 	}
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(IMUSHCodeParser parser,
@@ -155,8 +154,8 @@ public partial class LocateService(
 		AnySharpObject executor, string name, Func<SharpPlayer, ValueTask<CallState>> foundFunc)
 		=> await LocatePlayerAndNotifyIfInvalidWithCallState(parser, looker, executor, name) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => await foundFunc(obj.AsPlayer),
+			SharpErrorCallState errorCs => errorCs.Value,
+			AnySharpObject obj => await foundFunc(obj.AsPlayer),
 			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
 		};
 
@@ -208,7 +207,7 @@ public partial class LocateService(
 				return looker.WithNoneOption().WithErrorOption();
 			}
 
-			return new Error<string>(Errors.ErrorPerm);
+			return new SharpError(Errors.ErrorPerm);
 		}
 
 		if (flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
@@ -221,7 +220,7 @@ public partial class LocateService(
 				return (await FriendlyWhereIs(looker)).WithExitOption().WithNoneOption().WithErrorOption();
 			}
 
-			return new Error<string>(Errors.ErrorPerm);
+			return new SharpError(Errors.ErrorPerm);
 		}
 
 		if ((flags.HasFlag(LocateFlags.MatchOptionalWildCardForPlayerName) || flags.HasFlag(LocateFlags.PlayersPreference)
@@ -254,7 +253,7 @@ public partial class LocateService(
 						return match;
 					}
 
-					return new Error<string>(Errors.ErrorPerm);
+					return new SharpError(Errors.ErrorPerm);
 				}
 
 				bestMatch = match;
@@ -266,7 +265,7 @@ public partial class LocateService(
 		{
 			var absObject = await mediator.Send(new GetObjectNodeQuery(abs.AsValue()));
 			match = absObject.WithErrorOption();
-			if (!match.IsT4 && (flags & LocateFlags.AbsoluteMatch) != 0)
+			if (!match.IsNone && (flags & LocateFlags.AbsoluteMatch) != 0)
 			{
 				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
 						|| await looker.HasLongFingers()
@@ -279,7 +278,7 @@ public partial class LocateService(
 						return match;
 					}
 
-					return new Error<string>(Errors.ErrorPerm);
+					return new SharpError(Errors.ErrorPerm);
 				}
 			}
 		}
@@ -305,7 +304,7 @@ public partial class LocateService(
 			}
 
 			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
-					&& location.Object().DBRef != where.Object().DBRef)
+					&& location.Object.DBRef != where.Object.DBRef)
 			{
 				var contents = mediator
 					.CreateStream(new GetContentsQuery(location))
@@ -344,7 +343,7 @@ public partial class LocateService(
 																LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
 						// Check if the location has a zone and if that zone is a room (ZMR)
-						var locationZone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
+						var locationZone = await location.WithExitOption().Object.Zone.WithCancellation(CancellationToken.None);
 						if (!locationZone.IsNone && locationZone.Known.IsRoom)
 						{
 							// Zone Master Room: Match exits in the ZMR
@@ -387,7 +386,7 @@ public partial class LocateService(
 			{
 				if (flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
 						&& where.IsRoom
-						&& ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
+						&& ((location.Object.DBRef != where.Object.DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
 					var exits = (mediator.CreateStream(new GetContentsQuery(where.AsContainer)))
 						.Where(x => x.IsExit)
@@ -411,7 +410,7 @@ public partial class LocateService(
 
 		if (right_type != 1 && !flags.HasFlag(LocateFlags.UseLastIfAmbiguous))
 		{
-			return new Error<string>(Errors.ErrorAmbiguous);
+			return new SharpError(Errors.ErrorAmbiguous);
 		}
 
 		return bestMatch;
@@ -446,7 +445,7 @@ public partial class LocateService(
 			}
 
 			var abs = HelperFunctions.ParseDbRef(name);
-			if (abs.IsSome() && cur.Object().DBRef.Matches(abs.AsValue()))
+			if (abs.IsSome() && cur.Object.DBRef.Matches(abs.AsValue()))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
@@ -463,8 +462,8 @@ public partial class LocateService(
 			else if (
 				(cur.IsPlayer && cur.Aliases.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase)))
 				|| (cur.IsExit && (cur.Aliases.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase)) ||
-													 cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-				|| (!cur.IsExit && string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
+													 cur.Object.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+				|| (!cur.IsExit && string.Equals(cur.Object.Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
@@ -476,7 +475,7 @@ public partial class LocateService(
 			// Partial (prefix) match for non-exit objects and player aliases, matching PennMUSH string_match() behavior
 			else if (!flags.HasFlag(LocateFlags.NoPartialMatches)
 							 && ((cur.IsPlayer && cur.Aliases.Any(a => a.StartsWith(name, StringComparison.OrdinalIgnoreCase)))
-									 || (!cur.IsExit && cur.Object().Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))))
+									 || (!cur.IsExit && cur.Object.Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
@@ -495,16 +494,13 @@ public partial class LocateService(
 		LocateFlags flags,
 		AnyOptionalSharpObject thing1, AnyOptionalSharpObject thing2)
 	{
-		switch (thing1, thing2)
-		{
-			case ({ IsNone: true }, { IsNone: true }): return new None();
-			case ({ IsNone: true }, _): return thing2;
-			case (_, { IsNone: true }): return thing1;
-		}
+		if (thing1.IsNone && thing2.IsNone) return new None();
+		if (thing1.IsNone) return thing2;
+		if (thing2.IsNone) return thing1;
 
-		if (TypePreferences(flags).Contains(thing1.Object()!.Type) &&
-				!TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing1;
-		if (TypePreferences(flags).Contains(thing2.Object()!.Type)
+		if (TypePreferences(flags).Contains(thing1.Object!.Type) &&
+				!TypePreferences(flags).Contains(thing2.Object!.Type)) return thing1;
+		if (TypePreferences(flags).Contains(thing2.Object!.Type)
 				|| !flags.HasFlag(LocateFlags.PreferLockPass)) return thing2;
 
 		var key = await permissionService.CouldDoIt(who, thing1);
@@ -544,7 +540,7 @@ public partial class LocateService(
 		{
 			bestMatch = (await ChooseThing(parser, looker, flags, bestMatch.WithoutError(), cur.WithNoneOption()))
 				.WithErrorOption();
-			if (bestMatch.IsValid() && bestMatch.WithoutError().WithoutNone().Object().DBRef != cur.Object().DBRef)
+			if (bestMatch.IsValid() && bestMatch.WithoutError().WithoutNone().Object.DBRef != cur.Object.DBRef)
 			{
 				return (bestMatch, final, curr, right_type, exact, ControlFlow.Continue);
 			}
@@ -572,7 +568,7 @@ public partial class LocateService(
 
 			if (!flags.HasFlag(LocateFlags.NoTypePreference)
 					&& bestMatch.IsValid()
-					&& bestMatch.WithoutError().WithoutNone().Object().Type == cur.Object().Type)
+					&& bestMatch.WithoutError().WithoutNone().Object.Type == cur.Object.Type)
 			{
 				right_type++;
 			}
@@ -595,8 +591,8 @@ public partial class LocateService(
 		if (thing.IsRoom) return null;
 		var minusRoom = thing.MinusRoom();
 		return thing.IsExit
-			? (await minusRoom.Home()).Object().DBRef
-			: (await minusRoom.Location()).Object().DBRef;
+			? (await minusRoom.Home()).Object.DBRef
+			: (await minusRoom.Location()).Object.DBRef;
 	}
 
 	public async ValueTask<AnySharpContainer> Room(AnySharpObject content)
@@ -607,7 +603,7 @@ public partial class LocateService(
 		// PennMUSH uses MAX_PARENTS (10) as a depth limit for similar traversals.
 		const int maxDepth = 50;
 		var depth = 0;
-		var visited = new HashSet<string> { currentLocation.Object().DBRef.ToString() };
+		var visited = new HashSet<string> { currentLocation.Object.DBRef.ToString() };
 
 		while (currentLocation.Id != (await currentLocation.Location()).Id)
 		{
@@ -621,7 +617,7 @@ public partial class LocateService(
 			currentLocation = await currentLocation.Location();
 
 			// Also guard against cycles via visited set
-			var dbRefStr = currentLocation.Object().DBRef.ToString();
+			var dbRefStr = currentLocation.Object.DBRef.ToString();
 			if (!visited.Add(dbRefStr))
 			{
 				break;
@@ -631,12 +627,14 @@ public partial class LocateService(
 		return currentLocation;
 	}
 
-	public static async ValueTask<AnySharpContainer> FriendlyWhereIs(AnySharpObject obj) => await obj.Match(
-		async player => await player.Location.WithCancellation(CancellationToken.None),
-		async room => await ValueTask.FromResult<AnySharpContainer>(room),
-		async exit => await exit.Home.WithCancellation(CancellationToken.None),
-		async thing => await thing.Location.WithCancellation(CancellationToken.None)
-	);
+	public static async ValueTask<AnySharpContainer> FriendlyWhereIs(AnySharpObject obj) => obj.Value switch
+	{
+		SharpPlayer p => await p.Location.WithCancellation(CancellationToken.None),
+		SharpRoom r   => r,
+		SharpExit e   => await e.Home.WithCancellation(CancellationToken.None),
+		SharpThing t  => await t.Location.WithCancellation(CancellationToken.None),
+		_             => throw new InvalidOperationException()
+	};
 
 	public static async ValueTask<bool> Nearby(
 		AnySharpObject obj1,
@@ -644,13 +642,13 @@ public partial class LocateService(
 	{
 		if (obj1.IsRoom && obj2.IsRoom) return false;
 
-		var loc1 = (await FriendlyWhereIs(obj1)).Object().DBRef;
+		var loc1 = (await FriendlyWhereIs(obj1)).Object.DBRef;
 
-		if (loc1 == obj2.Object().DBRef) return true;
+		if (loc1 == obj2.Object.DBRef) return true;
 
-		var loc2 = (await FriendlyWhereIs(obj2)).Object().DBRef;
+		var loc2 = (await FriendlyWhereIs(obj2)).Object.DBRef;
 
-		return loc2 == obj1.Object().DBRef || loc2 == loc1;
+		return loc2 == obj1.Object.DBRef || loc2 == loc1;
 	}
 
 	public static IEnumerable<string> TypePreferences(LocateFlags flags) =>

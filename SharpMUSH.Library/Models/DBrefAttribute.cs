@@ -26,19 +26,9 @@ public readonly struct DbRefAttribute(DBRef dbref, string[] attribute)
 
 	public static bool TryParse(string parse, out DbRefAttribute? output)
 	{
-		switch (HelperFunctions.SplitDBRefAndAttr(parse))
-		{
-			case { IsT0: true } split:
-				{
-					output = split.AsT0;
-					return true;
-				}
-			default:
-				{
-					output = null;
-					return false;
-				}
-		}
+		var result = HelperFunctions.SplitDBRefAndAttr(parse);
+		if (result.TryGetValue(out var attr)) { output = attr; return true; }
+		output = null; return false;
 	}
 
 	public static DbRefAttribute Parse(string parse)

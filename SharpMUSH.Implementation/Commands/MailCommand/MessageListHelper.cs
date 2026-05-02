@@ -1,7 +1,5 @@
 ﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
@@ -12,28 +10,20 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
-[GenerateOneOf]
-public class ErrorOrMailList : OneOfBase<Error<string>, IAsyncEnumerable<SharpMail>>
+public union ErrorOrMailList(SharpError, IAsyncEnumerable<SharpMail>)
 {
-	private ErrorOrMailList(OneOf<Error<string>, IAsyncEnumerable<SharpMail>> input) : base(input)
-	{
-	}
+	public bool IsError => Value is SharpError;
+	public string AsError => ((SharpError)Value!).Value;
+	public IAsyncEnumerable<SharpMail> AsMailList => (IAsyncEnumerable<SharpMail>)Value!;
 
-	public bool IsError => IsT0;
-	public string AsError => AsT0.Value;
-	public IAsyncEnumerable<SharpMail> AsMailList => AsT1;
-
-	public static implicit operator ErrorOrMailList(Error<string> x) => new(x);
-
-	public static ErrorOrMailList FromAsyncEnumerable(IAsyncEnumerable<SharpMail> x)
-		=> new(OneOf<Error<string>, IAsyncEnumerable<SharpMail>>.FromT1(x));
+	public static ErrorOrMailList FromAsyncEnumerable(IAsyncEnumerable<SharpMail> x) => x;
 }
 
 public static class MessageListHelper
 {
 	public static async ValueTask<string> CurrentMailFolder(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, AnySharpObject executor)
 	{
-		var mailData = await objectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object());
+		var mailData = await objectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object);
 
 		if (mailData?.ActiveFolder != null)
 		{
@@ -41,7 +31,7 @@ public static class MessageListHelper
 		}
 
 		mailData = new ExpandedMailData(Folders: ["INBOX"], ActiveFolder: "INBOX");
-		await objectDataService.SetExpandedDataAsync(mailData, executor.Object());
+		await objectDataService.SetExpandedDataAsync(mailData, executor.Object);
 
 		return mailData.ActiveFolder!;
 	}
@@ -71,7 +61,7 @@ public static class MessageListHelper
 		ErrorOrMailList filteredList = msgList switch
 		{
 			_ when msgList.Contains(' ')
-				=> new Error<string>("MAIL: Invalid message specification"),
+				=> new SharpError("MAIL: Invalid message specification"),
 			['*', .. var person] => await FilterMailByPerson(parser, executor, mailList, person),
 			['~', .. var days] when int.TryParse(days, out var exactDay)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay - 1)
@@ -105,7 +95,7 @@ public static class MessageListHelper
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(specificMessage).Take(1)),
 			[] when msgList.Length == 0
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
-			_ => new Error<string>("MAIL: Invalid message specification")
+			_ => new SharpError("MAIL: Invalid message specification")
 		};
 
 		return filteredList;
@@ -121,22 +111,22 @@ public static class MessageListHelper
 
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
-			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object(), target));
+			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object, target));
 			msgList = folderSplit[1];
 		}
 		else if (msgList == "all")
 		{
-			mailList = mediator!.CreateStream(new GetAllSentMailListQuery(executor.Object()));
+			mailList = mediator!.CreateStream(new GetAllSentMailListQuery(executor.Object));
 		}
 		else
 		{
-			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object(), target));
+			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object, target));
 		}
 
 		ErrorOrMailList filteredList = msgList switch
 		{
 			_ when msgList.Contains(' ')
-				=> new Error<string>("MAIL: Invalid message specification"),
+				=> new SharpError("MAIL: Invalid message specification"),
 			['~', .. var days] when int.TryParse(days, out var exactDay)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay - 1)
 																																	 && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay))),
@@ -167,7 +157,7 @@ public static class MessageListHelper
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(specificMessage).Take(1)),
 			[] when msgList.Length == 0
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
-			_ => new Error<string>("MAIL: Invalid message specification")
+			_ => new SharpError("MAIL: Invalid message specification")
 		};
 
 		return filteredList;
@@ -190,7 +180,7 @@ public static class MessageListHelper
 				.Where(async (x, _) =>
 				{
 					var from = await x.From.WithCancellation(CancellationToken.None);
-					return from.Object()?.Name.StartsWith(personName, StringComparison.OrdinalIgnoreCase) ?? false;
+					return from.Object?.Name.StartsWith(personName, StringComparison.OrdinalIgnoreCase) ?? false;
 				}));
 		}
 
@@ -200,7 +190,7 @@ public static class MessageListHelper
 			.Where(async (x, _) =>
 			{
 				var fromPlayer = await x.From.WithCancellation(CancellationToken.None);
-				return fromPlayer.Object()?.DBRef == targetPlayerDbref;
+				return fromPlayer.Object?.DBRef == targetPlayerDbref;
 			}));
 	}
 }

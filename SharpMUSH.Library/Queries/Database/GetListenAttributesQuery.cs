@@ -15,7 +15,7 @@ namespace SharpMUSH.Library.Queries.Database;
 /// </summary>
 public record GetListenAttributesQuery(AnySharpObject SharpObject) : IQuery<ListenAttributeCache[]>, ICacheable
 {
-	public string CacheKey => $"listens:{SharpObject.Object().DBRef}";
+	public string CacheKey => $"listens:{SharpObject.Object.DBRef}";
 	public string[] CacheTags => [];
 }
 

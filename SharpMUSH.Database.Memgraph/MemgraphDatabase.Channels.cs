@@ -2,7 +2,6 @@ using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -36,7 +35,7 @@ public partial class MemgraphDatabase
 
 	public async IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 		var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:ON_CHANNEL]->(c:Channel)
 RETURN c
@@ -118,7 +117,7 @@ CREATE (c)-[:HAS_CHANNEL_OWNER]->(o)
 	public async ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default)
 	{
 		var channelName = channel.Name.ToPlainText();
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 		await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (c:Channel {name: $name})
 CREATE (o)-[:ON_CHANNEL {combine: false, gagged: false, hide: false, mute: false, title: ''}]->(c)
@@ -128,7 +127,7 @@ CREATE (o)-[:ON_CHANNEL {combine: false, gagged: false, hide: false, mute: false
 	public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default)
 	{
 		var channelName = channel.Name.ToPlainText();
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 		await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[r:ON_CHANNEL]->(c:Channel {name: $name})
 DELETE r
@@ -138,7 +137,7 @@ DELETE r
 	public async ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj, SharpChannelStatus status, CancellationToken cancellationToken = default)
 	{
 		var channelName = channel.Name.ToPlainText();
-		var objKey = obj.Object().Key;
+		var objKey = obj.Object.Key;
 
 		var setClauses = new List<string>();
 		var parameters = new Dictionary<string, object>
@@ -243,7 +242,7 @@ RETURN o, r
 			Title: MModule.deserialize(
 			rel.Properties.ContainsKey("title") ? rel["title"].As<string>() ?? "" : ""));
 
-			yield return new SharpChannel.MemberAndStatus(memberObj.Known(), status);
+			yield return new SharpChannel.MemberAndStatus(memberObj.Known, status);
 		}
 	}
 

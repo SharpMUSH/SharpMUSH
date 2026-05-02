@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<LangVersion>default</LangVersion>
+		<LangVersion>preview</LangVersion>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<NoWarn>CS8425</NoWarn>
@@ -22,8 +22,8 @@
 		<PackageReference Include="JsonPatch.Net" Version="5.0.2" />
 		<PackageReference Include="JsonPath.Net" Version="3.0.2" />
 		<PackageReference Include="Mediator.Abstractions" Version="3.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.7" />
-		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.7" />
+		<PackageReference Include="Microsoft.Extensions.Identity.Core" Version="11.0.0-preview.3.26207.106" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="11.0.0-preview.3.26207.106" />
 		<PackageReference Include="morelinq" Version="4.4.0" />
 		<PackageReference Include="OneOf" Version="3.0.271" />
 		<PackageReference Include="Serilog" Version="4.3.1" />

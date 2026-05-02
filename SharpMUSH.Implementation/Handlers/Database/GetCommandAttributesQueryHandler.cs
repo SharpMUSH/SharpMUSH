@@ -15,7 +15,7 @@ public class GetCommandAttributesQueryHandler : IQueryHandler<GetCommandAttribut
 	public async ValueTask<CommandAttributeCache[]> Handle(GetCommandAttributesQuery request, CancellationToken cancellationToken)
 	{
 		var sharpObj = request.SharpObject;
-		var attributes = sharpObj.Object().AllAttributes.Value;
+		var attributes = sharpObj.Object.AllAttributes.Value;
 		var commandAttributes = new List<CommandAttributeCache>();
 
 		await foreach (var attr in attributes.WithCancellation(cancellationToken))

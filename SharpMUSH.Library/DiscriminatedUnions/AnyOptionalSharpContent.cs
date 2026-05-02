@@ -1,40 +1,36 @@
-﻿using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnyOptionalSharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing, None>
+/// <summary>
+/// A union of SharpPlayer, SharpExit, SharpThing, and None.
+/// Replaces AnyOptionalSharpContent : OneOfBase&lt;SharpPlayer, SharpExit, SharpThing, None&gt;.
+/// </summary>
+public union AnyOptionalSharpContent(SharpPlayer, SharpExit, SharpThing, None)
 {
-	public AnyOptionalSharpContent(OneOf<SharpPlayer, SharpExit, SharpThing, None> input) : base(input) { }
-	public static implicit operator AnyOptionalSharpContent(SharpPlayer x) => new(x);
-	public static implicit operator AnyOptionalSharpContent(SharpExit x) => new(x);
-	public static implicit operator AnyOptionalSharpContent(SharpThing x) => new(x);
-	public static implicit operator AnyOptionalSharpContent(None x) => new(x);
+	public bool IsPlayer => Value is SharpPlayer;
+	public bool IsExit   => Value is SharpExit;
+	public bool IsThing  => Value is SharpThing;
+	public bool IsNone   => Value is null or None;
 
-	public bool IsPlayer => IsT0;
-	public bool IsExit => IsT1;
-	public bool IsThing => IsT2;
-	public bool IsNone => IsT3;
+	public SharpPlayer AsPlayer => (SharpPlayer)Value!;
+	public SharpExit   AsExit   => (SharpExit)Value!;
+	public SharpThing  AsThing  => (SharpThing)Value!;
 
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpExit AsExit => AsT1;
-	public SharpThing AsThing => AsT2;
+	public AnyOptionalSharpObject WithRoomOption() => Value switch
+	{
+		SharpPlayer p => p,
+		SharpExit   e => e,
+		SharpThing  t => t,
+		None n => n,
+		_ => new None()
+	};
 
-	public AnyOptionalSharpObject WithRoomOption()
-		=> Match<AnyOptionalSharpObject>(
-			player => player,
-			exit => exit,
-			thing => thing,
-			none => none
-		);
-
-	public AnySharpContent WithoutNone()
-		=> Match<AnySharpContent>(
-			player => player,
-			exit => exit,
-			thing => thing,
-			none => throw new Exception("Cannot convert None to a valid object.")
-		);
+	public AnySharpContent WithoutNone() => Value switch
+	{
+		SharpPlayer p => p,
+		SharpExit   e => e,
+		SharpThing  t => t,
+		_ => throw new InvalidOperationException("Cannot convert None to a valid object.")
+	};
 }

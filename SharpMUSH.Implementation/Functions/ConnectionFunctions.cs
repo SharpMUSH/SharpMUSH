@@ -72,7 +72,7 @@ public partial class Functions
 					_ => null
 				};
 
-				if (addressValue != null
+				if (addressValue is not null
 						&& MModule.isWildcardMatch2(MModule.single(addressValue), pattern)
 						&& uniqueAddresses.Add(addressValue)
 						&& !isCount)
@@ -354,11 +354,7 @@ public partial class Functions
 				mode: IAttributeService.AttributeMode.Read,
 				parent: false);
 
-			return maybeAttr switch
-			{
-				{ IsError: true } or { IsNone: true } => new CallState(string.Empty),
-				_ => new CallState(maybeAttr.AsAttribute.Last().Value)
-			};
+			return (maybeAttr.IsError || maybeAttr.IsNone) ? new CallState(string.Empty) : new CallState(maybeAttr.AsAttribute.Last().Value);
 		}
 
 		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
@@ -376,11 +372,7 @@ public partial class Functions
 			mode: IAttributeService.AttributeMode.Read,
 			parent: false);
 
-		return doingAttr switch
-		{
-			{ IsError: true } or { IsNone: true } => new CallState(string.Empty),
-			_ => new CallState(doingAttr.AsAttribute.Last().Value)
-		};
+		return (doingAttr.IsError || doingAttr.IsNone) ? new CallState(string.Empty) : new CallState(doingAttr.AsAttribute.Last().Value);
 	}
 
 	[SharpFunction(Name = "host", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -763,7 +755,7 @@ public partial class Functions
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => isWizard || !await x.HasFlag("DARK"))
-			.Select(player => $"#{player.Object().DBRef.Number}");
+			.Select(player => $"#{player.Object.DBRef.Number}");
 
 		return new CallState(string.Join(" ", await nonHiddenConnections.ToArrayAsync()));
 	}
@@ -780,7 +772,7 @@ public partial class Functions
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => isWizard || !await x.HasFlag("DARK"))
-			.Select(x => x.Object().DBRef);
+			.Select(x => x.Object.DBRef);
 
 		return new CallState(string.Join(" ", await nonHiddenConnectionsObjIds.ToArrayAsync()));
 	}
@@ -937,7 +929,7 @@ public partial class Functions
 				return new CallState("0");
 			}
 
-			if (data.Ref != executor.Object().DBRef)
+			if (data.Ref != executor.Object.DBRef)
 			{
 				if (!await executor.IsSee_All())
 				{
@@ -957,7 +949,7 @@ public partial class Functions
 
 		var located = maybeLocate.AsPlayer;
 
-		if (located.Object.DBRef != executor.Object().DBRef && !await executor.IsSee_All())
+		if (located.Object.DBRef != executor.Object.DBRef && !await executor.IsSee_All())
 		{
 			return new CallState(Errors.ErrorPerm);
 		}
@@ -984,7 +976,7 @@ public partial class Functions
 				return new CallState("unknown");
 			}
 
-			var isSelf = data.Ref == executor.Object().DBRef;
+			var isSelf = data.Ref == executor.Object.DBRef;
 
 			if (!hasSeeAll && !isSelf)
 			{
@@ -1001,7 +993,7 @@ public partial class Functions
 		}
 
 		var located = maybeLocate.AsPlayer;
-		var isSelfPlayer = located.Object.DBRef == executor.Object().DBRef;
+		var isSelfPlayer = located.Object.DBRef == executor.Object.DBRef;
 
 		if (!hasSeeAll && !isSelfPlayer)
 		{
@@ -1066,7 +1058,7 @@ public partial class Functions
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => !await x.HasFlag("DARK"))
-			.Select(x => $"#{x.Object().DBRef.Number}");
+			.Select(x => $"#{x.Object.DBRef.Number}");
 
 		var result = allDbrefs.Skip(start - 1).Take(count);
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
@@ -1094,7 +1086,7 @@ public partial class Functions
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => !await x.HasFlag("DARK"))
-			.Select(x => x.Object().DBRef);
+			.Select(x => x.Object.DBRef);
 
 		var result = allObjIds.Skip(start - 1).Take(count);
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
@@ -1151,7 +1143,7 @@ public partial class Functions
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.Select(x => $"#{x.Object().DBRef.Number}");
+			.Select(x => $"#{x.Object.DBRef.Number}");
 
 		var result = allDbrefs.Skip(start - 1).Take(count);
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
@@ -1208,7 +1200,7 @@ public partial class Functions
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.Select(x => x.Object().DBRef);
+			.Select(x => x.Object.DBRef);
 
 		var result = allObjIds.Skip(start - 1).Take(count);
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
@@ -1260,11 +1252,11 @@ public partial class Functions
 
 			// Check if the location's zone matches
 			var locationObj = playerLocation.WithExitOption();
-			var locationZone = await locationObj.Object().Zone.WithCancellation(CancellationToken.None);
+			var locationZone = await locationObj.Object.Zone.WithCancellation(CancellationToken.None);
 
 			if (!locationZone.IsNone)
 			{
-				if (locationZone.Known.Object().DBRef.Number == zone.Object().DBRef.Number)
+				if (locationZone.Known.Object.DBRef.Number == zone.Object.DBRef.Number)
 				{
 					playersInZone.Add(player.Object.DBRef.ToString());
 				}
@@ -1311,11 +1303,11 @@ public partial class Functions
 
 			// Check if the location's zone matches
 			var locationObj = playerLocation.WithExitOption();
-			var locationZone = await locationObj.Object().Zone.WithCancellation(CancellationToken.None);
+			var locationZone = await locationObj.Object.Zone.WithCancellation(CancellationToken.None);
 
 			if (!locationZone.IsNone)
 			{
-				if (locationZone.Known.Object().DBRef.Number == zone.Object().DBRef.Number)
+				if (locationZone.Known.Object.DBRef.Number == zone.Object.DBRef.Number)
 				{
 					playersInZone.Add(player.Object.DBRef.ToString());
 				}
@@ -1419,7 +1411,7 @@ public partial class Functions
 
 		var target = maybeLocate.AsPlayer;
 
-		if (target.Object.DBRef != executor.Object().DBRef)
+		if (target.Object.DBRef != executor.Object.DBRef)
 		{
 			if (!await executor.IsSee_All())
 			{
@@ -1447,9 +1439,9 @@ public partial class Functions
 
 		var data = ConnectionService!.Get(port);
 
-		if (data?.Ref == executor.Object().DBRef)
+		if (data?.Ref == executor.Object.DBRef)
 		{
-			return new CallState($"#{executor.Object().DBRef.Number}");
+			return new CallState($"#{executor.Object.DBRef.Number}");
 		}
 
 		if (await executor.IsWizard() || await executor.IsRoyalty() || await executor.IsSee_All())
@@ -1536,7 +1528,7 @@ public partial class Functions
 	/// </summary>
 	private static async ValueTask<bool> CanAccessConnectionData(AnySharpObject executor, DBRef? targetDbRef)
 	{
-		if (targetDbRef == executor.Object().DBRef)
+		if (targetDbRef == executor.Object.DBRef)
 		{
 			return true;
 		}
@@ -1617,7 +1609,7 @@ public partial class Functions
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 			// Find executor's connection; return -1 if not connected
-			var data = ConnectionService!.Get(executor.Object().DBRef);
+			var data = ConnectionService!.Get(executor.Object.DBRef);
 			var idleSeconds = await data
 				.Select(x => x.Idle?.TotalSeconds ?? -1)
 				.DefaultIfEmpty(-1)

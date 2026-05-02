@@ -5,7 +5,6 @@ using DotNext.Threading;
 using MarkupString;
 using Mediator;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -145,24 +144,25 @@ public partial class ArangoDatabase
 	{
 		var key = mailId.Split("/")[1];
 
-		switch (commandMail)
+		if (commandMail.IsReadEdit)
 		{
-			case { IsReadEdit: true }:
-				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
-					key, new { Read = commandMail.AsReadEdit, Fresh = false }, cancellationToken: ct);
-				return;
-			case { IsClearEdit: true }:
-				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
-					key, new { Read = commandMail.AsClearEdit }, cancellationToken: ct);
-				return;
-			case { IsTaggedEdit: true }:
-				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
-					key, new { Urgent = commandMail.AsTaggedEdit }, cancellationToken: ct);
-				return;
-			case { IsUrgentEdit: true }:
-				await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
-					key, new { Urgent = commandMail.AsUrgentEdit }, cancellationToken: ct);
-				return;
+			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
+				key, new { Read = commandMail.AsReadEdit, Fresh = false }, cancellationToken: ct);
+		}
+		else if (commandMail.IsClearEdit)
+		{
+			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
+				key, new { Read = commandMail.AsClearEdit }, cancellationToken: ct);
+		}
+		else if (commandMail.IsTaggedEdit)
+		{
+			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
+				key, new { Urgent = commandMail.AsTaggedEdit }, cancellationToken: ct);
+		}
+		else if (commandMail.IsUrgentEdit)
+		{
+			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphMail, DatabaseConstants.Mails,
+				key, new { Urgent = commandMail.AsUrgentEdit }, cancellationToken: ct);
 		}
 	}
 

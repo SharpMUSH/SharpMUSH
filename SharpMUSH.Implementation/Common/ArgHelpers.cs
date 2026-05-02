@@ -1,8 +1,9 @@
 ﻿using Mediator;
-using OneOf;
 using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -231,11 +232,11 @@ public static partial class ArgHelpers
 		await obj.Powers.Value
 			.AnyAsync(x => x.Name == power || x.Alias == power);
 
-	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
-		=> NameListPattern().Matches(list).Select(x =>
+	public static IEnumerable<DbRefOrName> NameList(string list)
+		=> NameListPattern().Matches(list).Select<System.Text.RegularExpressions.Match, DbRefOrName>(x =>
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
-				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue())
-				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
+				? (DbRefOrName)HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue()
+				: (DbRefOrName)x.Groups["User"].Value);
 
 	public static IEnumerable<string> NameListString(string list)
 		=> NameListPattern().Matches(list).Select(x =>
@@ -246,12 +247,17 @@ public static partial class ArgHelpers
 	public static IAsyncEnumerable<SharpPlayer?> PopulatedNameList(IMediator mediator, string list)
 		=> NameList(list)
 			.ToAsyncEnumerable()
-			.Select<OneOf<DBRef, string>, SharpPlayer?>(async (x, ct) =>
-				await x.Match(
-					async dbref => (await mediator.Send(new GetObjectNodeQuery(dbref), ct)).TryPickT0(out var player, out _)
-						? player
-						: null,
-					async name => await mediator.CreateStream(new GetPlayerQuery(name), ct).FirstOrDefaultAsync(cancellationToken: ct)));
+			.Select<DbRefOrName, SharpPlayer?>(async (x, ct) =>
+			{
+				if (x.IsDBRef)
+				{
+					var result = await mediator.Send(new GetObjectNodeQuery(x.AsDBRef), ct);
+					return result.IsPlayer ? result.AsPlayer : null;
+				}
+				return x.IsName
+					? await mediator.CreateStream(new GetPlayerQuery(x.AsName), ct).FirstOrDefaultAsync(cancellationToken: ct)
+					: null;
+			});
 
 	public static async ValueTask<CallState> ForHandleOrPlayer(IMUSHCodeParser parser, IMediator mediator,
 		IConnectionService connectionService, ILocateService locateService, CallState value,

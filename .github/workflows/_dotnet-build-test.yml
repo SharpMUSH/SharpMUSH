@@ -16,7 +16,8 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.x
+          dotnet-version: 11.x
+          dotnet-quality: 'preview'
           cache: true
           cache-dependency-path: '**/*.csproj'
 
@@ -39,7 +40,8 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.x
+          dotnet-version: 11.x
+          dotnet-quality: 'preview'
           cache: true
           cache-dependency-path: '**/*.csproj'
 
@@ -88,7 +90,8 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.x
+          dotnet-version: 11.x
+          dotnet-quality: 'preview'
           cache: true
           cache-dependency-path: '**/*.csproj'
 

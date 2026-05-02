@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
 using System.Text;
 using System.Text.RegularExpressions;
+
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Documentation;
 
@@ -58,13 +58,13 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		foreach (var file in mdFiles)
 		{
 			var maybeIndexedFile = IndexMarkdown(file);
-			if (maybeIndexedFile.IsT1)
+			if (maybeIndexedFile.IsError)
 			{
-				logger?.LogWarning("Failed to index markdown helpfile {FilePath}: {Error}", file.FullName, maybeIndexedFile.AsT1.Value);
+				logger?.LogWarning("Failed to index markdown helpfile {FilePath}: {Error}", file.FullName, maybeIndexedFile.AsError.Value);
 				continue;
 			}
 
-			var indexedFile = maybeIndexedFile.AsT0;
+			var indexedFile = (Dictionary<string,string>)maybeIndexedFile.Value!;
 
 			foreach (var kv in indexedFile)
 			{
@@ -84,11 +84,11 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		}
 	}
 
-	public static OneOf<Dictionary<string, string>, Error<string>> Index(FileInfo file)
+	public static HelpIndex Index(FileInfo file)
 	{
 		if (!file.Exists)
 		{
-			return new Error<string>($"File {file.FullName} does not exist.");
+			return new SharpError($"File {file.FullName} does not exist.");
 		}
 
 		var dict = new Dictionary<string, string>();
@@ -115,11 +115,11 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	[GeneratedRegex(@"(?:^& (?<Indexes>.+)\n)+(?<Body>(?:[^&].*\n)+)", RegexOptions.Compiled | RegexOptions.Multiline)]
 	private static partial Regex Indexes();
 
-	public static OneOf<Dictionary<string, string>, Error<string>> IndexMarkdown(FileInfo file)
+	public static HelpIndex IndexMarkdown(FileInfo file)
 	{
 		if (!file.Exists)
 		{
-			return new Error<string>($"File {file.FullName} does not exist.");
+			return new SharpError($"File {file.FullName} does not exist.");
 		}
 
 		var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -182,11 +182,11 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	/// that all share the same byte range (from the first alias header to the
 	/// end of the content block).
 	/// </summary>
-	public static OneOf<Dictionary<string, (long Start, long End)>, Error<string>> IndexMarkdownPositions(FileInfo file)
+	public static HelpIndexPositions IndexMarkdownPositions(FileInfo file)
 	{
 		if (!file.Exists)
 		{
-			return new Error<string>($"File {file.FullName} does not exist.");
+			return new SharpError($"File {file.FullName} does not exist.");
 		}
 
 		var dict = new Dictionary<string, (long Start, long End)>(StringComparer.OrdinalIgnoreCase);

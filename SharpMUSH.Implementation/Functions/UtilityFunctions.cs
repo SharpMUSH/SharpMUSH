@@ -4,7 +4,6 @@ using ANSILibrary;
 using MarkupString;
 using MarkupString.MarkupImplementation;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -103,7 +102,7 @@ public partial class Functions
 			{
 				// Handle named color from colors.json
 				var colorName = code[1..].ToString();
-				if (colorsConfig != null && colorsConfig.ColorsByName.TryGetValue(colorName, out var colorIdentity))
+				if (colorsConfig is not null && colorsConfig.ColorsByName.TryGetValue(colorName, out var colorIdentity))
 				{
 					var hexColor = colorIdentity.rgb;
 					var color = new AnsiColor.RGB(ColorTranslator.FromHtml(hexColor));
@@ -121,7 +120,7 @@ public partial class Functions
 				(code.StartsWith("+xterm") && int.TryParse(code[6..], out xterm) && xterm >= 0 && xterm < 256))
 			{
 				// Handle xterm color (0-255)
-				if (colorsConfig != null && colorsConfig.ColorsByXterm.TryGetValue(xterm.ToString(), out var xtermColors) && xtermColors.Length > 0)
+				if (colorsConfig is not null && colorsConfig.ColorsByXterm.TryGetValue(xterm.ToString(), out var xtermColors) && xtermColors.Length > 0)
 				{
 					var hexColor = xtermColors[0].rgb;
 					var color = new AnsiColor.RGB(ColorTranslator.FromHtml(hexColor));
@@ -478,14 +477,14 @@ public partial class Functions
 				}
 
 				// Determine new name (arg 1 if provided)
-				var newName = obj.Object().Name;
+				var newName = obj.Object.Name;
 				if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 				{
 					newName = args["1"].Message!.ToPlainText();
 				}
 
 				DBRef cloneDbRef;
-				var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+				var owner = await executor.Object.Owner.WithCancellation(CancellationToken.None);
 
 				// Create the appropriate object type
 				if (obj.IsThing)
@@ -524,7 +523,7 @@ public partial class Functions
 				var clonedObj = clonedObjOptional.WithoutNone();
 
 				// Copy attributes (excluding system attributes)
-				await foreach (var attr in obj.Object().Attributes.Value)
+				await foreach (var attr in obj.Object.Attributes.Value)
 				{
 					if (!attr.Name.StartsWith("_"))
 					{
@@ -537,9 +536,9 @@ public partial class Functions
 				await EventService!.TriggerEventAsync(
 					parser,
 					"OBJECT`CREATE",
-					executor.Object().DBRef,
+					executor.Object.DBRef,
 					cloneDbRef.ToString(),
-					obj.Object().DBRef.ToString()); // cloned-from
+					obj.Object.DBRef.ToString()); // cloned-from
 
 				return new CallState(cloneDbRef.ToString());
 			}
@@ -571,7 +570,7 @@ public partial class Functions
 
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
 			await executor.Where(),
-			await executor.Object()
+			await executor.Object
 				.Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
 
@@ -635,7 +634,7 @@ public partial class Functions
 		// Create the room
 		var response = await Mediator!.Send(new CreateRoomCommand(
 			roomName,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
+			await executor.Object.Owner.WithCancellation(CancellationToken.None)));
 
 		// Return the room's dbref
 		return new CallState(response.ToString());
@@ -1153,7 +1152,7 @@ public partial class Functions
 			primaryName,
 			aliases,
 			sourceRoom,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
+			await executor.Object.Owner.WithCancellation(CancellationToken.None)));
 
 		return new CallState(exitDbRef.ToString());
 	}
@@ -1372,7 +1371,7 @@ public partial class Functions
 		// Add looker's location and its contents
 		if (checkRoom)
 		{
-			var dbref = looker.Object().DBRef;
+			var dbref = looker.Object.DBRef;
 			var locationQuery = new GetLocationQuery(dbref);
 			var locationOpt = await Mediator!.Send(locationQuery);
 
@@ -1432,7 +1431,7 @@ public partial class Functions
 		// Format results as "dbref/attribute" pairs
 		var matches = matchResult.AsValue();
 		var results = matches.Select(match =>
-			$"{match.SObject.Object().DBRef}/{match.Attribute.Name}");
+			$"{match.SObject.Object.DBRef}/{match.Attribute.Name}");
 
 		return string.Join(" ", results);
 	}
@@ -1768,7 +1767,7 @@ public partial class Functions
 						await Mediator!.Send(new MoveObjectCommand(
 							targetContent,
 							destinationContainer,
-							executor.Object().DBRef,
+							executor.Object.DBRef,
 							true, // silent
 							"tel()"));
 
@@ -1828,7 +1827,7 @@ public partial class Functions
 					var victim = victimResult.AsAnyObject;
 
 					// Get the named lock from the object
-					if (!lockedObject.Object().Locks.TryGetValue(lockName, out var lockData))
+					if (!lockedObject.Object.Locks.TryGetValue(lockName, out var lockData))
 					{
 						// No lock set means it passes
 						return new CallState("1");
@@ -1940,7 +1939,7 @@ public partial class Functions
 
 				// Collect all non-system attributes (those not starting with _)
 				var attributesToClear = new List<string>();
-				await foreach (var attr in obj.Object().Attributes.Value)
+				await foreach (var attr in obj.Object.Attributes.Value)
 				{
 					if (!attr.Name.StartsWith("_"))
 					{
@@ -1951,7 +1950,7 @@ public partial class Functions
 				// Clear each attribute
 				foreach (var attrName in attributesToClear)
 				{
-					await Mediator!.Send(new ClearAttributeCommand(obj.Object().DBRef, [attrName]));
+					await Mediator!.Send(new ClearAttributeCommand(obj.Object.DBRef, [attrName]));
 				}
 
 				return $"Wiped {attributesToClear.Count}";

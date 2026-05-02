@@ -1,7 +1,6 @@
 using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -89,7 +88,7 @@ public partial class SurrealDatabase
 
 	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
+		var objKey = dbref.Object.Key;
 		var parameters = new Dictionary<string, object?>
 		{
 			["key"] = objKey,
@@ -114,7 +113,7 @@ public partial class SurrealDatabase
 
 	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
+		var objKey = dbref.Object.Key;
 		var parameters = new Dictionary<string, object?>
 		{
 			["key"] = objKey,
@@ -237,7 +236,7 @@ public partial class SurrealDatabase
 
 	public async ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
+		var objKey = dbref.Object.Key;
 		var parameters = new Dictionary<string, object?>
 		{
 			["key"] = objKey,
@@ -261,7 +260,7 @@ public partial class SurrealDatabase
 
 	public async ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
+		var objKey = dbref.Object.Key;
 		var parameters = new Dictionary<string, object?>
 		{
 			["key"] = objKey,

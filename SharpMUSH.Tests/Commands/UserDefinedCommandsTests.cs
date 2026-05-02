@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -33,7 +32,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Boo! a - b")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Boo! a - b")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -56,7 +55,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Hello, World!")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Hello, World!")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -77,7 +76,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Message from Alice to Bob")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Message from Alice to Bob")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -98,7 +97,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Pong!")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Pong!")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -119,7 +118,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: A=foo B=bar C=baz")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: A=foo B=bar C=baz")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -144,7 +143,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: You said: hello world")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: You said: hello world")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -169,7 +168,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Full: {token} prefix_42, Part: 42")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Full: {token} prefix_42, Part: 42")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -193,7 +192,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Alice messaged Bob")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Alice messaged Bob")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -217,7 +216,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Rolling 3d6")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Rolling 3d6")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
@@ -238,12 +237,12 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Value 1 received")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Value 1 received")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Value 2 received")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Value 2 received")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

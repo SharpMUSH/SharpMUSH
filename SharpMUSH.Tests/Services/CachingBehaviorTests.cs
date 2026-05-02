@@ -60,7 +60,7 @@ public class CachingBehaviorTests
 		// Second call – should come from cache
 		var result2 = await mediator.Send(new GetObjectNodeQuery(dbRef));
 
-		await Assert.That(result1.IsT0).IsEqualTo(result2.IsT0);
+		await Assert.That(result1.IsPlayer).IsEqualTo(result2.IsPlayer);
 	}
 
 	/// <summary>
@@ -131,7 +131,7 @@ public class CachingBehaviorTests
 
 		// Populate the cache for this object
 		var before = await mediator.Send(new GetObjectNodeQuery(dbRef));
-		await Assert.That(before.Object()!.Name).IsEqualTo("CacheInvalidation Test Object");
+		await Assert.That(before.Object!.Name).IsEqualTo("CacheInvalidation Test Object");
 
 		// Rename via command — SetNameCommand invalidates object:{dbRef} cache key
 		await Parser.CommandParse(1, ConnectionService,
@@ -139,7 +139,7 @@ public class CachingBehaviorTests
 
 		// Query again — should return the new name, not the stale cached one
 		var after = await mediator.Send(new GetObjectNodeQuery(dbRef));
-		await Assert.That(after.Object()!.Name).IsEqualTo("CacheInvalidation Renamed Object");
+		await Assert.That(after.Object!.Name).IsEqualTo("CacheInvalidation Renamed Object");
 	}
 
 	/// <summary>
@@ -159,6 +159,6 @@ public class CachingBehaviorTests
 		// The new object should be queryable (cache was invalidated or wasn't stale)
 		var obj = await mediator.Send(new GetObjectNodeQuery(newDbRef));
 		await Assert.That(obj.IsNone).IsFalse();
-		await Assert.That(obj.Object()!.Name).IsEqualTo("CacheInvalidation Visibility Test");
+		await Assert.That(obj.Object!.Name).IsEqualTo("CacheInvalidation Visibility Test");
 	}
 }

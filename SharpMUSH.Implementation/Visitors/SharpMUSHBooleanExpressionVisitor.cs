@@ -34,23 +34,23 @@ public class SharpMUSHBooleanExpressionVisitor(
 	// that cannot be async. This is acceptable technical debt in this context.
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasFlag = (dbRef, flag)
-		=> dbRef.Object().Flags.Value
+		=> dbRef.Object.Flags.Value
 			.AnyAsync(x => x.Name == flag || x.Symbol == flag, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasPower = (dbRef, power)
-		=> dbRef.Object().Powers.Value
+		=> dbRef.Object.Powers.Value
 			.AnyAsync(x => x.Name == power || x.Alias == power, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
 	private readonly Expression<Func<AnySharpObject, string, bool>> _isType = (dbRef, type)
-		=> dbRef.Object().Type == type;
+		=> dbRef.Object.Type == type;
 
 	// For name matching, we need to convert the pattern to regex outside the expression tree
 	// because MModule.getWildcardMatchAsRegex2 cannot be compiled into an expression tree
 	private bool MatchesName(AnySharpObject dbRef, string pattern)
 	{
 		var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
-		return Regex.IsMatch(dbRef.Object().Name, regexPattern, RegexOptions.IgnoreCase)
-			|| (dbRef.Aliases != null && dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), regexPattern, RegexOptions.IgnoreCase)));
+		return Regex.IsMatch(dbRef.Object.Name, regexPattern, RegexOptions.IgnoreCase)
+			|| (dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), regexPattern, RegexOptions.IgnoreCase)));
 	}
 
 	private static readonly string[] defaultStringArrayValue = [];
@@ -113,13 +113,13 @@ public class SharpMUSHBooleanExpressionVisitor(
 			try
 			{
 				// Get the owner of the unlocker
-				var unlockerOwner = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+				var unlockerOwner = unlockerObj.Object.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
 				var unlockerOwnerDbRef = unlockerOwner.Object.DBRef;
 
 				// If target is "me", check if unlocker is owned by gated object's owner
 				if (target.Equals("me", StringComparison.OrdinalIgnoreCase))
 				{
-					var gatedOwner = gatedObj.Object().Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+					var gatedOwner = gatedObj.Object.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
 					return unlockerOwnerDbRef == gatedOwner.Object.DBRef;
 				}
 
@@ -137,8 +137,8 @@ if (parsedTargetOpt.IsSome())
 					if (targetObjResult.IsNone())
 						return false;
 
-					var targetObj = targetObjResult.Known();
-					var targetOwner = targetObj.Object().Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+					var targetObj = targetObjResult.Known;
+					var targetOwner = targetObj.Object.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
 					return unlockerOwnerDbRef == targetOwner.Object.DBRef;
 				}
 
@@ -193,7 +193,7 @@ if (parsedTargetOpt.IsSome())
 		Func<AnySharpObject, string, bool> func = (unlockerObj, target) =>
 		{
 			// Check if unlocker IS the target object (name match)
-			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
+			if (unlockerObj.Object.Name.Equals(target, StringComparison.OrdinalIgnoreCase))
 				return true;
 
 			// Check aliases too
@@ -211,7 +211,7 @@ if (parsedCarryOpt.IsSome())
 						var searchDbRef = parsedCarryOpt.AsValue();
 						var contents = unlockerObj.AsContainer.Content(med);
 						return contents
-							.AnyAsync(item => item.Object().DBRef.Matches(searchDbRef), CancellationToken.None)
+							.AnyAsync(item => item.Object.DBRef.Matches(searchDbRef), CancellationToken.None)
 							.AsTask().GetAwaiter().GetResult();
 					}
 				}
@@ -321,7 +321,7 @@ if (parsedCarryOpt.IsSome())
 
 					var listValue = MModule.plainText(attributes.First().Value);
 					var dbrefs = listValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-					var unlockerDbRef = unlockerObj.Object().DBRef;
+					var unlockerDbRef = unlockerObj.Object.DBRef;
 
 					// Check if unlocker's dbref is in the list
 					foreach (var dbrefStr in dbrefs)
@@ -373,7 +373,7 @@ if (parsedCarryOpt.IsSome())
 			try
 			{
 				// Get the owner of the unlocker
-				var ownerTask = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
+				var ownerTask = unlockerObj.Object.Owner.WithCancellation(CancellationToken.None);
 				var owner = ownerTask.GetAwaiter().GetResult();
 
 				// Get the LASTIP attribute from the owner
@@ -419,7 +419,7 @@ if (parsedCarryOpt.IsSome())
 			try
 			{
 				// Get the owner of the unlocker
-				var ownerTask = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
+				var ownerTask = unlockerObj.Object.Owner.WithCancellation(CancellationToken.None);
 				var owner = ownerTask.GetAwaiter().GetResult();
 
 				// Get the LASTSITE attribute from the owner
@@ -487,9 +487,9 @@ if (parsedCarryOpt.IsSome())
 			// If target is "me", it refers to the gated object's owner
 			if (target.Equals("me", StringComparison.OrdinalIgnoreCase))
 			{
-				var ownerTask = gatedObj.Object().Owner.WithCancellation(CancellationToken.None);
+				var ownerTask = gatedObj.Object.Owner.WithCancellation(CancellationToken.None);
 				var owner = ownerTask.GetAwaiter().GetResult();
-				return unlockerObj.Object().DBRef == owner.Object.DBRef;
+				return unlockerObj.Object.DBRef == owner.Object.DBRef;
 			}
 
 			// Try to parse as DBRef (supports both #123 and #123:timestamp formats)
@@ -497,7 +497,7 @@ if (parsedCarryOpt.IsSome())
 			if (parsedDbRef.IsSome())
 			{
 				var lockDbRef = parsedDbRef.AsValue();
-				var unlockerDbRef = unlockerObj.Object().DBRef;
+				var unlockerDbRef = unlockerObj.Object.DBRef;
 
 				// If lock specifies creation time (objid format), both number and timestamp must match
 				// This prevents locks from matching recycled dbrefs after objects are destroyed
@@ -515,11 +515,11 @@ if (parsedCarryOpt.IsSome())
 
 			// Otherwise try exact name match
 			// Check if the unlocker itself matches
-			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
+			if (unlockerObj.Object.Name.Equals(target, StringComparison.OrdinalIgnoreCase))
 				return true;
 
 			// Check aliases
-			if (unlockerObj.Aliases != null && unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
+			if (unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
 				return true;
 
 			return false;
@@ -650,7 +650,7 @@ if (parsedIndirectOpt.IsSome())
 					if (targetObjResult.IsNone())
 						return false;
 
-					targetObj = targetObjResult.Known();
+					targetObj = targetObjResult.Known;
 				}
 				else
 				{
@@ -675,17 +675,17 @@ if (parsedIndirectOpt.IsSome())
 					}
 				}
 
-				if (targetObj == null)
+				if (!targetObj.HasValue)
 					return false;
 
 				// Get the lock from the target object
-				var lockData = targetObj.Object().Locks.GetValueOrDefault(lockType, new Library.Models.SharpLockData("#TRUE"));
+				var lockData = targetObj.Value.Object.Locks.GetValueOrDefault(lockType, new Library.Models.SharpLockData("#TRUE"));
 				var lockString = lockData.LockString;
 
 				// Use mediator query to recursively evaluate the lock
 				// This breaks the circular dependency between parser and lock service
 				var evaluateResult = med.Send(
-					new EvaluateLockQuery(lockString, targetObj, unlockerObj),
+					new EvaluateLockQuery(lockString, targetObj!.Value, unlockerObj),
 					CancellationToken.None)
 					.AsTask()
 					.ConfigureAwait(false).GetAwaiter().GetResult();

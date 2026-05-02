@@ -107,7 +107,7 @@ public class EventService(
 			// Set executor to event handler and enactor as determined above
 			await parser.With(state => state with
 			{
-				Executor = eventHandler.Object().DBRef,
+				Executor = eventHandler.Object.DBRef,
 				Enactor = eventEnactor
 			}, async newParser =>
 			{

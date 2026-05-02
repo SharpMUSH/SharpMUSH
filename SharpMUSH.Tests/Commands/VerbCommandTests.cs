@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -32,7 +31,7 @@ public class VerbCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(verbObj),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbActorDefault_Value_52830")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbActorDefault_Value_52830")),
 				Arg.Is<AnySharpObject?>(s => s == null),
 				INotifyService.NotificationType.Announce);
 	}
@@ -54,7 +53,7 @@ public class VerbCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(verbObj),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbAction_Value_74102")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbAction_Value_74102")),
 				Arg.Is<AnySharpObject?>(s => s == null),
 				INotifyService.NotificationType.Announce);
 	}
@@ -75,7 +74,7 @@ public class VerbCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(verbObj),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbArgs_Value_91605")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbArgs_Value_91605")),
 				Arg.Is<AnySharpObject?>(s => s == null),
 				INotifyService.NotificationType.Announce);
 	}

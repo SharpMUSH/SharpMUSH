@@ -38,13 +38,13 @@ public partial class Commands
 
 		var objAttrStr = objAttrArg.Message?.ToPlainText() ?? string.Empty;
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
-		if (maybeObjAttr.IsT1)
+		if (maybeObjAttr.IsNone())
 		{
 			await NotifyService!.Notify(executor, "#-1 INVALID OBJECT/ATTRIBUTE", executor);
 			return new CallState("#-1 INVALID OBJECT/ATTRIBUTE");
 		}
 
-		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
+		var (targetObjRef, attrName) = maybeObjAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,
@@ -78,7 +78,7 @@ public partial class Commands
 
 				var requestUri = uri;
 				var requestBody = dataArg?.Message?.ToString();
-				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
+				var dbRefAttribute = new DbRefAttribute(found.Object!.DBRef, attrName.Split("`"));
 
 				await Mediator!.Send(new QueueAttributeRequest(
 					async () =>

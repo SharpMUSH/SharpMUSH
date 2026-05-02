@@ -180,7 +180,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		DBRef tempGodDbRef;
 		var existingPlayer1 = await _database.GetObjectNodeAsync(new DBRef(1), cancellationToken);
 
-		if (existingPlayer1.IsT0)
+		if (existingPlayer1.IsPlayer)
 		{
 			// Player #1 already exists (from database migration), reuse it
 			tempGodDbRef = new DBRef(1);
@@ -193,12 +193,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
 				// Update God player name/password from PennMUSH data
-				await _database.SetObjectName(existingPlayer1.AsT0, MModule.single(godPennObject.Name), cancellationToken);
+				await _database.SetObjectName(existingPlayer1.AsPlayer, MModule.single(godPennObject.Name), cancellationToken);
 
 				if (!string.IsNullOrEmpty(godPennObject.Password))
 				{
 					var (salt, hash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
-					await _database.SetPlayerPasswordAsync(existingPlayer1.AsT0, hash, salt, cancellationToken);
+					await _database.SetPlayerPasswordAsync(existingPlayer1.AsPlayer, hash, salt, cancellationToken);
 				}
 
 				_logger.LogDebug("Updated God player #{PennDBRef} with name: {Name}", 1, godPennObject.Name);
@@ -245,17 +245,17 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		// Get the God player object for use as creator
 		var godPlayerObj = await _database.GetObjectNodeAsync(tempGodDbRef, cancellationToken);
-		if (!godPlayerObj.TryPickT0(out var godPlayerWrapped, out _))
+		if (!godPlayerObj.IsPlayer)
 		{
 			throw new InvalidOperationException("Failed to retrieve God player after creation or reuse");
 		}
-		var godPlayer = godPlayerWrapped; // This is SharpPlayer directly
+		var godPlayer = godPlayerObj.AsPlayer; // This is SharpPlayer directly
 
 		// Check if Room #0 already exists (from database migration)
 		DBRef tempRoom0DbRef;
 		var existingRoom0 = await _database.GetObjectNodeAsync(new DBRef(0), cancellationToken);
 
-		if (existingRoom0.IsT0)
+		if (existingRoom0.IsRoom)
 		{
 			// Room #0 already exists (from database migration), reuse it
 			tempRoom0DbRef = new DBRef(0);
@@ -268,7 +268,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
 				// Update Room #0 name from PennMUSH data
-				await _database.SetObjectName(existingRoom0.AsT1, MModule.single(room0Penn.Name), cancellationToken);
+				await _database.SetObjectName(existingRoom0.AsRoom, MModule.single(room0Penn.Name), cancellationToken);
 				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
 			}
 		}
@@ -302,7 +302,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		// Check if Master Room #2 already exists (from database migration)
 		var existingRoom2 = await _database.GetObjectNodeAsync(new DBRef(2), cancellationToken);
 
-		if (existingRoom2.IsT0)
+		if (existingRoom2.IsRoom)
 		{
 			// Master Room #2 already exists (from database migration), reuse it
 			_dbrefMapping[2] = new DBRef(2);
@@ -395,10 +395,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							if (room0 == null)
 							{
 								var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
-								if (!room0Obj.TryPickT1(out room0, out _))
-								{
-									throw new InvalidOperationException("Failed to retrieve Limbo room");
-								}
+								room0 = room0Obj.IsRoom ? room0Obj.AsRoom : throw new InvalidOperationException("Failed to retrieve Limbo room");
 							}
 
 							newDbRef = await _database.CreateThingAsync(
@@ -417,10 +414,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							if (room0 == null)
 							{
 								var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
-								if (!room0Obj.TryPickT1(out room0, out _))
-								{
-									throw new InvalidOperationException("Failed to retrieve Limbo room");
-								}
+								room0 = room0Obj.IsRoom ? room0Obj.AsRoom : throw new InvalidOperationException("Failed to retrieve Limbo room");
 							}
 
 							var aliases = ExtractAliases(pennObj.Name);
@@ -497,35 +491,25 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						if (container != null)
 						{
 							// Convert object to content (player, exit, or thing)
-							var hasContent = sharpObj.Match(
-								player => true,
-								room => false, // Rooms aren't content
-								exit => true,
-								thing => true,
-								_ => false);
+							var hasContent = sharpObj.Value is SharpPlayer or SharpExit or SharpThing;
 
 							if (hasContent)
 							{
-								var content = sharpObj.Match<AnySharpContent>(
-									player => player,
-									room => throw new InvalidOperationException("Room cannot be content"),
-									exit => exit,
-									thing => thing,
-									_ => throw new InvalidOperationException("None cannot be content"));
+								var content = sharpObj.WithoutNone().AsContent;
 
 								// Use MoveService to properly move the object
 								// Note: Passing null for parser as this is a system operation during conversion
 								var moveResult = await _moveService.ExecuteMoveAsync(
 									null!, // No parser context during conversion
 									content,
-									container,
+									container!.Value,
 									null, // System move
 									"conversion",
 									silent: true);
 
-								if (moveResult.IsT1)
+								if (moveResult.IsError)
 								{
-									var errorMsg = $"Failed to move object #{pennObj.DBRef} to location #{pennObj.Location}: {moveResult.AsT1.Value}";
+									var errorMsg = $"Failed to move object #{pennObj.DBRef} to location #{pennObj.Location}: {moveResult.AsError.Value}";
 									warnings.Add(errorMsg);
 									_logger.LogDebug("Move error during conversion: {Error}", errorMsg);
 								}
@@ -544,7 +528,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 						if (container != null && sharpObj.IsExit)
 						{
-							await _database.LinkExitAsync(sharpObj.AsExit, container, cancellationToken);
+							await _database.LinkExitAsync(sharpObj.AsExit, container!.Value, cancellationToken);
 							_logger.LogDebug("Linked exit #{PennDBRef} to destination #{DestDBRef}", pennObj.DBRef, pennObj.Link);
 						}
 					}
@@ -650,7 +634,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							pennAttr.Name,
 							value);
 
-						if (result.IsT0)
+						if (result.IsSuccess)
 						{
 							count++;
 							_logger.LogTrace("Set attribute {AttrName} on object #{DBRef}", pennAttr.Name, pennObj.DBRef);
@@ -663,7 +647,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						}
 						else
 						{
-							warnings.Add($"Failed to set attribute {pennAttr.Name} on #{pennObj.DBRef}: {result.AsT1.Value}");
+							warnings.Add($"Failed to set attribute {pennAttr.Name} on #{pennObj.DBRef}: {result.AsError.Value}");
 						}
 					}
 					catch (Exception ex)
@@ -729,7 +713,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					{
 						var lockData = new Models.SharpLockData { LockString = lockString, Flags = Services.LockService.LockFlags.Default };
 						await _database.SetLockAsync(
-							sharpObj.Object(),
+							sharpObj.Object,
 							lockName,
 							lockData,
 							cancellationToken);
@@ -776,12 +760,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return null;
 		}
 
-		return obj.Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			exit => throw new InvalidOperationException("Exit cannot be container"),
-			thing => thing,
-			_ => throw new InvalidOperationException("None cannot be container"));
+		return obj.WithoutNone().AsContainer;
 	}
 
 	/// <summary>

@@ -1,5 +1,4 @@
-﻿using OneOf;
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -22,21 +21,21 @@ public interface INotifyService
 	}
 
 	// Sender parameter added for Noisy rules support
-	ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Notify(DBRef who, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-	ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Notify(AnySharpObject who, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-	ValueTask Notify(long handle, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Notify(long handle, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-	ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Notify(long[] handles, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-	ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Prompt(DBRef who, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-	ValueTask Prompt(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Prompt(AnySharpObject who, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-	ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Prompt(long handle, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-	ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
+	ValueTask Prompt(long[] handles, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
 	/// <summary>
 	/// Unified error handling: optionally notify user, then return error.

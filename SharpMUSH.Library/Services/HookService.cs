@@ -33,7 +33,7 @@ public class HookService : IHookService
 			return ValueTask.FromResult<Option<CommandHook>>(hook);
 		}
 
-		return ValueTask.FromResult<Option<CommandHook>>(new OneOf.Types.None());
+		return ValueTask.FromResult<Option<CommandHook>>(new None());
 	}
 
 	public ValueTask<bool> SetHookAsync(string commandName, string hookType, DBRef targetObject, string attributeName,

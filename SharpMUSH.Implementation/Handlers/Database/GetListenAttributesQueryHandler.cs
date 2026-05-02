@@ -20,7 +20,7 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 	public async ValueTask<ListenAttributeCache[]> Handle(GetListenAttributesQuery request, CancellationToken cancellationToken)
 	{
 		var sharpObj = request.SharpObject;
-		var attributes = sharpObj.Object().AllAttributes.Value;
+		var attributes = sharpObj.Object.AllAttributes.Value;
 		var listenAttributes = new List<ListenAttributeCache>();
 
 		await foreach (var attr in attributes.WithCancellation(cancellationToken))

@@ -1,4 +1,3 @@
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using static SharpMUSH.Library.Services.Interfaces.INotifyService;
@@ -17,7 +16,7 @@ public interface IListenerRoutingService
 	/// </summary>
 	ValueTask ProcessNotificationAsync(
 		NotificationContext context,
-		OneOf<MString, string> message,
+		SharpMessage message,
 		AnySharpObject? sender,
 		NotificationType type);
 }

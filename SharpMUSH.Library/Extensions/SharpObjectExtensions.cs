@@ -44,7 +44,7 @@ public static class SharpObjectExtensions
 			yield return zone;
 
 			// Get the zone's zone (if any)
-			currentZone = await zone.Object().Zone.WithCancellation(ct);
+			currentZone = await zone.Object.Zone.WithCancellation(ct);
 			depth++;
 
 			// Prevent infinite loops
@@ -63,7 +63,7 @@ public static class SharpObjectExtensions
 		int maxDepth = 10,
 		[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
 	{
-		await foreach (var zone in obj.Object().GetZoneChain(maxDepth, ct))
+		await foreach (var zone in obj.Object.GetZoneChain(maxDepth, ct))
 		{
 			yield return zone;
 		}
@@ -91,7 +91,7 @@ public static class SharpObjectExtensions
 		}
 
 		// Check immediate zone
-		if (objectZone.Known.Object().DBRef.Number == targetZone.Object().DBRef.Number)
+		if (objectZone.Known.Object.DBRef.Number == targetZone.Object.DBRef.Number)
 		{
 			return true;
 		}
@@ -101,7 +101,7 @@ public static class SharpObjectExtensions
 		{
 			await foreach (var zone in obj.GetZoneChain(ct: ct))
 			{
-				if (zone.Object().DBRef.Number == targetZone.Object().DBRef.Number)
+				if (zone.Object.DBRef.Number == targetZone.Object.DBRef.Number)
 				{
 					return true;
 				}

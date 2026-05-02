@@ -34,13 +34,8 @@ public static class ChannelChown
 		var locate =
 			await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, newOwner.ToPlainText());
 
-		switch (locate)
-		{
-			case { IsError: true }:
-				return new CallState(locate.AsError.Value);
-			case { IsNone: true }:
-				return new CallState("#-1 PLAYER NOT FOUND");
-		}
+		if (locate.IsError) return new CallState(locate.AsError.Value);
+		if (locate.IsNone) return new CallState("#-1 PLAYER NOT FOUND");
 
 		var newOwnerObject = locate.AsPlayer;
 

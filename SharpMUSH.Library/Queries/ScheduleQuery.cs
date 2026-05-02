@@ -1,14 +1,14 @@
 using Mediator;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 
 namespace SharpMUSH.Library.Queries;
 
-public record ScheduleSemaphoreQuery(OneOf<long, DBRef, DbRefAttribute> Query) : IStreamQuery<SemaphoreTaskData>;
+public record ScheduleSemaphoreQuery(SemaphoreTarget Query) : IStreamQuery<SemaphoreTaskData>;
 
 public record ScheduleDelayQuery(DBRef Query) : IStreamQuery<long>;
 
 public record ScheduleEnqueueQuery(DBRef Query) : IStreamQuery<long>;
 
-public record ScheduleAllTasksQuery : IStreamQuery<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])>;
+public record ScheduleAllTasksQuery : IStreamQuery<(string Group, (DateTimeOffset, DbRefOrName)[])>;

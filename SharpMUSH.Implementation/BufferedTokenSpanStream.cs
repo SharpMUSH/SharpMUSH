@@ -375,7 +375,7 @@ namespace SharpMUSH.Implementation
 		[return: NotNull]
 		public virtual string GetText(IToken? start, IToken? stop)
 		{
-			return start != null && stop != null
+			return stop is not null && start is not null
 				? GetText(Interval.Of(start.TokenIndex, stop.TokenIndex))
 				: string.Empty;
 		}

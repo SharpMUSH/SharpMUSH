@@ -1,59 +1,66 @@
-﻿using OneOf;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnySharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing>
+/// <summary>
+/// A union of SharpPlayer, SharpExit, SharpThing (things that live inside containers).
+/// Replaces AnySharpContent : OneOfBase&lt;SharpPlayer, SharpExit, SharpThing&gt;.
+/// </summary>
+public union AnySharpContent(SharpPlayer, SharpExit, SharpThing)
 {
-	public AnySharpContent(OneOf<SharpPlayer, SharpExit, SharpThing> input) : base(input)
+	public bool IsPlayer => Value is SharpPlayer;
+	public bool IsExit   => Value is SharpExit;
+	public bool IsThing  => Value is SharpThing;
+
+	public SharpPlayer AsPlayer => (SharpPlayer)Value!;
+	public SharpExit   AsExit   => (SharpExit)Value!;
+	public SharpThing  AsThing  => (SharpThing)Value!;
+
+	public SharpObject Object => Value switch
 	{
-	}
+		SharpPlayer p => p.Object,
+		SharpExit   e => e.Object,
+		SharpThing  t => t.Object,
+		_ => throw new InvalidOperationException()
+	};
 
-	public static implicit operator AnySharpContent(SharpPlayer x) => new(x);
-	public static implicit operator AnySharpContent(SharpExit x) => new(x);
-	public static implicit operator AnySharpContent(SharpThing x) => new(x);
+	public string Id => Value switch
+	{
+		SharpPlayer p => p.Id,
+		SharpExit   e => e.Id,
+		SharpThing  t => t.Id,
+		_ => throw new InvalidOperationException()
+	} ?? throw new InvalidOperationException("Id was null");
 
-	public bool IsPlayer => IsT0;
-	public bool IsExit => IsT1;
-	public bool IsThing => IsT2;
+	public AnySharpObject WithRoomOption() => Value switch
+	{
+		SharpPlayer p => p,
+		SharpExit   e => e,
+		SharpThing  t => t,
+		_ => throw new InvalidOperationException()
+	};
 
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpExit AsExit => AsT1;
-	public SharpThing AsThing => AsT2;
+	public AnyOptionalSharpContent WithNoneOption() => Value switch
+	{
+		SharpPlayer p => p,
+		SharpExit   e => e,
+		SharpThing  t => t,
+		_ => throw new InvalidOperationException()
+	};
 
-	public string Id
-		=> Match(
-			player => player.Id,
-			exit => exit.Id,
-			thing => thing.Id)!;
+	public async ValueTask<AnySharpContainer> Location() => Value switch
+	{
+		SharpPlayer p => await p.Location.WithCancellation(CancellationToken.None),
+		SharpExit   e => await e.Location.WithCancellation(CancellationToken.None),
+		SharpThing  t => await t.Location.WithCancellation(CancellationToken.None),
+		_ => throw new InvalidOperationException()
+	};
 
-	public AnySharpObject WithRoomOption()
-		=> Match<AnySharpObject>(
-			player => player,
-			exit => exit,
-			thing => thing
-		);
-
-	public AnyOptionalSharpContent WithNoneOption()
-		=> Match<AnyOptionalSharpContent>(
-			player => player,
-			exit => exit,
-			thing => thing
-		);
-
-	public async ValueTask<AnySharpContainer> Location()
-		=> await Match(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			async exit => await exit.Location.WithCancellation(CancellationToken.None),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None)
-		);
-
-
-	public async ValueTask<AnySharpContainer> Home()
-		=> await Match(
-			async player => await player.Home.WithCancellation(CancellationToken.None),
-			async exit => await exit.Home.WithCancellation(CancellationToken.None),
-			async thing => await thing.Home.WithCancellation(CancellationToken.None)
-		);
+	public async ValueTask<AnySharpContainer> Home() => Value switch
+	{
+		SharpPlayer p => await p.Home.WithCancellation(CancellationToken.None),
+		SharpExit   e => await e.Home.WithCancellation(CancellationToken.None),
+		SharpThing  t => await t.Home.WithCancellation(CancellationToken.None),
+		_ => throw new InvalidOperationException()
+	};
 }

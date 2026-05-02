@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -88,7 +87,7 @@ public class SemaphoreCommandTests
 			.DidNotReceive()
 			.Notify(
 				TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"Queued{uniqueId}")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"Queued{uniqueId}")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -110,7 +109,7 @@ public class SemaphoreCommandTests
 		// It might say "no queue entry" but must NOT say the pairs-error message.
 		await NotifyService.DidNotReceive().Notify(
 			Arg.Any<AnySharpObject>(),
-			Arg.Is<OneOf<MString, string>>(msg =>
+			Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Q-register assignments must be in pairs: qreg,value[,qreg,value...]")),
 			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}

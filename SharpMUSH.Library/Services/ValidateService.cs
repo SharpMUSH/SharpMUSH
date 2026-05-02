@@ -1,6 +1,4 @@
 using Mediator;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -25,21 +23,21 @@ public partial class ValidateService(
 	// Thread-safe cache for compiled glob patterns
 	private readonly ConcurrentDictionary<string, Regex> _globCache = new();
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
-		OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None> target)
+		AttributeTarget target)
 		=> type switch
 		{
 			_ when value.Length == 0
 				=> false,
 			IValidateService.ValidationType.Name
 				=> ValidateName(value),
-			IValidateService.ValidationType.PlayerName when target is { IsT0: true }
-				=> await ValidatePlayerName(value, target.AsT0),
-			IValidateService.ValidationType.PlayerAlias when target is { IsT0: true }
-				=> ValidatePlayerAlias(value, target.AsT0),
+			IValidateService.ValidationType.PlayerName when target is AnySharpObject
+				=> await ValidatePlayerName(value, (AnySharpObject)target.Value!),
+			IValidateService.ValidationType.PlayerAlias when target is AnySharpObject
+				=> ValidatePlayerAlias(value, (AnySharpObject)target.Value!),
 			IValidateService.ValidationType.AttributeName
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
-			IValidateService.ValidationType.AttributeValue when target is { IsT1: true }
-				=> ValidateAttributeValue(value, target.AsT1),
+			IValidateService.ValidationType.AttributeValue when target is SharpAttributeEntry
+				=> ValidateAttributeValue(value, (SharpAttributeEntry)target.Value!),
 			IValidateService.ValidationType.AttributeValue
 				=> ValidateAttributeValueBasic(value),
 			IValidateService.ValidationType.ColorName
@@ -48,8 +46,8 @@ public partial class ValidateService(
 				=> true,
 			IValidateService.ValidationType.CommandName
 				=> ValidCommandNameRegex().IsMatch(value.ToPlainText()),
-			IValidateService.ValidationType.LockKey when target is { IsT0: true }
-				=> lockService.Validate(value.ToPlainText(), target.AsT0),
+			IValidateService.ValidationType.LockKey when target is AnySharpObject
+				=> lockService.Validate(value.ToPlainText(), (AnySharpObject)target.Value!),
 			IValidateService.ValidationType.LockType
 				=> ValidateLockType(value),
 			IValidateService.ValidationType.BoolExp
@@ -58,9 +56,9 @@ public partial class ValidateService(
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.PowerName
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
-			IValidateService.ValidationType.ChannelName when target is { IsT3: true }
+			IValidateService.ValidationType.ChannelName when target is None
 				=> ChannelNameRegex().IsMatch(value.ToPlainText()),
-			IValidateService.ValidationType.ChannelName when target is { IsT2: true, AsT2: var channel }
+			IValidateService.ValidationType.ChannelName when target is SharpChannel channel
 				=> channel.Name.ToPlainText() == value.ToPlainText()
 					 || ChannelNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.Password
@@ -277,7 +275,7 @@ public partial class ValidateService(
 
 		var tryFindPlayerByName = mediator
 			.CreateStream(new GetPlayerQuery(plainName))
-			.Where(x => x.Object.DBRef != target.Object().DBRef);
+			.Where(x => x.Object.DBRef != target.Object.DBRef);
 
 		return !await tryFindPlayerByName
 			.AnyAsync(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase));

@@ -2,7 +2,6 @@ using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
 using Neo4j.Driver;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -71,7 +70,7 @@ aliases: $aliases, setPermissions: $setPerms, unsetPermissions: $unsetPerms, typ
 
 	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
+		var objKey = dbref.Object.Key;
 		// Check if already set
 		var existing = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:HAS_FLAG]->(f:ObjectFlag {name: $fname})
@@ -89,7 +88,7 @@ CREATE (o)-[:HAS_FLAG]->(f)
 
 	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
+		var objKey = dbref.Object.Key;
 		var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[r:HAS_FLAG]->(f:ObjectFlag {name: $fname})
 DELETE r
@@ -100,7 +99,7 @@ RETURN count(r) AS cnt
 
 	public async ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
+		var objKey = dbref.Object.Key;
 		var existing = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:HAS_POWER]->(p:Power {name: $pname})
 RETURN count(p) AS cnt
@@ -117,7 +116,7 @@ CREATE (o)-[:HAS_POWER]->(p)
 
 	public async ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
+		var objKey = dbref.Object.Key;
 		var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[r:HAS_POWER]->(p:Power {name: $pname})
 DELETE r

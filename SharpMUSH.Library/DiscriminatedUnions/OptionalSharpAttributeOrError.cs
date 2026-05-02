@@ -1,32 +1,34 @@
-﻿using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class OptionalSharpAttributeOrError(OneOf<SharpAttribute[], None, Error<string>> input)
-	: OneOfBase<SharpAttribute[], None, Error<string>>(input)
+/// <summary>
+/// A union of SharpAttribute[], None, and SharpError.
+/// Replaces OptionalSharpAttributeOrError : OneOfBase&lt;SharpAttribute[], None, Error&lt;string&gt;&gt;.
+/// </summary>
+public union OptionalSharpAttributeOrError(SharpAttribute[], None, SharpError)
 {
-	public static implicit operator OptionalSharpAttributeOrError(SharpAttribute[] x) => new(x);
-	public static implicit operator OptionalSharpAttributeOrError(None x) => new(x);
-	public static implicit operator OptionalSharpAttributeOrError(Error<string> x) => new(x);
+	public bool IsAttribute => Value is SharpAttribute[];
+	public bool IsNone      => Value is null or None;
+	public bool IsError     => Value is SharpError;
 
-	public bool IsAttribute => IsT0;
-	public bool IsNone => IsT1;
-	public bool IsError => IsT2;
+	public SharpAttribute[] AsAttribute => (SharpAttribute[])Value!;
+	public SharpError       AsError      => (SharpError)Value!;
 
-	public SharpAttribute[] AsAttribute => AsT0;
-	public Error<string> AsError => AsT2;
+	public CallState AsCallStateError => Value switch
+	{
+		None   => new CallState(Errors.ErrorNoSuchAttribute),
+		SharpError e => new CallState(e.Value),
+		_ => new CallState(Errors.ErrorNoSuchAttribute)
+	};
 
-	public CallState AsCallStateError => IsT1
-		? new CallState(Errors.ErrorNoSuchAttribute)
-		: new CallState(AsT2.Value);
-
-	public CallState AsCallState => Match(
-		attribute => new CallState(AsT0.Last().Value),
-		none => new CallState(Errors.ErrorNoSuchAttribute),
-		error => new CallState(AsT2.Value));
+	public CallState AsCallState => Value switch
+	{
+		SharpAttribute[] attrs => new CallState(attrs.Last().Value),
+		None => new CallState(Errors.ErrorNoSuchAttribute),
+		SharpError e => new CallState(e.Value),
+		_ => new CallState(Errors.ErrorNoSuchAttribute)
+	};
 }

@@ -152,19 +152,19 @@ public partial class Commands
 		}
 
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
-		if (maybeObjAttr.IsT1)
+		if (maybeObjAttr.IsNone())
 		{
 			await NotifyService!.Notify(executor, "#-1 INVALID OBJECT/ATTRIBUTE", executor);
 			return new CallState("#-1 INVALID OBJECT/ATTRIBUTE");
 		}
 
-		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
+		var (targetObjRef, attrName) = maybeObjAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,
 			async found =>
 			{
-				var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, found, attrName,
+				var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, found, attrName!,
 					IAttributeService.AttributeMode.Execute, true);
 
 				if (!maybeAttribute.IsAttribute)
@@ -247,7 +247,7 @@ public partial class Commands
 									};
 									return ValueTask.FromResult(newState);
 								},
-								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`"))));
+								new DbRefAttribute(found.Object.DBRef, attribute.LongName!.Split("`"))));
 
 							firstRow = false;
 						}
@@ -272,7 +272,7 @@ public partial class Commands
 									EnvironmentRegisters = dict
 								});
 							},
-							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`"))));
+							new DbRefAttribute(found.Object.DBRef, attribute.LongName!.Split("`"))));
 
 						rowNumber++;
 					}
@@ -283,7 +283,7 @@ public partial class Commands
 						await Mediator!.Send(new QueueCommandListRequest(
 							MModule.single("@notify me"),
 							parser.CurrentState,
-							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")),
+							new DbRefAttribute(found.Object.DBRef, attribute.LongName!.Split("`")),
 							-1));
 					}
 

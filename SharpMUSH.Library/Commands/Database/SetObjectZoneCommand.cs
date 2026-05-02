@@ -7,6 +7,6 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record SetObjectZoneCommand(AnySharpObject Target, AnySharpObject Zone) : ICommand, ICacheInvalidating
 {
-	public string[] CacheKeys => [$"object:{Target.Object().DBRef}", $"object:{Zone.Object().DBRef}"];
+	public string[] CacheKeys => [$"object:{Target.Object.DBRef}", $"object:{Zone.Object.DBRef}"];
 	public string[] CacheTags => [];
 }

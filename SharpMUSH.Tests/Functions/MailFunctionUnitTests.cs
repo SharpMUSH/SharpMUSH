@@ -90,9 +90,9 @@ public class MailFunctionUnitTests
 		};
 
 		// Send the test mail to the player
-		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail1));
-		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail2));
-		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail3));
+		await Mediator.Send(new SendMailCommand(executor.Object, testPlayer, testMail1));
+		await Mediator.Send(new SendMailCommand(executor.Object, testPlayer, testMail2));
+		await Mediator.Send(new SendMailCommand(executor.Object, testPlayer, testMail3));
 
 		_setupComplete = true;
 	}

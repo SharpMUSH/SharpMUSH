@@ -1,8 +1,6 @@
 ﻿using Json.Patch;
 using Json.Path;
 using Json.Pointer;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -94,13 +92,14 @@ public partial class Functions
 		{
 			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-			if (objAttr is { IsT1: true, AsT1: false })
+			if (objAttr.IsNone())
 			{
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
 
-			var (dbref, attrName) = objAttr.AsT0;
-			dbref ??= executor.Object().DBRef.ToString();
+			var objAttrRef = objAttr.AsValue();
+			var dbref = objAttrRef.Db ?? executor.Object.DBRef.ToString();
+			var attrName = objAttrRef.Attribute;
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, enactor, executor, dbref, LocateFlags.All);
 			if (!locate.IsValid())
@@ -109,7 +108,7 @@ public partial class Functions
 			}
 
 			var located = locate.WithoutError().WithoutNone();
-			var maybeAttr = await AttributeService!.GetAttributeAsync(executor, located, attrName,
+			var maybeAttr = await AttributeService!.GetAttributeAsync(executor, located, attrName!,
 				mode: IAttributeService.AttributeMode.Execute, parent: true);
 
 			if (maybeAttr.IsNone)
@@ -246,10 +245,10 @@ public partial class Functions
 
 			// Evaluate path to see if it exists
 			var pathResult = jsonPath.Evaluate(jsonDoc);
-			var pathExists = pathResult.Matches != null && pathResult.Matches.Count > 0;
+			var pathExists = pathResult.Matches.Count > 0;
 
 			// For modification operations with found matches, we need exactly one
-			if (pathExists && pathResult.Matches!.Count > 1)
+			if (pathExists && pathResult.Matches.Count > 1)
 			{
 				return new CallState("#-1 PATH MUST BE SINGULAR");
 			}
@@ -526,7 +525,7 @@ public partial class Functions
 		}
 
 		var isWizard = await executor.IsWizard();
-		var hasSendOOBPower = await ArgHelpers.HasObjectPowers(executor.Object(), "Send_OOB");
+		var hasSendOOBPower = await ArgHelpers.HasObjectPowers(executor.Object, "Send_OOB");
 
 		int sentCount = 0;
 
@@ -551,14 +550,14 @@ public partial class Functions
 				continue;
 			}
 
-			var isSelf = executor.Object().DBRef == located.Object().DBRef;
+			var isSelf = executor.Object.DBRef == located.Object.DBRef;
 
 			if (!isWizard && !isSelf && !hasSendOOBPower)
 			{
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 
-			await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
+			await foreach (var connection in ConnectionService!.Get(located.Object.DBRef))
 			{
 				if (connection.Metadata.GetValueOrDefault("GMCP", "0") != "1")
 				{

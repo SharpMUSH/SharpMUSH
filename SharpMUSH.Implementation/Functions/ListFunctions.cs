@@ -123,16 +123,17 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(sep, filteredItems));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsT0;
-		dbref ??= executor.ToString();
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -214,16 +215,17 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(sep, filteredItems));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsT0;
-		dbref ??= executor.ToString();
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -379,16 +381,17 @@ public partial class Functions
 			return new CallState(accumulator);
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsT0;
-		dbref ??= executor.ToString();
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -734,15 +737,16 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(sep, lambdaResults));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsT0;
-		dbref ??= executor.ToString();
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -896,16 +900,17 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(delimiter, result));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsT0;
-		dbref ??= executor.ToString();
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -1001,16 +1006,17 @@ public partial class Functions
 		}
 		else
 		{
-			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 			var objAttr =
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-			if (objAttr is { IsT1: true, AsT1: false })
+			if (objAttr.IsNone())
 			{
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
 
-			var (dbref, attrName) = objAttr.AsT0;
-			dbref ??= executor.ToString();
+			var objAttrRef = objAttr.AsValue();
+			var dbref = objAttrRef.Db ?? executor.ToString()!;
+			var attrName = objAttrRef.Attribute;
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
@@ -1094,8 +1100,8 @@ public partial class Functions
 
 		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
 		{
-			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsT0));
-			return (dbref.AsT0, item.Object()!.Name);
+			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsValue()));
+			return (dbref.AsValue(), item.Object!.Name);
 		});
 
 		var exact = await locatedNames.FirstOrDefaultAsync(async (x, ct)
@@ -1103,7 +1109,7 @@ public partial class Functions
 
 		if (exact != null)
 		{
-			return (await exact).AsT0;
+			var (exactDbref, _) = (await exact); return exactDbref.ToString();
 		}
 
 		var partial = await locatedNames.FirstOrDefaultAsync(async (x, ct)
@@ -1111,7 +1117,7 @@ public partial class Functions
 
 		if (partial != null)
 		{
-			return (await partial).AsT0;
+			var (partialDbref, _) = (await partial); return partialDbref.ToString();
 		}
 
 		return CallState.Empty;
@@ -1136,8 +1142,8 @@ public partial class Functions
 
 		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
 		{
-			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsT0));
-			return (dbref.AsT0, item.Object()!.Name);
+			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsValue()));
+			return (dbref.AsValue(), item.Object!.Name);
 		});
 
 		var exact = locatedNames.Where(async (x, ct)
@@ -1145,7 +1151,7 @@ public partial class Functions
 
 		if (await exact.AnyAsync())
 		{
-			return string.Join(" ", exact.Select(async x => (await x).AsT0.ToString()));
+			return string.Join(" ", exact.Select(async x => { var (xDbref, _) = (await x); return xDbref.ToString(); }));
 		}
 
 		var partial = locatedNames.Where(async (x, ct)
@@ -1153,7 +1159,7 @@ public partial class Functions
 
 		if (await partial.AnyAsync())
 		{
-			return string.Join(" ", partial.Select(async x => (await x).AsT0.ToString()));
+			return string.Join(" ", partial.Select(async x => { var (xDbref, _) = (await x); return xDbref.ToString(); }));
 		}
 
 		return CallState.Empty;
@@ -1368,16 +1374,17 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(sep, sorted));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsT0;
-		dbref ??= executor.ToString();
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -1488,16 +1495,17 @@ public partial class Functions
 		}
 		else
 		{
-			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 			var objAttr =
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-			if (objAttr is { IsT1: true, AsT1: false })
+			if (objAttr.IsNone())
 			{
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
 
-			var (dbref, attrName) = objAttr.AsT0;
-			dbref ??= executor.ToString();
+			var objAttrRef = objAttr.AsValue();
+			var dbref = objAttrRef.Db ?? executor.ToString()!;
+			var attrName = objAttrRef.Attribute;
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
@@ -1629,16 +1637,17 @@ public partial class Functions
 			return new CallState(MModule.multipleWithDelimiter(sep, result));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-		if (objAttr is { IsT1: true, AsT1: false })
+		if (objAttr.IsNone())
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsT0;
-		dbref ??= executor.ToString();
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,

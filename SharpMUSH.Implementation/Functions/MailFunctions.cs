@@ -309,20 +309,20 @@ public partial class Functions
 			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!.Value, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!.Value, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
 		var from = await mail.From.WithCancellation(CancellationToken.None);
-		return new CallState(from.Object()?.DBRef.ToString() ?? "#-1");
+		return new CallState(from.Object?.DBRef.ToString() ?? "#-1");
 	}
 	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["player", "subject", "message"])]
 	public static async ValueTask<CallState> mailsend(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -391,7 +391,7 @@ public partial class Functions
 		};
 
 		// Send the mail
-		await Mediator!.Send(new Library.Commands.Database.SendMailCommand(sender.Object(), recipient, mail));
+		await Mediator!.Send(new Library.Commands.Database.SendMailCommand(sender.Object, recipient, mail));
 
 		return new CallState(string.Empty);
 	}
@@ -428,7 +428,7 @@ public partial class Functions
 			target = locateResult.AsPlayer;
 		}
 
-		var allSentMail = Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()));
+		var allSentMail = Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object));
 		var allReceivedMail = Mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer));
 
 		var sentCount = await allSentMail.CountAsync();
@@ -469,7 +469,7 @@ public partial class Functions
 			target = locateResult.AsPlayer;
 		}
 
-		var allSentMail = await (Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
+		var allSentMail = await (Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object))).ToArrayAsync();
 		var allReceivedMail = await (Mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
 
 		var sentCount = allSentMail.Length;
@@ -515,7 +515,7 @@ public partial class Functions
 			target = locateResult.AsPlayer;
 		}
 
-		var allSentMail = await (Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
+		var allSentMail = await (Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object))).ToArrayAsync();
 		var allReceivedMail = await (Mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
 
 		var sentCount = allSentMail.Length;
@@ -542,13 +542,13 @@ public partial class Functions
 			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!.Value, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!.Value, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
@@ -575,13 +575,13 @@ public partial class Functions
 			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!.Value, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!.Value, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
@@ -601,13 +601,13 @@ public partial class Functions
 			return new CallState(parseResult.Error!);
 		}
 
-		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
+		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!.Value, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
 			return new CallState("#-1 NO SUCH MAIL");
 		}
 
-		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
+		var mail = await GetMailMessage(parseResult.Player!.Value, folder, messageIndex);
 		if (mail == null)
 		{
 			return new CallState("#-1 NO SUCH MAIL");

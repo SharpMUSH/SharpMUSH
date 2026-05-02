@@ -1,90 +1,116 @@
-﻿using OneOf;
-using SharpMUSH.Library.Extensions;
+using Mediator;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnySharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> input)
-	: OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing>(input)
+/// <summary>
+/// A union of SharpPlayer, SharpRoom, SharpExit, SharpThing.
+/// Replaces AnySharpObject : OneOfBase&lt;SharpPlayer, SharpRoom, SharpExit, SharpThing&gt;.
+/// </summary>
+public union AnySharpObject(SharpPlayer, SharpRoom, SharpExit, SharpThing)
 {
-	protected bool Equals(AnySharpObject other) => this.Object().DBRef == other.Object().DBRef;
+	public bool Equals(AnySharpObject other) =>
+		Value is null ? other.Value is null :
+		other.Value is not null && this.Object.DBRef == other.Object.DBRef;
+	public override bool Equals(object? o) => o is AnySharpObject other && Equals(other);
+	public override int GetHashCode() => Value is null ? 0 : this.Object.DBRef.GetHashCode();
+	public static bool operator ==(AnySharpObject a, AnySharpObject b) => a.Equals(b);
+	public static bool operator !=(AnySharpObject a, AnySharpObject b) => !a.Equals(b);
 
-	public override int GetHashCode() => this.Object().DBRef.GetHashCode();
+	public bool IsPlayer => Value is SharpPlayer;
+	public bool IsRoom   => Value is SharpRoom;
+	public bool IsExit   => Value is SharpExit;
+	public bool IsThing  => Value is SharpThing;
 
-	public static implicit operator AnySharpObject(SharpPlayer x) => new(x);
-	public static implicit operator AnySharpObject(SharpRoom x) => new(x);
-	public static implicit operator AnySharpObject(SharpExit x) => new(x);
-	public static implicit operator AnySharpObject(SharpThing x) => new(x);
+	public bool IsContent   => IsPlayer || IsExit || IsThing;
+	public bool IsContainer => IsPlayer || IsRoom || IsThing;
 
-	public async ValueTask<AnySharpContainer> Where() => await Match<ValueTask<AnySharpContainer>>(
-		async player => await player.Location.WithCancellation(CancellationToken.None),
-		async room => await ValueTask.FromResult(room),
-		async exit => await exit.Location.WithCancellation(CancellationToken.None),
-		async thing => await thing.Location.WithCancellation(CancellationToken.None)
-	);
+	public SharpPlayer AsPlayer => (SharpPlayer)Value!;
+	public SharpRoom   AsRoom   => (SharpRoom)Value!;
+	public SharpExit   AsExit   => (SharpExit)Value!;
+	public SharpThing  AsThing  => (SharpThing)Value!;
+
+	public SharpObject Object => Value switch
+	{
+		SharpPlayer p => p.Object,
+		SharpRoom   r => r.Object,
+		SharpExit   e => e.Object,
+		SharpThing  t => t.Object,
+		_ => throw new InvalidOperationException()
+	};
+
+	public string? Id => Value switch
+	{
+		SharpPlayer p => p.Id,
+		SharpRoom   r => r.Id,
+		SharpExit   e => e.Id,
+		SharpThing  t => t.Id,
+		_ => null
+	};
+
+	public string[] Aliases => (Value switch
+	{
+		SharpPlayer p => p.Aliases,
+		SharpRoom   r => r.Aliases,
+		SharpExit   e => e.Aliases,
+		SharpThing  t => t.Aliases,
+		_ => null
+	}) ?? [];
+
+	public async ValueTask<AnySharpContainer> Where() => Value switch
+	{
+		SharpPlayer p => await p.Location.WithCancellation(CancellationToken.None),
+		SharpRoom   r => r,
+		SharpExit   e => await e.Location.WithCancellation(CancellationToken.None),
+		SharpThing  t => await t.Location.WithCancellation(CancellationToken.None),
+		_ => throw new InvalidOperationException("Invalid AnySharpObject state")
+	};
 
 	public async ValueTask<AnySharpContainer> OutermostWhere()
 	{
 		var where = await Where();
-
-		for (DBRef? tmpWhere = null; where.Object().DBRef != tmpWhere;)
+		for (DBRef? tmpWhere = null; where.Object.DBRef != tmpWhere;)
 		{
-			tmpWhere = where.Object().DBRef;
+			tmpWhere = where.Object.DBRef;
 			where = await where.Location();
 		}
-
 		return where;
 	}
 
-	public string[] Aliases => Match(
-		player => player.Aliases,
-		room => room.Aliases,
-		exit => exit.Aliases,
-		thing => thing.Aliases
-	) ?? [];
+	public AnySharpContainer MinusExit() => Value switch
+	{
+		SharpPlayer p => p,
+		SharpRoom   r => r,
+		SharpExit   => throw new ArgumentException("Cannot convert an exit to a non-exit."),
+		SharpThing  t => t,
+		_ => throw new InvalidOperationException()
+	};
 
-	public AnySharpContainer MinusExit()
-		=> Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			exit => throw new ArgumentException("Cannot convert an exit to a non-exit."),
-			thing => thing
-		);
+	public AnySharpContent MinusRoom() => Value switch
+	{
+		SharpPlayer p => p,
+		SharpRoom   => throw new ArgumentException("Cannot convert a room to a non-room."),
+		SharpExit   e => e,
+		SharpThing  t => t,
+		_ => throw new InvalidOperationException()
+	};
 
-	public AnySharpContent MinusRoom()
-		=> Match<AnySharpContent>(
-			player => player,
-			room => throw new ArgumentException("Cannot convert an room to a non-room."),
-			exit => exit,
-			thing => thing
-		);
+	public AnySharpContent AsContent => Value switch
+	{
+		SharpPlayer p => p,
+		SharpRoom   => throw new ArgumentException("Cannot convert a room to content."),
+		SharpExit   e => e,
+		SharpThing  t => t,
+		_ => throw new InvalidOperationException()
+	};
 
-	public bool IsPlayer => IsT0;
-	public bool IsRoom => IsT1;
-	public bool IsExit => IsT2;
-	public bool IsThing => IsT3;
-
-	public bool IsContent => IsPlayer || IsExit || IsThing;
-
-	public AnySharpContent AsContent => Match<AnySharpContent>(
-		player => player,
-		room => throw new ArgumentException("Cannot convert a room to content."),
-		exit => exit,
-		thing => thing
-	);
-
-	public AnySharpContainer AsContainer => Match<AnySharpContainer>(
-		player => player,
-		room => room,
-		exit => throw new ArgumentException("Cannot convert an exit to container."),
-		thing => thing
-	);
-
-	public bool IsContainer => IsPlayer || IsRoom || IsThing;
-
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpRoom AsRoom => AsT1;
-	public SharpExit AsExit => AsT2;
-	public SharpThing AsThing => AsT3;
+	public AnySharpContainer AsContainer => Value switch
+	{
+		SharpPlayer p => p,
+		SharpRoom   r => r,
+		SharpExit   => throw new ArgumentException("Cannot convert an exit to container."),
+		SharpThing  t => t,
+		_ => throw new InvalidOperationException()
+	};
 }

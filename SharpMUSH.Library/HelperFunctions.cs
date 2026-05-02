@@ -1,6 +1,4 @@
 ﻿using Mediator;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -27,19 +25,19 @@ public static partial class HelperFunctions
 	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x)
 	/// </summary>
 	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
-		=> obj.IsGod() || await (obj.Object().Flags.Value)
+		=> obj.IsGod() || await (obj.Object.Flags.Value)
 			.AnyAsync(x => x.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase));
 
 	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj)
-		=> await (obj.Object().Flags.Value)
+		=> await (obj.Object.Flags.Value)
 			.AnyAsync(x => x.Name.Equals("ROYALTY", StringComparison.OrdinalIgnoreCase));
 
 	public static async ValueTask<bool> IsMistrust(this AnySharpObject obj)
-		=> await (obj.Object().Flags.Value)
+		=> await (obj.Object.Flags.Value)
 			.AnyAsync(x => x.Name.Equals("MISTRUST", StringComparison.OrdinalIgnoreCase));
 
 	public static bool IsGod(this AnySharpObject obj)
-		=> obj.Object().Key == 1;
+		=> obj.Object.Key == 1;
 
 	public static async ValueTask<bool> IsPriv(this AnySharpObject obj)
 		=> IsGod(obj) || await IsWizard(obj) || await IsRoyalty(obj);
@@ -86,7 +84,7 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsAlive(this AnySharpObject obj)
 		=> obj.IsPlayer
 			 || await IsPuppet(obj)
-			 || (await IsAudible(obj) && await (obj.Object().LazyAllAttributes.Value)
+			 || (await IsAudible(obj) && await (obj.Object.LazyAllAttributes.Value)
 				 .AnyAsync(x => x.Name == "FORWARDLIST"));
 
 	public static async ValueTask<bool> IsPuppet(this AnySharpObject obj)
@@ -96,7 +94,7 @@ public static partial class HelperFunctions
 	{
 		try
 		{
-			return await obj.Object().Powers.Value
+			return await obj.Object.Powers.Value
 				.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
 										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
 		}
@@ -189,20 +187,20 @@ public static partial class HelperFunctions
 		};
 
 	public static string TypeString(this AnySharpObject obj) =>
-		obj switch
+		obj.Value switch
 		{
-			{ IsPlayer: true } => "PLAYER",
-			{ IsThing: true } => "THING",
-			{ IsRoom: true } => "ROOM",
-			{ IsExit: true } => "EXIT",
-			_ => "OBJECT"
+			SharpPlayer => "PLAYER",
+			SharpThing  => "THING",
+			SharpRoom   => "ROOM",
+			SharpExit   => "EXIT",
+			_           => "OBJECT"
 		};
 
 	public static async ValueTask<bool> HasLongFingers(this AnySharpObject obj)
 		=> await obj.IsPriv() || await obj.HasPower("Long_Fingers");
 
 	public static async ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
-		=> await obj.Object().Flags.Value
+		=> await obj.Object.Flags.Value
 			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase));
 
 	// This may belong in the Permission Service.
@@ -216,32 +214,26 @@ public static partial class HelperFunctions
 		IOptionsWrapper<SharpMUSHOptions> configuration)
 		=> await obj.IsOrphan()
 			? null
-			: obj.Match(
-				_ => configuration.CurrentValue.Database.AncestorPlayer is null
-					? null
-					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorPlayer)),
-				_ => configuration.CurrentValue.Database.AncestorRoom is null
-					? null
-					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorRoom)),
-				_ => configuration.CurrentValue.Database.AncestorExit is null
-					? null
-					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorExit)),
-				_ => configuration.CurrentValue.Database.AncestorThing is null
-					? (DBRef?)null
-					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorThing))
-			);
+			: obj.Value switch
+			{
+				SharpPlayer => configuration.CurrentValue.Database.AncestorPlayer is null ? null : new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorPlayer)),
+				SharpRoom   => configuration.CurrentValue.Database.AncestorRoom is null ? null : new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorRoom)),
+				SharpExit   => configuration.CurrentValue.Database.AncestorExit is null ? null : new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorExit)),
+				SharpThing  => configuration.CurrentValue.Database.AncestorThing is null ? (DBRef?)null : new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorThing)),
+				_           => null
+			};
 
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer
 			 || await obj.HasFlag("Trust")
-			 || await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
+			 || await (await obj.Object.Owner.WithCancellation(CancellationToken.None))
 				 .Object.Flags.Value.AnyAsync(x => x.Name == "Trust")
 			 || await IsWizard(obj);
 
 	public static async ValueTask<bool> Owns(this AnySharpObject who,
 		AnySharpObject what)
-		=> (await who.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id ==
-			 (await what.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id;
+		=> (await who.Object.Owner.WithCancellation(CancellationToken.None)).Object.Id ==
+			 (await what.Object.Owner.WithCancellation(CancellationToken.None)).Object.Id;
 
 	/// <summary>
 	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
@@ -268,32 +260,25 @@ public static partial class HelperFunctions
 	/// </summary>
 	/// <param name="objectAttr">Object/Attribute</param>
 	/// <returns><see cref="DbRefAttribute"/> if it is a valid Object/Attribute format. Otherwise, <see cref="None"/>.</returns>
-	public static OneOf<(string db, string Attribute), None> SplitObjectAndAttr(string objectAttr)
+	public static Option<ObjAttrPair> SplitObjectAndAttr(string objectAttr)
 	{
 		var match = ObjectWithAttributeRegex.Match(objectAttr);
 		var obj = match.Groups["Object"].Value;
-
 		var attr = match.Groups["Attribute"].Value;
-		if (!IsValidAttributeName(attr))
-			return new None();
-
-		return string.IsNullOrEmpty(attr) || string.IsNullOrEmpty(obj)
-			? new None()
-			: (obj, attr);
+		if (!IsValidAttributeName(attr)) return new None();
+		return string.IsNullOrEmpty(attr) || string.IsNullOrEmpty(obj) ? new None() : new ObjAttrPair(obj, attr);
 	}
 
-	public static OneOf<(string? db, string Attribute), bool> SplitOptionalObjectAndAttr(string ObjectAttr)
+	public static Option<ObjAttrRef> SplitOptionalObjectAndAttr(string ObjectAttr)
 	{
 		var match = OptionalDatabaseReferenceWithAttributeRegex.Match(ObjectAttr);
 		var obj = match.Groups["Object"].Value;
-
 		var attr = match.Groups["Attribute"].Value;
-		if (!IsValidAttributeName(attr))
-			return false;
-
-		return string.IsNullOrEmpty(attr)
-			? false
-			: (obj, attr);
+		if (!IsValidAttributeName(attr)) return new None();
+		if (string.IsNullOrEmpty(attr)) return new None();
+		return string.IsNullOrEmpty(obj)
+			? (Option<ObjAttrRef>)(ObjAttrRef)attr
+			: (Option<ObjAttrRef>)(ObjAttrRef)new ObjAttrPair(obj, attr);
 	}
 
 	/// <summary>
@@ -307,8 +292,8 @@ public static partial class HelperFunctions
 	/// <returns>True if safe to add (no cycle), false if it would create a cycle</returns>
 	public static async ValueTask<bool> SafeToAddRelationship(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newRelated, CancellationToken cancellationToken = default)
 	{
-		var startDbRef = start.Object().DBRef;
-		var newRelatedDbRef = newRelated.Object().DBRef;
+		var startDbRef = start.Object.DBRef;
+		var newRelatedDbRef = newRelated.Object.DBRef;
 
 		// Check for self-reference
 		if (startDbRef.Number == newRelatedDbRef.Number)
@@ -336,19 +321,16 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newZone, CancellationToken cancellationToken = default)
 		=> await SafeToAddRelationship(mediator, database, start, newZone, cancellationToken);
 
-	public static OneOf<(string db, string? Attribute), bool> SplitDbRefAndOptionalAttr(string DBRefAttr)
+	public static Option<DbRefOrAttrRef> SplitDbRefAndOptionalAttr(string DBRefAttr)
 	{
 		var match = DatabaseReferenceWithOptionalAttributeRegex.Match(DBRefAttr);
 		var obj = match.Groups["Object"].Value;
-
 		var attr = match.Groups["Attribute"].Value;
-		// Attribute is optional in this method, so only validate if present
-		if (!string.IsNullOrEmpty(attr) && !IsValidAttributeName(attr))
-			return false;
-
-		return string.IsNullOrEmpty(obj)
-			? false
-			: (obj, string.IsNullOrEmpty(attr) ? null : attr);
+		if (!string.IsNullOrEmpty(attr) && !IsValidAttributeName(attr)) return new None();
+		if (string.IsNullOrEmpty(obj)) return new None();
+		if (!string.IsNullOrEmpty(attr))
+			return (Option<DbRefOrAttrRef>)(DbRefOrAttrRef)new ObjAttrPair(obj, attr);
+		return (Option<DbRefOrAttrRef>)(DbRefOrAttrRef)obj;
 	}
 
 	public static Option<DBRef> ParseDbRef(string dbrefStr)

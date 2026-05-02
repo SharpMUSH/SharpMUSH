@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
+using SharpMUSH.Library.DiscriminatedUnions;
 namespace SharpMUSH.Tests.Commands;
 
 public class MessageCommandTests
@@ -30,7 +30,7 @@ public class MessageCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageBasic_UniqueValue_93751")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageBasic_UniqueValue_93751")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.Announce);
 	}
@@ -49,7 +49,7 @@ public class MessageCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageWithAttribute_Result_84729:15")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageWithAttribute_Result_84729:15")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.Announce);
 	}
@@ -67,7 +67,7 @@ public class MessageCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "DefaultMessage_UniqueValue_72914")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "DefaultMessage_UniqueValue_72914")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.Announce);
 	}
@@ -86,8 +86,8 @@ public class MessageCommandTests
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
-			if (args[1] is not OneOf<MString, string> msg) return false;
-			var text = msg.Match(ms => ms.ToPlainText(), s => s);
+			if (args[1] is not SharpMessage msg) return false;
+			var text = msg.ToPlainText();
 			return text == "Message sent to 1 recipient(s).";
 		});
 
@@ -98,7 +98,7 @@ public class MessageCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageSilent_Value_61829")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageSilent_Value_61829")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.Announce);
 
@@ -108,8 +108,8 @@ public class MessageCommandTests
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
-			if (args[1] is not OneOf<MString, string> msg) return false;
-			var text = msg.Match(ms => ms.ToPlainText(), s => s);
+			if (args[1] is not SharpMessage msg) return false;
+			var text = msg.ToPlainText();
 			return text == "Message sent to 1 recipient(s).";
 		});
 
@@ -130,7 +130,7 @@ public class MessageCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNoisy_Value_55193")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNoisy_Value_55193")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.Announce);
 
@@ -169,7 +169,7 @@ public class MessageCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNospoof_Value_48203")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageNospoof_Value_48203")),
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.NSAnnounce);
 	}

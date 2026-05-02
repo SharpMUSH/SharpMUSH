@@ -4,7 +4,6 @@ using Antlr4.Runtime.Tree;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -100,7 +99,7 @@ public class SharpMUSHParserVisitor(
 	/// <param name="message">The message to send</param>
 	private async ValueTask SendDebugOrVerboseOutput(AnySharpObject executor, string message)
 	{
-		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await executor.Object.Owner.WithCancellation(CancellationToken.None);
 		await NotifyService.Notify(owner, MModule.single(message));
 
 		var debugForwardAttr = await AttributeService.GetAttributeAsync(
@@ -328,7 +327,7 @@ public class SharpMUSHParserVisitor(
 
 		if (!executor.IsNone)
 		{
-			executorObj = executor.Known();
+			executorObj = executor.Known;
 
 			var stateFlags = parser.CurrentState.Flags;
 			if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
@@ -344,20 +343,20 @@ public class SharpMUSHParserVisitor(
 			else
 			{
 				// No attribute override — fall back to the executor's DEBUG object flag
-				shouldDebug = await executorObj.HasFlag("DEBUG");
+				shouldDebug = await executorObj!.Value.HasFlag("DEBUG");
 			}
 
 			if (shouldDebug)
 			{
 				indent = new string(' ', _debugNestDepth);
-				dbrefNumber = executorObj.Object().DBRef.Number;
+				dbrefNumber = executorObj!.Value.Object.DBRef.Number;
 			}
 		}
 
-		if (shouldDebug && executorObj != null && indent != null)
+		if (shouldDebug && executorObj.HasValue && indent != null)
 		{
 			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} :";
-			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+			await SendDebugOrVerboseOutput(executorObj!.Value, debugOutput);
 		}
 
 		if (shouldDebug) _debugNestDepth++;
@@ -366,10 +365,10 @@ public class SharpMUSHParserVisitor(
 
 		if (shouldDebug) _debugNestDepth--;
 
-		if (shouldDebug && executorObj != null && indent != null)
+		if (shouldDebug && executorObj.HasValue && indent != null)
 		{
 			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}";
-			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+			await SendDebugOrVerboseOutput(executorObj!.Value, debugOutput);
 		}
 
 		return result;
@@ -400,7 +399,7 @@ public class SharpMUSHParserVisitor(
 			{
 				var discoveredFunction = DiscoverBuiltInFunction(name);
 
-				if (!discoveredFunction.TryPickT0(out var functionValue, out _))
+				if (!discoveredFunction.TryGetValue(out var functionValue))
 				{
 					success = false;
 					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
@@ -857,7 +856,7 @@ public class SharpMUSHParserVisitor(
 			// Optimistic that the command still exists, until we try and it no longer does?
 			// What's the best way to retrieve the Regex or Wildcard pattern and transform it? 
 			// It needs to take an area to search in. So this is definitely its own service.
-			var nearbyObjects = Mediator.CreateStream(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
+			var nearbyObjects = Mediator.CreateStream(new GetNearbyObjectsQuery(executorObject.Object.DBRef));
 
 			var userDefinedCommandMatches = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
@@ -875,7 +874,7 @@ public class SharpMUSHParserVisitor(
 			{
 				// Get the location's zone
 				var executorLocation = await executorObject.AsContent.Location();
-				var locationZone = await executorLocation.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
+				var locationZone = await executorLocation.WithExitOption().Object.Zone.WithCancellation(CancellationToken.None);
 
 				// If the location has a zone that is a room (ZMR), check for $-commands in ZMR contents
 				if (!locationZone.IsNone && locationZone.Known.IsRoom)
@@ -913,7 +912,7 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 13: User defined commands on the player's personal zone.
-			var executorZone = await executorObject.Object().Zone.WithCancellation(CancellationToken.None);
+			var executorZone = await executorObject.Object.Zone.WithCancellation(CancellationToken.None);
 			if (!executorZone.IsNone && executorZone.Known.IsRoom)
 			{
 				// If player has a ZMR as their personal zone, check for $-commands in ZMR contents
@@ -936,7 +935,7 @@ public class SharpMUSHParserVisitor(
 			// Step 15: Global User-defined commands
 			var goConfig = Configuration.CurrentValue.Database.MasterRoom;
 			var maybeGlobalObject = await Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
-			var globalObject = maybeGlobalObject.Known();
+			var globalObject = maybeGlobalObject.Known;
 			AnySharpObject[] globalObjects = [globalObject];
 			var globalObjectContent = globalObject.AsContainer
 				.Content(Mediator)
@@ -1015,11 +1014,11 @@ public class SharpMUSHParserVisitor(
 		{
 			var newParser = prs.Push(prs.CurrentState with
 			{
-				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
+				CurrentEvaluation = new DBAttribute(obj.Object.DBRef, attr.Name),
 				EnvironmentRegisters = arguments,
 				Arguments = arguments,
 				Function = null,
-				Executor = obj.Object().DBRef,
+				Executor = obj.Object.DBRef,
 				Caller = prs.CurrentState.Executor
 			});
 
@@ -1158,13 +1157,13 @@ public class SharpMUSHParserVisitor(
 			var clearHandle = prs.CurrentState.Handle;
 			if (clearHandle.HasValue)
 			{
-			if (clearResult.TryPickT0(out _, out var clearError))
+			if (clearResult.IsSuccess)
 			{
-				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared), clearExecutor, clearTargetObject.Object().Name, matchedEntry.Name);
+				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared), clearExecutor, clearTargetObject.Object.Name, matchedEntry.Name);
 			}
 			else
 			{
-				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), clearExecutor, clearError.Value);
+				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), clearExecutor, clearResult.AsError.Value);
 			}
 			}
 
@@ -1209,13 +1208,13 @@ public class SharpMUSHParserVisitor(
 		var handle2 = prs.CurrentState.Handle;
 		if (handle2.HasValue)
 		{
-			if (setResult.TryPickT0(out _, out var error))
+			if (setResult.IsSuccess)
 			{
-				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet), executor, targetObject.Object().Name, matchedEntry.Name);
+				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet), executor, targetObject.Object.Name, matchedEntry.Name);
 			}
 			else
 			{
-				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), executor, error.Value);
+				await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat), executor, setResult.AsError.Value);
 			}
 		}
 
@@ -1385,7 +1384,7 @@ public class SharpMUSHParserVisitor(
 				var commandLockStr = libraryCommandDefinition.Attribute.CommandLock;
 				if (!string.IsNullOrEmpty(commandLockStr) && !executor.IsNone)
 				{
-					var executorObj = executor.Known();
+					var executorObj = executor.Known;
 					var passesLock = await Mediator.Send(
 						new SharpMUSH.Library.Queries.EvaluateLockQuery(commandLockStr, executorObj, executorObj));
 					if (!passesLock)
@@ -1402,10 +1401,10 @@ public class SharpMUSHParserVisitor(
 
 				if (!executor.IsNone)
 				{
-					var executorObj = executor.Known();
+					var executorObj = executor.Known;
 					if (await executorObj.HasFlag("VERBOSE"))
 					{
-						var verboseOutput = $"#{executorObj.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
+						var verboseOutput = $"#{executorObj.Object.DBRef.Number}] {commandWithSwitches.ToPlainText()}";
 						await SendDebugOrVerboseOutput(executorObj, verboseOutput);
 					}
 				}
@@ -1449,13 +1448,13 @@ public class SharpMUSHParserVisitor(
 	{
 		// Get the target object
 		var targetObject = await Mediator.Send(new GetObjectNodeQuery(hook.TargetObject));
-		if (targetObject == null || targetObject.IsNone)
+		if (targetObject.IsNone)
 		{
 			return new None();
 		}
 
-		var targetObj = targetObject.Known();
-		var executorObj = executor.IsNone ? targetObj : executor.Known();
+		var targetObj = targetObject.Known;
+		var executorObj = executor.IsNone ? targetObj : executor.Known;
 
 		// Save q-registers if /localize is set
 		Dictionary<string, MString>? savedRegisters = null;
@@ -1549,11 +1548,11 @@ public class SharpMUSHParserVisitor(
 		{
 			var newParser = prs.Push(prs.CurrentState with
 			{
-				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
+				CurrentEvaluation = new DBAttribute(obj.Object.DBRef, attr.Name),
 				EnvironmentRegisters = arguments,
 				Arguments = arguments,
 				Function = null,
-				Executor = obj.Object().DBRef,
+				Executor = obj.Object.DBRef,
 				Caller = prs.CurrentState.Executor
 			});
 
@@ -1968,10 +1967,7 @@ public class SharpMUSHParserVisitor(
 		var isCommandList = context.Parent is CommandListContext;
 
 		var result = await EvaluateCommands(source, context, isCommandList, VisitChildren);
-		return result
-			.Match<CallState?>(
-				x => x,
-				_ => CallState.Empty);
+		return result.IsSome() ? result.AsValue() : CallState.Empty;
 	}
 
 	public override async ValueTask<CallState?> VisitStartCommandString(

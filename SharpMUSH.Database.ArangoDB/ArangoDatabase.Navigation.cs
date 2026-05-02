@@ -5,7 +5,6 @@ using DotNext.Threading;
 using MarkupString;
 using Mediator;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -98,12 +97,7 @@ public partial class ArangoDatabase
 			cancellationToken: ct)).First();
 		var homeObject = await GetObjectNodeAsync(homeId, ct);
 
-		return homeObject.Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			_ => throw new Exception("Invalid Location found"),
-			thing => thing,
-			_ => throw new Exception("Invalid Location found"));
+		return homeObject.WithoutNone().AsContainer;
 	}
 
 	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string id, CancellationToken ct = default)
@@ -120,12 +114,7 @@ public partial class ArangoDatabase
 		var dropToId = dropToResult.First();
 		var dropToObject = await GetObjectNodeAsync(dropToId, ct);
 
-		return dropToObject.Match<AnyOptionalSharpContainer>(
-			player => player,
-			room => room,
-			_ => new None(),
-			thing => thing,
-			_ => new None());
+		return dropToObject.AsOptionalContainer;
 	}
 	public async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(DBRef obj,
 		[EnumeratorCancellation] CancellationToken ct = default)
@@ -135,12 +124,12 @@ public partial class ArangoDatabase
 
 		yield return self;
 
-		await foreach (var item in GetContentsAsync(self.Object().DBRef, ct))
+		await foreach (var item in GetContentsAsync(self.Object.DBRef, ct))
 		{
 			yield return item.WithRoomOption();
 		}
 
-		await foreach (var item in GetContentsAsync(location.Object().DBRef, ct))
+		await foreach (var item in GetContentsAsync(location.Object.DBRef, ct))
 		{
 			yield return item.WithRoomOption();
 		}
@@ -153,12 +142,12 @@ public partial class ArangoDatabase
 
 		yield return obj;
 
-		await foreach (var item in GetContentsAsync(obj.Object().DBRef, ct))
+		await foreach (var item in GetContentsAsync(obj.Object.DBRef, ct))
 		{
 			yield return item.WithRoomOption();
 		}
 
-		await foreach (var item in GetContentsAsync(location.Object().DBRef, ct))
+		await foreach (var item in GetContentsAsync(location.Object.DBRef, ct))
 		{
 			yield return item.WithRoomOption();
 		}
@@ -182,15 +171,10 @@ public partial class ArangoDatabase
 			$"FOR v IN {variableDepth} OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN v._id";
 		var query = await arangoDb.Query.ExecuteAsync<string>(handle, locationQuery, new Dictionary<string, object>()
 		{
-			{ StartVertex, baseObject.Id()! }
+			{ StartVertex, baseObject.Id! }
 		}, cancellationToken: ct);
 		var locationBaseObj = await GetObjectNodeAsync(query.Last(), CancellationToken.None);
-		var trueLocation = locationBaseObj.Match<AnyOptionalSharpContainer>(
-			player => player,
-			room => room,
-			_ => throw new Exception("Invalid Location found"),
-			thing => thing,
-			_ => throw new Exception("Invalid Location found"));
+		var trueLocation = locationBaseObj.AsOptionalContainer;
 
 		return trueLocation;
 	}
@@ -212,26 +196,21 @@ public partial class ArangoDatabase
 			{ StartVertex, id }
 		}, cancellationToken: ct);
 		var locationBaseObj = await GetObjectNodeAsync(query.Last(), CancellationToken.None);
-		var trueLocation = locationBaseObj.Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			_ => throw new Exception("Invalid Location found"),
-			thing => thing,
-			_ => throw new Exception("Invalid Location found"));
+		var trueLocation = locationBaseObj.WithoutNone().AsContainer;
 
 		return trueLocation;
 	}
 
 	public async ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1,
 		CancellationToken ct = default) =>
-		(await GetLocationAsync(obj.Object().DBRef, depth, ct)).WithoutNone();
+		(await GetLocationAsync(obj.Object.DBRef, depth, ct)).WithoutNone();
 
 	public async IAsyncEnumerable<AnySharpContent> GetContentsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken ct = default)
 	{
 		var baseObject = await GetObjectNodeAsync(obj, ct);
 		if (baseObject.IsNone) yield break;
 
-		await foreach (var content in GetContentsBatchAsync(baseObject.Id()!, ct))
+		await foreach (var content in GetContentsBatchAsync(baseObject.Id!, ct))
 		{
 			yield return content;
 		}
@@ -266,13 +245,7 @@ public partial class ArangoDatabase
 			var typedEl = result.GetProperty("typed");
 			var objEl = result.GetProperty("obj");
 			var node = HydrateObjectFromElements(typedEl, objEl);
-			yield return node.Match<AnySharpContent>(
-				player => player,
-				_ => throw new Exception("Invalid Contents found"),
-				exit => exit,
-				thing => thing,
-				_ => throw new Exception("Invalid Contents found")
-			);
+			yield return node.WithoutNone().AsContent;
 		}
 	}
 
@@ -334,7 +307,7 @@ public partial class ArangoDatabase
 		var baseObject = await GetObjectNodeAsync(obj, ct);
 		if (baseObject.IsNone) yield break;
 
-		await foreach (var exit in GetExitsBatchAsync(baseObject.Known().Id()!, ct))
+		await foreach (var exit in GetExitsBatchAsync(baseObject.Known.Id!, ct))
 		{
 			yield return exit;
 		}
@@ -371,13 +344,13 @@ public partial class ArangoDatabase
 			var objEl = result.GetProperty("obj");
 			var node = HydrateObjectFromElements(typedEl, objEl);
 			if (node.IsNone) continue;
-			yield return node.Known().AsExit;
+			yield return node.Known.AsExit;
 		}
 	}
 	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone,
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
-		var zoneId = zone.Object().Id!;
+		var zoneId = zone.Object.Id!;
 
 		// Query to find all objects that have this zone set
 		const string zoneQuery =

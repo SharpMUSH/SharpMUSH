@@ -23,7 +23,7 @@ public static class FolderMail
 		var executorPlayer = executor.AsPlayer;
 
 		var folderInfo =
-			await objectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object());
+			await objectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object);
 
 		switch (switches)
 		{
@@ -73,7 +73,7 @@ public static class FolderMail
 				.ToImmutableHashSet()
 				.Add(folder.ToPlainText())
 				.ToArray()),
-			executor.Object(),
+			executor.Object,
 			ignoreNull: true);
 
 		return folder;
@@ -90,7 +90,7 @@ public static class FolderMail
 				.ToImmutableArray()
 				.Remove(folder.ToPlainText())
 				.ToArray()),
-			executor.Object(),
+			executor.Object,
 			ignoreNull: true);
 		return MModule.single("");
 	}
@@ -113,7 +113,7 @@ public static class FolderMail
 				.ToImmutableHashSet()
 				.Remove(folder.ToPlainText()).Add(newName.ToPlainText())
 				.ToArray()),
-			executor.Object(),
+			executor.Object,
 			ignoreNull: true);
 
 		return MModule.single("");
@@ -124,7 +124,7 @@ public static class FolderMail
 	{
 		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(Folders: folderInfo?.Folders ?? [], ActiveFolder: folder.ToPlainText()),
-			executor.Object());
+			executor.Object);
 		return MModule.single(folder.ToPlainText());
 	}
 

@@ -1,13 +1,13 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -31,7 +31,7 @@ public class BuildingCommandTests
 		var newDb = DBRef.Parse(result.Message!.ToPlainText());
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
-		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObject - Test Object");
+		await Assert.That(newObject.Object!.Name).IsEqualTo("CreateObject - Test Object");
 	}
 
 	[Test]
@@ -43,7 +43,7 @@ public class BuildingCommandTests
 		var newDb = DBRef.Parse(result.Message!.ToPlainText());
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
-		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObjectWithCost - Test Object");
+		await Assert.That(newObject.Object!.Name).IsEqualTo("CreateObjectWithCost - Test Object");
 	}
 
 	[Test]
@@ -63,18 +63,18 @@ public class BuildingCommandTests
 		// Use unique room name in assertions to avoid pollution from other tests
 		await NotifyService
 			.Received(1)
-			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"DoDigTestRoom created with room number {newDb.Number}.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(1)
-			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"Linked exit #{newDb.Number + 1} to #{newDb.Number}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(1)
 			.Notify(executor, "Trying to link...", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(1)
-			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"Linked exit #{newDb.Number + 2} to #{currentLocationDbRef.Number}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -139,7 +139,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@name {newDbRef}=DigAndMoveTest - New Name"));
 
 		var renamedObject = await Mediator.Send(new GetObjectNodeQuery(newDbRef));
-		await Assert.That(renamedObject.Object()!.Name).IsEqualTo("DigAndMoveTest - New Name");
+		await Assert.That(renamedObject.Object!.Name).IsEqualTo("DigAndMoveTest - New Name");
 	}
 
 	[Test]
@@ -151,7 +151,7 @@ public class BuildingCommandTests
 		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
-		await Assert.That(newObject.Object()!.Name).IsEqualTo("DigRoom - Test Room");
+		await Assert.That(newObject.Object!.Name).IsEqualTo("DigRoom - Test Room");
 	}
 
 	[Test]
@@ -166,7 +166,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(executor, $"Room With Exits created with room number {newObject.Object()!.DBRef.Number}.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(executor, $"Room With Exits created with room number {newObject.Object!.DBRef.Number}.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -188,11 +188,9 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
-				msg.Match(
-					mstr => mstr.ToString().Contains("Linked") && mstr.ToString().Contains($"#{exitDbRef.Number}") && mstr.ToString().Contains($"#{roomDbRef.Number}"),
-					str => str.Contains("Linked") && str.Contains($"#{exitDbRef.Number}") && str.Contains($"#{roomDbRef.Number}")
-				)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(executor, Arg.Is<SharpMessage>(msg =>
+				msg.ToString().Contains("Linked") && msg.ToString().Contains($"#{exitDbRef.Number}") && msg.ToString().Contains($"#{roomDbRef.Number}")
+				), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -211,11 +209,9 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				msg.Match(
-					mstr => mstr.ToString().Contains("Cloned") && mstr.ToString().Contains("CloneObjectTestSource"),
-					str => str.Contains("Cloned") && str.Contains("CloneObjectTestSource")
-				)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
+				msg.ToString().Contains("Cloned") && msg.ToString().Contains("CloneObjectTestSource")
+				), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -235,7 +231,7 @@ public class BuildingCommandTests
 		await Assert.That(childObj.IsNone).IsFalse();
 
 		// Verify child has no parent initially
-		var initialParent = await childObj.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var initialParent = await childObj.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(initialParent.IsNone).IsTrue();
 
 		// Set parent using @parent command
@@ -243,9 +239,9 @@ public class BuildingCommandTests
 
 		// Verify parent was set by querying database directly
 		var updatedChild = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var setParent = await updatedChild.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var setParent = await updatedChild.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(setParent.IsNone).IsFalse();
-		await Assert.That(setParent.Known.Object().DBRef.Number).IsEqualTo(parentDbRef.Number);
+		await Assert.That(setParent.Known.Object.DBRef.Number).IsEqualTo(parentDbRef.Number);
 	}
 
 	[Test]
@@ -264,7 +260,7 @@ public class BuildingCommandTests
 
 		// Verify parent was set
 		var childWithParent = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var parentSet = await childWithParent.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentSet = await childWithParent.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentSet.IsNone).IsFalse();
 
 		// Unset parent
@@ -272,7 +268,7 @@ public class BuildingCommandTests
 
 		// Verify parent was cleared
 		var childNoParent = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var parentCleared = await childNoParent.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentCleared = await childNoParent.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentCleared.IsNone).IsTrue();
 	}
 
@@ -293,16 +289,16 @@ public class BuildingCommandTests
 
 		// Verify A's parent is B
 		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
-		var parentOfA = await objA.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOfA = await objA.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfA.IsNone).IsFalse();
-		await Assert.That(parentOfA.Known.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
+		await Assert.That(parentOfA.Known.Object.DBRef.Number).IsEqualTo(objBDbRef.Number);
 
 		// Try to set B's parent to A (would create direct cycle: A -> B -> A)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objBDbRef}={objADbRef}"));
 
 		// Verify B's parent was NOT set (cycle prevention)
 		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
-		var parentOfB = await objB.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOfB = await objB.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfB.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle
@@ -330,21 +326,21 @@ public class BuildingCommandTests
 
 		// Verify the chain is established
 		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
-		var parentOfA = await objA.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOfA = await objA.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfA.IsNone).IsFalse();
-		await Assert.That(parentOfA.Known.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
+		await Assert.That(parentOfA.Known.Object.DBRef.Number).IsEqualTo(objBDbRef.Number);
 
 		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
-		var parentOfB = await objB.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOfB = await objB.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfB.IsNone).IsFalse();
-		await Assert.That(parentOfB.Known.Object().DBRef.Number).IsEqualTo(objCDbRef.Number);
+		await Assert.That(parentOfB.Known.Object.DBRef.Number).IsEqualTo(objCDbRef.Number);
 
 		// Try to set C's parent to A (would create indirect cycle: A -> B -> C -> A)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objCDbRef}={objADbRef}"));
 
 		// Verify C's parent was NOT set (cycle prevention)
 		var objC = await Mediator.Send(new GetObjectNodeQuery(objCDbRef));
-		var parentOfC = await objC.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOfC = await objC.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfC.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle (via NotifyLocalized)
@@ -365,7 +361,7 @@ public class BuildingCommandTests
 
 		// Verify parent was NOT set (self-cycle prevention)
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parent = await obj.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parent.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle (via NotifyLocalized)
@@ -395,9 +391,9 @@ public class BuildingCommandTests
 		for (int i = 0; i < 4; i++)
 		{
 			var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRefs[i]));
-			var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
+			var parent = await obj.Known.Object.Parent.WithCancellation(CancellationToken.None);
 			await Assert.That(parent.IsNone).IsFalse();
-			await Assert.That(parent.Known.Object().DBRef.Number).IsEqualTo(objDbRefs[i + 1].Number);
+			await Assert.That(parent.Known.Object.DBRef.Number).IsEqualTo(objDbRefs[i + 1].Number);
 		}
 
 		// Try to set 4's parent to 0 (would create long cycle: 0 -> 1 -> 2 -> 3 -> 4 -> 0)
@@ -405,7 +401,7 @@ public class BuildingCommandTests
 
 		// Verify 4's parent was NOT set (cycle prevention)
 		var obj4 = await Mediator.Send(new GetObjectNodeQuery(objDbRefs[4]));
-		var parentOf4 = await obj4.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var parentOf4 = await obj4.Known.Object.Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOf4.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle (via NotifyLocalized)
@@ -445,7 +441,7 @@ public class BuildingCommandTests
 		// Verify command executed without permission error
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "Permission denied.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -503,7 +499,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageContains(msg, "Unlinked")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -646,7 +642,7 @@ public class BuildingCommandTests
 		// Verify look displayed the stored description exactly
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "LookDesc_UniqueTestValue_38471")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -666,7 +662,7 @@ public class BuildingCommandTests
 		// Verify error notification was sent: "I don't see that here." (ErrorMessages.Notifications.NoMatch)
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(testPlayer.DbRef), 
 				INotifyService.NotificationType.Announce);
 	}

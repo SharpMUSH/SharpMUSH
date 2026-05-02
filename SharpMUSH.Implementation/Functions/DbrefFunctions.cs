@@ -38,7 +38,7 @@ public partial class Functions
 		var found = locateResult.AsSharpObject;
 
 		return await found.Match<ValueTask<CallState>>(
-			async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			async player => (await player.Location.WithCancellation(CancellationToken.None)).Object.DBRef,
 			async room =>
 			{
 				var location = await room.Location.WithCancellation(CancellationToken.None);
@@ -52,9 +52,9 @@ public partial class Functions
 			{
 				var linkTypeAttr = await AttributeService!.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
 
-				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsT0.Length > 0)
+				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsAttribute.Length > 0)
 				{
-					var linkTypeText = linkTypeAttr.AsT0[0].Value.ToPlainText();
+					var linkTypeText = linkTypeAttr.AsAttribute[0].Value.ToPlainText();
 					if (!string.IsNullOrEmpty(linkTypeText))
 					{
 						if (string.Equals(linkTypeText, LinkTypeVariable, StringComparison.OrdinalIgnoreCase))
@@ -71,14 +71,14 @@ public partial class Functions
 				try
 				{
 					var destination = await exit.Location.WithCancellation(CancellationToken.None);
-					return destination.Object().DBRef;
+					return destination.Object.DBRef;
 				}
 				catch (InvalidOperationException)
 				{
 					return "#-1";
 				}
 			},
-			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
+			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object.DBRef
 		);
 	}
 
@@ -94,7 +94,7 @@ public partial class Functions
 			LocateFlags.All,
 			async locate =>
 			{
-				var children = locate.Object().Children.Value ?? AsyncEnumerable.Empty<SharpObject>();
+				var children = locate.Object.Children.Value ?? AsyncEnumerable.Empty<SharpObject>();
 				return string.Join(" ", await children.Select(x => x.DBRef.ToString()).ToArrayAsync());
 			});
 	}
@@ -117,7 +117,7 @@ public partial class Functions
 				}
 
 				var contents = locate.AsContainer.Content(Mediator!);
-				return string.Join(" ", contents.Take(1).Select(x => x.Object().DBRef.ToString()));
+				return string.Join(" ", contents.Take(1).Select(x => x.Object.DBRef.ToString()));
 			});
 	}
 
@@ -219,7 +219,7 @@ public partial class Functions
 			target = maybeTarget.AsAnyObject;
 		}
 
-		var exits = Mediator!.CreateStream(new GetEntrancesQuery(target.Object().DBRef));
+		var exits = Mediator!.CreateStream(new GetEntrancesQuery(target.Object.DBRef));
 		var entrances = new List<AnySharpObject>();
 
 		await foreach (var exit in exits)
@@ -257,7 +257,7 @@ public partial class Functions
 		// Filter by type and dbref range
 		var filtered = entrances.Where(entrance =>
 		{
-			var obj = entrance.Object();
+			var obj = entrance.Object;
 			var dbrefNum = obj.DBRef.Number;
 
 			// Filter by dbref range
@@ -278,7 +278,7 @@ public partial class Functions
 			if (typeFilter.Contains('r') && entrance.IsRoom) return true;
 
 			return false;
-		}).Select(e => e.Object().DBRef.ToString());
+		}).Select(e => e.Object.DBRef.ToString());
 
 		return new CallState(string.Join(" ", filtered));
 	}
@@ -296,7 +296,7 @@ public partial class Functions
 			LocateFlags.All,
 			async locate =>
 			{
-				if (locate.IsPlayer && enactor.Object().DBRef == locate.Object().DBRef)
+				if (locate.IsPlayer && enactor.Object.DBRef == locate.Object.DBRef)
 				{
 					locate = (await locate.AsPlayer.Location.WithCancellation(CancellationToken.None)).WithExitOption();
 				}
@@ -308,7 +308,7 @@ public partial class Functions
 
 				var exits = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
-					.Select(x => x.Object().DBRef)
+					.Select(x => x.Object.DBRef)
 					.ToArrayAsync();
 
 				return exits.Length != 0
@@ -330,7 +330,7 @@ public partial class Functions
 			async found =>
 			{
 				// Query all objects that have FOLLOWING attribute set to this object's dbref
-				var targetDbref = found.Object().DBRef.ToString();
+				var targetDbref = found.Object.DBRef.ToString();
 				var followers = new List<string>();
 
 				// Use filtered query to get all objects more efficiently
@@ -400,7 +400,7 @@ public partial class Functions
 
 		return await found.Match<ValueTask<CallState>>(
 			// Player - return home
-			async player => (await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
+			async player => (await player.Home.WithCancellation(CancellationToken.None)).Object.DBRef,
 			// Room - return location (drop-to) or #-1
 			async room =>
 			{
@@ -412,9 +412,9 @@ public partial class Functions
 					_ => "#-1");
 			},
 			// Exit - return source room
-			async exit => (await exit.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
+			async exit => (await exit.Home.WithCancellation(CancellationToken.None)).Object.DBRef,
 			// Thing - return home
-			async thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef
+			async thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object.DBRef
 		);
 	}
 
@@ -487,7 +487,7 @@ public partial class Functions
 			found =>
 			{
 				// Get the lock data
-				if (!found.Object().Locks.TryGetValue(lockType, out var lockData))
+				if (!found.Object.Locks.TryGetValue(lockType, out var lockData))
 				{
 					return ValueTask.FromResult(new CallState(string.Empty));
 				}
@@ -525,7 +525,7 @@ public partial class Functions
 			found =>
 			{
 				// Get the lock string from the object
-				if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
+				if (!found.Object.Locks.TryGetValue(lockName, out var lockData))
 				{
 					return ValueTask.FromResult(new CallState("#-1 NO SUCH LOCK"));
 				}
@@ -557,7 +557,7 @@ public partial class Functions
 		}
 
 		// Get all lock names from the object
-		var lockNames = target.Object().Locks.Keys;
+		var lockNames = target.Object.Locks.Keys;
 		return new CallState(string.Join(" ", lockNames));
 	}
 
@@ -577,7 +577,7 @@ public partial class Functions
 		var target = maybeTarget.AsAnyObject;
 
 		// Get all lock names from the object
-		var lockNames = target.Object().Locks.Keys;
+		var lockNames = target.Object.Locks.Keys;
 		return new CallState(string.Join(" ", lockNames));
 	}
 
@@ -697,7 +697,7 @@ LOCATE()
 			}
 		}
 
-		return $"#{found.Object().DBRef.Number}";
+		return $"#{found.Object.DBRef.Number}";
 	}
 
 	private static LocateFlags ParseLocateParameters(string parameters)
@@ -777,7 +777,7 @@ LOCATE()
 			found =>
 			{
 				// Get the lock string from the object
-				if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
+				if (!found.Object.Locks.TryGetValue(lockName, out var lockData))
 				{
 					return ValueTask.FromResult(new CallState(string.Empty));
 				}
@@ -814,12 +814,12 @@ LOCATE()
 			var found = maybeObj.AsAnyObject;
 
 			// Check if object has the lock
-			if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
+			if (!found.Object.Locks.TryGetValue(lockName, out var lockData))
 			{
 				// No lock means it passes if we're looking for passes
 				if (!shouldPass)
 				{
-					results.Add(found.Object().DBRef.ToString());
+					results.Add(found.Object.DBRef.ToString());
 				}
 				continue;
 			}
@@ -829,7 +829,7 @@ LOCATE()
 
 			if (passes == shouldPass)
 			{
-				results.Add(found.Object().DBRef.ToString());
+				results.Add(found.Object.DBRef.ToString());
 			}
 		}
 
@@ -848,7 +848,7 @@ LOCATE()
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				var owner = await found.Object().Owner.WithCancellation(CancellationToken.None);
+				var owner = await found.Object.Owner.WithCancellation(CancellationToken.None);
 				return new CallState(owner.Object.DBRef);
 			});
 	}
@@ -873,7 +873,7 @@ LOCATE()
 
 		while (true)
 		{
-			var parent = await locate.Object().Parent.WithCancellation(CancellationToken.None);
+			var parent = await locate.Object.Parent.WithCancellation(CancellationToken.None);
 			if (parent.IsNone)
 			{
 				break;
@@ -886,7 +886,7 @@ LOCATE()
 			}
 
 			locate = knownParent;
-			list.Add(knownParent.Object().DBRef);
+			list.Add(knownParent.Object.DBRef);
 		}
 
 		return string.Join(" ", list);
@@ -1003,11 +1003,11 @@ LOCATE()
 					break;
 				case "ZONE":
 					var maybeZone = await LocateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
-					if (maybeZone.IsValid()) zone = maybeZone.AsAnyObject.Object().DBRef;
+					if (maybeZone.IsValid()) zone = maybeZone.AsAnyObject.Object.DBRef;
 					break;
 				case "PARENT":
 					var maybeParent = await LocateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
-					if (maybeParent.IsValid()) parent = maybeParent.AsAnyObject.Object().DBRef;
+					if (maybeParent.IsValid()) parent = maybeParent.AsAnyObject.Object.DBRef;
 					break;
 				case "FLAG":
 				case "FLAGS":
@@ -1097,7 +1097,7 @@ LOCATE()
 			Parent = parent,
 			HasFlag = hasFlag,
 			HasPower = hasPower,
-			Owner = classObj?.Object().DBRef,
+			Owner = classObj?.Object.DBRef,
 			Skip = hasAppLevelCriteria ? null : start,  // Only skip at DB level if no app-level filtering
 			Limit = hasAppLevelCriteria ? null : count  // Only limit at DB level if no app-level filtering
 		};
@@ -1142,7 +1142,7 @@ LOCATE()
 				foreach (var (evalExpression, typeFilter) in compiledEvals)
 				{
 					// Check type filter if specified
-					if (typeFilter != null && !typedObj.Object().Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
+					if (typeFilter != null && !typedObj.Object.Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
 					{
 						matches = false;
 						break;
@@ -1150,7 +1150,7 @@ LOCATE()
 
 					// Replace ## with the object's dbref number in the expression
 					// Use just the number (e.g., "1") for numeric comparisons
-					var objectDbRefNum = typedObj.Object().DBRef.Number.ToString();
+					var objectDbRefNum = typedObj.Object.DBRef.Number.ToString();
 					var expression = evalExpression.Replace("##", objectDbRefNum);
 
 					// Evaluate the expression
@@ -1242,7 +1242,7 @@ LOCATE()
 
 			if (matches)
 			{
-				finalResults.Add(typedObj.Object().DBRef.ToString());
+				finalResults.Add(typedObj.Object.DBRef.ToString());
 			}
 		}
 
@@ -1351,10 +1351,10 @@ LOCATE()
 			int errorCode = 0; // 0 = success, -1 = not found, -2 = ambiguous
 			string originalName = string.Empty;
 
-			if (item.IsT0)
+			if (item.IsDBRef)
 			{
 				// Already a dbref - validate it exists
-				var dbref = item.AsT0;
+				var dbref = item.AsDBRef;
 				var exists = await Mediator!.Send(new GetBaseObjectNodeQuery(dbref));
 
 				if (exists != null)
@@ -1370,7 +1370,7 @@ LOCATE()
 			else
 			{
 				// String name - need to locate
-				var name = item.AsT1;
+				var name = item.AsName;
 				originalName = name;
 
 				var locateResult = await LocateService!.Locate(parser, executor, executor, name, LocateFlags.All);
@@ -1378,17 +1378,17 @@ LOCATE()
 				if (locateResult.IsValid())
 				{
 					// Found valid object
-					resolvedDbref = locateResult.AsAnyObject.Object().DBRef;
+					resolvedDbref = locateResult.AsAnyObject.Object.DBRef;
 				}
-				else if (locateResult.IsT4)
+				else if (locateResult.IsNone)
 				{
 					// None - not found
 					errorCode = -1;
 				}
-				else if (locateResult.IsT5)
+				else if (locateResult.IsError)
 				{
 					// Error occurred - check if ambiguous or not found
-					var error = locateResult.AsT5;
+					var error = locateResult.AsError;
 					if (error.Value.Contains("ambiguous", StringComparison.OrdinalIgnoreCase) ||
 							error.Value.Contains("#-2"))
 					{
@@ -1417,10 +1417,10 @@ LOCATE()
 				resultList.Add($"#{errorCode}");
 
 				// Call error callback if provided
-				if (hasErrorCallback && callbackObject != null && callbackAttribute != null)
+				if (hasErrorCallback && callbackAttribute != null)
 				{
 					var attrResult = await AttributeService!.GetAttributeAsync(
-						executor, callbackObject, string.Join("`", callbackAttribute),
+						executor, callbackObject!.Value, string.Join("`", callbackAttribute),
 						IAttributeService.AttributeMode.Read, true);
 
 					if (!attrResult.IsNone && !attrResult.IsError)
@@ -1453,7 +1453,7 @@ LOCATE()
 			parser, executor, executor, arg1, LocateFlags.All,
 			async x =>
 			{
-				var children = x.Object().Children.Value ?? AsyncEnumerable.Empty<SharpObject>();
+				var children = x.Object.Children.Value ?? AsyncEnumerable.Empty<SharpObject>();
 				return await children.CountAsync();
 			});
 	}
@@ -1494,7 +1494,7 @@ LOCATE()
 				var contents = await location.Content(Mediator!).ToListAsync();
 
 				// Find the current object in the list
-				var currentIndex = contents.FindIndex(x => x.Object().DBRef == locate.Object().DBRef);
+				var currentIndex = contents.FindIndex(x => x.Object.DBRef == locate.Object.DBRef);
 
 				if (currentIndex == -1 || currentIndex == contents.Count - 1)
 				{
@@ -1503,7 +1503,7 @@ LOCATE()
 				}
 
 				// Return the next object
-				return contents[currentIndex + 1].Object().DBRef;
+				return contents[currentIndex + 1].Object.DBRef;
 			});
 	}
 
@@ -1568,7 +1568,7 @@ LOCATE()
 			arg0,
 			LocateFlags.All,
 			found =>
-				ValueTask.FromResult<CallState>($"#{found.Object().DBRef.Number}"));
+				ValueTask.FromResult<CallState>($"#{found.Object.DBRef.Number}"));
 	}
 
 	[SharpFunction(Name = "numversion", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
@@ -1594,7 +1594,7 @@ LOCATE()
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser, executor, executor, arg0, LocateFlags.All,
 				async found =>
-					(await found.Object().Parent.WithCancellation(CancellationToken.None)).Object()
+					(await found.Object.Parent.WithCancellation(CancellationToken.None)).Object
 					?.DBRef.ToString() ?? "");
 		}
 
@@ -1696,7 +1696,7 @@ LOCATE()
 					}
 				}
 
-				return new CallState(current.Object().DBRef);
+				return new CallState(current.Object.DBRef);
 			});
 	}
 
@@ -1713,7 +1713,7 @@ LOCATE()
 			async x =>
 			{
 				var room = await LocateService.Room(x);
-				return room.Object().DBRef;
+				return room.Object.DBRef;
 			});
 	}
 
@@ -1729,11 +1729,11 @@ LOCATE()
 			LocateFlags.All,
 			async x =>
 				await x.Match<ValueTask<string>>(
-					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
+					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object.DBRef.ToString(),
 					_ => ValueTask.FromResult<string>("#-1 THIS IS A ROOM"),
 					// For exits, return the location (the room containing the exit)
-					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
-					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString()));
+					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object.DBRef.ToString(),
+					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object.DBRef.ToString()));
 	}
 
 	[SharpFunction(Name = "zone", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -1831,11 +1831,11 @@ LOCATE()
 				}
 
 				// Get zone of the target object - query fresh from database
-				var freshTarget = await Mediator!.Send(new GetObjectNodeQuery(target.Object().DBRef));
-				var zoneObj = await freshTarget.Known.Object().Zone.WithCancellation(CancellationToken.None);
+				var freshTarget = await Mediator!.Send(new GetObjectNodeQuery(target.Object.DBRef));
+				var zoneObj = await freshTarget.Known.Object.Zone.WithCancellation(CancellationToken.None);
 				return zoneObj.IsNone
 					? "#-1"
-					: zoneObj.Known.Object().DBRef.ToString();
+					: zoneObj.Known.Object.DBRef.ToString();
 			});
 	}
 
@@ -1868,7 +1868,7 @@ LOCATE()
 					.Where(x => x.IsThing)
 					.Skip(start - 1)
 					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", things);
@@ -1901,10 +1901,10 @@ LOCATE()
 				}
 
 				var paginated = await locate.AsContainer.Content(Mediator!)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
 					.Skip(start - 1)
 					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", paginated);
@@ -1938,10 +1938,10 @@ LOCATE()
 
 				var paginated = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
 					.Skip(start - 1)
 					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", paginated);
@@ -1975,10 +1975,10 @@ LOCATE()
 
 				var paginated = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
 					.Skip(start - 1)
 					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", paginated);
@@ -2012,10 +2012,10 @@ LOCATE()
 
 				var paginated = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
 					.Skip(start - 1)
 					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", paginated);
@@ -2050,7 +2050,7 @@ LOCATE()
 				var contents = await locate.AsContainer.Content(Mediator!)
 					.Skip(start - 1)
 					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", contents);
@@ -2086,7 +2086,7 @@ LOCATE()
 					.Where(x => x.IsExit)
 					.Skip(start - 1)
 					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", exits);
@@ -2122,7 +2122,7 @@ LOCATE()
 					.Where(x => x.IsPlayer)
 					.Skip(start - 1)
 					.Take(count)
-					.Select(x => x.Object().DBRef.ToString())
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", players);
@@ -2147,7 +2147,7 @@ LOCATE()
 				}
 
 				return string.Join(" ", locate.AsContainer.Content(Mediator!)
-					.Select(x => x.Object().DBRef.ToString()));
+					.Select(x => x.Object.DBRef.ToString()));
 			});
 	}
 
@@ -2170,7 +2170,7 @@ LOCATE()
 
 				return string.Join(" ", locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
-					.Select(x => x.Object().DBRef.ToString()));
+					.Select(x => x.Object.DBRef.ToString()));
 			});
 	}
 
@@ -2193,7 +2193,7 @@ LOCATE()
 
 				return string.Join(" ", locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
-					.Select(x => x.Object().DBRef.ToString()));
+					.Select(x => x.Object.DBRef.ToString()));
 			});
 	}
 
@@ -2216,7 +2216,7 @@ LOCATE()
 
 				return string.Join(" ", locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsThing)
-					.Select(x => x.Object().DBRef.ToString()));
+					.Select(x => x.Object.DBRef.ToString()));
 			});
 	}
 
@@ -2238,8 +2238,8 @@ LOCATE()
 				}
 
 				var visibleContents = await locate.AsContainer.Content(Mediator!)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", visibleContents);
@@ -2265,8 +2265,8 @@ LOCATE()
 
 				var visibleExits = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", visibleExits);
@@ -2292,8 +2292,8 @@ LOCATE()
 
 				var visiblePlayers = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", visiblePlayers);
@@ -2319,8 +2319,8 @@ LOCATE()
 
 				var visibleThings = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
-					.Select(x => x.Object().DBRef.ToString())
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
+					.Select(x => x.Object.DBRef.ToString())
 					.ToListAsync();
 
 				return string.Join(" ", visibleThings);
@@ -2703,7 +2703,7 @@ LOCATE()
 				}
 
 				return await locate.AsContainer.Content(Mediator!)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
 					.CountAsync();
 			});
 	}
@@ -2727,7 +2727,7 @@ LOCATE()
 
 				return await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
 					.CountAsync();
 			});
 	}
@@ -2751,7 +2751,7 @@ LOCATE()
 
 				return await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
 					.CountAsync();
 			});
 	}
@@ -2775,7 +2775,7 @@ LOCATE()
 
 				return await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object))
 					.CountAsync();
 			});
 	}

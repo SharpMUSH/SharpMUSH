@@ -35,7 +35,7 @@ public static class ChannelPrivs
 		if (privilegeList.IsError)
 		{
 			await NotifyService.Notify(executor,
-				$"CHAT: Invalid channel privileges(s):  {string.Join(",", privilegeList.AsError.Value)}", executor);
+				$"CHAT: Invalid channel privileges(s):  {string.Join(",", privilegeList.AsError)}", executor);
 		}
 
 		await Mediator.Send(new UpdateChannelCommand(channel,
