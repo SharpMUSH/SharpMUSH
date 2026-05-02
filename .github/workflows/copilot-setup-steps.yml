@@ -28,10 +28,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET (Latest Stable)
+      - name: Setup .NET (Preview)
         uses: actions/setup-dotnet@v4
         with:
-          # Use 'x' to always get the latest stable version
+          # Use 'x' with dotnet-quality: preview to get the latest preview version
           dotnet-version: 11.x
           dotnet-quality: 'preview'
 
