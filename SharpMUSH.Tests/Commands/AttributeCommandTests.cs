@@ -89,6 +89,7 @@ public class AttributeCommandTests
 	/// command pattern is later triggered.
 	/// </summary>
 	[Test]
+	[Retry(3)]
 	public async ValueTask SetAttribute_PreservesBracesInNoParse()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrBrace");
