@@ -332,12 +332,12 @@ public partial class Functions
 			return string.Format(Errors.ErrorBadArgumentFormat, "getpids");
 		}
 
-		var (db, attr) = split.AsValue();
+		var infoRefOrAttr = split.AsValue();
 
-		if (attr is null)
+		if (infoRefOrAttr.IsDBRef)
 		{
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser, executor, executor, db, LocateFlags.All,
+				parser, executor, executor, infoRefOrAttr.DbRef.ToString(), LocateFlags.All,
 				async found =>
 				{
 					var queryResult = Mediator!.CreateStream(new ScheduleSemaphoreQuery(found.Object.DBRef));
@@ -347,10 +347,10 @@ public partial class Functions
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, db, LocateFlags.All,
+			parser, executor, executor, infoRefOrAttr.DbRef.ToString(), LocateFlags.All,
 			async found =>
 			{
-				var dbAttr = new DbRefAttribute(found.Object.DBRef, attr.Split("`"));
+				var dbAttr = new DbRefAttribute(found.Object.DBRef, infoRefOrAttr.AttributeArray!);
 				var queryResult = Mediator!.CreateStream(new ScheduleSemaphoreQuery(dbAttr));
 				var pids = queryResult.Select(x => MModule.single(x.Pid.ToString()));
 				return MModule.multipleWithDelimiter(MModule.single(" "), await pids.ToArrayAsync());

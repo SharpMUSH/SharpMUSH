@@ -259,20 +259,20 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, obj, LocateFlags.All,
+			parser, executor, executor, afRefOrAttr.DbRef.ToString(), LocateFlags.All,
 			async found =>
 			{
-				if (attributePattern is null)
+				if (afRefOrAttr.Attribute is null)
 				{
 					var flags = found.Object.Flags.Value;
 					return string.Join("", await flags.Select(x => x.Symbol).ToArrayAsync());
 				}
 
 				var attr = await AttributeService!.LazilyGetAttributeAsync(
-					executor, found, attributePattern, IAttributeService.AttributeMode.Read, false);
+					executor, found, afRefOrAttr.Attribute, IAttributeService.AttributeMode.Read, false);
 
 				return attr.Match(
 					attribute => string.Join("", attribute.Last().Flags.Select(x => x.Symbol)),
@@ -521,21 +521,15 @@ public partial class Functions
 		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAndAttr);
 
-		if (!split.TryGetValue(out var details))
+		if (!split.TryGetValue(out var hasFlagRefOrAttr))
 		{
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(HasFlag)));
 		}
 
-		var (db, attr) = details;
-
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, db, LocateFlags.All | LocateFlags.NoVisibilityCheck, async realLocated =>
+			parser, executor, executor, hasFlagRefOrAttr.DbRef.ToString(), LocateFlags.All | LocateFlags.NoVisibilityCheck, async realLocated =>
 			{
-				return split.AsValue() switch
-				{
-					(_, null) => await HasObjectFlag(realLocated),
-					_ => await HasAttributeFlag(realLocated)
-				};
+				return hasFlagRefOrAttr.IsDBRef ? await HasObjectFlag(realLocated) : await HasAttributeFlag(realLocated);
 			});
 
 		async ValueTask<CallState> HasObjectFlag(AnySharpObject realLocated)
@@ -550,7 +544,7 @@ public partial class Functions
 			var maybeAttr = await AttributeService!.GetAttributeAsync(
 				executor,
 				realLocated,
-				attr!,
+				hasFlagRefOrAttr.Attribute!,
 				IAttributeService.AttributeMode.Read,
 				false);
 
@@ -574,14 +568,14 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, obj, LocateFlags.All,
+			executor, executor, afRefOrAttr.DbRef.ToString(), LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? "*", false,
+					afRefOrAttr.Attribute ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
 				if (attributes.IsError)
@@ -605,14 +599,14 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, obj, LocateFlags.All,
+			executor, executor, afRefOrAttr.DbRef.ToString(), LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? "*", true,
+					afRefOrAttr.Attribute ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
 				if (attributes.IsError)
@@ -644,14 +638,14 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, obj, LocateFlags.All,
+			parser, executor, executor, afRefOrAttr.DbRef.ToString(), LocateFlags.All,
 			async found =>
 			{
 				// Object Flags
-				if (attributePattern is null)
+				if (afRefOrAttr.IsDBRef)
 				{
 					var flags = found.Object.Flags.Value;
 					return string.Join(" ", await flags.Select(x => x.Name).ToArrayAsync());
@@ -659,7 +653,7 @@ public partial class Functions
 
 				// Attribute Flags
 				var attr = await AttributeService!.LazilyGetAttributeAsync(
-					executor, found, attributePattern, IAttributeService.AttributeMode.Read, false);
+					executor, found, afRefOrAttr.Attribute!, IAttributeService.AttributeMode.Read, false);
 
 				return attr.Match(
 					attribute => string.Join(" ", attribute.Last().Flags.Select(x => x.Name)),
@@ -680,14 +674,14 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, afRefOrAttr.DbRef.ToString(),
 			LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? "*", false,
+					afRefOrAttr.Attribute ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
 				if (attributes.IsError)
@@ -711,14 +705,14 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, afRefOrAttr.DbRef.ToString(),
 			LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? "*", true,
+					afRefOrAttr.Attribute ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
 				if (attributes.IsError)
@@ -811,7 +805,7 @@ public partial class Functions
 			parser,
 			executor,
 			executor,
-			dbrefAndMaybeArg.AsValue().Db,
+			dbrefAndMaybeArg.AsValue().DbRef.ToString(),
 			LocateFlags.All,
 			async actualObject =>
 			{
@@ -1063,14 +1057,14 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "reglattr".ToUpper()));
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, obj, LocateFlags.All,
+			executor, executor, afRefOrAttr.DbRef.ToString(), LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? ".*", false,
+					afRefOrAttr.Attribute ?? ".*", false,
 					IAttributeService.AttributePatternMode.Regex);
 
 				if (attributes.IsError)
@@ -1099,14 +1093,14 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, obj, LocateFlags.All,
+			executor, executor, afRefOrAttr.DbRef.ToString(), LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? ".*", true,
+					afRefOrAttr.Attribute ?? ".*", true,
 					IAttributeService.AttributePatternMode.Regex);
 
 				if (attributes.IsError)
@@ -1135,14 +1129,14 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, afRefOrAttr.DbRef.ToString(),
 			LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? ".*", false,
+					afRefOrAttr.Attribute ?? ".*", false,
 					IAttributeService.AttributePatternMode.Regex);
 
 				if (attributes.IsError)
@@ -1167,14 +1161,14 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, afRefOrAttr.DbRef.ToString(),
 			LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? ".*", true,
+					afRefOrAttr.Attribute ?? ".*", true,
 					IAttributeService.AttributePatternMode.Regex);
 
 				if (attributes.IsError)
@@ -1211,14 +1205,14 @@ public partial class Functions
 			return Errors.ErrorArgRange;
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, obj, LocateFlags.All,
+			executor, executor, afRefOrAttr.DbRef.ToString(), LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? ".*", false,
+					afRefOrAttr.Attribute ?? ".*", false,
 					IAttributeService.AttributePatternMode.Regex);
 
 				if (attributes.IsError)
@@ -1261,14 +1255,14 @@ public partial class Functions
 			return Errors.ErrorArgRange;
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, obj, LocateFlags.All,
+			executor, executor, afRefOrAttr.DbRef.ToString(), LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? ".*", true,
+					afRefOrAttr.Attribute ?? ".*", true,
 					IAttributeService.AttributePatternMode.Regex);
 
 				if (attributes.IsError)
@@ -1704,7 +1698,9 @@ public partial class Functions
 			return Errors.ErrorBadArgumentFormat;
 		}
 
-		var (victim, attr) = victAttr.AsT0;
+		var victRefOrAttr = victAttr.AsT0;
+		var victim = victRefOrAttr.DbRef.ToString();
+		var attr = victRefOrAttr.Attribute;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
 			LocateFlags.All,
@@ -1816,14 +1812,14 @@ public partial class Functions
 			return Errors.ErrorArgRange;
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, obj, LocateFlags.All,
+			executor, executor, afRefOrAttr.DbRef.ToString(), LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? "*", false,
+					afRefOrAttr.Attribute ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
 				if (attributes.IsError)
@@ -1865,14 +1861,14 @@ public partial class Functions
 			return Errors.ErrorArgRange;
 		}
 
-		var (obj, attributePattern) = dbrefAndAttr.AsValue();
+		var afRefOrAttr = dbrefAndAttr.AsValue();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, obj, LocateFlags.All,
+			executor, executor, afRefOrAttr.DbRef.ToString(), LocateFlags.All,
 			async found =>
 			{
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
-					attributePattern ?? "*", true,
+					afRefOrAttr.Attribute ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
 				if (attributes.IsError)

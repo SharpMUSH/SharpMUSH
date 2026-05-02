@@ -155,17 +155,15 @@ public partial class Commands
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
-		if (!split.TryGetValue(out var details))
+		if (!split.TryGetValue(out var refOrAttr))
 		{
 			return new CallState("#-1 BAD ARGUMENT FORMAT TO @SET");
 		}
 
-		var (dbref, maybeAttribute) = details;
-
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 			enactor,
 			executor,
-			dbref,
+			refOrAttr.DbRef.ToString(),
 			LocateFlags.All);
 
 		if (locate.IsError)
@@ -176,18 +174,18 @@ public partial class Commands
 		var realLocated = locate.AsSharpObject;
 
 		// Attr Flag Path
-		if (!string.IsNullOrEmpty(maybeAttribute))
+		if (refOrAttr.Attribute is not null)
 		{
 			foreach (var flag in MModule.splitList(MModule.single(" "), args["1"].Message!))
 			{
 				var plainFlag = MModule.plainText(flag);
 				if (plainFlag.StartsWith('!'))
 				{
-					await AttributeService!.UnsetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag[1..]);
+					await AttributeService!.UnsetAttributeFlagAsync(executor, realLocated, refOrAttr.Attribute, plainFlag[1..]);
 				}
 				else
 				{
-					await AttributeService!.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
+					await AttributeService!.SetAttributeFlagAsync(executor, realLocated, refOrAttr.Attribute, plainFlag);
 				}
 			}
 

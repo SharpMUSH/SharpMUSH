@@ -29,17 +29,15 @@ public partial class Commands
 		var objAttrText = MModule.plainText(objAttrArg.Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
-		if (!split.TryGetValue(out var details) || string.IsNullOrEmpty(details.Attribute))
+		if (!split.TryGetValue(out var refOrAttr) || refOrAttr.IsDBRef)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState("#-1 INVALID FORMAT");
 		}
 
-		var (dbref, attrName) = details;
-
 		// Locate object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, dbref, LocateFlags.All);
+		enactor, executor, refOrAttr.DbRef.ToString(), LocateFlags.All);
 
 		if (locate.IsError)
 		{
@@ -48,14 +46,8 @@ public partial class Commands
 
 		var targetObject = locate.AsSharpObject;
 
-		if (attrName is null)
-		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
-			return new CallState(ErrorMessages.Returns.NoMatch);
-		}
-		
 		// Check if attribute exists
-		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName,
+		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, refOrAttr.Attribute!,
 			IAttributeService.AttributeMode.Read);
 
 		if (!attribute.IsAttribute)
@@ -105,14 +97,14 @@ public partial class Commands
 		if (shouldLock)
 		{
 			// Lock the attribute and change ownership to executor
-			await AttributeService.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
+			await AttributeService.SetAttributeFlagAsync(executor, targetObject, refOrAttr.Attribute!, "LOCKED");
 
 			// Change ownership to executor (if executor is a player)
 			if (executor.IsPlayer)
 			{
 				// Re-set the attribute with new owner to change ownership
 				var currentValue = attribute.AsAttribute.Last().Value;
-				await AttributeService.SetAttributeAsync(executor, targetObject, attrName, currentValue);
+				await AttributeService.SetAttributeAsync(executor, targetObject, refOrAttr.Attribute!, currentValue);
 			}
 
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeLocked), executor);
@@ -120,7 +112,7 @@ public partial class Commands
 		else
 		{
 			// Unlock the attribute
-			await AttributeService!.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
+			await AttributeService!.UnsetAttributeFlagAsync(executor, targetObject, refOrAttr.Attribute!, "LOCKED");
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeUnlocked), executor);
 		}
 
@@ -146,29 +138,23 @@ public partial class Commands
 		var sourceText = MModule.plainText(sourceArg.Message!);
 		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
 
-		if (!sourceSplit.TryGetValue(out var sourceDetails) || string.IsNullOrEmpty(sourceDetails.Attribute))
+		if (!sourceSplit.TryGetValue(out var sourceRefOrAttr) || sourceRefOrAttr.IsDBRef)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
 			return new CallState("#-1 INVALID SOURCE");
 		}
 
-		var (sourceDbref, sourceAttr) = sourceDetails;
+		var sourceAttr = sourceRefOrAttr.Attribute!;
 
 		// Locate source object
 		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, sourceDbref, LocateFlags.All);
+		enactor, executor, sourceRefOrAttr.DbRef.ToString(), LocateFlags.All);
 
 		if (sourceLocate.IsError)
 		{
 			return sourceLocate.AsError;
 		}
 
-		if (sourceAttr is null)
-		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
-			return new CallState(ErrorMessages.Returns.NoMatch);
-		}
-		
 		var sourceObject = sourceLocate.AsSharpObject;
 
 		// Get the source attribute
@@ -198,23 +184,22 @@ public partial class Commands
 		{
 			var destSplit = HelperFunctions.SplitDbRefAndOptionalAttr(dest);
 
-			if (!destSplit.TryGetValue(out var destDetails))
+			if (!destSplit.TryGetValue(out var destRefOrAttr))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
 				continue;
 			}
 
-			var (destDbref, destAttr) = destDetails;
 			// If no destination attribute name specified, use source attribute name
-			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
+			var targetAttrName = destRefOrAttr.Attribute ?? sourceAttr;
 
 			// Locate destination object
 			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor, executor, destDbref, LocateFlags.All);
+			enactor, executor, destRefOrAttr.DbRef.ToString(), LocateFlags.All);
 
 			if (destLocate.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destRefOrAttr.DbRef.ToString());
 				continue;
 			}
 
@@ -224,7 +209,7 @@ public partial class Commands
 			var canSet = await PermissionService!.CanSet(executor, destObject);
 			if (!canSet)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destDbref);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destRefOrAttr.DbRef.ToString());
 				continue;
 			}
 
@@ -233,7 +218,7 @@ public partial class Commands
 
 			if (setResult.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsError.Value);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destRefOrAttr.DbRef.ToString(), setResult.AsError.Value);
 				continue;
 			}
 
@@ -282,17 +267,17 @@ public partial class Commands
 		var sourceText = MModule.plainText(sourceArg.Message!);
 		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
 
-		if (!sourceSplit.TryGetValue(out var sourceDetails) || string.IsNullOrEmpty(sourceDetails.Attribute))
+		if (!sourceSplit.TryGetValue(out var sourceRefOrAttr) || sourceRefOrAttr.IsDBRef)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
 			return new CallState("#-1 INVALID SOURCE");
 		}
 
-		var (sourceDbref, sourceAttr) = sourceDetails;
+		var sourceAttr = sourceRefOrAttr.Attribute!;
 
 		// Locate source object
 		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, sourceDbref, LocateFlags.All);
+		enactor, executor, sourceRefOrAttr.DbRef.ToString(), LocateFlags.All);
 
 		if (sourceLocate.IsError)
 		{
@@ -302,12 +287,12 @@ public partial class Commands
 		var sourceObject = sourceLocate.AsSharpObject;
 
 		// Get the source attribute
-		var sourceAttribute = await AttributeService!.GetAttributeAsync(executor, sourceObject, sourceAttr!,
+		var sourceAttribute = await AttributeService!.GetAttributeAsync(executor, sourceObject, sourceAttr,
 		IAttributeService.AttributeMode.Read);
 
 		if (!sourceAttribute.IsAttribute)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr!);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
@@ -328,23 +313,22 @@ public partial class Commands
 		{
 			var destSplit = HelperFunctions.SplitDbRefAndOptionalAttr(dest);
 
-			if (!destSplit.TryGetValue(out var destDetails))
+			if (!destSplit.TryGetValue(out var destRefOrAttr))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
 				continue;
 			}
 
-			var (destDbref, destAttr) = destDetails;
 			// If no destination attribute name specified, use source attribute name
-			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
+			var targetAttrName = destRefOrAttr.Attribute ?? sourceAttr;
 
 			// Locate destination object
 			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor, executor, destDbref, LocateFlags.All);
+			enactor, executor, destRefOrAttr.DbRef.ToString(), LocateFlags.All);
 
 			if (destLocate.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destRefOrAttr.DbRef.ToString());
 				continue;
 			}
 
@@ -354,16 +338,16 @@ public partial class Commands
 			var canSet = await PermissionService!.CanSet(executor, destObject);
 			if (!canSet)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destDbref);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDeniedSetAttribute), executor, destRefOrAttr.DbRef.ToString());
 				continue;
 			}
 
 			// Set the attribute value
-			var setResult = await AttributeService.SetAttributeAsync(executor, destObject, targetAttrName!, attrValue);
+			var setResult = await AttributeService.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
 			if (setResult.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsError.Value);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destRefOrAttr.DbRef.ToString(), setResult.AsError.Value);
 				continue;
 			}
 
@@ -372,7 +356,7 @@ public partial class Commands
 			{
 				foreach (var flag in attrFlags)
 				{
-					await AttributeService.SetAttributeFlagAsync(executor, destObject, targetAttrName!, flag.Name);
+					await AttributeService.SetAttributeFlagAsync(executor, destObject, targetAttrName, flag.Name);
 				}
 			}
 
@@ -382,7 +366,7 @@ public partial class Commands
 		if (copiedCount > 0)
 		{
 			// Remove the source attribute after successful copy
-			var clearResult = await AttributeService.ClearAttributeAsync(executor, sourceObject, sourceAttr!,
+			var clearResult = await AttributeService.ClearAttributeAsync(executor, sourceObject, sourceAttr,
 			IAttributeService.AttributePatternMode.Exact,
 			IAttributeService.AttributeClearMode.Safe);
 
@@ -422,17 +406,15 @@ public partial class Commands
 		var objAttrText = MModule.plainText(objAttrArg.Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
-		if (!split.TryGetValue(out var details) || string.IsNullOrEmpty(details.Attribute))
+		if (!split.TryGetValue(out var refOrAttr) || refOrAttr.IsDBRef)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState("#-1 INVALID FORMAT");
 		}
 
-		var (dbref, attrName) = details;
-
 		// Locate object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, dbref, LocateFlags.All);
+		enactor, executor, refOrAttr.DbRef.ToString(), LocateFlags.All);
 
 		if (locate.IsError)
 		{
@@ -442,7 +424,7 @@ public partial class Commands
 		var targetObject = locate.AsSharpObject;
 
 		// Check if attribute exists
-		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName!,
+		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, refOrAttr.Attribute!,
 		IAttributeService.AttributeMode.Read);
 
 		if (!attribute.IsAttribute)
@@ -509,7 +491,7 @@ public partial class Commands
 
 		// Change ownership by re-setting the attribute with new owner
 		var currentValue = attribute.AsAttribute.Last().Value;
-		var setResult = await AttributeService.SetAttributeAsync(executor, targetObject, attrName!, currentValue);
+		var setResult = await AttributeService.SetAttributeAsync(executor, targetObject, refOrAttr.Attribute!, currentValue);
 
 		if (setResult.IsError)
 		{
@@ -537,19 +519,17 @@ public partial class Commands
 		var objAttr = MModule.plainText(args["0"].Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttr);
 
-		if (!split.TryGetValue(out var details))
+		if (!split.TryGetValue(out var refOrAttr))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return new CallState("#-1 INVALID OBJECT");
 		}
 
-		var (dbref, maybeAttribute) = details;
-
 		// Locate the object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 		enactor,
 		executor,
-		dbref,
+		refOrAttr.DbRef.ToString(),
 		LocateFlags.All);
 
 		if (locate.IsError)
@@ -576,7 +556,7 @@ public partial class Commands
 		}
 
 		// If no attribute pattern specified, wipe all attributes
-		if (string.IsNullOrEmpty(maybeAttribute))
+		if (refOrAttr.Attribute is null)
 		{
 			// Wipe all attributes - use ClearAttributeAsync with wildcard pattern
 			await AttributeService!.ClearAttributeAsync(executor, targetObject, "**",
@@ -588,10 +568,10 @@ public partial class Commands
 		else
 		{
 			// Wipe matching attributes
-			await AttributeService!.ClearAttributeAsync(executor, targetObject, maybeAttribute,
+			await AttributeService!.ClearAttributeAsync(executor, targetObject, refOrAttr.Attribute,
 			IAttributeService.AttributePatternMode.Wildcard,
 			IAttributeService.AttributeClearMode.Safe);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WipedAttributes), executor, maybeAttribute);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WipedAttributes), executor, refOrAttr.Attribute);
 			return new CallState(string.Empty);
 		}
 	}

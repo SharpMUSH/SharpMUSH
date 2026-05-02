@@ -97,8 +97,9 @@ public partial class Functions
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
 
-			var (dbref, attrName) = objAttr.AsT0;
-			dbref ??= executor.Object.DBRef.ToString();
+			var objAttrRef = objAttr.AsValue();
+			var dbref = objAttrRef.Db ?? executor.Object.DBRef.ToString();
+			var attrName = objAttrRef.Attribute;
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, enactor, executor, dbref, LocateFlags.All);
 			if (!locate.IsValid())

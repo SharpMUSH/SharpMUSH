@@ -233,13 +233,16 @@ public static partial class HelperFunctions
 		return string.IsNullOrEmpty(attr) || string.IsNullOrEmpty(obj) ? new None() : new ObjAttrPair(obj, attr);
 	}
 
-	public static Option<OptionalObjAttr> SplitOptionalObjectAndAttr(string ObjectAttr)
+	public static Option<ObjAttrRef> SplitOptionalObjectAndAttr(string ObjectAttr)
 	{
 		var match = OptionalDatabaseReferenceWithAttributeRegex.Match(ObjectAttr);
 		var obj = match.Groups["Object"].Value;
 		var attr = match.Groups["Attribute"].Value;
 		if (!IsValidAttributeName(attr)) return new None();
-		return string.IsNullOrEmpty(attr) ? new None() : new OptionalObjAttr(obj, attr);
+		if (string.IsNullOrEmpty(attr)) return new None();
+		return string.IsNullOrEmpty(obj)
+			? (Option<ObjAttrRef>)(ObjAttrRef)attr
+			: (Option<ObjAttrRef>)(ObjAttrRef)new ObjAttrPair(obj, attr);
 	}
 
 	/// <summary>
@@ -282,15 +285,16 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newZone, CancellationToken cancellationToken = default)
 		=> await SafeToAddRelationship(mediator, database, start, newZone, cancellationToken);
 
-	public static Option<DbRefOptionalAttr> SplitDbRefAndOptionalAttr(string DBRefAttr)
+	public static Option<DbRefOrAttrRef> SplitDbRefAndOptionalAttr(string DBRefAttr)
 	{
 		var match = DatabaseReferenceWithOptionalAttributeRegex.Match(DBRefAttr);
 		var obj = match.Groups["Object"].Value;
 		var attr = match.Groups["Attribute"].Value;
 		if (!string.IsNullOrEmpty(attr) && !IsValidAttributeName(attr)) return new None();
-		return string.IsNullOrEmpty(obj) 
-			? new None() 
-			: new DbRefOptionalAttr(obj, string.IsNullOrEmpty(attr) ? null : attr);
+		if (string.IsNullOrEmpty(obj) || !DBRef.TryParse(obj, out var dbRef) || dbRef is null) return new None();
+		if (!string.IsNullOrEmpty(attr))
+			return (DbRefOrAttrRef)new DbRefAttribute(dbRef.Value, attr.ToUpper().Split("`").ToArray());
+		return (DbRefOrAttrRef)dbRef.Value;
 	}
 
 	public static Option<DBRef> ParseDbRef(string dbrefStr)

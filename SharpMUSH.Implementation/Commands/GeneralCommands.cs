@@ -248,14 +248,7 @@ public partial class Commands
 
 		// Parse object/attribute path
 		var pathSplit = HelperFunctions.SplitDbRefAndOptionalAttr(attributePath);
-		if (!pathSplit.TryGetValue(out var pathDetails))
-		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapInvalidObjectAttributePath), executor);
-			return new CallState("#-1 INVALID PATH");
-		}
-
-		var (objSpec, attrName) = pathDetails;
-		if (string.IsNullOrEmpty(attrName))
+		if (!pathSplit.TryGetValue(out var pathRefOrAttr) || pathRefOrAttr.IsDBRef)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapMustSpecifyAttribute), executor);
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
@@ -266,7 +259,7 @@ public partial class Commands
 		var (delimiter, listText) = ExtractFirstParameter(originalListText, switches.Contains("DELIMIT"));
 		var list = MModule.split(delimiter, listText);
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWouldIterateFormat), executor, list.Length, objSpec, attrName);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWouldIterateFormat), executor, list.Length, pathRefOrAttr.DbRef.ToString(), pathRefOrAttr.Attribute!);
 
 		if (switches.Contains("INLINE"))
 		{
@@ -290,7 +283,7 @@ public partial class Commands
 
 		// Locate the target object
 		var targetObject = await LocateService!.LocateAndNotifyIfInvalid(
-			parser, executor, executor, objSpec, LocateFlags.All);
+			parser, executor, executor, pathRefOrAttr.DbRef.ToString(), LocateFlags.All);
 
 		if (!targetObject.IsValid())
 		{
@@ -301,11 +294,11 @@ public partial class Commands
 
 		// Get the attribute to execute
 		var attributeResult = await AttributeService!.GetAttributeAsync(
-			executor, target, attrName, IAttributeService.AttributeMode.Read, false);
+			executor, target, pathRefOrAttr.Attribute!, IAttributeService.AttributeMode.Read, false);
 
 		if (attributeResult.IsNone || attributeResult.IsError)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat), executor, attrName, target.Object.Name);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat), executor, pathRefOrAttr.Attribute!, target.Object.Name);
 			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 
@@ -842,16 +835,15 @@ public partial class Commands
 			var argText = args["0"].Message!.ToPlainText();
 			var split = HelperFunctions.SplitDbRefAndOptionalAttr(argText);
 
-			if (split.TryGetValue(out var details))
+			if (split.TryGetValue(out var refOrAttr))
 			{
-				var (objectName, maybeAttributePattern) = details;
-				attributePattern = maybeAttributePattern;
+				attributePattern = refOrAttr.Attribute;
 
 				var locate = await LocateService!.LocateAndNotifyIfInvalid(
 					parser,
 					enactor,
 					enactor,
-					objectName,
+					refOrAttr.DbRef.ToString(),
 					LocateFlags.All);
 
 				if (locate.IsValid())
@@ -1796,14 +1788,14 @@ public partial class Commands
 			return new None();
 		}
 
-		var (db, maybeAttributeString) = objectAndAttribute.AsValue();
+		var notifyRefOrAttr = objectAndAttribute.AsValue();
 		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
-			db, LocateFlags.All);
+			notifyRefOrAttr.DbRef.ToString(), LocateFlags.All);
 
 		if (maybeObject.IsError) return maybeObject.AsError;
 		var objectToNotify = maybeObject.AsSharpObject;
 
-		var attribute = string.IsNullOrEmpty(maybeAttributeString) ? DefaultSemaphoreAttribute : maybeAttributeString;
+		var attribute = notifyRefOrAttr.Attribute ?? DefaultSemaphoreAttribute;
 
 		var attributeContents = await AttributeService!.GetAttributeAsync(executor, objectToNotify, attribute,
 			IAttributeService.AttributeMode.Execute, false);
@@ -2722,15 +2714,16 @@ public partial class Commands
 			return new CallState(Errors.ErrorCantSeeThat);
 		}
 
-		var _moa = maybeObjectAndAttribute.AsT0; var target = _moa.Db; var maybeAttribute = _moa.Attribute;
-		var maybeObject = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, target!,
+		var drainRefOrAttr = maybeObjectAndAttribute.AsValue();
+		var maybeObject = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, drainRefOrAttr.DbRef.ToString(),
 			LocateFlags.All);
 
 		if (maybeObject.IsError) return new CallState(maybeObject.AsError.Value);
 		if (maybeObject.IsNone) return new CallState(Errors.ErrorCantSeeThat);
 
 		var objectToDrain = maybeObject.AsAnyObject;
-		var attribute = maybeAttribute?.Split("`") ?? DefaultSemaphoreAttributeArray;
+		var attribute = drainRefOrAttr.AttributeArray ?? DefaultSemaphoreAttributeArray;
+		var maybeAttribute = drainRefOrAttr.Attribute;
 		var hasAll = switches.Contains("ALL");
 		var hasAny = switches.Contains("ANY");
 
@@ -3426,17 +3419,15 @@ public partial class Commands
 		var objAttrText = MModule.plainText(objAttrArg.Message);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
-		if (!split.TryGetValue(out var details) || string.IsNullOrEmpty(details.Attribute))
+		if (!split.TryGetValue(out var editRefOrAttr) || editRefOrAttr.IsDBRef)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat), executor);
 			return new CallState("#-1 INVALID FORMAT");
 		}
 
-		var (dbref, attrPattern) = details;
-
 		// Locate object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor, executor, dbref, LocateFlags.All);
+			enactor, executor, editRefOrAttr.DbRef.ToString(), LocateFlags.All);
 
 		if (locate.IsError)
 		{
@@ -3469,7 +3460,7 @@ public partial class Commands
 
 		// Get matching attributes
 		var attributes = await AttributeService!.GetAttributePatternAsync(
-			executor, targetObject, attrPattern!, false, IAttributeService.AttributePatternMode.Wildcard);
+			executor, targetObject, editRefOrAttr.Attribute!, false, IAttributeService.AttributePatternMode.Wildcard);
 
 		if (attributes.IsError)
 		{
@@ -4713,16 +4704,15 @@ public partial class Commands
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec);
 		AnyOptionalSharpObject target;
 
-		if (split.TryGetValue(out var details))
+		if (split.TryGetValue(out var examineRefOrAttr))
 		{
-			var (objectName, maybeAttributePattern) = details;
-			attributePattern = maybeAttributePattern;
+			attributePattern = examineRefOrAttr.Attribute;
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				enactor,
 				enactor,
-				objectName,
+				examineRefOrAttr.DbRef.ToString(),
 				LocateFlags.All);
 
 			if (locate.IsValid())
@@ -5604,20 +5594,19 @@ public partial class Commands
 		var pattern = MModule.plainText(patternArg.Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
-		if (!split.TryGetValue(out var details))
+		if (!split.TryGetValue(out var grepRefOrAttr))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return new CallState("#-1 INVALID OBJECT");
 		}
 
-		var (dbref, maybeAttributePattern) = details;
-		var attributePattern = string.IsNullOrEmpty(maybeAttributePattern) ? "*" : maybeAttributePattern;
+		var attributePattern = grepRefOrAttr.Attribute ?? "*";
 
 		// Locate the object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 			enactor,
 			executor,
-			dbref,
+			grepRefOrAttr.DbRef.ToString(),
 			LocateFlags.All);
 
 		if (locate.IsError)

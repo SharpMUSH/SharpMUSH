@@ -131,8 +131,9 @@ public partial class Functions
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsValue();
-		dbref ??= executor.ToString()!;
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -222,8 +223,9 @@ public partial class Functions
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsValue();
-		dbref ??= executor.ToString()!;
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -387,8 +389,9 @@ public partial class Functions
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsValue();
-		dbref ??= executor.ToString()!;
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -741,8 +744,9 @@ public partial class Functions
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsValue();
-		dbref ??= executor.ToString()!;
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -904,8 +908,9 @@ public partial class Functions
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsValue();
-		dbref ??= executor.ToString()!;
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -1009,8 +1014,9 @@ public partial class Functions
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
 
-			var (dbref, attrName) = objAttr.AsValue();
-			dbref ??= executor.ToString()!;
+			var objAttrRef = objAttr.AsValue();
+			var dbref = objAttrRef.Db ?? executor.ToString()!;
+			var attrName = objAttrRef.Attribute;
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
@@ -1376,8 +1382,9 @@ public partial class Functions
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsValue();
-		dbref ??= executor.ToString()!;
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -1496,8 +1503,9 @@ public partial class Functions
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
 
-			var (dbref, attrName) = objAttr.AsValue();
-			dbref ??= executor.ToString()!;
+			var objAttrRef = objAttr.AsValue();
+			var dbref = objAttrRef.Db ?? executor.ToString()!;
+			var attrName = objAttrRef.Attribute;
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
@@ -1637,8 +1645,9 @@ public partial class Functions
 			return new CallState(Errors.ErrorObjectAttributeString);
 		}
 
-		var (dbref, attrName) = objAttr.AsValue();
-		dbref ??= executor.ToString()!;
+		var objAttrRef = objAttr.AsValue();
+		var dbref = objAttrRef.Db ?? executor.ToString()!;
+		var attrName = objAttrRef.Attribute;
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
