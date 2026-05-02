@@ -12,14 +12,4 @@ public union DbRefOrName(DBRef, string)
 	public bool   IsName  => Value is string;
 	public DBRef  AsDBRef => (DBRef)Value!;
 	public string AsName  => (string)Value!;
-
-	// Backward-compat aliases
-	public bool   IsT0 => IsDBRef;
-	public bool   IsT1 => IsName;
-	public DBRef  AsT0 => AsDBRef;
-	public string AsT1 => AsName;
-
-	// Extra compat aliases for scripts that replaced IsT0→IsSuccess, AsT0→AsValue()
-	public bool   IsSuccess => IsDBRef;
-	public DBRef  AsValue()  => AsDBRef;
 }

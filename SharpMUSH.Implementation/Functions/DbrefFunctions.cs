@@ -52,9 +52,9 @@ public partial class Functions
 			{
 				var linkTypeAttr = await AttributeService!.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
 
-				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsT0.Length > 0)
+				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsAttribute.Length > 0)
 				{
-					var linkTypeText = linkTypeAttr.AsT0[0].Value.ToPlainText();
+					var linkTypeText = linkTypeAttr.AsAttribute[0].Value.ToPlainText();
 					if (!string.IsNullOrEmpty(linkTypeText))
 					{
 						if (string.Equals(linkTypeText, LinkTypeVariable, StringComparison.OrdinalIgnoreCase))
@@ -1351,10 +1351,10 @@ LOCATE()
 			int errorCode = 0; // 0 = success, -1 = not found, -2 = ambiguous
 			string originalName = string.Empty;
 
-			if (item.IsT0)
+			if (item.IsDBRef)
 			{
 				// Already a dbref - validate it exists
-				var dbref = item.AsT0;
+				var dbref = item.AsDBRef;
 				var exists = await Mediator!.Send(new GetBaseObjectNodeQuery(dbref));
 
 				if (exists != null)
@@ -1370,7 +1370,7 @@ LOCATE()
 			else
 			{
 				// String name - need to locate
-				var name = item.AsT1;
+				var name = item.AsName;
 				originalName = name;
 
 				var locateResult = await LocateService!.Locate(parser, executor, executor, name, LocateFlags.All);

@@ -2326,9 +2326,9 @@ public partial class Commands
 					var customSemaphoreAttr = splitBySlashes[1].Split('`');
 					var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
 
-					if (validation.IsT1)
+					if (validation.IsError)
 					{
-						await NotifyService!.Notify(executor, validation.AsT1.Value, executor);
+						await NotifyService!.Notify(executor, validation.AsError.Value, executor);
 						return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
 					}
 
@@ -2348,9 +2348,9 @@ public partial class Commands
 					var customSemaphoreAttr = splitBySlashes[1].Split('`');
 					var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
 
-					if (validation.IsT1)
+					if (validation.IsError)
 					{
-						await NotifyService!.Notify(executor, validation.AsT1.Value, executor);
+						await NotifyService!.Notify(executor, validation.AsError.Value, executor);
 						return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
 					}
 
@@ -2364,9 +2364,9 @@ public partial class Commands
 					var customSemaphoreAttr = splitBySlashes[1].Split('`');
 					var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
 
-					if (validation.IsT1)
+					if (validation.IsError)
 					{
-						await NotifyService!.Notify(executor, validation.AsT1.Value, executor);
+						await NotifyService!.Notify(executor, validation.AsError.Value, executor);
 						return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
 					}
 
@@ -5178,7 +5178,7 @@ public partial class Commands
 		// Resolve all objects to exclude
 		_ = await objectList
 			.ToAsyncEnumerable()
-			.Select(obj => obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1)
+			.Select(obj => obj.IsDBRef ? obj.AsDBRef.ToString() : obj.AsName)
 			.Select(objName =>
 				LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 					parser,
@@ -6040,7 +6040,7 @@ public partial class Commands
 
 		foreach (var recipient in recipientList)
 		{
-			var recipientName = recipient.IsT0 ? recipient.AsT0.ToString() : recipient.AsT1;
+			var recipientName = recipient.IsDBRef ? recipient.AsDBRef.ToString() : recipient.AsName;
 
 			// Use LocateAndNotifyIfInvalidWithCallStateFunction for proper error handling
 			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(

@@ -217,10 +217,10 @@ public partial class Commands
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
 		var result = await AttributeService!.SetAttributeAsync(executor, executor, attributeName, channel.Name);
 
-		if (result.IsT1)
+		if (result.IsError)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorSettingAliasFormat), executor, result.AsT1.Value);
-			return new CallState($"#-1 Error setting alias: {result.AsT1.Value}");
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorSettingAliasFormat), executor, result.AsError.Value);
+			return new CallState($"#-1 Error setting alias: {result.AsError.Value}");
 		}
 
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasAddedForChannelFormat), executor, alias, channel.Name.ToPlainText());

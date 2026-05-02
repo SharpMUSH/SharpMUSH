@@ -447,9 +447,9 @@ Existing games which have softcoded 'who' commands.
 			var fileInfo = new FileInfo(testFilePath);
 			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
 
-			await Assert.That(maybePositions.IsT0).IsTrue();
+			await Assert.That(maybePositions.IsIndex).IsTrue();
 
-			var positions = maybePositions.AsT0;
+			var positions = maybePositions.AsIndex;
 
 			await Assert.That(positions).ContainsKey("WHO");
 			await Assert.That(positions).ContainsKey("DOING");
@@ -501,9 +501,9 @@ Existing games which have softcoded 'who' commands.
 			var fileInfo = new FileInfo(testFilePath);
 			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
 
-			await Assert.That(maybePositions.IsT0).IsTrue();
+			await Assert.That(maybePositions.IsIndex).IsTrue();
 
-			var positions = maybePositions.AsT0;
+			var positions = maybePositions.AsIndex;
 
 			await Assert.That(positions).ContainsKey("help");
 			await Assert.That(positions).ContainsKey("newbie");
@@ -555,9 +555,9 @@ Existing games which have softcoded 'who' commands.
 			var fileInfo = new FileInfo(testFilePath);
 			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
 
-			await Assert.That(maybePositions.IsT0).IsTrue();
+			await Assert.That(maybePositions.IsIndex).IsTrue();
 
-			var positions = maybePositions.AsT0;
+			var positions = maybePositions.AsIndex;
 
 			await Assert.That(positions).ContainsKey("help");
 			await Assert.That(positions).ContainsKey("topic2");
@@ -600,9 +600,9 @@ Existing games which have softcoded 'who' commands.
 			var fileInfo = new FileInfo(testFilePath);
 			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
 
-			await Assert.That(maybePositions.IsT0).IsTrue();
+			await Assert.That(maybePositions.IsIndex).IsTrue();
 
-			var positions = maybePositions.AsT0;
+			var positions = maybePositions.AsIndex;
 
 			// FUNCTION LIST and FUNCTION TYPES share the same range.
 			await Assert.That(positions["FUNCTION LIST"].Start).IsEqualTo(positions["FUNCTION TYPES"].Start);

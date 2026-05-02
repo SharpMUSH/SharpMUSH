@@ -1693,12 +1693,12 @@ public partial class Functions
 		var victAttr = HelperFunctions.SplitDbRefAndOptionalAttr(victimAttribute);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		if (victAttr.IsT1)
+		if (victAttr.IsNone())
 		{
 			return Errors.ErrorBadArgumentFormat;
 		}
 
-		var victRefOrAttr = victAttr.AsT0;
+		var victRefOrAttr = victAttr.AsValue();
 		var victim = victRefOrAttr.ObjSpecifier;
 		var attr = victRefOrAttr.Attribute;
 

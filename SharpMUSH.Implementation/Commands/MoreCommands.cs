@@ -1093,9 +1093,9 @@ public partial class Commands
 
 		// Trigger @drop attribute on the object (command-specific attribute)
 		var dropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, AttrDrop, IAttributeService.AttributeMode.Read, true);
-		if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
+		if (dropAttr.IsAttribute && dropAttr.AsAttribute.Length > 0)
 		{
-			var dropMsg = dropAttr.AsT0[0].Value;
+			var dropMsg = dropAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(dropMsg.ToPlainText()))
 			{
 				await NotifyService!.Notify(executor, dropMsg, executor);
@@ -1104,9 +1104,9 @@ public partial class Commands
 
 		// Trigger @odrop attribute (show to others in room)
 		var odropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, AttrODrop, IAttributeService.AttributeMode.Read, true);
-		if (odropAttr.IsAttribute && odropAttr.AsT0.Length > 0)
+		if (odropAttr.IsAttribute && odropAttr.AsAttribute.Length > 0)
 		{
-			var odropMsg = odropAttr.AsT0[0].Value;
+			var odropMsg = odropAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(odropMsg.ToPlainText()))
 			{
 				// Notify others in room (exclude executor)
@@ -1122,9 +1122,9 @@ public partial class Commands
 		// Trigger @adrop attribute (actions)
 		// Executor = the dropped object; enactor = the player who dropped it (PennMUSH @a* semantics)
 		var adropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, AttrADrop, IAttributeService.AttributeMode.Read, true);
-		if (adropAttr.IsAttribute && adropAttr.AsT0.Length > 0)
+		if (adropAttr.IsAttribute && adropAttr.AsAttribute.Length > 0)
 		{
-			var adropActions = adropAttr.AsT0[0].Value;
+			var adropActions = adropAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(adropActions.ToPlainText()))
 			{
 				await parser.With(
@@ -1139,7 +1139,7 @@ public partial class Commands
 			var room = currentRoom.AsRoom;
 			var dropToLocation = await room.Location.WithCancellation(CancellationToken.None);
 
-			if (!dropToLocation.IsT3) // Not None
+			if (!dropToLocation.IsNone) // Not None
 			{
 				// Check dropto lock
 				if (LockService!.Evaluate(LockType.DropTo, room, objectToDrop))
@@ -1311,9 +1311,9 @@ public partial class Commands
 
 				// Trigger @success attribute on the item (like GET does)
 				var successAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
-				if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
+				if (successAttr.IsAttribute && successAttr.AsAttribute.Length > 0)
 				{
-					var successMsg = successAttr.AsT0[0].Value;
+					var successMsg = successAttr.AsAttribute[0].Value;
 					if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
 					{
 						await NotifyService!.Notify(executor, successMsg, executor);
@@ -1323,9 +1323,9 @@ public partial class Commands
 				// Trigger @asuccess attribute (actions)
 				// Executor = the item being picked up; enactor = player (PennMUSH @a* semantics)
 				var asuccessAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrASuccess, IAttributeService.AttributeMode.Read, true);
-				if (asuccessAttr.IsAttribute && asuccessAttr.AsT0.Length > 0)
+				if (asuccessAttr.IsAttribute && asuccessAttr.AsAttribute.Length > 0)
 				{
-					var asuccessActions = asuccessAttr.AsT0[0].Value;
+					var asuccessActions = asuccessAttr.AsAttribute[0].Value;
 					if (!string.IsNullOrEmpty(asuccessActions.ToPlainText()))
 					{
 						await parser.With(
@@ -1352,9 +1352,9 @@ public partial class Commands
 
 				// Trigger @success attribute on the item
 				var successAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
-				if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
+				if (successAttr.IsAttribute && successAttr.AsAttribute.Length > 0)
 				{
-					var successMsg = successAttr.AsT0[0].Value;
+					var successMsg = successAttr.AsAttribute[0].Value;
 					if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
 					{
 						await NotifyService!.Notify(executor, successMsg, executor);
@@ -1390,9 +1390,9 @@ public partial class Commands
 
 				// Trigger @drop attribute on the object
 				var dropAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrDrop, IAttributeService.AttributeMode.Read, true);
-				if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
+				if (dropAttr.IsAttribute && dropAttr.AsAttribute.Length > 0)
 				{
-					var dropMsg = dropAttr.AsT0[0].Value;
+					var dropMsg = dropAttr.AsAttribute[0].Value;
 					if (!string.IsNullOrEmpty(dropMsg.ToPlainText()))
 					{
 						await NotifyService!.Notify(executor, dropMsg, executor);
@@ -1402,9 +1402,9 @@ public partial class Commands
 				// Trigger @adrop attribute (actions)
 				// Executor = the dropped item; enactor = player (PennMUSH @a* semantics)
 				var adropAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrADrop, IAttributeService.AttributeMode.Read, true);
-				if (adropAttr.IsAttribute && adropAttr.AsT0.Length > 0)
+				if (adropAttr.IsAttribute && adropAttr.AsAttribute.Length > 0)
 				{
-					var adropActions = adropAttr.AsT0[0].Value;
+					var adropActions = adropAttr.AsAttribute[0].Value;
 					if (!string.IsNullOrEmpty(adropActions.ToPlainText()))
 					{
 						await parser.With(
@@ -1480,9 +1480,9 @@ public partial class Commands
 		{
 			// Trigger @efail attribute
 			var efailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrEFail, IAttributeService.AttributeMode.Read, true);
-			if (efailAttr.IsAttribute && efailAttr.AsT0.Length > 0)
+			if (efailAttr.IsAttribute && efailAttr.AsAttribute.Length > 0)
 			{
-				var efailMsg = efailAttr.AsT0[0].Value;
+				var efailMsg = efailAttr.AsAttribute[0].Value;
 				if (!string.IsNullOrEmpty(efailMsg.ToPlainText()))
 				{
 					await NotifyService!.Notify(executor, efailMsg, executor);
@@ -1495,9 +1495,9 @@ public partial class Commands
 
 			// Trigger @oefail attribute (shown to others in room)
 			var oefailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrOEFail, IAttributeService.AttributeMode.Read, true);
-			if (oefailAttr.IsAttribute && oefailAttr.AsT0.Length > 0)
+			if (oefailAttr.IsAttribute && oefailAttr.AsAttribute.Length > 0)
 			{
-				var oefailMsg = oefailAttr.AsT0[0].Value;
+				var oefailMsg = oefailAttr.AsAttribute[0].Value;
 				if (!string.IsNullOrEmpty(oefailMsg.ToPlainText()))
 				{
 					// Notify others in current location (exclude executor)
@@ -1514,9 +1514,9 @@ public partial class Commands
 			// Trigger @aefail attribute (actions)
 			// Executor = the container whose enter-lock failed; enactor = player (PennMUSH @a* semantics)
 			var aefailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrAEFail, IAttributeService.AttributeMode.Read, true);
-			if (aefailAttr.IsAttribute && aefailAttr.AsT0.Length > 0)
+			if (aefailAttr.IsAttribute && aefailAttr.AsAttribute.Length > 0)
 			{
-				var aefailActions = aefailAttr.AsT0[0].Value;
+				var aefailActions = aefailAttr.AsAttribute[0].Value;
 				if (!string.IsNullOrEmpty(aefailActions.ToPlainText()))
 				{
 					await parser.With(
@@ -1554,9 +1554,9 @@ public partial class Commands
 
 		// Trigger @enter attribute (shown to entering player) (command-specific attribute)
 		var enterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrEnter, IAttributeService.AttributeMode.Read, true);
-		if (enterAttr.IsAttribute && enterAttr.AsT0.Length > 0)
+		if (enterAttr.IsAttribute && enterAttr.AsAttribute.Length > 0)
 		{
-			var enterMsg = enterAttr.AsT0[0].Value;
+			var enterMsg = enterAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(enterMsg.ToPlainText()))
 			{
 				await NotifyService!.Notify(executor, enterMsg, executor);
@@ -1565,9 +1565,9 @@ public partial class Commands
 
 		// Trigger @oenter attribute (shown to others inside)
 		var oenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrOEnter, IAttributeService.AttributeMode.Read, true);
-		if (oenterAttr.IsAttribute && oenterAttr.AsT0.Length > 0)
+		if (oenterAttr.IsAttribute && oenterAttr.AsAttribute.Length > 0)
 		{
-			var oenterMsg = oenterAttr.AsT0[0].Value;
+			var oenterMsg = oenterAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(oenterMsg.ToPlainText()))
 			{
 				// Notify others inside object (exclude executor)
@@ -1582,9 +1582,9 @@ public partial class Commands
 
 		// Trigger @oxenter attribute (shown to those in old location)
 		var oxenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrOXEnter, IAttributeService.AttributeMode.Read, true);
-		if (oxenterAttr.IsAttribute && oxenterAttr.AsT0.Length > 0)
+		if (oxenterAttr.IsAttribute && oxenterAttr.AsAttribute.Length > 0)
 		{
-			var oxenterMsg = oxenterAttr.AsT0[0].Value;
+			var oxenterMsg = oxenterAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(oxenterMsg.ToPlainText()))
 			{
 				// Notify others in old location (exclude executor)
@@ -1600,9 +1600,9 @@ public partial class Commands
 		// Trigger @aenter attribute (actions)
 		// Executor = the container being entered; enactor = player (PennMUSH @a* semantics)
 		var aenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrAEnter, IAttributeService.AttributeMode.Read, true);
-		if (aenterAttr.IsAttribute && aenterAttr.AsT0.Length > 0)
+		if (aenterAttr.IsAttribute && aenterAttr.AsAttribute.Length > 0)
 		{
-			var aenterActions = aenterAttr.AsT0[0].Value;
+			var aenterActions = aenterAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(aenterActions.ToPlainText()))
 			{
 				await parser.With(
@@ -1793,9 +1793,9 @@ public partial class Commands
 
 		// Trigger @success attribute on the object (command-specific attribute)
 		var successAttr = await AttributeService!.GetAttributeAsync(executor, objectToGet, AttrSuccess, IAttributeService.AttributeMode.Read, true);
-		if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
+		if (successAttr.IsAttribute && successAttr.AsAttribute.Length > 0)
 		{
-			var successMsg = successAttr.AsT0[0].Value;
+			var successMsg = successAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
 			{
 				await NotifyService!.Notify(executor, successMsg, executor);
@@ -1808,9 +1808,9 @@ public partial class Commands
 
 		// Trigger @osuccess attribute (shown to others in room)
 		var osuccessAttr = await AttributeService!.GetAttributeAsync(executor, objectToGet, AttrOSuccess, IAttributeService.AttributeMode.Read, true);
-		if (osuccessAttr.IsAttribute && osuccessAttr.AsT0.Length > 0)
+		if (osuccessAttr.IsAttribute && osuccessAttr.AsAttribute.Length > 0)
 		{
-			var osuccessMsg = osuccessAttr.AsT0[0].Value;
+			var osuccessMsg = osuccessAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(osuccessMsg.ToPlainText()))
 			{
 				// Notify others in source location (exclude executor)
@@ -1826,9 +1826,9 @@ public partial class Commands
 		// Trigger @asuccess attribute (actions)
 		// Executor = the object being gotten; enactor = player (PennMUSH @a* semantics)
 		var asuccessAttr = await AttributeService!.GetAttributeAsync(executor, objectToGet, AttrASuccess, IAttributeService.AttributeMode.Read, true);
-		if (asuccessAttr.IsAttribute && asuccessAttr.AsT0.Length > 0)
+		if (asuccessAttr.IsAttribute && asuccessAttr.AsAttribute.Length > 0)
 		{
-			var asuccessActions = asuccessAttr.AsT0[0].Value;
+			var asuccessActions = asuccessAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(asuccessActions.ToPlainText()))
 			{
 				await parser.With(
@@ -1964,9 +1964,9 @@ public partial class Commands
 
 		// Trigger @give attribute on executor
 		var giveAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrGive, IAttributeService.AttributeMode.Read, true);
-		if (giveAttr.IsAttribute && giveAttr.AsT0.Length > 0)
+		if (giveAttr.IsAttribute && giveAttr.AsAttribute.Length > 0)
 		{
-			var giveMsg = giveAttr.AsT0[0].Value;
+			var giveMsg = giveAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(giveMsg.ToPlainText()))
 			{
 				await NotifyService!.Notify(executor, giveMsg, executor);
@@ -1979,9 +1979,9 @@ public partial class Commands
 
 		// Trigger @ogive attribute (shown to others in room)
 		var ogiveAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrOGive, IAttributeService.AttributeMode.Read, true);
-		if (ogiveAttr.IsAttribute && ogiveAttr.AsT0.Length > 0)
+		if (ogiveAttr.IsAttribute && ogiveAttr.AsAttribute.Length > 0)
 		{
-			var ogiveMsg = ogiveAttr.AsT0[0].Value;
+			var ogiveMsg = ogiveAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(ogiveMsg.ToPlainText()))
 			{
 				// Notify others in room (exclude executor and recipient)
@@ -1997,9 +1997,9 @@ public partial class Commands
 
 		// Trigger @agive attribute (actions)
 		var agiveAttr = await AttributeService!.GetAttributeAsync(executor, executor, AttrAGive, IAttributeService.AttributeMode.Read, true);
-		if (agiveAttr.IsAttribute && agiveAttr.AsT0.Length > 0)
+		if (agiveAttr.IsAttribute && agiveAttr.AsAttribute.Length > 0)
 		{
-			var agiveActions = agiveAttr.AsT0[0].Value;
+			var agiveActions = agiveAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(agiveActions.ToPlainText()))
 			{
 				await parser.CommandParse(agiveActions);
@@ -2008,9 +2008,9 @@ public partial class Commands
 
 		// Trigger @receive attribute on recipient
 		var receiveAttr = await AttributeService!.GetAttributeAsync(executor, recipient, AttrReceive, IAttributeService.AttributeMode.Read, true);
-		if (receiveAttr.IsAttribute && receiveAttr.AsT0.Length > 0)
+		if (receiveAttr.IsAttribute && receiveAttr.AsAttribute.Length > 0)
 		{
-			var receiveMsg = receiveAttr.AsT0[0].Value;
+			var receiveMsg = receiveAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(receiveMsg.ToPlainText()) && !isSilent)
 			{
 				await NotifyService!.Notify(recipient, receiveMsg);
@@ -2023,9 +2023,9 @@ public partial class Commands
 
 		// Trigger @oreceive attribute (shown to others in room)
 		var oreceiveAttr = await AttributeService!.GetAttributeAsync(executor, recipient, AttrOReceive, IAttributeService.AttributeMode.Read, true);
-		if (oreceiveAttr.IsAttribute && oreceiveAttr.AsT0.Length > 0)
+		if (oreceiveAttr.IsAttribute && oreceiveAttr.AsAttribute.Length > 0)
 		{
-			var oreceiveMsg = oreceiveAttr.AsT0[0].Value;
+			var oreceiveMsg = oreceiveAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(oreceiveMsg.ToPlainText()))
 			{
 				// Notify others in room (exclude executor and recipient)
@@ -2042,9 +2042,9 @@ public partial class Commands
 		// Trigger @areceive attribute (actions)
 		// Executor = the recipient; enactor = player who gave (PennMUSH @a* semantics)
 		var areceiveAttr = await AttributeService!.GetAttributeAsync(executor, recipient, AttrAReceive, IAttributeService.AttributeMode.Read, true);
-		if (areceiveAttr.IsAttribute && areceiveAttr.AsT0.Length > 0)
+		if (areceiveAttr.IsAttribute && areceiveAttr.AsAttribute.Length > 0)
 		{
-			var areceiveActions = areceiveAttr.AsT0[0].Value;
+			var areceiveActions = areceiveAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(areceiveActions.ToPlainText()))
 			{
 				await parser.With(
@@ -2056,9 +2056,9 @@ public partial class Commands
 		// Trigger @success attribute on object being given
 		// Executor = the object being given; enactor = player who gave (PennMUSH @a* semantics)
 		var successAttr = await AttributeService!.GetAttributeAsync(executor, objectToGive, AttrSuccess, IAttributeService.AttributeMode.Read, true);
-		if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
+		if (successAttr.IsAttribute && successAttr.AsAttribute.Length > 0)
 		{
-			var successActions = successAttr.AsT0[0].Value;
+			var successActions = successAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(successActions.ToPlainText()))
 			{
 				await parser.With(
@@ -2206,9 +2206,9 @@ public partial class Commands
 		{
 			// Trigger @lfail attribute on the container (message to leaver)
 			var lfailAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrLFail, IAttributeService.AttributeMode.Read, true);
-			if (lfailAttr.IsAttribute && lfailAttr.AsT0.Length > 0)
+			if (lfailAttr.IsAttribute && lfailAttr.AsAttribute.Length > 0)
 			{
-				var lfailMsg = lfailAttr.AsT0[0].Value;
+				var lfailMsg = lfailAttr.AsAttribute[0].Value;
 				if (!string.IsNullOrEmpty(lfailMsg.ToPlainText()))
 				{
 					await NotifyService!.Notify(executor, lfailMsg, executor);
@@ -2221,9 +2221,9 @@ public partial class Commands
 
 			// Trigger @olfail attribute (shown to others inside container)
 			var olfailAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrOLFail, IAttributeService.AttributeMode.Read, true);
-			if (olfailAttr.IsAttribute && olfailAttr.AsT0.Length > 0)
+			if (olfailAttr.IsAttribute && olfailAttr.AsAttribute.Length > 0)
 			{
-				var olfailMsg = olfailAttr.AsT0[0].Value;
+				var olfailMsg = olfailAttr.AsAttribute[0].Value;
 				if (!string.IsNullOrEmpty(olfailMsg.ToPlainText()))
 				{
 					// Notify others inside the container (excluding executor)
@@ -2235,9 +2235,9 @@ public partial class Commands
 			// Trigger @alfail attribute (actions on failed leave)
 			// Executor = the container whose leave-lock failed; enactor = player (PennMUSH @a* semantics)
 			var alfailAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrALFail, IAttributeService.AttributeMode.Read, true);
-			if (alfailAttr.IsAttribute && alfailAttr.AsT0.Length > 0)
+			if (alfailAttr.IsAttribute && alfailAttr.AsAttribute.Length > 0)
 			{
-				var alfailActions = alfailAttr.AsT0[0].Value;
+				var alfailActions = alfailAttr.AsAttribute[0].Value;
 				if (!string.IsNullOrEmpty(alfailActions.ToPlainText()))
 				{
 					await parser.With(
@@ -2266,9 +2266,9 @@ public partial class Commands
 
 		// Trigger @leave attribute on the container (message to leaver) (command-specific attribute)
 		var leaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrLeave, IAttributeService.AttributeMode.Read, true);
-		if (leaveAttr.IsAttribute && leaveAttr.AsT0.Length > 0)
+		if (leaveAttr.IsAttribute && leaveAttr.AsAttribute.Length > 0)
 		{
-			var leaveMsg = leaveAttr.AsT0[0].Value;
+			var leaveMsg = leaveAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(leaveMsg.ToPlainText()))
 			{
 				await NotifyService!.Notify(executor, leaveMsg, executor);
@@ -2281,9 +2281,9 @@ public partial class Commands
 
 		// Trigger @oleave attribute (shown to others inside the container)
 		var oleaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrOLeave, IAttributeService.AttributeMode.Read, true);
-		if (oleaveAttr.IsAttribute && oleaveAttr.AsT0.Length > 0)
+		if (oleaveAttr.IsAttribute && oleaveAttr.AsAttribute.Length > 0)
 		{
-			var oleaveMsg = oleaveAttr.AsT0[0].Value;
+			var oleaveMsg = oleaveAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(oleaveMsg.ToPlainText()))
 			{
 				// Notify others inside the container (excluding executor)
@@ -2294,9 +2294,9 @@ public partial class Commands
 
 		// Trigger @oxleave attribute (shown to others in destination location)
 		var oxleaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrOXLeave, IAttributeService.AttributeMode.Read, true);
-		if (oxleaveAttr.IsAttribute && oxleaveAttr.AsT0.Length > 0)
+		if (oxleaveAttr.IsAttribute && oxleaveAttr.AsAttribute.Length > 0)
 		{
-			var oxleaveMsg = oxleaveAttr.AsT0[0].Value;
+			var oxleaveMsg = oxleaveAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(oxleaveMsg.ToPlainText()))
 			{
 				// Notify others in the destination location (excluding executor)
@@ -2308,9 +2308,9 @@ public partial class Commands
 		// Trigger @aleave attribute (actions after leaving)
 		// Executor = the container left; enactor = player (PennMUSH @a* semantics)
 		var aleaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrALeave, IAttributeService.AttributeMode.Read, true);
-		if (aleaveAttr.IsAttribute && aleaveAttr.AsT0.Length > 0)
+		if (aleaveAttr.IsAttribute && aleaveAttr.AsAttribute.Length > 0)
 		{
-			var aleaveActions = aleaveAttr.AsT0[0].Value;
+			var aleaveActions = aleaveAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(aleaveActions.ToPlainText()))
 			{
 				await parser.With(
@@ -2681,9 +2681,9 @@ public partial class Commands
 		{
 			// Trigger @UFAIL attribute (use failure message)
 			var ufailAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "UFAIL", IAttributeService.AttributeMode.Read, true);
-			if (ufailAttr.IsAttribute && ufailAttr.AsT0.Length > 0)
+			if (ufailAttr.IsAttribute && ufailAttr.AsAttribute.Length > 0)
 			{
-				var ufailMsg = ufailAttr.AsT0[0].Value;
+				var ufailMsg = ufailAttr.AsAttribute[0].Value;
 				if (!string.IsNullOrEmpty(ufailMsg.ToPlainText()))
 				{
 					await NotifyService!.Notify(executor, ufailMsg, executor);
@@ -2696,9 +2696,9 @@ public partial class Commands
 
 			// Trigger @OUFAIL attribute (others see this)
 			var oufailAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "OUFAIL", IAttributeService.AttributeMode.Read, true);
-			if (oufailAttr.IsAttribute && oufailAttr.AsT0.Length > 0)
+			if (oufailAttr.IsAttribute && oufailAttr.AsAttribute.Length > 0)
 			{
-				var oufailMsg = oufailAttr.AsT0[0].Value;
+				var oufailMsg = oufailAttr.AsAttribute[0].Value;
 				if (!string.IsNullOrEmpty(oufailMsg.ToPlainText()))
 				{
 					var executorLocation = await executor.Where();
@@ -2710,9 +2710,9 @@ public partial class Commands
 			// Trigger @AUFAIL attribute (actions on failure)
 			// Executor = the object with @AUFAIL; enactor = player (PennMUSH @a* semantics)
 			var aufailAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "AUFAIL", IAttributeService.AttributeMode.Read, true);
-			if (aufailAttr.IsAttribute && aufailAttr.AsT0.Length > 0)
+			if (aufailAttr.IsAttribute && aufailAttr.AsAttribute.Length > 0)
 			{
-				var aufailActions = aufailAttr.AsT0[0].Value;
+				var aufailActions = aufailAttr.AsAttribute[0].Value;
 				if (!string.IsNullOrEmpty(aufailActions.ToPlainText()))
 				{
 					await parser.With(
@@ -2726,9 +2726,9 @@ public partial class Commands
 
 		// Trigger @USE attribute (what happens when used successfully)
 		var useAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "USE", IAttributeService.AttributeMode.Read, true);
-		if (useAttr.IsAttribute && useAttr.AsT0.Length > 0)
+		if (useAttr.IsAttribute && useAttr.AsAttribute.Length > 0)
 		{
-			var useMsg = useAttr.AsT0[0].Value;
+			var useMsg = useAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(useMsg.ToPlainText()))
 			{
 				await NotifyService!.Notify(executor, useMsg, executor);
@@ -2741,9 +2741,9 @@ public partial class Commands
 
 		// Trigger @OUSE attribute (others see this)
 		var ouseAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "OUSE", IAttributeService.AttributeMode.Read, true);
-		if (ouseAttr.IsAttribute && ouseAttr.AsT0.Length > 0)
+		if (ouseAttr.IsAttribute && ouseAttr.AsAttribute.Length > 0)
 		{
-			var ouseMsg = ouseAttr.AsT0[0].Value;
+			var ouseMsg = ouseAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(ouseMsg.ToPlainText()))
 			{
 				var executorLocation = await executor.Where();
@@ -2755,9 +2755,9 @@ public partial class Commands
 		// Trigger @AUSE attribute (actions after use)
 		// Executor = the object used; enactor = player (PennMUSH @a* semantics)
 		var auseAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "AUSE", IAttributeService.AttributeMode.Read, true);
-		if (auseAttr.IsAttribute && auseAttr.AsT0.Length > 0)
+		if (auseAttr.IsAttribute && auseAttr.AsAttribute.Length > 0)
 		{
-			var auseActions = auseAttr.AsT0[0].Value;
+			var auseActions = auseAttr.AsAttribute[0].Value;
 			if (!string.IsNullOrEmpty(auseActions.ToPlainText()))
 			{
 				await parser.With(

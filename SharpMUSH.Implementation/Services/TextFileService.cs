@@ -289,7 +289,7 @@ public class TextFileService : ITextFileService
 
 		if (result.IsError)
 		{
-			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, result.AsT1.Value);
+			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, result.AsError.Value);
 			return Task.CompletedTask;
 		}
 

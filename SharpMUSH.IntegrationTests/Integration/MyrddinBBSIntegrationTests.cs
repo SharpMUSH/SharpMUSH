@@ -2,7 +2,6 @@ using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -101,11 +100,9 @@ public class MyrddinBBSIntegrationTests
 		var args = call.GetArguments();
 		if (args.Length < 2) return null;
 
-		if (args[1] is OneOf<MString, string> oneOf)
+		if (args[1] is SharpMessage msg)
 		{
-			return oneOf.Match(
-				mstr => mstr.ToString(),
-				str => str);
+			return msg.ToString();
 		}
 
 		if (args[1] is string str2)

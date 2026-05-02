@@ -24,10 +24,4 @@ public union HelpIndexPositions(System.Collections.Generic.Dictionary<string, (l
 
 	public System.Collections.Generic.Dictionary<string, (long Start, long End)> AsIndex => (System.Collections.Generic.Dictionary<string, (long Start, long End)>)Value!;
 	public SharpError AsError => (SharpError)Value!;
-
-	// Backward-compat aliases
-	public System.Collections.Generic.Dictionary<string, (long Start, long End)> AsT0 => AsIndex;
-	public SharpError AsT1 => AsError;
-	public bool IsT0 => IsIndex;
-	public bool IsT1 => IsError;
 }

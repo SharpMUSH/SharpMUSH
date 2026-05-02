@@ -184,7 +184,7 @@ public partial class Functions
 		{
 			var splitTransform = HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText());
 
-			if (splitTransform.IsT1)
+			if (splitTransform.IsNone())
 			{
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
@@ -193,7 +193,7 @@ public partial class Functions
 				LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
-					splitTransform.AsT0.Db,
+					splitTransform.AsValue().Db,
 					LocateFlags.All);
 
 			if (transformationObject.IsError)
@@ -202,25 +202,25 @@ public partial class Functions
 			}
 
 			actualTransformationObject = transformationObject.AsSharpObject;
-			actualTransformAttribute = splitTransform.AsT0.Attribute;
+			actualTransformAttribute = splitTransform.AsValue().Attribute;
 		}
 
 		if (hasTransform && hasNull)
 		{
 			var splitNull = HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText());
 
-			if (splitNull.IsT1)
+			if (splitNull.IsNone())
 			{
 				return new CallState(Errors.ErrorObjectAttributeString);
 			}
 
-			actualNullAttribute = splitNull.AsT0.Attribute;
+			actualNullAttribute = splitNull.AsValue().Attribute;
 
 			var nullObject = await
 				LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
-					splitNull.AsT0.Db,
+					splitNull.AsValue().Db,
 					LocateFlags.All);
 
 			if (nullObject.IsError)
@@ -910,7 +910,7 @@ public partial class Functions
 		}
 
 		return CryptoHelpers.hashAlgorithms.ContainsKey(arg0)
-			? CryptoHelpers.Digest(arg0, arg1!).AsT0
+			? CryptoHelpers.Digest(arg0, arg1!).AsValue()
 			: Errors.ErrorArgRange;
 	}
 
