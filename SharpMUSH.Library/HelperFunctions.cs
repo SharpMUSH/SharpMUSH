@@ -100,12 +100,17 @@ public static partial class HelperFunctions
 				.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
 										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
 		}
-		catch (Exception e) when (e is NotSupportedException or InvalidOperationException)
+		catch (NotSupportedException)
 		{
-			// Core.Arango 3.12.x can throw NotSupportedException or InvalidOperationException from
+			// Core.Arango 3.12.x can throw NotSupportedException (or InvalidOperationException) from
 			// ExecuteStreamAsync.DisposeAsync() in a race condition. Treat as "no power" so callers
 			// (e.g. PermissionService.Controls) degrade gracefully instead of crashing or silently
 			// aborting the enclosing operation.
+			return false;
+		}
+		catch (InvalidOperationException)
+		{
+			// Same as NotSupportedException above.
 			return false;
 		}
 	}
@@ -118,8 +123,17 @@ public static partial class HelperFunctions
 				.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
 										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
 		}
-		catch (Exception e) when (e is NotSupportedException or InvalidOperationException)
+		catch (NotSupportedException)
 		{
+			// Core.Arango 3.12.x can throw NotSupportedException (or InvalidOperationException) from
+			// ExecuteStreamAsync.DisposeAsync() in a race condition. Treat as "no power" so callers
+			// (e.g. PermissionService.Controls) degrade gracefully instead of crashing or silently
+			// aborting the enclosing operation.
+			return false;
+		}
+		catch (InvalidOperationException)
+		{
+			// Same as NotSupportedException above.
 			return false;
 		}
 	}
