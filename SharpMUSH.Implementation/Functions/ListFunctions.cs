@@ -1729,39 +1729,30 @@ public partial class Functions
 		return new CallState(argsArray[^1].Value.Message);
 	}
 
-	[SharpFunction(Name = "strallof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression..."])]
-	public static async ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "strallof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]
+	public static ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		// PennMUSH strallof(expr1, expr2, ..., exprN, delimiter):
-		// Last arg is output delimiter. Evaluate each remaining arg.
-		// Return all non-empty string results joined by the delimiter.
+		// strallof(expr1, expr2, ..., exprN, delimiter):
+		// Last arg is output delimiter. Return all non-empty results joined by it.
 		if (args.Count < 2)
 		{
-			// With 0 or 1 arg, there's no delimiter — just return empty
-			return CallState.Empty;
+			return ValueTask.FromResult(CallState.Empty);
 		}
 
-		// Last arg is the delimiter (evaluate it)
-		var delimArg = args[(args.Count - 1).ToString()];
-		var delimParsed = await parser.FunctionParse(delimArg.Message!);
-		var delimiter = MModule.plainText(delimParsed!.Message);
-
-		// Evaluate all args except the last (delimiter)
+		var delimiter = MModule.plainText(args[(args.Count - 1).ToString()].Message);
 		var nonEmptyValues = new List<string>();
 		for (var i = 0; i < args.Count - 1; i++)
 		{
-			var parsed = await parser.FunctionParse(args[i.ToString()].Message!);
-			var value = MModule.plainText(parsed!.Message);
-			// strallof: include if non-empty STRING (unlike allof which checks truthiness)
+			var value = MModule.plainText(args[i.ToString()].Message);
 			if (!string.IsNullOrEmpty(value))
 			{
 				nonEmptyValues.Add(value);
 			}
 		}
 
-		return new CallState(string.Join(delimiter, nonEmptyValues));
+		return ValueTask.FromResult(new CallState(string.Join(delimiter, nonEmptyValues)));
 	}
 
 	[SharpFunction(Name = "table", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "width", "delimiter", "line-delimiter"])]
