@@ -563,6 +563,66 @@ All 126 commands are present. Focus on behavioral correctness.
 
 ---
 
+## Phase 7: Pretty Softcode (SharpMUSH Extension)
+
+---
+
+### Overview
+
+SharpMUSH extension (deliberate divergence from PennMUSH) to allow human-readable, prettified softcode with proper indentation, newlines, and formatting — the kind of whitespace you'd expect in a real programming language.
+
+### Design Decisions
+
+**PRETTY attribute flag:**
+- Per-attribute flag that enables multi-line storage, syntax highlighting, and formatted examine output.
+- Opt-in — existing softcode is unchanged. Only attributes with PRETTY set get the new behavior.
+
+**Storage:**
+- Whitespace (indentation, newlines) is stored as-is in the attribute. The prettified form IS the source of truth.
+
+**Evaluation (minifier):**
+- At evaluation time, a preprocessing minifier strips cosmetic whitespace before feeding the content to the ANTLR parser.
+- Output is identical to the equivalent compact/single-line form.
+- Minifier rules (TBD, but likely): newline + surrounding whitespace collapses to empty or single space (like HTML). Explicit `%r` produces a real newline in output.
+- Runs BEFORE PE_COMPRESS_SPACES — two different concerns at two different layers.
+
+**Input — Transport Divergence:**
+- **Websocket:** Can send multi-line payloads natively. Web client can offer a proper code editor (Monaco/CodeMirror) with syntax highlighting. This is the preferred "developer" input method.
+- **Telnet:** Stays single-line (`@set me/attr=code`). Telnet is line-oriented by nature (Enter sends a command). Could support heredoc-style multi-line (e.g. `@set me/attr=<<<END ... END`) in the future, but not required.
+- The divergence is acceptable: stored result is identical regardless of transport. The websocket client is a better editor, not a different language. Mirrors how git CLI vs web IDE works.
+
+**Examine Output — Box-Drawing Borders:**
+- PRETTY attributes render in examine with box-drawing characters and line numbers:
+  ```
+  CMD_ATTACK [#1]:
+  │  1  [setq(0, locate(me, *target, *))]
+  │  2  [if(
+  │  3    eq(%q0, #-1),
+  │  4    {Not found.},
+  │  5    {Attack!}
+  │  6  )]
+  ```
+- Solves two UX problems:
+  1. First-line offset: code starts on its own line, not jammed after the attribute name at some arbitrary column.
+  2. Attribute boundary: bottom border clearly marks where the code ends and the next attribute begins.
+- Non-PRETTY attributes still render single-line as always.
+- Line numbers enable meaningful error reporting: "Error on CMD_ATTACK line 3" instead of "somewhere in this wall of text."
+
+**@decompile:**
+- Outputs the raw stored form (prettified or compact, whatever was stored). For copy-paste extraction, not examine.
+
+### Implementation Tasks (TBD)
+
+1. Add PRETTY flag to attribute system
+2. Implement minifier (cosmetic whitespace stripping before ANTLR parse)
+3. Implement box-drawing examine renderer for PRETTY attributes
+4. Websocket multi-line input support
+5. Syntax highlighting for examine output (ANSI-colored keywords, functions, substitutions)
+6. Line-number-aware error reporting
+7. Tests: minifier correctness, evaluate equivalence between pretty and compact forms
+
+---
+
 ## Execution Priority
 
 0. **Phase 0** (Prove gaps exist) — Tests first, TDD approach
