@@ -149,6 +149,8 @@ public class UtilityFunctionUnitTests
 
 	[Test]
 	[Arguments("null()", "")]
+	[Arguments("null(a)", "")]
+	[Arguments("null(a,b,c)", "")]
 	public async Task Null(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -166,6 +168,8 @@ public class UtilityFunctionUnitTests
 
 	[Test]
 	[Arguments("@@(test)", "")]
+	[Arguments("@@()", "")]
+	[Arguments("@@({a,b,c})", "")]
 	public async Task AtAt(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
