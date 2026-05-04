@@ -56,9 +56,12 @@ public partial class Commands
 			executor,
 			args["1"].Message!.ToString(), LocateFlags.All | LocateFlags.NoVisibilityCheck, async realLocated =>
 			{
-				if (!args.TryGetValue("2", out var tmpContents))
+				if (!args.TryGetValue("2", out var tmpContents)
+					|| (!Configuration!.CurrentValue.Attribute.EmptyAttributes
+						&& string.IsNullOrEmpty(tmpContents.Message?.ToPlainText())))
 				{
-					// PennMUSH: & attr obj (no '=') deletes (wipes) the attribute.
+					// PennMUSH: & attr obj (no '=') always clears.
+					// & attr obj= (empty value) clears only when empty_attrs is off.
 					// command_atrset() in cmds.c passes executor to do_set_atr() for both
 					// match_controlled() permission check and notify().
 					// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/cmds.c#L1790
@@ -83,8 +86,8 @@ public partial class Commands
 				// - DirectInput clear → command is running from a queue/callback (@wait, @trigger,
 				//   @force, etc.); evaluate the value before storage, matching PennMUSH behavior.
 				var contents = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)
-					? tmpContents.Message!
-					: await tmpContents.ParsedMessage() ?? MModule.empty();
+					? tmpContents!.Message!
+					: await tmpContents!.ParsedMessage() ?? MModule.empty();
 
 				// command_atrset() in cmds.c passes executor to do_set_atr() for both
 				// match_controlled() permission check and notify().

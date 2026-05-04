@@ -51,4 +51,11 @@ public interface ISortService
 	/// <param name="keySelector">Transform from MString to string</param>
 	/// <returns>Sorted List</returns>
 	IAsyncEnumerable<MString> Sort(IAsyncEnumerable<MString> items, Func<MString, CancellationToken, ValueTask<string>> keySelector, IMUSHCodeParser parser, SortInformation sortData);
+
+	/// <summary>
+	/// Returns an IEqualityComparer for set membership testing based on the sort type.
+	/// Used by setunion/setdiff/setinter/setsymdiff to compare elements according to the
+	/// specified comparison mode (case-insensitive, integer, float, etc.)
+	/// </summary>
+	IEqualityComparer<string> GetEqualityComparer(SortInformation sortData);
 }

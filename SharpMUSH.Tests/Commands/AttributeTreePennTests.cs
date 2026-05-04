@@ -144,8 +144,8 @@ public class AttributeTreePennTests
 		// Set a tree attribute (creates FOO branch and FOO`BAR leaf)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
 
-		// Try to clear the branch FOO while it still has children
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {objDbRef}="));
+		// Try to clear the branch FOO while it still has children (no '=' = explicit clear)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {objDbRef}"));
 
 		// The branch should still exist (clear should have been rejected)
 		var branchAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO",
@@ -168,8 +168,8 @@ public class AttributeTreePennTests
 		// Set a tree attribute
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
 
-		// Clear the leaf FOO`BAR
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}="));
+		// Clear the leaf FOO`BAR (no '=' = explicit clear)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}"));
 
 		// The leaf should be gone
 		var leafAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO`BAR",
@@ -192,11 +192,11 @@ public class AttributeTreePennTests
 		// Set a tree attribute
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
 
-		// Clear the leaf first
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}="));
+		// Clear the leaf first (no '=' = explicit clear)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}"));
 
-		// Now clear the branch
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {objDbRef}="));
+		// Now clear the branch (no '=' = explicit clear)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {objDbRef}"));
 
 		// The branch should now be gone
 		var branchAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO",

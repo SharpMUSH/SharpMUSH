@@ -1967,6 +1967,8 @@ public partial class Functions
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		// PennMUSH: empty delimiter arg means use space (default)
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
@@ -1974,8 +1976,9 @@ public partial class Functions
 		var aList2 = MModule.splitList(delimiter, list2);
 
 		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
+		var comparer = SortService.GetEqualityComparer(sortTypeType);
 		var sorted = SortService.Sort(Enumerable.DistinctBy(aList1
-			.Concat(aList2), MModule.plainText), (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
+			.Concat(aList2), MModule.plainText, comparer), (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
 	}
@@ -1987,18 +1990,22 @@ public partial class Functions
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		// PennMUSH: empty delimiter arg means use space (default)
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
 		var aList1 = MModule.splitList(delimiter, list1);
 		var aList2 = MModule.splitList(delimiter, list2);
-		var set2 = new HashSet<string>(aList2.Select(MModule.plainText));
+
+		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
+		var comparer = SortService.GetEqualityComparer(sortTypeType);
+		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
 
 		// Elements in list1 that aren't in list2
 		var difference = aList1.Where(x => !set2.Contains(MModule.plainText(x)));
 
-		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = SortService.Sort(Enumerable.DistinctBy(difference, MModule.plainText),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(difference, MModule.plainText, comparer),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
@@ -2011,18 +2018,22 @@ public partial class Functions
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		// PennMUSH: empty delimiter arg means use space (default)
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
 		var aList1 = MModule.splitList(delimiter, list1);
 		var aList2 = MModule.splitList(delimiter, list2);
-		var set2 = new HashSet<string>(aList2.Select(MModule.plainText));
+
+		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
+		var comparer = SortService.GetEqualityComparer(sortTypeType);
+		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
 
 		// Elements that appear in both lists
 		var intersection = aList1.Where(x => set2.Contains(MModule.plainText(x)));
 
-		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = SortService.Sort(Enumerable.DistinctBy(intersection, MModule.plainText),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(intersection, MModule.plainText, comparer),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
@@ -2035,20 +2046,24 @@ public partial class Functions
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		// PennMUSH: empty delimiter arg means use space (default)
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
 		var aList1 = MModule.splitList(delimiter, list1);
 		var aList2 = MModule.splitList(delimiter, list2);
-		var set1 = new HashSet<string>(aList1.Select(MModule.plainText));
-		var set2 = new HashSet<string>(aList2.Select(MModule.plainText));
+
+		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
+		var comparer = SortService.GetEqualityComparer(sortTypeType);
+		var set1 = new HashSet<string>(aList1.Select(MModule.plainText), comparer);
+		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
 
 		// Elements that appear in only one of the lists
 		var symdiff = aList1.Where(x => !set2.Contains(MModule.plainText(x)))
 			.Concat(aList2.Where(x => !set1.Contains(MModule.plainText(x))));
 
-		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = SortService.Sort(Enumerable.DistinctBy(symdiff, MModule.plainText),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(symdiff, MModule.plainText, comparer),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));

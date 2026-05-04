@@ -251,4 +251,88 @@ public class SortService(ILocateService locateService, IConnectionService connec
 			yield return item;
 		}
 	}
+
+	/// <summary>
+	/// Returns an IEqualityComparer that mirrors how the sort type determines equality
+	/// for set membership testing. This ensures setunion/setinter/setdiff/setsymdiff
+	/// use the same comparison logic as sorting when determining duplicates.
+	/// </summary>
+	public IEqualityComparer<string> GetEqualityComparer(ISortService.SortInformation sortData) =>
+		sortData.Type switch
+		{
+			ISortService.SortType.IntegerSort => new NumericEqualityComparer(useFloat: false),
+			ISortService.SortType.DecimalSort => new NumericEqualityComparer(useFloat: true),
+			ISortService.SortType.CasedLexicographically => StringComparer.Ordinal,
+			ISortService.SortType.UncasedLexicographically => StringComparer.OrdinalIgnoreCase,
+			// NaturalSort (mudname, default): numeric strings compared by value, others case-insensitive
+			ISortService.SortType.NaturalSort => new MudnameEqualityComparer(),
+			_ => new MudnameEqualityComparer()
+		};
+
+	/// <summary>
+	/// PennMUSH mudname equality: if both values parse as numbers, compare numerically;
+	/// otherwise compare case-insensitively. This is the default for set functions.
+	/// </summary>
+	private sealed class MudnameEqualityComparer : IEqualityComparer<string>
+	{
+		public bool Equals(string? x, string? y)
+		{
+			if (x == y) return true;
+			if (x is null || y is null) return false;
+			if (double.TryParse(x, out var dx) && double.TryParse(y, out var dy))
+				return dx == dy;
+			return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+		}
+
+		public int GetHashCode(string obj)
+		{
+			if (double.TryParse(obj, out var d))
+				return d.GetHashCode();
+			return StringComparer.OrdinalIgnoreCase.GetHashCode(obj);
+		}
+	}
+
+	/// <summary>
+	/// Compares strings as numbers for set membership.
+	/// When useFloat=false (integer mode), truncates to long before comparing.
+	/// When useFloat=true (float mode), compares as doubles.
+	/// Non-numeric strings fall back to case-insensitive string comparison.
+	/// </summary>
+	private sealed class NumericEqualityComparer(bool useFloat) : IEqualityComparer<string>
+	{
+		public bool Equals(string? x, string? y)
+		{
+			if (x == y) return true;
+			if (x is null || y is null) return false;
+
+			if (useFloat)
+			{
+				if (double.TryParse(x, out var dx) && double.TryParse(y, out var dy))
+					return dx == dy;
+			}
+			else
+			{
+				if (double.TryParse(x, out var dx) && double.TryParse(y, out var dy))
+					return (long)dx == (long)dy;
+			}
+
+			return StringComparer.OrdinalIgnoreCase.Equals(x, y);
+		}
+
+		public int GetHashCode(string obj)
+		{
+			if (useFloat)
+			{
+				if (double.TryParse(obj, out var d))
+					return d.GetHashCode();
+			}
+			else
+			{
+				if (double.TryParse(obj, out var d))
+					return ((long)d).GetHashCode();
+			}
+
+			return StringComparer.OrdinalIgnoreCase.GetHashCode(obj);
+		}
+	}
 }

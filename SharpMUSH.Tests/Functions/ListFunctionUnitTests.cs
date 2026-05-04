@@ -323,9 +323,9 @@ public class ListFunctionUnitTests
 	[Arguments("setunion( b a ,b)", "a b")]
 	[Arguments("setunion( b a , b)", "a b")]
 	[Arguments("setunion( c a b a,a b c c)", "a b c")]
-	// Numeric comparison mode tests
-	[Arguments("setunion(0 1 2, 0.0 1.0 2.0)", "0 1 2 0.0 1.0 2.0")]
-	[Arguments("setunion(0.0 1.0 2.0, 0 1 2)", "0 1 2 0.0 1.0 2.0")]
+	// Numeric comparison mode tests (default sort is mudname/alpha — 0 ≠ 0.0 lexicographically)
+	[Arguments("setunion(0 1 2, 0.0 1.0 2.0)", "0 1 2")]
+	[Arguments("setunion(0.0 1.0 2.0, 0 1 2)", "0.0 1.0 2.0")]
 	[Arguments("setunion(0 1 2, 0.0 1.0 2,,i)", "0 0.0 1 1.0 2")]
 	[Arguments("setunion(0 1 2, 0.0 1.0 2,,n)", "0 1 2")]
 	[Arguments("setunion(0 1 2, 0.0 1.0 2,,f)", "0 1 2")]
