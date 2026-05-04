@@ -1,6 +1,7 @@
 using Mediator;
 using MoreLinq;
 using NaturalSort.Extension;
+using System.Globalization;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -10,8 +11,12 @@ namespace SharpMUSH.Library.Services;
 public class SortService(ILocateService locateService, IConnectionService connectionService, IMediator mediator)
 	: ISortService
 {
-	private readonly NaturalSortComparer _naturalSortComparer =
-		new(StringComparison.CurrentCultureIgnoreCase);
+	// Cached comparers — avoid allocations on every sort/set operation
+	private static readonly NaturalSortComparer NaturalSortComparerInstance =
+		new(StringComparison.OrdinalIgnoreCase);
+	private static readonly MudnameEqualityComparer MudnameComparerInstance = new();
+	private static readonly NumericEqualityComparer IntegerComparerInstance = new(useFloat: false);
+	private static readonly NumericEqualityComparer FloatComparerInstance = new(useFloat: true);
 
 	/// <summary>
 	/// Transforms string to Sort Data.
@@ -36,9 +41,9 @@ public class SortService(ILocateService locateService, IConnectionService connec
 	public ISortService.SortInformation StringToSortType(string sortType) =>
 		sortType switch
 		{
-			"a" => new ISortService.SortInformation(ISortService.SortType.UncasedLexicographically,
+			"a" => new ISortService.SortInformation(ISortService.SortType.CasedLexicographically,
 				OrderByDirection.Ascending, null),
-			"i" => new ISortService.SortInformation(ISortService.SortType.CasedLexicographically, OrderByDirection.Ascending,
+			"i" => new ISortService.SortInformation(ISortService.SortType.UncasedLexicographically, OrderByDirection.Ascending,
 				null),
 			"d" => new ISortService.SortInformation(ISortService.SortType.DbRef, OrderByDirection.Ascending, null),
 			"n" => new ISortService.SortInformation(ISortService.SortType.IntegerSort, OrderByDirection.Ascending, null),
@@ -55,9 +60,9 @@ public class SortService(ILocateService locateService, IConnectionService connec
 			"lattr" => new ISortService.SortInformation(ISortService.SortType.AttributeName, OrderByDirection.Ascending,
 				null),
 
-			"-a" => new ISortService.SortInformation(ISortService.SortType.UncasedLexicographically,
+			"-a" => new ISortService.SortInformation(ISortService.SortType.CasedLexicographically,
 				OrderByDirection.Descending, null),
-			"-i" => new ISortService.SortInformation(ISortService.SortType.CasedLexicographically,
+			"-i" => new ISortService.SortInformation(ISortService.SortType.UncasedLexicographically,
 				OrderByDirection.Descending, null),
 			"-d" => new ISortService.SortInformation(ISortService.SortType.DbRef, OrderByDirection.Descending, null),
 			"-n" => new ISortService.SortInformation(ISortService.SortType.IntegerSort, OrderByDirection.Descending, null),
@@ -103,16 +108,16 @@ public class SortService(ILocateService locateService, IConnectionService connec
 		{
 			ISortService.SortType.CasedLexicographically
 				=> source
-					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.CurrentCulture, direction),
+					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.Ordinal, direction),
 
 			ISortService.SortType.UncasedLexicographically
 				=> source
-					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.CurrentCultureIgnoreCase,
+					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.OrdinalIgnoreCase,
 						direction),
 
 			ISortService.SortType.DbRef
 				=> source
-					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.CurrentCulture, direction),
+					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.Ordinal, direction),
 
 			ISortService.SortType.IntegerSort
 				=> source
@@ -127,7 +132,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 					.Select(val => val.mString),
 
 			ISortService.SortType.NaturalSort
-				=> source.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), _naturalSortComparer, direction),
+				=> source.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), NaturalSortComparerInstance, direction),
 
 			ISortService.SortType.CasedName => source
 				.OrderByAwait(async (key, ct)
@@ -242,9 +247,9 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				.OrderByAwait(keySelector, StringComparer.OrdinalIgnoreCase.WithNaturalSort(), direction),
 
 			ISortService.SortType.Invalid
-				=> source.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.CurrentCulture,
+				=> source.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.Ordinal,
 					direction),
-			_ => source.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.CurrentCulture,
+			_ => source.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.Ordinal,
 				direction)
 		})
 		{
@@ -260,13 +265,13 @@ public class SortService(ILocateService locateService, IConnectionService connec
 	public IEqualityComparer<string> GetEqualityComparer(ISortService.SortInformation sortData) =>
 		sortData.Type switch
 		{
-			ISortService.SortType.IntegerSort => new NumericEqualityComparer(useFloat: false),
-			ISortService.SortType.DecimalSort => new NumericEqualityComparer(useFloat: true),
+			ISortService.SortType.IntegerSort => IntegerComparerInstance,
+			ISortService.SortType.DecimalSort => FloatComparerInstance,
 			ISortService.SortType.CasedLexicographically => StringComparer.Ordinal,
 			ISortService.SortType.UncasedLexicographically => StringComparer.OrdinalIgnoreCase,
 			// NaturalSort (mudname, default): numeric strings compared by value, others case-insensitive
-			ISortService.SortType.NaturalSort => new MudnameEqualityComparer(),
-			_ => new MudnameEqualityComparer()
+			ISortService.SortType.NaturalSort => MudnameComparerInstance,
+			_ => MudnameComparerInstance
 		};
 
 	/// <summary>
@@ -277,16 +282,17 @@ public class SortService(ILocateService locateService, IConnectionService connec
 	{
 		public bool Equals(string? x, string? y)
 		{
-			if (x == y) return true;
+			if (ReferenceEquals(x, y)) return true;
 			if (x is null || y is null) return false;
-			if (double.TryParse(x, out var dx) && double.TryParse(y, out var dy))
+			if (double.TryParse(x, NumberStyles.Float, CultureInfo.InvariantCulture, out var dx)
+				&& double.TryParse(y, NumberStyles.Float, CultureInfo.InvariantCulture, out var dy))
 				return dx == dy;
 			return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
 		}
 
 		public int GetHashCode(string obj)
 		{
-			if (double.TryParse(obj, out var d))
+			if (double.TryParse(obj, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
 				return d.GetHashCode();
 			return StringComparer.OrdinalIgnoreCase.GetHashCode(obj);
 		}
@@ -302,17 +308,19 @@ public class SortService(ILocateService locateService, IConnectionService connec
 	{
 		public bool Equals(string? x, string? y)
 		{
-			if (x == y) return true;
+			if (ReferenceEquals(x, y)) return true;
 			if (x is null || y is null) return false;
 
 			if (useFloat)
 			{
-				if (double.TryParse(x, out var dx) && double.TryParse(y, out var dy))
+				if (double.TryParse(x, NumberStyles.Float, CultureInfo.InvariantCulture, out var dx)
+					&& double.TryParse(y, NumberStyles.Float, CultureInfo.InvariantCulture, out var dy))
 					return dx == dy;
 			}
 			else
 			{
-				if (double.TryParse(x, out var dx) && double.TryParse(y, out var dy))
+				if (double.TryParse(x, NumberStyles.Float, CultureInfo.InvariantCulture, out var dx)
+					&& double.TryParse(y, NumberStyles.Float, CultureInfo.InvariantCulture, out var dy))
 					return (long)dx == (long)dy;
 			}
 
@@ -323,12 +331,12 @@ public class SortService(ILocateService locateService, IConnectionService connec
 		{
 			if (useFloat)
 			{
-				if (double.TryParse(obj, out var d))
+				if (double.TryParse(obj, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
 					return d.GetHashCode();
 			}
 			else
 			{
-				if (double.TryParse(obj, out var d))
+				if (double.TryParse(obj, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
 					return ((long)d).GetHashCode();
 			}
 
