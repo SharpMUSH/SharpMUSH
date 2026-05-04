@@ -29,7 +29,7 @@ public partial class Functions
 	public static ValueTask<CallState> Div(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		parser.CurrentState.Arguments.Skip(1).Any(x
 				=> decimal.TryParse(MModule.plainText(x.Value.Message), out var num) && num == 0)
-			? ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero))
+			? ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivideByZero))
 			: ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc / sub);
 
 	[SharpFunction(Name = "fdiv", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["dividend", "divisor"])]
@@ -62,7 +62,7 @@ public partial class Functions
 		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value) ||
 				!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var min))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		if (args.Count == 2)
@@ -73,7 +73,7 @@ public partial class Functions
 
 		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var max))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		// Clamp the value between min and max
@@ -101,7 +101,7 @@ public partial class Functions
 		var lastIdx = text.Length - 1;
 		if (!char.IsDigit(text[lastIdx]))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorArgMustEndInInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgMustEndInInteger));
 		}
 
 		var numStart = lastIdx;
@@ -120,7 +120,7 @@ public partial class Functions
 
 		if (!int.TryParse(numPart, out var num))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorArgMustEndInInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgMustEndInInteger));
 		}
 
 		return ValueTask.FromResult<CallState>($"{prefix}{num - 1}");
@@ -140,7 +140,7 @@ public partial class Functions
 		}
 		catch (FormatException)
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorInvalidBase64String);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidBase64String);
 		}
 	}
 
@@ -154,7 +154,7 @@ public partial class Functions
 
 		if (string.IsNullOrEmpty(password))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorPasswordRequired);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.PasswordRequired);
 		}
 
 		try
@@ -175,7 +175,7 @@ public partial class Functions
 		}
 		catch (Exception ex) when (ex is FormatException || ex is ArgumentException)
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorDecryptionError);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.DecryptionError);
 		}
 	}
 
@@ -189,7 +189,7 @@ public partial class Functions
 				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var x2) ||
 				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["3"].Message)), out var y2))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		var distance = Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2));
@@ -208,7 +208,7 @@ public partial class Functions
 				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["4"].Message)), out var y2) ||
 				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["5"].Message)), out var z2))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		var distance = Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2) + Math.Pow(z2 - z1, 2));
@@ -235,7 +235,7 @@ public partial class Functions
 
 		if (string.IsNullOrEmpty(password))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorPasswordRequired);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.PasswordRequired);
 		}
 
 		var plaintextBytes = System.Text.Encoding.UTF8.GetBytes(plaintext);
@@ -261,7 +261,7 @@ public partial class Functions
 
 		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		var showWhole = false;
@@ -269,7 +269,7 @@ public partial class Functions
 		{
 			if (!int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var wholeFlag))
 			{
-				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
 			showWhole = wholeFlag != 0;
 		}
@@ -334,7 +334,7 @@ public partial class Functions
 		var lastIdx = text.Length - 1;
 		if (!char.IsDigit(text[lastIdx]))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorArgMustEndInInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgMustEndInInteger));
 		}
 
 		var numStart = lastIdx;
@@ -353,7 +353,7 @@ public partial class Functions
 
 		if (!int.TryParse(numPart, out var num))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorArgMustEndInInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgMustEndInInteger));
 		}
 
 		return ValueTask.FromResult<CallState>($"{prefix}{num + 1}");
@@ -374,7 +374,7 @@ public partial class Functions
 		{
 			if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(item)), out var parsedValue))
 			{
-				return Errors.ErrorNumbers;
+				return ErrorMessages.Returns.Numbers;
 			}
 			values.Add(parsedValue);
 		}
@@ -388,7 +388,7 @@ public partial class Functions
 		if ((operation == "div" || operation == "fdiv" || operation == "modulo" || operation == "remainder")
 				&& values.Skip(1).Any(v => v == 0))
 		{
-			return Errors.ErrorDivideByZero;
+			return ErrorMessages.Returns.DivideByZero;
 		}
 
 		string result = operation switch
@@ -432,12 +432,12 @@ public partial class Functions
 			// Distance operations (requires exactly 4 or 6 values)
 			"dist2d" when values.Count == 4
 				=> ((decimal)Math.Sqrt((double)((values[2] - values[0]) * (values[2] - values[0]) + (values[3] - values[1]) * (values[3] - values[1])))).ToString(CultureInfo.InvariantCulture),
-			"dist2d" => Errors.ErrorBadArgumentFormat.Replace("{0}", "lmath"),
+			"dist2d" => ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "lmath"),
 			"dist3d" when values.Count == 6
 				=> ((decimal)Math.Sqrt((double)((values[3] - values[0]) * (values[3] - values[0]) + (values[4] - values[1]) * (values[4] - values[1]) + (values[5] - values[2]) * (values[5] - values[2])))).ToString(CultureInfo.InvariantCulture),
-			"dist3d" => Errors.ErrorBadArgumentFormat.Replace("{0}", "lmath"),
+			"dist3d" => ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "lmath"),
 
-			_ => Errors.ErrorBadArgumentFormat.Replace("{0}", "lmath")
+			_ => ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "lmath")
 		};
 
 		return new CallState(result);
@@ -491,7 +491,7 @@ public partial class Functions
 		}
 		else
 		{
-			return new CallState(Errors.ErrorInteger);
+			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
 		if (args.Count == 1)
@@ -501,7 +501,7 @@ public partial class Functions
 
 		if (!int.TryParse(MModule.plainText(args["1"].Message), out var arg1Val))
 		{
-			return new CallState(Errors.ErrorInteger);
+			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ");
@@ -509,7 +509,7 @@ public partial class Functions
 
 		if (!int.TryParse(MModule.plainText(args3), out var arg3Val))
 		{
-			return new CallState(Errors.ErrorInteger);
+			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
 		return new CallState(string.Join(
@@ -528,7 +528,7 @@ public partial class Functions
 		{
 			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
 			{
-				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
 			values.Add(value);
 		}
@@ -548,7 +548,7 @@ public partial class Functions
 		{
 			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
 			{
-				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
 			values.Add(value);
 		}
@@ -585,12 +585,12 @@ public partial class Functions
 		{
 			if (!int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
 			{
-				return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
 			}
 
 			if (values.Count > 0 && value == 0)
 			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivideByZero));
 			}
 
 			values.Add(value);
@@ -611,12 +611,12 @@ public partial class Functions
 		{
 			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
 			{
-				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
 
 			if (values.Count > 0 && value == 0)
 			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivideByZero));
 			}
 
 			values.Add(value);
@@ -634,7 +634,7 @@ public partial class Functions
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value) ||
 				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var root))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		// Handle negative base: odd integer roots of negatives are valid (e.g. root(-27,3) = -3)
@@ -647,13 +647,13 @@ public partial class Functions
 				return ValueTask.FromResult<CallState>(result);
 			}
 
-			return ValueTask.FromResult(new CallState(Errors.ErrorImaginaryNumber));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ImaginaryNumber));
 		}
 
 		var computed = Math.Pow(value, 1.0 / root);
 		if (double.IsNaN(computed))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorImaginaryNumber));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ImaginaryNumber));
 		}
 
 		return ValueTask.FromResult<CallState>(computed);
@@ -678,7 +678,7 @@ public partial class Functions
 
 		if (!double.TryParse(angleArg, out var angle))
 		{
-			return Errors.ErrorNumber;
+			return ErrorMessages.Returns.Number;
 		}
 
 		return InverseAngleTypeMath(angleType, angle, Math.Acos);
@@ -695,7 +695,7 @@ public partial class Functions
 
 		if (!double.TryParse(angleArg, out var angle))
 		{
-			return Errors.ErrorNumber;
+			return ErrorMessages.Returns.Number;
 		}
 
 		return InverseAngleTypeMath(angleType, angle, Math.Asin);
@@ -712,7 +712,7 @@ public partial class Functions
 
 		if (!double.TryParse(angleArg, out var angle))
 		{
-			return Errors.ErrorNumber;
+			return ErrorMessages.Returns.Number;
 		}
 
 		return InverseAngleTypeMath(angleType, angle, Math.Atan);
@@ -727,7 +727,7 @@ public partial class Functions
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var y) ||
 				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var x))
 		{
-			return Errors.ErrorNumbers;
+			return ErrorMessages.Returns.Numbers;
 		}
 
 		var angleType = args.Count == 3 ? MModule.plainText(args["2"].Message) : null;
@@ -750,7 +750,7 @@ public partial class Functions
 
 		if (!double.TryParse(angleArg, out var angle))
 		{
-			return Errors.ErrorNumber;
+			return ErrorMessages.Returns.Number;
 		}
 
 		return AngleTypeMath(angleType, angle, Math.Cos);
@@ -763,7 +763,7 @@ public partial class Functions
 
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var angle))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
 
 		var from = MModule.plainText(args["1"].Message).ToLower();
@@ -796,7 +796,7 @@ public partial class Functions
 
 		return ValueTask.FromResult<CallState>(new(double.TryParse(arg1 ?? "1", out var dec)
 			? Math.Exp(dec).ToString()
-			: Errors.ErrorNumber));
+			: ErrorMessages.Returns.Number));
 	}
 
 	[SharpFunction(Name = "fmod", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "divisor"])]
@@ -807,12 +807,12 @@ public partial class Functions
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var arg0) ||
 				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var arg1))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		if (arg1 == 0)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivideByZero));
 		}
 
 		return ValueTask.FromResult<CallState>(arg0 % arg1);
@@ -829,7 +829,7 @@ public partial class Functions
 
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		if (args.Count == 1)
@@ -840,7 +840,7 @@ public partial class Functions
 
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var baseNum))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		return ValueTask.FromResult<CallState>(Math.Log(value, baseNum));
@@ -863,7 +863,7 @@ public partial class Functions
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var baseNum) ||
 				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var exponent))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		return ValueTask.FromResult<CallState>(Math.Pow(baseNum, exponent));
@@ -877,7 +877,7 @@ public partial class Functions
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value) ||
 				!int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var decimals))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		var rounded = Math.Round(value, decimals);
@@ -886,7 +886,7 @@ public partial class Functions
 		{
 			if (!int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var padZeros))
 			{
-				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
 
 			// Third argument indicates whether to pad with zeros
@@ -910,7 +910,7 @@ public partial class Functions
 
 		if (!double.TryParse(angleArg, out var angle))
 		{
-			return Errors.ErrorNumber;
+			return ErrorMessages.Returns.Number;
 		}
 
 		return AngleTypeMath(angleType, angle, Math.Sin);
@@ -922,12 +922,12 @@ public partial class Functions
 		var text = ArgHelpers.EmptyStringToZero(MModule.plainText(parser.CurrentState.ArgumentsOrdered["0"].Message));
 		if (!double.TryParse(text, out var value))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
 
 		if (value < 0)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorImaginaryNumber));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ImaginaryNumber));
 		}
 
 		return ValueTask.FromResult<CallState>(Math.Sqrt(value));
@@ -944,7 +944,7 @@ public partial class Functions
 		{
 			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
 			{
-				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
 			values.Add(value);
 		}
@@ -974,7 +974,7 @@ public partial class Functions
 
 		if (!double.TryParse(angleArg, out var angle))
 		{
-			return Errors.ErrorNumber;
+			return ErrorMessages.Returns.Number;
 		}
 
 		return AngleTypeMath(angleType, angle, Math.Tan);
@@ -994,7 +994,7 @@ public partial class Functions
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 
 		var vector1 = new Vector<decimal>(list1.Select(x => x.result).ToArray().AsSpan());
@@ -1021,7 +1021,7 @@ public partial class Functions
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 
 		var vector1 = new Vector<decimal>(list1.Select(x => x.result).ToArray().AsSpan());
@@ -1053,12 +1053,12 @@ public partial class Functions
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 
 		if (list1.Length != 3 || list2.Length != 3)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorVectorsMustBe3D));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.VectorsMustBe3D));
 		}
 
 		var x = list1[1].result * list2[2].result - list2[1].result * list1[2].result;
@@ -1102,7 +1102,7 @@ public partial class Functions
 
 		if (list.Any(x => !x.Item1))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 
 		var sumOfSquares = list.Sum(x => (double)(x.result * x.result));
@@ -1124,7 +1124,7 @@ public partial class Functions
 
 		if (list.Any(x => !x.Item1))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 
 		// Math.Sqrt requires double; the cast from decimal to double introduces minimal precision
@@ -1132,7 +1132,7 @@ public partial class Functions
 		var magnitude = (decimal)Math.Sqrt((double)list.Sum(x => x.result * x.result));
 		if (magnitude == 0)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorDivisionByZero));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivisionByZero));
 		}
 
 		var output = list.Select(x => MModule.single((x.result / magnitude).ToString(CultureInfo.InvariantCulture)));

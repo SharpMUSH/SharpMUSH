@@ -41,8 +41,8 @@ public partial class Commands
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
 		if (maybeObjAttr.IsT1)
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorInvalidObjectAttribute, executor);
-			return new CallState(Errors.ErrorInvalidObjectAttribute);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.InvalidObjectAttribute, executor);
+			return new CallState(ErrorMessages.Returns.InvalidObjectAttribute);
 		}
 
 		var (targetObjRef, attrName) = maybeObjAttr.AsT0;

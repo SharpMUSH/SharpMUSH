@@ -26,7 +26,7 @@ public static class ReadMail
 		if (actualMail is null)
 		{
 			await notifyService.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber + 1}");
-			return MModule.single(Errors.ErrorNoSuchMail);
+			return MModule.single(ErrorMessages.Returns.NoSuchMail);
 		}
 
 		var dateline = MModule.pad(

@@ -125,7 +125,7 @@ public static class MessageHelpers
 			if (maybeLocateTarget.IsError)
 			{
 				await notifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
-				return new CallState(Errors.ErrorNotVisible);
+				return new CallState(ErrorMessages.Returns.NotVisible);
 			}
 
 			objToEvaluate = maybeLocateTarget.AsSharpObject;
@@ -157,7 +157,7 @@ public static class MessageHelpers
 		if (isSpoof && !await permissionService.CanNoSpoof(executor))
 		{
 			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LackSpoofingPermissions), executor);
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		int recipientCount = 0;

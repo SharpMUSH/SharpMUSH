@@ -77,12 +77,12 @@ public partial class Functions
 
 		if (!int.TryParse(first, out var firstNumber))
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "FIRST (arg 2)"));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "FIRST (arg 2)"));
 		}
 
 		if (!int.TryParse(length, out var lengthNumber))
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "LENGTH (arg 3)"));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "LENGTH (arg 3)"));
 		}
 
 		var list = MModule.splitList(delimiter, listArg);
@@ -128,7 +128,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -157,7 +157,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -219,7 +219,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -248,7 +248,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -384,7 +384,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -413,7 +413,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -491,12 +491,12 @@ public partial class Functions
 
 		if (!int.TryParse(firstArg, out var first))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		if (!int.TryParse(lengthArg, out var length))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		var list = MModule.splitList(delimiter, listArg);
@@ -620,7 +620,7 @@ public partial class Functions
 
 		if (iterNumber >= maxCount)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 		}
 
 		parser.CurrentState.IterationRegisters.ElementAt(maxCount - iterNumber - 1).Break = true;
@@ -647,19 +647,19 @@ public partial class Functions
 			// "L" refers to the outermost iteration
 			if (maxCount == 0)
 			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 			}
 			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Iteration));
 		}
 
 		if (!int.TryParse(levelArg, out var level))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		if (level < 0 || level >= maxCount)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 		}
 
 		// Level 0 = current, 1 = parent, etc.
@@ -738,7 +738,7 @@ public partial class Functions
 		var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -767,7 +767,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -901,7 +901,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -930,7 +930,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -1006,7 +1006,7 @@ public partial class Functions
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
-				return new CallState(Errors.ErrorObjectAttributeString);
+				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 			}
 
 			var (dbref, attrName) = objAttr.AsT0;
@@ -1035,7 +1035,7 @@ public partial class Functions
 
 			if (maybeAttr.IsNone)
 			{
-				return new CallState(Errors.ErrorNoSuchAttribute);
+				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 			}
 
 			if (maybeAttr.IsError)
@@ -1171,7 +1171,7 @@ public partial class Functions
 
 		if (!int.TryParse(countArg, out var count))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		var list = MModule.splitList(delimiter, listArg);
@@ -1373,7 +1373,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -1402,7 +1402,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -1493,7 +1493,7 @@ public partial class Functions
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
-				return new CallState(Errors.ErrorObjectAttributeString);
+				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 			}
 
 			var (dbref, attrName) = objAttr.AsT0;
@@ -1522,7 +1522,7 @@ public partial class Functions
 
 			if (maybeAttr.IsNone)
 			{
-				return new CallState(Errors.ErrorNoSuchAttribute);
+				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 			}
 
 			if (maybeAttr.IsError)
@@ -1581,7 +1581,7 @@ public partial class Functions
 
 		if (list.Length != list2.Length)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumberOfWordsMustBeEqual));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOfWordsMustBeEqual));
 		}
 
 		// Each pair uses delimiter as the within-pair separator.
@@ -1607,7 +1607,7 @@ public partial class Functions
 		var stepArg = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 		if (!int.TryParse(stepArg, out var step) || step < 1 || step > 30)
 		{
-			return new CallState(Errors.ErrorInteger);
+			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MModule.single(" "));
@@ -1634,7 +1634,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -1663,7 +1663,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -1771,18 +1771,18 @@ public partial class Functions
 
 		if (!int.TryParse(fieldWidthArg, out var fieldWidth))
 		{
-			return new CallState(Errors.ErrorInvalidFieldWidth);
+			return new CallState(ErrorMessages.Returns.InvalidFieldWidth);
 		}
 
 		if (!int.TryParse(lineWidthArg, out var lineWidth))
 		{
-			return new CallState(Errors.ErrorInvalidLineWidth);
+			return new CallState(ErrorMessages.Returns.InvalidLineWidth);
 		}
 
 		var fieldsPerLine = lineWidth / fieldWidth;
 		if (fieldsPerLine < 1)
 		{
-			return new CallState(Errors.ErrorFieldWidthExceedsLineWidth);
+			return new CallState(ErrorMessages.Returns.FieldWidthExceedsLineWidth);
 		}
 		var list = MModule.splitList(delimiterArg, listArg);
 		var resultFields = list.Select(x =>
@@ -1859,7 +1859,7 @@ public partial class Functions
 
 		if (!int.TryParse(numberArg, out var number))
 		{
-			return new CallState(Errors.ErrorUInteger);
+			return new CallState(ErrorMessages.Returns.PositiveInteger);
 		}
 
 		var list = MModule.splitList(delimiter, listArg);
@@ -1867,7 +1867,7 @@ public partial class Functions
 
 		if (number > lengths.Sum())
 		{
-			return new CallState(Errors.ErrorWordNumberOutOfRange);
+			return new CallState(ErrorMessages.Returns.WordNumberOutOfRange);
 		}
 
 		var i = 0;
@@ -1897,7 +1897,7 @@ public partial class Functions
 
 		if (!int.TryParse(positionArg, out var position))
 		{
-			return new CallState(Errors.ErrorInteger);
+			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
 		var listItems = MModule.splitList(delimiter, listArg).ToList();

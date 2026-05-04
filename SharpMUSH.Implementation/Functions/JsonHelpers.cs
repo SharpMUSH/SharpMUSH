@@ -32,14 +32,14 @@ public static class JsonHelpers
 	{
 		if (args.Count != 2)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, 2, args.Count)));
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
 		}
 
 		var entry = MModule.plainText(args["1"].Message);
 
 		return entry switch
 		{
-			not "1" and not "0" and not "false" and not "true" => ValueTask.FromResult(new CallState(Errors.ErrorInvalidValue)),
+			not "1" and not "0" and not "false" and not "true" => ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidValue)),
 			_ => ValueTask.FromResult(new CallState(entry is "1" or "true" ? "true" : "false"))
 		};
 	}
@@ -48,7 +48,7 @@ public static class JsonHelpers
 	{
 		if (args.Count != 2)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, 2, args.Count)));
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
 		}
 
 		var entry = args["1"].Message;
@@ -60,13 +60,13 @@ public static class JsonHelpers
 	{
 		if (args.Count != 2)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, 2, args.Count)));
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
 		}
 
 		var entry = MModule.plainText(args["1"].Message);
 		if (!decimal.TryParse(entry, out var value))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumber));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Number));
 		}
 
 		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(value)));
@@ -76,7 +76,7 @@ public static class JsonHelpers
 	{
 		if (args.Count < 2)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, int.MaxValue, args.Count)));
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, int.MaxValue, args.Count)));
 		}
 
 		try
@@ -89,7 +89,7 @@ public static class JsonHelpers
 		}
 		catch (JsonException)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorBadArgumentFormat, "json")));
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json")));
 		}
 	}
 
@@ -97,12 +97,12 @@ public static class JsonHelpers
 	{
 		if (args.Count < 3)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorWrongArgumentsRange, "json", 2, int.MaxValue, args.Count)));
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, int.MaxValue, args.Count)));
 		}
 
 		if (args.Count % 2 == 0)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorGotEvenArgs, "json")));
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, "json")));
 		}
 
 		var sortedArgs = args.Select(x => x.Value.Message!).Skip(1);
@@ -121,7 +121,7 @@ public static class JsonHelpers
 		}
 		catch (JsonException)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(Errors.ErrorBadArgumentFormat, "json")));
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json")));
 		}
 	}
 

@@ -393,7 +393,7 @@ public partial class Functions
 
 		if (!int.TryParse(MModule.plainText(args["1"].Message), out var iterations) || iterations <= 0)
 		{
-			return new CallState(Errors.ErrorNumbers);
+			return new CallState(ErrorMessages.Returns.Numbers);
 		}
 
 		var outputFormat = "ms";
@@ -427,14 +427,14 @@ public partial class Functions
 		if (dbRefConversion.IsNone())
 		{
 			await NotifyService!.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.CantSeeThat));
-			return new CallState(Errors.ErrorNoSuchPlayer);
+			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
 		var dbRef = dbRefConversion.AsValue();
 		var objectInfo = await Mediator!.Send(new GetObjectNodeQuery(dbRef));
 		if (!objectInfo.IsPlayer)
 		{
-			return new CallState(Errors.ErrorNoSuchPlayer);
+			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
 		var player = objectInfo.AsPlayer;
@@ -460,7 +460,7 @@ public partial class Functions
 
 		if (location.IsNone || location.IsExit)
 		{
-			return Errors.ErrorInvalidRoom;
+			return ErrorMessages.Returns.InvalidRoom;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -469,12 +469,12 @@ public partial class Functions
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					return Errors.ErrorPerm;
+					return ErrorMessages.Returns.PermissionDenied;
 				}
 
 				if (obj.IsPlayer)
 				{
-					return Errors.ErrorInvalidObjectType;
+					return ErrorMessages.Returns.InvalidObjectType;
 				}
 
 				// Determine new name (arg 1 if provided)
@@ -516,7 +516,7 @@ public partial class Functions
 				}
 				else
 				{
-					return Errors.ErrorInvalidObjectType;
+					return ErrorMessages.Returns.InvalidObjectType;
 				}
 
 				// Get the cloned object
@@ -560,13 +560,13 @@ public partial class Functions
 		if (location.IsNone || location.IsExit)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DefaultHomeLocationInvalid), executor);
-			return new CallState(Errors.ErrorInvalidRoom);
+			return new CallState(ErrorMessages.Returns.InvalidRoom);
 		}
 
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidNameThing), executor);
-			return new CallState(Errors.ErrorBadObjectName);
+			return new CallState(ErrorMessages.Returns.BadObjectName);
 		}
 
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
@@ -585,11 +585,11 @@ public partial class Functions
 
 		if (!int.TryParse(MModule.plainText(args["0"].Message), out var count) || count < 0)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 		if (!int.TryParse(MModule.plainText(args["1"].Message), out var sides) || sides <= 0)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 
 		// Optional third argument for how many rolls to show (vs just return sum)
@@ -598,7 +598,7 @@ public partial class Functions
 		{
 			if (!int.TryParse(MModule.plainText(args["2"].Message), out showCount) || showCount < 0)
 			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 			}
 		}
 
@@ -629,7 +629,7 @@ public partial class Functions
 
 		if (string.IsNullOrWhiteSpace(roomName))
 		{
-			return Errors.ErrorBadObjectName;
+			return ErrorMessages.Returns.BadObjectName;
 		}
 
 		// Create the room
@@ -795,19 +795,19 @@ public partial class Functions
 		{
 			if (maxCount == 0)
 			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 			}
 			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Value));
 		}
 
 		if (!int.TryParse(levelArg, out var level))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		if (level < 0 || level >= maxCount)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 		}
 
 		// Iteration registers are stored innermost-first (stack top = current iteration),
@@ -851,7 +851,7 @@ public partial class Functions
 		}
 
 		_ = parser.CurrentState.Registers.TryPop(out _);
-		return new CallState(Errors.ErrorBadRegName);
+		return new CallState(ErrorMessages.Returns.BadRegName);
 	}
 
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -868,7 +868,7 @@ public partial class Functions
 			{
 				if (!await PermissionService!.Controls(executor, exitObj))
 				{
-					return Errors.ErrorPerm;
+					return ErrorMessages.Returns.PermissionDenied;
 				}
 
 				// Handle different link types
@@ -893,7 +893,7 @@ public partial class Functions
 						{
 							if (!destObj.IsRoom)
 							{
-								return Errors.ErrorInvalidDestination;
+								return ErrorMessages.Returns.InvalidDestination;
 							}
 
 							var destinationRoom = destObj.AsRoom;
@@ -907,7 +907,7 @@ public partial class Functions
 
 								if (!hasLinkOk)
 								{
-									return Errors.ErrorPerm;
+									return ErrorMessages.Returns.PermissionDenied;
 								}
 							}
 
@@ -927,7 +927,7 @@ public partial class Functions
 						{
 							if (!destObj.IsRoom)
 							{
-								return Errors.ErrorInvalidDestination;
+								return ErrorMessages.Returns.InvalidDestination;
 							}
 
 							AnySharpContent contentObj = exitObj.IsThing ? exitObj.AsThing : (AnySharpContent)exitObj.AsPlayer;
@@ -945,7 +945,7 @@ public partial class Functions
 						{
 							if (!destObj.IsRoom)
 							{
-								return Errors.ErrorInvalidDestination;
+								return ErrorMessages.Returns.InvalidDestination;
 							}
 
 							await Mediator!.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
@@ -954,7 +954,7 @@ public partial class Functions
 					);
 				}
 
-				return Errors.ErrorInvalidObjectType;
+				return ErrorMessages.Returns.InvalidObjectType;
 			});
 	}
 
@@ -1065,7 +1065,7 @@ public partial class Functions
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 			if (!await executor.IsWizard())
 			{
-				return new CallState(Errors.ErrorPermissionDenied);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			return option switch
@@ -1101,13 +1101,13 @@ public partial class Functions
 		if (!args.TryGetValue("1", out var arg1) ||
 				!int.TryParse(MModule.plainText(arg1.Message), out var position))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 
 		// Get the new value
 		if (!args.TryGetValue("2", out var arg2))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 		var newValue = arg2.Message!;
 
@@ -1131,7 +1131,7 @@ public partial class Functions
 		// Check if position is valid (1-based indexing)
 		if (position < 1 || position > items.Count)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 		}
 
 		// Set the item at the position (convert to 0-based)
@@ -1167,7 +1167,7 @@ public partial class Functions
 		// Check permissions
 		if (!await PermissionService!.Controls(executor, sourceRoom.WithExitOption()))
 		{
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		// Create the exit
@@ -1223,12 +1223,12 @@ public partial class Functions
 		// One argument: random number from 0 to arg-1
 			if (!int.TryParse(MModule.plainText(arg0.Message), out var maxVal))
 			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 			}
 			// PennMUSH behavior: rand(0) is an error (empty range), negative values return 0
 			if (maxVal == 0)
 			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorResultOutOfRange));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ResultOutOfRange));
 			}
 			if (maxVal < 0)
 			{
@@ -1241,11 +1241,11 @@ public partial class Functions
 		if (!int.TryParse(MModule.plainText(arg0.Message), out var minVal) ||
 				!int.TryParse(MModule.plainText(arg1.Message), out var maxVal2))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 		if (minVal > maxVal2)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 		// Next is exclusive of upper bound, so add 1
 		return ValueTask.FromResult(new CallState(Random.Shared.Next(minVal, maxVal2 + 1)));
@@ -1311,7 +1311,7 @@ public partial class Functions
 				// Check permissions
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					return Errors.ErrorPerm;
+					return ErrorMessages.Returns.PermissionDenied;
 				}
 
 				// Evaluate the code using the AttributeService which handles executor context properly
@@ -1370,7 +1370,7 @@ public partial class Functions
 		// Check permissions - must control looker
 		if (!await PermissionService!.Controls(executor, looker))
 		{
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		// Collect objects to scan based on switches
@@ -1488,7 +1488,7 @@ public partial class Functions
 		}
 		else
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorBadRegName));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.BadRegName));
 		}
 	}
 
@@ -1512,7 +1512,7 @@ public partial class Functions
 		}
 		else
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorBadRegName));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.BadRegName));
 		}
 	}
 	[SharpFunction(Name = "soundex", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1525,7 +1525,7 @@ public partial class Functions
 
 		if (arg1 != "soundex")
 		{
-			return ValueTask.FromResult<CallState>(Errors.NotSupported);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.NotSupported);
 		}
 
 		// PennMUSH-specific: leading "ph" is treated as "f" for soundex purposes
@@ -1548,7 +1548,7 @@ public partial class Functions
 
 		if (arg2 != "soundex")
 		{
-			return ValueTask.FromResult<CallState>(Errors.NotSupported);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.NotSupported);
 		}
 
 		// PennMUSH-specific: leading "ph" is treated as "f" for soundex purposes
@@ -1617,7 +1617,7 @@ public partial class Functions
 		{
 			if (!int.TryParse(args["3"].Message!.ToPlainText(), out limit) || limit < 1)
 			{
-				return new CallState(Errors.ErrorIntegers);
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
 		}
 
@@ -1730,7 +1730,7 @@ public partial class Functions
 				}
 				else if (!int.TryParse(depthStr, out depth) || depth < 0)
 				{
-					return ValueTask.FromResult(new CallState(Errors.ErrorNonNegativeInteger));
+					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NonNegativeInteger));
 				}
 			}
 		}
@@ -1769,12 +1769,12 @@ public partial class Functions
 			{
 				if (targetObj.IsRoom)
 				{
-					return Errors.ErrorCannotTeleport;
+					return ErrorMessages.Returns.CannotTeleport;
 				}
 
 				if (!await PermissionService!.Controls(executor, targetObj))
 				{
-					return Errors.ErrorCannotTeleport;
+					return ErrorMessages.Returns.CannotTeleport;
 				}
 
 				return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1783,7 +1783,7 @@ public partial class Functions
 					{
 						if (destObj.IsExit)
 						{
-							return Errors.ErrorInvalidDestination;
+							return ErrorMessages.Returns.InvalidDestination;
 						}
 
 						var destinationContainer = destObj.AsContainer;
@@ -1792,7 +1792,7 @@ public partial class Functions
 						// Check for containment loops
 						if (await MoveService!.WouldCreateLoop(targetContent, destinationContainer))
 						{
-							return Errors.ErrorWouldCreateLoop;
+							return ErrorMessages.Returns.WouldCreateLoop;
 						}
 
 						// Move the object
@@ -1831,7 +1831,7 @@ public partial class Functions
 					// Validate the lock string
 					if (!LockService!.Validate(lockString, executor))
 					{
-						return ValueTask.FromResult(new CallState(Errors.ErrorInvalidLock));
+						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidLock));
 					}
 
 					// Evaluate the lock: does victim pass the lock expression?
@@ -1854,7 +1854,7 @@ public partial class Functions
 					var victimResult = await LocateService!.Locate(parser, executor, executor, victimName, LocateFlags.All);
 					if (!victimResult.IsValid())
 					{
-						return new CallState(Errors.ErrorInvalidVictim);
+						return new CallState(ErrorMessages.Returns.InvalidVictim);
 					}
 					var victim = victimResult.AsAnyObject;
 
@@ -1883,7 +1883,7 @@ public partial class Functions
 
 		if (TextFileService == null)
 		{
-			return new CallState(Errors.ErrorTextFileServiceNotAvailable);
+			return new CallState(ErrorMessages.Returns.TextFileServiceNotAvailable);
 		}
 
 		try
@@ -1893,12 +1893,12 @@ public partial class Functions
 		}
 		catch (FileNotFoundException)
 		{
-			return new CallState(Errors.ErrorFileNotFound);
+			return new CallState(ErrorMessages.Returns.FileNotFound);
 		}
 		catch (Exception ex)
 		{
 			Logger?.LogError(ex, "Error in textentries({File})", fileReference);
-			return new CallState(Errors.ErrorError);
+			return new CallState(ErrorMessages.Returns.Error);
 		}
 	}
 
@@ -1911,7 +1911,7 @@ public partial class Functions
 
 		if (TextFileService == null)
 		{
-			return new CallState(Errors.ErrorTextFileServiceNotAvailable);
+			return new CallState(ErrorMessages.Returns.TextFileServiceNotAvailable);
 		}
 
 		try
@@ -1919,16 +1919,16 @@ public partial class Functions
 			var content = await TextFileService.GetEntryAsync(fileReference, entryName);
 			return content != null
 				? new CallState(content)
-				: new CallState(Errors.ErrorEntryNotFound);
+				: new CallState(ErrorMessages.Returns.EntryNotFound);
 		}
 		catch (FileNotFoundException)
 		{
-			return new CallState(Errors.ErrorFileNotFound);
+			return new CallState(ErrorMessages.Returns.FileNotFound);
 		}
 		catch (Exception ex)
 		{
 			Logger?.LogError(ex, "Error in textfile({File}, {Entry})", fileReference, entryName);
-			return new CallState(Errors.ErrorError);
+			return new CallState(ErrorMessages.Returns.Error);
 		}
 	}
 
@@ -1966,7 +1966,7 @@ public partial class Functions
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					return Errors.ErrorPerm;
+					return ErrorMessages.Returns.PermissionDenied;
 				}
 
 				// Collect all non-system attributes (those not starting with _)

@@ -32,7 +32,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
 
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		if (!await validateService.Valid(IValidateService.ValidationType.Name, name, obj))
@@ -42,7 +42,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.CannotNameObjectFormat), executor, name.ToPlainText());
 			}
 
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		switch (obj)
@@ -117,7 +117,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
 
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		if (!await validateService.Valid(IValidateService.ValidationType.Password, MModule.single(newPassword), new None()))
@@ -127,7 +127,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.InvalidPasswordText), executor);
 			}
 
-			return Errors.ErrorInvalidPassword;
+			return ErrorMessages.Returns.InvalidPassword;
 		}
 
 		var hashedPw = passwordService.HashPassword(player.Object.DBRef.ToString(), newPassword);
@@ -146,7 +146,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
 
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		var unset = flagOrFlagAlias.StartsWith('!');
@@ -164,7 +164,7 @@ public class ManipulateSharpObjectService(
 					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizeFlag, obj.Object().Name));
 			}
 
-			return Errors.ErrorNoSuchFlag;
+			return ErrorMessages.Returns.NoSuchFlag;
 		}
 
 		if (!realFlag.TypeRestrictions.Contains(obj.TypeString()))
@@ -174,7 +174,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
 
-			return Errors.InvalidFlag;
+			return ErrorMessages.Returns.InvalidFlag;
 		}
 
 		// Generic flag permission check, matching PennMUSH's can_set_flag_generic().
@@ -192,7 +192,7 @@ public class ManipulateSharpObjectService(
 					await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 				}
 
-				return Errors.ErrorPerm;
+				return ErrorMessages.Returns.PermissionDenied;
 			}
 		}
 
@@ -206,7 +206,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
 
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		switch (unset)
@@ -283,7 +283,7 @@ public class ManipulateSharpObjectService(
 			{
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		// God protection: non-God cannot modify God's powers (PennMUSH src/flags.c)
@@ -293,7 +293,7 @@ public class ManipulateSharpObjectService(
 			{
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.WhoDoYouThinkYouAre);
 			}
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		// Can't make admin (Wizard/Royalty) into guests (PennMUSH src/flags.c)
@@ -304,7 +304,7 @@ public class ManipulateSharpObjectService(
 			{
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.CantMakeAdminGuests);
 			}
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		if (await obj.HasPower(powerOrPowerAlias))
@@ -331,7 +331,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.Notify(executor,
 					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, obj.Object().Name));
 			}
-			return Errors.ErrorNoSuchPower;
+			return ErrorMessages.Returns.NoSuchPower;
 		}
 
 		if (notify)
@@ -362,7 +362,7 @@ public class ManipulateSharpObjectService(
 			{
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		// God protection: non-God cannot modify God's powers (PennMUSH src/flags.c)
@@ -372,7 +372,7 @@ public class ManipulateSharpObjectService(
 			{
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.WhoDoYouThinkYouAre);
 			}
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		if (!await obj.HasPower(powerOrPowerAlias))
@@ -399,7 +399,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.Notify(executor,
 					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, obj.Object().Name));
 			}
-			return Errors.ErrorNoSuchPower;
+			return ErrorMessages.Returns.NoSuchPower;
 		}
 
 		if (notify)
@@ -429,7 +429,7 @@ public class ManipulateSharpObjectService(
 			{
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		// Early return if object has no powers
@@ -475,7 +475,7 @@ public class ManipulateSharpObjectService(
 			{
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		// Ownership transfer logic confirmed:
@@ -504,7 +504,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
 
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		var safeToAdd = await HelperFunctions.SafeToAddParent(mediator, database, obj, newParent);
@@ -516,7 +516,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ParentLoopCannotAdd), executor);
 			}
 
-			return Errors.ParentLoop;
+			return ErrorMessages.Returns.ParentLoop;
 		}
 
 		await mediator.Send(new SetObjectParentCommand(obj, newParent));
@@ -534,7 +534,7 @@ public class ManipulateSharpObjectService(
 		if (!await permissionService.Controls(executor, obj))
 		{
 			await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		await mediator.Send(new UnsetObjectParentCommand(obj));
@@ -553,7 +553,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
 
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		var safeToAdd = await HelperFunctions.SafeToAddZone(mediator, database, obj, newZone);
@@ -565,7 +565,7 @@ public class ManipulateSharpObjectService(
 				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ZoneCycleCannotAdd), executor);
 			}
 
-			return Errors.ZoneLoop;
+			return ErrorMessages.Returns.ZoneLoop;
 		}
 
 		await mediator.Send(new SetObjectZoneCommand(obj, newZone));
@@ -586,7 +586,7 @@ public class ManipulateSharpObjectService(
 			{
 				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		await mediator.Send(new UnsetObjectZoneCommand(obj));

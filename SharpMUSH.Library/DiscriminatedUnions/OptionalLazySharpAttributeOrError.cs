@@ -22,11 +22,11 @@ public class OptionalLazySharpAttributeOrError(OneOf<LazySharpAttribute[], None,
 	public Error<string> AsError => AsT2;
 
 	public CallState AsCallStateError => IsT1
-		? new CallState(Errors.ErrorNoSuchAttribute)
+		? new CallState(ErrorMessages.Returns.NoSuchAttribute)
 		: new CallState(AsT2.Value);
 
 	public async ValueTask<CallState> AsCallStateAsync() => await Match<ValueTask<CallState>>(
 			async attributes => await attributes.Last().Value.WithCancellation(CancellationToken.None),
-			none => ValueTask.FromResult<CallState>(Errors.ErrorNoSuchAttribute),
+			none => ValueTask.FromResult<CallState>(ErrorMessages.Returns.NoSuchAttribute),
 			error => ValueTask.FromResult<CallState>(AsT2.Value));
 }

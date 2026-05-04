@@ -81,7 +81,7 @@ public partial class Functions
 				// Must be wizard to view other player's mail
 				if (!await executor.IsWizard())
 				{
-					return new CallState(Errors.ErrorPermissionDenied);
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
 				}
 
 				// Try to locate as player
@@ -106,7 +106,7 @@ public partial class Functions
 			// Must be wizard to view other player's mail
 			if (!await executor.IsWizard())
 			{
-				return new CallState(Errors.ErrorPermissionDenied);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			var playerArg = args["0"].Message!.ToPlainText()!;
@@ -115,7 +115,7 @@ public partial class Functions
 
 			if (locateResult.IsError || locateResult.IsNone)
 			{
-				return new CallState(Errors.ErrorNoSuchPlayer);
+				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
 			targetPlayer = locateResult.AsPlayer;
@@ -158,7 +158,7 @@ public partial class Functions
 
 		if (!long.TryParse(pidStr, out var pid))
 		{
-			return new CallState(Errors.ErrorInvalidPid);
+			return new CallState(ErrorMessages.Returns.InvalidPid);
 		}
 
 		var field = args.TryGetValue("1", out var fieldArg)
@@ -177,7 +177,7 @@ public partial class Functions
 		}
 
 		// If not found in semaphore tasks, return "NO SUCH PID"
-		return new CallState(Errors.ErrorNoSuchPid);
+		return new CallState(ErrorMessages.Returns.NoSuchPid);
 	}
 
 	private static CallState FormatTaskInfo(SemaphoreTaskData task, string? field, string delimiter)
@@ -205,7 +205,7 @@ public partial class Functions
 			"status" => new CallState("waiting"),
 			"delay" => new CallState(task.RunDelay?.TotalSeconds.ToString("F2") ?? "0"),
 			"semaphore" => new CallState(task.SemaphoreSource.ToString()),
-			_ => new CallState(Errors.ErrorInvalidField)
+			_ => new CallState(ErrorMessages.Returns.InvalidField)
 		};
 	}
 
@@ -239,7 +239,7 @@ public partial class Functions
 				var indexArg = args["1"].Message!.ToPlainText();
 				if (!int.TryParse(indexArg, out var index) || index < 1)
 				{
-					return ValueTask.FromResult(new CallState(Errors.ErrorInvalidAliasIndex));
+					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidAliasIndex));
 				}
 
 				return ValueTask.FromResult(new CallState(
@@ -325,7 +325,7 @@ public partial class Functions
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
 		if (split.IsT1)
 		{
-			return string.Format(Errors.ErrorBadArgumentFormat, "getpids");
+			return string.Format(ErrorMessages.Returns.BadArgumentFormat, "getpids");
 		}
 
 		var (db, attr) = split.AsT0;
@@ -381,7 +381,7 @@ public partial class Functions
 				{
 					if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 					{
-						return Errors.ErrorNoSideFx;
+						return ErrorMessages.Returns.NoSideFx;
 					}
 
 					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -430,7 +430,7 @@ public partial class Functions
 
 		if (typeQuery.Any(x => x is not "PLAYER" and not "THING" and not "ROOM" and not "EXIT"))
 		{
-			return new CallState(Errors.ErrorNoSuchType);
+			return new CallState(ErrorMessages.Returns.NoSuchType);
 		}
 
 		var located = maybeLocate.AsSharpObject;
@@ -464,7 +464,7 @@ public partial class Functions
 
 		if (queueTypes.Any(type => type is not "WAIT" and not "SEMAPHORE" and not "INDEPENDENT"))
 		{
-			return new CallState(Errors.ErrorInvalidQueueType);
+			return new CallState(ErrorMessages.Returns.InvalidQueueType);
 		}
 
 		var maybeLocate = await
@@ -549,7 +549,7 @@ public partial class Functions
 				_ => -1
 			};
 
-			return count >= 0 ? new CallState(count.ToString()) : new CallState(Errors.ErrorInvalidType);
+			return count >= 0 ? new CallState(count.ToString()) : new CallState(ErrorMessages.Returns.InvalidType);
 		}
 
 		// Count each type
@@ -568,7 +568,7 @@ public partial class Functions
 		// Money/pennies are not supported in SharpMUSH
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MoneyFunctionNotSupported), executor);
-		return new CallState(Errors.ErrorNotSupported);
+		return new CallState(ErrorMessages.Returns.ErrorNotSupported);
 	}
 
 	[SharpFunction(Name = "mudname", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
@@ -621,7 +621,7 @@ public partial class Functions
 					await ManipulateSharpObjectService!.SetName(executor, found, newName.Message!, true));
 		}
 
-		await NotifyService!.Notify(executor, Errors.ErrorNoSideFx);
+		await NotifyService!.Notify(executor, ErrorMessages.Returns.NoSideFx);
 		return false;
 	}
 
@@ -756,7 +756,7 @@ public partial class Functions
 			var maybeClass = await LocateService!.Locate(parser, executor, executor, classArg, LocateFlags.All);
 			if (!maybeClass.IsValid())
 			{
-				return new CallState(Errors.ErrorInvalidClass);
+				return new CallState(ErrorMessages.Returns.InvalidClass);
 			}
 			classObj = maybeClass.AsAnyObject;
 		}
@@ -854,7 +854,7 @@ public partial class Functions
 			"16color" or "c" => FormatColorsAs16Color(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
 			"name" => FormatColorsAsName(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
 			"auto" => FormatColorsAsAuto(colorSpec, foregroundSpec, backgroundSpec, styles, includeStyles),
-			_ => Errors.ErrorInvalidFormat
+			_ => ErrorMessages.Returns.InvalidFormat
 		};
 
 		return ValueTask.FromResult(new CallState(result));
@@ -940,7 +940,7 @@ public partial class Functions
 			}
 		}
 
-		return result.Count > 0 ? string.Join(" ", result) : Errors.ErrorInvalidColor;
+		return result.Count > 0 ? string.Join(" ", result) : ErrorMessages.Returns.InvalidColor;
 	}
 
 	private static string FormatColorsAsRgb(string? foreground, string? background, string styles, bool includeStyles,
@@ -971,7 +971,7 @@ public partial class Functions
 			}
 		}
 
-		return result.Count > 0 ? string.Join(" ", result) : Errors.ErrorInvalidColor;
+		return result.Count > 0 ? string.Join(" ", result) : ErrorMessages.Returns.InvalidColor;
 	}
 
 	private static string FormatColorsAsXterm(string? foreground, string? background, string styles, bool includeStyles,
@@ -1003,7 +1003,7 @@ public partial class Functions
 			}
 		}
 
-		return result.Count > 0 ? string.Join(" ", result) : Errors.ErrorInvalidColor;
+		return result.Count > 0 ? string.Join(" ", result) : ErrorMessages.Returns.InvalidColor;
 	}
 
 	private static string FormatColorsAs16Color(string? foreground, string? background, string styles, bool includeStyles,
@@ -1034,7 +1034,7 @@ public partial class Functions
 			}
 		}
 
-		return result.Count > 0 ? string.Join(" ", result) : Errors.ErrorInvalidColor;
+		return result.Count > 0 ? string.Join(" ", result) : ErrorMessages.Returns.InvalidColor;
 	}
 
 	private static string FormatColorsAsName(string? foreground, string? background, string styles, bool includeStyles,
@@ -1056,7 +1056,7 @@ public partial class Functions
 			}
 			else
 			{
-				return Errors.ErrorNoMatchingColorName;
+				return ErrorMessages.Returns.NoMatchingColorName;
 			}
 		}
 
@@ -1069,11 +1069,11 @@ public partial class Functions
 			}
 			else
 			{
-				return Errors.ErrorNoMatchingColorName;
+				return ErrorMessages.Returns.NoMatchingColorName;
 			}
 		}
 
-		return result.Count > 0 ? string.Join(" ", result) : Errors.ErrorNoMatchingColorName;
+		return result.Count > 0 ? string.Join(" ", result) : ErrorMessages.Returns.NoMatchingColorName;
 	}
 
 	private static string FormatColorsAsAuto(string originalSpec, string? foreground, string? background, string styles, bool includeStyles)
@@ -1371,6 +1371,6 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(value?.ToString() ?? "");
 		}
 
-		return ValueTask.FromResult<CallState>(Errors.ErrorNoSuchOption);
+		return ValueTask.FromResult<CallState>(ErrorMessages.Returns.NoSuchOption);
 	}
 }

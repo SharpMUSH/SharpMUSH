@@ -11,7 +11,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
-using Errors = SharpMUSH.Library.Definitions.Errors;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -895,7 +894,7 @@ public partial class Commands
 						{
 							return await NotifyService!.NotifyAndReturn(
 								executor.Object().DBRef,
-								errorReturn: Errors.ZoneLoop,
+								errorReturn: ErrorMessages.Returns.ZoneLoop,
 								notifyMessage: ErrorMessages.Notifications.CantMakeCircularZones,
 								shouldNotify: true);
 						}

@@ -404,7 +404,7 @@ public class SharpMUSHParserVisitor(
 				if (!discoveredFunction.TryPickT0(out var functionValue, out _))
 				{
 					success = false;
-					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
+					return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name), context.Depth());
 				}
 
 				// Avoid double lookup: store result and add to library
@@ -428,7 +428,7 @@ public class SharpMUSHParserVisitor(
 			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
 			{
 				limitExceeded.IsExceeded = true;
-				return new CallState(Errors.ErrorInvoke, contextDepth);
+				return new CallState(ErrorMessages.Returns.Invoke, contextDepth);
 			}
 
 			var currentDepth = callDepth.Increment();
@@ -446,57 +446,57 @@ public class SharpMUSHParserVisitor(
 			if (attribute.Flags.HasFlag(FunctionFlags.WizardOnly) && !await executor.IsWizard())
 			{
 				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			// Check if function is restricted to Admins (Wizards or higher)
 			if (attribute.Flags.HasFlag(FunctionFlags.AdminOnly) && !await executor.IsWizard())
 			{
 				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			// Check if function is restricted to God
 			if (attribute.Flags.HasFlag(FunctionFlags.GodOnly) && !executor.IsGod())
 			{
 				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			// Check if function cannot be used by Guests
 			if (attribute.Flags.HasFlag(FunctionFlags.NoGuest) && await executor.IsGuest())
 			{
 				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			// Check if function cannot be used by Gagged players
 			if (attribute.Flags.HasFlag(FunctionFlags.NoGagged) && await executor.HasFlag("GAGGED"))
 			{
 				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			/* Validation, this should probably go into its own function! */
 			if (args.Length > attribute.MaxArgs)
 			{
-				return new CallState(string.Format(Errors.ErrorTooManyArguments, name.ToUpperInvariant(), attribute.MaxArgs, args.Length), context.Depth());
+				return new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, name.ToUpperInvariant(), attribute.MaxArgs, args.Length), context.Depth());
 			}
 
 			if (args.Length < attribute.MinArgs)
 			{
-				return new CallState(string.Format(Errors.ErrorTooFewArguments, name.ToUpperInvariant(), attribute.MinArgs, args.Length),
+				return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, name.ToUpperInvariant(), attribute.MinArgs, args.Length),
 					contextDepth);
 			}
 
 			if (((attribute.Flags & FunctionFlags.UnEvenArgsOnly) != 0) && (args.Length % 2 == 0))
 			{
-				return new CallState(string.Format(Errors.ErrorGotEvenArgs, name.ToUpperInvariant()), contextDepth);
+				return new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, name.ToUpperInvariant()), contextDepth);
 			}
 
 			if (((attribute.Flags & FunctionFlags.EvenArgsOnly) != 0) && (args.Length % 2 != 0))
 			{
-				return new CallState(string.Format(Errors.ErrorGotUnEvenArgs, name.ToUpperInvariant()), contextDepth);
+				return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, name.ToUpperInvariant()), contextDepth);
 			}
 
 			// Consider moving after RefinedArguments to avoid extra parsing. However, each
@@ -509,7 +509,7 @@ public class SharpMUSHParserVisitor(
 			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
 				limitExceeded.IsExceeded = true;
-				return new CallState(Errors.ErrorCall, contextDepth);
+				return new CallState(ErrorMessages.Returns.Call, contextDepth);
 			}
 
 			// Built-in functions do NOT check recursion limit
@@ -576,7 +576,7 @@ public class SharpMUSHParserVisitor(
 			// If a limit was exceeded during argument evaluation, return immediately
 			if (limitExceeded.IsExceeded)
 			{
-				return new CallState(Errors.ErrorInvoke, contextDepth);
+				return new CallState(ErrorMessages.Returns.Invoke, contextDepth);
 			}
 
 			// TODO: Pass ParserContexts directly as arguments instead of creating

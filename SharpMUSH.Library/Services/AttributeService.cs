@@ -36,7 +36,7 @@ public class AttributeService(
 
 		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		Func<AnySharpObject, AnySharpObject, SharpAttribute[], ValueTask<bool>> permissionPredicate = mode switch
@@ -49,9 +49,9 @@ public class AttributeService(
 		};
 		var permissionFailureType = mode switch
 		{
-			IAttributeService.AttributeMode.Read => Errors.ErrorAttrPermissions,
-			IAttributeService.AttributeMode.Execute => Errors.ErrorAttrEvalPermissions,
-			IAttributeService.AttributeMode.Set => Errors.ErrorAttrSetPermissions,
+			IAttributeService.AttributeMode.Read => ErrorMessages.Returns.AttrPermissions,
+			IAttributeService.AttributeMode.Execute => ErrorMessages.Returns.AttrEvalPermissions,
+			IAttributeService.AttributeMode.Set => ErrorMessages.Returns.AttrSetPermissions,
 			IAttributeService.AttributeMode.SystemSet => string.Empty,
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
@@ -77,7 +77,7 @@ public class AttributeService(
 	{
 		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var attributePath = attribute.Split('`');
@@ -90,8 +90,8 @@ public class AttributeService(
 		};
 		var permissionFailureType = mode switch
 		{
-			IAttributeService.AttributeMode.Read => Errors.ErrorAttrPermissions,
-			IAttributeService.AttributeMode.Execute => Errors.ErrorAttrEvalPermissions,
+			IAttributeService.AttributeMode.Read => ErrorMessages.Returns.AttrPermissions,
+			IAttributeService.AttributeMode.Execute => ErrorMessages.Returns.AttrEvalPermissions,
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
 
@@ -116,7 +116,7 @@ public class AttributeService(
 	{
 		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
 		{
-			return MModule.single(Errors.ErrorObjectAttributeString);
+			return MModule.single(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var realExecutor = executor;
@@ -161,7 +161,7 @@ public class AttributeService(
 		if (depth > configuration.CurrentValue.Limit.FunctionRecursionLimit)
 		{
 			limitExceeded.IsExceeded = true;
-			return MModule.single(Errors.ErrorRecursion);
+			return MModule.single(ErrorMessages.Returns.Recursion);
 		}
 
 		try
@@ -243,7 +243,7 @@ public class AttributeService(
 		if (!applyPredicate && !lambdaPredicate &&
 		    !await validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None()))
 		{
-			return MModule.single(Errors.ErrorObjectAttributeString);
+			return MModule.single(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var realExecutor = executor;
@@ -264,7 +264,7 @@ public class AttributeService(
 			if (!string.IsNullOrWhiteSpace(applyArgCountStr) && !int.TryParse(applyArgCountStr, out argN))
 			{
 				// Invalid argument count in #apply 
-				return MModule.single(string.Format(Errors.ErrorBadArgumentFormat, "#APPLY"));
+				return MModule.single(string.Format(ErrorMessages.Returns.BadArgumentFormat, "#APPLY"));
 			}
 
 			var slimArgs = Enumerable
@@ -280,19 +280,19 @@ public class AttributeService(
 				// Check wizard/admin/god restrictions
 				if (functionFlags.HasFlag(FunctionFlags.GodOnly) && !await realExecutor.IsRoyalty())
 				{
-					return MModule.single(Errors.ErrorAttrEvalPermissions);
+					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 				if (functionFlags.HasFlag(FunctionFlags.AdminOnly) && !await realExecutor.IsRoyalty())
 				{
-					return MModule.single(Errors.ErrorAttrEvalPermissions);
+					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 				if (functionFlags.HasFlag(FunctionFlags.WizardOnly) && !await realExecutor.IsWizard())
 				{
-					return MModule.single(Errors.ErrorAttrEvalPermissions);
+					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 				if (functionFlags.HasFlag(FunctionFlags.NoGuest) && await realExecutor.IsGuest())
 				{
-					return MModule.single(Errors.ErrorAttrEvalPermissions);
+					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 
 				// Check custom restrictions
@@ -302,7 +302,7 @@ public class AttributeService(
 						.AnyAsync(async (restriction, _) => await realExecutor.HasPower(restriction));
 					if (!hasRestriction)
 					{
-						return MModule.single(Errors.ErrorAttrEvalPermissions);
+						return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
 					}
 				}
 
@@ -471,7 +471,7 @@ public class AttributeService(
 
 		if (returnedAttribute.IsNone)
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
@@ -513,7 +513,7 @@ public class AttributeService(
 
 		if (returnedAttribute.IsNone)
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
@@ -551,7 +551,7 @@ public class AttributeService(
 	{
 		if (!await ps.Controls(executor, obj))
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		var attrPath = attribute.Split('`');
@@ -564,7 +564,7 @@ public class AttributeService(
 
 		if (!permission)
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
@@ -592,7 +592,7 @@ public class AttributeService(
 
 		if (!await ps.Controls(executor, obj))
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
@@ -602,7 +602,7 @@ public class AttributeService(
 		if (attrArr.Length == 0
 				|| !await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		// For wildcard patterns (used by @wipe), use WipeAttributeCommand to fully delete the

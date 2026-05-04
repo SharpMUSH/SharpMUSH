@@ -18,7 +18,7 @@ public static class RetractMail
 
 		if (!maybeLocate.IsValid())
 		{
-			return MModule.single(Errors.ErrorNoSuchPlayer);
+			return MModule.single(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
 		var sentMails = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, MModule.single(msgList), maybeLocate.AsPlayer);

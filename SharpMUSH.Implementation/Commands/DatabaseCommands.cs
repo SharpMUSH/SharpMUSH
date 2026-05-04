@@ -26,23 +26,23 @@ public partial class Commands
 		// Check if SQL is available
 		if (SqlService == null || !SqlService.IsAvailable)
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorSqlNotEnabled, executor);
-			return new CallState(Errors.ErrorSqlNotEnabled);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.SqlNotEnabled, executor);
+			return new CallState(ErrorMessages.Returns.SqlNotEnabled);
 		}
 
 		// Get the query from arguments
 		if (parser.CurrentState.Arguments.Count == 0 || !parser.CurrentState.Arguments.TryGetValue("0", out var queryArg))
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorNoQuerySpecified, executor);
-			return new CallState(Errors.ErrorNoQuerySpecified);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.NoQuerySpecified, executor);
+			return new CallState(ErrorMessages.Returns.NoQuerySpecified);
 		}
 
 		var rawInput = queryArg.Message?.ToPlainText() ?? string.Empty;
 
 		if (string.IsNullOrWhiteSpace(rawInput))
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorNoQuerySpecified, executor);
-			return new CallState(Errors.ErrorNoQuerySpecified);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.NoQuerySpecified, executor);
+			return new CallState(ErrorMessages.Returns.NoQuerySpecified);
 		}
 
 		try
@@ -83,8 +83,8 @@ public partial class Commands
 
 				if (parts.Count == 0)
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorNoQuerySpecified, executor);
-					return new CallState(Errors.ErrorNoQuerySpecified);
+					await NotifyService!.Notify(executor, ErrorMessages.Returns.NoQuerySpecified, executor);
+					return new CallState(ErrorMessages.Returns.NoQuerySpecified);
 				}
 
 				var query = parts[0];
@@ -130,8 +130,8 @@ public partial class Commands
 		// Check if SQL is available
 		if (SqlService == null || !SqlService.IsAvailable)
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorSqlNotEnabled, executor);
-			return new CallState(Errors.ErrorSqlNotEnabled);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.SqlNotEnabled, executor);
+			return new CallState(ErrorMessages.Returns.SqlNotEnabled);
 		}
 
 		// Parse arguments: obj/attr=query
@@ -139,8 +139,8 @@ public partial class Commands
 				!parser.CurrentState.Arguments.TryGetValue("0", out var objAttrArg) ||
 				!parser.CurrentState.Arguments.TryGetValue("1", out var queryArg))
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorInvalidArguments, executor);
-			return new CallState(Errors.ErrorInvalidArguments);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.InvalidArguments, executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		var objAttrStr = objAttrArg.Message?.ToPlainText() ?? string.Empty;
@@ -148,15 +148,15 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(rawQueryInput))
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorInvalidArguments, executor);
-			return new CallState(Errors.ErrorInvalidArguments);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.InvalidArguments, executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
 		if (maybeObjAttr.IsT1)
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorInvalidObjectAttribute, executor);
-			return new CallState(Errors.ErrorInvalidObjectAttribute);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.InvalidObjectAttribute, executor);
+			return new CallState(ErrorMessages.Returns.InvalidObjectAttribute);
 		}
 
 		var (targetObjRef, attrName) = maybeObjAttr.AsT0;

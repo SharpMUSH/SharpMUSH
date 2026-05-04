@@ -29,7 +29,7 @@ public static class ReviewMail
 			if (!actualPlayer.IsPlayer)
 			{
 				await notifyService.Notify(executor, $"MAIL: {name} not found.");
-				return MModule.single(Errors.ErrorNoSuchPlayer);
+				return MModule.single(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
 			target = actualPlayer.AsPlayer;

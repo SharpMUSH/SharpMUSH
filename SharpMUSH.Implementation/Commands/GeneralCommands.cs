@@ -110,7 +110,7 @@ public partial class Commands
 			limitExceeded.IsExceeded = true;
 			callDepth.Decrement();
 			recursionDepths[attributeLongName] = depth - 1;
-			return new CallState(Errors.ErrorRecursion);
+			return new CallState(ErrorMessages.Returns.Recursion);
 		}
 
 		try
@@ -308,7 +308,7 @@ public partial class Commands
 		if (attributeResult.IsNone || attributeResult.IsError)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat), executor, attrName, target.Object().Name);
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		var attribute = attributeResult.AsAttribute.Last();
@@ -1399,7 +1399,7 @@ public partial class Commands
 				}
 				else
 				{
-					await NotifyService!.Notify(executor, Errors.ErrorNotVisible, executor);
+					await NotifyService!.Notify(executor, ErrorMessages.Returns.NotVisible, executor);
 				}
 				continue;
 			}
@@ -1408,7 +1408,7 @@ public partial class Commands
 			var targetContent = target.AsContent;
 			if (!await PermissionService!.Controls(executor, target))
 			{
-				await NotifyService!.Notify(executor, Errors.ErrorCannotTeleport, executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Returns.CannotTeleport, executor);
 				continue;
 			}
 
@@ -1612,7 +1612,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			// Halt all objects in the game
@@ -1638,7 +1638,7 @@ public partial class Commands
 			if (!long.TryParse(pidStr, out var pid))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPidFormat), executor);
-				return new CallState(Errors.ErrorInvalidPid);
+				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
 			// Halt the specific task by PID
@@ -1693,7 +1693,7 @@ public partial class Commands
 		if (!canHalt)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var targetObject = target.Object();
@@ -1787,7 +1787,7 @@ public partial class Commands
 				// No switches - default to ANY
 				break;
 			default:
-				return new CallState(Errors.ErrorTooManySwitches);
+				return new CallState(ErrorMessages.Returns.TooManySwitches);
 		}
 
 		var objectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText());
@@ -2288,7 +2288,7 @@ public partial class Commands
 			if (!await PermissionService!.Controls(executor, located))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			await QueueSemaphore(parser, located, DefaultSemaphoreAttributeArray, arg1, callbackState);
@@ -2315,7 +2315,7 @@ public partial class Commands
 					if (!double.TryParse(splitBySlashes[1], out untilTime))
 					{
 						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeArgumentFormat), executor);
-						return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
+						return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "TIME ARGUMENT"));
 					}
 
 					var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
@@ -2348,7 +2348,7 @@ public partial class Commands
 			// @wait[/until] <object>/<attribute>/<time>=<command list>
 			case 3 when !double.TryParse(splitBySlashes[2], out untilTime):
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeArgumentFormat), executor);
-				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
+				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "TIME ARGUMENT"));
 
 			// Note: Attribute value validation for semaphore usage is handled in QueueSemaphore/QueueSemaphoreWithDelay
 			// methods. If the attribute value is not a valid integer, an error is returned.
@@ -2386,7 +2386,7 @@ public partial class Commands
 
 			default:
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidFirstArgumentFormat), executor);
-				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "FIRST ARGUMENT"));
+				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "FIRST ARGUMENT"));
 		}
 	}
 
@@ -2415,7 +2415,7 @@ public partial class Commands
 
 		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorInteger, executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.Integer, executor);
 			return;
 		}
 
@@ -2449,7 +2449,7 @@ public partial class Commands
 
 		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorInteger, executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.Integer, executor);
 			return;
 		}
 
@@ -2466,13 +2466,13 @@ public partial class Commands
 		if (!int.TryParse(arg0, out var pid))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified), executor);
-			return new CallState(Errors.ErrorInvalidPid);
+			return new CallState(ErrorMessages.Returns.InvalidPid);
 		}
 
 		if (string.IsNullOrEmpty(arg1))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitWhatToDoWithProcess), executor);
-			return new CallState(string.Format(Errors.ErrorTooFewArguments, "@WAIT", 2, 1));
+			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "@WAIT", 2, 1));
 		}
 
 		var exists = Mediator!.CreateStream(new ScheduleSemaphoreQuery(pid));
@@ -2481,7 +2481,7 @@ public partial class Commands
 		if (maybeFoundPid is null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified), executor);
-			return new CallState(Errors.ErrorInvalidPid);
+			return new CallState(ErrorMessages.Returns.InvalidPid);
 		}
 
 		var timeArg = arg1;
@@ -2562,7 +2562,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			// Handle administrative operations
@@ -2612,7 +2612,7 @@ public partial class Commands
 				if (!executor.IsGod())
 				{
 					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandOnlyGodCanDelete), executor);
-					return new CallState(Errors.ErrorPerm);
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
 				}
 
 				if (!isQuiet)
@@ -2712,15 +2712,15 @@ public partial class Commands
 
 		if (switches.Length > 1)
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorTooManySwitches, executor);
-			return new CallState(Errors.ErrorTooManySwitches);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.TooManySwitches, executor);
+			return new CallState(ErrorMessages.Returns.TooManySwitches);
 		}
 
 		var maybeObjectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
 		if (maybeObjectAndAttribute is { IsT1: true, AsT1: false })
 		{
-			await NotifyService!.Notify(executor, Errors.ErrorCantSeeThat, executor);
-			return new CallState(Errors.ErrorCantSeeThat);
+			await NotifyService!.Notify(executor, ErrorMessages.Returns.CantSeeThat, executor);
+			return new CallState(ErrorMessages.Returns.CantSeeThat);
 		}
 
 		var (target, maybeAttribute) = maybeObjectAndAttribute.AsT0;
@@ -2732,7 +2732,7 @@ public partial class Commands
 			case { IsError: true }:
 				return new CallState(maybeObject.AsError.Value);
 			case { IsNone: true }:
-				return new CallState(Errors.ErrorCantSeeThat);
+				return new CallState(ErrorMessages.Returns.CantSeeThat);
 		}
 
 		var objectToDrain = maybeObject.AsAnyObject;
@@ -2881,13 +2881,13 @@ public partial class Commands
 		if (!await PermissionService!.Controls(executor, found))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ForcePermissionDeniedDoNotControl), executor);
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (cmdListArg.Length < 1)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ForceThemToDoWhat), executor);
-			return new CallState(Errors.NothingToDo);
+			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
 		var switches = parser.CurrentState.Switches.ToArray();
@@ -2985,7 +2985,7 @@ public partial class Commands
 			if (!canSpoof && !controlsExecutor)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 		}
 
@@ -3333,13 +3333,13 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			if (switches.Contains("SAVE") && !executor.IsGod())
 			{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOnlyGodCanUseSave), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			// /set and /save not yet implemented - would require runtime config modification
@@ -3426,7 +3426,7 @@ public partial class Commands
 		if (objAttrArg == null || objAttrArg.Message == null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidArguments), executor);
-			return new CallState(Errors.ErrorInvalidArguments);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		var objAttrText = MModule.plainText(objAttrArg.Message);
@@ -3435,7 +3435,7 @@ public partial class Commands
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat), executor);
-			return new CallState(Errors.ErrorInvalidFormat);
+			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
 		var (dbref, attrPattern) = details;
@@ -4037,7 +4037,7 @@ public partial class Commands
 			if (!long.TryParse(pidStr, out var pid))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPidFormat), executor);
-				return new CallState(Errors.ErrorInvalidPid);
+				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
 			// Find the semaphore task with this PID
@@ -4120,7 +4120,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			// Get all tasks across the system
@@ -4444,13 +4444,13 @@ public partial class Commands
 		if (attributeResult.IsError)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), executor, attributeName);
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (attributeResult.IsNone)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), executor, attributeName);
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		var attribute = attributeResult.AsAttribute.Last();
@@ -4770,7 +4770,7 @@ public partial class Commands
 		if (!canExamine)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var obj = targetKnown.Object();
@@ -5030,7 +5030,7 @@ public partial class Commands
 			if (!canSpoof && !controlsExecutor)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 		}
 
@@ -5120,7 +5120,7 @@ public partial class Commands
 		if (!canSpoof && !controlsExecutor)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		await foreach (var obj in interactableContents)
@@ -5174,7 +5174,7 @@ public partial class Commands
 			if (!roomResult.IsValid() || (!roomResult.IsRoom && !roomResult.IsThing))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidRoomSpecifiedDetail), executor);
-				return new CallState(Errors.ErrorInvalidRoom);
+				return new CallState(ErrorMessages.Returns.InvalidRoom);
 			}
 
 			targetRoom = roomResult.IsRoom
@@ -5337,7 +5337,7 @@ public partial class Commands
 		{
 			await NotifyService!.Notify(executor,
 				"Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]", executor);
-			return new CallState(Errors.ErrorCantSeeThat);
+			return new CallState(ErrorMessages.Returns.CantSeeThat);
 		}
 
 		var victimName = args.ElementAtOrDefault(0).Value.Message!.ToPlainText();
@@ -5390,7 +5390,7 @@ public partial class Commands
 		if (!hasPermission)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var actorMessage = await GetAttributeOrDefault(
@@ -5602,7 +5602,7 @@ public partial class Commands
 		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var patternArg))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepInvalidArguments), executor);
-			return new CallState(Errors.ErrorInvalidArguments);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		// Parse object/attribute pattern
@@ -5613,7 +5613,7 @@ public partial class Commands
 		if (!split.TryPickT0(out var details, out _))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
-			return new CallState(Errors.ErrorInvalidObject);
+			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
 
 		var (dbref, maybeAttributePattern) = details;
@@ -5831,7 +5831,7 @@ public partial class Commands
 		if (attributeResult.IsError)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeNoSuchAttributeFormat), executor, attributeName);
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (attributeResult.IsNone)
@@ -5949,7 +5949,7 @@ public partial class Commands
 		if (switches.Except(sendSwitches).Any() && switches.Length > 1)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MailTooManySwitches), executor);
-			return new CallState(Errors.ErrorTooManySwitches);
+			return new CallState(ErrorMessages.Returns.TooManySwitches);
 		}
 
 		if (!switches.Contains("NOEVAL"))
@@ -6130,7 +6130,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			// Halt all objects, then trigger @STARTUP on all objects that have it
@@ -6186,7 +6186,7 @@ public partial class Commands
 		if (!await PermissionService!.Controls(executor, target))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var targetObject = target.Object();
@@ -6577,7 +6577,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "*";
@@ -6645,7 +6645,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			if (args.Count < 2)
@@ -6699,7 +6699,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			// Remove attribute from standard attribute table
@@ -6724,7 +6724,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			if (args.Count < 2)
@@ -6762,7 +6762,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			if (args.Count < 2)
@@ -6791,7 +6791,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			if (args.Count < 2)

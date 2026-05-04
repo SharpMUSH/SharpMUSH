@@ -25,11 +25,11 @@ public partial class Functions
 
 	[SharpFunction(Name = "tag", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["tagname", "content", "attributes"])]
 	public static ValueTask<CallState> Tag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(Errors.ErrorUseTagwrapInstead);
+		=> ValueTask.FromResult<CallState>(ErrorMessages.Returns.UseTagwrapInstead);
 
 	[SharpFunction(Name = "endtag", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["tagname"])]
 	public static ValueTask<CallState> EndTag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(Errors.ErrorUseTagwrapInstead);
+		=> ValueTask.FromResult<CallState>(ErrorMessages.Returns.UseTagwrapInstead);
 
 	[SharpFunction(Name = "tagwrap", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["tag", "content"])]
 	public static ValueTask<CallState> TagWrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)

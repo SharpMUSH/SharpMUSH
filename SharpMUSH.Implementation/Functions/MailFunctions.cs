@@ -94,7 +94,7 @@ public partial class Functions
 		// Two arguments - must be wizard to view other player's mail
 		if (!await executor.IsWizard())
 		{
-			return PlayerMessageResult.FromError(Errors.ErrorPermissionDenied);
+			return PlayerMessageResult.FromError(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText()!;
@@ -108,7 +108,7 @@ public partial class Functions
 
 		if (locateResult.IsNone)
 		{
-			return PlayerMessageResult.FromError(Errors.ErrorNoSuchPlayer);
+			return PlayerMessageResult.FromError(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
 		return PlayerMessageResult.Success(locateResult.AsPlayer, args["1"].Message!.ToPlainText()!);
@@ -146,7 +146,7 @@ public partial class Functions
 		{
 			if (!await CanViewOtherPlayerMail(executor))
 			{
-				return new CallState(Errors.ErrorPermissionDenied);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -168,13 +168,13 @@ public partial class Functions
 			var (folder, messageIndex) = await ParseMessageSpec(parser, executor, arg0);
 			if (messageIndex < 0)
 			{
-				return new CallState(Errors.ErrorNoSuchMail);
+				return new CallState(ErrorMessages.Returns.NoSuchMail);
 			}
 
 			var mail = await GetMailMessage(executor, folder, messageIndex);
 			if (mail == null)
 			{
-				return new CallState(Errors.ErrorNoSuchMail);
+				return new CallState(ErrorMessages.Returns.NoSuchMail);
 			}
 
 			return new CallState(mail.Content.ToString());
@@ -185,7 +185,7 @@ public partial class Functions
 
 		if (!await CanViewOtherPlayerMail(executor))
 		{
-			return new CallState(Errors.ErrorPermissionDenied);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -195,13 +195,13 @@ public partial class Functions
 				var (folder, messageIndex) = await ParseMessageSpec(parser, target, arg1);
 				if (messageIndex < 0)
 				{
-					return new CallState(Errors.ErrorNoSuchMail);
+					return new CallState(ErrorMessages.Returns.NoSuchMail);
 				}
 
 				var mail = await GetMailMessage(target, folder, messageIndex);
 				if (mail == null)
 				{
-					return new CallState(Errors.ErrorNoSuchMail);
+					return new CallState(ErrorMessages.Returns.NoSuchMail);
 				}
 
 				return new CallState(mail.Content.ToString());
@@ -250,7 +250,7 @@ public partial class Functions
 			// Must be wizard to view other player's mail
 			if (!await CanViewOtherPlayerMail(executor))
 			{
-				return new CallState(Errors.ErrorPermissionDenied);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			var playerArg = args["0"].Message!.ToPlainText()!;
@@ -259,7 +259,7 @@ public partial class Functions
 
 			if (locateResult.IsError || locateResult.IsNone)
 			{
-				return new CallState(Errors.ErrorNoSuchPlayer);
+				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
 			targetPlayer = locateResult.AsPlayer;
@@ -312,13 +312,13 @@ public partial class Functions
 		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
-			return new CallState(Errors.ErrorNoSuchMail);
+			return new CallState(ErrorMessages.Returns.NoSuchMail);
 		}
 
 		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
 		if (mail == null)
 		{
-			return new CallState(Errors.ErrorNoSuchMail);
+			return new CallState(ErrorMessages.Returns.NoSuchMail);
 		}
 
 		var from = await mail.From.WithCancellation(CancellationToken.None);
@@ -329,7 +329,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -349,7 +349,7 @@ public partial class Functions
 
 		if (locateResult.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchPlayer);
+			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
 		var recipient = locateResult.AsPlayer;
@@ -357,7 +357,7 @@ public partial class Functions
 		// Check mail lock
 		if (!PermissionService!.PassesLock(sender, recipient, LockType.Mail))
 		{
-			return new CallState(Errors.ErrorRecipientDoesNotAcceptMail);
+			return new CallState(ErrorMessages.Returns.RecipientDoesNotAcceptMail);
 		}
 
 		// Parse subject and message (split on /)
@@ -414,7 +414,7 @@ public partial class Functions
 			// Must be wizard to view other player's mail
 			if (!await CanViewOtherPlayerMail(executor))
 			{
-				return new CallState(Errors.ErrorPermissionDenied);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
@@ -422,7 +422,7 @@ public partial class Functions
 
 			if (locateResult.IsError || locateResult.IsNone)
 			{
-				return new CallState(Errors.ErrorNoSuchPlayer);
+				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
 			target = locateResult.AsPlayer;
@@ -455,7 +455,7 @@ public partial class Functions
 			// Must be wizard to view other player's mail
 			if (!await CanViewOtherPlayerMail(executor))
 			{
-				return new CallState(Errors.ErrorPermissionDenied);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
@@ -463,7 +463,7 @@ public partial class Functions
 
 			if (locateResult.IsError || locateResult.IsNone)
 			{
-				return new CallState(Errors.ErrorNoSuchPlayer);
+				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
 			target = locateResult.AsPlayer;
@@ -501,7 +501,7 @@ public partial class Functions
 			// Must be wizard to view other player's mail
 			if (!await CanViewOtherPlayerMail(executor))
 			{
-				return new CallState(Errors.ErrorPermissionDenied);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
@@ -509,7 +509,7 @@ public partial class Functions
 
 			if (locateResult.IsError || locateResult.IsNone)
 			{
-				return new CallState(Errors.ErrorNoSuchPlayer);
+				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
 			target = locateResult.AsPlayer;
@@ -545,13 +545,13 @@ public partial class Functions
 		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
-			return new CallState(Errors.ErrorNoSuchMail);
+			return new CallState(ErrorMessages.Returns.NoSuchMail);
 		}
 
 		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
 		if (mail == null)
 		{
-			return new CallState(Errors.ErrorNoSuchMail);
+			return new CallState(ErrorMessages.Returns.NoSuchMail);
 		}
 
 		// Format status as per @mail/list format: [NCUF+]
@@ -578,13 +578,13 @@ public partial class Functions
 		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
-			return new CallState(Errors.ErrorNoSuchMail);
+			return new CallState(ErrorMessages.Returns.NoSuchMail);
 		}
 
 		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
 		if (mail == null)
 		{
-			return new CallState(Errors.ErrorNoSuchMail);
+			return new CallState(ErrorMessages.Returns.NoSuchMail);
 		}
 
 		return new CallState(mail.Subject.ToString());
@@ -604,13 +604,13 @@ public partial class Functions
 		var (folder, messageIndex) = await ParseMessageSpec(parser, parseResult.Player!, parseResult.MessageSpec!);
 		if (messageIndex < 0)
 		{
-			return new CallState(Errors.ErrorNoSuchMail);
+			return new CallState(ErrorMessages.Returns.NoSuchMail);
 		}
 
 		var mail = await GetMailMessage(parseResult.Player!, folder, messageIndex);
 		if (mail == null)
 		{
-			return new CallState(Errors.ErrorNoSuchMail);
+			return new CallState(ErrorMessages.Returns.NoSuchMail);
 		}
 
 		return new CallState(mail.DateSent.ToUnixTimeSeconds().ToString());

@@ -53,7 +53,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -139,7 +139,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -236,7 +236,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -293,7 +293,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -337,7 +337,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -379,7 +379,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -427,7 +427,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -521,7 +521,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -576,7 +576,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -613,7 +613,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -656,7 +656,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);

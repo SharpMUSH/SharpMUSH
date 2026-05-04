@@ -116,7 +116,7 @@ public static partial class Substitutions
 	private static CallState HandleITextTop(CallState symbol, IMUSHCodeParser parser) =>
 		$"{(parser.CurrentState.IterationRegisters.TryPeek(out var result)
 			? result.Value
-			: MModule.single(Errors.ErrorRegisterRange))}";
+			: MModule.single(ErrorMessages.Returns.RegisterRange))}";
 
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
 	{
@@ -154,13 +154,13 @@ public static partial class Substitutions
 		// Parse the symbol number
 		if (!int.TryParse(symbolValue, out var symbolNumber) || symbolNumber < 0)
 		{
-			return new CallState(Errors.ErrorNonNegativeInteger);
+			return new CallState(ErrorMessages.Returns.NonNegativeInteger);
 		}
 
 		// Check if we're in a switch context or if the depth is out of range
 		if (stack.Count == 0 || symbolNumber >= stack.Count)
 		{
-			return new CallState(Errors.ErrorRegisterRange);
+			return new CallState(ErrorMessages.Returns.RegisterRange);
 		}
 
 		// Get the nth item from the stack (0 is top/current)
@@ -176,7 +176,7 @@ public static partial class Substitutions
 		// Check if we're in a switch context
 		if (stack.Count == 0)
 		{
-			return new CallState(Errors.ErrorRegisterRange);
+			return new CallState(ErrorMessages.Returns.RegisterRange);
 		}
 
 		// Get the outermost (last) item from the stack
@@ -194,7 +194,7 @@ public static partial class Substitutions
 
 		if (maxCount <= symbolNumber)
 		{
-			return new CallState(Errors.ErrorRegisterRange);
+			return new CallState(ErrorMessages.Returns.RegisterRange);
 		}
 
 		var val = parser.CurrentState.IterationRegisters.ElementAt(symbolNumber).Value;

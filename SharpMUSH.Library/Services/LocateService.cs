@@ -208,7 +208,7 @@ public partial class LocateService(
 				return looker.WithNoneOption().WithErrorOption();
 			}
 
-			return new Error<string>(Errors.ErrorPerm);
+			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
@@ -221,7 +221,7 @@ public partial class LocateService(
 				return (await FriendlyWhereIs(looker)).WithExitOption().WithNoneOption().WithErrorOption();
 			}
 
-			return new Error<string>(Errors.ErrorPerm);
+			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if ((flags.HasFlag(LocateFlags.MatchOptionalWildCardForPlayerName) || flags.HasFlag(LocateFlags.PlayersPreference)
@@ -254,7 +254,7 @@ public partial class LocateService(
 						return match;
 					}
 
-					return new Error<string>(Errors.ErrorPerm);
+					return new Error<string>(ErrorMessages.Returns.PermissionDenied);
 				}
 
 				bestMatch = match;
@@ -279,7 +279,7 @@ public partial class LocateService(
 						return match;
 					}
 
-					return new Error<string>(Errors.ErrorPerm);
+					return new Error<string>(ErrorMessages.Returns.PermissionDenied);
 				}
 			}
 		}
@@ -411,7 +411,7 @@ public partial class LocateService(
 
 		if (right_type != 1 && !flags.HasFlag(LocateFlags.UseLastIfAmbiguous))
 		{
-			return new Error<string>(Errors.ErrorAmbiguous);
+			return new Error<string>(ErrorMessages.Returns.AmbiguousMatch);
 		}
 
 		return bestMatch;

@@ -31,19 +31,19 @@ public partial class Functions
 		// Parse the base arguments as integers
 		if (!int.TryParse(ArgHelpers.EmptyStringToZero(fromBaseStr), out var fromBase))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
 		}
 
 		if (!int.TryParse(ArgHelpers.EmptyStringToZero(toBaseStr), out var toBase))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
 		}
 
 		if (fromBase is < 2 or > 64)
-			return ValueTask.FromResult<CallState>(new(string.Format(Errors.ErrorBaseArgRange, 1)));
+			return ValueTask.FromResult<CallState>(new(string.Format(ErrorMessages.Returns.BaseArgRange, 1)));
 
 		if (toBase is < 2 or > 64)
-			return ValueTask.FromResult<CallState>(new(string.Format(Errors.ErrorBaseArgRange, 2)));
+			return ValueTask.FromResult<CallState>(new(string.Format(ErrorMessages.Returns.BaseArgRange, 2)));
 
 		var fromBaseChars = fromBase <= 36 ? Chars36 : Chars;
 		var toBaseChars = toBase <= 36 ? Chars36 : Chars;
@@ -51,7 +51,7 @@ public partial class Functions
 		// Validate input according to fromBase
 		if (input.Any(c => fromBaseChars.IndexOf(c) >= fromBase))
 		{
-			return ValueTask.FromResult<CallState>(new(Errors.ErrorMalformedNumber));
+			return ValueTask.FromResult<CallState>(new(ErrorMessages.Returns.MalformedNumber));
 		}
 
 		// Convert input to base 10

@@ -19,12 +19,12 @@ public partial class Functions
 
 		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
 		{
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (SqlService is not { IsAvailable: true })
 		{
-			return new CallState(Errors.ErrorSqlNotEnabled);
+			return new CallState(ErrorMessages.Returns.SqlNotEnabled);
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -33,7 +33,7 @@ public partial class Functions
 
 		if (string.IsNullOrWhiteSpace(query))
 		{
-			return new CallState(Errors.ErrorNoQuerySpecified);
+			return new CallState(ErrorMessages.Returns.NoQuerySpecified);
 		}
 
 		var rowSeparator = args.Count > 1 && args.TryGetValue("1", out var value)
@@ -99,7 +99,7 @@ public partial class Functions
 	{
 		if (SqlService is not { IsAvailable: true })
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorSqlNotEnabled));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.SqlNotEnabled));
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -117,12 +117,12 @@ public partial class Functions
 
 		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
 		{
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (SqlService is not { IsAvailable: true })
 		{
-			return new CallState(Errors.ErrorSqlNotEnabled);
+			return new CallState(ErrorMessages.Returns.SqlNotEnabled);
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -133,7 +133,7 @@ public partial class Functions
 
 		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(query))
 		{
-			return new CallState(Errors.ErrorInvalidArguments);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		var osep = args.Count > 2 && args.TryGetValue("2", out var osepArg)
@@ -150,7 +150,7 @@ public partial class Functions
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
 		if (maybeObjAttr.IsT1)
 		{
-			return new CallState(Errors.ErrorInvalidObjectAttribute);
+			return new CallState(ErrorMessages.Returns.InvalidObjectAttribute);
 		}
 
 		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
