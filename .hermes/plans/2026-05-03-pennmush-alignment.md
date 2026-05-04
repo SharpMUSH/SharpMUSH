@@ -254,13 +254,13 @@ These are ranked by actual impact. Items already partially handled are noted.
 
 **Files:**
 - Create: `SharpMUSH.Tests/Functions/PennMUSHParityTests/` (one file per category)
-- Reference: PennMUSH help files + pennmush/test/*.t files
+- Reference: PennMUSH help files + existing PennMUSH parity tests in C# suite
 
 **Steps:**
-1. Extract test cases from PennMUSH's 28 .t test files (already in pennmush/test/)
-2. Convert to SharpMUSH's xUnit [Arguments] format
+1. Identify functions with no parity test coverage yet
+2. Add test cases using PennMUSH docs for expected input/output
 3. Run and catalog failures as a prioritized fix list
-4. Commit: `test: function parity tests from PennMUSH test suite`
+4. Commit: `test: expand function parity test coverage`
 
 ---
 
@@ -424,24 +424,7 @@ All 126 commands are present. Focus on behavioral correctness.
 
 ---
 
-### Task 5.1: Convert PennMUSH .t Test Files to C# xUnit
-
-**Objective:** The 28 PennMUSH .t test files in pennmush/test/ use a Perl harness. Convert them to SharpMUSH's C# test format for automated regression testing.
-
-**Files:**
-- Source: `pennmush/test/*.t` (28 files: math.t, sort.t, json.t, flags.t, grep.t, trim.t, strings.t, lnum.t, letq.t, digest.t, alias.t, atree.t, decompose.t, etc.)
-- Create: `SharpMUSH.Tests/PennMUSHParity/` (converted tests)
-
-**Steps:**
-1. Parse the .t file format: `test('name', $god, 'think expr()', 'expected_regex')`
-2. Write a converter script or manually convert to `[Arguments("expr()", "expected")]`
-3. Run and catalog failures
-4. Failures become the prioritized fix list
-5. Commit: `test: convert PennMUSH .t test suite to xUnit`
-
----
-
-### Task 5.2: Fix 192 Skipped Tests
+### Task 5.1: Fix 192 Skipped Tests
 
 **Objective:** Reduce skipped tests from 192 to as few as possible.
 
@@ -461,7 +444,7 @@ All 126 commands are present. Focus on behavioral correctness.
 
 ---
 
-### Task 5.3: Expand Substitution Tests
+### Task 5.2: Expand Substitution Tests
 
 **Objective:** Only 1 active substitution test exists (3 more commented out as TODO). This is dangerously sparse for such a critical feature.
 
@@ -477,7 +460,7 @@ All 126 commands are present. Focus on behavioral correctness.
 
 ---
 
-### Task 5.4: Softcode Regression Suite
+### Task 5.3: Softcode Regression Suite
 
 **Objective:** Test real-world MUSHcode patterns (BBS, combat code, building tools) end-to-end.
 
@@ -523,13 +506,12 @@ All 126 commands are present. Focus on behavioral correctness.
 
 ## Execution Priority
 
-1. **Phase 5.1** (Convert PennMUSH .t tests) — Gives concrete failure list to drive everything else
-2. **Phase 5.3** (Substitution tests) — Dangerously sparse, high risk area
-3. **Phase 1** (Parser gaps) — Cascading impact
-4. **Phase 2** (Function parity) — Most-used feature
-5. **Phase 3** (Command behavior) — Output correctness
-6. **Phase 4** (Object model) — Multi-user correctness
-7. **Phase 5.2** (Un-skip tests) — Ongoing
-8. **Phase 6** (Networking) — Lowest impact on softcode compatibility
+1. **Phase 5.2** (Substitution tests) — Dangerously sparse, high risk area
+2. **Phase 1** (Parser gaps) — Cascading impact
+3. **Phase 2** (Function parity) — Most-used feature
+4. **Phase 3** (Command behavior) — Output correctness
+5. **Phase 4** (Object model) — Multi-user correctness
+6. **Phase 5.1** (Un-skip tests) — Ongoing
+7. **Phase 6** (Networking) — Lowest impact on softcode compatibility
 
-**Done criteria:** All PennMUSH .t tests pass in C# form, all 192 skipped tests resolved, substitution coverage comprehensive, function parity tests pass, economy/quota implemented.
+**Done criteria:** All PennMUSH parity tests pass, all 192 skipped tests resolved, substitution coverage comprehensive, function parity tests pass, economy/quota implemented.
