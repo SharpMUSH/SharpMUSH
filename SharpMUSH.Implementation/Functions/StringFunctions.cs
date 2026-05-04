@@ -56,7 +56,7 @@ public partial class Functions
 		if (!parser.CurrentState.ArgumentsOrdered.Any())
 			return ValueTask.FromResult(CallState.Empty);
 
-		return ValueTask.FromResult(new CallState(parser.CurrentState.Arguments["0"].Message));
+		return ValueTask.FromResult(new CallState(parser.CurrentState.Arguments["0"].Message) { PreserveSpaces = true });
 	}
 
 	[SharpFunction(Name = "speak", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular,
@@ -1081,7 +1081,41 @@ public partial class Functions
 			.Replace("^", "\\^")
 			.Replace("$", "\\$");
 
-		result = SpacesRegex().Replace(result, m => string.Join("", Enumerable.Repeat("%b", m.Length)));
+		// PennMUSH decompose space algorithm (from escape_marked_str in markup.c):
+		// - 5+ consecutive spaces → [space(N)]
+		// - 1-4 spaces: alternating literal-space / %b pattern
+		//   - At start of string (dospace=1): first space → %b, then alternating space/%b
+		//   - After non-space (dospace=0): alternating space/%b pairs
+		//   - Trailing spaces: last space always becomes %b
+		bool dospaceGlobal = result.Length > 0 && result[0] == ' ';
+		result = SpacesRegex().Replace(result, m =>
+		{
+			int spaces = m.Length;
+			if (spaces >= 5)
+			{
+				return $"[space({spaces})]";
+			}
+
+			var sb = new System.Text.StringBuilder();
+			bool dospace = dospaceGlobal && m.Index == 0;
+
+			// Check if this is a trailing run (at end of string)
+			bool isTrailing = m.Index + m.Length == result.Length;
+
+			if (isTrailing)
+			{
+				spaces--; // reserve last for final %b
+				if (spaces > 0 && dospace) { spaces--; sb.Append("%b"); }
+				while (spaces > 0) { sb.Append(' '); spaces--; if (spaces > 0) { spaces--; sb.Append("%b"); } }
+				sb.Append("%b"); // final %b for trailing
+			}
+			else
+			{
+				if (dospace) { spaces--; sb.Append("%b"); }
+				while (spaces > 0) { sb.Append(' '); spaces--; if (spaces > 0) { spaces--; sb.Append("%b"); } }
+			}
+			return sb.ToString();
+		});
 
 		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
 

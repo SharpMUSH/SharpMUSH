@@ -182,7 +182,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		return visitor.Visit(context);
 	}
 
-	public ValueTask<CallState?> FunctionParse(MString text)
+	public async ValueTask<CallState?> FunctionParse(MString text)
 	{
 		// Ensure we have invocation tracking for standalone function parsing
 		// Check if tracking is already initialized - if not, create a new parser with tracking
@@ -215,7 +215,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				LimitExceeded: new LimitExceededFlag()))
 			: this;
 
-		return ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+		var result = await ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+
+		return result;
 	}
 
 	public ValueTask<CallState?> CommandListParse(MString text)

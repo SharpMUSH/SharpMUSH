@@ -239,8 +239,9 @@ public class SharpMUSHParserVisitor(
 			messages[i] = results[i].Message ?? MModule.Empty();
 
 		var combined = MModule.ConcatMany(messages);
+		var preserveSpaces = results.Any(r => r.PreserveSpaces);
 		return new CallState(combined, results[0].Depth, null,
-			() => ValueTask.FromResult<MString?>(combined));
+			() => ValueTask.FromResult<MString?>(combined)) { PreserveSpaces = preserveSpaces };
 	}
 
 	/// <summary>
@@ -479,23 +480,23 @@ public class SharpMUSHParserVisitor(
 			/* Validation, this should probably go into its own function! */
 			if (args.Length > attribute.MaxArgs)
 			{
-				return new CallState(string.Format(Errors.ErrorTooManyArguments, name, attribute.MaxArgs, args.Length), context.Depth());
+				return new CallState(string.Format(Errors.ErrorTooManyArguments, name.ToUpperInvariant(), attribute.MaxArgs, args.Length), context.Depth());
 			}
 
 			if (args.Length < attribute.MinArgs)
 			{
-				return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Length),
+				return new CallState(string.Format(Errors.ErrorTooFewArguments, name.ToUpperInvariant(), attribute.MinArgs, args.Length),
 					contextDepth);
 			}
 
 			if (((attribute.Flags & FunctionFlags.UnEvenArgsOnly) != 0) && (args.Length % 2 == 0))
 			{
-				return new CallState(string.Format(Errors.ErrorGotEvenArgs, name), contextDepth);
+				return new CallState(string.Format(Errors.ErrorGotEvenArgs, name.ToUpperInvariant()), contextDepth);
 			}
 
 			if (((attribute.Flags & FunctionFlags.EvenArgsOnly) != 0) && (args.Length % 2 != 0))
 			{
-				return new CallState(string.Format(Errors.ErrorGotUnEvenArgs, name), contextDepth);
+				return new CallState(string.Format(Errors.ErrorGotUnEvenArgs, name.ToUpperInvariant()), contextDepth);
 			}
 
 			// Consider moving after RefinedArguments to avoid extra parsing. However, each

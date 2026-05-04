@@ -1220,10 +1220,19 @@ public partial class Functions
 		// Check if second argument exists and is not empty
 		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace(MModule.plainText(arg1.Message)))
 		{
-			// One argument: random number from 0 to arg-1
-			if (!int.TryParse(MModule.plainText(arg0.Message), out var maxVal) || maxVal <= 0)
+		// One argument: random number from 0 to arg-1
+			if (!int.TryParse(MModule.plainText(arg0.Message), out var maxVal))
 			{
 				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			}
+			// PennMUSH behavior: rand(0) is an error (empty range), negative values return 0
+			if (maxVal == 0)
+			{
+				return ValueTask.FromResult(new CallState("#-1 RESULT WAS OUTSIDE OF RANGE"));
+			}
+			if (maxVal < 0)
+			{
+				return ValueTask.FromResult(new CallState(0));
 			}
 			return ValueTask.FromResult(new CallState(Random.Shared.Next(0, maxVal)));
 		}

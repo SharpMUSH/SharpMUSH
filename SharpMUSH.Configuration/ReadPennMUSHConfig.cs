@@ -91,7 +91,7 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CosmeticOptions.AnsiNames)), true),
 				Boolean(Get(nameof(CosmeticOptions.OnlyAsciiInNames)), true),
 				Boolean(Get(nameof(CosmeticOptions.Monikers)), true),
-				UnsignedInteger(Get(nameof(CosmeticOptions.FloatPrecision)), 6),
+				UnsignedInteger(Get(nameof(CosmeticOptions.FloatPrecision)), 15),
 				Boolean(Get(nameof(CosmeticOptions.CommaExitList)), true),
 				Boolean(Get(nameof(CosmeticOptions.CountAll)), false),
 				Boolean(Get(nameof(CosmeticOptions.PageAliases)), false),

@@ -246,7 +246,7 @@ public partial class Functions
 
 		if (matches.Count == 0)
 		{
-			return new ValueTask<CallState>(Errors.ErrorInteger);
+			return new ValueTask<CallState>("#-1 INVALID TIMESTRING");
 		}
 
 		long totalSeconds = 0;
@@ -517,6 +517,12 @@ public partial class Functions
 			return new ValueTask<CallState>(Errors.ErrorInteger);
 		}
 
+		// PennMUSH: negative seconds return error
+		if (totalSecs < 0)
+		{
+			return new ValueTask<CallState>("#-1 SECONDS MUST NOT BE NEGATIVE");
+		}
+
 		if (!int.TryParse(padFlag, out var pad))
 		{
 			pad = 0;
@@ -624,7 +630,13 @@ public partial class Functions
 			return new ValueTask<CallState>(Errors.ErrorInteger);
 		}
 
-		var maxWidth = width != null && int.TryParse(width, out var w) ? w : int.MaxValue;
+		var maxWidth = width != null && int.TryParse(width, out var w) ? w :
+			width != null ? -1 : int.MaxValue; // -1 signals invalid width
+
+		if (maxWidth < 0)
+		{
+			return new ValueTask<CallState>("#-1 WIDTH MUST BE A NUMBER");
+		}
 
 		// Calculate time components
 		var timeSpan = TimeSpan.FromSeconds(totalSecs);
@@ -672,6 +684,12 @@ public partial class Functions
 		if (!long.TryParse(secsStr, out var totalSecs))
 		{
 			return new ValueTask<CallState>(Errors.ErrorInteger);
+		}
+
+		// PennMUSH: negative seconds return error
+		if (totalSecs < 0)
+		{
+			return new ValueTask<CallState>("#-1 SECONDS MUST NOT BE NEGATIVE");
 		}
 
 		// Calculate time components using TimeSpan

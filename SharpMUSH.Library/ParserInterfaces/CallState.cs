@@ -6,7 +6,7 @@ using System.Globalization;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
-public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<ValueTask<MString?>> ParsedMessage)
+public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<ValueTask<MString?>> ParsedMessage, bool PreserveSpaces = false)
 {
 	public static implicit operator CallState(MString? m) => new(m);
 	public static implicit operator CallState(DBRef m) => new(m);
@@ -33,7 +33,10 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 
 	public CallState(DBRef Message) : this(Message.ToString()) { }
 
-	public CallState(double Message) : this(Message.ToString(CultureInfo.InvariantCulture)) { }
+	public CallState(double Message) : this(
+		Definitions.Configurable.FloatPrecision >= 15
+			? Message.ToString(CultureInfo.InvariantCulture)
+			: Message.ToString($"G{Definitions.Configurable.FloatPrecision}", CultureInfo.InvariantCulture)) { }
 
 	public CallState(decimal Message) : this(Message.ToString(CultureInfo.InvariantCulture)) { }
 

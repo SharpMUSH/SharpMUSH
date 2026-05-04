@@ -4,6 +4,21 @@ namespace SharpMUSH.Library.Definitions;
 
 public static class Configurable
 {
+	private const int MinFloatPrecision = 0;
+	private const int MaxFloatPrecision = 15;
+	private const int DefaultFloatPrecision = 15;
+	private static int _floatPrecision = DefaultFloatPrecision;
+
+	/// <summary>
+	/// Number of significant digits for floating-point output.
+	/// Clamped to [0, 15]. PennMUSH default: 6, SharpMUSH default: 15.
+	/// Set via float_precision config option (Cosmetic category).
+	/// </summary>
+	public static int FloatPrecision
+	{
+		get => _floatPrecision;
+		set => _floatPrecision = Math.Clamp(value, MinFloatPrecision, MaxFloatPrecision);
+	}
 	public static Dictionary<string, string[]> FunctionAliases { get; private set; } = new()
 	{
 		{ "atrlock", ["attrlock"] },

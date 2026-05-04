@@ -45,6 +45,7 @@ public class StartupHandler(
 		logger.LogInformation("Initializing configurable aliases and restrictions from database.");
 		var currentOptions = options.CurrentValue;
 		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
+		Configurable.FloatPrecision = (int)currentOptions.Cosmetic.FloatPrecision;
 
 		// Notify ConnectionServer that the main process is ready
 		logger.LogInformation("Publishing MainProcessReadyMessage to ConnectionServer.");
