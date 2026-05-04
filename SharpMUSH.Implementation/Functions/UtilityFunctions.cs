@@ -1523,44 +1523,34 @@ public partial class Functions
 			? val.Message!.ToPlainText().ToLowerInvariant()
 			: "soundex";
 
-		if (arg1 != "soundex")
+		return arg1 switch
 		{
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.NotSupported);
-		}
-
-		// PennMUSH-specific: leading "ph" is treated as "f" for soundex purposes
-		var soundexInput = arg0.StartsWith("ph", StringComparison.OrdinalIgnoreCase)
-			? "f" + arg0[2..]
-			: arg0;
-
-		return ValueTask.FromResult<CallState>(ComputeSoundex(soundexInput));
+			"soundex" => ValueTask.FromResult<CallState>(ComputeSoundex(
+				arg0.StartsWith("ph", StringComparison.OrdinalIgnoreCase) ? "f" + arg0[2..] : arg0)),
+			"phone" => ValueTask.FromResult<CallState>(ComputePhoneticHash(arg0)),
+			_ => ValueTask.FromResult<CallState>("#-1 INVALID HASH TYPE")
+		};
 	}
 
 	[SharpFunction(Name = "soundslike", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> SoundLike(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var arg2 = parser.CurrentState.Arguments.TryGetValue("2", out var val)
 			? val.Message!.ToPlainText().ToLowerInvariant()
 			: "soundex";
 
-		if (arg2 != "soundex")
+		return arg2 switch
 		{
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.NotSupported);
-		}
-
-		// PennMUSH-specific: leading "ph" is treated as "f" for soundex purposes
-		var input0 = arg0.StartsWith("ph", StringComparison.OrdinalIgnoreCase)
-			? "f" + arg0[2..]
-			: arg0;
-		var input1 = arg1.StartsWith("ph", StringComparison.OrdinalIgnoreCase)
-			? "f" + arg1[2..]
-			: arg1;
-
-		return ValueTask.FromResult<CallState>(
-			ComputeSoundex(input0) == ComputeSoundex(input1) ? "1" : "0");
+			"soundex" => ValueTask.FromResult<CallState>(
+				ComputeSoundex(arg0.StartsWith("ph", StringComparison.OrdinalIgnoreCase) ? "f" + arg0[2..] : arg0) ==
+				ComputeSoundex(arg1.StartsWith("ph", StringComparison.OrdinalIgnoreCase) ? "f" + arg1[2..] : arg1)
+					? "1" : "0"),
+			"phone" => ValueTask.FromResult<CallState>(
+				ComputePhoneticHash(arg0) == ComputePhoneticHash(arg1) ? "1" : "0"),
+			_ => ValueTask.FromResult<CallState>("#-1 INVALID HASH TYPE")
+		};
 	}
 
 	/// <summary>
@@ -1602,6 +1592,109 @@ public partial class Functions
 		}
 
 		return new string(result);
+	}
+
+	/// <summary>
+	/// Compute the phonetic hash using SQLite's spellfix1 algorithm (used by PennMUSH).
+	/// Maps characters to phonetic classes, omits vowels beside R/L, deduplicates.
+	/// </summary>
+	private static string ComputePhoneticHash(string input)
+	{
+		if (string.IsNullOrEmpty(input)) return "";
+
+		var word = input.ToLowerInvariant();
+		var result = new System.Text.StringBuilder();
+		var length = word.Length;
+
+		// Character classes
+		const int SILENT = 0, VOWEL = 1, B = 2, C = 3, D = 4, L = 6, R = 7, M = 8, Y = 9, DIGIT = 10, SPACE = 11, OTHER = 12;
+
+		// className maps class index to output character
+		const string classOutput = ".ABCDHLRMY9 ?";
+
+		// midClass lookup (H, W, Y differ in initClass)
+		int MidClass(char ch) => ch switch
+		{
+			>= 'a' and <= 'z' => ch switch
+			{
+				'a' or 'e' or 'i' or 'o' or 'u' or 'y' => VOWEL,
+				'b' or 'f' or 'p' or 'v' or 'w' => B,
+				'c' or 'g' or 'j' or 'k' or 'q' or 's' or 'x' or 'z' => C,
+				'd' or 't' => D,
+				'h' => SILENT,
+				'l' => L,
+				'r' => R,
+				'm' or 'n' => M,
+				_ => OTHER
+			},
+			>= '0' and <= '9' => DIGIT,
+			' ' or '\t' or '\r' or '\n' => SPACE,
+			'\'' => SILENT,
+			_ => OTHER
+		};
+
+		// initClass: same as midClass except H→SILENT, W→B, Y→Y (not VOWEL)
+		int InitClass(char ch) => ch switch
+		{
+			'y' => Y,
+			'h' => SILENT,
+			_ => MidClass(ch)
+		};
+
+		// Drop initial GN/KN
+		int start = 0;
+		if (length >= 2 && (word[0] == 'g' || word[0] == 'k') && word[1] == 'n')
+		{
+			start = 1;
+		}
+
+		int cPrev = OTHER; // 0x77 maps to OTHER range
+		int cPrevX = OTHER;
+		bool isFirst = true;
+
+		for (int i = start; i < length; i++)
+		{
+			var ch = word[i];
+
+			// Skip D before J/G, W before R, T before CH
+			if (i + 1 < length)
+			{
+				if (ch == 'w' && word[i + 1] == 'r') continue;
+				if (ch == 'd' && (word[i + 1] == 'j' || word[i + 1] == 'g')) continue;
+				if (i + 2 < length && ch == 't' && word[i + 1] == 'c' && word[i + 2] == 'h') continue;
+			}
+
+			int c = isFirst ? InitClass(ch) : MidClass(ch);
+
+			if (c == SPACE) continue;
+			if (c == OTHER && cPrev != DIGIT) continue;
+
+			isFirst = false;
+
+			// Omit vowels beside R and L
+			if (c == VOWEL && (cPrevX == R || cPrevX == L))
+			{
+				continue;
+			}
+			if ((c == R || c == L) && cPrevX == VOWEL)
+			{
+				// Remove the preceding vowel
+				if (result.Length > 0) result.Length--;
+			}
+
+			cPrev = c;
+			if (c == SILENT) continue;
+			cPrevX = c;
+
+			char output = classOutput[c];
+			// Deduplicate consecutive same output chars
+			if (result.Length == 0 || output != result[result.Length - 1])
+			{
+				result.Append(output);
+			}
+		}
+
+		return result.ToString();
 	}
 
 	[SharpFunction(Name = "suggest", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
