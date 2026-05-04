@@ -28,13 +28,13 @@ public partial class Commands
 		if (objAttrArg is null)
 		{
 			await NotifyService!.Notify(executor, "What do you want to query?", executor);
-			return new CallState("#-1 What do you want to query?");
+			return new CallState(ErrorMessages.Returns.WhatDoYouWantToQuery);
 		}
 
 		if (uriArg is null)
 		{
 			await NotifyService!.Notify(executor, "Query where?", executor);
-			return new CallState("#-1 Query where?");
+			return new CallState(ErrorMessages.Returns.QueryWhere);
 		}
 
 		var objAttrStr = objAttrArg.Message?.ToPlainText() ?? string.Empty;
@@ -68,13 +68,13 @@ public partial class Commands
 				if (method == HttpMethod.Get && dataArg is not null)
 				{
 					await NotifyService!.Notify(executor, "GET requests cannot have a body.", executor);
-					return new CallState("#-1 GET requests cannot have a body.");
+					return new CallState(ErrorMessages.Returns.GetRequestsCannotHaveBody);
 				}
 
 				if (!Uri.TryCreate(uriArg.Message?.ToPlainText() ?? string.Empty, UriKind.Absolute, out var uri))
 				{
 					await NotifyService!.Notify(executor, "Invalid URI format.", executor);
-					return new CallState("#-1 INVALID URI FORMAT");
+					return new CallState(ErrorMessages.Returns.InvalidUriFormat);
 				}
 
 				var requestUri = uri;
@@ -144,7 +144,7 @@ public partial class Commands
 			if (contentTypeArg is null || string.IsNullOrWhiteSpace(contentTypeArg.Message?.ToPlainText()))
 			{
 				await NotifyService!.Notify(executor, "Content-Type cannot be empty.", executor);
-				return new CallState("#-1 CONTENT-TYPE CANNOT BE EMPTY");
+				return new CallState(ErrorMessages.Returns.ContentTypeCannotBeEmpty);
 			}
 
 			var contentType = contentTypeArg.Message!.ToPlainText();
@@ -168,7 +168,7 @@ public partial class Commands
 			if (headerNameArg is null)
 			{
 				await NotifyService!.Notify(executor, "Header required.", executor);
-				return new CallState("#-1 HEADER REQUIRED");
+				return new CallState(ErrorMessages.Returns.HeaderRequired);
 			}
 
 			var headerName = headerNameArg.Message?.ToPlainText()?.Trim() ?? string.Empty;
@@ -177,14 +177,14 @@ public partial class Commands
 			if (string.IsNullOrWhiteSpace(headerName))
 			{
 				await NotifyService!.Notify(executor, "Header name cannot be empty.", executor);
-				return new CallState("#-1 HEADER NAME CANNOT BE EMPTY");
+				return new CallState(ErrorMessages.Returns.HeaderNameCannotBeEmpty);
 			}
 
 			// Prevent setting Content-Length as per documentation
 			if (headerName.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
 			{
 				await NotifyService!.Notify(executor, "Cannot set Content-Length header.", executor);
-				return new CallState("#-1 CANNOT SET CONTENT-LENGTH HEADER");
+				return new CallState(ErrorMessages.Returns.CannotSetContentLengthHeader);
 			}
 
 			if (isHttpContext)
@@ -205,7 +205,7 @@ public partial class Commands
 			if (statusArg is null)
 			{
 				await NotifyService!.Notify(executor, "Status code required.", executor);
-				return new CallState("#-1 STATUS CODE REQUIRED");
+				return new CallState(ErrorMessages.Returns.StatusCodeRequired);
 			}
 
 			var fullStatusText = statusArg.Message?.ToPlainText() ?? string.Empty;
@@ -230,7 +230,7 @@ public partial class Commands
 			if (!int.TryParse(statusCodeText, out var statusCode) || statusCode < 100 || statusCode > 999)
 			{
 				await NotifyService!.Notify(executor, "Status code must be a 3-digit number.", executor);
-				return new CallState("#-1 STATUS CODE MUST BE A 3-DIGIT NUMBER");
+				return new CallState(ErrorMessages.Returns.StatusCodeMustBe3Digit);
 			}
 
 			// Build the full status line
@@ -242,7 +242,7 @@ public partial class Commands
 			if (statusLine.Length >= 40)
 			{
 				await NotifyService!.Notify(executor, "Status line must be less than 40 characters.", executor);
-				return new CallState("#-1 STATUS LINE MUST BE LESS THAN 40 CHARACTERS");
+				return new CallState(ErrorMessages.Returns.StatusLineTooLong);
 			}
 
 			if (isHttpContext)

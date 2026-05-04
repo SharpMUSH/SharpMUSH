@@ -98,7 +98,7 @@ public partial class Commands
 		if (lockType is not ("JOIN" or "SPEAK" or "SEE" or "HIDE" or "MOD"))
 		{
 			await NotifyService!.Notify(executor, $"Invalid lock type: {lockType}", executor);
-			return new CallState("#-1 INVALID LOCK TYPE");
+			return new CallState(ErrorMessages.Returns.InvalidLockType);
 		}
 
 		await Mediator!.Send(updateCommand);

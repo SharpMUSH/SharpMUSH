@@ -143,7 +143,7 @@ public partial class Commands
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
-			return new CallState("#-1 INVALID SOURCE");
+			return new CallState(ErrorMessages.Returns.InvalidSource);
 		}
 
 		var (sourceDbref, sourceAttr) = sourceDetails;
@@ -245,7 +245,7 @@ public partial class Commands
 		else
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeAny), executor);
-			return new CallState("#-1 COPY FAILED");
+			return new CallState(ErrorMessages.Returns.CopyFailed);
 		}
 
 		return new CallState(string.Empty);
@@ -273,7 +273,7 @@ public partial class Commands
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
-			return new CallState("#-1 INVALID SOURCE");
+			return new CallState(ErrorMessages.Returns.InvalidSource);
 		}
 
 		var (sourceDbref, sourceAttr) = sourceDetails;
@@ -387,7 +387,7 @@ public partial class Commands
 		else
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToMoveAttributeAny), executor);
-			return new CallState("#-1 MOVE FAILED");
+			return new CallState(ErrorMessages.Returns.MoveFailed);
 		}
 
 		return new CallState(string.Empty);
@@ -502,7 +502,7 @@ public partial class Commands
 		if (setResult.IsT1)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToChangeOwnershipFormat), executor, setResult.AsT1.Value);
-			return new CallState("#-1 FAILED");
+			return new CallState(ErrorMessages.Returns.Failed);
 		}
 
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeOwnerChanged), executor);
@@ -560,7 +560,7 @@ public partial class Commands
 		if (isSafe)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectIsProtectedSafe), executor);
-			return new CallState("#-1 SAFE");
+			return new CallState(ErrorMessages.Returns.Safe);
 		}
 
 		// If no attribute pattern specified, wipe all attributes

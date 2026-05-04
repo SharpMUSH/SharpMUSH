@@ -9,6 +9,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.ObjectModel;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -127,11 +128,11 @@ public static class ChannelHelper
 					var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 					await NotifyService.Notify(executor,
 						"Channel not found.", executor);
-					return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
+					return new ChannelOrError(new Error<CallState>(new CallState(ErrorMessages.Returns.ChannelNotFound)));
 				}
 			case (null, false):
 				{
-					return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
+					return new ChannelOrError(new Error<CallState>(new CallState(ErrorMessages.Returns.ChannelNotFound)));
 				}
 			case ({ } foundChannel, _):
 				{

@@ -51,7 +51,7 @@ public static class AdminMail
 				return MModule.single(totalCount.ToString());
 			default:
 				await notifyService!.Notify(executor, "Invalid arguments for @mail admin command.");
-				return MModule.single("#-1 Invalid arguments for @mail admin command.");
+				return MModule.single(ErrorMessages.Returns.InvalidMailArguments);
 		}
 	}
 }

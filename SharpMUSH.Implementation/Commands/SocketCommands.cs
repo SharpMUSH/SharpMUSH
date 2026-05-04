@@ -111,7 +111,7 @@ public partial class Commands
 		if (ConnectionService!.Get(parser.CurrentState.Handle!.Value)?.Ref is not null)
 		{
 			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Huh?  (Type \"help\" for help.)");
-			return new CallState("#-1 ALREADY CONNECTED");
+			return new CallState(ErrorMessages.Returns.AlreadyConnected);
 		}
 
 		var match = ConnectionPatternRegex.Match(parser.CurrentState.Arguments["0"].Message!.ToString());
@@ -146,7 +146,7 @@ public partial class Commands
 				username);
 
 			await NotifyService!.Notify(handle, "Could not find that player.");
-			return new CallState("#-1 PLAYER NOT FOUND");
+			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}
 
 		var nameItem = nameItems.First();
@@ -173,7 +173,7 @@ public partial class Commands
 				username);
 
 			await NotifyService!.Notify(handle, "Could not find that player.");
-			return new CallState("#-1 PLAYER NOT FOUND");
+			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}
 
 		var validPassword = PasswordService!.PasswordIsValid($"#{foundDB.Object.Key}:{foundDB.Object.CreationTime}",
@@ -235,7 +235,7 @@ public partial class Commands
 		if (!Configuration!.CurrentValue.Net.Guests)
 		{
 			await NotifyService!.Notify(handle, "Guest logins are not enabled.");
-			return new CallState("#-1 GUEST LOGINS DISABLED");
+			return new CallState(ErrorMessages.Returns.GuestLoginsDisabled);
 		}
 
 		// Get all players and filter for those with Guest power
@@ -258,7 +258,7 @@ public partial class Commands
 				"guest");
 
 			await NotifyService!.Notify(handle, "Sorry, there are no guest characters available.");
-			return new CallState("#-1 NO GUEST CHARACTERS");
+			return new CallState(ErrorMessages.Returns.NoGuestCharacters);
 		}
 
 		// Get max_guests configuration
@@ -292,7 +292,7 @@ public partial class Commands
 					"guest");
 
 				await NotifyService!.Notify(handle, "Sorry, all guest characters are currently in use.");
-				return new CallState("#-1 ALL GUESTS IN USE");
+				return new CallState(ErrorMessages.Returns.AllGuestsInUse);
 			}
 		}
 		else if (maxGuests == 0)
@@ -327,7 +327,7 @@ public partial class Commands
 					"guest");
 
 				await NotifyService!.Notify(handle, "Sorry, the maximum number of guest connections has been reached.");
-				return new CallState("#-1 MAX GUESTS REACHED");
+				return new CallState(ErrorMessages.Returns.MaxGuestsReached);
 			}
 
 			// Find the guest with fewest connections
@@ -365,7 +365,7 @@ public partial class Commands
 				"guest");
 
 			await NotifyService!.Notify(handle, "Sorry, there are no guest characters available.");
-			return new CallState("#-1 GUEST SELECTION FAILED");
+			return new CallState(ErrorMessages.Returns.GuestSelectionFailed);
 		}
 
 		// Bind the connection to the selected guest

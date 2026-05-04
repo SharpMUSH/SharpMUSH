@@ -25,7 +25,7 @@ public partial class Commands
 		if (!arg0Check || !arg1Check)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
-			return new CallState("#-1 Don't you have anything to say?");
+			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
 		var channelName = arg0CallState!.Message!;
@@ -76,7 +76,7 @@ public partial class Commands
 		if (!arg0Check || !arg1Check)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
-			return new CallState("#-1 Don't you have anything to say?");
+			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
 		var channelName = arg0CallState!.Message!;
@@ -129,7 +129,7 @@ public partial class Commands
 		if (!arg0Check || !arg1Check)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
-			return new CallState("#-1 Don't you have anything to say?");
+			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
 		var channelName = arg0CallState!.Message!;
@@ -185,7 +185,7 @@ public partial class Commands
 		if (!arg0Check || !arg1Check)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageAddcom), executor);
-			return new CallState("#-1 Usage: addcom <alias>=<channel>");
+			return new CallState(ErrorMessages.Returns.UsageAddcom);
 		}
 
 		var alias = arg0CallState!.Message!.ToPlainText().Trim();
@@ -194,7 +194,7 @@ public partial class Commands
 		if (string.IsNullOrWhiteSpace(alias))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor);
-			return new CallState("#-1 Alias name cannot be empty.");
+			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
 		// Get the channel
@@ -236,7 +236,7 @@ public partial class Commands
 		if (!arg0Check)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageDelcom), executor);
-			return new CallState("#-1 Usage: delcom <alias>");
+			return new CallState(ErrorMessages.Returns.UsageDelcom);
 		}
 
 		var alias = arg0CallState!.Message!.ToPlainText().Trim();
@@ -244,7 +244,7 @@ public partial class Commands
 		if (string.IsNullOrWhiteSpace(alias))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor);
-			return new CallState("#-1 Alias name cannot be empty.");
+			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
 		// Get the alias attribute
@@ -326,7 +326,7 @@ public partial class Commands
 		if (!arg0Check || !arg1Check)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageComtitle), executor);
-			return new CallState("#-1 Usage: comtitle <alias>=<title>");
+			return new CallState(ErrorMessages.Returns.UsageComtitle);
 		}
 
 		var alias = arg0CallState!.Message!.ToPlainText().Trim();
@@ -335,7 +335,7 @@ public partial class Commands
 		if (string.IsNullOrWhiteSpace(alias))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor);
-			return new CallState("#-1 Alias name cannot be empty.");
+			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
 		// Get the channel name from the alias

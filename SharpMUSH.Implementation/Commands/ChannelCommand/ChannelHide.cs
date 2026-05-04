@@ -6,6 +6,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -18,8 +19,8 @@ public static class ChannelHide
 
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
-			return new CallState("#-1 Guests may not modify channels.");
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatGuestsCantModify, executor);
+			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
 		var yesNoString = yesNo?.ToPlainText();
@@ -27,7 +28,7 @@ public static class ChannelHide
 																		 yesNoString.Equals("no", StringComparison.InvariantCultureIgnoreCase)))
 		{
 			await NotifyService.Notify(executor, "CHAT: Yes or No are the only valid options.", executor);
-			return new CallState("#-1 INVALID OPTION");
+			return new CallState(ErrorMessages.Returns.InvalidOption);
 		}
 
 		if (channelName != null)

@@ -157,7 +157,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			return new CallState("#-1 BAD ARGUMENT FORMAT TO @SET");
+			return new CallState(ErrorMessages.Returns.BadArgumentFormatToSet);
 		}
 
 		var (dbref, maybeAttribute) = details;
@@ -958,7 +958,7 @@ public partial class Commands
 		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToString()))
 		{
 			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.DigWhat), executorBase);
-			return new CallState("#-1 NO ROOM NAME SPECIFIED");
+			return new CallState(ErrorMessages.Returns.NoRoomNameSpecified);
 		}
 
 		// NOTE: Additional permission checks needed:

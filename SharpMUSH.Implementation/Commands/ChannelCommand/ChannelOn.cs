@@ -3,6 +3,7 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -25,7 +26,7 @@ public static class ChannelOn
 				case { IsError: true }:
 					return new CallState(maybeTarget.AsError.Value);
 				case { IsNone: true }:
-					return new CallState("#-1 PLAYER NOT FOUND");
+					return new CallState(ErrorMessages.Returns.PlayerNotFound);
 			}
 
 			target = maybeTarget.AsAnyObject;

@@ -21,7 +21,7 @@ public partial class Commands
 		if (TextFileService == null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsSystemNotInitialized), executor);
-			return new CallState("#-1 NEWS SYSTEM NOT INITIALIZED");
+			return new CallState(ErrorMessages.Returns.NewsSystemNotInitialized);
 		}
 
 		// No arguments - show main news
@@ -129,7 +129,7 @@ public partial class Commands
 		if (TextFileService == null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpSystemNotInitialized), executor);
-			return new CallState("#-1 AHELP SYSTEM NOT INITIALIZED");
+			return new CallState(ErrorMessages.Returns.AhelpSystemNotInitialized);
 		}
 
 		// No arguments - show main admin help

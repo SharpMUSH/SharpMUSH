@@ -1582,14 +1582,14 @@ public partial class Commands
 		if (args.Count == 0)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyCommandName), executor);
-			return new CallState("#-1 NO COMMAND SPECIFIED");
+			return new CallState(ErrorMessages.Returns.NoCommandSpecified);
 		}
 
 		var commandName = args["0"].Message?.ToPlainText()?.ToUpper();
 		if (string.IsNullOrEmpty(commandName))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyCommandName), executor);
-			return new CallState("#-1 NO COMMAND SPECIFIED");
+			return new CallState(ErrorMessages.Returns.NoCommandSpecified);
 		}
 
 		if (switches.Contains("LIST"))
@@ -1627,7 +1627,7 @@ public partial class Commands
 		if (selectedHookType == null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyType), executor);
-			return new CallState("#-1 NO HOOK TYPE");
+			return new CallState(ErrorMessages.Returns.NoHookType);
 		}
 
 		if (args.Count < 2 || string.IsNullOrWhiteSpace(args["1"].Message?.ToPlainText()))
@@ -1640,7 +1640,7 @@ public partial class Commands
 			}
 
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookNotSetFormat), executor, selectedHookType, commandName);
-			return new CallState("#-1 NO HOOK");
+			return new CallState(ErrorMessages.Returns.NoHook);
 		}
 
 		var objectAndAttribute = args["1"].Message!.ToPlainText();
@@ -1649,7 +1649,7 @@ public partial class Commands
 		if (parts.Length < 1 || string.IsNullOrWhiteSpace(parts[0]))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyObject), executor);
-			return new CallState("#-1 NO OBJECT");
+			return new CallState(ErrorMessages.Returns.NoObject);
 		}
 
 		var objectRef = parts[0].Trim();
@@ -1674,7 +1674,7 @@ public partial class Commands
 		if (attrResult.IsError)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookAttributeNotFoundFormat), executor, attributeName, dbref);
-			return new CallState("#-1 NO ATTRIBUTE");
+			return new CallState(ErrorMessages.Returns.NoAttribute);
 		}
 
 		var inline = switches.Contains("INLINE");
@@ -2270,7 +2270,7 @@ public partial class Commands
 			// Note: Actual modification of configuration is not yet implemented
 			// This would require saving to the database
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameNotImplemented), executor);
-			return new CallState("#-1 NOT IMPLEMENTED");
+			return new CallState(ErrorMessages.Returns.NotImplemented);
 		}
 
 		// @sitelock/ban <pattern> - shorthand for !connect !create !guest
@@ -2284,7 +2284,7 @@ public partial class Commands
 
 			// Note: Actual modification of configuration is not yet implemented
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockBanNotImplemented), executor);
-			return new CallState("#-1 NOT IMPLEMENTED");
+			return new CallState(ErrorMessages.Returns.NotImplemented);
 		}
 
 		// @sitelock/register <pattern> - shorthand for !create register
@@ -2298,7 +2298,7 @@ public partial class Commands
 
 			// Note: Actual modification of configuration is not yet implemented
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRegisterNotImplemented), executor);
-			return new CallState("#-1 NOT IMPLEMENTED");
+			return new CallState(ErrorMessages.Returns.NotImplemented);
 		}
 
 		// @sitelock/remove <pattern> - remove a sitelock rule
@@ -2312,7 +2312,7 @@ public partial class Commands
 
 			// Note: Actual modification of configuration is not yet implemented
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRemoveNotImplemented), executor);
-			return new CallState("#-1 NOT IMPLEMENTED");
+			return new CallState(ErrorMessages.Returns.NotImplemented);
 		}
 
 		// @sitelock <pattern>=<options> - add/modify a rule
@@ -2320,7 +2320,7 @@ public partial class Commands
 		{
 			// Note: Actual modification of configuration is not yet implemented
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleNotImplemented), executor);
-			return new CallState("#-1 NOT IMPLEMENTED");
+			return new CallState(ErrorMessages.Returns.NotImplemented);
 		}
 
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockInvalidSyntax), executor);
@@ -2660,7 +2660,7 @@ public partial class Commands
 		if (matchingProperty.Key == null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, optionName);
-			return new CallState("#-1 NOT FOUND");
+			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
 		// Check if the option is a boolean
@@ -2682,7 +2682,7 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RuntimeConfigNotImplemented), executor);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCurrentValueFormat), executor, attr2.Name, value?.ToString() ?? "null");
 
-		return new CallState("#-1 NOT IMPLEMENTED");
+		return new CallState(ErrorMessages.Returns.NotImplemented);
 	}
 
 }
