@@ -1826,8 +1826,12 @@ public class SharpMUSHParserVisitor(
 		var result = await VisitChildren(context)
 					 ?? new CallState(GetContextText(context), context.Depth());
 
-		// PennMUSH PE_COMPRESS_SPACES: strip trailing spaces at evaluation boundary
-		// This matches PennMUSH's exit_sequence which removes trailing space from process_expression output
+		// PE_COMPRESS_SPACES: strip trailing literal-text spaces at evaluation boundary.
+		// Only fires when the last child is literal text (genericText/beginGenericText).
+		// Bracket/substitution output trailing spaces are preserved — PennMUSH's had_space
+		// flag only triggers on literal space characters, not function/substitution output.
+		// The lexer's COMMAWS/CPAREN leading WS does NOT eat trailing spaces before delimiters
+		// (OTHER greedily consumes them), so this is the layer that handles trailing.
 		if (parser.CurrentState.ParseMode is ParseMode.Default && result.Message is not null)
 		{
 			// Only strip if the last child is literal text (genericText/beginGenericText)
@@ -1945,8 +1949,12 @@ public class SharpMUSHParserVisitor(
 	{
 		var result = await VisitChildren(context)
 			?? new CallState(GetContextText(context), context.Depth());
-		// PennMUSH PE_COMPRESS_SPACES: compress runs of spaces in literal text during evaluation
-		if (parser.CurrentState.ParseMode is ParseMode.Default && result.Message is not null)
+		// PE_COMPRESS_SPACES: only compress here for the FUNCHAR alternative
+		// (terminal token — VisitChildren returns null, so GetContextText has raw text).
+		// The beginGenericText alternative is already compressed by VisitBeginGenericText.
+		if (context.beginGenericText() is null
+			&& parser.CurrentState.ParseMode is ParseMode.Default
+			&& result.Message is not null)
 			return result with { Message = MModule.compressSpaces(result.Message) };
 		return result;
 	}
@@ -1956,12 +1964,15 @@ public class SharpMUSHParserVisitor(
 	{
 		var result = await VisitChildren(context)
 			?? new CallState(GetContextText(context), context.Depth());
-		// PennMUSH PE_COMPRESS_SPACES: compress runs of spaces in literal text
+		// PE_COMPRESS_SPACES: compress literal space runs to single space.
+		// The lexer already eats leading spaces on function args (FUNCHAR WS, COMMAWS WS),
+		// but internal runs within OTHER tokens and top-level/command-arg leading spaces remain.
 		if (parser.CurrentState.ParseMode is ParseMode.Default && result.Message is not null)
 		{
 			var compressed = MModule.compressSpaces(result.Message);
-			// Only strip leading spaces when this is the FIRST text node in an evaluation string
-			// (i.e. direct child of explicitEvaluationString, not reached via genericText)
+			// Strip leading when this is the FIRST text node in an evaluation string
+			// (direct child of explicitEvaluationString). When reached via genericText
+			// (text between brackets), leading spaces are meaningful separators.
 			if (context.Parent is ExplicitEvaluationStringContext or BraceExplicitEvaluationStringContext)
 				compressed = MModule.trim(compressed, " ", global::MarkupString.TrimType.TrimStart);
 			return result with { Message = compressed };
