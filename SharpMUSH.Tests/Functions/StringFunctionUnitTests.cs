@@ -216,7 +216,7 @@ public class StringFunctionUnitTests
 
 	[Test]
 	[Arguments("edit(this is a test,a test,an exam)", "this is an exam")]
-	[Arguments("edit(hello,^,well )", "well hello")]
+	[Arguments("edit(hello,^,well )", "wellhello")]
 	[Arguments("edit(hello,$,%bworld)", "hello world")]
 	public async Task Edit(string str, string expectedText)
 	{

@@ -43,14 +43,43 @@ public class PennMUSHOracleTests
 	[Arguments("lit.4", "lit(near       far)", "near       far")]
 	[Arguments("lit.5", "lit(%b%b%b)", "%b%b%b")]
 	[Arguments("lit.6", "lit({test})", "{test}")]
-	// Skipped: PE_COMPRESS_SPACES not implemented at FunctionParse level
-	// [Arguments("compress.1", "hello     world", "hello world")]
-	// Skipped: PE_COMPRESS_SPACES not implemented at FunctionParse level
-	// [Arguments("compress.2", "   leading", " leading")]
-	// Skipped: PE_COMPRESS_SPACES not implemented at FunctionParse level
-	// [Arguments("compress.3", "trailing   ", "trailing ")]
-	// Skipped: PE_COMPRESS_SPACES not implemented at FunctionParse level
-	// [Arguments("compress.4", "a  b  c  d", "a b c d")]
+	[Arguments("compress.1", "hello     world", "hello world")]
+	[Arguments("compress.2", "   leading", "leading")]
+	[Arguments("compress.3", "trailing   ", "trailing")]
+	[Arguments("compress.4", "a  b  c  d", "a b c d")]
+	// PE_COMPRESS_SPACES: function output trailing stripped, leading preserved
+	[Arguments("cs.fn.1", "[space(5)]hello", "     hello")]
+	[Arguments("cs.fn.2", "hello[space(5)]", "hello     ")]
+	[Arguments("cs.fn.3", "[ljust(a,10)]end", "a         end")]
+	[Arguments("cs.fn.4", "start[rjust(a,10)]", "start         a")]
+	[Arguments("cs.fn.5", "[space(3)]x[space(3)]", "   x   ")]
+	// PE_COMPRESS_SPACES: function args trimmed both sides
+	[Arguments("cs.arg.1", "[strlen(  a  )]", "1")]
+	[Arguments("cs.arg.2", "[strlen( a )]", "1")]
+	[Arguments("cs.arg.3", "[strlen(a  b)]", "3")]
+	[Arguments("cs.arg.4", "[strlen(  a  b  )]", "3")]
+	[Arguments("cs.arg.5", "[mid(  hello  ,0,5)]", "hello")]
+	[Arguments("cs.arg.6", "[mid(  a  b  ,0,3)]", "a b")]
+	// PE_COMPRESS_SPACES: cat with spaced args
+	[Arguments("cs.cat.1", "[cat(  a  ,  b  )]", "a b")]
+	[Arguments("cs.cat.2", "[cat(  a  b  ,  c  d  )]", "a b c d")]
+	// PE_COMPRESS_SPACES: mixed literal + function output
+	[Arguments("cs.mix.1", "X  [add(1,2)]  Y", "X 3 Y")]
+	[Arguments("cs.mix.2", "[add(1,2)]  text  [add(2,2)]", "3 text 4")]
+	// PE_COMPRESS_SPACES: literal spaces between function calls compressed
+	[Arguments("cs.between.1", "[add(1,1)]  [add(2,2)]", "2 4")]
+	[Arguments("cs.between.2", "[add(1,1)]     [add(2,2)]", "2 4")]
+	[Arguments("cs.between.3", "[add(1,1)] [add(2,2)]", "2 4")]
+	// PE_COMPRESS_SPACES: bracket-only, trailing stripped
+	[Arguments("cs.brk.1", "[space(3)]", "   ")]
+	[Arguments("cs.brk.2", "[ljust(a,5)]", "a    ")]
+	[Arguments("cs.brk.3", "[rjust(a,5)]", "    a")]
+	// PE_COMPRESS_SPACES: edge cases
+	[Arguments("cs.edge.1", " ", "")]
+	[Arguments("cs.edge.2", "   ", "")]
+	// PE_COMPRESS_SPACES: nested functions
+	[Arguments("cs.nest.1", "[cat([ljust(a,5)],[rjust(b,5)])]", "a         b")]
+	[Arguments("cs.nest.2", "[strlen([space(5)])]", "5")]
 	[Arguments("fn.1", "fn(add,1,2)", "3")]
 	[Arguments("fn.2", "fn(mul,3,4)", "12")]
 	[Arguments("fn.3", "fn(cat,hello,world)", "hello world")]
@@ -160,8 +189,7 @@ public class PennMUSHOracleTests
 	[Arguments("etimefmt.7", "etimefmt($xm$xs, 75)", "1m15s")]
 	[Arguments("etimefmt.13", "etimefmt($h, -200)", "#-1")]
 	[Arguments("etimefmt.14", "etimefmt($h, twelve)", "#-1")]
-	// Skipped: PennMUSH result is " 1:01" but think's PE_COMPRESS_SPACES strips the leading space
-	// [Arguments("etimefmt.15", "etimefmt($2h:$2M, 3700)", "1:01")]
+	[Arguments("etimefmt.15", "etimefmt($2h:$2M, 3700)", " 1:01")]
 	[Arguments("etimefmt.16", "etimefmt(You have $m minutes and $s seconds to go, 78)", "You have 1 minutes and 18 seconds to go")]
 	[Arguments("timestring.4", "timestring(-50)", "#-1")]
 	[Arguments("timestring.5", "timestring(four)", "#-1")]

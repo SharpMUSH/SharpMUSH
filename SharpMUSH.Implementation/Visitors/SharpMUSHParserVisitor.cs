@@ -545,8 +545,6 @@ public class SharpMUSHParserVisitor(
 						if (x == null) return CallState.Empty;
 						var msg = (await visitor.VisitChildren(x))?.Message ?? MModule.empty();
 						if (stripAnsi) msg = MModule.plainText2(msg);
-						// PennMUSH: PE_COMPRESS_SPACES — compress runs of spaces in evaluated args
-						msg = MModule.compressSpaces(msg);
 						return new CallState(msg, x.Depth());
 					})
 					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
@@ -1825,16 +1823,22 @@ public class SharpMUSHParserVisitor(
 	public override async ValueTask<CallState?> VisitExplicitEvaluationString(
 		[NotNull] ExplicitEvaluationStringContext context)
 	{
-		/* var isGenericText = context.beginGenericText() is not null;
-
-		if (!isGenericText)
-		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, MModule.single(
-				$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :"));
-		} */
-
-		return await VisitChildren(context)
+		var result = await VisitChildren(context)
 					 ?? new CallState(GetContextText(context), context.Depth());
+
+		// PennMUSH PE_COMPRESS_SPACES: strip trailing spaces at evaluation boundary
+		// This matches PennMUSH's exit_sequence which removes trailing space from process_expression output
+		if (parser.CurrentState.ParseMode is ParseMode.Default && result.Message is not null)
+		{
+			// Only strip if the last child is literal text (genericText/beginGenericText)
+			// Function output (brackets) trailing spaces should be preserved within the expression
+			var children = context.children;
+			var lastChild = children[^1];
+			if (lastChild is GenericTextContext or BeginGenericTextContext)
+				result = result with { Message = MModule.trim(result.Message, " ", global::MarkupString.TrimType.TrimEnd) };
+		}
+
+		return result;
 
 		/* if (!isGenericText)
 		{
@@ -1938,13 +1942,32 @@ public class SharpMUSHParserVisitor(
 	}
 
 	public override async ValueTask<CallState?> VisitGenericText([NotNull] GenericTextContext context)
-		=> await VisitChildren(context)
-			 ?? new CallState(GetContextText(context), context.Depth());
+	{
+		var result = await VisitChildren(context)
+			?? new CallState(GetContextText(context), context.Depth());
+		// PennMUSH PE_COMPRESS_SPACES: compress runs of spaces in literal text during evaluation
+		if (parser.CurrentState.ParseMode is ParseMode.Default && result.Message is not null)
+			return result with { Message = MModule.compressSpaces(result.Message) };
+		return result;
+	}
 
 	public override async ValueTask<CallState?> VisitBeginGenericText(
 		[NotNull] BeginGenericTextContext context)
-		=> await VisitChildren(context)
-			 ?? new CallState(GetContextText(context), context.Depth());
+	{
+		var result = await VisitChildren(context)
+			?? new CallState(GetContextText(context), context.Depth());
+		// PennMUSH PE_COMPRESS_SPACES: compress runs of spaces in literal text
+		if (parser.CurrentState.ParseMode is ParseMode.Default && result.Message is not null)
+		{
+			var compressed = MModule.compressSpaces(result.Message);
+			// Only strip leading spaces when this is the FIRST text node in an evaluation string
+			// (i.e. direct child of explicitEvaluationString, not reached via genericText)
+			if (context.Parent is ExplicitEvaluationStringContext or BraceExplicitEvaluationStringContext)
+				compressed = MModule.trim(compressed, " ", global::MarkupString.TrimType.TrimStart);
+			return result with { Message = compressed };
+		}
+		return result;
+	}
 
 	public override async ValueTask<CallState?> VisitValidSubstitution(
 		[NotNull] ValidSubstitutionContext context)
