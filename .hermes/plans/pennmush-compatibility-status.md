@@ -2,13 +2,20 @@
 
 ## Branch: `pennmush-compatibility`
 ## Last Updated: 2026-05-04
-## Tests: 3430 passing, 0 failing
+## Tests: 3474 passing, 0 failing
 
 ---
 
 ## Completed
 
 ### Phase 1A: .t file audit & test porting
+- **testsoundex.t**: AUDITED — soundex/soundslike already covered. Added phone hash (spellfix1 algorithm), invalid hash error tests (10 new tests)
+- **testinsert.t**: AUDITED — linsert already fully covered. Added `insert()` alias registration + 9 alias tests
+- **testgaps.t/2/3**: AUDITED — mostly lit(), fn(), compress, %? behavior. Added 25 parser behavior tests (lit, fn, compress, qreg noparse)
+- **testtime.t**: AUDITED — already 33 tests covering etimefmt/timestring/stringsecs/etime
+- **testtrim.t**: AUDITED — trim/trimpenn/trimtiny already covered in StringFunctionUnitTests
+- **testletq.t**: AUDITED — already covered in FlowFunctionUnitTests (scoping tests)
+- **testdecompose.t**: AUDITED — already covered in StringFunctionUnitTests (ANSI decompose + space/tab/newline)
 - **testsetfuns.t**: 282 tests ported (whitespace trimming, numeric comparison modes, all set ops)
 - **testatree.t**: 8 tests ported (name validation, branch auto-creation, clear semantics)
 - **testmath.t**: 106 tests ported. Fixes:
