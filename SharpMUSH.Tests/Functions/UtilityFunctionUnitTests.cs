@@ -529,4 +529,6 @@ public class UtilityFunctionUnitTests
 		await Assert.That(fullText).Contains("\u001b["); // Should have ANSI escape sequence
 		await Assert.That(fullText).Contains("38;2;255;0;0"); // RGB red color
 	}
+
+
 }
