@@ -31,6 +31,49 @@ Any new Phase 1 work should follow the same pattern: grammar stays structural, b
 
 ---
 
+## Phase 0: Prove Parser Gaps Exist (Unit Tests First)
+
+**Objective:** Before fixing any gap, write failing tests that prove the gap exists by comparing SharpMUSH output to verified PennMUSH behavior. Each test documents what PennMUSH does (verified against a live instance) and what SharpMUSH currently does wrong.
+
+**PennMUSH test oracle:** Tests were verified against PennMUSH (built from source at `pennmush/`). Results in `pennmush/test/testgaps.t` and `testgaps2.t` — all 20 pass.
+
+**Test file:** `SharpMUSH.Tests/Parser/PennMUSHParserGapTests.cs`
+
+### Verified PennMUSH behaviors (oracle results):
+
+| Gap | MUSHcode | PennMUSH Output | Gap Description |
+|-----|----------|-----------------|-----------------|
+| lit() | `lit(hello world)` | `hello world` | Basic literal pass-through |
+| lit() | `lit(%#)` | `%#` | Suppresses %-substitutions |
+| lit() | `lit([add(1,2)])` | `[add(1,2)]` | Suppresses bracket eval |
+| lit() | `lit({test})` | `{test}` | Suppresses brace processing |
+| lit() | `lit(near       far)` | `near       far` | Preserves multiple spaces |
+| lit() | `lit(\|)` | `\|` | Pipe passes through |
+| lit() | `lit(;)` | `;` | Semicolon passes through |
+| PE_COMPRESS | `cat(a,  b)` | `a b` | Spaces compressed in output |
+| PE_COMPRESS | `think a     b` | `a b` | Multiple spaces → single |
+| %? | `think %?` | `N M` (two ints) | Invocations AND recursions |
+| fn() | `fn(add,1,2)` | `3` | Calls built-in directly |
+| fn() | `fn(notafunction)` | `#-1` | Non-built-in returns error |
+| fn() | `fn(mid,hello,1,3)` | `ell` | Works for any built-in |
+| Q-reg/lit | `lit(%q0)` | `%q0` | Q-regs literal in lit() |
+| Q-reg/lit | `[setq(0,test)]lit(%q0)` | `%q0` | setq runs, lit still literal |
+| Q-reg/lit | `[setq(0,test)]%q0` | `test` | Normal context evaluates |
+| @function | `myfn(test)` after `@function/preserve myfn=me/MYFN` | `CUSTOM-test` | User-defined function call |
+| fn() vs @function | `fn(myfn,test)` | `#-1` | fn() ignores @functions |
+
+### Gap coverage by test method:
+
+1. **FunctionFlags.Literal / lit()** — 6 test methods, 9 [Arguments] cases
+2. **PE_COMPRESS_SPACES** — 1 test (FunctionParse level; full compression needs CommandParser)
+3. **%? substitution** — 2 tests (format check + invocation increment)
+4. **PE_BUILTINONLY / fn()** — 2 tests (built-in calls + error on unknown)
+5. **Q-register NoParse** — 3 tests (lit context, normal context, set-then-lit)
+6. **PE_USERFN** — deferred to integration tests (needs @function setup via CommandParser)
+7. **lsargs** — deferred to integration tests (needs @command/add/lsargs via CommandParser)
+
+---
+
 ## Phase 1: Parser & Evaluation Engine Gaps
 
 These are ranked by actual impact. Items already partially handled are noted.
@@ -490,6 +533,7 @@ All 126 commands are present. Focus on behavioral correctness.
 
 ## Execution Priority
 
+0. **Phase 0** (Prove gaps exist) — Tests first, TDD approach
 1. **Phase 1** (Parser gaps) — Cascading impact
 2. **Phase 2** (Function parity) — Most-used feature
 3. **Phase 3** (Command behavior) — Output correctness
