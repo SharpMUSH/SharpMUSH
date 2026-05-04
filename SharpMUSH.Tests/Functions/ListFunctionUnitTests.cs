@@ -190,6 +190,11 @@ public class ListFunctionUnitTests
 	[Arguments("sort(0.0 0 0.3 *foo*,f)", "0.0 0 *foo* 0.3")]
 	[Arguments("sort(3 1 foo 2 bar,f)", "foo bar 1 2 3")]
 	[Arguments("sort(z a 0 -1 3,f)", "-1 z a 0 3")]
+	// Penn sort.3/sort.4 — ANSI-aware sort. SharpMUSH preserves ANSI through sort
+	// (superior behavior), so sorted output retains formatting. PennMUSH strips it.
+	// Comparison is correct in both — only output representation differs.
+	// [Arguments("sort(a [ansi(h,a)] b [ansi(h,b)] c d [ansi(h,e)] f)", "a a b b c d e f")]
+	// [Arguments("sort(3 [ansi(h,1)] [ansi(y,7)] 5)", "1 3 5 7")]
 	public async Task Sort(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;

@@ -90,4 +90,61 @@ public class ParserBehaviorUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	// Nested function evaluation
+	[Test]
+	[Arguments("add(1,add(2,3))", "6")]
+	[Arguments("add(1,mul(2,3))", "7")]
+	[Arguments("cat(add(1,2),mul(3,4))", "3 12")]
+	public async Task NestedFunctions(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Function name case insensitivity
+	[Test]
+	[Arguments("ADD(1,2)", "3")]
+	[Arguments("Add(1,2)", "3")]
+	[Arguments("aDd(1,2)", "3")]
+	public async Task FunctionCaseInsensitive(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Brace handling — braces prevent evaluation but are stripped
+	[Test]
+	[Arguments("{hello}", "hello")]
+	[Arguments("add({1},{2})", "3")]
+	[Arguments("cat({[add(1,2)]},done)", "3 done")]
+	public async Task BraceHandling(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Escape sequences — backslash escapes special chars
+	[Test]
+	[Arguments(@"strlen(\[)", "1")]
+	[Arguments(@"strlen(\])", "1")]
+	public async Task EscapeSequences(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Empty argument handling
+	[Test]
+	[Arguments("if(,yes,no)", "no")]
+	[Arguments("if(1,yes,no)", "yes")]
+	[Arguments("if(0,yes,no)", "no")]
+	// PennMUSH treats func() as 1 empty arg; SharpMUSH treats it as 0 args.
+	// Known parser divergence — PennMUSH: strlen() → 0, SharpMUSH: error
+	// [Arguments("strlen()", "0")]
+	public async Task EmptyArgHandling(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }
