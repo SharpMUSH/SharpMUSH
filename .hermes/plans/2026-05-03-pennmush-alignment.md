@@ -444,23 +444,7 @@ All 126 commands are present. Focus on behavioral correctness.
 
 ---
 
-### Task 5.2: Expand Substitution Tests
-
-**Objective:** Only 1 active substitution test exists (3 more commented out as TODO). This is dangerously sparse for such a critical feature.
-
-**Files:**
-- Modify: `SharpMUSH.Tests/Substitutions/RegistersUnitTests.cs`
-- Create: Additional substitution test files
-
-**Steps:**
-1. Un-comment the 3 TODO'd tests, fix them
-2. Add tests for every %-substitution (%#, %!, %@, %n, %N, %b, %r, %0-%9, %q0-%qz, %?, %c, %u, etc.)
-3. Add tests for complex substitutions (%vw, %$0, %iL, etc.)
-4. Commit: `test: comprehensive substitution test coverage`
-
----
-
-### Task 5.3: Softcode Regression Suite
+### Task 5.2: Softcode Regression Suite
 
 **Objective:** Test real-world MUSHcode patterns (BBS, combat code, building tools) end-to-end.
 
@@ -506,12 +490,12 @@ All 126 commands are present. Focus on behavioral correctness.
 
 ## Execution Priority
 
-1. **Phase 5.2** (Substitution tests) — Dangerously sparse, high risk area
-2. **Phase 1** (Parser gaps) — Cascading impact
-3. **Phase 2** (Function parity) — Most-used feature
-4. **Phase 3** (Command behavior) — Output correctness
-5. **Phase 4** (Object model) — Multi-user correctness
-6. **Phase 5.1** (Un-skip tests) — Ongoing
+1. **Phase 1** (Parser gaps) — Cascading impact
+2. **Phase 2** (Function parity) — Most-used feature
+3. **Phase 3** (Command behavior) — Output correctness
+4. **Phase 4** (Object model) — Multi-user correctness
+5. **Phase 5.1** (Un-skip tests) — Ongoing
+6. **Phase 5.2** (Softcode regression suite) — Ongoing validation
 7. **Phase 6** (Networking) — Lowest impact on softcode compatibility
 
 **Done criteria:** All PennMUSH parity tests pass, all 192 skipped tests resolved, substitution coverage comprehensive, function parity tests pass, economy/quota implemented.
