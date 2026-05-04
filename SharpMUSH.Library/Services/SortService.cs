@@ -121,13 +121,13 @@ public class SortService(ILocateService locateService, IConnectionService connec
 
 			ISortService.SortType.IntegerSort
 				=> source
-					.Select(mString => (i: int.TryParse(mString.ToPlainText(), out var number) ? number : -1, mString))
+					.Select(mString => (i: int.TryParse(mString.ToPlainText(), out var number) ? number : 0, mString))
 					.OrderByAwait((val, ct) => ValueTask.FromResult(val.i), Comparer<int>.Default, direction)
 					.Select(val => val.mString),
 
 			ISortService.SortType.DecimalSort
 				=> source
-					.Select(mString => (i: decimal.TryParse(mString.ToPlainText(), out var number) ? number : -1, mString))
+					.Select(mString => (i: decimal.TryParse(mString.ToPlainText(), out var number) ? number : 0, mString))
 					.OrderByAwait((val, ct) => ValueTask.FromResult(val.i), Comparer<decimal>.Default, direction)
 					.Select(val => val.mString),
 

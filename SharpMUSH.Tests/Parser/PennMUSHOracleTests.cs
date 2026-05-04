@@ -141,7 +141,7 @@ public class PennMUSHOracleTests
 	[Arguments("root.2", "root(-1,2)", "#-1 IMAGINARY NUMBER")]
 	[Arguments("root.3", "root(27, 3)", "3")]
 	[Arguments("root.4", "root(-27, 3)", "-3")]
-	[Arguments("root.5", "root(125, 5)", "2.6265278044037674")]
+	[Arguments("root.5", "root(125, 5)", "2.62652780440377")]
 	[Arguments("round.0", "round(pi(), 0)", "3")]
 	[Arguments("round.1", "round(pi(), 1)", "3.1")]
 	[Arguments("null.1", "null()", "")]

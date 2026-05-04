@@ -1440,21 +1440,22 @@ public partial class Functions
 			: ValueTask.FromResult<CallState>(MModule.substring(0, int.Min(strlen, str.Length), str));
 	}
 
-	[SharpFunction(Name = "ljust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill"])]
+	[SharpFunction(Name = "ljust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill", "truncate"])]
 	public static ValueTask<CallState> LeftJustifyString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = parser.CurrentState.Arguments["0"].Message!;
 		var width = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
 		var fill = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2,
 			MModule.single(" "));
+		var truncate = MModule.plainText(ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, MModule.single("")));
 
 		if (!int.TryParse(width, out var widthInt) || widthInt < 0)
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, PadType.Right,
-			TruncationType.Overflow));
+		var truncType = truncate == "1" ? TruncationType.Truncate : TruncationType.Overflow;
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, PadType.Right, truncType));
 	}
 
 	[SharpFunction(Name = "lpos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["target", "list", "delimiter"])]
@@ -1672,21 +1673,22 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MModule.substring(startPos, maxLength, str));
 	}
 
-	[SharpFunction(Name = "rjust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill"])]
+	[SharpFunction(Name = "rjust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill", "truncate"])]
 	public static ValueTask<CallState> RightJustifyString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = parser.CurrentState.Arguments["0"].Message!;
 		var width = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
 		var fill = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2,
 			MModule.single(" "));
+		var truncate = MModule.plainText(ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, MModule.single("")));
 
 		if (!int.TryParse(width, out var widthInt) || widthInt < 0)
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, PadType.Left,
-			TruncationType.Overflow));
+		var truncType = truncate == "1" ? TruncationType.Truncate : TruncationType.Overflow;
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, PadType.Left, truncType));
 	}
 
 	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]

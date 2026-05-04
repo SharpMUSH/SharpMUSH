@@ -186,6 +186,8 @@ public class ListFunctionUnitTests
 	[Test]
 	[Arguments("sort(3 1 2)", "1 2 3")]
 	[Arguments("sort(foo bar baz)", "bar baz foo")]
+	// Penn sort.2: float sort with explicit 'f' type
+	[Arguments("sort(0.0 0 0.3 *foo*,f)", "0.0 0 *foo* 0.3")]
 	public async Task Sort(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;

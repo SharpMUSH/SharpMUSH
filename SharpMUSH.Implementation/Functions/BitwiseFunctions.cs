@@ -48,8 +48,22 @@ public partial class Functions
 		var fromBaseChars = fromBase <= 36 ? Chars36 : Chars;
 		var toBaseChars = toBase <= 36 ? Chars36 : Chars;
 
+		// Handle negative sign for bases <= 36 (where '-' is not a valid digit)
+		var isNegative = false;
+		if (fromBase <= 36 && input.StartsWith('-'))
+		{
+			isNegative = true;
+			input = input[1..];
+		}
+
+		// Normalize standard Base64 characters (+/) to URL-safe (-_) for bases > 36
+		if (fromBase > 36)
+		{
+			input = input.Replace('+', '-').Replace('/', '_');
+		}
+
 		// Validate input according to fromBase
-		if (input.Any(c => fromBaseChars.IndexOf(c) >= fromBase))
+		if (input.Length == 0 || input.Any(c => fromBaseChars.IndexOf(c) < 0 || fromBaseChars.IndexOf(c) >= fromBase))
 		{
 			return ValueTask.FromResult<CallState>(new(ErrorMessages.Returns.MalformedNumber));
 		}
@@ -60,7 +74,10 @@ public partial class Functions
 
 		// Directly return the number if toBase is 10
 		if (toBase == 10)
-			return ValueTask.FromResult<CallState>(new(number.ToString()));
+		{
+			var numStr = number.ToString();
+			return ValueTask.FromResult<CallState>(new(isNegative && number != 0 ? "-" + numStr : numStr));
+		}
 
 		// Convert from base 10 to the desired base
 		var result = string.Empty;
@@ -70,7 +87,10 @@ public partial class Functions
 			number /= toBase;
 		}
 
-		return ValueTask.FromResult<CallState>(new(result == string.Empty ? "0" : result));
+		var output = result == string.Empty ? "0" : result;
+		if (isNegative && toBase <= 36)
+			output = "-" + output;
+		return ValueTask.FromResult<CallState>(new(output));
 	}
 
 	[SharpFunction(Name = "band",

@@ -2,7 +2,7 @@
 
 ## Branch: `pennmush-compatibility`
 ## Last Updated: 2026-05-04
-## Tests: 3274 passing, 0 failing
+## Tests: 3430 passing, 0 failing
 
 ---
 
@@ -11,6 +11,20 @@
 ### Phase 1A: .t file audit & test porting
 - **testsetfuns.t**: 282 tests ported (whitespace trimming, numeric comparison modes, all set ops)
 - **testatree.t**: 8 tests ported (name validation, branch auto-creation, clear semantics)
+- **testmath.t**: 106 tests ported. Fixes:
+  - CallState(double) always formats with G{FloatPrecision} (consistent 15 sig figs)
+  - tan(90,d) singularity detection (|result| > 1e15 threshold)
+  - log() supports base `e`, negative/zero range checks, `-inf` formatting
+  - ln() negative/zero range checks
+  - baseconv() handles negative numbers for bases ≤ 36
+  - baseconv() normalizes +/ → -_ for base 64 input (PennMUSH accepts both)
+  - fraction() uses continued fraction approximation algorithm
+- **testfirstof.t**: 25 tests ported (firstof, strfirstof, allof, strallof)
+- **testreswitch.t**: 12 tests ported (reswitch/reswitchall/reswitchi/reswitchalli with regex)
+- **testdistxd.t**: 2 new dist2d/dist3d tests added (non-trivial distances)
+- **testjust.t/testlnum.t**: ljust/rjust truncation (4th arg) and lnum float support fixed
+  - ljust/rjust: pass TruncationType.Truncate when 4th arg is truthy
+  - lnum: rewritten to support float start/end/step via double.TryParse
 - All 12 initial failures FIXED:
   - Set function `IEqualityComparer<string>` system for sort-type-aware membership
   - Attribute name backtick validation (leading/trailing/consecutive rejected)
@@ -34,7 +48,7 @@ Run them against PennMUSH oracle: `cd pennmush/test && perl runtest.pl <file>.t`
 **Unaudited .t files (high value):**
 - `testfuns.t` — general function tests (likely hundreds of tests)
 - `teststring.t` — string functions (mid, left, right, edit, etc.)
-- `testmath.t` — math functions
+- ~~`testmath.t` — math functions~~ ✅ DONE (106 tests ported)
 - `testbool.t` — boolean/logic functions
 - `testcmds.t` — command parsing
 - `testlocks.t` — lock evaluation
@@ -59,6 +73,10 @@ Run them against PennMUSH oracle: `cd pennmush/test && perl runtest.pl <file>.t`
 **testsetfuns.t remaining:**
 - [ ] ANSI-in-set operations (2 tests) — MEDIUM
 - [ ] Null-suffix formatting (3 tests) — LOW
+
+**testsort.t remaining:**
+- [ ] Float sort treats non-numeric items as 0 (`sort(list,f)`) — MEDIUM
+- [ ] ANSI-aware sort (sort.3, sort.4) — MEDIUM
 
 ### 3. Phase 1B: Function parity (systematic)
 - Enumerate ALL functions in PennMUSH's `fun_tab[]` vs SharpMUSH's `FunctionLibrary`
