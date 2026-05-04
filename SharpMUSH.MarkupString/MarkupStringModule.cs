@@ -799,7 +799,8 @@ public static partial class MarkupStringModule
     public static MarkupString CompressSpaces(MarkupString ams)
     {
         var text = ams.ToPlainText();
-        if (text == null) return ams;
+        // Fast path: no consecutive spaces means nothing to compress (common case)
+        if (text == null || text.IndexOf("  ", StringComparison.Ordinal) < 0) return ams;
 
         // Find runs of 2+ spaces from right to left and replace with single space
         var singleSpace = Single(" ");
