@@ -2,7 +2,7 @@
 
 ## Branch: `pennmush-compatibility`
 ## Last Updated: 2026-05-04
-## Tests: 3484 passing, 0 failing
+## Tests: 3501 passing, 0 failing
 
 ---
 
@@ -111,8 +111,13 @@ Run them against PennMUSH oracle: `cd pennmush/test && perl runtest.pl <file>.t`
 - [x] MinArgs differences: 10 found, all cosmetic (functions validate internally regardless of declared min)
 
 ### 4. Phase 2: Parser parity
-- Escape sequences, nested evaluation, %substitutions
-- Edge cases: empty args, trailing commas, unbalanced parens
+- [x] func() arg count: PennMUSH treats func() as 1 empty arg for MinArgs>=1. FIXED.
+- [x] Nested function evaluation: confirmed working
+- [x] Function name case insensitivity: confirmed working
+- [x] Brace handling: braces prevent comma splitting but NOT bracket evaluation — confirmed matches PennMUSH
+- [x] Escape sequences: backslash escapes [ and ] — confirmed working
+- [ ] %substitutions in function context (%b, %r, %t) — needs verification
+- [ ] Evaluation depth limits and recursion behavior
 
 ### 5. Phase 3: Command parity
 - @commands, single-token commands (&, @, etc.)
