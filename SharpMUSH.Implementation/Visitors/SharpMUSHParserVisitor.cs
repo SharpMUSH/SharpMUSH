@@ -304,7 +304,8 @@ public class SharpMUSHParserVisitor(
 		EvaluationStringContext?[] arguments;
 		if (evalStrings is null || evalStrings.Length == 0 && commas.Length == 0)
 		{
-			arguments = [];
+			// PennMUSH treats func() as having 1 empty arg, not 0 args.
+			arguments = [null];
 		}
 		else
 		{
@@ -478,12 +479,18 @@ public class SharpMUSHParserVisitor(
 			}
 
 			/* Validation, this should probably go into its own function! */
+			// PennMUSH compat: if minargs=0 and we got 1 empty arg from func(), treat as 0 args
+			if (attribute.MinArgs == 0 && args.Length == 1 && args[0] is null)
+			{
+				args = [];
+			}
+
 			if (args.Length > attribute.MaxArgs)
 			{
 				return new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, name.ToUpperInvariant(), attribute.MaxArgs, args.Length), context.Depth());
 			}
 
-			if (args.Length < attribute.MinArgs)
+		if (args.Length < attribute.MinArgs)
 			{
 				return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, name.ToUpperInvariant(), attribute.MinArgs, args.Length),
 					contextDepth);

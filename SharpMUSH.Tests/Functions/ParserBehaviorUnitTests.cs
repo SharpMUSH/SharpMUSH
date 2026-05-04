@@ -134,14 +134,14 @@ public class ParserBehaviorUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// Empty argument handling
+	// Empty argument handling — PennMUSH treats func() as 1 empty arg for MinArgs>=1 functions
 	[Test]
 	[Arguments("if(,yes,no)", "no")]
 	[Arguments("if(1,yes,no)", "yes")]
 	[Arguments("if(0,yes,no)", "no")]
-	// PennMUSH treats func() as 1 empty arg; SharpMUSH treats it as 0 args.
-	// Known parser divergence — PennMUSH: strlen() → 0, SharpMUSH: error
-	// [Arguments("strlen()", "0")]
+	[Arguments("strlen()", "0")]
+	[Arguments("words()", "0")]
+	[Arguments("trim()", "")]
 	public async Task EmptyArgHandling(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

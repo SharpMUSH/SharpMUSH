@@ -37,7 +37,7 @@ public class PennMUSHOracleTests
 	// Skipped: requires @function myfn setup (object state)
 	// [Arguments("atfun.4", "fn(myfn,test)", "#-1")]
 	[Arguments("fn.case", "[fn(ADD,1,2)]", "3")]
-	[Arguments("fn.zero_args_add", "[fn(add)]", "#-1 FUNCTION (ADD) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 0")]
+	[Arguments("fn.zero_args_add", "[fn(add)]", "#-1 FUNCTION (ADD) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1")]
 	[Arguments("lit.1", "lit(hello world)", "hello world")]
 	[Arguments("lit.2", "lit(%#)", "%#")]
 	[Arguments("lit.4", "lit(near       far)", "near       far")]
