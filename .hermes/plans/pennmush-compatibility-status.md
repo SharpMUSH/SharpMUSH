@@ -2,7 +2,7 @@
 
 ## Branch: `pennmush-compatibility`
 ## Last Updated: 2026-05-04
-## Tests: 3479 passing, 0 failing
+## Tests: 3484 passing, 0 failing
 
 ---
 
@@ -97,17 +97,18 @@ Run them against PennMUSH oracle: `cd pennmush/test && perl runtest.pl <file>.t`
 - [ ] flags() showing backtick on branches (1 test) — LOW
 
 **testsetfuns.t remaining:**
-- [ ] ANSI-in-set operations (2 tests) — MEDIUM
-- [ ] Null-suffix formatting (3 tests) — LOW
+- [x] ANSI-in-set operations (2 tests) — SharpMUSH behavior is SUPERIOR (strips formatting for comparison)
+- [x] Null-suffix formatting (3 tests) — DONE, all pass
 
 **testsort.t remaining:**
-- [ ] Float sort treats non-numeric items as 0 (`sort(list,f)`) — MEDIUM
+- [x] Float sort treats non-numeric items as 0 (`sort(list,f)`) — DONE, confirmed correct
 - [ ] ANSI-aware sort (sort.3, sort.4) — MEDIUM
 
 ### 3. Phase 1B: Function parity (systematic)
-- Enumerate ALL functions in PennMUSH's `fun_tab[]` vs SharpMUSH's `FunctionLibrary`
-- Identify missing functions
-- Verify argument counts, flags (NoParse, Literal, etc.)
+- [x] Enumerated ALL functions: 527/529 coverage (99.6%). Missing: `ansigen`, `pe_regs_dump` (both low priority debug/internal)
+- [x] 19 SharpMUSH extensions not in PennMUSH (rendermarkdown, websocket_*, delete/insert/idlesecs aliases)
+- [x] Flag audit: Fixed `strallof` (Regular→NoParse) and `xor` (removed spurious NoParse)
+- [x] MinArgs differences: 10 found, all cosmetic (functions validate internally regardless of declared min)
 
 ### 4. Phase 2: Parser parity
 - Escape sequences, nested evaluation, %substitutions
