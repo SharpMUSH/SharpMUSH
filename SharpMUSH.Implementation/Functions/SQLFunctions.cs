@@ -24,7 +24,7 @@ public partial class Functions
 
 		if (SqlService is not { IsAvailable: true })
 		{
-			return new CallState("#-1 SQL IS NOT ENABLED");
+			return new CallState(Errors.ErrorSqlNotEnabled);
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -33,7 +33,7 @@ public partial class Functions
 
 		if (string.IsNullOrWhiteSpace(query))
 		{
-			return new CallState("#-1 NO QUERY SPECIFIED");
+			return new CallState(Errors.ErrorNoQuerySpecified);
 		}
 
 		var rowSeparator = args.Count > 1 && args.TryGetValue("1", out var value)
@@ -99,7 +99,7 @@ public partial class Functions
 	{
 		if (SqlService is not { IsAvailable: true })
 		{
-			return ValueTask.FromResult(new CallState("#-1 SQL IS NOT ENABLED"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorSqlNotEnabled));
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -122,7 +122,7 @@ public partial class Functions
 
 		if (SqlService is not { IsAvailable: true })
 		{
-			return new CallState("#-1 SQL IS NOT ENABLED");
+			return new CallState(Errors.ErrorSqlNotEnabled);
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -133,7 +133,7 @@ public partial class Functions
 
 		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(query))
 		{
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(Errors.ErrorInvalidArguments);
 		}
 
 		var osep = args.Count > 2 && args.TryGetValue("2", out var osepArg)
@@ -150,7 +150,7 @@ public partial class Functions
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
 		if (maybeObjAttr.IsT1)
 		{
-			return new CallState("#-1 INVALID OBJECT/ATTRIBUTE");
+			return new CallState(Errors.ErrorInvalidObjectAttribute);
 		}
 
 		var (targetObjRef, attrName) = maybeObjAttr.AsT0;

@@ -14,10 +14,10 @@ public class BitwiseFunctionUnitTests
 	[Arguments("10", "2", "10", "2")]
 	[Arguments("woof", "64", "32", "c52gv")]
 	[Arguments("oof", "32", "64", "GMP")]
-	[Arguments("woof", "1", "10", "#-1 Argument 1 must be between 2 and 64.")]
-	[Arguments("woof", "10", "1", "#-1 Argument 2 must be between 2 and 64.")]
-	[Arguments("woof", "10", "65", "#-1 Argument 2 must be between 2 and 64.")]
-	[Arguments("woof", "65", "10", "#-1 Argument 1 must be between 2 and 64.")]
+	[Arguments("woof", "1", "10", "#-1 ARGUMENT 1 MUST BE BETWEEN 2 AND 64")]
+	[Arguments("woof", "10", "1", "#-1 ARGUMENT 2 MUST BE BETWEEN 2 AND 64")]
+	[Arguments("woof", "10", "65", "#-1 ARGUMENT 2 MUST BE BETWEEN 2 AND 64")]
+	[Arguments("woof", "65", "10", "#-1 ARGUMENT 1 MUST BE BETWEEN 2 AND 64")]
 	public async Task BaseConv(string number, string frombase, string tobase, string expected)
 	{
 		var result = await Parser.FunctionParse(MModule.single($"baseconv({number},{frombase},{tobase})"));

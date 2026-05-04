@@ -1581,7 +1581,7 @@ public partial class Functions
 
 		if (list.Length != list2.Length)
 		{
-			return ValueTask.FromResult(new CallState("#-1 NUMBER OF WORDS MUST BE EQUAL"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumberOfWordsMustBeEqual));
 		}
 
 		// Each pair uses delimiter as the within-pair separator.
@@ -1771,18 +1771,18 @@ public partial class Functions
 
 		if (!int.TryParse(fieldWidthArg, out var fieldWidth))
 		{
-			return new CallState("#-1 INVALID FIELD WIDTH");
+			return new CallState(Errors.ErrorInvalidFieldWidth);
 		}
 
 		if (!int.TryParse(lineWidthArg, out var lineWidth))
 		{
-			return new CallState("#-1 INVALID LINE WIDTH");
+			return new CallState(Errors.ErrorInvalidLineWidth);
 		}
 
 		var fieldsPerLine = lineWidth / fieldWidth;
 		if (fieldsPerLine < 1)
 		{
-			return new CallState("#-1 FIELD WIDTH EXCEEDS LINE WIDTH");
+			return new CallState(Errors.ErrorFieldWidthExceedsLineWidth);
 		}
 		var list = MModule.splitList(delimiterArg, listArg);
 		var resultFields = list.Select(x =>
@@ -1867,7 +1867,7 @@ public partial class Functions
 
 		if (number > lengths.Sum())
 		{
-			return new CallState("#-1 WORD NUMBER OUT OF RANGE");
+			return new CallState(Errors.ErrorWordNumberOutOfRange);
 		}
 
 		var i = 0;

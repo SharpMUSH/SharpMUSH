@@ -246,7 +246,7 @@ public partial class Functions
 
 		if (matches.Count == 0)
 		{
-			return new ValueTask<CallState>("#-1 INVALID TIMESTRING");
+			return new ValueTask<CallState>(Errors.ErrorInvalidTimestring);
 		}
 
 		long totalSeconds = 0;
@@ -477,7 +477,7 @@ public partial class Functions
 				'y' => dt.ToString("yy"),
 				'Y' => dt.ToString("yyyy"),
 				'Z' => dt.ToString("zzz"),
-				_ => "#-1 INVALID ESCAPE CODE"
+				_ => Errors.ErrorInvalidEscapeCode
 			};
 		});
 
@@ -520,7 +520,7 @@ public partial class Functions
 		// PennMUSH: negative seconds return error
 		if (totalSecs < 0)
 		{
-			return new ValueTask<CallState>("#-1 SECONDS MUST NOT BE NEGATIVE");
+			return new ValueTask<CallState>(Errors.ErrorSecondsMustNotBeNegative);
 		}
 
 		if (!int.TryParse(padFlag, out var pad))
@@ -635,7 +635,7 @@ public partial class Functions
 
 		if (maxWidth < 0)
 		{
-			return new ValueTask<CallState>("#-1 WIDTH MUST BE A NUMBER");
+			return new ValueTask<CallState>(Errors.ErrorWidthMustBeANumber);
 		}
 
 		// Calculate time components
@@ -689,7 +689,7 @@ public partial class Functions
 		// PennMUSH: negative seconds return error
 		if (totalSecs < 0)
 		{
-			return new ValueTask<CallState>("#-1 SECONDS MUST NOT BE NEGATIVE");
+			return new ValueTask<CallState>(Errors.ErrorSecondsMustNotBeNegative);
 		}
 
 		// Calculate time components using TimeSpan
@@ -757,7 +757,7 @@ public partial class Functions
 
 		if (!long.TryParse(secsStr, out var seconds))
 		{
-			return ValueTask.FromResult<CallState>("#-1 INVALID SECONDS");
+			return ValueTask.FromResult<CallState>(Errors.ErrorInvalidSeconds);
 		}
 
 		var dateTime = DateTimeOffset.FromUnixTimeSeconds(seconds);
@@ -775,7 +775,7 @@ public partial class Functions
 			}
 			else
 			{
-				return ValueTask.FromResult<CallState>("#-1 INVALID TIMEZONE");
+				return ValueTask.FromResult<CallState>(Errors.ErrorInvalidTimezone);
 			}
 		}
 
@@ -823,7 +823,7 @@ public partial class Functions
 
 		if (!long.TryParse(secsStr, out var seconds))
 		{
-			return ValueTask.FromResult<CallState>("#-1 INVALID SECONDS");
+			return ValueTask.FromResult<CallState>(Errors.ErrorInvalidSeconds);
 		}
 
 		var dateTime = DateTimeOffset.FromUnixTimeSeconds(seconds);

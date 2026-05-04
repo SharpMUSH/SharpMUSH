@@ -5,6 +5,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -25,7 +26,7 @@ public static class ReadMail
 		if (actualMail is null)
 		{
 			await notifyService.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber + 1}");
-			return MModule.single("#-1 NO SUCH MAIL");
+			return MModule.single(Errors.ErrorNoSuchMail);
 		}
 
 		var dateline = MModule.pad(

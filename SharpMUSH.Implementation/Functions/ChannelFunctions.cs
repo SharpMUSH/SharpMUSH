@@ -63,7 +63,7 @@ public partial class Functions
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 		if (maybeMemberStatus is null)
 		{
-			return new CallState("#-1 You are not a member of that channel.");
+			return new CallState(Errors.ErrorNotAMember);
 		}
 
 		using (Logger!.BeginScope("<{DbRef}> {Category}: {Channel}.",
@@ -103,7 +103,7 @@ public partial class Functions
 
 		if (maybeMemberStatus is null)
 		{
-			return new CallState("#-1 You are not a member of that channel.");
+			return new CallState(Errors.ErrorNotAMember);
 		}
 
 		var (_, status) = maybeMemberStatus;
@@ -402,7 +402,7 @@ public partial class Functions
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 		if (maybeMemberStatus is null)
 		{
-			return new CallState("#-1 You are not a member of that channel.");
+			return new CallState(Errors.ErrorNotAMember);
 		}
 
 		// Get optional arguments
@@ -543,7 +543,7 @@ public partial class Functions
 
 		if (maybeMemberStatus is null)
 		{
-			return new CallState("#-1 You are not a member of that channel.");
+			return new CallState(Errors.ErrorNotAMember);
 		}
 
 		var (_, status) = maybeMemberStatus;
@@ -677,7 +677,7 @@ public partial class Functions
 			"owner" => new CallState($"#{owner.Object.DBRef.Number}"),
 			"members" => new CallState((await channel.Members.Value.CountAsync()).ToString()),
 			"buffer" => new CallState("50"), // Default buffer size
-			_ => new CallState("#-1 INVALID INFO TYPE")
+			_ => new CallState(Errors.ErrorInvalidInfoType)
 		};
 	}
 }

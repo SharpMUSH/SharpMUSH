@@ -40,10 +40,10 @@ public partial class Functions
 		}
 
 		if (fromBase is < 2 or > 64)
-			return ValueTask.FromResult<CallState>(new("#-1 Argument 1 must be between 2 and 64."));
+			return ValueTask.FromResult<CallState>(new(string.Format(Errors.ErrorBaseArgRange, 1)));
 
 		if (toBase is < 2 or > 64)
-			return ValueTask.FromResult<CallState>(new("#-1 Argument 2 must be between 2 and 64."));
+			return ValueTask.FromResult<CallState>(new(string.Format(Errors.ErrorBaseArgRange, 2)));
 
 		var fromBaseChars = fromBase <= 36 ? Chars36 : Chars;
 		var toBaseChars = toBase <= 36 ? Chars36 : Chars;
@@ -51,7 +51,7 @@ public partial class Functions
 		// Validate input according to fromBase
 		if (input.Any(c => fromBaseChars.IndexOf(c) >= fromBase))
 		{
-			return ValueTask.FromResult<CallState>(new("#-1 MALFORMED NUMBER"));
+			return ValueTask.FromResult<CallState>(new(Errors.ErrorMalformedNumber));
 		}
 
 		// Convert input to base 10

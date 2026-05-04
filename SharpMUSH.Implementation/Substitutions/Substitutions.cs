@@ -154,7 +154,7 @@ public static partial class Substitutions
 		// Parse the symbol number
 		if (!int.TryParse(symbolValue, out var symbolNumber) || symbolNumber < 0)
 		{
-			return new CallState("#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER");
+			return new CallState(Errors.ErrorNonNegativeInteger);
 		}
 
 		// Check if we're in a switch context or if the depth is out of range

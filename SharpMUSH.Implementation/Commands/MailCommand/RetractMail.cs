@@ -3,6 +3,7 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -17,7 +18,7 @@ public static class RetractMail
 
 		if (!maybeLocate.IsValid())
 		{
-			return MModule.single("#-1 NO SUCH PLAYER");
+			return MModule.single(Errors.ErrorNoSuchPlayer);
 		}
 
 		var sentMails = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, MModule.single(msgList), maybeLocate.AsPlayer);

@@ -53,7 +53,7 @@ public partial class Functions
 
 		if (searchType != "ip" && searchType != "hostname")
 		{
-			return new CallState("#-1 INVALID SEARCH TYPE");
+			return new CallState(Errors.ErrorInvalidSearchType);
 		}
 
 		var logs = Mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
@@ -156,7 +156,7 @@ public partial class Functions
 
 		if (filter != "all" && filter != "logged in" && filter != "not logged in" && !filter.StartsWith("#"))
 		{
-			return new CallState("#-1 INVALID FILTER");
+			return new CallState(Errors.ErrorInvalidFilter);
 		}
 
 		var osep = "|";
@@ -173,7 +173,7 @@ public partial class Functions
 		{
 			if (i + 1 > lastArgIndex)
 			{
-				return new CallState("#-1 INVALID SPEC PAIR");
+				return new CallState(Errors.ErrorInvalidSpecPair);
 			}
 
 			var specType = args[i.ToString()].Message!.ToPlainText().ToLower();
@@ -182,7 +182,7 @@ public partial class Functions
 			if (specType != "after" && specType != "before" && specType != "ip" &&
 					specType != "hostname" && specType != "count")
 			{
-				return new CallState("#-1 INVALID SPEC TYPE");
+				return new CallState(Errors.ErrorInvalidSpecType);
 			}
 
 			specs.Add((specType, specValue));
@@ -292,7 +292,7 @@ public partial class Functions
 			: " ";
 		if (string.IsNullOrWhiteSpace(connectionId))
 		{
-			return new CallState("#-1 INVALID CONNECTION ID");
+			return new CallState(Errors.ErrorInvalidConnectionId);
 		}
 
 		var logs = Mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
@@ -328,7 +328,7 @@ public partial class Functions
 			// If iteration fails, return not found
 		}
 
-		return new CallState("#-1 CONNECTION NOT FOUND");
+		return new CallState(Errors.ErrorConnectionNotFound);
 	}
 
 	[SharpFunction(Name = "doing", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -546,7 +546,7 @@ public partial class Functions
 			status = args["1"].Message!.ToPlainText().ToLower();
 			if (status != "all" && status != "online" && status != "offline")
 			{
-				return new CallState("#-1 INVALID SECOND ARGUMENT");
+				return new CallState(Errors.ErrorInvalidSecondArgument);
 			}
 		}
 
@@ -608,13 +608,13 @@ public partial class Functions
 
 		if (arg1.Length > 1)
 		{
-			return "#-1 INVALID SECOND ARGUMENT";
+			return Errors.ErrorInvalidSecondArgument;
 		}
 
 		var status = arg1.First();
 		if (!((string[])["online", "offline", "all"]).Contains(status))
 		{
-			return "#-1 INVALID SECOND ARGUMENT";
+			return Errors.ErrorInvalidSecondArgument;
 		}
 
 		// Check if looker has See_All permission for offline/all status
@@ -694,13 +694,13 @@ public partial class Functions
 
 		if (arg1.Length > 1)
 		{
-			return "#-1 INVALID SECOND ARGUMENT";
+			return Errors.ErrorInvalidSecondArgument;
 		}
 
 		var status = arg1.First();
 		if (!((string[])["online", "offline", "all"]).Contains(status))
 		{
-			return "#-1 INVALID SECOND ARGUMENT";
+			return Errors.ErrorInvalidSecondArgument;
 		}
 
 		// Check if looker has See_All permission for offline/all status
@@ -1442,7 +1442,7 @@ public partial class Functions
 
 		if (!long.TryParse(portString, out var port))
 		{
-			return new CallState("#-1 INVALID PORT");
+			return new CallState(Errors.ErrorInvalidPort);
 		}
 
 		var data = ConnectionService!.Get(port);
@@ -1455,7 +1455,7 @@ public partial class Functions
 		if (await executor.IsWizard() || await executor.IsRoyalty() || await executor.IsSee_All())
 		{
 			return data is null
-				? new CallState("#-1 INVALID PORT")
+				? new CallState(Errors.ErrorInvalidPort)
 				: new CallState($"#{data.Ref?.Number}");
 		}
 

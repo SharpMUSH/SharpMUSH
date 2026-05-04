@@ -50,7 +50,7 @@ public partial class Functions
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			return new CallState("#-1 BAD ARGUMENT FORMAT TO ATTRIB_SET");
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "ATTRIB_SET"));
 		}
 
 		var (dbref, attribute) = details;
@@ -91,7 +91,7 @@ public partial class Functions
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			return new CallState("#-1 BAD ARGUMENT FORMAT TO ATTRIB_SET");
+			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "ATTRIB_SET"));
 		}
 
 		var (dbref, attribute) = details;
@@ -965,7 +965,7 @@ public partial class Functions
 			}
 			catch (ArgumentException)
 			{
-				return new CallState("#-1 REGEXP ERROR: Invalid regular expression");
+				return new CallState(Errors.ErrorRegexpInvalid);
 			}
 		}
 
@@ -1057,7 +1057,7 @@ public partial class Functions
 		}
 		catch (ArgumentException)
 		{
-			return new CallState("#-1 REGEXP ERROR: Invalid regular expression");
+			return new CallState(Errors.ErrorRegexpInvalid);
 		}
 	}
 
@@ -1536,7 +1536,7 @@ public partial class Functions
 
 		if (parentObject.IsNone)
 		{
-			return new CallState("#-1 OBJECT HAS NO PARENT");
+			return new CallState(Errors.ErrorObjectHasNoParent);
 		}
 
 		// Trust checking and attribute inheritance logic (no_inherit, INTERNAL flags, etc.)
@@ -1952,7 +1952,7 @@ public partial class Functions
 
 		if (zone.IsNone)
 		{
-			return new CallState("#-1 NO ZONE SET");
+			return new CallState(Errors.ErrorNoZoneSet);
 		}
 
 		// Evaluate the attribute function on the zone object

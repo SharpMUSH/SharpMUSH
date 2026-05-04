@@ -384,7 +384,7 @@ public partial class Commands
 		if (slashIndex == -1)
 		{
 			await NotifyService!.Notify(executor, "Invalid format. Use: @lset <object>/<lock type>=[!]<flag>", executor);
-			return new CallState("#-1 INVALID FORMAT");
+			return new CallState(Errors.ErrorInvalidFormat);
 		}
 
 		var objectName = objectLock[..slashIndex];
@@ -396,7 +396,7 @@ public partial class Commands
 		if (!LockService!.LockPrivileges.TryGetValue(flagName.ToLower(), out var flagInfo))
 		{
 			await NotifyService!.Notify(executor, $"Invalid flag: {flagName}", executor);
-			return new CallState("#-1 INVALID FLAG");
+			return new CallState(Errors.InvalidFlag);
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -415,7 +415,7 @@ public partial class Commands
 				if (!obj.Object().Locks.TryGetValue(lockType, out var lockData))
 				{
 					await NotifyService!.Notify(executor, $"No such lock: {lockType}", executor);
-					return new CallState("#-1 NO SUCH LOCK");
+					return new CallState(Errors.ErrorNoSuchLock);
 				}
 
 				var currentFlags = lockData.Flags;

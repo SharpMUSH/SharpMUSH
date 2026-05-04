@@ -39,7 +39,7 @@ public static class JsonHelpers
 
 		return entry switch
 		{
-			not "1" and not "0" and not "false" and not "true" => ValueTask.FromResult(new CallState("#-1 INVALID VALUE")),
+			not "1" and not "0" and not "false" and not "true" => ValueTask.FromResult(new CallState(Errors.ErrorInvalidValue)),
 			_ => ValueTask.FromResult(new CallState(entry is "1" or "true" ? "true" : "false"))
 		};
 	}

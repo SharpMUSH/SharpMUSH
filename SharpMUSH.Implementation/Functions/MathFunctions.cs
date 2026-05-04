@@ -101,7 +101,7 @@ public partial class Functions
 		var lastIdx = text.Length - 1;
 		if (!char.IsDigit(text[lastIdx]))
 		{
-			return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST END IN AN INTEGER"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorArgMustEndInInteger));
 		}
 
 		var numStart = lastIdx;
@@ -120,7 +120,7 @@ public partial class Functions
 
 		if (!int.TryParse(numPart, out var num))
 		{
-			return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST END IN AN INTEGER"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorArgMustEndInInteger));
 		}
 
 		return ValueTask.FromResult<CallState>($"{prefix}{num - 1}");
@@ -140,7 +140,7 @@ public partial class Functions
 		}
 		catch (FormatException)
 		{
-			return ValueTask.FromResult<CallState>("#-1 INVALID BASE64 STRING");
+			return ValueTask.FromResult<CallState>(Errors.ErrorInvalidBase64String);
 		}
 	}
 
@@ -154,7 +154,7 @@ public partial class Functions
 
 		if (string.IsNullOrEmpty(password))
 		{
-			return ValueTask.FromResult<CallState>("#-1 PASSWORD REQUIRED");
+			return ValueTask.FromResult<CallState>(Errors.ErrorPasswordRequired);
 		}
 
 		try
@@ -175,7 +175,7 @@ public partial class Functions
 		}
 		catch (Exception ex) when (ex is FormatException || ex is ArgumentException)
 		{
-			return ValueTask.FromResult<CallState>("#-1 DECRYPTION ERROR");
+			return ValueTask.FromResult<CallState>(Errors.ErrorDecryptionError);
 		}
 	}
 
@@ -235,7 +235,7 @@ public partial class Functions
 
 		if (string.IsNullOrEmpty(password))
 		{
-			return ValueTask.FromResult<CallState>("#-1 PASSWORD REQUIRED");
+			return ValueTask.FromResult<CallState>(Errors.ErrorPasswordRequired);
 		}
 
 		var plaintextBytes = System.Text.Encoding.UTF8.GetBytes(plaintext);
@@ -334,7 +334,7 @@ public partial class Functions
 		var lastIdx = text.Length - 1;
 		if (!char.IsDigit(text[lastIdx]))
 		{
-			return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST END IN AN INTEGER"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorArgMustEndInInteger));
 		}
 
 		var numStart = lastIdx;
@@ -353,7 +353,7 @@ public partial class Functions
 
 		if (!int.TryParse(numPart, out var num))
 		{
-			return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST END IN AN INTEGER"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorArgMustEndInInteger));
 		}
 
 		return ValueTask.FromResult<CallState>($"{prefix}{num + 1}");
@@ -796,7 +796,7 @@ public partial class Functions
 
 		return ValueTask.FromResult<CallState>(new(double.TryParse(arg1 ?? "1", out var dec)
 			? Math.Exp(dec).ToString()
-			: "#-1 argument must be number"));
+			: Errors.ErrorNumber));
 	}
 
 	[SharpFunction(Name = "fmod", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "divisor"])]
@@ -1058,7 +1058,7 @@ public partial class Functions
 
 		if (list1.Length != 3 || list2.Length != 3)
 		{
-			return ValueTask.FromResult(new CallState("#-1 VECTORS MUST BE 3-DIMENSIONAL"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorVectorsMustBe3D));
 		}
 
 		var x = list1[1].result * list2[2].result - list2[1].result * list1[2].result;
@@ -1132,7 +1132,7 @@ public partial class Functions
 		var magnitude = (decimal)Math.Sqrt((double)list.Sum(x => x.result * x.result));
 		if (magnitude == 0)
 		{
-			return ValueTask.FromResult(new CallState("#-1 DIVISION BY ZERO"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorDivisionByZero));
 		}
 
 		var output = list.Select(x => MModule.single((x.result / magnitude).ToString(CultureInfo.InvariantCulture)));

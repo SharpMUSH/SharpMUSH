@@ -195,7 +195,7 @@ public partial class Commands
 				foundDB.Object.Name);
 
 			await NotifyService!.Notify(handle, "Invalid Password.");
-			return new CallState("#-1 INVALID PASSWORD");
+			return new CallState(Errors.ErrorInvalidPassword);
 		}
 
 		// Rehash legacy PennMUSH passwords to modern PBKDF2 format on successful login

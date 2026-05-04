@@ -308,7 +308,7 @@ public partial class Commands
 		if (attributeResult.IsNone || attributeResult.IsError)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapAttributeNotFoundOnObjectFormat), executor, attrName, target.Object().Name);
-			return new CallState("#-1 NO SUCH ATTRIBUTE");
+			return new CallState(Errors.ErrorNoSuchAttribute);
 		}
 
 		var attribute = attributeResult.AsAttribute.Last();
@@ -1638,7 +1638,7 @@ public partial class Commands
 			if (!long.TryParse(pidStr, out var pid))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPidFormat), executor);
-				return new CallState("#-1 INVALID PID");
+				return new CallState(Errors.ErrorInvalidPid);
 			}
 
 			// Halt the specific task by PID
@@ -2466,7 +2466,7 @@ public partial class Commands
 		if (!int.TryParse(arg0, out var pid))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified), executor);
-			return new CallState("#-1 INVALID PID");
+			return new CallState(Errors.ErrorInvalidPid);
 		}
 
 		if (string.IsNullOrEmpty(arg1))
@@ -2481,7 +2481,7 @@ public partial class Commands
 		if (maybeFoundPid is null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified), executor);
-			return new CallState("#-1 INVALID PID");
+			return new CallState(Errors.ErrorInvalidPid);
 		}
 
 		var timeArg = arg1;
@@ -3426,7 +3426,7 @@ public partial class Commands
 		if (objAttrArg == null || objAttrArg.Message == null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidArguments), executor);
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(Errors.ErrorInvalidArguments);
 		}
 
 		var objAttrText = MModule.plainText(objAttrArg.Message);
@@ -3435,7 +3435,7 @@ public partial class Commands
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat), executor);
-			return new CallState("#-1 INVALID FORMAT");
+			return new CallState(Errors.ErrorInvalidFormat);
 		}
 
 		var (dbref, attrPattern) = details;
@@ -4037,7 +4037,7 @@ public partial class Commands
 			if (!long.TryParse(pidStr, out var pid))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltInvalidPidFormat), executor);
-				return new CallState("#-1 INVALID PID");
+				return new CallState(Errors.ErrorInvalidPid);
 			}
 
 			// Find the semaphore task with this PID
@@ -4444,13 +4444,13 @@ public partial class Commands
 		if (attributeResult.IsError)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), executor, attributeName);
-			return new CallState("#-1 NO SUCH ATTRIBUTE");
+			return new CallState(Errors.ErrorNoSuchAttribute);
 		}
 
 		if (attributeResult.IsNone)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), executor, attributeName);
-			return new CallState("#-1 NO SUCH ATTRIBUTE");
+			return new CallState(Errors.ErrorNoSuchAttribute);
 		}
 
 		var attribute = attributeResult.AsAttribute.Last();
@@ -5174,7 +5174,7 @@ public partial class Commands
 			if (!roomResult.IsValid() || (!roomResult.IsRoom && !roomResult.IsThing))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidRoomSpecifiedDetail), executor);
-				return new CallState("#-1 INVALID ROOM");
+				return new CallState(Errors.ErrorInvalidRoom);
 			}
 
 			targetRoom = roomResult.IsRoom
@@ -5602,7 +5602,7 @@ public partial class Commands
 		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var patternArg))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepInvalidArguments), executor);
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(Errors.ErrorInvalidArguments);
 		}
 
 		// Parse object/attribute pattern
@@ -5613,7 +5613,7 @@ public partial class Commands
 		if (!split.TryPickT0(out var details, out _))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
-			return new CallState("#-1 INVALID OBJECT");
+			return new CallState(Errors.ErrorInvalidObject);
 		}
 
 		var (dbref, maybeAttributePattern) = details;
@@ -5831,7 +5831,7 @@ public partial class Commands
 		if (attributeResult.IsError)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeNoSuchAttributeFormat), executor, attributeName);
-			return new CallState("#-1 NO SUCH ATTRIBUTE");
+			return new CallState(Errors.ErrorNoSuchAttribute);
 		}
 
 		if (attributeResult.IsNone)
@@ -6099,7 +6099,7 @@ public partial class Commands
 		if (!executor.IsPlayer)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PasswordOnlyPlayersHavePasswords), executor);
-			return new CallState("#-1 INVALID OBJECT TYPE.");
+			return new CallState("#-1 INVALID OBJECT TYPE");
 		}
 
 		var isValidPassword = PasswordService!.PasswordIsValid(executor.Object().DBRef.ToString(), oldPassword,
@@ -6107,7 +6107,7 @@ public partial class Commands
 		if (!isValidPassword)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PasswordInvalid), executor);
-			return new CallState("#-1 INVALID PASSWORD.");
+			return new CallState("#-1 INVALID PASSWORD");
 		}
 
 		var hashedPassword = PasswordService.HashPassword(executor.Object().DBRef.ToString(), newPassword);
@@ -6435,14 +6435,14 @@ public partial class Commands
 		if (!args.TryGetValue("0", out var predicate))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RetryUsage), executor);
-			return new CallState("#-1 RETRY: NO CONDITION PROVIDED.");
+			return new CallState("#-1 RETRY: NO CONDITION PROVIDED");
 		}
 
 		var commandHistory = parser.CurrentState.CommandHistory;
 		if (commandHistory == null || commandHistory.Count < 2)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RetryNothingToRetry), executor);
-			return new CallState("#-1 RETRY: NO COMMAND TO RETRY.");
+			return new CallState("#-1 RETRY: NO COMMAND TO RETRY");
 		}
 
 		// History top = @retry itself; entry below it = the command to re-run.

@@ -427,14 +427,14 @@ public partial class Functions
 		if (dbRefConversion.IsNone())
 		{
 			await NotifyService!.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.CantSeeThat));
-			return new CallState("#-1 NO SUCH PLAYER");
+			return new CallState(Errors.ErrorNoSuchPlayer);
 		}
 
 		var dbRef = dbRefConversion.AsValue();
 		var objectInfo = await Mediator!.Send(new GetObjectNodeQuery(dbRef));
 		if (!objectInfo.IsPlayer)
 		{
-			return new CallState("#-1 NO SUCH PLAYER");
+			return new CallState(Errors.ErrorNoSuchPlayer);
 		}
 
 		var player = objectInfo.AsPlayer;
@@ -851,7 +851,7 @@ public partial class Functions
 		}
 
 		_ = parser.CurrentState.Registers.TryPop(out _);
-		return new CallState("#-1 REGISTER NAME INVALID");
+		return new CallState(Errors.ErrorBadRegName);
 	}
 
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1065,7 +1065,7 @@ public partial class Functions
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 			if (!await executor.IsWizard())
 			{
-				return new CallState("#-1 PERMISSION DENIED");
+				return new CallState(Errors.ErrorPermissionDenied);
 			}
 
 			return option switch
@@ -1228,7 +1228,7 @@ public partial class Functions
 			// PennMUSH behavior: rand(0) is an error (empty range), negative values return 0
 			if (maxVal == 0)
 			{
-				return ValueTask.FromResult(new CallState("#-1 RESULT WAS OUTSIDE OF RANGE"));
+				return ValueTask.FromResult(new CallState(Errors.ErrorResultOutOfRange));
 			}
 			if (maxVal < 0)
 			{
@@ -1488,7 +1488,7 @@ public partial class Functions
 		}
 		else
 		{
-			return ValueTask.FromResult(new CallState("#-1 REGISTER NAME INVALID"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorBadRegName));
 		}
 	}
 
@@ -1512,7 +1512,7 @@ public partial class Functions
 		}
 		else
 		{
-			return ValueTask.FromResult(new CallState("#-1 REGISTER NAME INVALID"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorBadRegName));
 		}
 	}
 	[SharpFunction(Name = "soundex", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1730,7 +1730,7 @@ public partial class Functions
 				}
 				else if (!int.TryParse(depthStr, out depth) || depth < 0)
 				{
-					return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER"));
+					return ValueTask.FromResult(new CallState(Errors.ErrorNonNegativeInteger));
 				}
 			}
 		}
@@ -1792,7 +1792,7 @@ public partial class Functions
 						// Check for containment loops
 						if (await MoveService!.WouldCreateLoop(targetContent, destinationContainer))
 						{
-							return "#-1 WOULD CREATE LOOP";
+							return Errors.ErrorWouldCreateLoop;
 						}
 
 						// Move the object
@@ -1831,7 +1831,7 @@ public partial class Functions
 					// Validate the lock string
 					if (!LockService!.Validate(lockString, executor))
 					{
-						return ValueTask.FromResult(new CallState("#-1 INVALID LOCK"));
+						return ValueTask.FromResult(new CallState(Errors.ErrorInvalidLock));
 					}
 
 					// Evaluate the lock: does victim pass the lock expression?
@@ -1854,7 +1854,7 @@ public partial class Functions
 					var victimResult = await LocateService!.Locate(parser, executor, executor, victimName, LocateFlags.All);
 					if (!victimResult.IsValid())
 					{
-						return new CallState("#-1 INVALID VICTIM");
+						return new CallState(Errors.ErrorInvalidVictim);
 					}
 					var victim = victimResult.AsAnyObject;
 
@@ -1883,7 +1883,7 @@ public partial class Functions
 
 		if (TextFileService == null)
 		{
-			return new CallState("#-1 TEXT FILE SERVICE NOT AVAILABLE");
+			return new CallState(Errors.ErrorTextFileServiceNotAvailable);
 		}
 
 		try
@@ -1893,12 +1893,12 @@ public partial class Functions
 		}
 		catch (FileNotFoundException)
 		{
-			return new CallState("#-1 FILE NOT FOUND");
+			return new CallState(Errors.ErrorFileNotFound);
 		}
 		catch (Exception ex)
 		{
 			Logger?.LogError(ex, "Error in textentries({File})", fileReference);
-			return new CallState("#-1 ERROR");
+			return new CallState(Errors.ErrorError);
 		}
 	}
 
@@ -1911,7 +1911,7 @@ public partial class Functions
 
 		if (TextFileService == null)
 		{
-			return new CallState("#-1 TEXT FILE SERVICE NOT AVAILABLE");
+			return new CallState(Errors.ErrorTextFileServiceNotAvailable);
 		}
 
 		try
@@ -1919,16 +1919,16 @@ public partial class Functions
 			var content = await TextFileService.GetEntryAsync(fileReference, entryName);
 			return content != null
 				? new CallState(content)
-				: new CallState("#-1 ENTRY NOT FOUND");
+				: new CallState(Errors.ErrorEntryNotFound);
 		}
 		catch (FileNotFoundException)
 		{
-			return new CallState("#-1 FILE NOT FOUND");
+			return new CallState(Errors.ErrorFileNotFound);
 		}
 		catch (Exception ex)
 		{
 			Logger?.LogError(ex, "Error in textfile({File}, {Entry})", fileReference, entryName);
-			return new CallState("#-1 ERROR");
+			return new CallState(Errors.ErrorError);
 		}
 	}
 

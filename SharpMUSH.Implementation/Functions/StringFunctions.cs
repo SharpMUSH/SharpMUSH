@@ -482,7 +482,7 @@ public partial class Functions
 		var widthSpecs = widths.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		if (widthSpecs.Length == 0)
 		{
-			return "#-1 INVALID ALIGN STRING";
+			return Errors.ErrorInvalidAlignString;
 		}
 
 		var expectedColumnCount = widthSpecs.Length;
@@ -491,13 +491,13 @@ public partial class Functions
 		// We need at least expectedColumnCount arguments for the column data
 		if (totalArgs < expectedColumnCount)
 		{
-			return "#-1 NOT ENOUGH COLUMNS FOR ALIGN";
+			return Errors.ErrorNotEnoughColumnsForAlign;
 		}
 
 		// We can have at most expectedColumnCount + 3 arguments (columns + filler + colsep + rowsep)
 		if (totalArgs > expectedColumnCount + 3)
 		{
-			return "#-1 TOO MANY COLUMNS FOR ALIGN";
+			return Errors.ErrorTooManyColumnsForAlign;
 		}
 
 		// Take exactly expectedColumnCount arguments as column data
@@ -535,7 +535,7 @@ public partial class Functions
 
 		if (widthSpecs.Length == 0)
 		{
-			return "#-1 INVALID ALIGN STRING";
+			return Errors.ErrorInvalidAlignString;
 		}
 
 		return TextAlignerModule.align(widths, MModule.split2(colDelim, cols), filler, columnSeparator, rowSeparator);
@@ -1617,7 +1617,7 @@ public partial class Functions
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		return arg0.Length is > 1 or < 0
-			? new ValueTask<CallState>("#-1 ARGUMENT MUST BE A SINGLE CHARACTER")
+			? new ValueTask<CallState>(Errors.ErrorSingleCharArgument)
 			: ValueTask.FromResult<CallState>(arg0.EnumerateRunes().First().Value);
 	}
 
@@ -2161,7 +2161,7 @@ public partial class Functions
 	{
 		// SHA-0 is deprecated and not supported in modern .NET/OpenSSL
 		// Return error message per PennMUSH documentation
-		return new ValueTask<CallState>(new CallState("#-1 NOT SUPPORTED"));
+		return new ValueTask<CallState>(new CallState(Errors.ErrorNotSupported));
 	}
 
 	[GeneratedRegex(@"\w+")]

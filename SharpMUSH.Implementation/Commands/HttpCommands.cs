@@ -7,6 +7,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -40,8 +41,8 @@ public partial class Commands
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
 		if (maybeObjAttr.IsT1)
 		{
-			await NotifyService!.Notify(executor, "#-1 INVALID OBJECT/ATTRIBUTE", executor);
-			return new CallState("#-1 INVALID OBJECT/ATTRIBUTE");
+			await NotifyService!.Notify(executor, Errors.ErrorInvalidObjectAttribute, executor);
+			return new CallState(Errors.ErrorInvalidObjectAttribute);
 		}
 
 		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
@@ -73,7 +74,7 @@ public partial class Commands
 				if (!Uri.TryCreate(uriArg.Message?.ToPlainText() ?? string.Empty, UriKind.Absolute, out var uri))
 				{
 					await NotifyService!.Notify(executor, "Invalid URI format.", executor);
-					return new CallState("#-1 INVALID URI FORMAT.");
+					return new CallState("#-1 INVALID URI FORMAT");
 				}
 
 				var requestUri = uri;

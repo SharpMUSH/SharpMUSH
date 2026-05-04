@@ -36,7 +36,7 @@ public partial class Functions
 	public static async ValueTask<CallState> JSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> JsonFunctions.TryGetValue(MModule.plainText(parser.CurrentState.Arguments["0"].Message!).ToLower(), out var jsonFunction)
 			? await jsonFunction(parser.CurrentState.ArgumentsOrdered)
-			: new CallState(MModule.single("#-1 Invalid Type"));
+			: new CallState(MModule.single(Errors.ErrorInvalidType));
 
 
 	[SharpFunction(Name = "isjson", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -210,7 +210,7 @@ public partial class Functions
 			{
 				if (string.IsNullOrWhiteSpace(arg2))
 				{
-					return new CallState("#-1 MISSING JSON2");
+					return new CallState(Errors.ErrorMissingJson2);
 				}
 				var patchDoc = JsonNode.Parse(arg2);
 				var merged = ApplyMergePatch(jsonDoc, patchDoc!);
@@ -222,7 +222,7 @@ public partial class Functions
 			{
 				if (jsonDoc is not JsonArray arr)
 				{
-					return new CallState("#-1 NOT AN ARRAY");
+					return new CallState(Errors.ErrorNotAnArray);
 				}
 
 				var selectorPath = JsonPath.Parse(arg2);
@@ -251,14 +251,14 @@ public partial class Functions
 			// For modification operations with found matches, we need exactly one
 			if (pathExists && pathResult.Matches!.Count > 1)
 			{
-				return new CallState("#-1 PATH MUST BE SINGULAR");
+				return new CallState(Errors.ErrorPathMustBeSingular);
 			}
 
 			var jsonDoc2 = json2 is null ? null : JsonNode.Parse(json2);
 
 			if (action is "insert" or "replace" or "set" && string.IsNullOrWhiteSpace(json2))
 			{
-				return new CallState("#-1 MISSING JSON2");
+				return new CallState(Errors.ErrorMissingJson2);
 			}
 
 			if (action == "insert")
@@ -272,7 +272,7 @@ public partial class Functions
 				// Path doesn't exist yet — use JSON Pointer derived from JSONPath to add
 				var insertPointer = JsonPathToPointer(arg2);
 				if (insertPointer is null)
-					return new CallState("#-1 PATH NOT FOUND");
+					return new CallState(Errors.ErrorPathNotFound);
 				var insertPatch = new JsonPatch(PatchOperation.Add(insertPointer.Value, jsonDoc2));
 				var insertResult = insertPatch.Apply(jsonDoc);
 				return insertResult.IsSuccess
@@ -293,7 +293,7 @@ public partial class Functions
 				{
 				var derived = JsonPathToPointer(arg2);
 				if (derived is null)
-					return new CallState("#-1 PATH NOT FOUND");
+					return new CallState(Errors.ErrorPathNotFound);
 				setPointer = derived.Value;
 				}
 				var setPatch = new JsonPatch(PatchOperation.Add(setPointer, jsonDoc2));
@@ -333,7 +333,7 @@ public partial class Functions
 					: new CallState($"#-1 REMOVE FAILED: {removeResult.Error}");
 			}
 
-			return new CallState("#-1 INVALID OPERATION");
+			return new CallState(Errors.ErrorInvalidOperation);
 		}
 		catch (JsonException)
 		{
@@ -489,9 +489,9 @@ public partial class Functions
 			if (action == "unescape")
 				return rootElement.ValueKind == JsonValueKind.String
 					? new CallState(rootElement.GetString() ?? string.Empty)
-					: new CallState("#-1 INVALID TYPE");
+					: new CallState(Errors.ErrorInvalidType);
 
-			return new CallState("#-1 INVALID ACTION");
+			return new CallState(Errors.ErrorInvalidAction);
 		}
 		catch (JsonException)
 		{
@@ -521,7 +521,7 @@ public partial class Functions
 			}
 			catch (JsonException)
 			{
-				return new CallState("#-1 INVALID JSON MESSAGE");
+				return new CallState(Errors.ErrorInvalidJsonMessage);
 			}
 		}
 
@@ -555,7 +555,7 @@ public partial class Functions
 
 			if (!isWizard && !isSelf && !hasSendOOBPower)
 			{
-				return new CallState("#-1 PERMISSION DENIED");
+				return new CallState(Errors.ErrorPermissionDenied);
 			}
 
 			await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))

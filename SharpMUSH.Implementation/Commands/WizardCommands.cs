@@ -570,7 +570,7 @@ public partial class Commands
 		if (!logMessageArg || string.IsNullOrWhiteSpace(logCallState!.Message!.ToPlainText()))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LogUsage), executor);
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(Errors.ErrorInvalidArguments);
 		}
 
 		var logMessage = logCallState!.Message!;
@@ -609,7 +609,7 @@ public partial class Commands
 		if (parser.CurrentState.Arguments.Count < 1)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PoorUsage), executor);
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(Errors.ErrorInvalidArguments);
 		}
 
 		// Check if quota system is enabled
@@ -731,14 +731,14 @@ public partial class Commands
 		if (parser.CurrentState.Arguments.Count < 1)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllQuotaUsage), executor);
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(Errors.ErrorInvalidArguments);
 		}
 
 		var amountArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		if (!int.TryParse(amountArg, out var amount))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaAmountMustBeNumber), executor);
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(Errors.ErrorInvalidArguments);
 		}
 
 		// Check if quota system is enabled
@@ -1382,7 +1382,7 @@ public partial class Commands
 			if (args.Count < 2)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestAddUsage), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 
 			var category = args["0"].Message!.ToPlainText().ToLower();
@@ -1391,7 +1391,7 @@ public partial class Commands
 			if (string.IsNullOrWhiteSpace(category) || string.IsNullOrWhiteSpace(word))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestCategoryAndWordCannotBeEmpty), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 
 			if (!suggestionData.Categories.ContainsKey(category))
@@ -1418,7 +1418,7 @@ public partial class Commands
 			if (args.Count < 2)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestDeleteUsage), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 
 			var category = args["0"].Message!.ToPlainText().ToLower();
@@ -1491,13 +1491,13 @@ public partial class Commands
 			if (args.Count == 0)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootPortUsage), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 			var portText = args["0"].Message!.ToPlainText();
 			if (!long.TryParse(portText, out var handle))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootDescriptorMustBeNumber), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 			if (ConnectionService!.Get(handle) is not null)
 			{
@@ -1514,7 +1514,7 @@ public partial class Commands
 			if (args.Count == 0)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootUsage), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 			var playerArg = args["0"].Message!.ToPlainText();
 			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
@@ -1901,7 +1901,7 @@ public partial class Commands
 		if (args.Count < 1)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllUsage), executor);
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(Errors.ErrorInvalidArguments);
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText();
@@ -2091,7 +2091,7 @@ public partial class Commands
 			if (args.Count < 2)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSetUsage), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 
 			var playerArg = args["0"].Message!.ToPlainText();
@@ -2100,7 +2100,7 @@ public partial class Commands
 			if (!int.TryParse(amountArg, out var amount))
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaAmountMustBeNumber), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 
 			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
@@ -2236,7 +2236,7 @@ public partial class Commands
 			if (args.Count == 0)
 			{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockCheckRequiresHost), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 
 			var hostToCheck = args["0"].Message!.ToPlainText();
@@ -2264,7 +2264,7 @@ public partial class Commands
 			if (args.Count == 0)
 			{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameRequiresName), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 
 			// Note: Actual modification of configuration is not yet implemented
@@ -2279,7 +2279,7 @@ public partial class Commands
 			if (args.Count == 0)
 			{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockBanRequiresPattern), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 
 			// Note: Actual modification of configuration is not yet implemented
@@ -2293,7 +2293,7 @@ public partial class Commands
 			if (args.Count == 0)
 			{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRegisterRequiresPattern), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 
 			// Note: Actual modification of configuration is not yet implemented
@@ -2307,7 +2307,7 @@ public partial class Commands
 			if (args.Count == 0)
 			{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRemoveRequiresPattern), executor);
-				return new CallState("#-1 INVALID ARGUMENTS");
+				return new CallState(Errors.ErrorInvalidArguments);
 			}
 
 			// Note: Actual modification of configuration is not yet implemented
@@ -2324,7 +2324,7 @@ public partial class Commands
 		}
 
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockInvalidSyntax), executor);
-		return new CallState("#-1 INVALID ARGUMENTS");
+		return new CallState(Errors.ErrorInvalidArguments);
 	}
 
 	/// <summary>
@@ -2481,7 +2481,7 @@ public partial class Commands
 		if (args.Count == 0)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.KickUsage), executor);
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(Errors.ErrorInvalidArguments);
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText();
@@ -2649,7 +2649,7 @@ public partial class Commands
 		if (string.IsNullOrWhiteSpace(optionName))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, isEnable ? "enable" : "disable");
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(Errors.ErrorInvalidArguments);
 		}
 
 		// Use generated ConfigMetadata to find the configuration option
@@ -2669,7 +2669,7 @@ public partial class Commands
 		{
 			var attr = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, attr.Name);
-			return new CallState("#-1 INVALID TYPE");
+			return new CallState(Errors.ErrorInvalidType);
 		}
 
 		// Get current value

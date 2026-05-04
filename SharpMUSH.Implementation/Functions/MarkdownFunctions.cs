@@ -34,7 +34,7 @@ public partial class Functions
 			var widthStr = widthArg.Message!.ToPlainText();
 			if (!int.TryParse(widthStr, out width) || width < 10 || width > 1000)
 			{
-				return ValueTask.FromResult(new CallState("#-1 INVALID WIDTH (must be 10-1000)"));
+				return ValueTask.FromResult(new CallState(Errors.ErrorInvalidWidth));
 			}
 		}
 
@@ -79,7 +79,7 @@ public partial class Functions
 			var widthStr = widthArg.Message!.ToPlainText();
 			if (!int.TryParse(widthStr, out width) || width < 10 || width > 1000)
 			{
-				return new CallState("#-1 INVALID WIDTH (must be 10-1000)");
+				return new CallState(Errors.ErrorInvalidWidth);
 			}
 		}
 

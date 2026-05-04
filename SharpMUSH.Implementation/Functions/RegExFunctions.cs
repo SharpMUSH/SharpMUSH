@@ -140,7 +140,7 @@ public partial class Functions
 		}
 		catch (ArgumentException)
 		{
-			return ValueTask.FromResult(new CallState("#-1 REGEXP ERROR: Invalid regular expression"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorRegexpInvalid));
 		}
 	}
 
@@ -237,7 +237,7 @@ public partial class Functions
 		}
 		catch (ArgumentException)
 		{
-			return ValueTask.FromResult(new CallState("#-1 REGEXP ERROR: Invalid regular expression"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorRegexpInvalid));
 		}
 	}
 
@@ -287,7 +287,7 @@ public partial class Functions
 		}
 		catch (ArgumentException)
 		{
-			return ValueTask.FromResult(new CallState("#-1 REGEXP ERROR: Invalid regular expression"));
+			return ValueTask.FromResult(new CallState(Errors.ErrorRegexpInvalid));
 		}
 	}
 
@@ -423,7 +423,7 @@ public partial class Functions
 		}
 		catch (Exception)
 		{
-			return ValueTask.FromResult<CallState>("#-1 INVALID REGEX");
+			return ValueTask.FromResult<CallState>(Errors.ErrorInvalidRegex);
 		}
 	}
 }

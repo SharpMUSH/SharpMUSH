@@ -214,7 +214,7 @@ public partial class Functions
 			var maybeTarget = await LocateService!.Locate(parser, executor, executor, locStr, LocateFlags.All);
 			if (!maybeTarget.IsValid())
 			{
-				return new CallState("#-1 INVALID LOCATION");
+				return new CallState(Errors.ErrorInvalidLocation);
 			}
 			target = maybeTarget.AsAnyObject;
 		}
@@ -527,7 +527,7 @@ public partial class Functions
 				// Get the lock string from the object
 				if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
 				{
-					return ValueTask.FromResult(new CallState("#-1 NO SUCH LOCK"));
+					return ValueTask.FromResult(new CallState(Errors.ErrorNoSuchLock));
 				}
 
 				// Evaluate the lock with the executor as the unlocker
@@ -551,7 +551,7 @@ public partial class Functions
 			var maybeTarget = await LocateService!.Locate(parser, executor, executor, objStr, LocateFlags.All);
 			if (!maybeTarget.IsValid())
 			{
-				return new CallState("#-1 INVALID OBJECT");
+				return new CallState(Errors.ErrorInvalidObject);
 			}
 			target = maybeTarget.AsAnyObject;
 		}
@@ -572,7 +572,7 @@ public partial class Functions
 		var maybeTarget = await LocateService!.Locate(parser, executor, executor, objStr, LocateFlags.All);
 		if (!maybeTarget.IsValid())
 		{
-			return new CallState("#-1 INVALID OBJECT");
+			return new CallState(Errors.ErrorInvalidObject);
 		}
 		var target = maybeTarget.AsAnyObject;
 
@@ -908,7 +908,7 @@ LOCATE()
 
 		if (args.Count == 0)
 		{
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(Errors.ErrorInvalidArguments);
 		}
 
 		// First argument is the player (who owns the objects to search)
@@ -920,7 +920,7 @@ LOCATE()
 			var maybeClass = await LocateService!.Locate(parser, executor, executor, classArg, LocateFlags.All);
 			if (!maybeClass.IsValid())
 			{
-				return new CallState("#-1 INVALID CLASS");
+				return new CallState(Errors.ErrorInvalidClass);
 			}
 			classObj = maybeClass.AsAnyObject;
 		}
@@ -1633,7 +1633,7 @@ LOCATE()
 
 								if (!await HelperFunctions.SafeToAddParent(Mediator!, Database!, target, newParent))
 								{
-									return "#-1 CYCLE DETECTED";
+									return Errors.ErrorCycleDetected;
 								}
 
 								await Mediator!.Send(new SetObjectParentCommand(target, newParent));
@@ -1667,7 +1667,7 @@ LOCATE()
 
 		if (!int.TryParse(levelsArg, out var levels) || levels < 0)
 		{
-			return new CallState("#-1 INVALID LEVEL");
+			return new CallState(Errors.ErrorInvalidLevel);
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -1730,7 +1730,7 @@ LOCATE()
 			async x =>
 				await x.Match<ValueTask<string>>(
 					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
-					_ => ValueTask.FromResult<string>("#-1 THIS IS A ROOM"),
+					_ => ValueTask.FromResult<string>(Errors.ErrorThisIsARoom),
 					// For exits, return the location (the room containing the exit)
 					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
 					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString()));
@@ -1785,7 +1785,7 @@ LOCATE()
 					var maybeZone = await LocateService!.Locate(parser, executor, executor, arg1Str, LocateFlags.All);
 					if (!maybeZone.IsValid())
 					{
-						return "#-1 INVALID ZONE";
+						return Errors.ErrorInvalidZone;
 					}
 
 					var zone = maybeZone.AsAnyObject;
@@ -1849,7 +1849,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return Errors.ErrorInvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1885,7 +1885,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return Errors.ErrorInvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1921,7 +1921,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return Errors.ErrorInvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1958,7 +1958,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return Errors.ErrorInvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1995,7 +1995,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return Errors.ErrorInvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -2032,7 +2032,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return Errors.ErrorInvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -2067,7 +2067,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return Errors.ErrorInvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -2103,7 +2103,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return Errors.ErrorInvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
