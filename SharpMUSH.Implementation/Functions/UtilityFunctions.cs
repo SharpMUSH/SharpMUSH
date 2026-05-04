@@ -644,20 +644,42 @@ public partial class Functions
 	[SharpFunction(Name = "fn", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Fn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var functionName = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
+		if (string.IsNullOrWhiteSpace(functionName))
+		{
+			return new CallState("#-1 FUNCTION (No function name given)");
+		}
+
+		// First check if it's a built-in function
+		if (parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out _))
+		{
+			// Build function call string and re-parse: fn(add,1,2) -> add(1,2)
+			var fnArgs = parser.CurrentState.ArgumentsOrdered
+				.Skip(1)
+				.Select(x => MModule.plainText(x.Value.Message));
+			var callString = $"{functionName}({string.Join(",", fnArgs)})";
+			var result = await parser.FunctionParse(MModule.single(callString));
+			return result ?? CallState.Empty;
+		}
+
+		// Fall back to user-defined attribute function
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		var functionName = parser.CurrentState.Arguments["0"].Message!;
-
-		var result = await AttributeService!.EvaluateAttributeFunctionAsync(
+		var result2 = await AttributeService!.EvaluateAttributeFunctionAsync(
 			parser,
 			executor,
-			objAndAttribute: functionName,
+			objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
 			args: parser.CurrentState.Arguments.Skip(1)
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 				.ToDictionary(),
 			ignoreLambda: true);
 
-		return new CallState(result);
+		// If attribute lookup returned nothing, report function not found
+		if (result2 == null || MModule.plainText(result2).Length == 0)
+		{
+			return new CallState($"#-1 FUNCTION ({functionName.ToUpper()}) NOT FOUND");
+		}
+
+		return new CallState(result2);
 	}
 	[SharpFunction(Name = "functions", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> FFunctions(IMUSHCodeParser parser, SharpFunctionAttribute _2)

@@ -78,7 +78,8 @@ public static partial class Substitutions
 			"L" or "l" => await GetLocationDbRefString(parser, mediator),
 			"C" or "c" => LastCommandBeforeEvaluation(parser), // Last command before evaluation - using same implementation
 			"U" or "u" => LastCommandBeforeEvaluation(parser), // Last command after evaluation - using same implementation
-			"?" => parser.State.Count().ToString(),
+			// PennMUSH: %? returns "invocations recursions" (two space-separated numbers)
+			"?" => $"{parser.CurrentState.TotalInvocations!.Count} {parser.CurrentState.CallDepth!.Count}",
 			"+" => parser.CurrentState.EnvironmentRegisters.Count.ToString(),
 			_ => symbol,
 		};

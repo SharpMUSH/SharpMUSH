@@ -236,6 +236,38 @@ These are ranked by actual impact. Items already partially handled are noted.
 
 ---
 
+## Phase 1B: SharpMUSH-Specific Compatibility Verification
+
+SharpMUSH documents 4 deliberate divergences from PennMUSH (see https://sharpmush.com/reference/compatibility/). These are NOT bugs — they are design choices. However, SharpMUSH introduces replacement mechanisms that must be verified working.
+
+### Task 1B.1: Verify callfn() Works Correctly
+
+**Objective:** SharpMUSH replaces PennMUSH's full-recursion parsing (`[v(fn)](foo)`) with `callfn()`. Since this is the ONLY way to do dynamic function dispatch in SharpMUSH, it must work correctly.
+
+**Steps:**
+1. Test `callfn(v(fn),foo)` where `&fn me=ucstr` → should return "FOO"
+2. Test error cases: invalid function name, missing args
+3. Test with various built-in functions as targets
+
+### Task 1B.2: Verify s() and objeval() as Double-Eval Workarounds
+
+**Objective:** SharpMUSH's `##` in `iter()` does NOT double-evaluate (deliberate). Users are directed to use `s()` or `objeval()` instead. Verify these workarounds function correctly.
+
+**Steps:**
+1. Test `s()` forces evaluation of a string containing MUSHcode
+2. Test `objeval()` evaluates from another object's perspective
+3. Test the documented pattern: `iter()` with `s(##)` for double-eval
+
+### Task 1B.3: Verify @callcmd Works Correctly
+
+**Objective:** SharpMUSH introduces `@callcmd` as a companion to `callfn()` for dynamic command dispatch. Verify it works.
+
+**Steps:**
+1. Test basic @callcmd usage
+2. Test error cases
+
+---
+
 ## Phase 2: Function Parity
 
 ---
@@ -535,6 +567,7 @@ All 126 commands are present. Focus on behavioral correctness.
 
 0. **Phase 0** (Prove gaps exist) — Tests first, TDD approach
 1. **Phase 1** (Parser gaps) — Cascading impact
+1B. **Phase 1B** (SharpMUSH-specific compat) — callfn(), s(), objeval(), @callcmd
 2. **Phase 2** (Function parity) — Most-used feature
 3. **Phase 3** (Command behavior) — Output correctness
 4. **Phase 4** (Object model) — Multi-user correctness

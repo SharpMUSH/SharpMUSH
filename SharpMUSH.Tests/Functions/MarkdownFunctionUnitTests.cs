@@ -128,8 +128,11 @@ public class MarkdownFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(```%rLine one%r  Line two indented%rLine three%r```)")))?.Message;
 		await Assert.That(result).IsNotNull();
 
-		// All lines in code blocks should have 2 spaces of indentation added (total)
-		var expected = "  Line one\n    Line two indented\n  Line three";
+		// All lines in code blocks should have 2 spaces of indentation added.
+		// Note: PennMUSH PE_COMPRESS_SPACES compresses runs of spaces in evaluated args,
+		// so "  Line two indented" (2 leading spaces) becomes " Line two indented" (1 space)
+		// before rendermarkdown adds its 2-space indent, giving 3 total spaces.
+		var expected = "  Line one\n   Line two indented\n  Line three";
 		await Assert.That(TrimmedPlainText(result!)).IsEqualTo(expected);
 	}
 
@@ -339,7 +342,9 @@ public class MarkdownFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 
 		// Render the same markdown again to get expected output
-		var expected = RecursiveMarkdownHelper.RenderMarkdown("- Item 1\n  - Nested 1\n  - Nested 2\n- Item 2\n\n> Quote text");
+		// Note: PE_COMPRESS_SPACES compresses runs of spaces in evaluated args,
+		// so "  - Nested" (2 spaces) becomes " - Nested" (1 space).
+		var expected = RecursiveMarkdownHelper.RenderMarkdown("- Item 1\n - Nested 1\n - Nested 2\n- Item 2\n\n> Quote text");
 
 		// Do full byte-wise comparison
 		await AssertMarkupStringEquals(result!, expected);

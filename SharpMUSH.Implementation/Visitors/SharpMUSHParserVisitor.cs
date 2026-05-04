@@ -516,15 +516,38 @@ public class SharpMUSHParserVisitor(
 
 			var stripAnsi = attribute.Flags.HasFlag(FunctionFlags.StripAnsi);
 
-			if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
+			if (attribute.Flags.HasFlag(FunctionFlags.Literal))
+			{
+				// FunctionFlags.Literal: treat the entire content between parens as a single
+				// raw unevaluated string. Do NOT split on commas, do NOT evaluate substitutions.
+				// This is how PennMUSH's lit() works — lit(a,b,%q0) returns "a,b,%q0" verbatim.
+				// We reconstruct the raw text from the parse tree using GetText() on the FunctionContext.
+				var funcText = context.GetText();
+				// funcText is e.g. "lit(a,b,%q0)" — strip "lit(" prefix and ")" suffix
+				var openParen = funcText.IndexOf('(');
+				if (openParen >= 0 && funcText.EndsWith(")"))
+				{
+					var rawContent = funcText[(openParen + 1)..^1];
+					refinedArguments = [new CallState(MModule.single(rawContent), contextDepth)];
+				}
+				else
+				{
+					refinedArguments = [CallState.Empty];
+				}
+			}
+			else if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
 			{
 				refinedArguments = await args
 					.ToAsyncEnumerable()
-					.Select<EvaluationStringContext?, CallState>(async (x, ct) => x == null
-						? CallState.Empty
-						: new CallState(stripAnsi
-								? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
-								: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))
+					.Select<EvaluationStringContext?, CallState>(async (x, ct) =>
+					{
+						if (x == null) return CallState.Empty;
+						var msg = (await visitor.VisitChildren(x))?.Message ?? MModule.empty();
+						if (stripAnsi) msg = MModule.plainText2(msg);
+						// PennMUSH: PE_COMPRESS_SPACES — compress runs of spaces in evaluated args
+						msg = MModule.compressSpaces(msg);
+						return new CallState(msg, x.Depth());
+					})
 					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 					.ToListAsync();
 			}

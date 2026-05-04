@@ -48,11 +48,15 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(result));
 	}
 
-	[SharpFunction(Name = "lit", MinArgs = 1, Flags = FunctionFlags.Literal | FunctionFlags.NoParse, ParameterNames = ["argument..."])]
+	[SharpFunction(Name = "lit", MinArgs = 0, Flags = FunctionFlags.Literal | FunctionFlags.NoParse, ParameterNames = ["argument..."])]
 	public static ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(MModule.single(","),
-			parser.CurrentState.ArgumentsOrdered.Select(x => x.Value.Message)));
+		// lit() with Literal flag: args are already the raw unevaluated text (set by visitor's Literal branch).
+		// With zero args, return empty string. Otherwise return the single raw argument.
+		if (!parser.CurrentState.ArgumentsOrdered.Any())
+			return ValueTask.FromResult(CallState.Empty);
+
+		return ValueTask.FromResult(new CallState(parser.CurrentState.Arguments["0"].Message));
 	}
 
 	[SharpFunction(Name = "speak", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular,
