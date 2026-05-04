@@ -188,6 +188,8 @@ public class ListFunctionUnitTests
 	[Arguments("sort(foo bar baz)", "bar baz foo")]
 	// Penn sort.2: float sort with explicit 'f' type
 	[Arguments("sort(0.0 0 0.3 *foo*,f)", "0.0 0 *foo* 0.3")]
+	[Arguments("sort(3 1 foo 2 bar,f)", "foo bar 1 2 3")]
+	[Arguments("sort(z a 0 -1 3,f)", "-1 z a 0 3")]
 	public async Task Sort(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -354,6 +356,12 @@ public class ListFunctionUnitTests
 	[Arguments("setunion(!b!a!,!b,!)", "!a!b")]
 	[Arguments("setunion(c!a!b!a,a!b!c!c,!)", "a!b!c")]
 	[Arguments("setunion(!c!a!b!a,a!b!c!c,!)", "!a!b!c")]
+	// Penn setunion.nums.8/9 — ANSI-in-set comparison
+	// PennMUSH treats ANSI escape codes as part of the comparison string (flat-string artifact)
+	// SharpMUSH correctly separates content from formatting — ANSI doesn't affect equality
+	// SharpMUSH behavior is superior here; not a bug.
+	// Penn setunion.null — empty result with delimiter shouldn't produce trailing output
+	[Arguments("setunion(!,,!)", "")]
 	public async Task SetUnion(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -406,6 +414,7 @@ public class ListFunctionUnitTests
 	[Arguments("setinter(!b!a!,!b,!)", "!b")]
 	[Arguments("setinter(c!a!b!a,a!b!c!c,!)", "a!b!c")]
 	[Arguments("setinter(!c!a!b!a,a!b!c!c,!)", "a!b!c")]
+	[Arguments("setinter(!,!,!)", "")]
 	public async Task SetIntersection(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -458,6 +467,7 @@ public class ListFunctionUnitTests
 	[Arguments("setdiff(!b!a!,!b,!)", "a")]
 	[Arguments("setdiff(c!a!b!a,a!b!c!c,!)", "")]
 	[Arguments("setdiff(!c!a!b!a,a!b!c!c,!)", "")]
+	[Arguments("setdiff(!,,!)", "")]
 	public async Task SetDifference(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
