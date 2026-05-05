@@ -79,32 +79,11 @@ public class ConfigurationController(
 			if (updates == null || updates.Count == 0)
 				return BadRequest(new { error = "No updates provided" });
 
-			// Get current config and serialize to JSON for patching
+			// Get current config
 			var current = options.CurrentValue;
-			var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = null };
-			var json = JsonSerializer.SerializeToNode(current, jsonOptions)!.AsObject();
 
-			foreach (var (path, value) in updates)
-			{
-				var parts = path.Split('.');
-				if (parts.Length != 2) continue;
-
-				var categoryName = parts[0];
-				var propertyName = parts[1];
-
-				if (json[categoryName] is JsonObject category)
-				{
-					category[propertyName] = JsonNode.Parse(value.GetRawText());
-				}
-			}
-
-			var updated = json.Deserialize<SharpMUSHOptions>(new JsonSerializerOptions
-			{
-				PropertyNameCaseInsensitive = false
-			});
-
-			if (updated == null)
-				return BadRequest(new { error = "Failed to deserialize updated configuration" });
+			// Apply updates via reflection on the live object
+			var updated = ApplyUpdatesViaReflection(current, updates);
 
 			// Validate using the generated validator
 			var validator = new ValidateSharpOptions();
@@ -127,5 +106,62 @@ public class ConfigurationController(
 			logger.LogError(ex, "Error updating configuration");
 			return BadRequest(new { error = $"Error updating configuration: {ex.Message}" });
 		}
+	}
+
+	/// <summary>
+	/// Applies updates to a SharpMUSHOptions record by patching one category at a time.
+	/// Uses the record clone constructor (via reflection) to produce a new SharpMUSHOptions
+	/// with the updated category, avoiding full deserialization of the top-level record.
+	/// </summary>
+	private static SharpMUSHOptions ApplyUpdatesViaReflection(SharpMUSHOptions current, Dictionary<string, JsonElement> updates)
+	{
+		// Group updates by category
+		var grouped = updates
+			.Where(kv => kv.Key.Contains('.'))
+			.GroupBy(kv => kv.Key.Split('.')[0]);
+
+		var result = current;
+		var optionsType = typeof(SharpMUSHOptions);
+
+		foreach (var group in grouped)
+		{
+			var categoryName = group.Key;
+			var categoryProp = optionsType.GetProperty(categoryName);
+			if (categoryProp == null) continue;
+
+			var categoryValue = categoryProp.GetValue(result);
+			if (categoryValue == null) continue;
+
+			// Serialize just this category to JSON, patch it, deserialize back
+			var categoryJson = JsonSerializer.SerializeToNode(categoryValue)!.AsObject();
+
+			foreach (var (path, value) in group)
+			{
+				var propertyName = path.Split('.')[1];
+				categoryJson[propertyName] = JsonNode.Parse(value.GetRawText());
+			}
+
+			var updatedCategory = categoryJson.Deserialize(categoryProp.PropertyType, new JsonSerializerOptions
+			{
+				PropertyNameCaseInsensitive = true
+			});
+
+			// Use the record copy constructor + init setter via reflection
+			// Records generate a <Clone>$ method we can use
+			var cloneMethod = optionsType.GetMethod("<Clone>$")
+				?? throw new InvalidOperationException($"Could not find <Clone>$ method on {optionsType.Name}. Ensure it is a record type.");
+			var cloned = cloneMethod.Invoke(result, null)
+				?? throw new InvalidOperationException("Clone returned null");
+
+			// Init-only setters are still settable via reflection
+			categoryProp.SetValue(cloned, updatedCategory);
+			result = (SharpMUSHOptions)cloned;
+
+			// Verify the update took effect
+			if (categoryProp.GetValue(result) == null)
+				throw new InvalidOperationException($"Failed to set {categoryName} on cloned record");
+		}
+
+		return result;
 	}
 }

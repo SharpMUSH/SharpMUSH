@@ -78,7 +78,7 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 	}
 
 	private static string? GetValidationBodyForProperty(IPropertySymbol prop, Dictionary<string, string> regexFieldNames,
-		IPropertySymbol category)
+	IPropertySymbol category)
 	{
 		var attr = prop.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == SHARPATTRIBUTE);
 		if (attr is null) return null;
@@ -88,14 +88,21 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 
 		var regexFieldName = regexFieldNames[pattern!];
 
-		return
-			$$"""
-			      var {{prop.Name}}Value = {{category.Name}}Value.{{prop.Name}};
-			      if (!{{regexFieldName}}.IsMatch({{prop.Name}}Value.ToString() ?? ""))
-			      {
-			        return ValidateOptionsResult.Fail($"Configuration option ({{category.Name}}) {{prop.Name}} with value '{{{prop.Name}}Value}' is invalid.");
-			      }
-			  """;
+		// Check if the property type is nullable (reference type or Nullable<T>)
+		var isNullable = prop.Type.NullableAnnotation == NullableAnnotation.Annotated
+			|| prop.Type.OriginalDefinition.SpecialType == SpecialType.None
+			&& prop.Type is INamedTypeSymbol { IsValueType: false };
+
+		var nullCheck = isNullable ? $"{prop.Name}Value != null && " : "";
+
+	return
+		$$"""
+		      var {{prop.Name}}Value = {{category.Name}}Value.{{prop.Name}};
+		      if ({{nullCheck}}!{{regexFieldName}}.IsMatch({{prop.Name}}Value.ToString() ?? ""))
+		      {
+		        return ValidateOptionsResult.Fail($"Configuration option ({{category.Name}}) {{prop.Name}} with value '{{{prop.Name}}Value}' is invalid.");
+		      }
+		  """;
 	}
 
 	private static IEnumerable<RegexFieldsAndNames> GetRegexFieldsAndNames(INamedTypeSymbol optionsSymbol)

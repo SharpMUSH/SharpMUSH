@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -131,5 +132,71 @@ public class ConfigurationControllerTests
 		{
 			disposable?.Dispose();
 		}
+	}
+
+	[Test]
+	public async Task UpdateConfiguration_ValidUpdate_PersistsAndReturnsUpdated()
+	{
+		var database = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var optionsWrapper = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
+		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
+
+		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
+
+		var updates = new Dictionary<string, JsonElement>
+		{
+			["Net.MudName"] = JsonSerializer.SerializeToElement("UpdateTest MUSH"),
+			["Net.Port"] = JsonSerializer.SerializeToElement(4210)
+		};
+
+		var result = await controller.UpdateConfiguration(updates);
+
+		await Assert.That(result.Result).IsTypeOf<OkObjectResult>();
+
+		var okResult = (OkObjectResult)result.Result!;
+		var response = (ConfigurationResponse)okResult.Value!;
+
+		await Assert.That(response.Configuration.Net.MudName).IsEqualTo("UpdateTest MUSH");
+		await Assert.That(response.Configuration.Net.Port).IsEqualTo((uint)4210);
+	}
+
+	[Test]
+	public async Task UpdateConfiguration_EmptyUpdates_ReturnsBadRequest()
+	{
+		var database = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var optionsWrapper = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
+		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
+
+		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
+
+		var updates = new Dictionary<string, JsonElement>();
+
+		var result = await controller.UpdateConfiguration(updates);
+
+		await Assert.That(result.Result).IsTypeOf<BadRequestObjectResult>();
+	}
+
+	[Test]
+	public async Task UpdateConfiguration_InvalidValidation_ReturnsBadRequest()
+	{
+		var database = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var optionsWrapper = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
+		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
+
+		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
+
+		// Chat.ChatTokenAlias has ValidationPattern "^.$" (exactly one char)
+		// Setting it to multiple chars should fail validation
+		var updates = new Dictionary<string, JsonElement>
+		{
+			["Chat.ChatTokenAlias"] = JsonSerializer.SerializeToElement("abc")
+		};
+
+		var result = await controller.UpdateConfiguration(updates);
+
+		await Assert.That(result.Result).IsTypeOf<BadRequestObjectResult>();
 	}
 }
