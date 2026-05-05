@@ -122,7 +122,8 @@
                     <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetChanges">
                         @Loc["ResetChanges"]
                     </MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="SaveChanges" StartIcon="@Icons.Material.Filled.Save">
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="SaveChanges" StartIcon="@Icons.Material.Filled.Save"
+                               Disabled="@(_validationErrors.Values.Any(e => e != null))">
                         @Loc["SaveConfiguration"]
                     </MudButton>
                 </div>
@@ -206,6 +207,7 @@
     private Dictionary<string, PropertyMetadata> _categoryProperties = new();
     private Dictionary<string, object?> _currentValues = new();
     private Dictionary<string, object?> _originalValues = new();
+    private Dictionary<string, string?> _validationErrors = new();
 
     // Categories that have custom pages - redirect to them
     private static readonly HashSet<string> CustomPageCategories = new(StringComparer.OrdinalIgnoreCase)
@@ -340,7 +342,9 @@
                                    Variant="Variant.Outlined"
                                    HelperText="@prop.Description"
                                    Min="@(minVal ?? int.MinValue)"
-                                   Max="@(maxVal ?? int.MaxValue)" />
+                                   Max="@(maxVal ?? int.MaxValue)"
+                                   Error="@(_validationErrors.GetValueOrDefault(prop.Path) != null)"
+                                   ErrorText="@(_validationErrors.GetValueOrDefault(prop.Path))" />
                 }
                 else
                 {
@@ -349,7 +353,9 @@
                                    ValueChanged="@(v => UpdateValue(prop, v))"
                                    Label="@displayName"
                                    Variant="Variant.Outlined"
-                                   HelperText="@prop.Description" />
+                                   HelperText="@prop.Description"
+                                   Error="@(_validationErrors.GetValueOrDefault(prop.Path) != null)"
+                                   ErrorText="@(_validationErrors.GetValueOrDefault(prop.Path))" />
                 }
             </MudItem>
         }
@@ -361,7 +367,9 @@
                             ValueChanged="@(v => UpdateValue(prop, v))"
                             Label="@displayName"
                             Variant="Variant.Outlined"
-                            HelperText="@prop.Description" />
+                            HelperText="@prop.Description"
+                            Error="@(_validationErrors.GetValueOrDefault(prop.Path) != null)"
+                            ErrorText="@(_validationErrors.GetValueOrDefault(prop.Path))" />
             </MudItem>
         }
     };
@@ -442,15 +450,84 @@
     private void UpdateValue(PropertyMetadata prop, object? newValue)
     {
         _currentValues[prop.Path] = newValue;
+        _validationErrors[prop.Path] = ValidateProperty(prop, newValue);
         _hasChanges = !_currentValues.All(kvp => 
             Equals(kvp.Value, _originalValues.GetValueOrDefault(kvp.Key)));
     }
 
+    private string? ValidateProperty(PropertyMetadata prop, object? value)
+    {
+        if (prop.Required && (value == null || string.IsNullOrWhiteSpace(value.ToString())))
+            return $"{prop.DisplayName ?? prop.Name} is required";
+
+        if (prop.Type == "integer" && value != null)
+        {
+            var intVal = value is int i ? i : 0;
+            if (prop.Min != null)
+            {
+                var min = Convert.ToInt32(prop.Min);
+                if (intVal < min) return $"Minimum value is {min}";
+            }
+            if (prop.Max != null)
+            {
+                var max = Convert.ToInt32(prop.Max);
+                if (intVal > max) return $"Maximum value is {max}";
+            }
+        }
+
+        if (!string.IsNullOrEmpty(prop.Pattern) && value != null)
+        {
+            var strVal = value.ToString() ?? "";
+            if (!string.IsNullOrEmpty(strVal) && !System.Text.RegularExpressions.Regex.IsMatch(strVal, prop.Pattern))
+                return "Invalid format";
+        }
+
+        return null;
+    }
+
     private async Task SaveChanges()
     {
-        Snackbar.Add(Loc["SaveNotImplemented"].Value, Severity.Info);
-        // TODO: Implement save to API
-        _hasChanges = false;
+        // Don't save if there are validation errors
+        if (_validationErrors.Values.Any(e => e != null))
+        {
+            Snackbar.Add("Please fix validation errors before saving.", Severity.Warning);
+            return;
+        }
+
+        // Build updates dictionary (only changed values)
+        var updates = new Dictionary<string, object?>();
+        foreach (var (path, currentValue) in _currentValues)
+        {
+            if (!Equals(currentValue, _originalValues.GetValueOrDefault(path)))
+            {
+                updates[path] = currentValue;
+            }
+        }
+
+        if (updates.Count == 0)
+        {
+            Snackbar.Add("No changes to save.", Severity.Info);
+            return;
+        }
+
+        var result = await AdminConfigService.SaveOptionsAsync(updates);
+
+        result.Switch(
+            response =>
+            {
+                Snackbar.Add("Configuration saved successfully.", Severity.Success);
+                foreach (var (path, value) in updates)
+                {
+                    _originalValues[path] = value;
+                }
+                _hasChanges = false;
+                StateHasChanged();
+            },
+            error =>
+            {
+                Snackbar.Add($"Failed to save: {error.Value}", Severity.Error);
+            }
+        );
     }
 
     private void ResetChanges()

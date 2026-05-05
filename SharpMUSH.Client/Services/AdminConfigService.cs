@@ -49,6 +49,32 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		}
 	}
 
+	public async Task<OneOf.OneOf<ConfigurationResponse, Error<string>>> SaveOptionsAsync(Dictionary<string, object?> updates)
+	{
+		try
+		{
+			var response = await httpClient.CreateClient("api").PutAsJsonAsync("/api/configuration", updates);
+
+			if (!response.IsSuccessStatusCode)
+			{
+				var errorContent = await response.Content.ReadAsStringAsync();
+				return new Error<string>(errorContent);
+			}
+
+			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
+			if (configResponse?.Configuration != null)
+			{
+				_currentOptions = configResponse.Configuration;
+			}
+			return configResponse!;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error saving configuration");
+			return new Error<string>(ex.Message);
+		}
+	}
+
 	public void ResetToDefault()
 	{
 		_currentOptions = null;

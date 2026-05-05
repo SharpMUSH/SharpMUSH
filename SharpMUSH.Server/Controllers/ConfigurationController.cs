@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration;
@@ -66,6 +68,64 @@ public class ConfigurationController(
 		{
 			logger.LogError(ex, "Error importing configuration");
 			return BadRequest($"Error importing configuration: {ex.Message}");
+		}
+	}
+
+	[HttpPut]
+	public async Task<ActionResult<ConfigurationResponse>> UpdateConfiguration([FromBody] Dictionary<string, JsonElement> updates)
+	{
+		try
+		{
+			if (updates == null || updates.Count == 0)
+				return BadRequest(new { error = "No updates provided" });
+
+			// Get current config and serialize to JSON for patching
+			var current = options.CurrentValue;
+			var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = null };
+			var json = JsonSerializer.SerializeToNode(current, jsonOptions)!.AsObject();
+
+			foreach (var (path, value) in updates)
+			{
+				var parts = path.Split('.');
+				if (parts.Length != 2) continue;
+
+				var categoryName = parts[0];
+				var propertyName = parts[1];
+
+				if (json[categoryName] is JsonObject category)
+				{
+					category[propertyName] = JsonNode.Parse(value.GetRawText());
+				}
+			}
+
+			var updated = json.Deserialize<SharpMUSHOptions>(new JsonSerializerOptions
+			{
+				PropertyNameCaseInsensitive = false
+			});
+
+			if (updated == null)
+				return BadRequest(new { error = "Failed to deserialize updated configuration" });
+
+			// Validate using the generated validator
+			var validator = new ValidateSharpOptions();
+			var validationResult = validator.Validate(null, updated);
+			if (validationResult.Failed)
+				return BadRequest(new { error = validationResult.FailureMessage });
+
+			// Persist to database
+			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updated);
+
+			// Signal reload to all IOptionsMonitor consumers
+			configReloadService.SignalChange();
+
+			logger.LogInformation("Configuration updated: {Count} properties changed", updates.Count);
+
+			return Ok(OptionHelper.OptionsToConfigurationResponse(updated));
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error updating configuration");
+			return BadRequest(new { error = $"Error updating configuration: {ex.Message}" });
 		}
 	}
 }
