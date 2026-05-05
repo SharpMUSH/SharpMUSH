@@ -50,13 +50,43 @@ public class GetCommandAttributesQueryHandler : IQueryHandler<GetCommandAttribut
 		bool isLocal,
 		CancellationToken cancellationToken)
 	{
+		// Collect all attributes first so we can do proper tree-level flag checks
+		// regardless of enumeration order.
+		var attrList = new List<SharpAttribute>();
 		await foreach (var attr in attributes.WithCancellation(cancellationToken))
+			attrList.Add(attr);
+
+		// Build no_inherit prefixes (only matters for parent attrs)
+		var noInheritPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		if (!isLocal)
+		{
+			foreach (var attr in attrList)
+			{
+				if (attr.Flags.Any(f => f.Name == "no_inherit"))
+					noInheritPrefixes.Add((attr.LongName ?? "") + "`");
+			}
+		}
+
+		// Build no_command prefixes from this object's attrs
+		var localNoCommandPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var attr in attrList)
+		{
+			if (attr.Flags.Any(flag => flag.Name == "no_command"))
+				localNoCommandPrefixes.Add((attr.LongName ?? "") + "`");
+		}
+
+		foreach (var attr in attrList)
 		{
 			var longName = attr.LongName ?? "";
 
-			// Skip if no_inherit and we're looking at parent attributes
-			if (!isLocal && attr.Flags.Any(f => f.Name == "no_inherit"))
-				continue;
+			// Skip if no_inherit (or descendant of no_inherit) and we're looking at parent attributes
+			if (!isLocal)
+			{
+				if (attr.Flags.Any(f => f.Name == "no_inherit"))
+					continue;
+				if (noInheritPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+					continue;
+			}
 
 			// Track names we've already processed (child overrides parent)
 			if (!seenNames.Add(longName))
@@ -65,13 +95,15 @@ public class GetCommandAttributesQueryHandler : IQueryHandler<GetCommandAttribut
 			// Check if this attribute has no_command flag
 			if (attr.Flags.Any(flag => flag.Name == "no_command"))
 			{
-				// Block this attribute AND all tree descendants
+				// Block this attribute AND all tree descendants (propagate to cross-object noCommandPrefixes)
 				noCommandPrefixes.Add(longName + "`");
 				continue;
 			}
 
-			// Check if blocked by ancestor's no_command (tree-level blocking)
+			// Check if blocked by ancestor's no_command (tree-level blocking) — both local and cross-object
 			if (noCommandPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+				continue;
+			if (localNoCommandPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 				continue;
 
 			var plainValue = attr.Value.ToPlainText();

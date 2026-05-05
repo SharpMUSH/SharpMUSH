@@ -8,6 +8,7 @@ using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class UserDefinedCommandsTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -318,5 +319,129 @@ public class UserDefinedCommandsTests
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Leaf fired")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// Child's local $cmd masks parent's $cmd`leaf (child override blocks parent tree branch).
+	/// PennMUSH testatree.t: atree.command.13-14
+	/// </summary>
+	[Test]
+	public async ValueTask ChildCommand_MasksParentTreeBranch()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = TestIsolationHelpers.GenerateUniqueName("cmk");
+
+		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"MskPar_{token}");
+		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"MskChi_{token}");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
+
+		// Parent has tree command
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Parent {token}"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Parent leaf"));
+
+		// Child overrides the root — should mask parent's tree descendants
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_{token} {childObj}=${token}:@pemit %#=Child {token}"));
+
+		// Fire root command — should get child's version
+		await Parser.CommandParse(1, ConnectionService, MModule.single(token));
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Child {token}")),
+				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.Announce);
+
+		// Fire leaf command — should still work (parent's leaf not masked, child only overrides root name)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Parent leaf")),
+				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// no_inherit on parent attr causes fallthrough to grandparent command.
+	/// PennMUSH testatree.t: atree.command.27-29
+	/// </summary>
+	[Test]
+	public async ValueTask NoInherit_FallsThrough_ToGrandparent()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = TestIsolationHelpers.GenerateUniqueName("nif");
+
+		var grandObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NiGrand_{token}");
+		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NiPar_{token}");
+		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NiChi_{token}");
+
+		// Set up chain: child -> parent -> grand
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {parentObj}={grandObj}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {grandObj}=no_command"));
+
+		// Grand has bar`baz command
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_{token}`LEAF {grandObj}=${token}leaf:@pemit %#=Grand leaf"));
+
+		// Parent has bar and bar`baz, but bar is no_inherit
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Parent root"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Parent leaf"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@set {parentObj}/CMD_{token}=no_inherit"));
+
+		// Fire leaf — parent's CMD_token has no_inherit so entire branch skipped, falls to grand
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Grand leaf")),
+				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// no_command on parent's tree root blocks leaf inheritance even when child has no local override.
+	/// PennMUSH testatree.t: atree.command.19-21
+	/// </summary>
+	[Test]
+	public async ValueTask ParentNoCommand_BlocksLeafInheritance()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = TestIsolationHelpers.GenerateUniqueName("pnc");
+
+		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"PncPar_{token}");
+		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"PncChi_{token}");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
+
+		// Parent has tree commands
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Root {token}"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Leaf {token}"));
+
+		// Set no_command on parent's root attr
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@set {parentObj}/CMD_{token}=no_command"));
+
+		// Fire leaf — should get "Huh?" (no match), not "Leaf {token}"
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
+
+		await NotifyService
+			.DidNotReceive()
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Leaf {token}")),
+				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 }
