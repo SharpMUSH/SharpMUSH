@@ -317,6 +317,12 @@ public partial class ArangoDatabase
 			_ => $"\\{m.Value}"
 		});
 
+		// Trailing backtick means "direct children only" — e.g. FOO` → FOO`[^`]+
+		if (pattern.EndsWith("`"))
+		{
+			pattern = pattern + "[^`]+";
+		}
+
 		if (!result.Any())
 		{
 			yield break;

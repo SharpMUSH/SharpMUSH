@@ -309,7 +309,7 @@ public partial class Functions
 					x,
 					attribute,
 					mode: IAttributeService.AttributeMode.Read,
-					parent: false);
+					parent: true);
 
 				return maybeAttr switch
 				{
