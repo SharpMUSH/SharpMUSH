@@ -107,12 +107,17 @@ public class DatabaseConversionController(
 	[RequestSizeLimit(104857600)] // 100 MB
 	public async Task<ActionResult<object>> WipeAndImportDatabase(
 		[FromForm] IFormFile databaseFile,
-		[FromForm] IFormFile? configFile,
+		[FromForm] IFormFile configFile,
 		CancellationToken cancellationToken)
 	{
 		if (databaseFile == null || databaseFile.Length == 0)
 		{
 			return BadRequest("No database file uploaded");
+		}
+
+		if (configFile == null || configFile.Length == 0)
+		{
+			return BadRequest("No config file uploaded");
 		}
 
 		try
@@ -122,17 +127,12 @@ public class DatabaseConversionController(
 			await database.WipeDatabaseAsync(cancellationToken);
 			logger.LogInformation("Database wiped successfully. Starting import...");
 
-			// Step 2: If a config file was provided, import it
-			if (configFile is { Length: > 0 })
-			{
-				using var configReader = new StreamReader(configFile.OpenReadStream());
-				var configContent = await configReader.ReadToEndAsync(cancellationToken);
-				// Config import is handled separately via the configuration endpoint
-				logger.LogInformation("Config file received: {FileName} ({Size} bytes)", configFile.FileName, configFile.Length);
-				// Store config content for later processing
-				var configTempPath = Path.Combine(Path.GetTempPath(), $"pennmush_config_{Guid.NewGuid()}.cnf");
-				await System.IO.File.WriteAllTextAsync(configTempPath, configContent, cancellationToken);
-			}
+			// Step 2: Import the config file
+			using var configReader = new StreamReader(configFile.OpenReadStream());
+			var configContent = await configReader.ReadToEndAsync(cancellationToken);
+			logger.LogInformation("Config file received: {FileName} ({Size} bytes)", configFile.FileName, configFile.Length);
+			var configTempPath = Path.Combine(Path.GetTempPath(), $"pennmush_config_{Guid.NewGuid()}.cnf");
+			await System.IO.File.WriteAllTextAsync(configTempPath, configContent, cancellationToken);
 
 			// Step 3: Save database file and start conversion
 			var tempPath = Path.Combine(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
