@@ -98,7 +98,7 @@ public partial class Commands
 		if (lockType is not ("JOIN" or "SPEAK" or "SEE" or "HIDE" or "MOD"))
 		{
 			await NotifyService!.Notify(executor, $"Invalid lock type: {lockType}", executor);
-			return new CallState("#-1 INVALID LOCK TYPE");
+			return new CallState(ErrorMessages.Returns.InvalidLockType);
 		}
 
 		await Mediator!.Send(updateCommand);
@@ -384,7 +384,7 @@ public partial class Commands
 		if (slashIndex == -1)
 		{
 			await NotifyService!.Notify(executor, "Invalid format. Use: @lset <object>/<lock type>=[!]<flag>", executor);
-			return new CallState("#-1 INVALID FORMAT");
+			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
 		var objectName = objectLock[..slashIndex];
@@ -396,7 +396,7 @@ public partial class Commands
 		if (!LockService!.LockPrivileges.TryGetValue(flagName.ToLower(), out var flagInfo))
 		{
 			await NotifyService!.Notify(executor, $"Invalid flag: {flagName}", executor);
-			return new CallState("#-1 INVALID FLAG");
+			return new CallState(ErrorMessages.Returns.InvalidFlag);
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -415,7 +415,7 @@ public partial class Commands
 				if (!obj.Object().Locks.TryGetValue(lockType, out var lockData))
 				{
 					await NotifyService!.Notify(executor, $"No such lock: {lockType}", executor);
-					return new CallState("#-1 NO SUCH LOCK");
+					return new CallState(ErrorMessages.Returns.NoSuchLock);
 				}
 
 				var currentFlags = lockData.Flags;

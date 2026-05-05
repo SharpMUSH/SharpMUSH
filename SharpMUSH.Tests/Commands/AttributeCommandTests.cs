@@ -57,9 +57,9 @@ public class AttributeCommandTests
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var objName = obj.Known.Object().Name;
 
+		// With empty_attrs=yes (test config), &attr obj= sets to empty (not clear)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTCLEAR_ATTRSET_UNIQUE {objDbRef}="));
 
-		// Setting to empty still says "Set." per parser visitor implementation
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>

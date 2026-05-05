@@ -31,27 +31,41 @@ public partial class Functions
 		// Parse the base arguments as integers
 		if (!int.TryParse(ArgHelpers.EmptyStringToZero(fromBaseStr), out var fromBase))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
 		}
 
 		if (!int.TryParse(ArgHelpers.EmptyStringToZero(toBaseStr), out var toBase))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
 		}
 
 		if (fromBase is < 2 or > 64)
-			return ValueTask.FromResult<CallState>(new("#-1 Argument 1 must be between 2 and 64."));
+			return ValueTask.FromResult<CallState>(new(string.Format(ErrorMessages.Returns.BaseArgRange, 1)));
 
 		if (toBase is < 2 or > 64)
-			return ValueTask.FromResult<CallState>(new("#-1 Argument 2 must be between 2 and 64."));
+			return ValueTask.FromResult<CallState>(new(string.Format(ErrorMessages.Returns.BaseArgRange, 2)));
 
 		var fromBaseChars = fromBase <= 36 ? Chars36 : Chars;
 		var toBaseChars = toBase <= 36 ? Chars36 : Chars;
 
-		// Validate input according to fromBase
-		if (input.Any(c => fromBaseChars.IndexOf(c) >= fromBase))
+		// Handle negative sign for bases <= 36 (where '-' is not a valid digit)
+		var isNegative = false;
+		if (fromBase <= 36 && input.StartsWith('-'))
 		{
-			return ValueTask.FromResult<CallState>(new("#-1 MALFORMED NUMBER"));
+			isNegative = true;
+			input = input[1..];
+		}
+
+		// Normalize standard Base64 characters (+/) to URL-safe (-_) for bases > 36
+		if (fromBase > 36)
+		{
+			input = input.Replace('+', '-').Replace('/', '_');
+		}
+
+		// Validate input according to fromBase
+		if (input.Length == 0 || input.Any(c => fromBaseChars.IndexOf(c) < 0 || fromBaseChars.IndexOf(c) >= fromBase))
+		{
+			return ValueTask.FromResult<CallState>(new(ErrorMessages.Returns.MalformedNumber));
 		}
 
 		// Convert input to base 10
@@ -60,7 +74,10 @@ public partial class Functions
 
 		// Directly return the number if toBase is 10
 		if (toBase == 10)
-			return ValueTask.FromResult<CallState>(new(number.ToString()));
+		{
+			var numStr = number.ToString();
+			return ValueTask.FromResult<CallState>(new(isNegative && number != 0 ? "-" + numStr : numStr));
+		}
 
 		// Convert from base 10 to the desired base
 		var result = string.Empty;
@@ -70,7 +87,10 @@ public partial class Functions
 			number /= toBase;
 		}
 
-		return ValueTask.FromResult<CallState>(new(result == string.Empty ? "0" : result));
+		var output = result == string.Empty ? "0" : result;
+		if (isNegative && toBase <= 36)
+			output = "-" + output;
+		return ValueTask.FromResult<CallState>(new(output));
 	}
 
 	[SharpFunction(Name = "band",

@@ -239,8 +239,9 @@ public class SharpMUSHParserVisitor(
 			messages[i] = results[i].Message ?? MModule.Empty();
 
 		var combined = MModule.ConcatMany(messages);
+		var preserveSpaces = results.Any(r => r.PreserveSpaces);
 		return new CallState(combined, results[0].Depth, null,
-			() => ValueTask.FromResult<MString?>(combined));
+			() => ValueTask.FromResult<MString?>(combined)) { PreserveSpaces = preserveSpaces };
 	}
 
 	/// <summary>
@@ -303,7 +304,8 @@ public class SharpMUSHParserVisitor(
 		EvaluationStringContext?[] arguments;
 		if (evalStrings is null || evalStrings.Length == 0 && commas.Length == 0)
 		{
-			arguments = [];
+			// PennMUSH treats func() as having 1 empty arg, not 0 args.
+			arguments = [null];
 		}
 		else
 		{
@@ -403,7 +405,7 @@ public class SharpMUSHParserVisitor(
 				if (!discoveredFunction.TryPickT0(out var functionValue, out _))
 				{
 					success = false;
-					return new CallState(string.Format(Errors.ErrorNoSuchFunction, name), context.Depth());
+					return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name), context.Depth());
 				}
 
 				// Avoid double lookup: store result and add to library
@@ -427,7 +429,7 @@ public class SharpMUSHParserVisitor(
 			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
 			{
 				limitExceeded.IsExceeded = true;
-				return new CallState(Errors.ErrorInvoke, contextDepth);
+				return new CallState(ErrorMessages.Returns.Invoke, contextDepth);
 			}
 
 			var currentDepth = callDepth.Increment();
@@ -445,57 +447,63 @@ public class SharpMUSHParserVisitor(
 			if (attribute.Flags.HasFlag(FunctionFlags.WizardOnly) && !await executor.IsWizard())
 			{
 				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			// Check if function is restricted to Admins (Wizards or higher)
 			if (attribute.Flags.HasFlag(FunctionFlags.AdminOnly) && !await executor.IsWizard())
 			{
 				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			// Check if function is restricted to God
 			if (attribute.Flags.HasFlag(FunctionFlags.GodOnly) && !executor.IsGod())
 			{
 				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			// Check if function cannot be used by Guests
 			if (attribute.Flags.HasFlag(FunctionFlags.NoGuest) && await executor.IsGuest())
 			{
 				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			// Check if function cannot be used by Gagged players
 			if (attribute.Flags.HasFlag(FunctionFlags.NoGagged) && await executor.HasFlag("GAGGED"))
 			{
 				success = false;
-				return new CallState(Errors.ErrorPerm, contextDepth);
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			/* Validation, this should probably go into its own function! */
-			if (args.Length > attribute.MaxArgs)
+			// PennMUSH compat: if minargs=0 and we got 1 empty arg from func(), treat as 0 args
+			if (attribute.MinArgs == 0 && args.Length == 1 && args[0] is null)
 			{
-				return new CallState(string.Format(Errors.ErrorTooManyArguments, name, attribute.MaxArgs, args.Length), context.Depth());
+				args = [];
 			}
 
-			if (args.Length < attribute.MinArgs)
+			if (args.Length > attribute.MaxArgs)
 			{
-				return new CallState(string.Format(Errors.ErrorTooFewArguments, name, attribute.MinArgs, args.Length),
+				return new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, name.ToUpperInvariant(), attribute.MaxArgs, args.Length), context.Depth());
+			}
+
+		if (args.Length < attribute.MinArgs)
+			{
+				return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, name.ToUpperInvariant(), attribute.MinArgs, args.Length),
 					contextDepth);
 			}
 
 			if (((attribute.Flags & FunctionFlags.UnEvenArgsOnly) != 0) && (args.Length % 2 == 0))
 			{
-				return new CallState(string.Format(Errors.ErrorGotEvenArgs, name), contextDepth);
+				return new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, name.ToUpperInvariant()), contextDepth);
 			}
 
 			if (((attribute.Flags & FunctionFlags.EvenArgsOnly) != 0) && (args.Length % 2 != 0))
 			{
-				return new CallState(string.Format(Errors.ErrorGotUnEvenArgs, name), contextDepth);
+				return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, name.ToUpperInvariant()), contextDepth);
 			}
 
 			// Consider moving after RefinedArguments to avoid extra parsing. However, each
@@ -508,7 +516,7 @@ public class SharpMUSHParserVisitor(
 			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
 				limitExceeded.IsExceeded = true;
-				return new CallState(Errors.ErrorCall, contextDepth);
+				return new CallState(ErrorMessages.Returns.Call, contextDepth);
 			}
 
 			// Built-in functions do NOT check recursion limit
@@ -516,15 +524,36 @@ public class SharpMUSHParserVisitor(
 
 			var stripAnsi = attribute.Flags.HasFlag(FunctionFlags.StripAnsi);
 
-			if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
+			if (attribute.Flags.HasFlag(FunctionFlags.Literal))
+			{
+				// FunctionFlags.Literal: treat the entire content between parens as a single
+				// raw unevaluated string. Do NOT split on commas, do NOT evaluate substitutions.
+				// This is how PennMUSH's lit() works — lit(a,b,%q0) returns "a,b,%q0" verbatim.
+				// We reconstruct the raw text from the parse tree using GetText() on the FunctionContext.
+				var funcText = context.GetText();
+				// funcText is e.g. "lit(a,b,%q0)" — strip "lit(" prefix and ")" suffix
+				var openParen = funcText.IndexOf('(');
+				if (openParen >= 0 && funcText.EndsWith(")"))
+				{
+					var rawContent = funcText[(openParen + 1)..^1];
+					refinedArguments = [new CallState(MModule.single(rawContent), contextDepth)];
+				}
+				else
+				{
+					refinedArguments = [CallState.Empty];
+				}
+			}
+			else if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
 			{
 				refinedArguments = await args
 					.ToAsyncEnumerable()
-					.Select<EvaluationStringContext?, CallState>(async (x, ct) => x == null
-						? CallState.Empty
-						: new CallState(stripAnsi
-								? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
-								: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))
+					.Select<EvaluationStringContext?, CallState>(async (x, ct) =>
+					{
+						if (x == null) return CallState.Empty;
+						var msg = (await visitor.VisitChildren(x))?.Message ?? MModule.empty();
+						if (stripAnsi) msg = MModule.plainText2(msg);
+						return new CallState(msg, x.Depth());
+					})
 					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 					.ToListAsync();
 			}
@@ -554,7 +583,7 @@ public class SharpMUSHParserVisitor(
 			// If a limit was exceeded during argument evaluation, return immediately
 			if (limitExceeded.IsExceeded)
 			{
-				return new CallState(Errors.ErrorInvoke, contextDepth);
+				return new CallState(ErrorMessages.Returns.Invoke, contextDepth);
 			}
 
 			// TODO: Pass ParserContexts directly as arguments instead of creating
@@ -1801,16 +1830,26 @@ public class SharpMUSHParserVisitor(
 	public override async ValueTask<CallState?> VisitExplicitEvaluationString(
 		[NotNull] ExplicitEvaluationStringContext context)
 	{
-		/* var isGenericText = context.beginGenericText() is not null;
-
-		if (!isGenericText)
-		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, MModule.single(
-				$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :"));
-		} */
-
-		return await VisitChildren(context)
+		var result = await VisitChildren(context)
 					 ?? new CallState(GetContextText(context), context.Depth());
+
+		// PE_COMPRESS_SPACES: strip trailing literal-text spaces at evaluation boundary.
+		// Only fires when the last child is literal text (genericText/beginGenericText).
+		// Bracket/substitution output trailing spaces are preserved — PennMUSH's had_space
+		// flag only triggers on literal space characters, not function/substitution output.
+		// The lexer's COMMAWS/CPAREN leading WS does NOT eat trailing spaces before delimiters
+		// (OTHER greedily consumes them), so this is the layer that handles trailing.
+		if (parser.CurrentState.ParseMode is ParseMode.Default && result.Message is not null)
+		{
+			// Only strip if the last child is literal text (genericText/beginGenericText)
+			// Function output (brackets) trailing spaces should be preserved within the expression
+			var children = context.children;
+			var lastChild = children[^1];
+			if (lastChild is GenericTextContext or BeginGenericTextContext)
+				result = result with { Message = MModule.trim(result.Message, " ", global::MarkupString.TrimType.TrimEnd) };
+		}
+
+		return result;
 
 		/* if (!isGenericText)
 		{
@@ -1914,13 +1953,39 @@ public class SharpMUSHParserVisitor(
 	}
 
 	public override async ValueTask<CallState?> VisitGenericText([NotNull] GenericTextContext context)
-		=> await VisitChildren(context)
-			 ?? new CallState(GetContextText(context), context.Depth());
+	{
+		var result = await VisitChildren(context)
+			?? new CallState(GetContextText(context), context.Depth());
+		// PE_COMPRESS_SPACES: only compress here for the FUNCHAR alternative
+		// (terminal token — VisitChildren returns null, so GetContextText has raw text).
+		// The beginGenericText alternative is already compressed by VisitBeginGenericText.
+		if (context.beginGenericText() is null
+			&& parser.CurrentState.ParseMode is ParseMode.Default
+			&& result.Message is not null)
+			return result with { Message = MModule.compressSpaces(result.Message) };
+		return result;
+	}
 
 	public override async ValueTask<CallState?> VisitBeginGenericText(
 		[NotNull] BeginGenericTextContext context)
-		=> await VisitChildren(context)
-			 ?? new CallState(GetContextText(context), context.Depth());
+	{
+		var result = await VisitChildren(context)
+			?? new CallState(GetContextText(context), context.Depth());
+		// PE_COMPRESS_SPACES: compress literal space runs to single space.
+		// The lexer already eats leading spaces on function args (FUNCHAR WS, COMMAWS WS),
+		// but internal runs within OTHER tokens and top-level/command-arg leading spaces remain.
+		if (parser.CurrentState.ParseMode is ParseMode.Default && result.Message is not null)
+		{
+			var compressed = MModule.compressSpaces(result.Message);
+			// Strip leading when this is the FIRST text node in an evaluation string
+			// (direct child of explicitEvaluationString). When reached via genericText
+			// (text between brackets), leading spaces are meaningful separators.
+			if (context.Parent is ExplicitEvaluationStringContext or BraceExplicitEvaluationStringContext)
+				compressed = MModule.trim(compressed, " ", global::MarkupString.TrimType.TrimStart);
+			return result with { Message = compressed };
+		}
+		return result;
+	}
 
 	public override async ValueTask<CallState?> VisitValidSubstitution(
 		[NotNull] ValidSubstitutionContext context)

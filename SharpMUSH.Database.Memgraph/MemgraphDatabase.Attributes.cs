@@ -76,13 +76,19 @@ public partial class MemgraphDatabase
 		if (typedResult.Result.Count == 0) yield break;
 		var tkey = typedResult.Result[0]["tkey"].As<int>();
 
-		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
+	var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
 		{
 			"**" => ".*",
 			"*" => "[^`]*",
 			"?" => ".",
 			_ => $"\\{m.Value}"
 		});
+
+		// Trailing backtick means "direct children only" — e.g. FOO` → FOO`[^`]+
+		if (pattern.EndsWith("`"))
+		{
+			pattern = pattern + "[^`]+";
+		}
 
 		var result = await ExecuteWithRetryAsync("""
 MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute)
@@ -166,13 +172,19 @@ RETURN child ORDER BY child.longName
 		if (typedResult.Result.Count == 0) yield break;
 		var tkey = typedResult.Result[0]["tkey"].As<int>();
 
-		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
+	var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
 		{
 			"**" => ".*",
 			"*" => "[^`]*",
 			"?" => ".",
 			_ => $"\\{m.Value}"
 		});
+
+		// Trailing backtick means "direct children only" — e.g. FOO` → FOO`[^`]+
+		if (pattern.EndsWith("`"))
+		{
+			pattern = pattern + "[^`]+";
+		}
 
 		var result = await ExecuteWithRetryAsync("""
 MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE]->(child:Attribute)
@@ -277,6 +289,19 @@ RETURN child ORDER BY child.longName
 		var result = await ExecuteWithRetryAsync(sb.ToString(), parameters, cancellationToken);
 		if (result.Result.Count == 0) return false;
 
+	// Set branch flag on parent attribute nodes (not the root typed node)
+		for (var i = 0; i < attribute.Length - 1; i++)
+		{
+			var longName = string.Join('`', attribute.Take(i + 1));
+			var attrKey = $"{objKey}_{longName}";
+			// MERGE to avoid duplicate flag relationships
+			await ExecuteWithRetryAsync("""
+		MATCH (a:Attribute {key: $key}), (f:AttributeFlag)
+		WHERE toUpper(f.name) = 'BRANCH'
+		MERGE (a)-[:HAS_ATTRIBUTE_FLAG]->(f)
+		""", new { key = attrKey }, cancellationToken);
+		}
+
 		// Handle attribute entry flags for newly created attributes (post-MERGE)
 		// Check each level for attribute entries with default flags
 		for (var i = 0; i < attribute.Length; i++)
@@ -349,11 +374,11 @@ DELETE r
 			yield return MapNodeToAttributeFlag(record["f"].As<INode>());
 	}
 
-	public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
 	{
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
-		var attrs = GetAttributeAsync(dbref, attribute, cancellationToken);
-		var targetAttr = await attrs.LastOrDefaultAsync(cancellationToken);
+		var attrPath = await GetAttributeAsync(dbref, attribute, cancellationToken).ToListAsync(cancellationToken);
+		var targetAttr = attrPath.LastOrDefault();
 		if (targetAttr is null) return false;
 
 		var attrKey = ExtractKeyString(targetAttr.Id);
@@ -373,16 +398,23 @@ RETURN count(child) AS cnt
 		else
 		{
 			await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) DETACH DELETE a", new { key = attrKey }, cancellationToken);
+
+			// Check if parent still has other children; if not, remove branch flag
+			if (attrPath.Count >= 2)
+			{
+				var parentAttr = attrPath[^2];
+				await RemoveBranchFlagIfNoChildrenAsync(ExtractKeyString(parentAttr.Id), cancellationToken);
+			}
 		}
 
 		return true;
 	}
 
-	public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
 	{
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
-		var attrs = GetAttributeAsync(dbref, attribute, cancellationToken);
-		var targetAttr = await attrs.LastOrDefaultAsync(cancellationToken);
+		var attrPath = await GetAttributeAsync(dbref, attribute, cancellationToken).ToListAsync(cancellationToken);
+		var targetAttr = attrPath.LastOrDefault();
 		if (targetAttr is null) return false;
 
 		var attrKey = ExtractKeyString(targetAttr.Id);
@@ -395,6 +427,13 @@ DETACH DELETE descendant
 
 		// Delete the target itself
 		await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) DETACH DELETE a", new { key = attrKey }, cancellationToken);
+
+		// Check if parent still has other children; if not, remove branch flag
+		if (attrPath.Count >= 2)
+		{
+			var parentAttr = attrPath[^2];
+			await RemoveBranchFlagIfNoChildrenAsync(ExtractKeyString(parentAttr.Id), cancellationToken);
+		}
 
 		return true;
 	}
@@ -467,7 +506,7 @@ SET e.defaultFlags = $defaultFlags, e.lim = $lim, e.enumValues = $enumValues
 		var objKey = dbref.Number;
 		var parentResult = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..100]->(parent:Object) RETURN parent", new { key = objKey }, cancellationToken);
 
-		foreach (var parentNode in parentResult.Result.Select(r => r["parent"].As<INode>()))
+	foreach (var parentNode in parentResult.Result.Select(r => r["parent"].As<INode>()))
 		{
 			var parentKey = parentNode["key"].As<int>();
 			var parentDbRef = new DBRef(parentKey);
@@ -475,6 +514,9 @@ SET e.defaultFlags = $defaultFlags, e.lim = $lim, e.enumValues = $enumValues
 			if (parentAttrs.Length == attribute.Length)
 			{
 				var lastAttr = parentAttrs.Last();
+				// no_inherit flag prevents attribute from being visible to children
+				if (lastAttr.Flags.Any(f => f.Name == "no_inherit"))
+					yield break;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new AttributeWithInheritance(parentAttrs, parentDbRef, AttributeSource.Parent, flags);
 				yield break;
@@ -490,7 +532,7 @@ MATCH (chainObj)-[:HAS_ZONE]->(zone:Object)
 RETURN zone
 """, new { key = objKey }, cancellationToken);
 
-		foreach (var zoneNode in chainResult.Result.Select(r => r["zone"].As<INode>()))
+	foreach (var zoneNode in chainResult.Result.Select(r => r["zone"].As<INode>()))
 		{
 			var zoneKey = zoneNode["key"].As<int>();
 			var zoneDbRef = new DBRef(zoneKey);
@@ -498,11 +540,14 @@ RETURN zone
 			if (zoneAttrs.Length == attribute.Length)
 			{
 				var lastAttr = zoneAttrs.Last();
+				// no_inherit flag prevents attribute from being visible to children
+				if (lastAttr.Flags.Any(f => f.Name == "no_inherit"))
+					yield break;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new AttributeWithInheritance(zoneAttrs, zoneDbRef, AttributeSource.Zone, flags);
 				yield break;
 			}
-		}
+	}
 	}
 
 	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
@@ -529,9 +574,12 @@ RETURN zone
 			var parentKey = parentNode["key"].As<int>();
 			var parentDbRef = new DBRef(parentKey);
 			var parentAttrs = await GetLazyAttributeAsync(parentDbRef, attribute, cancellationToken).ToArrayAsync(cancellationToken);
-			if (parentAttrs.Length == attribute.Length)
+		if (parentAttrs.Length == attribute.Length)
 			{
 				var lastAttr = parentAttrs.Last();
+				// no_inherit flag prevents attribute from being visible to children
+				if (lastAttr.Flags.Any(f => f.Name == "no_inherit"))
+					yield break;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new LazyAttributeWithInheritance(parentAttrs, parentDbRef, AttributeSource.Parent, flags);
 				yield break;
@@ -554,10 +602,37 @@ RETURN zone
 			if (zoneAttrs.Length == attribute.Length)
 			{
 				var lastAttr = zoneAttrs.Last();
+				// no_inherit flag prevents attribute from being visible to children
+				if (lastAttr.Flags.Any(f => f.Name == "no_inherit"))
+					yield break;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new LazyAttributeWithInheritance(zoneAttrs, zoneDbRef, AttributeSource.Zone, flags);
 				yield break;
 			}
+		}
+	}
+
+	/// <summary>
+	/// After removing a child attribute, check if the parent attribute still has children.
+	/// If not, remove the branch flag from the parent.
+	/// </summary>
+	private async ValueTask RemoveBranchFlagIfNoChildrenAsync(string parentAttrKey, CancellationToken cancellationToken)
+	{
+		// Check if parent still has any children
+		var remainingChildren = await ExecuteWithRetryAsync("""
+MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE]->(child:Attribute)
+RETURN count(child) AS cnt
+""", new { key = parentAttrKey }, cancellationToken);
+
+		var childCount = remainingChildren.Result.Count > 0 ? remainingChildren.Result[0]["cnt"].As<long>() : 0;
+		if (childCount == 0)
+		{
+			// No children left — remove branch flag
+			await ExecuteWithRetryAsync("""
+MATCH (a:Attribute {key: $key})-[r:HAS_ATTRIBUTE_FLAG]->(f:AttributeFlag)
+WHERE toUpper(f.name) = 'BRANCH'
+DELETE r
+""", new { key = parentAttrKey }, cancellationToken);
 		}
 	}
 

@@ -171,7 +171,7 @@ public partial class Functions
 
 			if (locateAttribute.IsNone)
 			{
-				return Errors.ErrorNotVisible;
+				return ErrorMessages.Returns.NotVisible;
 			}
 
 			var foundAttribute = locateAttribute.AsAttribute;
@@ -214,7 +214,7 @@ public partial class Functions
 			var maybeTarget = await LocateService!.Locate(parser, executor, executor, locStr, LocateFlags.All);
 			if (!maybeTarget.IsValid())
 			{
-				return new CallState("#-1 INVALID LOCATION");
+				return new CallState(ErrorMessages.Returns.InvalidLocation);
 			}
 			target = maybeTarget.AsAnyObject;
 		}
@@ -303,7 +303,7 @@ public partial class Functions
 
 				if (!locate.IsRoom)
 				{
-					return Errors.ErrorNotARoom;
+					return ErrorMessages.Returns.ErrorNotARoom;
 				}
 
 				var exits = await locate.AsContainer.Content(Mediator!)
@@ -527,7 +527,7 @@ public partial class Functions
 				// Get the lock string from the object
 				if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
 				{
-					return ValueTask.FromResult(new CallState("#-1 NO SUCH LOCK"));
+					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NoSuchLock));
 				}
 
 				// Evaluate the lock with the executor as the unlocker
@@ -551,7 +551,7 @@ public partial class Functions
 			var maybeTarget = await LocateService!.Locate(parser, executor, executor, objStr, LocateFlags.All);
 			if (!maybeTarget.IsValid())
 			{
-				return new CallState("#-1 INVALID OBJECT");
+				return new CallState(ErrorMessages.Returns.InvalidObject);
 			}
 			target = maybeTarget.AsAnyObject;
 		}
@@ -572,7 +572,7 @@ public partial class Functions
 		var maybeTarget = await LocateService!.Locate(parser, executor, executor, objStr, LocateFlags.All);
 		if (!maybeTarget.IsValid())
 		{
-			return new CallState("#-1 INVALID OBJECT");
+			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
 		var target = maybeTarget.AsAnyObject;
 
@@ -908,7 +908,7 @@ LOCATE()
 
 		if (args.Count == 0)
 		{
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		// First argument is the player (who owns the objects to search)
@@ -920,7 +920,7 @@ LOCATE()
 			var maybeClass = await LocateService!.Locate(parser, executor, executor, classArg, LocateFlags.All);
 			if (!maybeClass.IsValid())
 			{
-				return new CallState("#-1 INVALID CLASS");
+				return new CallState(ErrorMessages.Returns.InvalidClass);
 			}
 			classObj = maybeClass.AsAnyObject;
 		}
@@ -1600,7 +1600,7 @@ LOCATE()
 
 		if (Configuration!.CurrentValue.Function.FunctionSideEffects == false)
 		{
-			return Errors.ErrorNoSideFx;
+			return ErrorMessages.Returns.NoSideFx;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1609,7 +1609,7 @@ LOCATE()
 			{
 				if (!await PermissionService!.Controls(executor, target))
 				{
-					return Errors.ErrorPerm;
+					return ErrorMessages.Returns.PermissionDenied;
 				}
 
 				switch (args)
@@ -1628,12 +1628,12 @@ LOCATE()
 										|| (!await target.HasFlag("LINK_OK")
 												&& !PermissionService.PassesLock(executor, newParent, LockType.Parent)))
 								{
-									return Errors.ErrorPerm;
+									return ErrorMessages.Returns.PermissionDenied;
 								}
 
 								if (!await HelperFunctions.SafeToAddParent(Mediator!, Database!, target, newParent))
 								{
-									return "#-1 CYCLE DETECTED";
+									return ErrorMessages.Returns.CycleDetected;
 								}
 
 								await Mediator!.Send(new SetObjectParentCommand(target, newParent));
@@ -1667,7 +1667,7 @@ LOCATE()
 
 		if (!int.TryParse(levelsArg, out var levels) || levels < 0)
 		{
-			return new CallState("#-1 INVALID LEVEL");
+			return new CallState(ErrorMessages.Returns.InvalidLevel);
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -1730,7 +1730,7 @@ LOCATE()
 			async x =>
 				await x.Match<ValueTask<string>>(
 					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
-					_ => ValueTask.FromResult<string>("#-1 THIS IS A ROOM"),
+					_ => ValueTask.FromResult<string>(ErrorMessages.Returns.ThisIsARoom),
 					// For exits, return the location (the room containing the exit)
 					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
 					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString()));
@@ -1762,7 +1762,7 @@ LOCATE()
 					// Setting zone is a side effect
 					if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 					{
-						return Errors.ErrorNoSideFx;
+						return ErrorMessages.Returns.NoSideFx;
 					}
 
 					// Handle zone setting like @chzone
@@ -1774,7 +1774,7 @@ LOCATE()
 						// Check permissions
 						if (!await PermissionService!.Controls(executor, target))
 						{
-							return Errors.ErrorPerm;
+							return ErrorMessages.Returns.PermissionDenied;
 						}
 
 						await Mediator!.Send(new UnsetObjectZoneCommand(target));
@@ -1785,7 +1785,7 @@ LOCATE()
 					var maybeZone = await LocateService!.Locate(parser, executor, executor, arg1Str, LocateFlags.All);
 					if (!maybeZone.IsValid())
 					{
-						return "#-1 INVALID ZONE";
+						return ErrorMessages.Returns.InvalidZone;
 					}
 
 					var zone = maybeZone.AsAnyObject;
@@ -1793,19 +1793,19 @@ LOCATE()
 					// Check permissions - must control both object and zone, or pass ChZone lock
 					if (!await PermissionService!.Controls(executor, target))
 					{
-						return Errors.ErrorPerm;
+						return ErrorMessages.Returns.PermissionDenied;
 					}
 
 					bool canZone = await PermissionService.Controls(executor, zone);
 					if (!canZone && !LockService!.Evaluate(LockType.ChZone, zone, executor))
 					{
-						return Errors.ErrorPerm;
+						return ErrorMessages.Returns.PermissionDenied;
 					}
 
 					// Check for cycles before setting the zone
 					if (!await HelperFunctions.SafeToAddZone(Mediator!, Database!, target, zone))
 					{
-						return Errors.ZoneLoop;
+						return ErrorMessages.Returns.ZoneLoop;
 					}
 
 					// Handle flag/power stripping (simplified - no /preserve in function)
@@ -1849,7 +1849,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return ErrorMessages.Returns.InvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1861,7 +1861,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var things = await locate.AsContainer.Content(Mediator!)
@@ -1885,7 +1885,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return ErrorMessages.Returns.InvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1897,7 +1897,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var paginated = await locate.AsContainer.Content(Mediator!)
@@ -1921,7 +1921,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return ErrorMessages.Returns.InvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1933,7 +1933,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var paginated = await locate.AsContainer.Content(Mediator!)
@@ -1958,7 +1958,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return ErrorMessages.Returns.InvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1970,7 +1970,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var paginated = await locate.AsContainer.Content(Mediator!)
@@ -1995,7 +1995,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return ErrorMessages.Returns.InvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -2007,7 +2007,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var paginated = await locate.AsContainer.Content(Mediator!)
@@ -2032,7 +2032,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return ErrorMessages.Returns.InvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -2044,7 +2044,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var contents = await locate.AsContainer.Content(Mediator!)
@@ -2067,7 +2067,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return ErrorMessages.Returns.InvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -2079,7 +2079,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var exits = await locate.AsContainer.Content(Mediator!)
@@ -2103,7 +2103,7 @@ LOCATE()
 
 		if (!int.TryParse(arg1, out var start) || !int.TryParse(arg2, out var count))
 		{
-			return "#-1 INVALID ARGUMENTS";
+			return ErrorMessages.Returns.InvalidArguments;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -2115,7 +2115,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var players = await locate.AsContainer.Content(Mediator!)
@@ -2143,7 +2143,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return string.Join(" ", locate.AsContainer.Content(Mediator!)
@@ -2165,7 +2165,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return string.Join(" ", locate.AsContainer.Content(Mediator!)
@@ -2188,7 +2188,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return string.Join(" ", locate.AsContainer.Content(Mediator!)
@@ -2211,7 +2211,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return string.Join(" ", locate.AsContainer.Content(Mediator!)
@@ -2234,7 +2234,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var visibleContents = await locate.AsContainer.Content(Mediator!)
@@ -2260,7 +2260,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var visibleExits = await locate.AsContainer.Content(Mediator!)
@@ -2287,7 +2287,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var visiblePlayers = await locate.AsContainer.Content(Mediator!)
@@ -2314,7 +2314,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				var visibleThings = await locate.AsContainer.Content(Mediator!)
@@ -2483,7 +2483,7 @@ LOCATE()
 			{
 				var result = await FlagLetterCheck(found, flagsArg, orMode: true);
 				if (result is null)
-					return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "orflags"));
+					return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "orflags"));
 				return new CallState(result.Value);
 			});
 	}
@@ -2503,7 +2503,7 @@ LOCATE()
 				var tokens = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 				var result = await FlagLongNameCheck(found, tokens, orMode: true);
 				if (result is null)
-					return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "orlflags"));
+					return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "orlflags"));
 				return new CallState(result.Value);
 			});
 	}
@@ -2544,7 +2544,7 @@ LOCATE()
 			{
 				var result = await FlagLetterCheck(found, flagsArg, orMode: false);
 				if (result is null)
-					return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "andflags"));
+					return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "andflags"));
 				return new CallState(result.Value);
 			});
 	}
@@ -2564,7 +2564,7 @@ LOCATE()
 				var tokens = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 				var result = await FlagLongNameCheck(found, tokens, orMode: false);
 				if (result is null)
-					return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "andlflags"));
+					return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "andlflags"));
 				return new CallState(result.Value);
 			});
 	}
@@ -2609,7 +2609,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return await locate.AsContainer.Content(Mediator!).CountAsync();
@@ -2630,7 +2630,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return await locate.AsContainer.Content(Mediator!)
@@ -2653,7 +2653,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return await locate.AsContainer.Content(Mediator!)
@@ -2676,7 +2676,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return await locate.AsContainer.Content(Mediator!)
@@ -2699,7 +2699,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return await locate.AsContainer.Content(Mediator!)
@@ -2722,7 +2722,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return await locate.AsContainer.Content(Mediator!)
@@ -2746,7 +2746,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return await locate.AsContainer.Content(Mediator!)
@@ -2770,7 +2770,7 @@ LOCATE()
 			{
 				if (!locate.IsContainer)
 				{
-					return Errors.ExitsCannotContainThings;
+					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
 				return await locate.AsContainer.Content(Mediator!)

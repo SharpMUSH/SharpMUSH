@@ -792,6 +792,31 @@ public static partial class MarkupStringModule
     public static MarkupString trim2(MarkupString ams, MarkupString trimStr, TrimType trimType) =>
         Trim2(ams, trimStr, trimType);
 
+    /// <summary>
+    /// Compresses runs of multiple spaces into single spaces (PennMUSH PE_COMPRESS_SPACES).
+    /// Preserves ANSI markup.
+    /// </summary>
+    [GeneratedRegex(@" {2,}")]
+    private static partial Regex MultipleSpacesRegex();
+
+    public static MarkupString CompressSpaces(MarkupString ams)
+    {
+        var text = ams.ToPlainText();
+        // Fast path: no consecutive spaces means nothing to compress (common case)
+        if (text == null || text.IndexOf("  ", StringComparison.Ordinal) < 0) return ams;
+
+        // Replace runs of 2+ spaces with a single space, right-to-left to preserve positions
+        var singleSpace = Single(" ");
+        var result = ams;
+        var matches = MultipleSpacesRegex().Matches(text);
+        foreach (var match in matches.Reverse())
+        {
+            result = Replace(result, singleSpace, match.Index, match.Length);
+        }
+        return result;
+    }
+    public static MarkupString compressSpaces(MarkupString ams) => CompressSpaces(ams);
+
     public static MarkupString ConcatAttach(MarkupString a, MarkupString b)
     {
         if (a.Runs.Length == 0) return Concat(a, b);

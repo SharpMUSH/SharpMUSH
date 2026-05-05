@@ -48,11 +48,15 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(result));
 	}
 
-	[SharpFunction(Name = "lit", MinArgs = 1, Flags = FunctionFlags.Literal | FunctionFlags.NoParse, ParameterNames = ["argument..."])]
+	[SharpFunction(Name = "lit", MinArgs = 0, Flags = FunctionFlags.Literal | FunctionFlags.NoParse, ParameterNames = ["argument..."])]
 	public static ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(MModule.single(","),
-			parser.CurrentState.ArgumentsOrdered.Select(x => x.Value.Message)));
+		// lit() with Literal flag: args are already the raw unevaluated text (set by visitor's Literal branch).
+		// With zero args, return empty string. Otherwise return the single raw argument.
+		if (!parser.CurrentState.ArgumentsOrdered.Any())
+			return ValueTask.FromResult(CallState.Empty);
+
+		return ValueTask.FromResult(new CallState(parser.CurrentState.Arguments["0"].Message) { PreserveSpaces = true });
 	}
 
 	[SharpFunction(Name = "speak", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular,
@@ -186,7 +190,7 @@ public partial class Functions
 
 			if (splitTransform.IsT1)
 			{
-				return new CallState(Errors.ErrorObjectAttributeString);
+				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 			}
 
 			var transformationObject = await
@@ -211,7 +215,7 @@ public partial class Functions
 
 			if (splitNull.IsT1)
 			{
-				return new CallState(Errors.ErrorObjectAttributeString);
+				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 			}
 
 			actualNullAttribute = splitNull.AsT0.Attribute;
@@ -297,7 +301,7 @@ public partial class Functions
 
 		if (!int.TryParse(positionStr, out var position) || position < 0)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorPositiveInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
 		// If position is greater than length, append
@@ -324,12 +328,12 @@ public partial class Functions
 
 		if (!int.TryParse(startStr, out var start) || start < 0)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorPositiveInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
 		if (!int.TryParse(lengthStr, out var length))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		// If start is greater than length, return original string
@@ -364,7 +368,7 @@ public partial class Functions
 
 		if (str.Length != template.Length)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 		}
 
 		var result = new StringBuilder();
@@ -478,7 +482,7 @@ public partial class Functions
 		var widthSpecs = widths.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		if (widthSpecs.Length == 0)
 		{
-			return "#-1 INVALID ALIGN STRING";
+			return ErrorMessages.Returns.InvalidAlignString;
 		}
 
 		var expectedColumnCount = widthSpecs.Length;
@@ -487,13 +491,13 @@ public partial class Functions
 		// We need at least expectedColumnCount arguments for the column data
 		if (totalArgs < expectedColumnCount)
 		{
-			return "#-1 NOT ENOUGH COLUMNS FOR ALIGN";
+			return ErrorMessages.Returns.NotEnoughColumnsForAlign;
 		}
 
 		// We can have at most expectedColumnCount + 3 arguments (columns + filler + colsep + rowsep)
 		if (totalArgs > expectedColumnCount + 3)
 		{
-			return "#-1 TOO MANY COLUMNS FOR ALIGN";
+			return ErrorMessages.Returns.TooManyColumnsForAlign;
 		}
 
 		// Take exactly expectedColumnCount arguments as column data
@@ -531,7 +535,7 @@ public partial class Functions
 
 		if (widthSpecs.Length == 0)
 		{
-			return "#-1 INVALID ALIGN STRING";
+			return ErrorMessages.Returns.InvalidAlignString;
 		}
 
 		return TextAlignerModule.align(widths, MModule.split2(colDelim, cols), filler, columnSeparator, rowSeparator);
@@ -738,7 +742,7 @@ public partial class Functions
 
 		if (!int.TryParse(width.ToPlainText(), out var widthInt) || widthInt < 0)
 		{
-			return new ValueTask<CallState>(new CallState(Errors.ErrorPositiveInteger));
+			return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
 		var result = MModule.center2(str, fill, rightFill, widthInt, TruncationType.Overflow);
@@ -753,7 +757,7 @@ public partial class Functions
 
 		if (!int.TryParse(arg0, out var charInt) || charInt < 0)
 		{
-			return new ValueTask<CallState>(new CallState(Errors.ErrorPositiveInteger));
+			return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
 		try
@@ -762,7 +766,7 @@ public partial class Functions
 		}
 		catch (ArgumentOutOfRangeException)
 		{
-			return new ValueTask<CallState>(new CallState(Errors.ErrorArgRange));
+			return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.ArgRange));
 		}
 	}
 
@@ -901,7 +905,7 @@ public partial class Functions
 
 		if (arg1 is null && !arg0.Equals("LIST", StringComparison.InvariantCultureIgnoreCase))
 		{
-			return Errors.ErrorArgRange;
+			return ErrorMessages.Returns.ArgRange;
 		}
 
 		if (arg0.Equals("LIST", StringComparison.InvariantCultureIgnoreCase))
@@ -911,7 +915,7 @@ public partial class Functions
 
 		return CryptoHelpers.hashAlgorithms.ContainsKey(arg0)
 			? CryptoHelpers.Digest(arg0, arg1!).AsT0
-			: Errors.ErrorArgRange;
+			: ErrorMessages.Returns.ArgRange;
 	}
 
 	[SharpFunction(Name = "edit", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["string", "find", "replace"])]
@@ -1077,7 +1081,41 @@ public partial class Functions
 			.Replace("^", "\\^")
 			.Replace("$", "\\$");
 
-		result = SpacesRegex().Replace(result, m => string.Join("", Enumerable.Repeat("%b", m.Length)));
+		// PennMUSH decompose space algorithm (from escape_marked_str in markup.c):
+		// - 5+ consecutive spaces → [space(N)]
+		// - 1-4 spaces: alternating literal-space / %b pattern
+		//   - At start of string (dospace=1): first space → %b, then alternating space/%b
+		//   - After non-space (dospace=0): alternating space/%b pairs
+		//   - Trailing spaces: last space always becomes %b
+		bool dospaceGlobal = result.Length > 0 && result[0] == ' ';
+		result = SpacesRegex().Replace(result, m =>
+		{
+			int spaces = m.Length;
+			if (spaces >= 5)
+			{
+				return $"[space({spaces})]";
+			}
+
+			var sb = new System.Text.StringBuilder();
+			bool dospace = dospaceGlobal && m.Index == 0;
+
+			// Check if this is a trailing run (at end of string)
+			bool isTrailing = m.Index + m.Length == result.Length;
+
+			if (isTrailing)
+			{
+				spaces--; // reserve last for final %b
+				if (spaces > 0 && dospace) { spaces--; sb.Append("%b"); }
+				while (spaces > 0) { sb.Append(' '); spaces--; if (spaces > 0) { spaces--; sb.Append("%b"); } }
+				sb.Append("%b"); // final %b for trailing
+			}
+			else
+			{
+				if (dospace) { spaces--; sb.Append("%b"); }
+				while (spaces > 0) { sb.Append(' '); spaces--; if (spaces > 0) { spaces--; sb.Append("%b"); } }
+			}
+			return sb.ToString();
+		});
 
 		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
 
@@ -1325,7 +1363,7 @@ public partial class Functions
 
 		if (hmac == null)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 		}
 
 		using (hmac)
@@ -1398,25 +1436,26 @@ public partial class Functions
 		var len = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
 
 		return !int.TryParse(len, out var strlen) || strlen < 0
-			? ValueTask.FromResult<CallState>(Errors.ErrorPositiveInteger)
+			? ValueTask.FromResult<CallState>(ErrorMessages.Returns.PositiveInteger)
 			: ValueTask.FromResult<CallState>(MModule.substring(0, int.Min(strlen, str.Length), str));
 	}
 
-	[SharpFunction(Name = "ljust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill"])]
+	[SharpFunction(Name = "ljust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill", "truncate"])]
 	public static ValueTask<CallState> LeftJustifyString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = parser.CurrentState.Arguments["0"].Message!;
 		var width = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
 		var fill = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2,
 			MModule.single(" "));
+		var truncate = MModule.plainText(ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, MModule.single("")));
 
 		if (!int.TryParse(width, out var widthInt) || widthInt < 0)
 		{
-			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
+			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, PadType.Right,
-			TruncationType.Overflow));
+		var truncType = truncate == "1" ? TruncationType.Truncate : TruncationType.Overflow;
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, PadType.Right, truncType));
 	}
 
 	[SharpFunction(Name = "lpos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["target", "list", "delimiter"])]
@@ -1479,7 +1518,7 @@ public partial class Functions
 				|| firstInt < 0
 				|| !int.TryParse(length, out var lengthInt))
 		{
-			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
+			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
 
 		var strLength = str.Length;
@@ -1579,7 +1618,7 @@ public partial class Functions
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		return arg0.Length is > 1 or < 0
-			? new ValueTask<CallState>("#-1 ARGUMENT MUST BE A SINGLE CHARACTER")
+			? new ValueTask<CallState>(ErrorMessages.Returns.SingleCharArgument)
 			: ValueTask.FromResult<CallState>(arg0.EnumerateRunes().First().Value);
 	}
 
@@ -1589,7 +1628,7 @@ public partial class Functions
 		var numberArg = parser.CurrentState.Arguments["0"].Message!;
 
 		return !int.TryParse(numberArg.ToPlainText(), out var number)
-			? new ValueTask<CallState>(new CallState(Errors.ErrorInteger))
+			? new ValueTask<CallState>(new CallState(ErrorMessages.Returns.Integer))
 			: new ValueTask<CallState>(new CallState(number.ToOrdinalWords()));
 	}
 
@@ -1610,7 +1649,7 @@ public partial class Functions
 
 		if (!int.TryParse(repeatNumberStr.ToPlainText(), out var repeatNumber))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		var repeat = MModule.repeat(str, repeatNumber)!;
@@ -1625,7 +1664,7 @@ public partial class Functions
 
 		if (!int.TryParse(len, out var strlen) || strlen < 0)
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorPositiveInteger);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
 
 		var startPos = int.Max(0, str.Length - strlen);
@@ -1634,21 +1673,22 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MModule.substring(startPos, maxLength, str));
 	}
 
-	[SharpFunction(Name = "rjust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill"])]
+	[SharpFunction(Name = "rjust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill", "truncate"])]
 	public static ValueTask<CallState> RightJustifyString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = parser.CurrentState.Arguments["0"].Message!;
 		var width = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
 		var fill = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2,
 			MModule.single(" "));
+		var truncate = MModule.plainText(ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, MModule.single("")));
 
 		if (!int.TryParse(width, out var widthInt) || widthInt < 0)
 		{
-			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
+			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, PadType.Left,
-			TruncationType.Overflow));
+		var truncType = truncate == "1" ? TruncationType.Truncate : TruncationType.Overflow;
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, PadType.Left, truncType));
 	}
 
 	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -1675,7 +1715,7 @@ public partial class Functions
 
 		if (!int.TryParse(repeatNumberStr.ToPlainText(), out var repeatNumber) || repeatNumber < 0)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorPositiveInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
 		var repeat = MModule.repeat(MModule.single(" "), repeatNumber)!;
@@ -1689,7 +1729,7 @@ public partial class Functions
 
 		if (!decimal.TryParse(numberString.ToPlainText(), out var repeatNumber))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		var integral = (int)Math.Truncate(repeatNumber);
@@ -1882,7 +1922,7 @@ public partial class Functions
 
 		if (expandedFind.Length != expandedReplace.Length)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorStringLengthsMustBeEqual));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.StringLengthsMustBeEqual));
 		}
 
 		// Build translation map - later occurrences override earlier ones
@@ -2047,7 +2087,7 @@ public partial class Functions
 		if (!int.TryParse(width, out var widthInt)
 				|| !int.TryParse(firstLineWidth, out var firstLineInt))
 		{
-			return Errors.ErrorInteger;
+			return ErrorMessages.Returns.Integer;
 		}
 
 		var firstLine = MModule.substring(0, firstLineInt, str)!;
@@ -2077,7 +2117,7 @@ public partial class Functions
 		if (!int.TryParse(first, out var index)
 				|| !int.TryParse(len, out var length))
 		{
-			return Errors.ErrorInteger;
+			return ErrorMessages.Returns.Integer;
 		}
 
 		return MModule.remove(str, index, length);
@@ -2123,7 +2163,7 @@ public partial class Functions
 	{
 		// SHA-0 is deprecated and not supported in modern .NET/OpenSSL
 		// Return error message per PennMUSH documentation
-		return new ValueTask<CallState>(new CallState("#-1 NOT SUPPORTED"));
+		return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.ErrorNotSupported));
 	}
 
 	[GeneratedRegex(@"\w+")]

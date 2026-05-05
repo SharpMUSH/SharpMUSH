@@ -73,6 +73,9 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 			var parentObj = parent.Known.Object();
 			await foreach (var attr in GetAttributesForDbRef(parentObj.DBRef, request, cancellationToken))
 			{
+				// no_inherit flag prevents attribute from being visible to children
+				if (attr.Flags.Any(f => f.Name == "no_inherit"))
+					continue;
 				if (seen.Add(attr.LongName!))
 					yield return attr;
 			}

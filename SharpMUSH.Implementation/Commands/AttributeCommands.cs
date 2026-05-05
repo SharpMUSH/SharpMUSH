@@ -22,7 +22,7 @@ public partial class Commands
 		if (!args.TryGetValue("0", out var objAttrArg))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		// Parse object/attribute
@@ -32,7 +32,7 @@ public partial class Commands
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
-			return new CallState("#-1 INVALID FORMAT");
+			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
 		var (dbref, attrName) = details;
@@ -85,7 +85,7 @@ public partial class Commands
 		else
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgument), executor);
-			return new CallState("#-1 INVALID VALUE");
+			return new CallState(ErrorMessages.Returns.InvalidValue);
 		}
 
 		// Check permissions
@@ -133,7 +133,7 @@ public partial class Commands
 		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, "@cpattr");
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		// Parse source object/attribute
@@ -143,7 +143,7 @@ public partial class Commands
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
-			return new CallState("#-1 INVALID SOURCE");
+			return new CallState(ErrorMessages.Returns.InvalidSource);
 		}
 
 		var (sourceDbref, sourceAttr) = sourceDetails;
@@ -245,7 +245,7 @@ public partial class Commands
 		else
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeAny), executor);
-			return new CallState("#-1 COPY FAILED");
+			return new CallState(ErrorMessages.Returns.CopyFailed);
 		}
 
 		return new CallState(string.Empty);
@@ -263,7 +263,7 @@ public partial class Commands
 		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgumentsToCommandFormat), executor, "@mvattr");
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		// Parse source object/attribute
@@ -273,7 +273,7 @@ public partial class Commands
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
-			return new CallState("#-1 INVALID SOURCE");
+			return new CallState(ErrorMessages.Returns.InvalidSource);
 		}
 
 		var (sourceDbref, sourceAttr) = sourceDetails;
@@ -387,7 +387,7 @@ public partial class Commands
 		else
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToMoveAttributeAny), executor);
-			return new CallState("#-1 MOVE FAILED");
+			return new CallState(ErrorMessages.Returns.MoveFailed);
 		}
 
 		return new CallState(string.Empty);
@@ -403,7 +403,7 @@ public partial class Commands
 		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var ownerArg))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
-			return new CallState("#-1 INVALID ARGUMENTS");
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		// Parse object/attribute
@@ -413,7 +413,7 @@ public partial class Commands
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
-			return new CallState("#-1 INVALID FORMAT");
+			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
 		var (dbref, attrName) = details;
@@ -502,7 +502,7 @@ public partial class Commands
 		if (setResult.IsT1)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToChangeOwnershipFormat), executor, setResult.AsT1.Value);
-			return new CallState("#-1 FAILED");
+			return new CallState(ErrorMessages.Returns.Failed);
 		}
 
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeOwnerChanged), executor);
@@ -528,7 +528,7 @@ public partial class Commands
 		if (!split.TryPickT0(out var details, out _))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
-			return new CallState("#-1 INVALID OBJECT");
+			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
 
 		var (dbref, maybeAttribute) = details;
@@ -560,7 +560,7 @@ public partial class Commands
 		if (isSafe)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectIsProtectedSafe), executor);
-			return new CallState("#-1 SAFE");
+			return new CallState(ErrorMessages.Returns.Safe);
 		}
 
 		// If no attribute pattern specified, wipe all attributes

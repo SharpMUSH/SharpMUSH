@@ -24,7 +24,7 @@ public partial class Functions
 				!await executor.IsRoyalty() &&
 				!await executor.IsSee_All())
 		{
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (!Configuration!.CurrentValue.Log.UseConnLog)
@@ -53,7 +53,7 @@ public partial class Functions
 
 		if (searchType != "ip" && searchType != "hostname")
 		{
-			return new CallState("#-1 INVALID SEARCH TYPE");
+			return new CallState(ErrorMessages.Returns.InvalidSearchType);
 		}
 
 		var logs = Mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
@@ -127,7 +127,7 @@ public partial class Functions
 			arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
-			return new CallState(maybeLocate.IsNone ? Errors.ErrorCantSeeThat : maybeLocate.AsError.Value);
+			return new CallState(maybeLocate.IsNone ? ErrorMessages.Returns.CantSeeThat : maybeLocate.AsError.Value);
 		}
 
 		var located = maybeLocate.AsPlayer;
@@ -156,7 +156,7 @@ public partial class Functions
 
 		if (filter != "all" && filter != "logged in" && filter != "not logged in" && !filter.StartsWith("#"))
 		{
-			return new CallState("#-1 INVALID FILTER");
+			return new CallState(ErrorMessages.Returns.InvalidFilter);
 		}
 
 		var osep = "|";
@@ -173,7 +173,7 @@ public partial class Functions
 		{
 			if (i + 1 > lastArgIndex)
 			{
-				return new CallState("#-1 INVALID SPEC PAIR");
+				return new CallState(ErrorMessages.Returns.InvalidSpecPair);
 			}
 
 			var specType = args[i.ToString()].Message!.ToPlainText().ToLower();
@@ -182,7 +182,7 @@ public partial class Functions
 			if (specType != "after" && specType != "before" && specType != "ip" &&
 					specType != "hostname" && specType != "count")
 			{
-				return new CallState("#-1 INVALID SPEC TYPE");
+				return new CallState(ErrorMessages.Returns.InvalidSpecType);
 			}
 
 			specs.Add((specType, specValue));
@@ -292,7 +292,7 @@ public partial class Functions
 			: " ";
 		if (string.IsNullOrWhiteSpace(connectionId))
 		{
-			return new CallState("#-1 INVALID CONNECTION ID");
+			return new CallState(ErrorMessages.Returns.InvalidConnectionId);
 		}
 
 		var logs = Mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
@@ -328,7 +328,7 @@ public partial class Functions
 			// If iteration fails, return not found
 		}
 
-		return new CallState("#-1 CONNECTION NOT FOUND");
+		return new CallState(ErrorMessages.Returns.ConnectionNotFound);
 	}
 
 	[SharpFunction(Name = "doing", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -399,7 +399,7 @@ public partial class Functions
 
 			if (!await CanAccessConnectionData(executor, data.Ref))
 			{
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			return new CallState(data.HostName);
@@ -415,7 +415,7 @@ public partial class Functions
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
@@ -486,7 +486,7 @@ public partial class Functions
 
 			if (!await CanAccessConnectionData(executor, data.Ref))
 			{
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			return new CallState(data.InternetProtocolAddress);
@@ -502,7 +502,7 @@ public partial class Functions
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
@@ -520,7 +520,7 @@ public partial class Functions
 
 		if (!await executor.IsSee_All())
 		{
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var viewer = executor;
@@ -546,7 +546,7 @@ public partial class Functions
 			status = args["1"].Message!.ToPlainText().ToLower();
 			if (status != "all" && status != "online" && status != "offline")
 			{
-				return new CallState("#-1 INVALID SECOND ARGUMENT");
+				return new CallState(ErrorMessages.Returns.InvalidSecondArgument);
 			}
 		}
 
@@ -608,20 +608,20 @@ public partial class Functions
 
 		if (arg1.Length > 1)
 		{
-			return "#-1 INVALID SECOND ARGUMENT";
+			return ErrorMessages.Returns.InvalidSecondArgument;
 		}
 
 		var status = arg1.First();
 		if (!((string[])["online", "offline", "all"]).Contains(status))
 		{
-			return "#-1 INVALID SECOND ARGUMENT";
+			return ErrorMessages.Returns.InvalidSecondArgument;
 		}
 
 		// Check if looker has See_All permission for offline/all status
 		var hasSeeAll = await looker.IsSee_All();
 		if ((status == "offline" || status == "all") && !hasSeeAll)
 		{
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		// Get connected player DBRefs
@@ -694,20 +694,20 @@ public partial class Functions
 
 		if (arg1.Length > 1)
 		{
-			return "#-1 INVALID SECOND ARGUMENT";
+			return ErrorMessages.Returns.InvalidSecondArgument;
 		}
 
 		var status = arg1.First();
 		if (!((string[])["online", "offline", "all"]).Contains(status))
 		{
-			return "#-1 INVALID SECOND ARGUMENT";
+			return ErrorMessages.Returns.InvalidSecondArgument;
 		}
 
 		// Check if looker has See_All permission for offline/all status
 		var hasSeeAll = await looker.IsSee_All();
 		if ((status == "offline" || status == "all") && !hasSeeAll)
 		{
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		// Get connected player DBRefs
@@ -857,7 +857,7 @@ public partial class Functions
 
 			if (!await CanAccessConnectionData(executor, data.Ref))
 			{
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			return new CallState(data.Metadata.GetValueOrDefault("RECV", "0"));
@@ -873,7 +873,7 @@ public partial class Functions
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
@@ -898,7 +898,7 @@ public partial class Functions
 
 			if (!await CanAccessConnectionData(executor, data.Ref))
 			{
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			return new CallState(data.Metadata.GetValueOrDefault("SENT", "0"));
@@ -914,7 +914,7 @@ public partial class Functions
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
@@ -941,7 +941,7 @@ public partial class Functions
 			{
 				if (!await executor.IsSee_All())
 				{
-					return new CallState(Errors.ErrorPerm);
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
 				}
 			}
 
@@ -959,7 +959,7 @@ public partial class Functions
 
 		if (located.Object.DBRef != executor.Object().DBRef && !await executor.IsSee_All())
 		{
-			return new CallState(Errors.ErrorPerm);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
@@ -1053,12 +1053,12 @@ public partial class Functions
 
 		if (!int.TryParse(arg0, out var start) || !int.TryParse(arg1, out var count))
 		{
-			return new CallState(Errors.ErrorIntegers);
+			return new CallState(ErrorMessages.Returns.Integers);
 		}
 
 		if (start < 1 || count < 0)
 		{
-			return new CallState(Errors.ErrorArgRange);
+			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
 		var allDbrefs = ConnectionService!
@@ -1081,12 +1081,12 @@ public partial class Functions
 
 		if (!int.TryParse(arg0, out var start) || !int.TryParse(arg1, out var count))
 		{
-			return new CallState(Errors.ErrorIntegers);
+			return new CallState(ErrorMessages.Returns.Integers);
 		}
 
 		if (start < 1 || count < 0)
 		{
-			return new CallState(Errors.ErrorArgRange);
+			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
 		var allObjIds = ConnectionService!
@@ -1128,7 +1128,7 @@ public partial class Functions
 			if (!int.TryParse(args["1"].Message!.ToPlainText(), out start) ||
 					!int.TryParse(args["2"].Message!.ToPlainText(), out count))
 			{
-				return new CallState(Errors.ErrorIntegers);
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
 		}
 		else
@@ -1137,13 +1137,13 @@ public partial class Functions
 			if (!int.TryParse(args["0"].Message!.ToPlainText(), out start) ||
 					!int.TryParse(args["1"].Message!.ToPlainText(), out count))
 			{
-				return new CallState(Errors.ErrorIntegers);
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
 		}
 
 		if (start < 1 || count < 0)
 		{
-			return new CallState(Errors.ErrorArgRange);
+			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
 		var allDbrefs = ConnectionService!
@@ -1185,7 +1185,7 @@ public partial class Functions
 			if (!int.TryParse(args["1"].Message!.ToPlainText(), out start) ||
 					!int.TryParse(args["2"].Message!.ToPlainText(), out count))
 			{
-				return new CallState(Errors.ErrorIntegers);
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
 		}
 		else
@@ -1194,13 +1194,13 @@ public partial class Functions
 			if (!int.TryParse(args["0"].Message!.ToPlainText(), out start) ||
 					!int.TryParse(args["1"].Message!.ToPlainText(), out count))
 			{
-				return new CallState(Errors.ErrorIntegers);
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
 		}
 
 		if (start < 1 || count < 0)
 		{
-			return new CallState(Errors.ErrorArgRange);
+			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
 		var allObjIds = ConnectionService!
@@ -1234,7 +1234,7 @@ public partial class Functions
 			// Check if executor passes the zone lock
 			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
 			{
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 		}
 
@@ -1296,7 +1296,7 @@ public partial class Functions
 			// Check if executor passes the zone lock
 			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
 			{
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 		}
 
@@ -1358,7 +1358,7 @@ public partial class Functions
 			// Check if executor passes the zone lock
 			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
 			{
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 		}
 
@@ -1423,7 +1423,7 @@ public partial class Functions
 		{
 			if (!await executor.IsSee_All())
 			{
-				return new CallState(Errors.ErrorPerm);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 		}
 
@@ -1442,7 +1442,7 @@ public partial class Functions
 
 		if (!long.TryParse(portString, out var port))
 		{
-			return new CallState("#-1 INVALID PORT");
+			return new CallState(ErrorMessages.Returns.InvalidPort);
 		}
 
 		var data = ConnectionService!.Get(port);
@@ -1455,11 +1455,11 @@ public partial class Functions
 		if (await executor.IsWizard() || await executor.IsRoyalty() || await executor.IsSee_All())
 		{
 			return data is null
-				? new CallState("#-1 INVALID PORT")
+				? new CallState(ErrorMessages.Returns.InvalidPort)
 				: new CallState($"#{data.Ref?.Number}");
 		}
 
-		return new CallState(Errors.ErrorPerm);
+		return new CallState(ErrorMessages.Returns.PermissionDenied);
 	}
 
 	[SharpFunction(Name = "height", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

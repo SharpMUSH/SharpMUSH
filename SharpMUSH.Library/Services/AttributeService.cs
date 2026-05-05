@@ -36,7 +36,7 @@ public class AttributeService(
 
 		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		Func<AnySharpObject, AnySharpObject, SharpAttribute[], ValueTask<bool>> permissionPredicate = mode switch
@@ -49,9 +49,9 @@ public class AttributeService(
 		};
 		var permissionFailureType = mode switch
 		{
-			IAttributeService.AttributeMode.Read => Errors.ErrorAttrPermissions,
-			IAttributeService.AttributeMode.Execute => Errors.ErrorAttrEvalPermissions,
-			IAttributeService.AttributeMode.Set => Errors.ErrorAttrSetPermissions,
+			IAttributeService.AttributeMode.Read => ErrorMessages.Returns.AttrPermissions,
+			IAttributeService.AttributeMode.Execute => ErrorMessages.Returns.AttrEvalPermissions,
+			IAttributeService.AttributeMode.Set => ErrorMessages.Returns.AttrSetPermissions,
 			IAttributeService.AttributeMode.SystemSet => string.Empty,
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
@@ -77,7 +77,7 @@ public class AttributeService(
 	{
 		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var attributePath = attribute.Split('`');
@@ -90,8 +90,8 @@ public class AttributeService(
 		};
 		var permissionFailureType = mode switch
 		{
-			IAttributeService.AttributeMode.Read => Errors.ErrorAttrPermissions,
-			IAttributeService.AttributeMode.Execute => Errors.ErrorAttrEvalPermissions,
+			IAttributeService.AttributeMode.Read => ErrorMessages.Returns.AttrPermissions,
+			IAttributeService.AttributeMode.Execute => ErrorMessages.Returns.AttrEvalPermissions,
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
 
@@ -116,7 +116,7 @@ public class AttributeService(
 	{
 		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
 		{
-			return MModule.single(Errors.ErrorObjectAttributeString);
+			return MModule.single(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var realExecutor = executor;
@@ -161,7 +161,7 @@ public class AttributeService(
 		if (depth > configuration.CurrentValue.Limit.FunctionRecursionLimit)
 		{
 			limitExceeded.IsExceeded = true;
-			return MModule.single(Errors.ErrorRecursion);
+			return MModule.single(ErrorMessages.Returns.Recursion);
 		}
 
 		try
@@ -243,7 +243,7 @@ public class AttributeService(
 		if (!applyPredicate && !lambdaPredicate &&
 		    !await validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None()))
 		{
-			return MModule.single(Errors.ErrorObjectAttributeString);
+			return MModule.single(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var realExecutor = executor;
@@ -264,7 +264,7 @@ public class AttributeService(
 			if (!string.IsNullOrWhiteSpace(applyArgCountStr) && !int.TryParse(applyArgCountStr, out argN))
 			{
 				// Invalid argument count in #apply 
-				return MModule.single(string.Format(Errors.ErrorBadArgumentFormat, "#APPLY"));
+				return MModule.single(string.Format(ErrorMessages.Returns.BadArgumentFormat, "#APPLY"));
 			}
 
 			var slimArgs = Enumerable
@@ -280,19 +280,19 @@ public class AttributeService(
 				// Check wizard/admin/god restrictions
 				if (functionFlags.HasFlag(FunctionFlags.GodOnly) && !await realExecutor.IsRoyalty())
 				{
-					return MModule.single(Errors.ErrorAttrEvalPermissions);
+					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 				if (functionFlags.HasFlag(FunctionFlags.AdminOnly) && !await realExecutor.IsRoyalty())
 				{
-					return MModule.single(Errors.ErrorAttrEvalPermissions);
+					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 				if (functionFlags.HasFlag(FunctionFlags.WizardOnly) && !await realExecutor.IsWizard())
 				{
-					return MModule.single(Errors.ErrorAttrEvalPermissions);
+					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 				if (functionFlags.HasFlag(FunctionFlags.NoGuest) && await realExecutor.IsGuest())
 				{
-					return MModule.single(Errors.ErrorAttrEvalPermissions);
+					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 
 				// Check custom restrictions
@@ -302,7 +302,7 @@ public class AttributeService(
 						.AnyAsync(async (restriction, _) => await realExecutor.HasPower(restriction));
 					if (!hasRestriction)
 					{
-						return MModule.single(Errors.ErrorAttrEvalPermissions);
+						return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
 					}
 				}
 
@@ -428,12 +428,37 @@ public class AttributeService(
 		var attributes = mediator.CreateStream(
 			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
-		// Filter based on permissions and return sorted results
-		// Permission check is done per-attribute for fine-grained access control
-		return await attributes
-			.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+		// For non-privileged viewers, collect mortal_dark attribute names to filter their children
+		var isPrivileged = executor.IsGod() || await executor.IsWizard();
+
+		if (isPrivileged)
+		{
+			return await attributes
+				.OrderBy(x => x.LongName, _attributeSort)
+				.ToArrayAsync();
+		}
+
+		// Filter based on permissions and exclude children of mortal_dark attributes
+		var results = await attributes.ToArrayAsync();
+		var darkPrefixes = results
+			.Where(x => x.IsMortalDark())
+			.Select(x => x.LongName + "`")
+			.ToArray();
+
+		var filtered = results
+			.Where(x => !x.IsMortalDark()
+			             && !darkPrefixes.Any(dp => (x.LongName ?? "").StartsWith(dp, StringComparison.OrdinalIgnoreCase)));
+
+		var permitted = new List<SharpAttribute>();
+		foreach (var attr in filtered)
+		{
+			if (await ps.CanViewAttribute(executor, obj, attr))
+				permitted.Add(attr);
+		}
+
+		return permitted
 			.OrderBy(x => x.LongName, _attributeSort)
-			.ToArrayAsync();
+			.ToArray();
 	}
 
 	/// <summary>
@@ -445,7 +470,7 @@ public class AttributeService(
 	/// <param name="checkParents">Whether to check parent objects</param>
 	/// <param name="mode">Pattern matching mode</param>
 	/// <returns>Lazy enumerable of matching attributes</returns>
-	public LazySharpAttributesOrError LazilyGetAttributePatternAsync(AnySharpObject executor,
+	public async ValueTask<LazySharpAttributesOrError> LazilyGetAttributePatternAsync(AnySharpObject executor,
 		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
@@ -453,11 +478,37 @@ public class AttributeService(
 		var attributes = mediator.CreateStream(
 			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
-		// Return lazy-evaluated, permission-filtered, sorted results
-		return LazySharpAttributesOrError
-			.FromAsync(attributes
-				.OrderBy(x => x.LongName, _attributeSort)
-				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
+		var isPrivileged = executor.IsGod() || await executor.IsWizard();
+
+		if (isPrivileged)
+		{
+			return LazySharpAttributesOrError
+				.FromAsync(attributes.OrderBy(x => x.LongName, _attributeSort));
+		}
+
+		// For non-privileged, materialize to filter mortal_dark descendants
+		return LazySharpAttributesOrError.FromAsync(FilterLazyAttributes(executor, obj, attributes));
+	}
+
+	private async IAsyncEnumerable<LazySharpAttribute> FilterLazyAttributes(
+		AnySharpObject executor, AnySharpObject obj, IAsyncEnumerable<LazySharpAttribute> attributes)
+	{
+		var results = await attributes.ToArrayAsync();
+		var darkPrefixes = results
+			.Where(x => x.IsMortalDark())
+			.Select(x => x.LongName + "`")
+			.ToArray();
+
+		var filtered = results
+			.Where(x => !x.IsMortalDark()
+			             && !darkPrefixes.Any(dp => (x.LongName ?? "").StartsWith(dp, StringComparison.OrdinalIgnoreCase)))
+			.OrderBy(x => x.LongName, _attributeSort);
+
+		foreach (var attr in filtered)
+		{
+			if (await ps.CanViewAttribute(executor, obj, attr))
+				yield return attr;
+		}
 	}
 
 	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
@@ -471,13 +522,20 @@ public class AttributeService(
 
 		if (returnedAttribute.IsNone)
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
-		var returnedFlag = await allFlags
-			.FirstOrDefaultAsync(x => x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
+		var flagList = await allFlags.ToArrayAsync();
+		var returnedFlag = flagList
+			.FirstOrDefault(x => x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
 				|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
+
+		// PennMUSH-compatible prefix matching: "wiz" matches "wizard"
+		returnedFlag ??= flagList
+			.Where(x => x.Name.StartsWith(flag, StringComparison.OrdinalIgnoreCase))
+			.OrderBy(x => x.Name.Length)
+			.FirstOrDefault();
 
 		if (returnedFlag is null)
 		{
@@ -513,7 +571,7 @@ public class AttributeService(
 
 		if (returnedAttribute.IsNone)
 		{
-			return new Error<string>(Errors.ErrorObjectAttributeString);
+			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
@@ -551,7 +609,7 @@ public class AttributeService(
 	{
 		if (!await ps.Controls(executor, obj))
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		var attrPath = attribute.Split('`');
@@ -564,7 +622,31 @@ public class AttributeService(
 
 		if (!permission)
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+		}
+
+		// If the target attribute doesn't exist yet (creating new), we still need to check
+		// permissions on the existing ancestor path. The stream above yields nothing when
+		// the full path doesn't exist (count != attribute.Length check in GetAttributeAsync).
+		// Check each existing prefix of the path.
+		if (attrPath.Length > 1)
+		{
+			for (var i = attrPath.Length - 1; i >= 1; i--)
+			{
+				var prefix = attrPath[..i];
+				var prefixAttr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, prefix));
+				var prefixPermission = await prefixAttr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
+				if (!prefixPermission)
+				{
+					return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+				}
+				// If prefix stream returned results, we found existing ancestors — done checking
+				var prefixCheck = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, prefix));
+				if (await prefixCheck.AnyAsync())
+				{
+					break;
+				}
+			}
 		}
 
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
@@ -592,7 +674,7 @@ public class AttributeService(
 
 		if (!await ps.Controls(executor, obj))
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
@@ -602,7 +684,7 @@ public class AttributeService(
 		if (attrArr.Length == 0
 				|| !await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
 		{
-			return new Error<string>(Errors.ErrorAttrSetPermissions);
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		// For wildcard patterns (used by @wipe), use WipeAttributeCommand to fully delete the

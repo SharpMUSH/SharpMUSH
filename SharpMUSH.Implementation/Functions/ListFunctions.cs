@@ -77,12 +77,12 @@ public partial class Functions
 
 		if (!int.TryParse(first, out var firstNumber))
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "FIRST (arg 2)"));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "FIRST (arg 2)"));
 		}
 
 		if (!int.TryParse(length, out var lengthNumber))
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "LENGTH (arg 3)"));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "LENGTH (arg 3)"));
 		}
 
 		var list = MModule.splitList(delimiter, listArg);
@@ -128,7 +128,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -157,7 +157,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -219,7 +219,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -248,7 +248,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -384,7 +384,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -413,7 +413,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -491,12 +491,12 @@ public partial class Functions
 
 		if (!int.TryParse(firstArg, out var first))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		if (!int.TryParse(lengthArg, out var length))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		var list = MModule.splitList(delimiter, listArg);
@@ -620,7 +620,7 @@ public partial class Functions
 
 		if (iterNumber >= maxCount)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 		}
 
 		parser.CurrentState.IterationRegisters.ElementAt(maxCount - iterNumber - 1).Break = true;
@@ -647,19 +647,19 @@ public partial class Functions
 			// "L" refers to the outermost iteration
 			if (maxCount == 0)
 			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 			}
 			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Iteration));
 		}
 
 		if (!int.TryParse(levelArg, out var level))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		if (level < 0 || level >= maxCount)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 		}
 
 		// Level 0 = current, 1 = parent, etc.
@@ -738,7 +738,7 @@ public partial class Functions
 		var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -767,7 +767,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -901,7 +901,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -930,7 +930,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -1006,7 +1006,7 @@ public partial class Functions
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
-				return new CallState(Errors.ErrorObjectAttributeString);
+				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 			}
 
 			var (dbref, attrName) = objAttr.AsT0;
@@ -1035,7 +1035,7 @@ public partial class Functions
 
 			if (maybeAttr.IsNone)
 			{
-				return new CallState(Errors.ErrorNoSuchAttribute);
+				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 			}
 
 			if (maybeAttr.IsError)
@@ -1171,7 +1171,7 @@ public partial class Functions
 
 		if (!int.TryParse(countArg, out var count))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		var list = MModule.splitList(delimiter, listArg);
@@ -1373,7 +1373,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -1402,7 +1402,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -1493,7 +1493,7 @@ public partial class Functions
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
-				return new CallState(Errors.ErrorObjectAttributeString);
+				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 			}
 
 			var (dbref, attrName) = objAttr.AsT0;
@@ -1522,7 +1522,7 @@ public partial class Functions
 
 			if (maybeAttr.IsNone)
 			{
-				return new CallState(Errors.ErrorNoSuchAttribute);
+				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 			}
 
 			if (maybeAttr.IsError)
@@ -1581,7 +1581,7 @@ public partial class Functions
 
 		if (list.Length != list2.Length)
 		{
-			return ValueTask.FromResult(new CallState("#-1 NUMBER OF WORDS MUST BE EQUAL"));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOfWordsMustBeEqual));
 		}
 
 		// Each pair uses delimiter as the within-pair separator.
@@ -1607,7 +1607,7 @@ public partial class Functions
 		var stepArg = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 		if (!int.TryParse(stepArg, out var step) || step < 1 || step > 30)
 		{
-			return new CallState(Errors.ErrorInteger);
+			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MModule.single(" "));
@@ -1634,7 +1634,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -1663,7 +1663,7 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
+			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		}
 
 		if (maybeAttr.IsError)
@@ -1732,22 +1732,27 @@ public partial class Functions
 	[SharpFunction(Name = "strallof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]
 	public static ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
+		var args = parser.CurrentState.ArgumentsOrdered;
 
-		// If single argument, just return it as-is
-		if (orderedArgs.Count == 1)
+		// strallof(expr1, expr2, ..., exprN, delimiter):
+		// Last arg is output delimiter. Return all non-empty results joined by it.
+		if (args.Count < 2)
 		{
-			return ValueTask.FromResult(new CallState(orderedArgs["0"].Message));
+			return ValueTask.FromResult(CallState.Empty);
 		}
 
-		// Original multi-argument logic: join all but last with last as delimiter
-		var allOf = Enumerable.SkipLast(orderedArgs, 1)
-			.Select(x => x.Value.Message!)
-			.Where(x => !string.IsNullOrEmpty(x.ToPlainText()));
-		var result = MModule.multipleWithDelimiter(
-			orderedArgs.Last().Value.Message!,
-			allOf);
-		return ValueTask.FromResult(new CallState(result));
+		var delimiter = MModule.plainText(args[(args.Count - 1).ToString()].Message);
+		var nonEmptyValues = new List<string>();
+		for (var i = 0; i < args.Count - 1; i++)
+		{
+			var value = MModule.plainText(args[i.ToString()].Message);
+			if (!string.IsNullOrEmpty(value))
+			{
+				nonEmptyValues.Add(value);
+			}
+		}
+
+		return ValueTask.FromResult(new CallState(string.Join(delimiter, nonEmptyValues)));
 	}
 
 	[SharpFunction(Name = "table", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "width", "delimiter", "line-delimiter"])]
@@ -1771,18 +1776,18 @@ public partial class Functions
 
 		if (!int.TryParse(fieldWidthArg, out var fieldWidth))
 		{
-			return new CallState("#-1 INVALID FIELD WIDTH");
+			return new CallState(ErrorMessages.Returns.InvalidFieldWidth);
 		}
 
 		if (!int.TryParse(lineWidthArg, out var lineWidth))
 		{
-			return new CallState("#-1 INVALID LINE WIDTH");
+			return new CallState(ErrorMessages.Returns.InvalidLineWidth);
 		}
 
 		var fieldsPerLine = lineWidth / fieldWidth;
 		if (fieldsPerLine < 1)
 		{
-			return new CallState("#-1 FIELD WIDTH EXCEEDS LINE WIDTH");
+			return new CallState(ErrorMessages.Returns.FieldWidthExceedsLineWidth);
 		}
 		var list = MModule.splitList(delimiterArg, listArg);
 		var resultFields = list.Select(x =>
@@ -1859,7 +1864,7 @@ public partial class Functions
 
 		if (!int.TryParse(numberArg, out var number))
 		{
-			return new CallState(Errors.ErrorUInteger);
+			return new CallState(ErrorMessages.Returns.PositiveInteger);
 		}
 
 		var list = MModule.splitList(delimiter, listArg);
@@ -1867,7 +1872,7 @@ public partial class Functions
 
 		if (number > lengths.Sum())
 		{
-			return new CallState("#-1 WORD NUMBER OUT OF RANGE");
+			return new CallState(ErrorMessages.Returns.WordNumberOutOfRange);
 		}
 
 		var i = 0;
@@ -1897,7 +1902,7 @@ public partial class Functions
 
 		if (!int.TryParse(positionArg, out var position))
 		{
-			return new CallState(Errors.ErrorInteger);
+			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
 		var listItems = MModule.splitList(delimiter, listArg).ToList();
@@ -1967,6 +1972,8 @@ public partial class Functions
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		// PennMUSH: empty delimiter arg means use space (default)
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
@@ -1974,8 +1981,9 @@ public partial class Functions
 		var aList2 = MModule.splitList(delimiter, list2);
 
 		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
+		var comparer = SortService.GetEqualityComparer(sortTypeType);
 		var sorted = SortService.Sort(Enumerable.DistinctBy(aList1
-			.Concat(aList2), MModule.plainText), (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
+			.Concat(aList2), MModule.plainText, comparer), (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
 	}
@@ -1987,18 +1995,22 @@ public partial class Functions
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		// PennMUSH: empty delimiter arg means use space (default)
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
 		var aList1 = MModule.splitList(delimiter, list1);
 		var aList2 = MModule.splitList(delimiter, list2);
-		var set2 = new HashSet<string>(aList2.Select(MModule.plainText));
+
+		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
+		var comparer = SortService.GetEqualityComparer(sortTypeType);
+		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
 
 		// Elements in list1 that aren't in list2
 		var difference = aList1.Where(x => !set2.Contains(MModule.plainText(x)));
 
-		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = SortService.Sort(Enumerable.DistinctBy(difference, MModule.plainText),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(difference, MModule.plainText, comparer),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
@@ -2011,18 +2023,22 @@ public partial class Functions
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		// PennMUSH: empty delimiter arg means use space (default)
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
 		var aList1 = MModule.splitList(delimiter, list1);
 		var aList2 = MModule.splitList(delimiter, list2);
-		var set2 = new HashSet<string>(aList2.Select(MModule.plainText));
+
+		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
+		var comparer = SortService.GetEqualityComparer(sortTypeType);
+		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
 
 		// Elements that appear in both lists
 		var intersection = aList1.Where(x => set2.Contains(MModule.plainText(x)));
 
-		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = SortService.Sort(Enumerable.DistinctBy(intersection, MModule.plainText),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(intersection, MModule.plainText, comparer),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
@@ -2035,20 +2051,24 @@ public partial class Functions
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		// PennMUSH: empty delimiter arg means use space (default)
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
 		var aList1 = MModule.splitList(delimiter, list1);
 		var aList2 = MModule.splitList(delimiter, list2);
-		var set1 = new HashSet<string>(aList1.Select(MModule.plainText));
-		var set2 = new HashSet<string>(aList2.Select(MModule.plainText));
+
+		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
+		var comparer = SortService.GetEqualityComparer(sortTypeType);
+		var set1 = new HashSet<string>(aList1.Select(MModule.plainText), comparer);
+		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
 
 		// Elements that appear in only one of the lists
 		var symdiff = aList1.Where(x => !set2.Contains(MModule.plainText(x)))
 			.Concat(aList2.Where(x => !set1.Contains(MModule.plainText(x))));
 
-		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = SortService.Sort(Enumerable.DistinctBy(symdiff, MModule.plainText),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(symdiff, MModule.plainText, comparer),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));

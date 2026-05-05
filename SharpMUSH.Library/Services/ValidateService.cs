@@ -37,7 +37,7 @@ public partial class ValidateService(
 			IValidateService.ValidationType.PlayerAlias when target is { IsT0: true }
 				=> ValidatePlayerAlias(value, target.AsT0),
 			IValidateService.ValidationType.AttributeName
-				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
+				=> ValidateAttributeName(value.ToPlainText()),
 			IValidateService.ValidationType.AttributeValue when target is { IsT1: true }
 				=> ValidateAttributeValue(value, target.AsT1),
 			IValidateService.ValidationType.AttributeValue
@@ -218,6 +218,16 @@ public partial class ValidateService(
 
 		return false;
 	}
+
+	/// <summary>
+	/// Validates an attribute name: must match the character set regex AND must not have
+	/// backticks at the start/end or consecutive backticks (PennMUSH parity).
+	/// </summary>
+	private static bool ValidateAttributeName(string name) =>
+		ValidAttributeNameRegex().IsMatch(name)
+		&& !name.StartsWith('`')
+		&& !name.EndsWith('`')
+		&& !name.Contains("``");
 
 	[GeneratedRegex("^[!\"#%&\\(\\)\\+,\\-\\./0-9A-Za-z:;\\<\\>=\\?@`_]+$")]
 	private static partial Regex ValidAttributeNameRegex();

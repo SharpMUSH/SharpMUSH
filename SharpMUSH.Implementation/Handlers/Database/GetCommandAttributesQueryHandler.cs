@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using System.Text.RegularExpressions;
@@ -9,19 +10,100 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 /// <summary>
 /// Handler that builds command attribute cache by scanning object attributes once
 /// and pre-compiling all regex patterns. Results are cached automatically by QueryCachingBehavior.
+/// Traverses parent chain for inherited $commands (respecting no_inherit and tree-level no_command).
 /// </summary>
 public class GetCommandAttributesQueryHandler : IQueryHandler<GetCommandAttributesQuery, CommandAttributeCache[]>
 {
 	public async ValueTask<CommandAttributeCache[]> Handle(GetCommandAttributesQuery request, CancellationToken cancellationToken)
 	{
 		var sharpObj = request.SharpObject;
-		var attributes = sharpObj.Object().AllAttributes.Value;
 		var commandAttributes = new List<CommandAttributeCache>();
+		var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		var noCommandPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-		await foreach (var attr in attributes.WithCancellation(cancellationToken))
+		// Scan local attributes first
+		await ScanAttributes(sharpObj.Object().AllAttributes.Value, commandAttributes, seenNames,
+			noCommandPrefixes, isLocal: true, cancellationToken);
+
+		// Walk parent chain for inherited commands
+		var current = sharpObj.Object();
+		while (true)
 		{
-			// Skip attributes with NO_COMMAND flag
-			if (attr.Flags.Any(flag => flag.Name == "NO_COMMAND"))
+			var parent = await current.Parent.WithCancellation(cancellationToken);
+			if (parent.IsNone) break;
+
+			var parentObj = parent.Known.Object();
+			await ScanAttributes(parentObj.AllAttributes.Value, commandAttributes, seenNames,
+				noCommandPrefixes, isLocal: false, cancellationToken);
+
+			current = parentObj;
+		}
+
+		return [.. commandAttributes];
+	}
+
+	private static async ValueTask ScanAttributes(
+		IAsyncEnumerable<SharpAttribute> attributes,
+		List<CommandAttributeCache> commandAttributes,
+		HashSet<string> seenNames,
+		HashSet<string> noCommandPrefixes,
+		bool isLocal,
+		CancellationToken cancellationToken)
+	{
+		// Collect all attributes first so we can do proper tree-level flag checks
+		// regardless of enumeration order.
+		var attrList = new List<SharpAttribute>();
+		await foreach (var attr in attributes.WithCancellation(cancellationToken))
+			attrList.Add(attr);
+
+		// Build no_inherit prefixes (only matters for parent attrs)
+		var noInheritPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		if (!isLocal)
+		{
+			foreach (var attr in attrList)
+			{
+				if (attr.Flags.Any(f => f.Name == "no_inherit"))
+					noInheritPrefixes.Add((attr.LongName ?? "") + "`");
+			}
+		}
+
+		// Build no_command prefixes from this object's attrs
+		var localNoCommandPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var attr in attrList)
+		{
+			if (attr.Flags.Any(flag => flag.Name == "no_command"))
+				localNoCommandPrefixes.Add((attr.LongName ?? "") + "`");
+		}
+
+		foreach (var attr in attrList)
+		{
+			var longName = attr.LongName ?? "";
+
+			// Skip if no_inherit (or descendant of no_inherit) and we're looking at parent attributes
+			if (!isLocal)
+			{
+				if (attr.Flags.Any(f => f.Name == "no_inherit"))
+					continue;
+				if (noInheritPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+					continue;
+			}
+
+			// Track names we've already processed (child overrides parent)
+			if (!seenNames.Add(longName))
+				continue;
+
+			// Check if this attribute has no_command flag
+			if (attr.Flags.Any(flag => flag.Name == "no_command"))
+			{
+				// Block this attribute AND all tree descendants (propagate to cross-object noCommandPrefixes)
+				noCommandPrefixes.Add(longName + "`");
+				continue;
+			}
+
+			// Check if blocked by ancestor's no_command (tree-level blocking) — both local and cross-object
+			if (noCommandPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+				continue;
+			if (localNoCommandPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 				continue;
 
 			var plainValue = attr.Value.ToPlainText();
@@ -58,7 +140,5 @@ public class GetCommandAttributesQueryHandler : IQueryHandler<GetCommandAttribut
 				continue;
 			}
 		}
-
-		return [.. commandAttributes];
 	}
 }

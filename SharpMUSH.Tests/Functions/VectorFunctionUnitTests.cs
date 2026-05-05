@@ -25,7 +25,7 @@ public class VectorFunctionUnitTests
 	[Arguments("vmag(0 0)", "0")]
 	[Arguments("vmag(1 0)", "1")]
 	[Arguments("vmag(3 4 0)", "5")]
-	[Arguments("vmag(1 1 1)", "1.7320508075688772")]
+	[Arguments("vmag(1 1 1)", "1.73205080756888")]
 	public async Task Vmag(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -44,6 +44,7 @@ public class VectorFunctionUnitTests
 	[Test]
 	[Arguments("dist2d(0,0,0,0)", "0")]
 	[Arguments("dist2d(0,0,0,1)", "1")]
+	[Arguments("dist2d(0,0,5,5)", "7.07106781186548")]
 	public async Task Dist2d(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -54,6 +55,7 @@ public class VectorFunctionUnitTests
 	[Test]
 	[Arguments("dist3d(0,0,0,0,0,0)", "0")]
 	[Arguments("dist3d(0,0,0,1,0,0)", "1")]
+	[Arguments("dist3d(0,0,0,5,5,5)", "8.66025403784439")]
 	public async Task Dist3d(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

@@ -40,7 +40,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -50,7 +50,7 @@ public partial class Functions
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			return new CallState("#-1 BAD ARGUMENT FORMAT TO ATTRIB_SET");
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "ATTRIB_SET"));
 		}
 
 		var (dbref, attribute) = details;
@@ -81,7 +81,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -91,7 +91,7 @@ public partial class Functions
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			return new CallState("#-1 BAD ARGUMENT FORMAT TO ATTRIB_SET");
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "ATTRIB_SET"));
 		}
 
 		var (dbref, attribute) = details;
@@ -132,7 +132,7 @@ public partial class Functions
 
 			if (dbrefAndAttr is { IsT1: true })
 			{
-				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 			}
 
 			var maybeFound = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
@@ -186,7 +186,7 @@ public partial class Functions
 
 			if (dbrefAndAttr is { IsT1: true })
 			{
-				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 			}
 
 			var maybeFound = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
@@ -258,7 +258,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -278,7 +278,7 @@ public partial class Functions
 
 				return attr.Match(
 					attribute => string.Join("", attribute.Last().Flags.Select(x => x.Symbol)),
-					_ => Errors.ErrorNoSuchAttribute,
+					_ => ErrorMessages.Returns.NoSuchAttribute,
 					error => error.Value);
 			});
 	}
@@ -292,7 +292,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true })
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
@@ -309,7 +309,7 @@ public partial class Functions
 					x,
 					attribute,
 					mode: IAttributeService.AttributeMode.Read,
-					parent: false);
+					parent: true);
 
 				return maybeAttr switch
 				{
@@ -328,7 +328,7 @@ public partial class Functions
 
 		if (dbrefAndAttr.IsT1) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(GetEval).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(GetEval).ToUpper()));
 		}
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
@@ -530,7 +530,7 @@ public partial class Functions
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(HasFlag)));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(HasFlag)));
 		}
 
 		var (db, attr) = details;
@@ -578,7 +578,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -609,7 +609,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -648,7 +648,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -670,7 +670,7 @@ public partial class Functions
 
 				return attr.Match(
 					attribute => string.Join(" ", attribute.Last().Flags.Select(x => x.Name)),
-					_ => Errors.ErrorNoSuchAttribute,
+					_ => ErrorMessages.Returns.NoSuchAttribute,
 					error => error.Value);
 			});
 	}
@@ -684,7 +684,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -715,7 +715,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -783,7 +783,7 @@ public partial class Functions
 						async newParser => await newParser.FunctionParse(arg1.Message!)))!;
 				}
 
-				return Errors.ErrorPerm;
+				return ErrorMessages.Returns.PermissionDenied;
 			});
 	}
 
@@ -811,7 +811,7 @@ public partial class Functions
 
 		if (dbrefAndMaybeArg is { IsT1: true, AsT1: false })
 		{
-			return new CallState(Errors.ErrorCantSeeThat);
+			return new CallState(ErrorMessages.Returns.CantSeeThat);
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -835,7 +835,7 @@ public partial class Functions
 
 				return attributeObject switch
 				{
-					{ IsNone: true } => new CallState(Errors.ErrorNoSuchAttribute),
+					{ IsNone: true } => new CallState(ErrorMessages.Returns.NoSuchAttribute),
 					{ IsError: true } => new CallState(attributeObject.AsError.Value),
 					{ AsAttribute: var attr } => new CallState($"#{(await attr.Last().Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}")
 				};
@@ -965,7 +965,7 @@ public partial class Functions
 			}
 			catch (ArgumentException)
 			{
-				return new CallState("#-1 REGEXP ERROR: Invalid regular expression");
+				return new CallState(ErrorMessages.Returns.RegexpInvalid);
 			}
 		}
 
@@ -1057,7 +1057,7 @@ public partial class Functions
 		}
 		catch (ArgumentException)
 		{
-			return new CallState("#-1 REGEXP ERROR: Invalid regular expression");
+			return new CallState(ErrorMessages.Returns.RegexpInvalid);
 		}
 	}
 
@@ -1070,7 +1070,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "reglattr".ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "reglattr".ToUpper()));
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -1106,7 +1106,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -1142,7 +1142,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -1174,7 +1174,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -1208,17 +1208,17 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper());
+			return string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper());
 		}
 
 		if (!int.TryParse(start, out var startInt) || !int.TryParse(count, out var countInt))
 		{
-			return Errors.ErrorInteger;
+			return ErrorMessages.Returns.Integer;
 		}
 
 		if (startInt < 1)
 		{
-			return Errors.ErrorArgRange;
+			return ErrorMessages.Returns.ArgRange;
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -1258,17 +1258,17 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper());
+			return string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper());
 		}
 
 		if (!int.TryParse(start, out var startInt) || !int.TryParse(count, out var countInt))
 		{
-			return Errors.ErrorInteger;
+			return ErrorMessages.Returns.Integer;
 		}
 
 		if (startInt < 1)
 		{
-			return Errors.ErrorArgRange;
+			return ErrorMessages.Returns.ArgRange;
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -1302,7 +1302,7 @@ public partial class Functions
 		await ValueTask.CompletedTask;
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -1408,7 +1408,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true })
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
@@ -1463,7 +1463,7 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true })
 		{
-			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper()));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
@@ -1536,7 +1536,7 @@ public partial class Functions
 
 		if (parentObject.IsNone)
 		{
-			return new CallState("#-1 OBJECT HAS NO PARENT");
+			return new CallState(ErrorMessages.Returns.ObjectHasNoParent);
 		}
 
 		// Trust checking and attribute inheritance logic (no_inherit, INTERNAL flags, etc.)
@@ -1662,7 +1662,7 @@ public partial class Functions
 
 		if (validationType == IValidateService.ValidationType.Invalid)
 		{
-			return string.Format(Errors.ErrorBadArgumentFormat, "valid");
+			return string.Format(ErrorMessages.Returns.BadArgumentFormat, "valid");
 		}
 
 		return validationType switch
@@ -1678,7 +1678,7 @@ public partial class Functions
 				when await LocateService!.LocateAndNotifyIfInvalid(parser, caller, caller, target, LocateFlags.All)
 					is { IsAnyObject: true, AsAnyObject: var obj }
 				=> new CallState(await ValidateService!.Valid(validationType, str, obj) ? "1" : "0"),
-			IValidateService.ValidationType.PlayerName => Errors.ErrorCantSeeThat,
+			IValidateService.ValidationType.PlayerName => ErrorMessages.Returns.CantSeeThat,
 
 			IValidateService.ValidationType.ChannelName
 				=> new CallState(await ValidateService!.Valid(validationType, str, await GetChannel(target ?? string.Empty)) ? "1" : "0"),
@@ -1689,7 +1689,7 @@ public partial class Functions
 				when await LocateService!.LocateAndNotifyIfInvalid(parser, caller, caller, target, LocateFlags.All)
 					is { IsAnyObject: true, AsAnyObject: var obj }
 				=> new CallState(await ValidateService!.Valid(validationType, str, obj) ? "1" : "0"),
-			IValidateService.ValidationType.LockType => Errors.ErrorCantSeeThat,
+			IValidateService.ValidationType.LockType => ErrorMessages.Returns.CantSeeThat,
 			_ => new CallState(await ValidateService!.Valid(validationType, str, new None()) ? "1" : "0")
 		};
 
@@ -1726,7 +1726,7 @@ public partial class Functions
 
 		if (victAttr.IsT1)
 		{
-			return Errors.ErrorBadArgumentFormat;
+			return ErrorMessages.Returns.BadArgumentFormat;
 		}
 
 		var (victim, attr) = victAttr.AsT0;
@@ -1828,17 +1828,17 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper());
+			return string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper());
 		}
 
 		if (!int.TryParse(start, out var startInt) || !int.TryParse(count, out var countInt))
 		{
-			return Errors.ErrorInteger;
+			return ErrorMessages.Returns.Integer;
 		}
 
 		if (startInt > countInt || startInt < 1)
 		{
-			return Errors.ErrorArgRange;
+			return ErrorMessages.Returns.ArgRange;
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -1877,17 +1877,17 @@ public partial class Functions
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
 		{
-			return string.Format(Errors.ErrorBadArgumentFormat, nameof(Get).ToUpper());
+			return string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper());
 		}
 
 		if (!int.TryParse(start, out var startInt) || !int.TryParse(count, out var countInt))
 		{
-			return Errors.ErrorInteger;
+			return ErrorMessages.Returns.Integer;
 		}
 
 		if (startInt > countInt || startInt < 1)
 		{
-			return Errors.ErrorArgRange;
+			return ErrorMessages.Returns.ArgRange;
 		}
 
 		var (obj, attributePattern) = dbrefAndAttr.AsT0;
@@ -1952,7 +1952,7 @@ public partial class Functions
 
 		if (zone.IsNone)
 		{
-			return new CallState("#-1 NO ZONE SET");
+			return new CallState(ErrorMessages.Returns.NoZoneSet);
 		}
 
 		// Evaluate the attribute function on the zone object

@@ -206,7 +206,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
 
 		await Assert.That(resultNoSelfControl.IsError).IsTrue();
-		await Assert.That(resultNoSelfControl.AsError.Value).IsEqualTo(Errors.ErrorPerm);
+		await Assert.That(resultNoSelfControl.AsError.Value).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 	}
 
 	[Test]
@@ -1213,7 +1213,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.PreferLockPass);
 
 		await Assert.That(result.IsError).IsTrue();
-		await Assert.That(result.AsError.Value).IsEqualTo(Errors.ErrorPerm);
+		await Assert.That(result.AsError.Value).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 	}
 
 	[Test]

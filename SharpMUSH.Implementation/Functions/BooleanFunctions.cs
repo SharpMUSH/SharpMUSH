@@ -130,7 +130,7 @@ public partial class Functions
 			? "1"
 			: "0");
 
-	[SharpFunction(Name = "xor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "xor", Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public static ValueTask<CallState> Xor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)

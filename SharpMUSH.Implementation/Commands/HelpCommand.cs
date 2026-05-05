@@ -4,6 +4,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -19,7 +20,7 @@ public partial class Commands
 		if (TextFileService == null)
 		{
 			await NotifyService!.Notify(executor, "Help system not initialized.", executor);
-			return new CallState("#-1 HELP SYSTEM NOT INITIALIZED");
+			return new CallState(ErrorMessages.Returns.HelpSystemNotInitialized);
 		}
 
 		// No arguments - show main help (PennMUSH shows the command's own entry)

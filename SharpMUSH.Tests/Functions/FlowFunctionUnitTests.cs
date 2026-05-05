@@ -56,4 +56,61 @@ public class FlowFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// Penn firstof: returns first non-zero argument
+	[Test]
+	[Arguments("firstof(0,0,2)", "2")]
+	[Arguments("firstof(2,0,0)", "2")]
+	[Arguments("firstof(0,0,0)", "0")]
+	[Arguments("firstof(1,2,3)", "1")]
+	public async Task Firstof(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	// Penn strfirstof: returns first non-empty-string argument
+	[Test]
+	[Arguments("strfirstof(,,foo)", "foo")]
+	[Arguments("strfirstof(,bar,foo)", "bar")]
+	[Arguments("strfirstof(bar,,foo)", "bar")]
+	[Arguments("strfirstof(bar,baz,foo)", "bar")]
+	public async Task StrFirstof(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	// Penn allof: returns all non-zero args joined by separator (last arg)
+	[Test]
+	[Arguments("allof(0,0,2,)", "2")]
+	[Arguments("allof(2,0,0,)", "2")]
+	[Arguments("allof(0,0,0,)", "")]
+	[Arguments("allof(1,2,3,%b)", "1 2 3")]
+	[Arguments("allof(1,2,3,)", "123")]
+	[Arguments("allof(0,0,2,@)", "2")]
+	[Arguments("allof(2,0,0,@)", "2")]
+	[Arguments("allof(0,0,0,@)", "")]
+	[Arguments("allof(1,2,3,@)", "1@2@3")]
+	public async Task Allof(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	// Penn strallof: returns all non-empty-string args joined by separator (last arg)
+	[Test]
+	[Arguments("strallof(,,,@)", "")]
+	[Arguments("strallof(foo,@)", "foo")]
+	[Arguments("strallof(,foo,@)", "foo")]
+	[Arguments("strallof(foo,,@)", "foo")]
+	[Arguments("strallof(foo,bar,@)", "foo@bar")]
+	[Arguments("strallof(,foo,bar,@)", "foo@bar")]
+	[Arguments("strallof(foo,,bar,@)", "foo@bar")]
+	[Arguments("strallof(foo,bar,,@)", "foo@bar")]
+	public async Task StrAllof(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
 }

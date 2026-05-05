@@ -11,7 +11,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
-using Errors = SharpMUSH.Library.Definitions.Errors;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -158,7 +157,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			return new CallState("#-1 BAD ARGUMENT FORMAT TO @SET");
+			return new CallState(ErrorMessages.Returns.BadArgumentFormatToSet);
 		}
 
 		var (dbref, maybeAttribute) = details;
@@ -895,7 +894,7 @@ public partial class Commands
 						{
 							return await NotifyService!.NotifyAndReturn(
 								executor.Object().DBRef,
-								errorReturn: Errors.ZoneLoop,
+								errorReturn: ErrorMessages.Returns.ZoneLoop,
 								notifyMessage: ErrorMessages.Notifications.CantMakeCircularZones,
 								shouldNotify: true);
 						}
@@ -959,7 +958,7 @@ public partial class Commands
 		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToString()))
 		{
 			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.DigWhat), executorBase);
-			return new CallState("#-1 NO ROOM NAME SPECIFIED");
+			return new CallState(ErrorMessages.Returns.NoRoomNameSpecified);
 		}
 
 		// NOTE: Additional permission checks needed:

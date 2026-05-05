@@ -393,7 +393,7 @@ public partial class Functions
 
 		if (!int.TryParse(MModule.plainText(args["1"].Message), out var iterations) || iterations <= 0)
 		{
-			return new CallState(Errors.ErrorNumbers);
+			return new CallState(ErrorMessages.Returns.Numbers);
 		}
 
 		var outputFormat = "ms";
@@ -427,14 +427,14 @@ public partial class Functions
 		if (dbRefConversion.IsNone())
 		{
 			await NotifyService!.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.CantSeeThat));
-			return new CallState("#-1 NO SUCH PLAYER");
+			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
 		var dbRef = dbRefConversion.AsValue();
 		var objectInfo = await Mediator!.Send(new GetObjectNodeQuery(dbRef));
 		if (!objectInfo.IsPlayer)
 		{
-			return new CallState("#-1 NO SUCH PLAYER");
+			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
 		var player = objectInfo.AsPlayer;
@@ -460,7 +460,7 @@ public partial class Functions
 
 		if (location.IsNone || location.IsExit)
 		{
-			return Errors.ErrorInvalidRoom;
+			return ErrorMessages.Returns.InvalidRoom;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -469,12 +469,12 @@ public partial class Functions
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					return Errors.ErrorPerm;
+					return ErrorMessages.Returns.PermissionDenied;
 				}
 
 				if (obj.IsPlayer)
 				{
-					return Errors.ErrorInvalidObjectType;
+					return ErrorMessages.Returns.InvalidObjectType;
 				}
 
 				// Determine new name (arg 1 if provided)
@@ -516,12 +516,16 @@ public partial class Functions
 				}
 				else
 				{
-					return Errors.ErrorInvalidObjectType;
+					return ErrorMessages.Returns.InvalidObjectType;
 				}
 
 				// Get the cloned object
 				var clonedObjOptional = await Mediator!.Send(new GetObjectNodeQuery(cloneDbRef));
 				var clonedObj = clonedObjOptional.WithoutNone();
+
+				// Check preserve flag (arg 3)
+				var preserve = args.ContainsKey("3") &&
+					args["3"].Message!.ToPlainText().Equals("preserve", StringComparison.OrdinalIgnoreCase);
 
 				// Copy attributes (excluding system attributes)
 				await foreach (var attr in obj.Object().Attributes.Value)
@@ -530,6 +534,15 @@ public partial class Functions
 					{
 						await AttributeService!.SetAttributeAsync(executor, clonedObj,
 							attr.Name, attr.Value);
+					}
+				}
+
+				// Copy flags (excluding privileged ones unless preserve)
+				await foreach (var flag in obj.Object().Flags.Value)
+				{
+					if (preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
+					{
+						await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, clonedObj, flag.Name, false);
 					}
 				}
 
@@ -560,13 +573,13 @@ public partial class Functions
 		if (location.IsNone || location.IsExit)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DefaultHomeLocationInvalid), executor);
-			return new CallState(Errors.ErrorInvalidRoom);
+			return new CallState(ErrorMessages.Returns.InvalidRoom);
 		}
 
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidNameThing), executor);
-			return new CallState(Errors.ErrorBadObjectName);
+			return new CallState(ErrorMessages.Returns.BadObjectName);
 		}
 
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
@@ -585,11 +598,11 @@ public partial class Functions
 
 		if (!int.TryParse(MModule.plainText(args["0"].Message), out var count) || count < 0)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 		if (!int.TryParse(MModule.plainText(args["1"].Message), out var sides) || sides <= 0)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 
 		// Optional third argument for how many rolls to show (vs just return sum)
@@ -598,7 +611,7 @@ public partial class Functions
 		{
 			if (!int.TryParse(MModule.plainText(args["2"].Message), out showCount) || showCount < 0)
 			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 			}
 		}
 
@@ -629,7 +642,7 @@ public partial class Functions
 
 		if (string.IsNullOrWhiteSpace(roomName))
 		{
-			return Errors.ErrorBadObjectName;
+			return ErrorMessages.Returns.BadObjectName;
 		}
 
 		// Create the room
@@ -644,20 +657,42 @@ public partial class Functions
 	[SharpFunction(Name = "fn", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Fn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var functionName = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
+		if (string.IsNullOrWhiteSpace(functionName))
+		{
+			return new CallState("#-1 FUNCTION (No function name given)");
+		}
+
+		// First check if it's a built-in function
+		if (parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out _))
+		{
+			// Build function call string and re-parse: fn(add,1,2) -> add(1,2)
+			var fnArgs = parser.CurrentState.ArgumentsOrdered
+				.Skip(1)
+				.Select(x => MModule.plainText(x.Value.Message));
+			var callString = $"{functionName}({string.Join(",", fnArgs)})";
+			var result = await parser.FunctionParse(MModule.single(callString));
+			return result ?? CallState.Empty;
+		}
+
+		// Fall back to user-defined attribute function
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-
-		var functionName = parser.CurrentState.Arguments["0"].Message!;
-
-		var result = await AttributeService!.EvaluateAttributeFunctionAsync(
+		var result2 = await AttributeService!.EvaluateAttributeFunctionAsync(
 			parser,
 			executor,
-			objAndAttribute: functionName,
+			objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
 			args: parser.CurrentState.Arguments.Skip(1)
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 				.ToDictionary(),
 			ignoreLambda: true);
 
-		return new CallState(result);
+		// If attribute lookup returned nothing, report function not found
+		if (result2 == null || MModule.plainText(result2).Length == 0)
+		{
+			return new CallState($"#-1 FUNCTION ({functionName.ToUpper()}) NOT FOUND");
+		}
+
+		return new CallState(result2);
 	}
 	[SharpFunction(Name = "functions", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> FFunctions(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -773,19 +808,19 @@ public partial class Functions
 		{
 			if (maxCount == 0)
 			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 			}
 			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Value));
 		}
 
 		if (!int.TryParse(levelArg, out var level))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
 		if (level < 0 || level >= maxCount)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
 		}
 
 		// Iteration registers are stored innermost-first (stack top = current iteration),
@@ -829,7 +864,7 @@ public partial class Functions
 		}
 
 		_ = parser.CurrentState.Registers.TryPop(out _);
-		return new CallState("#-1 REGISTER NAME INVALID");
+		return new CallState(ErrorMessages.Returns.BadRegName);
 	}
 
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -846,7 +881,7 @@ public partial class Functions
 			{
 				if (!await PermissionService!.Controls(executor, exitObj))
 				{
-					return Errors.ErrorPerm;
+					return ErrorMessages.Returns.PermissionDenied;
 				}
 
 				// Handle different link types
@@ -871,7 +906,7 @@ public partial class Functions
 						{
 							if (!destObj.IsRoom)
 							{
-								return Errors.ErrorInvalidDestination;
+								return ErrorMessages.Returns.InvalidDestination;
 							}
 
 							var destinationRoom = destObj.AsRoom;
@@ -885,7 +920,7 @@ public partial class Functions
 
 								if (!hasLinkOk)
 								{
-									return Errors.ErrorPerm;
+									return ErrorMessages.Returns.PermissionDenied;
 								}
 							}
 
@@ -905,7 +940,7 @@ public partial class Functions
 						{
 							if (!destObj.IsRoom)
 							{
-								return Errors.ErrorInvalidDestination;
+								return ErrorMessages.Returns.InvalidDestination;
 							}
 
 							AnySharpContent contentObj = exitObj.IsThing ? exitObj.AsThing : (AnySharpContent)exitObj.AsPlayer;
@@ -923,7 +958,7 @@ public partial class Functions
 						{
 							if (!destObj.IsRoom)
 							{
-								return Errors.ErrorInvalidDestination;
+								return ErrorMessages.Returns.InvalidDestination;
 							}
 
 							await Mediator!.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
@@ -932,7 +967,7 @@ public partial class Functions
 					);
 				}
 
-				return Errors.ErrorInvalidObjectType;
+				return ErrorMessages.Returns.InvalidObjectType;
 			});
 	}
 
@@ -1043,7 +1078,7 @@ public partial class Functions
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 			if (!await executor.IsWizard())
 			{
-				return new CallState("#-1 PERMISSION DENIED");
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			return option switch
@@ -1079,13 +1114,13 @@ public partial class Functions
 		if (!args.TryGetValue("1", out var arg1) ||
 				!int.TryParse(MModule.plainText(arg1.Message), out var position))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 
 		// Get the new value
 		if (!args.TryGetValue("2", out var arg2))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 		var newValue = arg2.Message!;
 
@@ -1109,7 +1144,7 @@ public partial class Functions
 		// Check if position is valid (1-based indexing)
 		if (position < 1 || position > items.Count)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 		}
 
 		// Set the item at the position (convert to 0-based)
@@ -1145,7 +1180,7 @@ public partial class Functions
 		// Check permissions
 		if (!await PermissionService!.Controls(executor, sourceRoom.WithExitOption()))
 		{
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		// Create the exit
@@ -1198,10 +1233,19 @@ public partial class Functions
 		// Check if second argument exists and is not empty
 		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace(MModule.plainText(arg1.Message)))
 		{
-			// One argument: random number from 0 to arg-1
-			if (!int.TryParse(MModule.plainText(arg0.Message), out var maxVal) || maxVal <= 0)
+		// One argument: random number from 0 to arg-1
+			if (!int.TryParse(MModule.plainText(arg0.Message), out var maxVal))
 			{
-				return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+			}
+			// PennMUSH behavior: rand(0) is an error (empty range), negative values return 0
+			if (maxVal == 0)
+			{
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ResultOutOfRange));
+			}
+			if (maxVal < 0)
+			{
+				return ValueTask.FromResult(new CallState(0));
 			}
 			return ValueTask.FromResult(new CallState(Random.Shared.Next(0, maxVal)));
 		}
@@ -1210,11 +1254,11 @@ public partial class Functions
 		if (!int.TryParse(MModule.plainText(arg0.Message), out var minVal) ||
 				!int.TryParse(MModule.plainText(arg1.Message), out var maxVal2))
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 		if (minVal > maxVal2)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 		// Next is exclusive of upper bound, so add 1
 		return ValueTask.FromResult(new CallState(Random.Shared.Next(minVal, maxVal2 + 1)));
@@ -1280,7 +1324,7 @@ public partial class Functions
 				// Check permissions
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					return Errors.ErrorPerm;
+					return ErrorMessages.Returns.PermissionDenied;
 				}
 
 				// Evaluate the code using the AttributeService which handles executor context properly
@@ -1339,7 +1383,7 @@ public partial class Functions
 		// Check permissions - must control looker
 		if (!await PermissionService!.Controls(executor, looker))
 		{
-			return Errors.ErrorPerm;
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		// Collect objects to scan based on switches
@@ -1457,7 +1501,7 @@ public partial class Functions
 		}
 		else
 		{
-			return ValueTask.FromResult(new CallState("#-1 REGISTER NAME INVALID"));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.BadRegName));
 		}
 	}
 
@@ -1481,7 +1525,7 @@ public partial class Functions
 		}
 		else
 		{
-			return ValueTask.FromResult(new CallState("#-1 REGISTER NAME INVALID"));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.BadRegName));
 		}
 	}
 	[SharpFunction(Name = "soundex", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1492,44 +1536,34 @@ public partial class Functions
 			? val.Message!.ToPlainText().ToLowerInvariant()
 			: "soundex";
 
-		if (arg1 != "soundex")
+		return arg1 switch
 		{
-			return ValueTask.FromResult<CallState>(Errors.NotSupported);
-		}
-
-		// PennMUSH-specific: leading "ph" is treated as "f" for soundex purposes
-		var soundexInput = arg0.StartsWith("ph", StringComparison.OrdinalIgnoreCase)
-			? "f" + arg0[2..]
-			: arg0;
-
-		return ValueTask.FromResult<CallState>(ComputeSoundex(soundexInput));
+			"soundex" => ValueTask.FromResult<CallState>(ComputeSoundex(
+				arg0.StartsWith("ph", StringComparison.OrdinalIgnoreCase) ? "f" + arg0[2..] : arg0)),
+			"phone" => ValueTask.FromResult<CallState>(ComputePhoneticHash(arg0)),
+			_ => ValueTask.FromResult<CallState>("#-1 INVALID HASH TYPE")
+		};
 	}
 
 	[SharpFunction(Name = "soundslike", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> SoundLike(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var arg2 = parser.CurrentState.Arguments.TryGetValue("2", out var val)
 			? val.Message!.ToPlainText().ToLowerInvariant()
 			: "soundex";
 
-		if (arg2 != "soundex")
+		return arg2 switch
 		{
-			return ValueTask.FromResult<CallState>(Errors.NotSupported);
-		}
-
-		// PennMUSH-specific: leading "ph" is treated as "f" for soundex purposes
-		var input0 = arg0.StartsWith("ph", StringComparison.OrdinalIgnoreCase)
-			? "f" + arg0[2..]
-			: arg0;
-		var input1 = arg1.StartsWith("ph", StringComparison.OrdinalIgnoreCase)
-			? "f" + arg1[2..]
-			: arg1;
-
-		return ValueTask.FromResult<CallState>(
-			ComputeSoundex(input0) == ComputeSoundex(input1) ? "1" : "0");
+			"soundex" => ValueTask.FromResult<CallState>(
+				ComputeSoundex(arg0.StartsWith("ph", StringComparison.OrdinalIgnoreCase) ? "f" + arg0[2..] : arg0) ==
+				ComputeSoundex(arg1.StartsWith("ph", StringComparison.OrdinalIgnoreCase) ? "f" + arg1[2..] : arg1)
+					? "1" : "0"),
+			"phone" => ValueTask.FromResult<CallState>(
+				ComputePhoneticHash(arg0) == ComputePhoneticHash(arg1) ? "1" : "0"),
+			_ => ValueTask.FromResult<CallState>("#-1 INVALID HASH TYPE")
+		};
 	}
 
 	/// <summary>
@@ -1573,6 +1607,109 @@ public partial class Functions
 		return new string(result);
 	}
 
+	/// <summary>
+	/// Compute the phonetic hash using SQLite's spellfix1 algorithm (used by PennMUSH).
+	/// Maps characters to phonetic classes, omits vowels beside R/L, deduplicates.
+	/// </summary>
+	private static string ComputePhoneticHash(string input)
+	{
+		if (string.IsNullOrEmpty(input)) return "";
+
+		var word = input.ToLowerInvariant();
+		var result = new System.Text.StringBuilder();
+		var length = word.Length;
+
+		// Character classes
+		const int SILENT = 0, VOWEL = 1, B = 2, C = 3, D = 4, L = 6, R = 7, M = 8, Y = 9, DIGIT = 10, SPACE = 11, OTHER = 12;
+
+		// className maps class index to output character
+		const string classOutput = ".ABCDHLRMY9 ?";
+
+		// midClass lookup (H, W, Y differ in initClass)
+		int MidClass(char ch) => ch switch
+		{
+			>= 'a' and <= 'z' => ch switch
+			{
+				'a' or 'e' or 'i' or 'o' or 'u' or 'y' => VOWEL,
+				'b' or 'f' or 'p' or 'v' or 'w' => B,
+				'c' or 'g' or 'j' or 'k' or 'q' or 's' or 'x' or 'z' => C,
+				'd' or 't' => D,
+				'h' => SILENT,
+				'l' => L,
+				'r' => R,
+				'm' or 'n' => M,
+				_ => OTHER
+			},
+			>= '0' and <= '9' => DIGIT,
+			' ' or '\t' or '\r' or '\n' => SPACE,
+			'\'' => SILENT,
+			_ => OTHER
+		};
+
+		// initClass: same as midClass except H→SILENT, W→B, Y→Y (not VOWEL)
+		int InitClass(char ch) => ch switch
+		{
+			'y' => Y,
+			'h' => SILENT,
+			_ => MidClass(ch)
+		};
+
+		// Drop initial GN/KN
+		int start = 0;
+		if (length >= 2 && (word[0] == 'g' || word[0] == 'k') && word[1] == 'n')
+		{
+			start = 1;
+		}
+
+		int cPrev = OTHER; // 0x77 maps to OTHER range
+		int cPrevX = OTHER;
+		bool isFirst = true;
+
+		for (int i = start; i < length; i++)
+		{
+			var ch = word[i];
+
+			// Skip D before J/G, W before R, T before CH
+			if (i + 1 < length)
+			{
+				if (ch == 'w' && word[i + 1] == 'r') continue;
+				if (ch == 'd' && (word[i + 1] == 'j' || word[i + 1] == 'g')) continue;
+				if (i + 2 < length && ch == 't' && word[i + 1] == 'c' && word[i + 2] == 'h') continue;
+			}
+
+			int c = isFirst ? InitClass(ch) : MidClass(ch);
+
+			if (c == SPACE) continue;
+			if (c == OTHER && cPrev != DIGIT) continue;
+
+			isFirst = false;
+
+			// Omit vowels beside R and L
+			if (c == VOWEL && (cPrevX == R || cPrevX == L))
+			{
+				continue;
+			}
+			if ((c == R || c == L) && cPrevX == VOWEL)
+			{
+				// Remove the preceding vowel
+				if (result.Length > 0) result.Length--;
+			}
+
+			cPrev = c;
+			if (c == SILENT) continue;
+			cPrevX = c;
+
+			char output = classOutput[c];
+			// Deduplicate consecutive same output chars
+			if (result.Length == 0 || output != result[result.Length - 1])
+			{
+				result.Append(output);
+			}
+		}
+
+		return result.ToString();
+	}
+
 	[SharpFunction(Name = "suggest", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static async ValueTask<CallState> Suggest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -1586,7 +1723,7 @@ public partial class Functions
 		{
 			if (!int.TryParse(args["3"].Message!.ToPlainText(), out limit) || limit < 1)
 			{
-				return new CallState(Errors.ErrorIntegers);
+				return new CallState(ErrorMessages.Returns.Integers);
 			}
 		}
 
@@ -1699,7 +1836,7 @@ public partial class Functions
 				}
 				else if (!int.TryParse(depthStr, out depth) || depth < 0)
 				{
-					return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER"));
+					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NonNegativeInteger));
 				}
 			}
 		}
@@ -1738,12 +1875,12 @@ public partial class Functions
 			{
 				if (targetObj.IsRoom)
 				{
-					return Errors.ErrorCannotTeleport;
+					return ErrorMessages.Returns.CannotTeleport;
 				}
 
 				if (!await PermissionService!.Controls(executor, targetObj))
 				{
-					return Errors.ErrorCannotTeleport;
+					return ErrorMessages.Returns.CannotTeleport;
 				}
 
 				return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1752,7 +1889,7 @@ public partial class Functions
 					{
 						if (destObj.IsExit)
 						{
-							return Errors.ErrorInvalidDestination;
+							return ErrorMessages.Returns.InvalidDestination;
 						}
 
 						var destinationContainer = destObj.AsContainer;
@@ -1761,7 +1898,7 @@ public partial class Functions
 						// Check for containment loops
 						if (await MoveService!.WouldCreateLoop(targetContent, destinationContainer))
 						{
-							return "#-1 WOULD CREATE LOOP";
+							return ErrorMessages.Returns.WouldCreateLoop;
 						}
 
 						// Move the object
@@ -1800,7 +1937,7 @@ public partial class Functions
 					// Validate the lock string
 					if (!LockService!.Validate(lockString, executor))
 					{
-						return ValueTask.FromResult(new CallState("#-1 INVALID LOCK"));
+						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidLock));
 					}
 
 					// Evaluate the lock: does victim pass the lock expression?
@@ -1823,7 +1960,7 @@ public partial class Functions
 					var victimResult = await LocateService!.Locate(parser, executor, executor, victimName, LocateFlags.All);
 					if (!victimResult.IsValid())
 					{
-						return new CallState("#-1 INVALID VICTIM");
+						return new CallState(ErrorMessages.Returns.InvalidVictim);
 					}
 					var victim = victimResult.AsAnyObject;
 
@@ -1852,7 +1989,7 @@ public partial class Functions
 
 		if (TextFileService == null)
 		{
-			return new CallState("#-1 TEXT FILE SERVICE NOT AVAILABLE");
+			return new CallState(ErrorMessages.Returns.TextFileServiceNotAvailable);
 		}
 
 		try
@@ -1862,12 +1999,12 @@ public partial class Functions
 		}
 		catch (FileNotFoundException)
 		{
-			return new CallState("#-1 FILE NOT FOUND");
+			return new CallState(ErrorMessages.Returns.FileNotFound);
 		}
 		catch (Exception ex)
 		{
 			Logger?.LogError(ex, "Error in textentries({File})", fileReference);
-			return new CallState("#-1 ERROR");
+			return new CallState(ErrorMessages.Returns.Error);
 		}
 	}
 
@@ -1880,7 +2017,7 @@ public partial class Functions
 
 		if (TextFileService == null)
 		{
-			return new CallState("#-1 TEXT FILE SERVICE NOT AVAILABLE");
+			return new CallState(ErrorMessages.Returns.TextFileServiceNotAvailable);
 		}
 
 		try
@@ -1888,16 +2025,16 @@ public partial class Functions
 			var content = await TextFileService.GetEntryAsync(fileReference, entryName);
 			return content != null
 				? new CallState(content)
-				: new CallState("#-1 ENTRY NOT FOUND");
+				: new CallState(ErrorMessages.Returns.EntryNotFound);
 		}
 		catch (FileNotFoundException)
 		{
-			return new CallState("#-1 FILE NOT FOUND");
+			return new CallState(ErrorMessages.Returns.FileNotFound);
 		}
 		catch (Exception ex)
 		{
 			Logger?.LogError(ex, "Error in textfile({File}, {Entry})", fileReference, entryName);
-			return new CallState("#-1 ERROR");
+			return new CallState(ErrorMessages.Returns.Error);
 		}
 	}
 
@@ -1935,7 +2072,7 @@ public partial class Functions
 			{
 				if (!await PermissionService!.Controls(executor, obj))
 				{
-					return Errors.ErrorPerm;
+					return ErrorMessages.Returns.PermissionDenied;
 				}
 
 				// Collect all non-system attributes (those not starting with _)

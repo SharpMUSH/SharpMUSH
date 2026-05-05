@@ -4,6 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -14,8 +15,8 @@ public static class ChannelMogrifier
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
-			return new CallState("#-1 Guests may not modify channels.");
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatGuestsCantModify, executor);
+			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);

@@ -8,6 +8,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -44,7 +45,7 @@ public static class FolderMail
 
 			default:
 				await notifyService!.Notify(executor, "Invalid arguments for @mail folder command.");
-				return MModule.single("#-1 Invalid arguments for @mail folder command.");
+				return MModule.single(ErrorMessages.Returns.InvalidMailFolderArguments);
 		}
 	}
 
@@ -101,7 +102,7 @@ public static class FolderMail
 		if (folder.ToPlainText().Equals("INBOX", StringComparison.InvariantCultureIgnoreCase))
 		{
 			await notifyService!.Notify(executor, "MAIL: You cannot rename the INBOX folder.");
-			return MModule.single("#-1 You cannot rename the INBOX folder.");
+			return MModule.single(ErrorMessages.Returns.CannotRenameInbox);
 		}
 
 		await mediator!.Send(new RenameMailFolderCommand(executorPlayer, folder.ToPlainText(), newName.ToPlainText()));

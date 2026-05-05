@@ -15,7 +15,7 @@ public static class ChannelDescribe
 		if (await executor.IsGuest())
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChatGuestsCantModify), executor);
-			return new CallState("#-1 Guests may not modify channels.");
+			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);

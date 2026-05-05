@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -12,8 +13,8 @@ public static class ChannelWhat
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		if (await executor.IsGuest())
 		{
-			await notifyService.Notify(executor, "CHAT: Guests may not modify channels.");
-			return new CallState("#-1 Guests may not modify channels.");
+			await notifyService.Notify(executor, ErrorMessages.Notifications.ChatGuestsCantModify);
+			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, locateService, permissionService, mediator, notifyService, channelName, true);

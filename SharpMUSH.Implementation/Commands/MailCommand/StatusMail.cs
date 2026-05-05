@@ -2,6 +2,7 @@
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -36,7 +37,7 @@ public static class StatusMail
 		{
 			case "UPDATE" when string.IsNullOrEmpty(statusString):
 				await notifyService.Notify(executor, "Update to what?");
-				return MModule.single("#-1 Update to what?");
+				return MModule.single(ErrorMessages.Returns.UpdateToWhat);
 			case "UPDATE"
 				when statusString is "CLEAR" or "UNCLEAR" or "TAG" or "UNTAG" or "UNREAD" or "READ" or "URGENT" or "UNURGENT":
 				sw = statusString;

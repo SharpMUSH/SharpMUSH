@@ -465,7 +465,7 @@ warn_interval 1h
 # If compiled with FLOATING_POINTS support, this controls the
 # decimal precision of numbers. Default is 6 digits after the
 # decimal point.
-float_precision 6
+float_precision 15
 
 # The maximum length of player names. Lowering this won't change
 # current player names.

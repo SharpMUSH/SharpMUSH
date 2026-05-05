@@ -6,6 +6,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -23,21 +24,21 @@ public static class ChannelAdd
 		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
-			return new CallState("#-1 Guests may not modify channels.");
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatGuestsCantModify, executor);
+			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 		if (!maybeChannel.IsError)
 		{
 			await NotifyService.Notify(executor, "CHAT: Channel already exists.", executor);
-			return new CallState("#-1 Channel already exists.");
+			return new CallState(ErrorMessages.Returns.ChannelAlreadyExists);
 		}
 
 		if (!ChannelHelper.IsValidChannelName(Configuration, channelName))
 		{
 			await NotifyService.Notify(executor, "Invalid channel name.", executor);
-			return new CallState("#-1 Invalid channel name.");
+			return new CallState(ErrorMessages.Returns.InvalidChannelName);
 		}
 
 		var allChannels = Mediator.CreateStream(new GetChannelListQuery());
@@ -48,15 +49,15 @@ public static class ChannelAdd
 
 		if (!await executor.IsPriv() && ownedChannels >= Configuration.CurrentValue.Chat.MaxChannels)
 		{
-			await NotifyService.Notify(executor, "#-1 You have too many channels.", executor);
-			return new CallState("#-1 You have too many channels.");
+			await NotifyService.Notify(executor, ErrorMessages.Returns.TooManyChannels, executor);
+			return new CallState(ErrorMessages.Returns.TooManyChannels);
 		}
 
 		var parsedPrivileges = ChannelHelper.StringToChannelPrivileges(privileges);
 		if (parsedPrivileges.IsError)
 		{
 			await NotifyService.Notify(executor, $"Invalid privileges: {string.Join(", ", parsedPrivileges.AsError.Value)}.", executor);
-			return new CallState("#-1 Invalid privileges.");
+			return new CallState(ErrorMessages.Returns.InvalidPrivileges);
 		}
 
 		await Mediator.Send(new CreateChannelCommand(channelName, parsedPrivileges.AsPrivileges, executorOwner));

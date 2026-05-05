@@ -87,6 +87,12 @@ public partial class SurrealDatabase
 			_ => $"\\{m.Value}"
 		});
 
+		// Trailing backtick means "direct children only" — e.g. FOO` → FOO`[^`]+
+		if (pattern.EndsWith("`"))
+		{
+			pattern = pattern + "[^`]+";
+		}
+
 		var regexPattern = $"(?i)^{pattern}$";
 
 		// Get the typed ID for this object
@@ -190,6 +196,12 @@ public partial class SurrealDatabase
 			"?" => ".",
 			_ => $"\\{m.Value}"
 		});
+
+		// Trailing backtick means "direct children only" — e.g. FOO` → FOO`[^`]+
+		if (pattern.EndsWith("`"))
+		{
+			pattern = pattern + "[^`]+";
+		}
 
 		var regexPattern = $"(?i)^{pattern}$";
 
@@ -341,29 +353,41 @@ public partial class SurrealDatabase
 			"RELATE attribute:⟨$attrKey⟩->has_attribute_owner->player:$ownerKey",
 			ownerParams, cancellationToken);
 
-		// Handle attribute entry flags for newly created attributes
-		for (var i = 0; i < attribute.Length; i++)
+	// Set branch flag on parent attribute nodes (not the root typed node)
+	for (var i = 0; i < attribute.Length - 1; i++)
+	{
+		var longName = string.Join('`', attribute.Take(i + 1));
+		var attrKey = $"{objKey}_{longName}";
+		var escapedAttrKey = EscapeRecordId(attrKey);
+		var branchParams = new Dictionary<string, object?>();
+		await ExecuteAsync(
+			$"RELATE attribute:⟨{escapedAttrKey}⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = 'BRANCH' AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨{escapedAttrKey}⟩) LIMIT 1)",
+			branchParams, cancellationToken);
+	}
+
+	// Handle attribute entry flags for newly created attributes
+	for (var i = 0; i < attribute.Length; i++)
+	{
+		var longName = string.Join('`', attribute.Take(i + 1));
+		var attrEntry = await GetSharpAttributeEntry(longName, cancellationToken);
+		var flagNames = attrEntry?.DefaultFlags ?? [];
+
+		var attrKey = $"{objKey}_{longName}";
+		var escapedAttrKey = EscapeRecordId(attrKey);
+		foreach (var flagName in flagNames)
 		{
-			var longName = string.Join('`', attribute.Take(i + 1));
-			var attrEntry = await GetSharpAttributeEntry(longName, cancellationToken);
-			var flagNames = attrEntry?.DefaultFlags ?? [];
-
-			var attrKey = $"{objKey}_{longName}";
-			var escapedAttrKey = EscapeRecordId(attrKey);
-			foreach (var flagName in flagNames)
+			var flagParams = new Dictionary<string, object?>
 			{
-				var flagParams = new Dictionary<string, object?>
-				{
-					["flagName"] = flagName
-				};
+				["flagName"] = flagName
+			};
 
-				await ExecuteAsync(
-					$"RELATE attribute:⟨{escapedAttrKey}⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = string::uppercase($flagName) AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨{escapedAttrKey}⟩) LIMIT 1)",
-					flagParams, cancellationToken);
-			}
+			await ExecuteAsync(
+				$"RELATE attribute:⟨{escapedAttrKey}⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = string::uppercase($flagName) AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨{escapedAttrKey}⟩) LIMIT 1)",
+				flagParams, cancellationToken);
 		}
+	}
 
-		return true;
+	return true;
 	}
 
 	public async ValueTask<bool> SetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
@@ -470,6 +494,14 @@ public partial class SurrealDatabase
 			await ExecuteAsync("DELETE has_attribute_owner WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
 			await ExecuteAsync("DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
 			await ExecuteAsync("DELETE attribute:⟨$key⟩", deleteParams, cancellationToken);
+
+			// Remove branch flag from parent if it no longer has children
+			if (attribute.Length > 1)
+			{
+				var parentLongName = string.Join('`', attribute.Take(attribute.Length - 1));
+				var parentAttrKey = $"{dbref.Number}_{parentLongName}";
+				await RemoveBranchFlagIfNoChildrenAsync(parentAttrKey, cancellationToken);
+			}
 		}
 
 		return true;
@@ -495,6 +527,14 @@ public partial class SurrealDatabase
 		await ExecuteAsync("DELETE has_attribute_owner WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
 		await ExecuteAsync("DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
 		await ExecuteAsync("DELETE attribute:⟨$key⟩", deleteParams, cancellationToken);
+
+		// Remove branch flag from parent if it no longer has children
+		if (attribute.Length > 1)
+		{
+			var parentLongName = string.Join('`', attribute.Take(attribute.Length - 1));
+			var parentAttrKey = $"{dbref.Number}_{parentLongName}";
+			await RemoveBranchFlagIfNoChildrenAsync(parentAttrKey, cancellationToken);
+		}
 
 		return true;
 	}
@@ -611,6 +651,9 @@ public partial class SurrealDatabase
 			if (parentAttrs.Length == attribute.Length)
 			{
 				var lastAttr = parentAttrs.Last();
+				// no_inherit flag prevents attribute from being visible to children
+				if (lastAttr.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase)))
+					continue;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new AttributeWithInheritance(parentAttrs, parentDbRef, AttributeSource.Parent, flags);
 				yield break;
@@ -637,6 +680,9 @@ public partial class SurrealDatabase
 				if (zoneAttrs.Length == attribute.Length)
 				{
 					var lastAttr = zoneAttrs.Last();
+					// no_inherit flag prevents attribute from being visible to children
+					if (lastAttr.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase)))
+						continue;
 					var flags = lastAttr.Flags.Where(f => f.Inheritable);
 					yield return new AttributeWithInheritance(zoneAttrs, zoneDbRef, AttributeSource.Zone, flags);
 					yield break;
@@ -671,6 +717,9 @@ public partial class SurrealDatabase
 			if (parentAttrs.Length == attribute.Length)
 			{
 				var lastAttr = parentAttrs.Last();
+				// no_inherit flag prevents attribute from being visible to children
+				if (lastAttr.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase)))
+					continue;
 				var flags = lastAttr.Flags.Where(f => f.Inheritable);
 				yield return new LazyAttributeWithInheritance(parentAttrs, parentDbRef, AttributeSource.Parent, flags);
 				yield break;
@@ -697,11 +746,37 @@ public partial class SurrealDatabase
 				if (zoneAttrs.Length == attribute.Length)
 				{
 					var lastAttr = zoneAttrs.Last();
+					// no_inherit flag prevents attribute from being visible to children
+					if (lastAttr.Flags.Any(f => f.Name.Equals("no_inherit", StringComparison.OrdinalIgnoreCase)))
+						continue;
 					var flags = lastAttr.Flags.Where(f => f.Inheritable);
 					yield return new LazyAttributeWithInheritance(zoneAttrs, zoneDbRef, AttributeSource.Zone, flags);
 					yield break;
 				}
 			}
+		}
+	}
+
+	/// <summary>
+	/// After removing a child attribute, check if the parent attribute still has children.
+	/// If not, remove the branch flag from the parent.
+	/// </summary>
+	private async ValueTask RemoveBranchFlagIfNoChildrenAsync(string parentAttrKey, CancellationToken cancellationToken)
+	{
+		var checkParams = new Dictionary<string, object?> { ["key"] = parentAttrKey };
+		var childResult = await ExecuteAsync(
+			"SELECT count() AS cnt FROM has_attribute WHERE in = attribute:⟨$key⟩ GROUP ALL",
+			checkParams, cancellationToken);
+
+		var records = childResult.GetValue<List<CountRecord>>(0)!;
+		var hasChildren = records.Count > 0 && records[0].cnt > 0;
+
+		if (!hasChildren)
+		{
+			var escapedKey = EscapeRecordId(parentAttrKey);
+			await ExecuteAsync(
+				$"DELETE has_attribute_flag WHERE in = attribute:⟨{escapedKey}⟩ AND out IN (SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = 'BRANCH')",
+				new Dictionary<string, object?>(), cancellationToken);
 		}
 	}
 

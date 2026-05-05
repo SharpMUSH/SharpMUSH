@@ -317,6 +317,12 @@ public partial class ArangoDatabase
 			_ => $"\\{m.Value}"
 		});
 
+		// Trailing backtick means "direct children only" — e.g. FOO` → FOO`[^`]+
+		if (pattern.EndsWith("`"))
+		{
+			pattern = pattern + "[^`]+";
+		}
+
 		if (!result.Any())
 		{
 			yield break;
@@ -629,9 +635,30 @@ public partial class ArangoDatabase
 				await SetAttributeFlagAsync(transactionHandle, newOne.New.Id, flag, ct);
 			}
 
-			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributes,
+		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributes,
 				DatabaseConstants.HasAttribute,
 				new SharpEdgeCreateRequest(lastId, newOne.Id), waitForSync: true, cancellationToken: ct);
+
+			// Set branch flag on parent attribute node if it doesn't already have it
+			// Only for attribute nodes (not the root object node)
+			if (lastId.StartsWith(DatabaseConstants.Attributes + "/"))
+			{
+				var branchFlag = await GetAttributeFlagAsync("branch", ct);
+				if (branchFlag != null)
+				{
+					var parentHasBranchFlag = await arangoDb.Query.ExecuteAsync<int>(transactionHandle,
+						$"RETURN LENGTH(FOR e IN {DatabaseConstants.HasAttributeFlag} FILTER e._from == @parentId AND e._to == @branchFlagId RETURN 1)",
+						new Dictionary<string, object>
+						{
+							{ "parentId", lastId },
+							{ "branchFlagId", branchFlag.Id! }
+						}, cancellationToken: ct);
+					if (parentHasBranchFlag.First() == 0)
+					{
+						await SetAttributeFlagAsync(transactionHandle, lastId, branchFlag, ct);
+					}
+				}
+			}
 
 			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributeOwners,
 				DatabaseConstants.HasAttributeOwner,
@@ -679,6 +706,42 @@ public partial class ArangoDatabase
 		=> await arangoDb.Graph.Edge.CreateAsync(transactionHandle,
 			DatabaseConstants.GraphAttributeFlags, DatabaseConstants.HasAttributeFlag,
 			new SharpEdgeCreateRequest(attrId, flag.Id!), cancellationToken: ct);
+
+	/// <summary>
+	/// After removing a child attribute, check if the parent attribute still has children.
+	/// If not, remove the branch flag from the parent.
+	/// </summary>
+	private async ValueTask RemoveBranchFlagIfNoChildrenAsync(string parentAttrId, CancellationToken ct)
+	{
+		// Check if parent still has any children
+		var remainingChildren = await arangoDb.Query.ExecuteAsync<int>(handle,
+			$"RETURN LENGTH(FOR v IN 1..1 OUTBOUND @parentId GRAPH {DatabaseConstants.GraphAttributes} LIMIT 1 RETURN 1)",
+			new Dictionary<string, object> { { "parentId", parentAttrId } },
+			cancellationToken: ct);
+
+		if (remainingChildren.First() == 0)
+		{
+			// No children left — remove branch flag
+			var branchFlag = await GetAttributeFlagAsync("branch", ct);
+			if (branchFlag != null)
+			{
+				// Find and remove the edge from parent to branch flag
+				var edges = await arangoDb.Query.ExecuteAsync<string>(handle,
+					$"FOR e IN {DatabaseConstants.HasAttributeFlag} FILTER e._from == @parentId AND e._to == @flagId RETURN e._key",
+					new Dictionary<string, object>
+					{
+						{ "parentId", parentAttrId },
+						{ "flagId", branchFlag.Id! }
+					}, cancellationToken: ct);
+
+				foreach (var edgeKey in edges)
+				{
+					await arangoDb.Document.DeleteAsync<object>(handle, DatabaseConstants.HasAttributeFlag, edgeKey,
+						cancellationToken: ct);
+				}
+			}
+		}
+	}
 
 
 	public async ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag,
@@ -747,9 +810,9 @@ public partial class ArangoDatabase
 		// Set the contents to empty, or remove entirely if no children.
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
-		// Get the attribute
-		var attrs = GetAttributeAsync(dbref, attribute, ct);
-		var targetAttr = await attrs.LastOrDefaultAsync(ct);
+		// Get the attribute path
+		var attrPath = await GetAttributeAsync(dbref, attribute, ct).ToListAsync(ct);
+		var targetAttr = attrPath.LastOrDefault();
 		if (targetAttr is null) return false;
 
 		// Check if attribute has children (just need to know if any exist)
@@ -764,11 +827,20 @@ public partial class ArangoDatabase
 				new { Key = targetAttr.Key, Value = MModule.serialize(MModule.empty()) },
 				mergeObjects: true, cancellationToken: ct);
 		}
-		else
+	else
 		{
 			// No children, remove the attribute
 			await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphAttributes,
 				DatabaseConstants.Attributes, targetAttr.Key, cancellationToken: ct);
+
+			// Check if parent still has other children; if not, remove branch flag
+			// Parent is second-to-last in the path (if it's an attribute node)
+			if (attrPath.Count >= 2)
+			{
+				var parentAttr = attrPath[^2];
+				if (parentAttr.Id!.StartsWith(DatabaseConstants.Attributes + "/"))
+					await RemoveBranchFlagIfNoChildrenAsync(parentAttr.Id, ct);
+			}
 		}
 
 		return true;
@@ -779,9 +851,9 @@ public partial class ArangoDatabase
 		// Wipe a list of attributes. We assume the calling code figured out the permissions part.
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
-		// Get the attribute
-		var attrs = GetAttributeAsync(dbref, attribute, ct);
-		var targetAttr = await attrs.LastOrDefaultAsync(ct);
+		// Get the attribute path
+		var attrPath = await GetAttributeAsync(dbref, attribute, ct).ToListAsync(ct);
+		var targetAttr = attrPath.LastOrDefault();
 		if (targetAttr is null) return false;
 
 		// Get all descendants (children, grandchildren, etc.) - traverse to max depth
@@ -799,6 +871,14 @@ public partial class ArangoDatabase
 		// Remove the target attribute itself
 		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphAttributes,
 			DatabaseConstants.Attributes, targetAttr.Key, cancellationToken: ct);
+
+		// Check if parent still has other children; if not, remove branch flag
+		if (attrPath.Count >= 2)
+		{
+			var parentAttr = attrPath[^2];
+			if (parentAttr.Id!.StartsWith(DatabaseConstants.Attributes + "/"))
+				await RemoveBranchFlagIfNoChildrenAsync(parentAttr.Id, ct);
+		}
 
 		return true;
 	}
@@ -915,6 +995,13 @@ public partial class ArangoDatabase
 		}
 
 		var lastAttr = attrs.Last();
+
+		// no_inherit flag prevents attribute from being visible to children
+		if (result.filterFlags && lastAttr.Flags.Any(f => f.Name == "no_inherit"))
+		{
+			yield break;
+		}
+
 		var flags = result.filterFlags
 			? lastAttr.Flags.Where(f => f.Inheritable)
 			: lastAttr.Flags;

@@ -42,7 +42,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
@@ -63,7 +63,7 @@ public partial class Functions
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 		if (maybeMemberStatus is null)
 		{
-			return new CallState("#-1 You are not a member of that channel.");
+			return new CallState(ErrorMessages.Returns.NotAMember);
 		}
 
 		using (Logger!.BeginScope("<{DbRef}> {Category}: {Channel}.",
@@ -82,7 +82,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -103,7 +103,7 @@ public partial class Functions
 
 		if (maybeMemberStatus is null)
 		{
-			return new CallState("#-1 You are not a member of that channel.");
+			return new CallState(ErrorMessages.Returns.NotAMember);
 		}
 
 		var (_, status) = maybeMemberStatus;
@@ -402,7 +402,7 @@ public partial class Functions
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 		if (maybeMemberStatus is null)
 		{
-			return new CallState("#-1 You are not a member of that channel.");
+			return new CallState(ErrorMessages.Returns.NotAMember);
 		}
 
 		// Get optional arguments
@@ -522,7 +522,7 @@ public partial class Functions
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
-			return new CallState(Errors.ErrorNoSideFx);
+			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -543,7 +543,7 @@ public partial class Functions
 
 		if (maybeMemberStatus is null)
 		{
-			return new CallState("#-1 You are not a member of that channel.");
+			return new CallState(ErrorMessages.Returns.NotAMember);
 		}
 
 		var (_, status) = maybeMemberStatus;
@@ -677,7 +677,7 @@ public partial class Functions
 			"owner" => new CallState($"#{owner.Object.DBRef.Number}"),
 			"members" => new CallState((await channel.Members.Value.CountAsync()).ToString()),
 			"buffer" => new CallState("50"), // Default buffer size
-			_ => new CallState("#-1 INVALID INFO TYPE")
+			_ => new CallState(ErrorMessages.Returns.InvalidInfoType)
 		};
 	}
 }

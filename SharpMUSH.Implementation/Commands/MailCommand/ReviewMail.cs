@@ -3,6 +3,7 @@ using MarkupString;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -28,7 +29,7 @@ public static class ReviewMail
 			if (!actualPlayer.IsPlayer)
 			{
 				await notifyService.Notify(executor, $"MAIL: {name} not found.");
-				return MModule.single("#-1 NO SUCH PLAYER");
+				return MModule.single(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
 			target = actualPlayer.AsPlayer;

@@ -11,6 +11,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 		var data = database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
+
 		if (data is not null)
 		{
 			return data;
@@ -80,7 +81,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				CountAll: false,
 				ExaminePublicAttributes: true,
 				FlagsOnExamine: true,
-				FloatPrecision: 6,
+				FloatPrecision: 15,
 				MoneyPlural: "Pennies",
 				MoneySingular: "Penny",
 				Monikers: true,

@@ -216,7 +216,7 @@ public class StringFunctionUnitTests
 
 	[Test]
 	[Arguments("edit(this is a test,a test,an exam)", "this is an exam")]
-	[Arguments("edit(hello,^,well )", "well hello")]
+	[Arguments("edit(hello,^,well )", "wellhello")]
 	[Arguments("edit(hello,$,%bworld)", "hello world")]
 	public async Task Edit(string str, string expectedText)
 	{
@@ -302,6 +302,8 @@ public class StringFunctionUnitTests
 	// Penn strinsert.1-strinsert.3
 	[Arguments("strinsert(000,1,1)", "0100")]
 	[Arguments("strinsert(000,5,11)", "00011")]
+	// Penn strinsert.2 — negative index
+	[Arguments("strinsert(000,-1,1)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Strinsert(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -316,6 +318,8 @@ public class StringFunctionUnitTests
 	[Arguments("strreplace(0010,2,2,0)", "000")]
 	[Arguments("strreplace(0010,2,1,010)", "000100")]
 	[Arguments("strreplace(0010,6,1,0)", "0010")]
+	// Penn strreplace.6 — negative index
+	[Arguments("strreplace(0010,-1,4,woot)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Strreplace(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

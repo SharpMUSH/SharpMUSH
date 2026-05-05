@@ -70,7 +70,7 @@ public static partial class ArgHelpers
 			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message));
 			if (!decimal.TryParse(text, out var value))
 			{
-				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
 			decimals.Add(value);
 		}
@@ -100,7 +100,7 @@ public static partial class ArgHelpers
 			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message));
 			if (!int.TryParse(text, out var value))
 			{
-				return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
 			}
 			integers.Add(value);
 		}
@@ -119,7 +119,7 @@ public static partial class ArgHelpers
 			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message!));
 			if (!int.TryParse(text, out var value))
 			{
-				return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
 			}
 			integers.Add(value);
 		}
@@ -137,7 +137,7 @@ public static partial class ArgHelpers
 			var text = string.Join(string.Empty, EmptyStringToZero(MModule.plainText(arg.Value.Message)));
 			if (!decimal.TryParse(text, out var value))
 			{
-				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
 			decimals.Add(value);
 		}
@@ -152,7 +152,7 @@ public static partial class ArgHelpers
 		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
 		if (!decimal.TryParse(text, out var value))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
 
 		var result = func(value);
@@ -165,7 +165,7 @@ public static partial class ArgHelpers
 		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
 		if (!decimal.TryParse(text, out var value))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
 
 		return ValueTask.FromResult<CallState>(func(value));
@@ -177,7 +177,7 @@ public static partial class ArgHelpers
 		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
 		if (!double.TryParse(text, out var value))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
 
 		return ValueTask.FromResult<CallState>(func(value));
@@ -189,7 +189,7 @@ public static partial class ArgHelpers
 		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
 		if (!int.TryParse(text, out var value))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorInteger);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integer);
 		}
 
 		return ValueTask.FromResult<CallState>(func(value));
@@ -204,7 +204,7 @@ public static partial class ArgHelpers
 	{
 		if (args.Count < 2)
 		{
-			return ValueTask.FromResult(new CallState(Message: Errors.ErrorTooFewArguments));
+			return ValueTask.FromResult(new CallState(Message: ErrorMessages.Returns.TooFewArguments));
 		}
 
 		var doubles = args.Select(x =>
@@ -215,7 +215,7 @@ public static partial class ArgHelpers
 
 		if (doubles.Any(x => !x.IsDouble))
 		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		var result = doubles.Select(x => x.Double).Pairwise().All(func);

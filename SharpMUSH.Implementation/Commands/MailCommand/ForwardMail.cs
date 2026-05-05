@@ -5,6 +5,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -43,7 +44,7 @@ public static class ForwardMail
 
 		if (mail is null)
 		{
-			return MModule.single("#-1 MAIL NOT FOUND");
+			return MModule.single(ErrorMessages.Returns.MailNotFound);
 		}
 
 		mail.Forwarded = true;

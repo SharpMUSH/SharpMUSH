@@ -4,6 +4,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -22,8 +23,8 @@ public static class ChannelRename
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
-			return new CallState("#-1 Guests may not modify channels.");
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatGuestsCantModify, executor);
+			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
@@ -44,7 +45,7 @@ public static class ChannelRename
 		if (!isValid)
 		{
 			await NotifyService.Notify(executor, "CHAT: Invalid channel name.", executor);
-			return new CallState("#-1 CHAT: Invalid channel name.");
+			return new CallState(ErrorMessages.Returns.InvalidChannelName);
 		}
 
 		await Mediator.Send(new UpdateChannelCommand(channel,

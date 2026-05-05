@@ -58,6 +58,10 @@ public class TimeFunctionUnitTests
 	[Arguments("stringsecs(1h)", "3600")]
 	[Arguments("stringsecs(10s 5m)", "310")]
 	[Arguments("stringsecs(1d 2h 3m 4s)", "93784")]
+	// Penn stringsecs error cases
+	[Arguments("stringsecs(a)", "#-1 INVALID TIMESTRING")]
+	[Arguments("stringsecs(h)", "#-1 INVALID TIMESTRING")]
+	[Arguments("stringsecs(5m 10s)", "310")]
 	public async Task Stringsecs(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

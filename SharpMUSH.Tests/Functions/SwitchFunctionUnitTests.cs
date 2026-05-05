@@ -20,6 +20,10 @@ public class SwitchFunctionUnitTests
 
 	[Test]
 	[Arguments("reswitch(abc,a*,1,b*,2,0)", "1")]
+	// Penn reswitch.1-3: regex matching (case-sensitive)
+	[Arguments("reswitch(test STRING,t,1,0)", "1")]
+	[Arguments("reswitch(test STRING,t,1,e,2,0)", "1")]
+	[Arguments("reswitch(test STRING,E,1,0)", "0")]
 	public async Task Reswitch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -28,6 +32,10 @@ public class SwitchFunctionUnitTests
 
 	[Test]
 	[Arguments("reswitchall(abc,a*,1,b*,2)", "12")]
+	// Penn reswitch.5-7: reswitchall matches all patterns
+	[Arguments("reswitchall(test STRING,t,1,0)", "1")]
+	[Arguments("reswitchall(test STRING,t,1,e,2,0)", "12")]
+	[Arguments("reswitchall(test STRING,E,1,0)", "0")]
 	public async Task Reswitchall(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -36,6 +44,10 @@ public class SwitchFunctionUnitTests
 
 	[Test]
 	[Arguments("reswitchi(ABC,a*,1,b*,2,0)", "1")]
+	// Penn reswitch.9-11: case-insensitive matching
+	[Arguments("reswitchi(test STRING,t,1,0)", "1")]
+	[Arguments("reswitchi(test STRING,t,1,e,2,0)", "1")]
+	[Arguments("reswitchi(test STRING,E,1,0)", "1")]
 	public async Task Reswitchi(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -44,6 +56,10 @@ public class SwitchFunctionUnitTests
 
 	[Test]
 	[Arguments("reswitchalli(ABC,a*,1,b*,2)", "12")]
+	// Penn reswitch.13-15: case-insensitive match-all
+	[Arguments("reswitchalli(test STRING,t,1,0)", "1")]
+	[Arguments("reswitchalli(test STRING,t,1,e,2,0)", "12")]
+	[Arguments("reswitchalli(test STRING,E,1,0)", "1")]
 	public async Task Reswitchalli(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

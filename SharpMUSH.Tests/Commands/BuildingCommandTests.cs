@@ -691,4 +691,92 @@ public class BuildingCommandTests
 		// Verify "Cleared" notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCleared))).IsTrue();
 	}
+
+	/// <summary>
+	/// @clone copies attributes but strips privileged flags.
+	/// PennMUSH testsidefx.t: clone.1-6
+	/// </summary>
+	[Test]
+	public async ValueTask Clone_CopiesAttrs_StripsPrivilegedFlags()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("cln");
+
+		// Create source with a wizard flag and custom attribute
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create ClnSrc_{token}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set ClnSrc_{token}=Wizard"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO ClnSrc_{token}=blah_{token}"));
+
+		// Clone without /preserve
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@clone ClnSrc_{token}=ClnCopy_{token}"));
+
+		// Wizard flag should NOT be copied
+		var flagResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"think hasflag(ClnCopy_{token}, WIZARD)"));
+		await Assert.That(flagResult.Message!.ToPlainText()!.Trim()).IsEqualTo("0");
+
+		// Attribute should be copied
+		var attrResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"think hasattr(ClnCopy_{token}, FOO)"));
+		await Assert.That(attrResult.Message!.ToPlainText()!.Trim()).IsEqualTo("1");
+	}
+
+	/// <summary>
+	/// @clone/preserve copies privileged flags too.
+	/// PennMUSH testsidefx.t: clone.7-8
+	/// </summary>
+	[Test]
+	public async ValueTask Clone_Preserve_CopiesPrivilegedFlags()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("clp");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create ClpSrc_{token}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set ClpSrc_{token}=Wizard"));
+
+		// Clone with /preserve
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@clone/preserve ClpSrc_{token}=ClpCopy_{token}"));
+
+		// Wizard flag SHOULD be copied
+		var flagResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"think hasflag(ClpCopy_{token}, WIZARD)"));
+		await Assert.That(flagResult.Message!.ToPlainText()!.Trim()).IsEqualTo("1");
+	}
+
+	/// <summary>
+	/// clone() function works like @clone; clone(..., preserve) like @clone/preserve.
+	/// PennMUSH testsidefx.t: clone.9-12
+	/// </summary>
+	[Test]
+	public async ValueTask CloneFunction_WithAndWithoutPreserve()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("clf");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create ClfSrc_{token}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set ClfSrc_{token}=Wizard"));
+
+		// clone() without preserve
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"think clone(ClfSrc_{token}, ClfNP_{token})"));
+		var npFlag = await Parser.CommandParse(1, ConnectionService, MModule.single($"think hasflag(ClfNP_{token}, WIZARD)"));
+		await Assert.That(npFlag.Message!.ToPlainText()!.Trim()).IsEqualTo("0");
+
+		// clone() with preserve
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"think clone(ClfSrc_{token}, ClfP_{token}, , preserve)"));
+		var pFlag = await Parser.CommandParse(1, ConnectionService, MModule.single($"think hasflag(ClfP_{token}, WIZARD)"));
+		await Assert.That(pFlag.Message!.ToPlainText()!.Trim()).IsEqualTo("1");
+	}
+
+	/// <summary>
+	/// @clone and clone() of non-existent object returns error.
+	/// PennMUSH testsidefx.t: clone.13-14
+	/// </summary>
+	[Test]
+	public async ValueTask Clone_NonExistentObject_Errors()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("clx");
+
+		// @clone non-existent
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@clone NoSuchObj_{token}"));
+
+		// clone() non-existent — should return error dbref
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"think clone(NoSuchObj_{token})"));
+		var output = result.Message!.ToPlainText()!.Trim();
+		// SharpMUSH returns "#-1 NO MATCH" for failed locate
+		await Assert.That(output).StartsWith("#-1");
+	}
 }

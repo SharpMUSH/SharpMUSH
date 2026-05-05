@@ -22,11 +22,11 @@ public class OptionalSharpAttributeOrError(OneOf<SharpAttribute[], None, Error<s
 	public Error<string> AsError => AsT2;
 
 	public CallState AsCallStateError => IsT1
-		? new CallState(Errors.ErrorNoSuchAttribute)
+		? new CallState(ErrorMessages.Returns.NoSuchAttribute)
 		: new CallState(AsT2.Value);
 
 	public CallState AsCallState => Match(
 		attribute => new CallState(AsT0.Last().Value),
-		none => new CallState(Errors.ErrorNoSuchAttribute),
+		none => new CallState(ErrorMessages.Returns.NoSuchAttribute),
 		error => new CallState(AsT2.Value));
 }

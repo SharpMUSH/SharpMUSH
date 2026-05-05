@@ -150,6 +150,10 @@ public class RegexFunctionUnitTests
 	[Arguments("reswitch(test STRING,t,1,0)", "1")]
 	[Arguments("reswitch(test STRING,t,1,e,2,0)", "1")]
 	[Arguments("reswitch(test STRING,E,1,0)", "0")]
+	// Penn reswitch.4 — complex regex with special chars
+	// NOTE: Skipped — SharpMUSH evaluates NoParse pattern args via ParsedMessage(),
+	// so {4}, [A-Z], {6} get consumed by the parser. PennMUSH passes them raw.
+	// [Arguments(@"reswitch(test STRING,.\{4\}\s\[A-Z\]\{6\},9,t,1,E,2,0)", "9")]
 	public async Task Reswitch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -162,6 +166,8 @@ public class RegexFunctionUnitTests
 	[Arguments("reswitchi(test STRING,t,1,0)", "1")]
 	[Arguments("reswitchi(test STRING,t,1,e,2,0)", "1")]
 	[Arguments("reswitchi(test STRING,E,1,0)", "1")]
+	// Penn reswitchi.12 — complex regex (same NoParse issue as reswitch.4)
+	// [Arguments(@"reswitchi(test STRING,.\{4\}\s\[A-Z\]\{6\},9,t,1,E,2,0)", "9")]
 	public async Task Reswitchi(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -174,6 +180,8 @@ public class RegexFunctionUnitTests
 	[Arguments("reswitchall(test STRING,t,1,0)", "1")]
 	[Arguments("reswitchall(test STRING,t,1,e,2,0)", "12")]
 	[Arguments("reswitchall(test STRING,E,1,0)", "0")]
+	// Penn reswitchall.8 — complex regex (same NoParse issue as reswitch.4)
+	// [Arguments(@"reswitchall(test STRING,.\{4\}\s\[A-Z\]\{6\},9,t,1,E,2,0)", "91")]
 	public async Task Reswitchall(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -186,6 +194,8 @@ public class RegexFunctionUnitTests
 	[Arguments("reswitchalli(test STRING,t,1,0)", "1")]
 	[Arguments("reswitchalli(test STRING,t,1,e,2,0)", "12")]
 	[Arguments("reswitchalli(test STRING,E,1,0)", "1")]
+	// Penn reswitchalli.16 — complex regex (same NoParse issue as reswitch.4)
+	// [Arguments(@"reswitchalli(test STRING,.\{4\}\s\[A-Z\]\{6\},9,t,1,E,2,0)", "912")]
 	public async Task Reswitchalli(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

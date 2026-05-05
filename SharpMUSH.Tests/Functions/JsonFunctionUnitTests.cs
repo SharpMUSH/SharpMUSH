@@ -314,9 +314,32 @@ public class JsonFunctionUnitTests
 	}
 
 	[Test]
+	public async Task Test_JsonMap_RecursiveCall()
+	{
+		// PennMUSH testjson.t json.map.5: json_map(me/json3_fn, v(json), #)
+		// json3_fn calls json_map again on the value with json4_fn
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "JsonMapRec");
+		var attr3 = $"JSON3_{Guid.NewGuid():N}";
+		var attr4 = $"JSON4_{Guid.NewGuid():N}";
+
+		// json4_fn: returns %1 (the value)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&{attr4} {objDbRef}=%1"));
+		// json3_fn: calls json_map(obj/json4_fn, %1, @) — maps over the value with @ separator
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&{attr3} {objDbRef}=json_map({objDbRef}/{attr4}, %1, @)"));
+
+		// Input: {"a":1,"b":2,"c":[1,2,3]}
+		// For scalars (a=1, b=2): json_map(obj/json4_fn, 1, @) → json4_fn gets type=number, value=1 → "1"
+		// For array (c=[1,2,3]): json_map(obj/json4_fn, [1,2,3], @) → maps each element → "1@2@3"
+		// Overall with # separator: "1#2#1@2@3"
+		var result = (await Parser.FunctionParse(MModule.single(
+			$@"json_map({objDbRef}/{attr3}, json(object,a,1,b,2,c,json(array,1,2,3)), #)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("1#2#1@2@3");
+	}
+
+	[Test]
 	[Category("NeedsSetup")]
 	[Skip("Requires connection setup")]
-	[Arguments("oob(me,Package.Name,{\"key\":\"test_oob_case1\"})", "1")]
+	[Arguments("oob(me,Package.Name,{\\\"key\\\":\\\"test_oob_case1\\\"})", "1")]
 	[Arguments("oob(me,Package.Name)", "1")]
 	public async Task Test_Oob_SendsGmcpMessages(string function, string expected)
 	{

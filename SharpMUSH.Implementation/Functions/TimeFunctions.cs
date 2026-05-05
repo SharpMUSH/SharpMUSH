@@ -54,12 +54,12 @@ public partial class Functions
 
 		if (!TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var tz))
 		{
-			return new ValueTask<CallState>(Errors.ErrorNoSuchTimezone);
+			return new ValueTask<CallState>(ErrorMessages.Returns.NoSuchTimezone);
 		}
 
 		if (!long.TryParse(secs, out var secsInt))
 		{
-			return new ValueTask<CallState>(Errors.ErrorTimeInteger);
+			return new ValueTask<CallState>(ErrorMessages.Returns.TimeInteger);
 		}
 
 		return ValueTask.FromResult<CallState>(tz.IsDaylightSavingTime(DateTimeOffset.FromUnixTimeMilliseconds(secsInt)));
@@ -125,7 +125,7 @@ public partial class Functions
 				{
 					if (!double.TryParse(match.Groups["number"].Value, out var value))
 					{
-						return new ValueTask<CallState>(Errors.ErrorInteger);
+						return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
 					}
 
 					var unit = match.Groups["unit"].Value.ToLower();
@@ -144,7 +144,7 @@ public partial class Functions
 				return ValueTask.FromResult<CallState>(totalSeconds.ToString());
 			}
 
-			return new ValueTask<CallState>(Errors.ErrorBadArgumentFormat.Replace("{0}", "SECSCALC"));
+			return new ValueTask<CallState>(ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "SECSCALC"));
 		}
 
 		// Apply modifiers
@@ -246,7 +246,7 @@ public partial class Functions
 
 		if (matches.Count == 0)
 		{
-			return new ValueTask<CallState>(Errors.ErrorInteger);
+			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidTimestring);
 		}
 
 		long totalSeconds = 0;
@@ -254,7 +254,7 @@ public partial class Functions
 		{
 			if (!double.TryParse(match.Groups["number"].Value, out var value))
 			{
-				return new ValueTask<CallState>(Errors.ErrorInteger);
+				return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
 			}
 
 			var unit = match.Groups["unit"].Value.ToLower();
@@ -339,7 +339,7 @@ public partial class Functions
 		}
 		else
 		{
-			return new ValueTask<CallState>(Errors.ErrorBadArgumentFormat.Replace("{0}", "TIMECALC"));
+			return new ValueTask<CallState>(ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "TIMECALC"));
 		}
 
 		// Apply modifiers using Aggregate
@@ -422,7 +422,7 @@ public partial class Functions
 			var secsStr = secsArg.Message!.ToPlainText();
 			if (!long.TryParse(secsStr, out var secs))
 			{
-				return new ValueTask<CallState>(Errors.ErrorInteger);
+				return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
 			}
 			dt = DateTimeOffset.FromUnixTimeSeconds(secs);
 		}
@@ -441,7 +441,7 @@ public partial class Functions
 			}
 			else
 			{
-				return new ValueTask<CallState>(Errors.ErrorNoSuchTimezone);
+				return new ValueTask<CallState>(ErrorMessages.Returns.NoSuchTimezone);
 			}
 		}
 		else
@@ -477,7 +477,7 @@ public partial class Functions
 				'y' => dt.ToString("yy"),
 				'Y' => dt.ToString("yyyy"),
 				'Z' => dt.ToString("zzz"),
-				_ => "#-1 INVALID ESCAPE CODE"
+				_ => ErrorMessages.Returns.InvalidEscapeCode
 			};
 		});
 
@@ -514,7 +514,13 @@ public partial class Functions
 
 		if (!long.TryParse(secsStr, out var totalSecs))
 		{
-			return new ValueTask<CallState>(Errors.ErrorInteger);
+			return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
+		}
+
+		// PennMUSH: negative seconds return error
+		if (totalSecs < 0)
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
 		}
 
 		if (!int.TryParse(padFlag, out var pad))
@@ -621,10 +627,16 @@ public partial class Functions
 
 		if (!long.TryParse(secsStr, out var totalSecs))
 		{
-			return new ValueTask<CallState>(Errors.ErrorInteger);
+			return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
 		}
 
-		var maxWidth = width != null && int.TryParse(width, out var w) ? w : int.MaxValue;
+		var maxWidth = width != null && int.TryParse(width, out var w) ? w :
+			width != null ? -1 : int.MaxValue; // -1 signals invalid width
+
+		if (maxWidth < 0)
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.WidthMustBeANumber);
+		}
 
 		// Calculate time components
 		var timeSpan = TimeSpan.FromSeconds(totalSecs);
@@ -671,7 +683,13 @@ public partial class Functions
 
 		if (!long.TryParse(secsStr, out var totalSecs))
 		{
-			return new ValueTask<CallState>(Errors.ErrorInteger);
+			return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
+		}
+
+		// PennMUSH: negative seconds return error
+		if (totalSecs < 0)
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
 		}
 
 		// Calculate time components using TimeSpan
@@ -739,7 +757,7 @@ public partial class Functions
 
 		if (!long.TryParse(secsStr, out var seconds))
 		{
-			return ValueTask.FromResult<CallState>("#-1 INVALID SECONDS");
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidSeconds);
 		}
 
 		var dateTime = DateTimeOffset.FromUnixTimeSeconds(seconds);
@@ -757,7 +775,7 @@ public partial class Functions
 			}
 			else
 			{
-				return ValueTask.FromResult<CallState>("#-1 INVALID TIMEZONE");
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTimezone);
 			}
 		}
 
@@ -805,7 +823,7 @@ public partial class Functions
 
 		if (!long.TryParse(secsStr, out var seconds))
 		{
-			return ValueTask.FromResult<CallState>("#-1 INVALID SECONDS");
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidSeconds);
 		}
 
 		var dateTime = DateTimeOffset.FromUnixTimeSeconds(seconds);

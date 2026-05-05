@@ -487,4 +487,16 @@ public class UtilityCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "God is in")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
+
+	/// <summary>
+	/// page/noeval with escaped = doesn't crash (PennMUSH testpage.t: page.1 regression).
+	/// </summary>
+	[Test]
+	public async ValueTask PageNoeval_EscapedEquals_DoesNotCrash()
+	{
+		// Should not throw; just produces a "who do you want to page" type message
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("page/noeval #1 \\= ="));
+		// If we got here without exception, the regression is fixed
+		await Assert.That(result).IsNotNull();
+	}
 }
