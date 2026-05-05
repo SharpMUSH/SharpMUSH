@@ -7,145 +7,207 @@
 
 <PageTitle>@Loc["Restrictions"] - @Loc["Configuration"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
-    <MudText Typo="Typo.h4" GutterBottom="true">@Loc["CommandAndFunctionRestrictions"]</MudText>
-    <MudText Typo="Typo.body1" Class="mb-4">
-        @Loc["RestrictionsDescription"]
-    </MudText>
+<div class="config-section-page">
+    <div class="config-section-header">
+        <MudText Typo="Typo.h4">@Loc["CommandAndFunctionRestrictions"]</MudText>
+        <MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">
+            @Loc["RestrictionsDescription"]
+        </MudText>
+    </div>
 
-    @if (_loading)
-    {
-        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
-    }
-    else
-    {
-        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
-            <MudTabPanel Text="@Loc["CommandRestrictions"].Value" Icon="@Icons.Material.Filled.Terminal">
-                <MudPaper Class="pa-4 mb-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["AddCommandRestriction"]</MudText>
-                    <MudGrid>
-                        <MudItem xs="12" md="5">
-                            <MudTextField @bind-Value="_newCommandName" 
-                                          Label="@Loc["CommandName"].Value" 
-                                          Variant="Variant.Outlined"
-                                          HelperText="@Loc["CommandNameHelper"].Value" />
-                        </MudItem>
-                        <MudItem xs="12" md="5">
-                            <MudTextField @bind-Value="_newCommandRestrictionsText" 
-                                          Label="@Loc["RestrictionsLabel"].Value" 
-                                          Variant="Variant.Outlined"
-                                          HelperText="@Loc["RestrictionsHelper"].Value" />
-                        </MudItem>
-                        <MudItem xs="12" md="2">
-                            <MudButton Variant="Variant.Filled" 
-                                       Color="Color.Primary" 
-                                       OnClick="AddCommandRestriction"
-                                       Disabled="string.IsNullOrWhiteSpace(_newCommandName) || string.IsNullOrWhiteSpace(_newCommandRestrictionsText)"
-                                       FullWidth="true"
-                                       StartIcon="@Icons.Material.Filled.Add">
-                                @Loc["Add"]
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
-                </MudPaper>
+    <div class="config-section-content">
+        @if (_loading)
+        {
+            <MudCard Outlined="true" Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudSkeleton Width="30%" Height="32px" />
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudSkeleton Height="56px" Class="mb-4" />
+                    <MudSkeleton Height="56px" />
+                </MudCardContent>
+            </MudCard>
+        }
+        else
+        {
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
+                <MudTabPanel Text="@Loc["CommandRestrictions"].Value" Icon="@Icons.Material.Filled.Terminal">
+                    <MudCard Outlined="true" Class="mb-4 mt-4">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@Loc["AddCommandRestriction"]</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudGrid>
+                                <MudItem xs="12" md="5">
+                                    <MudTextField @bind-Value="_newCommandName" 
+                                                  Label="@Loc["CommandName"].Value" 
+                                                  Variant="Variant.Outlined"
+                                                  HelperText="@Loc["CommandNameHelper"].Value" />
+                                </MudItem>
+                                <MudItem xs="12" md="5">
+                                    <MudTextField @bind-Value="_newCommandRestrictionsText" 
+                                                  Label="@Loc["RestrictionsLabel"].Value" 
+                                                  Variant="Variant.Outlined"
+                                                  HelperText="@Loc["RestrictionsBuilderHelper"].Value" />
+                                </MudItem>
+                                <MudItem xs="12" md="2" Class="d-flex align-end">
+                                    <MudButton Variant="Variant.Filled" 
+                                               Color="Color.Primary" 
+                                               OnClick="AddCommandRestriction"
+                                               Disabled="string.IsNullOrWhiteSpace(_newCommandName) || string.IsNullOrWhiteSpace(_newCommandRestrictionsText)"
+                                               FullWidth="true"
+                                               StartIcon="@Icons.Material.Filled.Add">
+                                        @Loc["Add"]
+                                    </MudButton>
+                                </MudItem>
+                            </MudGrid>
+                        </MudCardContent>
+                    </MudCard>
 
-                <MudPaper Class="pa-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["ConfiguredCommandRestrictions"]</MudText>
-                    
-                    @if (_commandRestrictions == null || !_commandRestrictions.Any())
-                    {
-                        <MudAlert Severity="Severity.Info">@Loc["NoCommandRestrictions"]</MudAlert>
-                    }
-                    else
-                    {
-                        <MudList T="string">
-                            @foreach (var restriction in _commandRestrictions.OrderBy(r => r.Key))
+                    <MudCard Outlined="true">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@Loc["ConfiguredCommandRestrictions"]</MudText>
+                            </CardHeaderContent>
+                            <CardHeaderActions>
+                                <MudChip T="string" Color="Color.Info" Size="Size.Small">@_commandRestrictions.Count</MudChip>
+                            </CardHeaderActions>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            @if (_commandRestrictions == null || !_commandRestrictions.Any())
                             {
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center" style="width: 100%">
-                                        <div>
-                                            <MudText Typo="Typo.body1"><strong>@restriction.Key</strong></MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                @string.Join(", ", restriction.Value)
-                                            </MudText>
-                                        </div>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                                       Color="Color.Error" 
-                                                       Size="Size.Small"
-                                                       OnClick="@(() => DeleteCommandRestriction(restriction.Key))" />
-                                    </div>
-                                </MudListItem>
-                                <MudDivider />
+                                <MudAlert Severity="Severity.Info">@Loc["NoCommandRestrictions"]</MudAlert>
                             }
-                        </MudList>
-                    }
-                </MudPaper>
-            </MudTabPanel>
-
-            <MudTabPanel Text="@Loc["FunctionRestrictions"].Value" Icon="@Icons.Material.Filled.Functions">
-                <MudPaper Class="pa-4 mb-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["AddFunctionRestriction"]</MudText>
-                    <MudGrid>
-                        <MudItem xs="12" md="5">
-                            <MudTextField @bind-Value="_newFunctionName" 
-                                          Label="@Loc["FunctionName"].Value" 
-                                          Variant="Variant.Outlined"
-                                          HelperText="@Loc["FunctionNameHelper"].Value" />
-                        </MudItem>
-                        <MudItem xs="12" md="5">
-                            <MudTextField @bind-Value="_newFunctionRestrictionsText" 
-                                          Label="@Loc["RestrictionsLabel"].Value" 
-                                          Variant="Variant.Outlined"
-                                          HelperText="@Loc["RestrictionsBuilderHelper"].Value" />
-                        </MudItem>
-                        <MudItem xs="12" md="2">
-                            <MudButton Variant="Variant.Filled" 
-                                       Color="Color.Primary" 
-                                       OnClick="AddFunctionRestriction"
-                                       Disabled="string.IsNullOrWhiteSpace(_newFunctionName) || string.IsNullOrWhiteSpace(_newFunctionRestrictionsText)"
-                                       FullWidth="true"
-                                       StartIcon="@Icons.Material.Filled.Add">
-                                @Loc["Add"]
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
-                </MudPaper>
-
-                <MudPaper Class="pa-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["ConfiguredFunctionRestrictions"]</MudText>
-                    
-                    @if (_functionRestrictions == null || !_functionRestrictions.Any())
-                    {
-                        <MudAlert Severity="Severity.Info">@Loc["NoFunctionRestrictions"]</MudAlert>
-                    }
-                    else
-                    {
-                        <MudList T="string">
-                            @foreach (var restriction in _functionRestrictions.OrderBy(r => r.Key))
+                            else
                             {
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center" style="width: 100%">
-                                        <div>
-                                            <MudText Typo="Typo.body1"><strong>@restriction.Key</strong></MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                @string.Join(", ", restriction.Value)
-                                            </MudText>
-                                        </div>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                                       Color="Color.Error" 
-                                                       Size="Size.Small"
-                                                       OnClick="@(() => DeleteFunctionRestriction(restriction.Key))" />
-                                    </div>
-                                </MudListItem>
-                                <MudDivider />
+                                <MudList T="string" Dense="true">
+                                    @foreach (var restriction in _commandRestrictions.OrderBy(r => r.Key))
+                                    {
+                                        <MudListItem T="string">
+                                            <div class="d-flex justify-space-between align-center" style="width: 100%">
+                                                <div>
+                                                    <MudText Typo="Typo.body1"><strong>@restriction.Key</strong></MudText>
+                                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                                                        @string.Join(", ", restriction.Value)
+                                                    </MudText>
+                                                </div>
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                               Color="Color.Error" 
+                                                               Size="Size.Small"
+                                                               OnClick="@(() => DeleteCommandRestriction(restriction.Key))" />
+                                            </div>
+                                        </MudListItem>
+                                        <MudDivider />
+                                    }
+                                </MudList>
                             }
-                        </MudList>
-                    }
-                </MudPaper>
-            </MudTabPanel>
-        </MudTabs>
+                        </MudCardContent>
+                    </MudCard>
+                </MudTabPanel>
+
+                <MudTabPanel Text="@Loc["FunctionRestrictions"].Value" Icon="@Icons.Material.Filled.Functions">
+                    <MudCard Outlined="true" Class="mb-4 mt-4">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@Loc["AddFunctionRestriction"]</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudGrid>
+                                <MudItem xs="12" md="5">
+                                    <MudTextField @bind-Value="_newFunctionName" 
+                                                  Label="@Loc["FunctionName"].Value" 
+                                                  Variant="Variant.Outlined"
+                                                  HelperText="@Loc["FunctionNameHelper"].Value" />
+                                </MudItem>
+                                <MudItem xs="12" md="5">
+                                    <MudTextField @bind-Value="_newFunctionRestrictionsText" 
+                                                  Label="@Loc["RestrictionsLabel"].Value" 
+                                                  Variant="Variant.Outlined"
+                                                  HelperText="@Loc["RestrictionsBuilderHelper"].Value" />
+                                </MudItem>
+                                <MudItem xs="12" md="2" Class="d-flex align-end">
+                                    <MudButton Variant="Variant.Filled" 
+                                               Color="Color.Primary" 
+                                               OnClick="AddFunctionRestriction"
+                                               Disabled="string.IsNullOrWhiteSpace(_newFunctionName) || string.IsNullOrWhiteSpace(_newFunctionRestrictionsText)"
+                                               FullWidth="true"
+                                               StartIcon="@Icons.Material.Filled.Add">
+                                        @Loc["Add"]
+                                    </MudButton>
+                                </MudItem>
+                            </MudGrid>
+                        </MudCardContent>
+                    </MudCard>
+
+                    <MudCard Outlined="true">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@Loc["ConfiguredFunctionRestrictions"]</MudText>
+                            </CardHeaderContent>
+                            <CardHeaderActions>
+                                <MudChip T="string" Color="Color.Info" Size="Size.Small">@_functionRestrictions.Count</MudChip>
+                            </CardHeaderActions>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            @if (_functionRestrictions == null || !_functionRestrictions.Any())
+                            {
+                                <MudAlert Severity="Severity.Info">@Loc["NoFunctionRestrictions"]</MudAlert>
+                            }
+                            else
+                            {
+                                <MudList T="string" Dense="true">
+                                    @foreach (var restriction in _functionRestrictions.OrderBy(r => r.Key))
+                                    {
+                                        <MudListItem T="string">
+                                            <div class="d-flex justify-space-between align-center" style="width: 100%">
+                                                <div>
+                                                    <MudText Typo="Typo.body1"><strong>@restriction.Key</strong></MudText>
+                                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                                                        @string.Join(", ", restriction.Value)
+                                                    </MudText>
+                                                </div>
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                               Color="Color.Error" 
+                                                               Size="Size.Small"
+                                                               OnClick="@(() => DeleteFunctionRestriction(restriction.Key))" />
+                                            </div>
+                                        </MudListItem>
+                                        <MudDivider />
+                                    }
+                                </MudList>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudTabPanel>
+            </MudTabs>
+        }
+    </div>
+</div>
+
+<style>
+    .config-section-page {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
     }
-</MudContainer>
+
+    .config-section-header {
+        padding: 24px 32px;
+        background: var(--mud-palette-surface);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .config-section-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 32px;
+    }
+</style>
 
 @code {
     private bool _loading = true;

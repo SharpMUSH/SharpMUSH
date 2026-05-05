@@ -7,69 +7,117 @@
 
 <PageTitle>@Loc["BannedNames"] - @Loc["Configuration"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
-    <MudText Typo="Typo.h4" GutterBottom="true">@Loc["BannedPlayerNames"]</MudText>
-    <MudText Typo="Typo.body1" Class="mb-4">
-        @Loc["BannedNamesDescription"]
-    </MudText>
+<div class="config-section-page">
+    <div class="config-section-header">
+        <MudText Typo="Typo.h4">@Loc["BannedPlayerNames"]</MudText>
+        <MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">
+            @Loc["BannedNamesDescription"]
+        </MudText>
+    </div>
 
-    @if (_loading)
-    {
-        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
-    }
-    else
-    {
-        <MudPaper Class="pa-4 mb-4">
-            <MudText Typo="Typo.h6" GutterBottom="true">@Loc["AddBannedName"]</MudText>
-            <MudGrid>
-                <MudItem xs="12" md="8">
-                    <MudTextField @bind-Value="_newName" 
-                                  Label="@Loc["NameToBan"].Value" 
-                                  Variant="Variant.Outlined"
-                                  Immediate="true"
-                                  OnKeyDown="HandleKeyDown" />
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
-                               OnClick="AddBannedName"
-                               Disabled="string.IsNullOrWhiteSpace(_newName)"
-                               FullWidth="true"
-                               StartIcon="@Icons.Material.Filled.Add">
-                        @Loc["AddName"]
-                    </MudButton>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
+    <div class="config-section-content">
+        @if (_loading)
+        {
+            <MudCard Outlined="true" Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudSkeleton Width="30%" Height="32px" />
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudSkeleton Height="56px" Class="mb-4" />
+                    <MudSkeleton Height="56px" />
+                </MudCardContent>
+            </MudCard>
+        }
+        else
+        {
+            <MudCard Outlined="true" Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@Loc["AddBannedName"]</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid>
+                        <MudItem xs="12" md="8">
+                            <MudTextField @bind-Value="_newName" 
+                                          Label="@Loc["NameToBan"].Value" 
+                                          Variant="Variant.Outlined"
+                                          Immediate="true"
+                                          OnKeyDown="HandleKeyDown" />
+                        </MudItem>
+                        <MudItem xs="12" md="4" Class="d-flex align-end">
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       OnClick="AddBannedName"
+                                       Disabled="string.IsNullOrWhiteSpace(_newName)"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Add">
+                                @Loc["AddName"]
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
 
-        <MudPaper Class="pa-4">
-            <MudText Typo="Typo.h6" GutterBottom="true">@Loc["BannedNamesList"]</MudText>
-            
-            @if (_bannedNames == null || !_bannedNames.Any())
-            {
-                <MudAlert Severity="Severity.Info">@Loc["NoBannedNamesConfigured"]</MudAlert>
-            }
-            else
-            {
-                <MudList T="string">
-                    @foreach (var name in _bannedNames.OrderBy(n => n))
+            <MudCard Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@Loc["BannedNamesList"]</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudChip T="string" Color="Color.Info" Size="Size.Small">@_bannedNames.Count</MudChip>
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (_bannedNames == null || !_bannedNames.Any())
                     {
-                        <MudListItem T="string">
-                            <div class="d-flex justify-space-between align-center" style="width: 100%">
-                                <MudText>@name</MudText>
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                               Color="Color.Error" 
-                                               Size="Size.Small"
-                                               OnClick="@(() => DeleteBannedName(name))" />
-                            </div>
-                        </MudListItem>
-                        <MudDivider />
+                        <MudAlert Severity="Severity.Info">@Loc["NoBannedNamesConfigured"]</MudAlert>
                     }
-                </MudList>
-            }
-        </MudPaper>
+                    else
+                    {
+                        <MudList T="string" Dense="true">
+                            @foreach (var name in _bannedNames.OrderBy(n => n))
+                            {
+                                <MudListItem T="string">
+                                    <div class="d-flex justify-space-between align-center" style="width: 100%">
+                                        <MudText>@name</MudText>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                       Color="Color.Error" 
+                                                       Size="Size.Small"
+                                                       OnClick="@(() => DeleteBannedName(name))" />
+                                    </div>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
+                </MudCardContent>
+            </MudCard>
+        }
+    </div>
+</div>
+
+<style>
+    .config-section-page {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
     }
-</MudContainer>
+
+    .config-section-header {
+        padding: 24px 32px;
+        background: var(--mud-palette-surface);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .config-section-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 32px;
+    }
+</style>
 
 @code {
     private bool _loading = true;
