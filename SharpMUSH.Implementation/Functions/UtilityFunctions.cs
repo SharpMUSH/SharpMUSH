@@ -523,6 +523,10 @@ public partial class Functions
 				var clonedObjOptional = await Mediator!.Send(new GetObjectNodeQuery(cloneDbRef));
 				var clonedObj = clonedObjOptional.WithoutNone();
 
+				// Check preserve flag (arg 3)
+				var preserve = args.ContainsKey("3") &&
+					args["3"].Message!.ToPlainText().Equals("preserve", StringComparison.OrdinalIgnoreCase);
+
 				// Copy attributes (excluding system attributes)
 				await foreach (var attr in obj.Object().Attributes.Value)
 				{
@@ -530,6 +534,15 @@ public partial class Functions
 					{
 						await AttributeService!.SetAttributeAsync(executor, clonedObj,
 							attr.Name, attr.Value);
+					}
+				}
+
+				// Copy flags (excluding privileged ones unless preserve)
+				await foreach (var flag in obj.Object().Flags.Value)
+				{
+					if (preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
+					{
+						await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, clonedObj, flag.Name, false);
 					}
 				}
 

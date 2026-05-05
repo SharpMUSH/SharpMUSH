@@ -181,6 +181,12 @@ public class DbrefFunctionUnitTests
 	[Arguments("andflags(%#,PW)", "1")]      // P = player, W = wizard
 	[Arguments("andflags(%#,TW)", "0")]      // T = thing (executor is not a thing)
 	[Arguments("andflags(%#,Pr)", "0")]      // P = player, r = royalty (executor lacks royalty)
+	[Arguments("andflags(%#,Wc)", "1")]      // oracle andflags.1: W=wizard, c=connected
+	[Arguments("andflags(%#,W_)", "0")]      // oracle andflags.2: _=puppet (god isn't puppet)
+	[Arguments("andflags(%#,W~)", "0")]      // oracle andflags.3: ~=noaccents
+	[Arguments("andflags(%#,W!~)", "1")]     // oracle andflags.4: !~=not noaccents
+	[Arguments("andflags(%#,WP)", "1")]      // oracle andflags.6: W=wizard, P=player
+	[Arguments("andflags(%#,WT)", "0")]      // oracle andflags.7: T=thing
 	public async Task Andflags(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -190,6 +196,10 @@ public class DbrefFunctionUnitTests
 	[Test]
 	[Arguments("orflags(%#,PLAYER)", "1")]
 	[Arguments("orflags(%#,WIZARD PLAYER)", "1")]
+	[Arguments("orflags(%#,~W)", "1")]       // oracle orflags.1
+	[Arguments("orflags(%#,~_)", "0")]       // oracle orflags.2: ~=noaccents, _=puppet — neither set
+	[Arguments("orflags(%#,ET)", "0")]       // oracle orflags.5: E=exit type, T=thing type
+	[Arguments("orflags(%#,EP)", "1")]       // oracle orflags.6: E=exit, P=player — player matches
 	public async Task Orflags(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -198,6 +208,13 @@ public class DbrefFunctionUnitTests
 
 	[Test]
 	[Arguments("andlflags(%#,PLAYER)", "1")]
+	[Arguments("andlflags(%#,wizard connected)", "1")]    // oracle andlflags.1
+	[Arguments("andlflags(%#,wizard flunky)", "0")]       // oracle andlflags.2
+	[Arguments("andlflags(%#,wizard !noaccents)", "1")]   // oracle andlflags.3
+	[Arguments("andlflags(%#,wizard !puppet)", "1")]      // oracle andlflags.4
+	[Arguments("andlflags(%#,puppet wizard)", "0")]       // oracle andlflags.5
+	[Arguments("andlflags(%#,noaccents wizard)", "0")]    // oracle andlflags.6
+	[Arguments("andlflags(%#,player connected)", "1")]    // oracle andlflags.8
 	public async Task Andlflags(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -206,6 +223,12 @@ public class DbrefFunctionUnitTests
 
 	[Test]
 	[Arguments("orlflags(%#,PLAYER)", "1")]
+	[Arguments("orlflags(%#,wizard connected)", "1")]    // oracle orlflags.1
+	[Arguments("orlflags(%#,wizard flunky)", "1")]       // oracle orlflags.2
+	[Arguments("orlflags(%#,flunky wizard)", "1")]       // oracle orlflags.3
+	[Arguments("orlflags(%#,myopic noaccents)", "0")]    // oracle orlflags.4
+	[Arguments("orlflags(%#,myopic !noaccents)", "1")]   // oracle orlflags.5
+	[Arguments("orlflags(%#,thing player)", "1")]        // oracle orlflags.7
 	public async Task Orlflags(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
