@@ -921,6 +921,13 @@ public partial class ArangoDatabase
 		}
 
 		var lastAttr = attrs.Last();
+
+		// no_inherit flag prevents attribute from being visible to children
+		if (result.filterFlags && lastAttr.Flags.Any(f => f.Name == "no_inherit"))
+		{
+			yield break;
+		}
+
 		var flags = result.filterFlags
 			? lastAttr.Flags.Where(f => f.Inheritable)
 			: lastAttr.Flags;

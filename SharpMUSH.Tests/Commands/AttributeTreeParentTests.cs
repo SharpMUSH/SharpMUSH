@@ -87,7 +87,7 @@ public class AttributeTreeParentTests
 	/// KNOWN GAP: no_inherit attribute flag not respected by GetAttributeAsync parent traversal.
 	/// HIGH PRIORITY — this is a critical PennMUSH compatibility feature.
 	/// </summary>
-	[Test, Skip("no_inherit flag not yet respected in parent attribute traversal")]
+	[Test]
 	public async ValueTask Parent_NoInheritStopsInheritance()
 	{
 		var parentDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "NoInhPar");
@@ -124,24 +124,34 @@ public class AttributeTreeParentTests
 	/// KNOWN GAP: lattrp() parent tree traversal not implemented.
 	/// HIGH PRIORITY — this is a critical PennMUSH compatibility feature.
 	/// </summary>
-	[Test, Skip("lattrp parent tree traversal not implemented")]
+	[Test]
 	public async ValueTask Lattrp_ShowsParentTreeAttributes()
 	{
-		var parentDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LatPar");
-		var childDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LatChild");
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var parentDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"LatPar_{uid}");
+		var childDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"LatChild_{uid}");
+		var pfx = $"LP{uid}";
 
 		// Set parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
-		// Set tree on parent and child
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TREE`LEAF {parentDbRef}=X"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TREE {childDbRef}=Y"));
+		// Set tree leaf on parent, tree root on child
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&{pfx}`LEAF {parentDbRef}=X"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&{pfx} {childDbRef}=Y"));
 
-		// lattrp(child/tree`) should show TREE`LEAF from parent
-		var result = (await Parser.FunctionParse(MModule.single($"lattrp({childDbRef}/TREE`)")))?.Message!;
-		var text = result.ToPlainText();
+		// Verify parent link works
+		var parentCheck = (await Parser.FunctionParse(MModule.single($"parent({childDbRef})")))?.Message!.ToPlainText();
+		await Assert.That(parentCheck).IsEqualTo(parentDbRef.ToString())
+			.Because("@parent should be set");
 
-		await Assert.That(text).Contains("TREE`LEAF")
+		// Verify the attr exists on parent directly
+		var parentAttr = (await Parser.FunctionParse(MModule.single($"get({parentDbRef}/{pfx}`LEAF)")))?.Message!.ToPlainText();
+		await Assert.That(parentAttr).IsEqualTo("X")
+			.Because("parent should have the tree leaf attr");
+
+		// lattrp(child/pfx`) should show pfx`LEAF from parent
+		var result = (await Parser.FunctionParse(MModule.single($"lattrp({childDbRef}/{pfx}`)")))?.Message!.ToPlainText();
+		await Assert.That(result).Contains($"{pfx}`LEAF")
 			.Because("lattrp should show parent's tree leaves");
 	}
 }
