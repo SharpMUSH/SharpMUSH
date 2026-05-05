@@ -193,4 +193,80 @@ public class AttributeTreeWipeBranchTests
 		await Assert.That(text).Contains("`")
 			.Because("branch attributes should have the backtick flag");
 	}
+
+	/// <summary>
+	/// When the last child of a branch attribute is cleared, the branch flag should be removed.
+	/// PennMUSH: &FOO`BAR obj=val, then &FOO`BAR obj= removes the child, and flags(obj/FOO) no longer shows `.
+	/// </summary>
+	[Test]
+	public async ValueTask BranchFlag_RemovedWhenLastChildCleared()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var dbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"BfRm_{uid}");
+		var d = $"#{dbRef.Number}";
+
+		// Create branch: FOO with child BAR
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BF{uid} {d}=parent_val"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BF{uid}`CHILD {d}=child_val"));
+
+		// Verify branch flag is set
+		var flagsBefore = (await Parser.FunctionParse(MModule.single($"flags({d}/BF{uid})")))?.Message!.ToPlainText();
+		await Assert.That(flagsBefore).Contains("`");
+
+		// Wipe the only child
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@wipe {d}/BF{uid}`CHILD"));
+
+		// Branch flag should be removed since FOO has no more children
+		var flagsAfter = (await Parser.FunctionParse(MModule.single($"flags({d}/BF{uid})")))?.Message!.ToPlainText();
+		await Assert.That(flagsAfter).DoesNotContain("`")
+			.Because("branch flag should be removed when last child is cleared");
+	}
+
+	/// <summary>
+	/// Branch flag removed via &attr= (clear to empty on leaf).
+	/// </summary>
+	[Test]
+	public async ValueTask BranchFlag_RemovedWhenLastChildClearedViaAmpersand()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var dbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"BfCl_{uid}");
+		var d = $"#{dbRef.Number}";
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BC{uid} {d}=parent_val"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BC{uid}`CHILD {d}=child_val"));
+
+		var flagsBefore = (await Parser.FunctionParse(MModule.single($"flags({d}/BC{uid})")))?.Message!.ToPlainText();
+		await Assert.That(flagsBefore).Contains("`");
+
+		// Clear via &attr obj (no =) which clears the attribute
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BC{uid}`CHILD {d}"));
+
+		var flagsAfter = (await Parser.FunctionParse(MModule.single($"flags({d}/BC{uid})")))?.Message!.ToPlainText();
+		await Assert.That(flagsAfter).DoesNotContain("`")
+			.Because("branch flag should be removed when leaf child is cleared via &attr=");
+	}
+
+	/// <summary>
+	/// Branch flag should remain if there are still other children after one is removed.
+	/// </summary>
+	[Test]
+	public async ValueTask BranchFlag_RemainsWhenOtherChildrenExist()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var dbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"BfK_{uid}");
+		var d = $"#{dbRef.Number}";
+
+		// Create branch: FOO with two children
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BK{uid} {d}=parent_val"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BK{uid}`ONE {d}=val1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BK{uid}`TWO {d}=val2"));
+
+		// Clear one child
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BK{uid}`ONE {d}="));
+
+		// Branch flag should still be present (TWO still exists)
+		var flags = (await Parser.FunctionParse(MModule.single($"flags({d}/BK{uid})")))?.Message!.ToPlainText();
+		await Assert.That(flags).Contains("`")
+			.Because("branch flag should remain while other children exist");
+	}
 }
