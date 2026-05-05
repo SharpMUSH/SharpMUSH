@@ -635,9 +635,30 @@ public partial class ArangoDatabase
 				await SetAttributeFlagAsync(transactionHandle, newOne.New.Id, flag, ct);
 			}
 
-			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributes,
+		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributes,
 				DatabaseConstants.HasAttribute,
 				new SharpEdgeCreateRequest(lastId, newOne.Id), waitForSync: true, cancellationToken: ct);
+
+			// Set branch flag on parent attribute node if it doesn't already have it
+			// Only for attribute nodes (not the root object node)
+			if (lastId.StartsWith(DatabaseConstants.Attributes + "/"))
+			{
+				var branchFlag = await GetAttributeFlagAsync("branch", ct);
+				if (branchFlag != null)
+				{
+					var parentHasBranchFlag = await arangoDb.Query.ExecuteAsync<int>(transactionHandle,
+						$"RETURN LENGTH(FOR e IN {DatabaseConstants.HasAttributeFlag} FILTER e._from == @parentId AND e._to == @branchFlagId RETURN 1)",
+						new Dictionary<string, object>
+						{
+							{ "parentId", lastId },
+							{ "branchFlagId", branchFlag.Id! }
+						}, cancellationToken: ct);
+					if (parentHasBranchFlag.First() == 0)
+					{
+						await SetAttributeFlagAsync(transactionHandle, lastId, branchFlag, ct);
+					}
+				}
+			}
 
 			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributeOwners,
 				DatabaseConstants.HasAttributeOwner,

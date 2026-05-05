@@ -177,7 +177,7 @@ public class AttributeTreeWipeBranchTests
 	/// PennMUSH testatree.t: atree.matching.20
 	/// KNOWN GAP: Branch flag (`) exists in DB schema but logic to set/unset it is not wired up.
 	/// </summary>
-	[Test, Skip("Branch flag not yet wired up — flag exists in DB but not set on attribute creation")]
+	[Test]
 	public async ValueTask Flags_ShowsBacktickForBranch()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "FlagsTree");
