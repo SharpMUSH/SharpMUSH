@@ -445,10 +445,18 @@ public class AttributeService(
 			.Select(x => x.LongName + "`")
 			.ToArray();
 
-		return results
+		var filtered = results
 			.Where(x => !x.IsMortalDark()
-			             && !darkPrefixes.Any(dp => (x.LongName ?? "").StartsWith(dp, StringComparison.OrdinalIgnoreCase)))
-			.Where(x => ps.CanViewAttribute(executor, obj, x).AsTask().Result)
+			             && !darkPrefixes.Any(dp => (x.LongName ?? "").StartsWith(dp, StringComparison.OrdinalIgnoreCase)));
+
+		var permitted = new List<SharpAttribute>();
+		foreach (var attr in filtered)
+		{
+			if (await ps.CanViewAttribute(executor, obj, attr))
+				permitted.Add(attr);
+		}
+
+		return permitted
 			.OrderBy(x => x.LongName, _attributeSort)
 			.ToArray();
 	}
@@ -462,7 +470,7 @@ public class AttributeService(
 	/// <param name="checkParents">Whether to check parent objects</param>
 	/// <param name="mode">Pattern matching mode</param>
 	/// <returns>Lazy enumerable of matching attributes</returns>
-	public LazySharpAttributesOrError LazilyGetAttributePatternAsync(AnySharpObject executor,
+	public async ValueTask<LazySharpAttributesOrError> LazilyGetAttributePatternAsync(AnySharpObject executor,
 		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
@@ -470,11 +478,37 @@ public class AttributeService(
 		var attributes = mediator.CreateStream(
 			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
-		// Return lazy-evaluated, permission-filtered, sorted results
-		return LazySharpAttributesOrError
-			.FromAsync(attributes
-				.OrderBy(x => x.LongName, _attributeSort)
-				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)));
+		var isPrivileged = executor.IsGod() || await executor.IsWizard();
+
+		if (isPrivileged)
+		{
+			return LazySharpAttributesOrError
+				.FromAsync(attributes.OrderBy(x => x.LongName, _attributeSort));
+		}
+
+		// For non-privileged, materialize to filter mortal_dark descendants
+		return LazySharpAttributesOrError.FromAsync(FilterLazyAttributes(executor, obj, attributes));
+	}
+
+	private async IAsyncEnumerable<LazySharpAttribute> FilterLazyAttributes(
+		AnySharpObject executor, AnySharpObject obj, IAsyncEnumerable<LazySharpAttribute> attributes)
+	{
+		var results = await attributes.ToArrayAsync();
+		var darkPrefixes = results
+			.Where(x => x.IsMortalDark())
+			.Select(x => x.LongName + "`")
+			.ToArray();
+
+		var filtered = results
+			.Where(x => !x.IsMortalDark()
+			             && !darkPrefixes.Any(dp => (x.LongName ?? "").StartsWith(dp, StringComparison.OrdinalIgnoreCase)))
+			.OrderBy(x => x.LongName, _attributeSort);
+
+		foreach (var attr in filtered)
+		{
+			if (await ps.CanViewAttribute(executor, obj, attr))
+				yield return attr;
+		}
 	}
 
 	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
@@ -492,9 +526,16 @@ public class AttributeService(
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
-		var returnedFlag = await allFlags
-			.FirstOrDefaultAsync(x => x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
+		var flagList = await allFlags.ToArrayAsync();
+		var returnedFlag = flagList
+			.FirstOrDefault(x => x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
 				|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
+
+		// PennMUSH-compatible prefix matching: "wiz" matches "wizard"
+		returnedFlag ??= flagList
+			.Where(x => x.Name.StartsWith(flag, StringComparison.OrdinalIgnoreCase))
+			.OrderBy(x => x.Name.Length)
+			.FirstOrDefault();
 
 		if (returnedFlag is null)
 		{

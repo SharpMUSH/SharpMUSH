@@ -224,9 +224,9 @@ public class AttributeTreeParentPermissionTests
 			.Because("hasattr should NOT find inherited attribute (only local)");
 
 		// hasattrp DOES check parents
-		// TODO: uncomment when hasattrp is implemented
-		// var r2 = await Eval(1, $"hasattrp({child},PH{uid})");
-		// await Assert.That(r2).IsEqualTo("1");
+		var r2 = await Eval(1, $"hasattrp({child},PH{uid})");
+		await Assert.That(r2).IsEqualTo("1")
+			.Because("hasattrp should find inherited attribute");
 	}
 
 	/// <summary>
