@@ -37,7 +37,30 @@
         }
         else if (_loading)
         {
-            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+            @* Loading skeletons *@
+            <MudCard Outlined="true" Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudSkeleton Width="30%" Height="32px" />
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudSkeleton Height="56px" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudSkeleton Height="56px" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudSkeleton Height="40px" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudSkeleton Height="56px" />
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
         }
         else if (_categoryMetadata == null)
         {

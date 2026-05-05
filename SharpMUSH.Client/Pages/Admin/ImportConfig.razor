@@ -3,6 +3,7 @@
 @inject AdminConfigService AdminConfigService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
 <div class="pa-4">
@@ -131,11 +132,12 @@
 		try
 		{
 			await AdminConfigService.ImportFromConfigFileAsync(_fileContent);
+			Snackbar.Add("Configuration imported successfully!", Severity.Success);
 			Navigation.NavigateTo("/admin/config");
 		}
 		catch (Exception ex)
 		{
-			await JSRuntime.InvokeVoidAsync("console.error", $"Error importing configuration: {ex.Message}");
+			Snackbar.Add($"Error importing configuration: {ex.Message}", Severity.Error);
 		}
 		finally
 		{
