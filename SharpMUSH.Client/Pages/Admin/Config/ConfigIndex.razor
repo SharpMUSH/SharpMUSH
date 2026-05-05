@@ -1,5 +1,10 @@
 @page "/admin/config"
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
 @inject NavigationManager Navigation
+@inject ConfigSchemaService SchemaService
+@inject AdminConfigService AdminConfigService
+@inject IJSRuntime JSRuntime
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["Configuration"] - @Loc["AppTitle"]</PageTitle>
@@ -16,144 +21,62 @@
             </MudText>
         </MudPaper>
 
-        @* Category Cards *@
-        <MudGrid>
-            @* Server Category *@
-            <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/network"))">
-                    <MudCardContent>
-                        <MudStack Spacing="2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center">
-                                <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">@Loc["Server"]</MudText>
-                            </MudStack>
-                            <MudText Typo="Typo.body2">
-                                @Loc["ServerCategoryDescription"]
-                            </MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="2 settings" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+        @if (_loading)
+        {
+            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+        }
+        else
+        {
+            @* Category Cards *@
+            <MudGrid>
+                @foreach (var group in _navGroups)
+                {
+                    <MudItem xs="12" md="6">
+                        <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo(group.FirstLink))">
+                            <MudCardContent>
+                                <MudStack Spacing="2">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                                        <MudIcon Icon="@group.Icon" Color="Color.Secondary" Size="Size.Large" />
+                                        <MudText Typo="Typo.h6">@group.Title</MudText>
+                                    </MudStack>
+                                    <MudText Typo="Typo.body2">
+                                        @group.Description
+                                    </MudText>
+                                    <MudStack Row="true" Spacing="2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" 
+                                                 Text="@($"{group.SettingCount} settings")" />
+                                        @foreach (var cat in group.Categories)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" 
+                                                     Text="@cat" />
+                                        }
+                                    </MudStack>
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
 
-            @* Performance Category *@
-            <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/limits"))">
-                    <MudCardContent>
-                        <MudStack Spacing="2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center">
-                                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">@Loc["Performance"]</MudText>
-                            </MudStack>
-                            <MudText Typo="Typo.body2">
-                                @Loc["PerformanceCategoryDescription"]
-                            </MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@Loc["ComingSoon"].Value" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-
-            @* Security Category *@
-            <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/sitelock"))">
-                    <MudCardContent>
-                        <MudStack Spacing="2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center">
-                                <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">@Loc["Security"]</MudText>
-                            </MudStack>
-                            <MudText Typo="Typo.body2">
-                                @Loc["SecurityCategoryDescription"]
-                            </MudText>
-                            <MudStack Row="true" Spacing="2">
-                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@Loc["ComingSoon"].Value" />
-                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="@Loc["Important"].Value" />
-                            </MudStack>
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-
-            @* Content Category *@
-            <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/messages"))">
-                    <MudCardContent>
-                        <MudStack Spacing="2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center">
-                                <MudIcon Icon="@Icons.Material.Filled.Article" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">@Loc["Content"]</MudText>
-                            </MudStack>
-                            <MudText Typo="Typo.body2">
-                                @Loc["ContentCategoryDescription"]
-                            </MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@Loc["ComingSoon"].Value" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-
-            @* Logs & Files Category *@
-            <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/logging"))">
-                    <MudCardContent>
-                        <MudStack Spacing="2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center">
-                                <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">@Loc["LogsAndFiles"]</MudText>
-                            </MudStack>
-                            <MudText Typo="Typo.body2">
-                                @Loc["LogsCategoryDescription"]
-                            </MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@Loc["ComingSoon"].Value" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-
-            @* Advanced Category *@
-            <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/attributes"))">
-                    <MudCardContent>
-                        <MudStack Spacing="2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center">
-                                <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">@Loc["Advanced"]</MudText>
-                            </MudStack>
-                            <MudText Typo="Typo.body2">
-                                @Loc["AdvancedCategoryDescription"]
-                            </MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@Loc["ComingSoon"].Value" />
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        </MudGrid>
-
-        @* Quick Actions *@
-        <MudPaper Outlined="true" Class="pa-4">
-            <MudText Typo="Typo.h6" Class="mb-3">@Loc["QuickActions"]</MudText>
-            <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Secondary" 
-                           StartIcon="@Icons.Material.Filled.Search"
-                           Disabled="true">
-                    @Loc["SearchAllSettings"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Default" 
-                           StartIcon="@Icons.Material.Filled.Upload"
-                           Disabled="true">
-                    @Loc["ImportConfigFile"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Default" 
-                           StartIcon="@Icons.Material.Filled.Download"
-                           Disabled="true">
-                    @Loc["ExportConfiguration"]
-                </MudButton>
-            </MudStack>
-        </MudPaper>
+            @* Quick Actions *@
+            <MudPaper Outlined="true" Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-3">@Loc["QuickActions"]</MudText>
+                <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.Upload"
+                               Href="/admin/importconfig">
+                        @Loc["ImportConfigFile"]
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               StartIcon="@Icons.Material.Filled.Download"
+                               OnClick="ExportConfiguration">
+                        @Loc["ExportConfiguration"]
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        }
     </MudStack>
 </MudContainer>
 
@@ -173,3 +96,97 @@
         box-shadow: 0 8px 24px rgba(0, 245, 183, 0.2);
     }
 </style>
+
+@code {
+    private bool _loading = true;
+    private List<NavGroup> _navGroups = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var schema = await SchemaService.GetSchemaAsync();
+        if (schema != null)
+        {
+            BuildNavGroups(schema);
+        }
+        _loading = false;
+    }
+
+    private void BuildNavGroups(ConfigurationSchema schema)
+    {
+        var categoryCounts = schema.Properties
+            .GroupBy(p => p.Value.Category)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+        _navGroups =
+        [
+            new NavGroup(
+                "Server", Icons.Material.Filled.Computer,
+                "Network settings, database connections, and server identity.",
+                "/admin/config/net",
+                ["Net", "Database"],
+                categoryCounts),
+            new NavGroup(
+                "Performance", Icons.Material.Filled.Speed,
+                "Resource limits, command quotas, and function restrictions.",
+                "/admin/config/limit",
+                ["Limit", "Command", "Function"],
+                categoryCounts),
+            new NavGroup(
+                "Security", Icons.Material.Filled.Security,
+                "Site locks, banned names, and access restrictions.",
+                "/admin/config/sitelock",
+                ["SitelockRules", "BannedNames", "Restriction"],
+                categoryCounts),
+            new NavGroup(
+                "Content", Icons.Material.Filled.Article,
+                "Messages, cosmetic settings, and chat configuration.",
+                "/admin/config/message",
+                ["Message", "Cosmetic", "Chat"],
+                categoryCounts),
+            new NavGroup(
+                "Logs & Files", Icons.Material.Filled.FolderOpen,
+                "Logging levels, file paths, text files, and database dumps.",
+                "/admin/config/log",
+                ["Log", "File", "TextFile", "Dump"],
+                categoryCounts),
+            new NavGroup(
+                "Advanced", Icons.Material.Filled.Tune,
+                "Attributes, flags, costs, compatibility, aliases, and debug.",
+                "/admin/config/attribute",
+                ["Attribute", "Flag", "Cost", "Compatibility", "Alias", "Debug", "Warning"],
+                categoryCounts),
+        ];
+    }
+
+    private async Task ExportConfiguration()
+    {
+        var response = await AdminConfigService.FetchConfigurationFromServer();
+        if (response.Configuration != null)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(response.Configuration, 
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            await JSRuntime.InvokeVoidAsync("downloadFile", "sharpmush-config.json", "application/json", json);
+        }
+    }
+
+    private record NavGroup
+    {
+        public string Title { get; init; }
+        public string Icon { get; init; }
+        public string Description { get; init; }
+        public string FirstLink { get; init; }
+        public string[] Categories { get; init; }
+        public int SettingCount { get; init; }
+
+        public NavGroup(string title, string icon, string description, string firstLink,
+            string[] categories, Dictionary<string, int> counts)
+        {
+            Title = title;
+            Icon = icon;
+            Description = description;
+            FirstLink = firstLink;
+            Categories = categories;
+            SettingCount = categories.Sum(c => counts.GetValueOrDefault(c, 0));
+        }
+    }
+}
