@@ -796,34 +796,22 @@ public static partial class MarkupStringModule
     /// Compresses runs of multiple spaces into single spaces (PennMUSH PE_COMPRESS_SPACES).
     /// Preserves ANSI markup.
     /// </summary>
+    [GeneratedRegex(@" {2,}")]
+    private static partial Regex MultipleSpacesRegex();
+
     public static MarkupString CompressSpaces(MarkupString ams)
     {
         var text = ams.ToPlainText();
         // Fast path: no consecutive spaces means nothing to compress (common case)
         if (text == null || text.IndexOf("  ", StringComparison.Ordinal) < 0) return ams;
 
-        // Find runs of 2+ spaces from right to left and replace with single space
+        // Replace runs of 2+ spaces with a single space, right-to-left to preserve positions
         var singleSpace = Single(" ");
         var result = ams;
-        int i = text.Length - 1;
-        while (i >= 0)
+        var matches = MultipleSpacesRegex().Matches(text);
+        foreach (var match in matches.Reverse())
         {
-            if (text[i] == ' ')
-            {
-                int end = i;
-                while (i > 0 && text[i - 1] == ' ') i--;
-                int start = i;
-                int runLength = end - start + 1;
-                if (runLength > 1)
-                {
-                    result = Replace(result, singleSpace, start, runLength);
-                }
-                i--;
-            }
-            else
-            {
-                i--;
-            }
+            result = Replace(result, singleSpace, match.Index, match.Length);
         }
         return result;
     }
