@@ -308,9 +308,14 @@
                 return;
             }
 
-            var config = result.AsT0;
+            var config = AdminConfigService.CurrentOptions;
+            if (config == null)
+            {
+                Snackbar.Add(Loc["FailedToLoadValues"].Value, Severity.Error);
+                return;
+            }
             
-            // Extract current values
+            // Extract current values from the strongly-typed options object
             foreach (var prop in _categoryProperties.Values)
             {
                 var value = GetPropertyValue(config, prop.Path);

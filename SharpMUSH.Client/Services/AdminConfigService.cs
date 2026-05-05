@@ -9,6 +9,7 @@ namespace SharpMUSH.Client.Services;
 public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientFactory httpClient)
 {
 	private SharpMUSHOptions? _currentOptions = null;
+	public SharpMUSHOptions? CurrentOptions => _currentOptions;
 	private Dictionary<string, SharpConfigAttribute> _metadata = [];
 
 	public async Task<OneOf.OneOf<IEnumerable<ConfigItem>, Error<string>>> GetOptionsAsync()
