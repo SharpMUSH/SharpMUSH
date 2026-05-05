@@ -246,4 +246,77 @@ public class UserDefinedCommandsTests
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Value 2 received")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
+
+	/// <summary>
+	/// Child inherits $commands from parent object.
+	/// PennMUSH testatree.t: atree.command.1-4 / atree.sortorder.10
+	/// </summary>
+	[Test]
+	public async ValueTask ParentInheritedCommand_Fires()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = TestIsolationHelpers.GenerateUniqueName("pic");
+
+		// Create parent and child objects
+		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"CmdParent_{token}");
+		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"CmdChild_{token}");
+
+		// Set parent relationship
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
+
+		// Ensure child does NOT have NO_COMMAND object flag, but parent DOES
+		// (so only the child fires the inherited command, not the parent directly)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
+
+		// Set $command on the parent
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Inherited {token}"));
+
+		// Fire the command — child should inherit it
+		await Parser.CommandParse(1, ConnectionService, MModule.single(token));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Inherited {token}")),
+				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// no_command on attribute blocks inherited command AND tree descendants.
+	/// PennMUSH testatree.t: atree.command.16-17 / atree.sortorder.17-18
+	/// </summary>
+	[Test]
+	public async ValueTask NoCommandOnAttribute_BlocksTreeDescendants()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var token = TestIsolationHelpers.GenerateUniqueName("ncb");
+
+		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NcParent_{token}");
+		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NcChild_{token}");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
+
+		// Set tree command on parent: CMD`LEAF
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Leaf fired"));
+
+		// Set no_command on the tree root on child (blocks whole tree)
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_{token} {childObj}=$dummy:say dummy"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@set {childObj}/CMD_{token}=no_command"));
+
+		// The tree leaf command should be blocked
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
+
+		// Should NOT have received the leaf command notification
+		await NotifyService
+			.DidNotReceive()
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Leaf fired")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
 }

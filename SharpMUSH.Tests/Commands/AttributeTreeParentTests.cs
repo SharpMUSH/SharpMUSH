@@ -119,10 +119,8 @@ public class AttributeTreeParentTests
 	}
 
 	/// <summary>
-	/// lattr(child/tree`) shows parent's tree attributes via lattrp behavior.
-	/// PennMUSH testatree.t: atree.lattrp.1-3
-	/// KNOWN GAP: lattrp() parent tree traversal not implemented.
-	/// HIGH PRIORITY — this is a critical PennMUSH compatibility feature.
+	/// lattrp() shows parent-inherited tree attributes.
+	/// PennMUSH testatree.t: atree.lattrp.1-6
 	/// </summary>
 	[Test]
 	public async ValueTask Lattrp_ShowsParentTreeAttributes()
@@ -135,23 +133,41 @@ public class AttributeTreeParentTests
 		// Set parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
-		// Set tree leaf on parent, tree root on child
+		// Setup: tree`leaf on parent, tree on child (matches oracle setup)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&{pfx}`LEAF {parentDbRef}=X"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&{pfx} {childDbRef}=Y"));
 
-		// Verify parent link works
-		var parentCheck = (await Parser.FunctionParse(MModule.single($"parent({childDbRef})")))?.Message!.ToPlainText();
-		await Assert.That(parentCheck).IsEqualTo(parentDbRef.ToString())
-			.Because("@parent should be set");
+		// lattrp.1: lattrp(child/pfx`) — direct children of pfx` from parent
+		var r1 = (await Parser.FunctionParse(MModule.single($"lattrp({childDbRef}/{pfx}`)")))?. Message!.ToPlainText();
+		await Assert.That(r1).IsEqualTo($"{pfx}`LEAF")
+			.Because("lattrp(child/tree`) should show parent's tree`leaf");
 
-		// Verify the attr exists on parent directly
-		var parentAttr = (await Parser.FunctionParse(MModule.single($"get({parentDbRef}/{pfx}`LEAF)")))?.Message!.ToPlainText();
-		await Assert.That(parentAttr).IsEqualTo("X")
-			.Because("parent should have the tree leaf attr");
+		// lattrp.2: lattrp(child/pfx`**) — recursive under pfx` from parent
+		var r2 = (await Parser.FunctionParse(MModule.single($"lattrp({childDbRef}/{pfx}`**)")))?. Message!.ToPlainText();
+		await Assert.That(r2).IsEqualTo($"{pfx}`LEAF")
+			.Because("lattrp(child/tree`**) should show parent's tree`leaf");
 
-		// lattrp(child/pfx`) should show pfx`LEAF from parent
-		var result = (await Parser.FunctionParse(MModule.single($"lattrp({childDbRef}/{pfx}`)")))?.Message!.ToPlainText();
-		await Assert.That(result).Contains($"{pfx}`LEAF")
-			.Because("lattrp should show parent's tree leaves");
+		// lattrp.3: lattrp(child/pfx**) — pfx and all descendants (child's own + parent's)
+		var r3 = (await Parser.FunctionParse(MModule.single($"lattrp({childDbRef}/{pfx}**)")))?. Message!.ToPlainText();
+		await Assert.That(r3).IsEqualTo($"{pfx} {pfx}`LEAF")
+			.Because("lattrp(child/tree**) should show child's tree + parent's tree`leaf");
+
+		// Now set tree`leaf on child too (oracle: &tree`leaf child=Z)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&{pfx}`LEAF {childDbRef}=Z"));
+
+		// lattrp.4: same as .1 but now local override exists
+		var r4 = (await Parser.FunctionParse(MModule.single($"lattrp({childDbRef}/{pfx}`)")))?. Message!.ToPlainText();
+		await Assert.That(r4).IsEqualTo($"{pfx}`LEAF")
+			.Because("lattrp(child/tree`) should show local tree`leaf (overrides parent)");
+
+		// lattrp.5: same as .2 with local override
+		var r5 = (await Parser.FunctionParse(MModule.single($"lattrp({childDbRef}/{pfx}`**)")))?. Message!.ToPlainText();
+		await Assert.That(r5).IsEqualTo($"{pfx}`LEAF")
+			.Because("lattrp(child/tree`**) should show local tree`leaf");
+
+		// lattrp.6: same as .3 with local override
+		var r6 = (await Parser.FunctionParse(MModule.single($"lattrp({childDbRef}/{pfx}**)")))?. Message!.ToPlainText();
+		await Assert.That(r6).IsEqualTo($"{pfx} {pfx}`LEAF")
+			.Because("lattrp(child/tree**) should show tree + tree`leaf");
 	}
 }
