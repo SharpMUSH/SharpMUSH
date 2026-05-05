@@ -13,6 +13,12 @@ public interface ISharpDatabase
 	ValueTask Migrate(CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Completely wipe the database and re-initialize it from scratch.
+	/// WARNING: This is destructive and irreversible.
+	/// </summary>
+	ValueTask WipeDatabaseAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Create a new player.
 	/// </summary>
 	/// <param name="name">Player name</param>

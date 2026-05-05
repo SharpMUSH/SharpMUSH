@@ -25,6 +25,30 @@ public partial class ArangoDatabase
 {
 	#region Migration
 
+	public async ValueTask WipeDatabaseAsync(CancellationToken ct = default)
+	{
+		try
+		{
+			logger.LogWarning("WIPING DATABASE - This is destructive and irreversible!");
+
+			if (await arangoDb.Database.ExistAsync(handle))
+			{
+				await arangoDb.Database.DropAsync(handle);
+				logger.LogInformation("Database dropped successfully.");
+			}
+
+			// Re-create and re-migrate
+			await Migrate(ct);
+
+			logger.LogInformation("Database wiped and re-initialized successfully.");
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Failed to wipe database.");
+			throw;
+		}
+	}
+
 	public async ValueTask Migrate(CancellationToken ct = default)
 	{
 		try

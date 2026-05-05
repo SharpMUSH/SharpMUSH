@@ -1,0 +1,455 @@
+@page "/admin/config/import-pennmush"
+@implements IDisposable
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Services.DatabaseConversion
+@inject DatabaseConversionService ConversionService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+<div class="config-section-page">
+    <div class="config-section-header">
+        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Large" Class="mr-2" />
+        <div>
+            <MudText Typo="Typo.h4">Import PennMUSH Database</MudText>
+            <MudText Typo="Typo.body2" Class="mt-1" Style="opacity: 0.7;">
+                Wipe the current database and replace it with a converted PennMUSH database
+            </MudText>
+        </div>
+    </div>
+
+    <div class="config-section-content">
+        @* Danger warning banner *@
+        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Icon="@Icons.Material.Filled.Dangerous" Class="mb-6">
+            <MudText Typo="Typo.h6" Class="mb-2"><strong>⚠️ DESTRUCTIVE OPERATION</strong></MudText>
+            <MudText Typo="Typo.body1">
+                This will <strong>permanently destroy</strong> the entire current SharpMUSH database — all players, rooms, objects,
+                attributes, and configuration — then replace it with data converted from a PennMUSH flatfile.
+                <br /><br />
+                <strong>This action cannot be undone.</strong> Ensure you have a backup before proceeding.
+            </MudText>
+        </MudAlert>
+
+        @if (!_isConverting && _result == null)
+        {
+            @* File upload section *@
+            <MudGrid Spacing="4">
+                <MudItem xs="12" md="6">
+                    <MudCard Outlined="true" Class="pa-4" Style="border-color: var(--mud-palette-error); height: 100%;">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Error" />
+                                    <MudText Typo="Typo.h6">Database File <MudChip T="string" Size="Size.Small" Color="Color.Error">Required</MudChip></MudText>
+                                </MudStack>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudText Typo="Typo.body2" Class="mb-4" Style="opacity: 0.7;">
+                                PennMUSH flatfile database (.db, .txt, or uncompressed dump)
+                            </MudText>
+                            <MudFileUpload T="IBrowserFile"
+                                           Accept=".db,.txt"
+                                           FilesChanged="OnDatabaseFileSelected"
+                                           MaximumFileCount="1"
+                                           MaxFileSize="104857600" />
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Error"
+                                       StartIcon="@Icons.Material.Filled.CloudUpload"
+                                       FullWidth="true"
+                                       Class="mt-2">
+                                @(_databaseFile == null ? "Select Database File" : _databaseFile.Name)
+                            </MudButton>
+                            @if (_databaseFile != null)
+                            {
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption">@_databaseFile.Name (@($"{_databaseFile.Size / 1024.0 / 1024.0:F1}") MB)</MudText>
+                                </MudStack>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudCard Outlined="true" Class="pa-4" Style="height: 100%;">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Info" />
+                                    <MudText Typo="Typo.h6">Config File <MudChip T="string" Size="Size.Small" Color="Color.Default">Optional</MudChip></MudText>
+                                </MudStack>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudText Typo="Typo.body2" Class="mb-4" Style="opacity: 0.7;">
+                                PennMUSH configuration file (.cnf) to import settings from
+                            </MudText>
+                            <MudFileUpload T="IBrowserFile"
+                                           Accept=".cnf,.conf,.txt"
+                                           FilesChanged="OnConfigFileSelected"
+                                           MaximumFileCount="1"
+                                           MaxFileSize="1048576" />
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Info"
+                                       StartIcon="@Icons.Material.Filled.CloudUpload"
+                                       FullWidth="true"
+                                       Class="mt-2">
+                                @(_configFile == null ? "Select Config File (Optional)" : _configFile.Name)
+                            </MudButton>
+                            @if (_configFile != null)
+                            {
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption">@_configFile.Name (@($"{_configFile.Size / 1024.0:F1}") KB)</MudText>
+                                </MudStack>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+
+            @* Confirmation section *@
+            @if (_databaseFile != null)
+            {
+                <MudPaper Class="pa-6 mt-6" Style="border: 2px solid var(--mud-palette-error); border-radius: 8px;" Elevation="0">
+                    <MudText Typo="Typo.h6" Color="Color.Error" GutterBottom="true">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-1" /> Confirmation Required
+                    </MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4">
+                        To confirm this destructive operation, type <code>DESTROY</code> in the field below:
+                    </MudText>
+
+                    <MudTextField @bind-Value="_confirmationText"
+                                  Label="Type DESTROY to confirm"
+                                  Variant="Variant.Outlined"
+                                  Immediate="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Warning"
+                                  AdornmentColor="Color.Error"
+                                  Style="max-width: 400px;" />
+
+                    <MudButton Class="mt-4"
+                               Variant="Variant.Filled"
+                               Color="Color.Error"
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.DeleteForever"
+                               Disabled="@(!IsConfirmed || _isUploading)"
+                               OnClick="StartWipeAndImport">
+                        @if (_isUploading)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Wiping & Importing...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Wipe Database & Import</MudText>
+                        }
+                    </MudButton>
+                </MudPaper>
+            }
+        }
+        else if (_isConverting && _progress != null)
+        {
+            @* Progress display — reuses same pattern as ImportDatabase.razor *@
+            <MudPaper Class="pa-6" Elevation="2">
+                <MudText Typo="Typo.h5" GutterBottom="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Sync" Class="mr-2 spin-icon" />
+                    Converting Database...
+                </MudText>
+
+                <MudProgressLinear Value="@_progress.PercentageComplete"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
+                                   Rounded="true"
+                                   Class="mt-4 mb-2" />
+
+                <MudText Typo="Typo.body1" Align="Align.Center" Class="mb-4">
+                    @($"{_progress.PercentageComplete:F1}%") — @_progress.CurrentPhase
+                </MudText>
+
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" md="4">
+                        <MudPaper Class="pa-3" Elevation="1">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Progress</MudText>
+                            <MudStack Spacing="1" Class="mt-2">
+                                <MudText Typo="Typo.body2">Phase: <strong>@_progress.CurrentPhase</strong></MudText>
+                                <MudText Typo="Typo.body2">Elapsed: <strong>@FormatTimeSpan(_progress.ElapsedTime)</strong></MudText>
+                                @if (_progress.EstimatedTimeRemaining.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2">ETA: <strong>@FormatTimeSpan(_progress.EstimatedTimeRemaining.Value)</strong></MudText>
+                                }
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudPaper Class="pa-3" Elevation="1">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Objects</MudText>
+                            <MudStack Spacing="1" Class="mt-2">
+                                <MudText Typo="Typo.body2">Players: <strong>@_progress.PlayersCreated</strong></MudText>
+                                <MudText Typo="Typo.body2">Rooms: <strong>@_progress.RoomsCreated</strong></MudText>
+                                <MudText Typo="Typo.body2">Things: <strong>@_progress.ThingsCreated</strong></MudText>
+                                <MudText Typo="Typo.body2">Exits: <strong>@_progress.ExitsCreated</strong></MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudPaper Class="pa-3" Elevation="1">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Data</MudText>
+                            <MudStack Spacing="1" Class="mt-2">
+                                <MudText Typo="Typo.body2">Attributes: <strong>@_progress.AttributesCreated</strong></MudText>
+                                <MudText Typo="Typo.body2">Locks: <strong>@_progress.LocksCreated</strong></MudText>
+                                <MudText Typo="Typo.body2">Total: <strong>@_progress.ProcessedObjects / @_progress.TotalObjects</strong></MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+
+                @if (_progress.RecentErrors.Any() || _progress.RecentWarnings.Any())
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mt-4">
+                        @_progress.RecentErrors.Count error(s), @_progress.RecentWarnings.Count warning(s)
+                    </MudAlert>
+                }
+
+                <MudButton StartIcon="@Icons.Material.Filled.Cancel"
+                           Color="Color.Error"
+                           Variant="Variant.Outlined"
+                           OnClick="CancelConversion"
+                           Class="mt-4">
+                    Cancel Conversion
+                </MudButton>
+            </MudPaper>
+        }
+        else if (_result != null)
+        {
+            @* Result display *@
+            <MudAlert Severity="@(_result.IsSuccessful ? Severity.Success : Severity.Error)" Class="mb-4" Variant="Variant.Filled">
+                <MudText Typo="Typo.h5">
+                    @(_result.IsSuccessful ? "✅ Import Successful!" : "❌ Import Completed with Errors")
+                </MudText>
+            </MudAlert>
+
+            <MudGrid Spacing="3">
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudText Typo="Typo.h6" GutterBottom="true">Objects Converted</MudText>
+                        <MudSimpleTable Dense="true" Hover="true">
+                            <tbody>
+                                <tr><td>Players</td><td><strong>@_result.PlayersConverted</strong></td></tr>
+                                <tr><td>Rooms</td><td><strong>@_result.RoomsConverted</strong></td></tr>
+                                <tr><td>Things</td><td><strong>@_result.ThingsConverted</strong></td></tr>
+                                <tr><td>Exits</td><td><strong>@_result.ExitsConverted</strong></td></tr>
+                                <tr><td><strong>Total</strong></td><td><strong>@_result.TotalObjects</strong></td></tr>
+                            </tbody>
+                        </MudSimpleTable>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudText Typo="Typo.h6" GutterBottom="true">Additional Data</MudText>
+                        <MudSimpleTable Dense="true" Hover="true">
+                            <tbody>
+                                <tr><td>Attributes</td><td><strong>@_result.AttributesConverted</strong></td></tr>
+                                <tr><td>Locks</td><td><strong>@_result.LocksConverted</strong></td></tr>
+                                <tr><td>Duration</td><td><strong>@FormatTimeSpan(_result.Duration)</strong></td></tr>
+                            </tbody>
+                        </MudSimpleTable>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            @if (_result.Errors.Any())
+            {
+                <MudPaper Class="pa-4 mt-4" Elevation="2">
+                    <MudText Typo="Typo.h6" Color="Color.Error" GutterBottom="true">Errors (@_result.Errors.Count)</MudText>
+                    <MudList T="string" Dense="true" Style="max-height: 300px; overflow-y: auto;">
+                        @foreach (var error in _result.Errors)
+                        {
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.Error" IconColor="Color.Error">
+                                <MudText Typo="Typo.body2">@error</MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudPaper>
+            }
+
+            @if (_result.Warnings.Any())
+            {
+                <MudPaper Class="pa-4 mt-4" Elevation="2">
+                    <MudText Typo="Typo.h6" Color="Color.Warning" GutterBottom="true">Warnings (@_result.Warnings.Count)</MudText>
+                    <MudList T="string" Dense="true" Style="max-height: 300px; overflow-y: auto;">
+                        @foreach (var warning in _result.Warnings)
+                        {
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.WarningAmber" IconColor="Color.Warning">
+                                <MudText Typo="Typo.body2">@warning</MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudPaper>
+            }
+
+            <MudButton StartIcon="@Icons.Material.Filled.Refresh"
+                       Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       OnClick="Reset"
+                       Class="mt-4">
+                Import Another Database
+            </MudButton>
+        }
+    </div>
+</div>
+
+<style>
+    .spin-icon {
+        animation: spin 2s linear infinite;
+    }
+    @@keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+@code {
+    private IBrowserFile? _databaseFile;
+    private IBrowserFile? _configFile;
+    private string _confirmationText = "";
+    private bool _isUploading;
+    private bool _isConverting;
+    private bool _isUpdatingProgress;
+    private string? _sessionId;
+    private ConversionProgress? _progress;
+    private ConversionResult? _result;
+    private System.Threading.Timer? _progressTimer;
+
+    private bool IsConfirmed => string.Equals(_confirmationText?.Trim(), "DESTROY", StringComparison.Ordinal);
+
+    private void OnDatabaseFileSelected(IBrowserFile? file)
+    {
+        _databaseFile = file;
+        _confirmationText = "";
+        StateHasChanged();
+    }
+
+    private void OnConfigFileSelected(IBrowserFile? file)
+    {
+        _configFile = file;
+        StateHasChanged();
+    }
+
+    private async Task StartWipeAndImport()
+    {
+        if (_databaseFile is null || !IsConfirmed)
+            return;
+
+        // The "DESTROY" typing IS the confirmation - no additional dialog needed
+        _isUploading = true;
+        StateHasChanged();
+
+        try
+        {
+            await using var dbStream = _databaseFile.OpenReadStream(maxAllowedSize: 104857600);
+            Stream? cfgStream = null;
+            string? cfgName = null;
+
+            if (_configFile != null)
+            {
+                cfgStream = _configFile.OpenReadStream(maxAllowedSize: 1048576);
+                cfgName = _configFile.Name;
+            }
+
+            _sessionId = await ConversionService.WipeAndImportAsync(
+                dbStream, _databaseFile.Name,
+                cfgStream, cfgName);
+
+            if (cfgStream != null)
+                await cfgStream.DisposeAsync();
+
+            if (_sessionId != null)
+            {
+                _isUploading = false;
+                _isConverting = true;
+                StateHasChanged();
+
+                _progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            _isUploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnTimerCallback(object? state)
+    {
+        _ = Task.Run(async () =>
+        {
+            try { await UpdateProgressAsync(); }
+            catch { _progressTimer?.Dispose(); _isConverting = false; }
+        });
+    }
+
+    private async Task UpdateProgressAsync()
+    {
+        if (_isUpdatingProgress || _sessionId == null || !_isConverting)
+            return;
+
+        _isUpdatingProgress = true;
+        try
+        {
+            _progress = await ConversionService.GetProgressAsync(_sessionId);
+
+            if (_progress?.PercentageComplete >= 100)
+            {
+                _result = await ConversionService.GetResultAsync(_sessionId);
+                _isConverting = false;
+                _progressTimer?.Dispose();
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+        finally
+        {
+            _isUpdatingProgress = false;
+        }
+    }
+
+    private async Task CancelConversion()
+    {
+        if (_sessionId == null) return;
+        await ConversionService.CancelConversionAsync(_sessionId);
+        _isConverting = false;
+        _progressTimer?.Dispose();
+        Reset();
+    }
+
+    private void Reset()
+    {
+        _databaseFile = null;
+        _configFile = null;
+        _confirmationText = "";
+        _sessionId = null;
+        _progress = null;
+        _result = null;
+        _isConverting = false;
+        _isUploading = false;
+        _progressTimer?.Dispose();
+        StateHasChanged();
+    }
+
+    private string FormatTimeSpan(TimeSpan ts)
+    {
+        if (ts.TotalHours >= 1) return $"{ts.Hours}h {ts.Minutes}m {ts.Seconds}s";
+        if (ts.TotalMinutes >= 1) return $"{ts.Minutes}m {ts.Seconds}s";
+        return $"{ts.Seconds}s";
+    }
+
+    public void Dispose()
+    {
+        _progressTimer?.Dispose();
+    }
+}

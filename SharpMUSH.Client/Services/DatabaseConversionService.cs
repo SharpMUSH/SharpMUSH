@@ -95,4 +95,34 @@ public class DatabaseConversionService(ILogger<DatabaseConversionService> logger
 		public string SessionId { get; set; } = string.Empty;
 		public string Message { get; set; } = string.Empty;
 	}
+
+	public async Task<string?> WipeAndImportAsync(Stream databaseStream, string databaseFileName, Stream? configStream, string? configFileName, CancellationToken cancellationToken = default)
+	{
+		try
+		{
+			using var content = new MultipartFormDataContent();
+			using var dbStreamContent = new StreamContent(databaseStream);
+			content.Add(dbStreamContent, "databaseFile", databaseFileName);
+
+			if (configStream != null && configFileName != null)
+			{
+				using var cfgStreamContent = new StreamContent(configStream);
+				content.Add(cfgStreamContent, "configFile", configFileName);
+			}
+
+			var response = await httpClient
+				.CreateClient("api")
+				.PostAsync("/api/databaseconversion/wipe-and-import", content, cancellationToken);
+
+			response.EnsureSuccessStatusCode();
+
+			var result = await response.Content.ReadFromJsonAsync<UploadResponse>(cancellationToken: cancellationToken);
+			return result?.SessionId;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error during wipe-and-import");
+			throw;
+		}
+	}
 }

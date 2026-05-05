@@ -21,6 +21,20 @@ public partial class MemgraphDatabase
 {
 	#region Migration
 
+	public async ValueTask WipeDatabaseAsync(CancellationToken cancellationToken = default)
+	{
+		logger.LogWarning("WIPING DATABASE - This is destructive and irreversible!");
+
+		await using var session = driver.AsyncSession();
+		await session.RunAsync("MATCH (n) DETACH DELETE n");
+		_migrated = false;
+
+		// Re-migrate
+		await Migrate(cancellationToken);
+
+		logger.LogInformation("Database wiped and re-initialized successfully.");
+	}
+
 	public async ValueTask Migrate(CancellationToken cancellationToken = default)
 	{
 		if (_migrated) return;

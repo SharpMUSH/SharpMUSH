@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using System.Collections.Concurrent;
 
@@ -10,6 +11,7 @@ namespace SharpMUSH.Server.Controllers;
 [Route("api/[controller]")]
 public class DatabaseConversionController(
 	IPennMUSHDatabaseConverter converter,
+	ISharpDatabase database,
 	ILogger<DatabaseConversionController> logger)
 	: ControllerBase
 {
@@ -95,6 +97,62 @@ public class DatabaseConversionController(
 		}
 
 		return Ok(new { message = "Conversion cancelled" });
+	}
+
+	/// <summary>
+	/// Wipe the entire database, then upload and convert a PennMUSH database file.
+	/// This is a destructive operation that cannot be undone.
+	/// </summary>
+	[HttpPost("wipe-and-import")]
+	[RequestSizeLimit(104857600)] // 100 MB
+	public async Task<ActionResult<object>> WipeAndImportDatabase(
+		[FromForm] IFormFile databaseFile,
+		[FromForm] IFormFile? configFile,
+		CancellationToken cancellationToken)
+	{
+		if (databaseFile == null || databaseFile.Length == 0)
+		{
+			return BadRequest("No database file uploaded");
+		}
+
+		try
+		{
+			// Step 1: Wipe the database
+			logger.LogWarning("Admin initiated database wipe-and-import");
+			await database.WipeDatabaseAsync(cancellationToken);
+			logger.LogInformation("Database wiped successfully. Starting import...");
+
+			// Step 2: If a config file was provided, import it
+			if (configFile is { Length: > 0 })
+			{
+				using var configReader = new StreamReader(configFile.OpenReadStream());
+				var configContent = await configReader.ReadToEndAsync(cancellationToken);
+				// Config import is handled separately via the configuration endpoint
+				logger.LogInformation("Config file received: {FileName} ({Size} bytes)", configFile.FileName, configFile.Length);
+				// Store config content for later processing
+				var configTempPath = Path.Combine(Path.GetTempPath(), $"pennmush_config_{Guid.NewGuid()}.cnf");
+				await System.IO.File.WriteAllTextAsync(configTempPath, configContent, cancellationToken);
+			}
+
+			// Step 3: Save database file and start conversion
+			var tempPath = Path.Combine(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
+			await using (var stream = System.IO.File.Create(tempPath))
+			{
+				await databaseFile.CopyToAsync(stream, cancellationToken);
+			}
+
+			logger.LogInformation("Uploaded PennMUSH database file: {FileName} ({Size} bytes)", databaseFile.FileName, databaseFile.Length);
+
+			var sessionId = Guid.NewGuid().ToString();
+			DatabaseConversionSession.StartConversion(sessionId, converter, tempPath, logger, cancellationToken);
+
+			return Ok(new { sessionId, message = "Database wiped. Conversion started." });
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error during wipe-and-import operation");
+			return StatusCode(500, $"Error during wipe-and-import: {ex.Message}");
+		}
 	}
 }
 

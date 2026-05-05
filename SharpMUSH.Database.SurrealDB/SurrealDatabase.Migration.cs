@@ -22,6 +22,20 @@ public partial class SurrealDatabase
 {
 	#region Migration
 
+	public async ValueTask WipeDatabaseAsync(CancellationToken cancellationToken = default)
+	{
+		logger.LogWarning("WIPING DATABASE - This is destructive and irreversible!");
+
+		// Remove all records from SurrealDB
+		await db.RawQuery("REMOVE DATABASE IF EXISTS sharpmush;");
+		_migrated = false;
+
+		// Re-migrate
+		await Migrate(cancellationToken);
+
+		logger.LogInformation("Database wiped and re-initialized successfully.");
+	}
+
 	public async ValueTask Migrate(CancellationToken cancellationToken = default)
 	{
 		if (_migrated) return;
