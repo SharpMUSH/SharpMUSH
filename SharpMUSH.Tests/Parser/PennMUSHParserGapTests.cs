@@ -283,7 +283,7 @@ public class PennMUSHParserGapTests
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!).StartsWith("7");
 
-		var afterResult = result.Substring(1).Trim();
+		var afterResult = result!.Substring(1).Trim();
 		var parts = afterResult.Split(' ');
 		await Assert.That(parts.Length).IsEqualTo(2);
 		await Assert.That(int.TryParse(parts[0], out _)).IsTrue();
@@ -301,7 +301,7 @@ public class PennMUSHParserGapTests
 		await Assert.That(result).IsNotNull();
 		// "hello " then two numbers
 		await Assert.That(result!).StartsWith("hello ");
-		var afterHello = result.Substring(6); // skip "hello "
+		var afterHello = result!.Substring(6); // skip "hello "
 		var parts = afterHello.Split(' ');
 		await Assert.That(parts.Length).IsEqualTo(2);
 		await Assert.That(int.TryParse(parts[0], out _)).IsTrue();
@@ -319,7 +319,7 @@ public class PennMUSHParserGapTests
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!).EndsWith("done");
 		// Should have at least "N M done" format
-		var parts = result.Split(' ');
+		var parts = result!.Split(' ');
 		await Assert.That(parts.Length).IsGreaterThanOrEqualTo(3);
 	}
 

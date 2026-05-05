@@ -502,13 +502,15 @@ public partial class Functions
 		var delim = MModule.plainText(ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " "));
 
 		var stepText = MModule.plainText(ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "1"));
-		if (!double.TryParse(stepText, out var step) || double.IsNaN(step) || double.IsInfinity(step) || step == 0)
+		if (!double.TryParse(stepText, out var step) || double.IsNaN(step) || double.IsInfinity(step) || Math.Abs(step) < 1e-12)
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
 		// Determine if we're working with integers or floats
-		var useIntegers = start == Math.Floor(start) && end == Math.Floor(end) && step == Math.Floor(step);
+		var useIntegers = Math.Abs(start - Math.Floor(start)) < 1e-10
+			&& Math.Abs(end - Math.Floor(end)) < 1e-10
+			&& Math.Abs(step - Math.Floor(step)) < 1e-10;
 
 		var results = new List<string>();
 		if (step > 0)
@@ -533,7 +535,7 @@ public partial class Functions
 
 	private static string FormatDouble(double value)
 	{
-		if (value == Math.Floor(value))
+		if (Math.Abs(value - Math.Floor(value)) < 1e-10)
 			return ((long)value).ToString();
 		return value.ToString($"G{Library.Definitions.Configurable.FloatPrecision}");
 	}
