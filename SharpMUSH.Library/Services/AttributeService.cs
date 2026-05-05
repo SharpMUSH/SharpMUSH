@@ -428,12 +428,29 @@ public class AttributeService(
 		var attributes = mediator.CreateStream(
 			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
-		// Filter based on permissions and return sorted results
-		// Permission check is done per-attribute for fine-grained access control
-		return await attributes
-			.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
+		// For non-privileged viewers, collect mortal_dark attribute names to filter their children
+		var isPrivileged = executor.IsGod() || await executor.IsWizard();
+
+		if (isPrivileged)
+		{
+			return await attributes
+				.OrderBy(x => x.LongName, _attributeSort)
+				.ToArrayAsync();
+		}
+
+		// Filter based on permissions and exclude children of mortal_dark attributes
+		var results = await attributes.ToArrayAsync();
+		var darkPrefixes = results
+			.Where(x => x.IsMortalDark())
+			.Select(x => x.LongName + "`")
+			.ToArray();
+
+		return results
+			.Where(x => !x.IsMortalDark()
+			             && !darkPrefixes.Any(dp => (x.LongName ?? "").StartsWith(dp, StringComparison.OrdinalIgnoreCase)))
+			.Where(x => ps.CanViewAttribute(executor, obj, x).AsTask().Result)
 			.OrderBy(x => x.LongName, _attributeSort)
-			.ToArrayAsync();
+			.ToArray();
 	}
 
 	/// <summary>
@@ -565,6 +582,30 @@ public class AttributeService(
 		if (!permission)
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+		}
+
+		// If the target attribute doesn't exist yet (creating new), we still need to check
+		// permissions on the existing ancestor path. The stream above yields nothing when
+		// the full path doesn't exist (count != attribute.Length check in GetAttributeAsync).
+		// Check each existing prefix of the path.
+		if (attrPath.Length > 1)
+		{
+			for (var i = attrPath.Length - 1; i >= 1; i--)
+			{
+				var prefix = attrPath[..i];
+				var prefixAttr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, prefix));
+				var prefixPermission = await prefixAttr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
+				if (!prefixPermission)
+				{
+					return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+				}
+				// If prefix stream returned results, we found existing ancestors — done checking
+				var prefixCheck = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, prefix));
+				if (await prefixCheck.AnyAsync())
+				{
+					break;
+				}
+			}
 		}
 
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,

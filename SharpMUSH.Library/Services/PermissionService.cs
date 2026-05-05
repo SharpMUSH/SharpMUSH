@@ -67,6 +67,11 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params SharpAttribute[] attribute)
 	{
+		// mortal_dark hides from non-privileged viewers regardless of ownership
+		if (attribute.Length > 0 && attribute.Any(attr => attr.IsMortalDark())
+		    && !viewer.IsGod() && !await viewer.IsWizard())
+			return false;
+
 		if (await CanExamine(viewer, target))
 			return true;
 
@@ -76,6 +81,11 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params LazySharpAttribute[] attribute)
 	{
+		// mortal_dark hides from non-privileged viewers regardless of ownership
+		if (attribute.Length > 0 && attribute.Any(attr => attr.IsMortalDark())
+		    && !viewer.IsGod() && !await viewer.IsWizard())
+			return false;
+
 		if (await CanExamine(viewer, target))
 			return true;
 
