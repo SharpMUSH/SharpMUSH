@@ -415,3 +415,6 @@ TextFiles/
 test_output.txt
 TestResults/
 pennmush/
+
+# AI Helpers
+.hermes
