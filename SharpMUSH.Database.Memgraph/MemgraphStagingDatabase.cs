@@ -84,8 +84,7 @@ public sealed class MemgraphStagingDatabase : MemgraphDatabase, IStagingDatabase
 		// Restore nodes
 		foreach (var node in backup.Nodes)
 		{
-			var labels = string.Join(":", node.Labels.Select(l => $"`{l}`"));
-			var propsJson = JsonSerializer.Serialize(node.Properties);
+			var labels = string.Join(":", node.Labels.Select(l => $"`{EscapeIdentifier(l)}`"));
 			await session.RunAsync(
 				$"CREATE (n:{labels}) SET n = $props",
 				new { props = node.Properties });
@@ -96,7 +95,7 @@ public sealed class MemgraphStagingDatabase : MemgraphDatabase, IStagingDatabase
 		{
 			await session.RunAsync(
 				$"MATCH (a), (b) WHERE elementId(a) = $startId AND elementId(b) = $endId " +
-				$"CREATE (a)-[r:`{rel.Type}`]->(b) SET r = $props",
+				$"CREATE (a)-[r:`{EscapeIdentifier(rel.Type)}`]->(b) SET r = $props",
 				new { startId = rel.StartNodeElementId, endId = rel.EndNodeElementId, props = rel.Properties });
 		}
 
@@ -113,6 +112,13 @@ public sealed class MemgraphStagingDatabase : MemgraphDatabase, IStagingDatabase
 			await AbortAsync();
 		}
 	}
+
+	/// <summary>
+	/// Escapes a Cypher identifier (label or relationship type) by replacing backticks with double backticks.
+	/// Identifiers are already wrapped in backticks by the caller.
+	/// </summary>
+	private static string EscapeIdentifier(string identifier) =>
+		identifier.Replace("`", "``");
 
 	/// <summary>
 	/// Creates a backup of all nodes and relationships in the current Memgraph database.
