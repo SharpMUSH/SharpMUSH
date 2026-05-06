@@ -12,24 +12,32 @@
         <div>
             <MudText Typo="Typo.h4">Import PennMUSH Database</MudText>
             <MudText Typo="Typo.body2" Class="mt-1" Style="opacity: 0.7;">
-                Wipe the current database and replace it with a converted PennMUSH database
+                Import a PennMUSH database into a staging area, review, then promote to live
             </MudText>
         </div>
     </div>
 
     <div class="config-section-content">
-        @* Danger warning banner *@
-        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Icon="@Icons.Material.Filled.Dangerous" Class="mb-6">
-            <MudText Typo="Typo.h6" Class="mb-2"><strong>⚠️ DESTRUCTIVE OPERATION</strong></MudText>
-            <MudText Typo="Typo.body1">
-                This will <strong>permanently destroy</strong> the entire current SharpMUSH database — all players, rooms, objects,
-                attributes, and configuration — then replace it with data converted from a PennMUSH flatfile.
-                <br /><br />
-                <strong>This action cannot be undone.</strong> Ensure you have a backup before proceeding.
+        @* Staging info banner *@
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Shield" Class="mb-4">
+            <MudText Typo="Typo.body2">
+                <strong>Safe staging workflow:</strong> Data is imported into an isolated staging database first.
+                Your live database remains untouched until you explicitly promote.
+                If anything goes wrong, abort to discard the staging data with zero impact.
             </MudText>
         </MudAlert>
 
-        @if (!_isConverting && _result == null)
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Icon="@Icons.Material.Filled.Dangerous" Class="mb-6">
+            <MudText Typo="Typo.h6" Class="mb-2"><strong>⚠️ DESTRUCTIVE ON PROMOTE</strong></MudText>
+            <MudText Typo="Typo.body1">
+                Promoting will <strong>replace</strong> the entire live database — all players, rooms, objects,
+                attributes, and configuration — with the staged PennMUSH import.
+                <br /><br />
+                <strong>This cannot be undone.</strong> Ensure you have a backup before promoting.
+            </MudText>
+        </MudAlert>
+
+        @if (_phase == ImportPhase.Upload)
         {
             @* File upload section *@
             <MudGrid Spacing="4">
@@ -94,7 +102,7 @@
                                        StartIcon="@Icons.Material.Filled.CloudUpload"
                                        FullWidth="true"
                                        Class="mt-2">
-                                @(_configFile == null ? "Select Config File (Optional)" : _configFile.Name)
+                                @(_configFile == null ? "Select Config File" : _configFile.Name)
                             </MudButton>
                             @if (_configFile != null)
                             {
@@ -109,14 +117,14 @@
             </MudGrid>
 
             @* Confirmation section *@
-            @if (_databaseFile != null)
+            @if (_databaseFile != null && _configFile != null)
             {
                 <MudPaper Class="pa-6 mt-6" Style="border: 2px solid var(--mud-palette-error); border-radius: 8px;" Elevation="0">
                     <MudText Typo="Typo.h6" Color="Color.Error" GutterBottom="true">
                         <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-1" /> Confirmation Required
                     </MudText>
                     <MudText Typo="Typo.body2" Class="mb-4">
-                        To confirm this destructive operation, type <code>DESTROY</code> in the field below:
+                        To begin staging the import, type <code>DESTROY</code> in the field below:
                     </MudText>
 
                     <MudTextField @bind-Value="_confirmationText"
@@ -132,30 +140,34 @@
                                Variant="Variant.Filled"
                                Color="Color.Error"
                                Size="Size.Large"
-                               StartIcon="@Icons.Material.Filled.DeleteForever"
+                               StartIcon="@Icons.Material.Filled.RocketLaunch"
                                Disabled="@(!IsConfirmed || _isUploading)"
-                               OnClick="StartWipeAndImport">
+                               OnClick="StartStagedImport">
                         @if (_isUploading)
                         {
                             <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                            <MudText Class="ms-2">Wiping & Importing...</MudText>
+                            <MudText Class="ms-2">Creating Staging & Uploading...</MudText>
                         }
                         else
                         {
-                            <MudText>Wipe Database & Import</MudText>
+                            <MudText>Start Staged Import</MudText>
                         }
                     </MudButton>
                 </MudPaper>
             }
         }
-        else if (_isConverting && _progress != null)
+        else if (_phase == ImportPhase.Converting && _progress != null)
         {
-            @* Progress display — reuses same pattern as ImportDatabase.razor *@
+            @* Progress display *@
             <MudPaper Class="pa-6" Elevation="2">
                 <MudText Typo="Typo.h5" GutterBottom="true">
                     <MudIcon Icon="@Icons.Material.Filled.Sync" Class="mr-2 spin-icon" />
-                    Converting Database...
+                    Importing into Staging Database...
                 </MudText>
+
+                <MudAlert Severity="Severity.Info" Variant="Variant.Text" Class="mb-4">
+                    Your live database is untouched. Data is being written to an isolated staging area.
+                </MudAlert>
 
                 <MudProgressLinear Value="@_progress.PercentageComplete"
                                    Color="Color.Primary"
@@ -218,16 +230,23 @@
                            Variant="Variant.Outlined"
                            OnClick="CancelConversion"
                            Class="mt-4">
-                    Cancel Conversion
+                    Cancel & Abort Staging
                 </MudButton>
             </MudPaper>
         }
-        else if (_result != null)
+        else if (_phase == ImportPhase.Review && _result != null)
         {
-            @* Result display *@
+            @* Review results before promote/abort *@
             <MudAlert Severity="@(_result.IsSuccessful ? Severity.Success : Severity.Error)" Class="mb-4" Variant="Variant.Filled">
                 <MudText Typo="Typo.h5">
-                    @(_result.IsSuccessful ? "✅ Import Successful!" : "❌ Import Completed with Errors")
+                    @(_result.IsSuccessful ? "✅ Staging Import Complete — Ready to Promote" : "❌ Staging Import Completed with Errors")
+                </MudText>
+            </MudAlert>
+
+            <MudAlert Severity="Severity.Info" Variant="Variant.Text" Class="mb-4">
+                <MudText Typo="Typo.body2">
+                    <strong>The data is in a staging database.</strong> Your live database has not been modified.
+                    Review the results below, then choose to <strong>Promote</strong> (replace live) or <strong>Abort</strong> (discard staging).
                 </MudText>
             </MudAlert>
 
@@ -291,6 +310,53 @@
                 </MudPaper>
             }
 
+            @* Promote / Abort action buttons *@
+            <MudPaper Class="pa-6 mt-6" Style="border: 2px solid var(--mud-palette-error); border-radius: 8px;" Elevation="0">
+                <MudText Typo="Typo.h6" GutterBottom="true">
+                    <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Class="mr-1" /> Promote or Abort
+                </MudText>
+
+                <MudStack Row="true" Spacing="3" Class="mt-4">
+                    @if (_result.IsSuccessful)
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Success"
+                                   Size="Size.Large"
+                                   StartIcon="@Icons.Material.Filled.CheckCircle"
+                                   Disabled="@_isPromoting"
+                                   OnClick="PromoteStaging">
+                            @if (_isPromoting)
+                            {
+                                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                <MudText Class="ms-2">Promoting...</MudText>
+                            }
+                            else
+                            {
+                                <MudText>Promote to Live</MudText>
+                            }
+                        </MudButton>
+                    }
+
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Error"
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.DeleteForever"
+                               Disabled="@_isPromoting"
+                               OnClick="AbortStaging">
+                        Abort & Discard Staging
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        }
+        else if (_phase == ImportPhase.Done)
+        {
+            <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Class="mb-4">
+                <MudText Typo="Typo.h5">🎉 Import Promoted Successfully!</MudText>
+                <MudText Typo="Typo.body1" Class="mt-2">
+                    The staging database has been promoted to live. Your game world is now running with the imported PennMUSH data.
+                </MudText>
+            </MudAlert>
+
             <MudButton StartIcon="@Icons.Material.Filled.Refresh"
                        Color="Color.Primary"
                        Variant="Variant.Filled"
@@ -313,15 +379,18 @@
 </style>
 
 @code {
+    private enum ImportPhase { Upload, Converting, Review, Done }
+
     private IBrowserFile? _databaseFile;
     private IBrowserFile? _configFile;
     private string _confirmationText = "";
     private bool _isUploading;
-    private bool _isConverting;
+    private bool _isPromoting;
     private bool _isUpdatingProgress;
     private string? _sessionId;
     private ConversionProgress? _progress;
     private ConversionResult? _result;
+    private ImportPhase _phase = ImportPhase.Upload;
     private System.Threading.Timer? _progressTimer;
 
     private bool IsConfirmed => string.Equals(_confirmationText?.Trim(), "DESTROY", StringComparison.Ordinal);
@@ -339,38 +408,28 @@
         StateHasChanged();
     }
 
-    private async Task StartWipeAndImport()
+    private async Task StartStagedImport()
     {
         if (_databaseFile is null || _configFile is null || !IsConfirmed)
             return;
 
-        // The "DESTROY" typing IS the confirmation - no additional dialog needed
         _isUploading = true;
         StateHasChanged();
 
         try
         {
             await using var dbStream = _databaseFile.OpenReadStream(maxAllowedSize: 104857600);
-            Stream? cfgStream = null;
-            string? cfgName = null;
-
-            if (_configFile != null)
-            {
-                cfgStream = _configFile.OpenReadStream(maxAllowedSize: 1048576);
-                cfgName = _configFile.Name;
-            }
+            await using var cfgStream = _configFile.OpenReadStream(maxAllowedSize: 1048576);
 
             _sessionId = await ConversionService.WipeAndImportAsync(
                 dbStream, _databaseFile.Name,
-                cfgStream, cfgName);
-
-            if (cfgStream != null)
-                await cfgStream.DisposeAsync();
+                cfgStream, _configFile.Name);
 
             if (_sessionId != null)
             {
                 _isUploading = false;
-                _isConverting = true;
+                _phase = ImportPhase.Converting;
+                _progress = new ConversionProgress();
                 StateHasChanged();
 
                 _progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
@@ -389,13 +448,13 @@
         _ = Task.Run(async () =>
         {
             try { await UpdateProgressAsync(); }
-            catch { _progressTimer?.Dispose(); _isConverting = false; }
+            catch { _progressTimer?.Dispose(); _phase = ImportPhase.Upload; }
         });
     }
 
     private async Task UpdateProgressAsync()
     {
-        if (_isUpdatingProgress || _sessionId == null || !_isConverting)
+        if (_isUpdatingProgress || _sessionId == null || _phase != ImportPhase.Converting)
             return;
 
         _isUpdatingProgress = true;
@@ -406,7 +465,7 @@
             if (_progress?.PercentageComplete >= 100)
             {
                 _result = await ConversionService.GetResultAsync(_sessionId);
-                _isConverting = false;
+                _phase = ImportPhase.Review;
                 _progressTimer?.Dispose();
             }
 
@@ -418,11 +477,67 @@
         }
     }
 
+    private async Task PromoteStaging()
+    {
+        if (_sessionId == null) return;
+
+        _isPromoting = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await ConversionService.PromoteStagingAsync(_sessionId);
+            if (success)
+            {
+                _phase = ImportPhase.Done;
+                Snackbar.Add("Staging promoted to live successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Failed to promote staging. Check server logs.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error promoting: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isPromoting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AbortStaging()
+    {
+        if (_sessionId == null) return;
+
+        try
+        {
+            var success = await ConversionService.AbortStagingAsync(_sessionId);
+            if (success)
+            {
+                Snackbar.Add("Staging discarded. Live database unchanged.", Severity.Info);
+            }
+            else
+            {
+                Snackbar.Add("Failed to abort staging. Check server logs.", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error aborting: {ex.Message}", Severity.Error);
+        }
+
+        Reset();
+    }
+
     private async Task CancelConversion()
     {
         if (_sessionId == null) return;
         await ConversionService.CancelConversionAsync(_sessionId);
-        _isConverting = false;
+        // Also try to abort the staging
+        await ConversionService.AbortStagingAsync(_sessionId);
         _progressTimer?.Dispose();
         Reset();
     }
@@ -435,8 +550,9 @@
         _sessionId = null;
         _progress = null;
         _result = null;
-        _isConverting = false;
+        _phase = ImportPhase.Upload;
         _isUploading = false;
+        _isPromoting = false;
         _progressTimer?.Dispose();
         StateHasChanged();
     }

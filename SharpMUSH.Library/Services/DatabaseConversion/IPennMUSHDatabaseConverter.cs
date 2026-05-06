@@ -26,11 +26,13 @@ public interface IPennMUSHDatabaseConverter
 	/// </summary>
 	/// <param name="databaseFilePath">Path to the PennMUSH database file</param>
 	/// <param name="progress">Progress reporter for real-time updates</param>
+	/// <param name="targetDatabase">Optional target database (for staging imports). If null, uses the default database.</param>
 	/// <param name="cancellationToken">Cancellation token</param>
 	/// <returns>Conversion statistics</returns>
 	Task<ConversionResult> ConvertDatabaseAsync(
 		string databaseFilePath,
 		IProgress<ConversionProgress> progress,
+		ISharpDatabase? targetDatabase = null,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>

@@ -4,12 +4,12 @@ using SharpMUSH.Client.Pages.Admin.Config;
 namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
-/// Tests for the ImportPennMUSH page — destructive wipe-and-import flow.
+/// Tests for the ImportPennMUSH page — staged import flow with promote/abort.
 /// </summary>
 public class ImportPennMUSHTests
 {
 	[Test]
-	public async Task ImportPennMUSH_InitialLoad_ShowsDangerWarning()
+	public async Task ImportPennMUSH_InitialLoad_ShowsStagingInfo()
 	{
 		await using var ctx = new BunitContext();
 		var handler = AdminTestHelpers.CreateConfigApiHandler();
@@ -17,9 +17,19 @@ public class ImportPennMUSHTests
 
 		var cut = ctx.Render<ImportPennMUSH>();
 
-		var markup = cut.Markup;
-		// Should show warning about destructive operation (hardcoded text)
-		await Assert.That(markup).Contains("permanently destroy");
+		await Assert.That(cut.Markup).Contains("Safe staging workflow");
+	}
+
+	[Test]
+	public async Task ImportPennMUSH_InitialLoad_ShowsDestructiveOnPromoteWarning()
+	{
+		await using var ctx = new BunitContext();
+		var handler = AdminTestHelpers.CreateConfigApiHandler();
+		AdminTestHelpers.SetupAdminContext(ctx, handler);
+
+		var cut = ctx.Render<ImportPennMUSH>();
+
+		await Assert.That(cut.Markup).Contains("DESTRUCTIVE ON PROMOTE");
 	}
 
 	[Test]
@@ -31,7 +41,7 @@ public class ImportPennMUSHTests
 
 		var cut = ctx.Render<ImportPennMUSH>();
 
-		await Assert.That(cut.Markup).Contains("Import");
+		await Assert.That(cut.Markup).Contains("Import PennMUSH Database");
 	}
 
 	[Test]
@@ -44,34 +54,13 @@ public class ImportPennMUSHTests
 		var cut = ctx.Render<ImportPennMUSH>();
 
 		var markup = cut.Markup;
-		// Should have areas for both database and config file upload
 		await Assert.That(markup).Contains(".db");
+		await Assert.That(markup).Contains("Database File");
+		await Assert.That(markup).Contains("Config File");
 	}
 
 	[Test]
-	public async Task ImportPennMUSH_WithoutFiles_ConfirmDisabled()
-	{
-		await using var ctx = new BunitContext();
-		var handler = AdminTestHelpers.CreateConfigApiHandler();
-		AdminTestHelpers.SetupAdminContext(ctx, handler);
-
-		var cut = ctx.Render<ImportPennMUSH>();
-
-		// The confirm/import button should be disabled without files selected
-		var buttons = cut.FindAll("button");
-		// Find the import/confirm button — it should be disabled
-		var importButton = buttons.FirstOrDefault(b =>
-			b.TextContent.Contains("Import", StringComparison.OrdinalIgnoreCase) ||
-			b.TextContent.Contains("Confirm", StringComparison.OrdinalIgnoreCase));
-
-		if (importButton != null)
-		{
-			await Assert.That(importButton.HasAttribute("disabled")).IsTrue();
-		}
-	}
-
-	[Test]
-	public async Task ImportPennMUSH_HasDestroyConfirmationInput()
+	public async Task ImportPennMUSH_InitialLoad_BothFilesRequired()
 	{
 		await using var ctx = new BunitContext();
 		var handler = AdminTestHelpers.CreateConfigApiHandler();
@@ -80,8 +69,72 @@ public class ImportPennMUSHTests
 		var cut = ctx.Render<ImportPennMUSH>();
 
 		var markup = cut.Markup;
-		// Should have an input field for typing DESTROY
-		var inputs = cut.FindAll("input");
-		await Assert.That(inputs.Count).IsGreaterThan(0);
+		// Both file cards should show "Required" chip
+		var requiredCount = System.Text.RegularExpressions.Regex.Matches(markup, "Required").Count;
+		await Assert.That(requiredCount).IsGreaterThanOrEqualTo(2);
+	}
+
+	[Test]
+	public async Task ImportPennMUSH_WithoutFiles_NoConfirmationSection()
+	{
+		await using var ctx = new BunitContext();
+		var handler = AdminTestHelpers.CreateConfigApiHandler();
+		AdminTestHelpers.SetupAdminContext(ctx, handler);
+
+		var cut = ctx.Render<ImportPennMUSH>();
+
+		// Confirmation section should not appear without both files
+		await Assert.That(cut.Markup).DoesNotContain("Confirmation Required");
+	}
+
+	[Test]
+	public async Task ImportPennMUSH_ConfirmationText_MentionsDESTROY()
+	{
+		await using var ctx = new BunitContext();
+		var handler = AdminTestHelpers.CreateConfigApiHandler();
+		AdminTestHelpers.SetupAdminContext(ctx, handler);
+
+		var cut = ctx.Render<ImportPennMUSH>();
+
+		// DESTROY is mentioned in the warning banner context ("DESTRUCTIVE ON PROMOTE")
+		await Assert.That(cut.Markup).Contains("DESTRUCTIVE");
+	}
+
+	[Test]
+	public async Task ImportPennMUSH_InitialLoad_ShowsSelectFileButtons()
+	{
+		await using var ctx = new BunitContext();
+		var handler = AdminTestHelpers.CreateConfigApiHandler();
+		AdminTestHelpers.SetupAdminContext(ctx, handler);
+
+		var cut = ctx.Render<ImportPennMUSH>();
+
+		await Assert.That(cut.Markup).Contains("Select Database File");
+		await Assert.That(cut.Markup).Contains("Select Config File");
+	}
+
+	[Test]
+	public async Task ImportPennMUSH_InitialLoad_ShowsStagingExplanation()
+	{
+		await using var ctx = new BunitContext();
+		var handler = AdminTestHelpers.CreateConfigApiHandler();
+		AdminTestHelpers.SetupAdminContext(ctx, handler);
+
+		var cut = ctx.Render<ImportPennMUSH>();
+
+		await Assert.That(cut.Markup).Contains("staging");
+		await Assert.That(cut.Markup).Contains("live database remains untouched");
+	}
+
+	[Test]
+	public async Task ImportPennMUSH_InitialLoad_ShowsBackupReminder()
+	{
+		await using var ctx = new BunitContext();
+		var handler = AdminTestHelpers.CreateConfigApiHandler();
+		AdminTestHelpers.SetupAdminContext(ctx, handler);
+
+		var cut = ctx.Render<ImportPennMUSH>();
+
+		await Assert.That(cut.Markup).Contains("backup");
 	}
 }

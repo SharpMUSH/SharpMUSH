@@ -125,4 +125,38 @@ public class DatabaseConversionService(ILogger<DatabaseConversionService> logger
 			throw;
 		}
 	}
+
+	public async Task<bool> PromoteStagingAsync(string sessionId, CancellationToken cancellationToken = default)
+	{
+		try
+		{
+			var response = await httpClient
+				.CreateClient("api")
+				.PostAsync($"/api/databaseconversion/promote/{sessionId}", null, cancellationToken);
+
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error promoting staging database");
+			return false;
+		}
+	}
+
+	public async Task<bool> AbortStagingAsync(string sessionId, CancellationToken cancellationToken = default)
+	{
+		try
+		{
+			var response = await httpClient
+				.CreateClient("api")
+				.PostAsync($"/api/databaseconversion/abort/{sessionId}", null, cancellationToken);
+
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error aborting staging");
+			return false;
+		}
+	}
 }

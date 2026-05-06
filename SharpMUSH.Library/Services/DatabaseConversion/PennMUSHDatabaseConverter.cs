@@ -46,24 +46,35 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	public async Task<ConversionResult> ConvertDatabaseAsync(
 		string databaseFilePath,
 		IProgress<ConversionProgress> progress,
+		ISharpDatabase? targetDatabase = null,
 		CancellationToken cancellationToken = default)
 	{
 		_logger.LogInformation("Starting conversion of PennMUSH database from: {FilePath}", databaseFilePath);
 
 		var pennDatabase = await _parser.ParseFileAsync(databaseFilePath, cancellationToken);
-		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
+		return await ConvertDatabaseAsync(pennDatabase, progress, targetDatabase, cancellationToken);
 	}
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(PennMUSHDatabase pennDatabase, CancellationToken cancellationToken = default)
 	{
-		return await ConvertDatabaseAsync(pennDatabase, null, cancellationToken);
+		return await ConvertDatabaseAsync(pennDatabase, null, null, cancellationToken);
+	}
+
+	public Task<ConversionResult> ConvertDatabaseAsync(
+		PennMUSHDatabase pennDatabase,
+		IProgress<ConversionProgress> progress,
+		CancellationToken cancellationToken = default)
+	{
+		return ConvertDatabaseAsync(pennDatabase, progress, null, cancellationToken);
 	}
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(
 		PennMUSHDatabase pennDatabase,
 		IProgress<ConversionProgress>? progress,
+		ISharpDatabase? targetDatabase = null,
 		CancellationToken cancellationToken = default)
 	{
+		var db = targetDatabase ?? _database;
 		var stopwatch = Stopwatch.StartNew();
 		var result = new ConversionResult();
 		var errors = new List<string>();
@@ -112,20 +123,20 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			ReportProgress("Creating objects", 0.0);
 
-			var objectCounts = await CreateObjectsAsync(pennDatabase, errors, warnings, cancellationToken);
+			var objectCounts = await CreateObjectsAsync(db, pennDatabase, errors, warnings, cancellationToken);
 			playersConverted = objectCounts.players;
 			roomsConverted = objectCounts.rooms;
 			thingsConverted = objectCounts.things;
 			exitsConverted = objectCounts.exits;
 			ReportProgress("Objects created", 0.25);
 
-			await EstablishRelationshipsAsync(pennDatabase, errors, warnings, cancellationToken);
+			await EstablishRelationshipsAsync(db, pennDatabase, errors, warnings, cancellationToken);
 			ReportProgress("Relationships established", 0.50);
 
-			attributesConverted = await CreateAttributesAsync(pennDatabase, errors, warnings, cancellationToken);
+			attributesConverted = await CreateAttributesAsync(db, pennDatabase, errors, warnings, cancellationToken);
 			ReportProgress("Attributes created", 0.75);
 
-			locksConverted = await CreateLocksAsync(pennDatabase, errors, warnings, cancellationToken);
+			locksConverted = await CreateLocksAsync(db, pennDatabase, errors, warnings, cancellationToken);
 			ReportProgress("Locks created", 1.0);
 
 			stopwatch.Stop();
@@ -159,6 +170,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	private async Task<(int players, int rooms, int things, int exits)> CreateObjectsAsync(
+		ISharpDatabase db,
 		PennMUSHDatabase pennDatabase,
 		List<string> errors,
 		List<string> warnings,
@@ -178,7 +190,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		// Check if default objects from migration already exist (#0, #1, #2)
 		// If they do, we'll reuse them instead of creating new ones
 		DBRef tempGodDbRef;
-		var existingPlayer1 = await _database.GetObjectNodeAsync(new DBRef(1), cancellationToken);
+		var existingPlayer1 = await db.GetObjectNodeAsync(new DBRef(1), cancellationToken);
 
 		if (existingPlayer1.IsT0)
 		{
@@ -193,12 +205,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
 				// Update God player name/password from PennMUSH data
-				await _database.SetObjectName(existingPlayer1.AsT0, MModule.single(godPennObject.Name), cancellationToken);
+				await db.SetObjectName(existingPlayer1.AsT0, MModule.single(godPennObject.Name), cancellationToken);
 
 				if (!string.IsNullOrEmpty(godPennObject.Password))
 				{
 					var (salt, hash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
-					await _database.SetPlayerPasswordAsync(existingPlayer1.AsT0, hash, salt, cancellationToken);
+					await db.SetPlayerPasswordAsync(existingPlayer1.AsT0, hash, salt, cancellationToken);
 				}
 
 				_logger.LogDebug("Updated God player #{PennDBRef} with name: {Name}", 1, godPennObject.Name);
@@ -213,7 +225,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				// Create God player first - extract salt from PennMUSH password
 				var (godSalt, godHash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
-				tempGodDbRef = await _database.CreatePlayerAsync(
+				tempGodDbRef = await db.CreatePlayerAsync(
 					godPennObject.Name,
 					godHash,
 					new DBRef(0), // Limbo room (will create or reuse next)
@@ -229,7 +241,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			else
 			{
 				// Create a default God player (no salt needed for new password)
-				tempGodDbRef = await _database.CreatePlayerAsync(
+				tempGodDbRef = await db.CreatePlayerAsync(
 					"God",
 					"NEEDS_RESET",
 					new DBRef(0),
@@ -244,7 +256,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		// Get the God player object for use as creator
-		var godPlayerObj = await _database.GetObjectNodeAsync(tempGodDbRef, cancellationToken);
+		var godPlayerObj = await db.GetObjectNodeAsync(tempGodDbRef, cancellationToken);
 		if (!godPlayerObj.TryPickT0(out var godPlayerWrapped, out _))
 		{
 			throw new InvalidOperationException("Failed to retrieve God player after creation or reuse");
@@ -253,7 +265,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		// Check if Room #0 already exists (from database migration)
 		DBRef tempRoom0DbRef;
-		var existingRoom0 = await _database.GetObjectNodeAsync(new DBRef(0), cancellationToken);
+		var existingRoom0 = await db.GetObjectNodeAsync(new DBRef(0), cancellationToken);
 
 		if (existingRoom0.IsT0)
 		{
@@ -268,7 +280,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
 				// Update Room #0 name from PennMUSH data
-				await _database.SetObjectName(existingRoom0.AsT1, MModule.single(room0Penn.Name), cancellationToken);
+				await db.SetObjectName(existingRoom0.AsT1, MModule.single(room0Penn.Name), cancellationToken);
 				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
 			}
 		}
@@ -279,7 +291,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
-				tempRoom0DbRef = await _database.CreateRoomAsync(
+				tempRoom0DbRef = await db.CreateRoomAsync(
 					room0Penn.Name,
 					godPlayer,
 					cancellationToken);
@@ -289,7 +301,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 			else
 			{
-				tempRoom0DbRef = await _database.CreateRoomAsync(
+				tempRoom0DbRef = await db.CreateRoomAsync(
 					"Limbo",
 					godPlayer,
 					cancellationToken);
@@ -300,7 +312,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		// Check if Master Room #2 already exists (from database migration)
-		var existingRoom2 = await _database.GetObjectNodeAsync(new DBRef(2), cancellationToken);
+		var existingRoom2 = await db.GetObjectNodeAsync(new DBRef(2), cancellationToken);
 
 		if (existingRoom2.IsT0)
 		{
@@ -366,7 +378,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							// Create player with password from PennMUSH - extract salt
 							// Players start in Limbo temporarily
 							var (playerSalt, playerHash) = ExtractPennMUSHPasswordParts(pennObj.Password);
-							newDbRef = await _database.CreatePlayerAsync(
+							newDbRef = await db.CreatePlayerAsync(
 								pennObj.Name,
 								playerHash,
 								tempRoom0DbRef, // Start in Limbo
@@ -381,7 +393,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					case PennMUSHObjectType.Room:
 						{
 							// Rooms are created with God as owner initially
-							newDbRef = await _database.CreateRoomAsync(
+							newDbRef = await db.CreateRoomAsync(
 								pennObj.Name,
 								godPlayer,
 								cancellationToken);
@@ -394,14 +406,14 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							// Things need location and home - use Limbo temporarily
 							if (room0 == null)
 							{
-								var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
+								var room0Obj = await db.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
 								if (!room0Obj.TryPickT1(out room0, out _))
 								{
 									throw new InvalidOperationException("Failed to retrieve Limbo room");
 								}
 							}
 
-							newDbRef = await _database.CreateThingAsync(
+							newDbRef = await db.CreateThingAsync(
 								pennObj.Name,
 								room0, // Start in Limbo
 								godPlayer, // God owns it temporarily
@@ -416,7 +428,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							// Exits need location - use Limbo temporarily
 							if (room0 == null)
 							{
-								var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
+								var room0Obj = await db.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
 								if (!room0Obj.TryPickT1(out room0, out _))
 								{
 									throw new InvalidOperationException("Failed to retrieve Limbo room");
@@ -424,7 +436,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							}
 
 							var aliases = ExtractAliases(pennObj.Name);
-							newDbRef = await _database.CreateExitAsync(
+							newDbRef = await db.CreateExitAsync(
 								aliases.name,
 								aliases.aliases,
 								room0, // Start in Limbo
@@ -457,6 +469,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	private async Task EstablishRelationshipsAsync(
+		ISharpDatabase db,
 		PennMUSHDatabase pennDatabase,
 		List<string> errors,
 		List<string> warnings,
@@ -477,7 +490,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			try
 			{
 				// Get the Sharp object
-				var sharpObjResult = await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken);
+				var sharpObjResult = await db.GetObjectNodeAsync(sharpDbRef, cancellationToken);
 				if (sharpObjResult.IsNone)
 				{
 					warnings.Add($"Could not retrieve object #{sharpDbRef} for relationship setup");
@@ -491,7 +504,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					if (_dbrefMapping.TryGetValue(pennObj.Location, out var locationDbRef))
 					{
-						var locationObj = await _database.GetObjectNodeAsync(locationDbRef, cancellationToken);
+						var locationObj = await db.GetObjectNodeAsync(locationDbRef, cancellationToken);
 						var container = TryGetContainer(locationObj);
 
 						if (container != null)
@@ -539,12 +552,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					if (_dbrefMapping.TryGetValue(pennObj.Link, out var destDbRef))
 					{
-						var destObj = await _database.GetObjectNodeAsync(destDbRef, cancellationToken);
+						var destObj = await db.GetObjectNodeAsync(destDbRef, cancellationToken);
 						var container = TryGetContainer(destObj);
 
 						if (container != null && sharpObj.IsExit)
 						{
-							await _database.LinkExitAsync(sharpObj.AsExit, container, cancellationToken);
+							await db.LinkExitAsync(sharpObj.AsExit, container, cancellationToken);
 							_logger.LogDebug("Linked exit #{PennDBRef} to destination #{DestDBRef}", pennObj.DBRef, pennObj.Link);
 						}
 					}
@@ -554,10 +567,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				if (pennObj.Parent >= 0 && _dbrefMapping.TryGetValue(pennObj.Parent, out var parentDbRef))
 				{
 					// Set parent relationship
-					var parentObj = await _database.GetObjectNodeAsync(parentDbRef, cancellationToken);
+					var parentObj = await db.GetObjectNodeAsync(parentDbRef, cancellationToken);
 					if (!parentObj.IsNone)
 					{
-						await _database.SetObjectParent(sharpObj.Known, parentObj.Known, cancellationToken);
+						await db.SetObjectParent(sharpObj.Known, parentObj.Known, cancellationToken);
 						_logger.LogDebug("Set parent for #{PennDBRef} to #{ParentDBRef}", pennObj.DBRef, pennObj.Parent);
 					}
 					else
@@ -570,10 +583,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				if (pennObj.Zone >= 0 && _dbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
 				{
 					// Set zone relationship
-					var zoneObj = await _database.GetObjectNodeAsync(zoneDbRef, cancellationToken);
+					var zoneObj = await db.GetObjectNodeAsync(zoneDbRef, cancellationToken);
 					if (!zoneObj.IsNone)
 					{
-						await _database.SetObjectZone(sharpObj.Known, zoneObj.Known, cancellationToken);
+						await db.SetObjectZone(sharpObj.Known, zoneObj.Known, cancellationToken);
 						_logger.LogDebug("Set zone for #{PennDBRef} to #{ZoneDBRef}", pennObj.DBRef, pennObj.Zone);
 					}
 					else
@@ -592,6 +605,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	private async Task<int> CreateAttributesAsync(
+		ISharpDatabase db,
 		PennMUSHDatabase pennDatabase,
 		List<string> errors,
 		List<string> warnings,
@@ -619,7 +633,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			try
 			{
 				// Get the Sharp object
-				var sharpObjResult = await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken);
+				var sharpObjResult = await db.GetObjectNodeAsync(sharpDbRef, cancellationToken);
 				if (sharpObjResult.IsNone)
 				{
 					warnings.Add($"Could not retrieve object #{sharpDbRef} for attribute creation");
@@ -686,6 +700,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	private async Task<int> CreateLocksAsync(
+		ISharpDatabase db,
 		PennMUSHDatabase pennDatabase,
 		List<string> errors,
 		List<string> warnings,
@@ -713,7 +728,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			try
 			{
 				// Get the Sharp object
-				var sharpObjResult = await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken);
+				var sharpObjResult = await db.GetObjectNodeAsync(sharpDbRef, cancellationToken);
 				if (sharpObjResult.IsNone)
 				{
 					warnings.Add($"Could not retrieve object #{sharpDbRef} for lock creation");
@@ -728,7 +743,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					try
 					{
 						var lockData = new Models.SharpLockData { LockString = lockString, Flags = Services.LockService.LockFlags.Default };
-						await _database.SetLockAsync(
+						await db.SetLockAsync(
 							sharpObj.Object(),
 							lockName,
 							lockData,

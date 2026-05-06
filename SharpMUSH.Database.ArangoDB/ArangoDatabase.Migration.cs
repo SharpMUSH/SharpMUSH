@@ -25,6 +25,22 @@ public partial class ArangoDatabase
 {
 	#region Migration
 
+	public async Task<IStagingDatabase> CreateStagingAsync(CancellationToken ct = default)
+	{
+		var stagingId = Guid.NewGuid().ToString("N")[..8];
+		var stagingHandle = new ArangoHandle($"{handle}_staging_{stagingId}");
+
+		logger.LogInformation("Creating staging database: {StagingDb}", (string)stagingHandle);
+
+		var staging = new ArangoStagingDatabase(
+			logger, arangoDb, stagingHandle, mediator, passwordService,
+			liveDatabase: this, originalHandle: handle, stagingId: stagingId);
+
+		await staging.Migrate(ct);
+
+		return staging;
+	}
+
 	public async ValueTask WipeDatabaseAsync(CancellationToken ct = default)
 	{
 		try
