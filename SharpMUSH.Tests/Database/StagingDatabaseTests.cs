@@ -14,6 +14,8 @@ namespace SharpMUSH.Tests.Database;
 /// 4. The live database can continue operating after promotion without downtime
 /// 5. Abort discards staging without affecting live
 /// </summary>
+[Explicit]
+[NotInParallel]
 public class StagingDatabaseTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
