@@ -21,6 +21,43 @@ public partial class MemgraphDatabase
 {
 	#region Migration
 
+	public async Task<IStagingDatabase> CreateStagingAsync(CancellationToken ct = default)
+	{
+		var stagingId = Guid.NewGuid().ToString("N")[..8];
+
+		logger.LogInformation("Creating Memgraph staging area (backup-and-restore mode): {StagingId}", stagingId);
+
+		// Memgraph is single-database — backup current state before wiping
+		var backupPath = await MemgraphStagingDatabase.BackupCurrentDatabaseAsync(driver, logger, ct);
+
+		// Wipe the current database
+		await using var session = driver.AsyncSession();
+		await session.RunAsync("MATCH (n) DETACH DELETE n");
+		_migrated = false;
+
+		// Create staging instance (which IS the live database — but with rollback capability)
+		var staging = new MemgraphStagingDatabase(
+			logger, driver, passwordService, backupPath, stagingId);
+
+		await staging.Migrate(ct);
+
+		return staging;
+	}
+
+	public async ValueTask WipeDatabaseAsync(CancellationToken cancellationToken = default)
+	{
+		logger.LogWarning("WIPING DATABASE - This is destructive and irreversible!");
+
+		await using var session = driver.AsyncSession();
+		await session.RunAsync("MATCH (n) DETACH DELETE n");
+		_migrated = false;
+
+		// Re-migrate
+		await Migrate(cancellationToken);
+
+		logger.LogInformation("Database wiped and re-initialized successfully.");
+	}
+
 	public async ValueTask Migrate(CancellationToken cancellationToken = default)
 	{
 		if (_migrated) return;

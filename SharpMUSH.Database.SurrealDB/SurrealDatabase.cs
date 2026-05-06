@@ -24,7 +24,6 @@ public partial class SurrealDatabase(
 	IPasswordService passwordService
 ) : ISharpDatabase
 {
-	private readonly IPasswordService _passwordService = passwordService;
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
 	private static volatile bool _migrated;
 	private static int _nextObjectKey;
