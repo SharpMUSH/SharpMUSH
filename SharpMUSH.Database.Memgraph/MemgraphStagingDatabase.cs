@@ -81,23 +81,26 @@ public sealed class MemgraphStagingDatabase : MemgraphDatabase, IStagingDatabase
 			return;
 		}
 
-		// Restore nodes
+		// Restore nodes with temporary backup IDs for relationship re-linking
 		foreach (var node in backup.Nodes)
 		{
 			var labels = string.Join(":", node.Labels.Select(l => $"`{EscapeIdentifier(l)}`"));
 			await session.RunAsync(
-				$"CREATE (n:{labels}) SET n = $props",
-				new { props = node.Properties });
+				$"CREATE (n:{labels}) SET n = $props, n._backup_id = $bid",
+				new { props = node.Properties, bid = node.BackupId });
 		}
 
-		// Restore relationships
+		// Restore relationships using temporary backup IDs
 		foreach (var rel in backup.Relationships)
 		{
 			await session.RunAsync(
-				$"MATCH (a), (b) WHERE elementId(a) = $startId AND elementId(b) = $endId " +
+				$"MATCH (a), (b) WHERE a._backup_id = $startId AND b._backup_id = $endId " +
 				$"CREATE (a)-[r:`{EscapeIdentifier(rel.Type)}`]->(b) SET r = $props",
-				new { startId = rel.StartNodeElementId, endId = rel.EndNodeElementId, props = rel.Properties });
+				new { startId = rel.StartNodeBackupId, endId = rel.EndNodeBackupId, props = rel.Properties });
 		}
+
+		// Remove temporary backup IDs
+		await session.RunAsync("MATCH (n) WHERE n._backup_id IS NOT NULL REMOVE n._backup_id");
 
 		// Clean up backup file
 		File.Delete(_backupPath);
@@ -132,15 +135,15 @@ public sealed class MemgraphStagingDatabase : MemgraphDatabase, IStagingDatabase
 
 		await using var session = driver.AsyncSession();
 
-		// Export all nodes
+		// Export all nodes — use id() which works in both Neo4j and Memgraph
 		var nodeResult = await session.RunAsync(
-			"MATCH (n) RETURN labels(n) as labels, elementId(n) as eid, properties(n) as props");
+			"MATCH (n) RETURN labels(n) as labels, id(n) as nid, properties(n) as props");
 		var nodeRecords = await nodeResult.ToListAsync();
 		foreach (var record in nodeRecords)
 		{
 			backup.Nodes.Add(new BackupNode
 			{
-				ElementId = record["eid"].As<string>(),
+				BackupId = record["nid"].As<long>(),
 				Labels = record["labels"].As<List<string>>(),
 				Properties = record["props"].As<Dictionary<string, object>>()
 			});
@@ -148,15 +151,15 @@ public sealed class MemgraphStagingDatabase : MemgraphDatabase, IStagingDatabase
 
 		// Export all relationships
 		var relResult = await session.RunAsync(
-			"MATCH (a)-[r]->(b) RETURN type(r) as type, elementId(a) as startEid, elementId(b) as endEid, properties(r) as props");
+			"MATCH (a)-[r]->(b) RETURN type(r) as type, id(a) as startId, id(b) as endId, properties(r) as props");
 		var relRecords = await relResult.ToListAsync();
 		foreach (var record in relRecords)
 		{
 			backup.Relationships.Add(new BackupRelationship
 			{
 				Type = record["type"].As<string>(),
-				StartNodeElementId = record["startEid"].As<string>(),
-				EndNodeElementId = record["endEid"].As<string>(),
+				StartNodeBackupId = record["startId"].As<long>(),
+				EndNodeBackupId = record["endId"].As<long>(),
 				Properties = record["props"].As<Dictionary<string, object>>()
 			});
 		}
@@ -180,7 +183,7 @@ public class MemgraphBackup
 
 public class BackupNode
 {
-	public string ElementId { get; set; } = "";
+	public long BackupId { get; set; }
 	public List<string> Labels { get; set; } = [];
 	public Dictionary<string, object> Properties { get; set; } = [];
 }
@@ -188,7 +191,7 @@ public class BackupNode
 public class BackupRelationship
 {
 	public string Type { get; set; } = "";
-	public string StartNodeElementId { get; set; } = "";
-	public string EndNodeElementId { get; set; } = "";
+	public long StartNodeBackupId { get; set; }
+	public long EndNodeBackupId { get; set; }
 	public Dictionary<string, object> Properties { get; set; } = [];
 }
