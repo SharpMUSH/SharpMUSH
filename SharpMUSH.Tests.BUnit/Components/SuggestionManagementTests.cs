@@ -7,7 +7,7 @@ using SharpMUSH.Library.ExpandedObjectData;
 using System.Net;
 using System.Net.Http.Json;
 
-namespace SharpMUSH.Tests.Client.Components;
+namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
 /// Tests for the SuggestionManagement Blazor component.

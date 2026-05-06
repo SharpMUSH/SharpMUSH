@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.Client.Services;
 
-namespace SharpMUSH.Tests.Client.Services;
+namespace SharpMUSH.Tests.BUnit.Services;
 
 /// <summary>
 /// Tests for the WebSocketClientService to verify connection management and messaging.

@@ -2,7 +2,7 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 
-namespace SharpMUSH.Tests.Client;
+namespace SharpMUSH.Tests.BUnit;
 
 /// <summary>
 /// Base class for Blazor component tests that use MudBlazor components.

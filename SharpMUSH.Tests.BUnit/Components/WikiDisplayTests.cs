@@ -5,7 +5,7 @@ using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
 
-namespace SharpMUSH.Tests.Client.Components;
+namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
 /// Tests for the WikiDisplay component to verify article rendering with parameters.

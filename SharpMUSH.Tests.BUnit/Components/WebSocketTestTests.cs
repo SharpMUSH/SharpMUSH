@@ -5,7 +5,7 @@ using NSubstitute;
 using SharpMUSH.Client.Pages;
 using SharpMUSH.Client.Services;
 
-namespace SharpMUSH.Tests.Client.Components;
+namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
 /// Tests for the WebSocketTest component to verify WebSocket client functionality.

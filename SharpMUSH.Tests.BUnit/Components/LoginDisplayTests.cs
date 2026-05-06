@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using SharpMUSH.Client.Layout;
 
-namespace SharpMUSH.Tests.Client.Components;
+namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
 /// Tests for the LoginDisplay component to verify authorization state behavior.

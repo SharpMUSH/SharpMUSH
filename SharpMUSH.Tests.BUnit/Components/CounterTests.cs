@@ -1,7 +1,7 @@
 using Bunit;
 using SharpMUSH.Client.Pages;
 
-namespace SharpMUSH.Tests.Client.Components;
+namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
 /// Tests for the Counter component to verify basic Blazor component behavior.

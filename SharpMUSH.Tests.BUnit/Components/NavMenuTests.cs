@@ -1,7 +1,7 @@
 using Bunit;
 using SharpMUSH.Client.Layout;
 
-namespace SharpMUSH.Tests.Client.Components;
+namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
 /// Tests for the NavMenu component to verify navigation menu behavior.

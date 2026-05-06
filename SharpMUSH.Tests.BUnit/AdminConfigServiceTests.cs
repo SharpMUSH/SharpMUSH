@@ -4,7 +4,7 @@ using SharpMUSH.Client.Services;
 using System.Net;
 using System.Text;
 
-namespace SharpMUSH.Tests.Client;
+namespace SharpMUSH.Tests.BUnit;
 
 public class MockHttpMessageHandler(HttpStatusCode statusCode, string content) : HttpMessageHandler
 {
