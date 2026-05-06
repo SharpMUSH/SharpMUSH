@@ -185,7 +185,7 @@
         var json = await AdminConfigService.ExportConfigAsync();
         if (json == null)
         {
-            Snackbar.Add("Failed to export configuration", Severity.Error);
+            Snackbar.Add(Loc["ExportFailed"].Value, Severity.Error);
             return;
         }
 

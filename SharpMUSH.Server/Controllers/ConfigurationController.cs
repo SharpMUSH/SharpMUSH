@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -39,6 +40,7 @@ public class ConfigurationController(
 	}
 
 	[HttpGet("export")]
+	[Authorize]
 	public ActionResult ExportConfiguration()
 	{
 		try
@@ -47,7 +49,7 @@ public class ConfigurationController(
 			var json = JsonSerializer.Serialize(configuration, new JsonSerializerOptions { WriteIndented = true });
 			return Content(json, "application/json");
 		}
-		catch (Exception ex)
+		catch (JsonException ex)
 		{
 			logger.LogError(ex, "Error exporting configuration");
 			return StatusCode(500, "Error exporting configuration");
@@ -55,6 +57,7 @@ public class ConfigurationController(
 	}
 
 	[HttpPatch]
+	[Authorize]
 	public async Task<ActionResult<ConfigurationResponse>> UpdateConfiguration(
 		[FromBody] Dictionary<string, JsonElement> updates)
 	{
@@ -88,7 +91,12 @@ public class ConfigurationController(
 
 			return Ok(OptionHelper.OptionsToConfigurationResponse(updated));
 		}
-		catch (Exception ex)
+		catch (JsonException ex)
+		{
+			logger.LogError(ex, "Error updating configuration");
+			return BadRequest(new { errors = new Dictionary<string, string> { ["_global"] = ex.Message } });
+		}
+		catch (InvalidOperationException ex)
 		{
 			logger.LogError(ex, "Error updating configuration");
 			return BadRequest(new { errors = new Dictionary<string, string> { ["_global"] = ex.Message } });

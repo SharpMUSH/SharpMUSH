@@ -241,7 +241,7 @@
     private Dictionary<string, PropertyMetadata> _categoryProperties = new();
     private Dictionary<string, object?> _currentValues = new();
     private Dictionary<string, object?> _originalValues = new();
-    private Dictionary<string, string> _validationErrors = new();
+    private readonly Dictionary<string, string> _validationErrors = new();
 
     // Categories that have custom pages - redirect to them
     private static readonly HashSet<string> CustomPageCategories = new(StringComparer.OrdinalIgnoreCase)
@@ -340,8 +340,8 @@
             ? FormatPropertyName(prop.DisplayName ?? prop.Name)
             : prop.DisplayName;
 
-        var hasError = _validationErrors.ContainsKey(prop.Path);
-        var errorText = hasError ? _validationErrors[prop.Path] : null;
+        var hasError = _validationErrors.TryGetValue(prop.Path, out var errorText);
+        
         var isChanged = IsPropertyChanged(prop.Path);
         var isNullable = !prop.Required;
             
@@ -552,14 +552,9 @@
         try
         {
             // Build changes dict: only send modified values
-            var changes = new Dictionary<string, object?>();
-            foreach (var kvp in _currentValues)
-            {
-                if (!Equals(kvp.Value, _originalValues.GetValueOrDefault(kvp.Key)))
-                {
-                    changes[kvp.Key] = kvp.Value;
-                }
-            }
+            var changes = _currentValues
+                .Where(kvp => !Equals(kvp.Value, _originalValues.GetValueOrDefault(kvp.Key)))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
             if (changes.Count == 0)
             {
@@ -615,7 +610,7 @@
                             Snackbar.Add(error.Value, Severity.Error);
                         }
                     }
-                    catch
+                    catch (JsonException)
                     {
                         Snackbar.Add(string.Format(Loc["SaveFailed"].Value, error.Value), Severity.Error);
                     }

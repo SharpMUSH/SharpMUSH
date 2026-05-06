@@ -71,7 +71,17 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 			}
 			return configResponse!;
 		}
-		catch (Exception ex)
+		catch (HttpRequestException ex)
+		{
+			logger.LogError(ex, "Error updating configuration");
+			return new Error<string>(ex.Message);
+		}
+		catch (TaskCanceledException ex)
+		{
+			logger.LogError(ex, "Error updating configuration");
+			return new Error<string>(ex.Message);
+		}
+		catch (System.Text.Json.JsonException ex)
 		{
 			logger.LogError(ex, "Error updating configuration");
 			return new Error<string>(ex.Message);
@@ -85,7 +95,12 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 			var client = httpClient.CreateClient("api");
 			return await client.GetStringAsync("/api/configuration/export");
 		}
-		catch (Exception ex)
+		catch (HttpRequestException ex)
+		{
+			logger.LogError(ex, "Error exporting configuration");
+			return null;
+		}
+		catch (TaskCanceledException ex)
 		{
 			logger.LogError(ex, "Error exporting configuration");
 			return null;
