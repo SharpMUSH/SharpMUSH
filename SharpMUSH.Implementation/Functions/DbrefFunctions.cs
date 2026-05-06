@@ -511,28 +511,49 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "elock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "locktype"])]
+	[SharpFunction(Name = "elock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "victim"])]
 	public static async ValueTask<CallState> EvaluateLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// elock() evaluates a lock against an object
-		// Format: elock(<object>, <lock name>)
+		// elock() evaluates an object's lock against a victim
+		// PennMUSH format: elock(<object>/<lock name>, <victim>)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var lockName = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var victimArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		// Parse slash syntax from first arg
+		string lockName = "Basic";
+		var slashIdx = objArg.IndexOf('/');
+		if (slashIdx >= 0)
+		{
+			lockName = objArg[(slashIdx + 1)..];
+			objArg = objArg[..slashIdx];
+		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
-			found =>
+			async found =>
 			{
+				// Locate the victim
+				var victimResult = await LocateService!.Locate(parser, executor, executor, victimArg, LocateFlags.All);
+				if (!victimResult.IsValid())
+				{
+					return new CallState("#-1");
+				}
+				var victim = victimResult.AsAnyObject;
+
+				// Check permission: executor must be able to read the lock
+				// TODO: implement Can_Read_Lock check
+
 				// Get the lock string from the object
 				if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
 				{
-					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NoSuchLock));
+					// No lock set = passes (TRUE_BOOLEXP)
+					return new CallState("1");
 				}
 
-				// Evaluate the lock with the executor as the unlocker
-				var result = LockService!.Evaluate(lockData.LockString, found, executor);
-				return ValueTask.FromResult(new CallState(result));
+				// Evaluate the lock: does victim pass this lock?
+				var result = LockService!.Evaluate(lockData.LockString, found, victim);
+				return new CallState(result ? "1" : "0");
 			});
 	}
 
@@ -760,17 +781,22 @@ LOCATE()
 		);
 	}
 
-	[SharpFunction(Name = "lock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "locktype"])]
+	[SharpFunction(Name = "lock", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Lock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lock() gets a lock string from an object
-		// Format: lock(<object>[, <lock name>])
+		// PennMUSH format: lock(<object>[/<lock name>]) - slash syntax in single arg
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var args = parser.CurrentState.Arguments;
-		var lockName = args.TryGetValue("1", out var lockArg)
-			? lockArg.Message!.ToPlainText()
-			: "Basic";
+
+		// Parse slash syntax: "obj/locktype"
+		string lockName = "Basic";
+		var slashIdx = objArg.IndexOf('/');
+		if (slashIdx >= 0)
+		{
+			lockName = objArg[(slashIdx + 1)..];
+			objArg = objArg[..slashIdx];
+		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
@@ -779,7 +805,8 @@ LOCATE()
 				// Get the lock string from the object
 				if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
 				{
-					return ValueTask.FromResult(new CallState(string.Empty));
+					// PennMUSH returns *UNLOCKED* for unset locks
+					return ValueTask.FromResult(new CallState("*UNLOCKED*"));
 				}
 
 				return ValueTask.FromResult(new CallState(lockData.LockString));

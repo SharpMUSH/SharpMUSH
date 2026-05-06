@@ -10,7 +10,9 @@ public class LockFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Arguments("testlock(%#,%#,basic)", "1")]
+	[Arguments("testlock(#1,%#)", "1")]
+	[Arguments("testlock(#FALSE,%#)", "0")]
+	[Arguments("testlock(#TRUE,%#)", "1")]
 	public async Task Testlock(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -18,7 +20,7 @@ public class LockFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("lockowner(%#,basic)", "")]
+	[Arguments("lockowner(%#)", "")]
 	public async Task Lockowner(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -55,5 +57,22 @@ public class LockFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
+	}
+
+	[Test]
+	[Arguments("lock(%#)", "*UNLOCKED*")]
+	public async Task LockReturnsUnlocked(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("elock(%#/Basic,%#)", "1")]
+	public async Task ElockNoLockPasses(string str, string expected)
+	{
+		// No lock set = passes (TRUE_BOOLEXP)
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

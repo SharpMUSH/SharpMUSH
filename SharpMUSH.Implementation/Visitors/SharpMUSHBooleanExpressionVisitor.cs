@@ -189,16 +189,9 @@ if (parsedTargetOpt.IsSome())
 	{
 		var targetName = context.@string().GetText();
 
-		// For carry locks, check if the unlocker is carrying the named object or IS the object
+		// PennMUSH OP_TCARRY: passes ONLY if unlocker CARRIES the target (not if IS the target)
 		Func<AnySharpObject, string, bool> func = (unlockerObj, target) =>
 		{
-			// Check if unlocker IS the target object (name match)
-			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
-				return true;
-
-			// Check aliases too
-			if (unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
-				return true;
 
 			// If target is a DBRef or objid like "#123" or "#123:timestamp", check if carrying that specific object
 			var parsedCarryOpt = HelperFunctions.ParseDbRef(target);
@@ -481,7 +474,7 @@ if (parsedCarryOpt.IsSome())
 
 	private Expression BuildExactObjectExpression(string targetIdentifier)
 	{
-		// Check if unlocker matches the exact target object
+		// PennMUSH OP_TCONST: passes if unlocker IS the target OR unlocker CARRIES the target
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, target) =>
 		{
 			// If target is "me", it refers to the gated object's owner
@@ -499,28 +492,59 @@ if (parsedCarryOpt.IsSome())
 				var lockDbRef = parsedDbRef.AsValue();
 				var unlockerDbRef = unlockerObj.Object().DBRef;
 
-				// If lock specifies creation time (objid format), both number and timestamp must match
-				// This prevents locks from matching recycled dbrefs after objects are destroyed
-				if (lockDbRef.CreationMilliseconds.HasValue)
+				// Check if unlocker IS the target
+				bool isMatch = lockDbRef.CreationMilliseconds.HasValue
+					? (lockDbRef.Number == unlockerDbRef.Number && lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds)
+					: lockDbRef.Number == unlockerDbRef.Number;
+
+				if (isMatch)
+					return true;
+
+				// Check if unlocker CARRIES the target (PennMUSH: member(arg, Contents(player)))
+				try
 				{
-					return (lockDbRef.Number == unlockerDbRef.Number)
-								 && (lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds);
+					if (unlockerObj.IsContainer)
+					{
+						var contents = unlockerObj.AsContainer.Content(med);
+						return contents
+							.AnyAsync(item => item.Object().DBRef.Matches(lockDbRef), CancellationToken.None)
+							.AsTask().GetAwaiter().GetResult();
+					}
 				}
-				// If lock doesn't specify creation time (bare dbref), only match number for backward compatibility
-				else
+				catch (Exception)
 				{
-					return lockDbRef.Number == unlockerDbRef.Number;
+					// Catch errors during inventory check
 				}
+
+				return false;
 			}
 
-			// Otherwise try exact name match
-			// Check if the unlocker itself matches
+			// Name-based resolution: resolve target name to an object, then check IS or CARRIES
+			// Check if the unlocker itself matches by name
 			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
 				return true;
 
 			// Check aliases
 			if (unlockerObj.Aliases != null && unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
 				return true;
+
+			// Check if unlocker carries an object with this name
+			try
+			{
+				if (unlockerObj.IsContainer)
+				{
+					var contents = unlockerObj.AsContainer.Content(med);
+					return contents
+						.AnyAsync(item =>
+							item.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase),
+							CancellationToken.None)
+						.AsTask().GetAwaiter().GetResult();
+				}
+			}
+			catch (Exception)
+			{
+				// Catch errors during inventory check
+			}
 
 			return false;
 		};
@@ -587,36 +611,22 @@ if (parsedCarryOpt.IsSome())
 		var expectedValue = context.@string().GetText();
 		var attribute = context.attributeName().GetText();
 
-		// Evaluation locks evaluate an attribute on the gated object (not the unlocker)
-		// The result is compared to the expected value
-		// %# is the unlocker, %! is the gated object during evaluation
+		// PennMUSH eval lock (ATTR/pattern): evaluate the attribute on the gated object
+		// as MUSHcode with the unlocker as enactor (%#), then compare result to pattern.
 		Func<AnySharpObject, AnySharpObject, string, string, bool> func = (gatedObj, unlockerObj, attrName, expected) =>
 		{
-			var attrResult = med.Send(
-					new GetAttributeServiceQuery(gatedObj, gatedObj, attrName, IAttributeService.AttributeMode.Execute, true),
+			// Use the mediator query to evaluate the attribute as MUSHcode
+			var evalResult = med.Send(
+					new EvaluateAttributeForLockQuery(gatedObj, unlockerObj, attrName),
 					CancellationToken.None)
 				.AsTask()
 				.ConfigureAwait(false).GetAwaiter().GetResult();
 
-			return attrResult.Match(
-				attributes =>
-				{
-					if (!attributes.Any())
-						return false;
+			if (evalResult == null)
+				return false;
 
-					// Get the attribute value and evaluate it
-					// NOTE: For full PennMUSH compatibility, the attribute should be evaluated with:
-					// %# = unlocker (the object trying to pass the lock)
-					// %! = gated object (the object being locked)
-					// This would require parser context injection
-					var actualValue = MModule.plainText(attributes.First().Value);
-
-					// Compare with expected value (case-insensitive)
-					return actualValue.Equals(expected, StringComparison.OrdinalIgnoreCase);
-				},
-				none => false,
-				error => false
-			);
+			// Compare with expected value (case-insensitive, per PennMUSH strcasecmp)
+			return evalResult.Equals(expected, StringComparison.OrdinalIgnoreCase);
 		};
 
 		return Expression.Invoke(Expression.Constant(func), gated, unlocker, Expression.Constant(attribute), Expression.Constant(expectedValue));
