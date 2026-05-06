@@ -29,7 +29,7 @@ public partial class MemgraphDatabase
 
 		var hashedPassword = salt != null
 		? password
-		: _passwordService.HashPassword($"#{nextKey}:{now}", password);
+		: passwordService.HashPassword($"#{nextKey}:{now}", password);
 
 		// Single atomic query: create Object + Player nodes with all relationships
 		await ExecuteWithRetryAsync("""
@@ -189,7 +189,7 @@ RETURN count(rel) AS cnt
 	{
 		var hashed = salt != null
 		? password
-		: _passwordService.HashPassword(player.Object.DBRef.ToString(), password);
+		: passwordService.HashPassword(player.Object.DBRef.ToString(), password);
 		var playerKey = ExtractKey(player.Id!);
 		await ExecuteWithRetryAsync("MATCH (p:Player {key: $key}) SET p.passwordHash = $hash, p.passwordSalt = $salt", new { key = playerKey, hash = hashed, salt = salt ?? "" }, cancellationToken);
 	}

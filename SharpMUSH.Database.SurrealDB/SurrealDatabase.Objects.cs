@@ -30,7 +30,7 @@ public partial class SurrealDatabase
 
 		var hashedPassword = salt != null
 		? password
-		: _passwordService.HashPassword($"#{nextKey}:{now}", password);
+		: passwordService.HashPassword($"#{nextKey}:{now}", password);
 
 		var parameters = new Dictionary<string, object?>
 		{
@@ -261,7 +261,7 @@ public partial class SurrealDatabase
 	{
 		var hashed = salt != null
 		? password
-		: _passwordService.HashPassword(player.Object.DBRef.ToString(), password);
+		: passwordService.HashPassword(player.Object.DBRef.ToString(), password);
 		var playerKey = ExtractKey(player.Id!);
 		var parameters = new Dictionary<string, object?>
 		{
