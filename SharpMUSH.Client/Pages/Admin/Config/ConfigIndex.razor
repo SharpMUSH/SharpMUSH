@@ -1,4 +1,5 @@
 @page "/admin/config"
+@using SharpMUSH.Client.Services
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -149,7 +150,7 @@
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Default" 
                            StartIcon="@Icons.Material.Filled.Download"
-                           Disabled="true">
+                           OnClick="ExportConfig">
                     @Loc["ExportConfiguration"]
                 </MudButton>
             </MudStack>
@@ -173,3 +174,25 @@
         box-shadow: 0 8px 24px rgba(0, 245, 183, 0.2);
     }
 </style>
+
+@code {
+    [Inject] private AdminConfigService AdminConfigService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private async Task ExportConfig()
+    {
+        var json = await AdminConfigService.ExportConfigAsync();
+        if (json == null)
+        {
+            Snackbar.Add("Failed to export configuration", Severity.Error);
+            return;
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+        var base64 = Convert.ToBase64String(bytes);
+        await JS.InvokeVoidAsync("eval",
+            $"var a=document.createElement('a');a.href='data:application/json;base64,{base64}';a.download='sharpmush-config.json';a.click()");
+        Snackbar.Add("Configuration exported", Severity.Success);
+    }
+}

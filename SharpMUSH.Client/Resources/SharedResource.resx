@@ -877,6 +877,24 @@
   <data name="ErrorLoadingConfig" xml:space="preserve">
     <value>Error loading configuration: {0}</value>
   </data>
+  <data name="ResetToDefaults" xml:space="preserve">
+    <value>Reset to Defaults</value>
+  </data>
+  <data name="Saving" xml:space="preserve">
+    <value>Saving...</value>
+  </data>
+  <data name="NoChangesToSave" xml:space="preserve">
+    <value>No changes to save</value>
+  </data>
+  <data name="ConfigSavedCount" xml:space="preserve">
+    <value>{0} setting(s) saved successfully</value>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>Failed to save configuration: {0}</value>
+  </data>
+  <data name="DefaultsRestored" xml:space="preserve">
+    <value>Defaults restored — save to apply</value>
+  </data>
 
   <!-- ======================== -->
   <!-- Language Picker          -->

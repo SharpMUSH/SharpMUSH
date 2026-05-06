@@ -13,10 +13,22 @@
 <div class="config-section-page">
     @* Header *@
     <div class="config-section-header">
-        <MudText Typo="Typo.h4">@CategoryTitle</MudText>
-        <MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">
-            @_categoryMetadata?.Description
-        </MudText>
+        <div class="d-flex justify-space-between align-center">
+            <div>
+                <MudText Typo="Typo.h4">@CategoryTitle</MudText>
+                <MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">
+                    @_categoryMetadata?.Description
+                </MudText>
+            </div>
+            @if (!_loading && _categoryMetadata != null)
+            {
+                <MudTooltip Text="@Loc["ResetToDefaults"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
+                                   Color="Color.Default"
+                                   OnClick="ResetToDefaults" />
+                </MudTooltip>
+            }
+        </div>
     </div>
 
     @* Content *@
@@ -71,9 +83,6 @@
                     </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudAlert Severity="Severity.Info" Class="mb-4">
-                        <strong>@Loc["NoGroupingNote"]</strong>
-                    </MudAlert>
                     <MudGrid>
                         @foreach (var prop in _categoryProperties.Values.OrderBy(p => p.Name))
                         {
@@ -116,14 +125,28 @@
             <div class="save-bar-content">
                 <div class="save-bar-info">
                     <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="mr-2" />
-                    <MudText Typo="Typo.body1"><strong>@Loc["UnsavedChanges"]</strong> @Loc["InThisSection"]</MudText>
+                    <MudText Typo="Typo.body1">
+                        <strong>@Loc["UnsavedChanges"]</strong> @Loc["InThisSection"]
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="ml-2">
+                            @_changedCount @((_changedCount == 1) ? "change" : "changes")
+                        </MudChip>
+                    </MudText>
                 </div>
                 <div class="save-bar-actions">
-                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetChanges">
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetChanges" Disabled="_saving">
                         @Loc["ResetChanges"]
                     </MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="SaveChanges" StartIcon="@Icons.Material.Filled.Save">
-                        @Loc["SaveConfiguration"]
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="SaveChanges"
+                               StartIcon="@Icons.Material.Filled.Save" Disabled="_saving">
+                        @if (_saving)
+                        {
+                            <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                            @Loc["Saving"]
+                        }
+                        else
+                        {
+                            @Loc["SaveConfiguration"]
+                        }
                     </MudButton>
                 </div>
             </div>
@@ -175,6 +198,16 @@
         gap: 12px;
     }
 
+    .nullable-field-wrapper {
+        position: relative;
+    }
+
+    .default-chip {
+        position: absolute;
+        right: 8px;
+        top: 4px;
+    }
+
     @@media (max-width: 600px) {
         .save-bar-content {
             flex-direction: column;
@@ -200,12 +233,15 @@
     private NavigationManager NavigationManager { get; set; } = default!;
 
     private bool _loading = true;
+    private bool _saving = false;
     private bool _hasChanges = false;
+    private int _changedCount = 0;
     private ConfigurationSchema? _schema;
     private CategoryMetadata? _categoryMetadata;
     private Dictionary<string, PropertyMetadata> _categoryProperties = new();
     private Dictionary<string, object?> _currentValues = new();
     private Dictionary<string, object?> _originalValues = new();
+    private Dictionary<string, string> _validationErrors = new();
 
     // Categories that have custom pages - redirect to them
     private static readonly HashSet<string> CustomPageCategories = new(StringComparer.OrdinalIgnoreCase)
@@ -223,8 +259,6 @@
         // Check if this category has a custom page - if so, let that page handle it
         if (CustomPageCategories.Contains(Category))
         {
-            // The custom page should be handling this - something went wrong
-            // Just continue and let it 404 or show error
             return;
         }
     }
@@ -244,10 +278,10 @@
     {
         _loading = true;
         _hasChanges = false;
+        _validationErrors.Clear();
         
         try
         {
-            // Fetch schema from the API
             var schema = await SchemaService.GetSchemaAsync();
             if (schema == null)
             {
@@ -257,10 +291,8 @@
 
             _schema = schema;
 
-            // Map URL parameter to category name
             var categoryName = MapCategoryName(Category);
             
-            // Find matching category
             _categoryMetadata = schema.Categories.FirstOrDefault(c => 
                 c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
 
@@ -270,12 +302,10 @@
                 return;
             }
 
-            // Get properties for this category
             _categoryProperties = schema.Properties
                 .Where(kvp => kvp.Value.Category.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-            // Fetch current config values
             var result = await AdminConfigService.GetOptionsAsync();
             if (result.IsT1)
             {
@@ -285,7 +315,6 @@
 
             var config = result.AsT0;
             
-            // Extract current values
             foreach (var prop in _categoryProperties.Values)
             {
                 var value = GetPropertyValue(config, prop.Path);
@@ -305,23 +334,41 @@
 
     private RenderFragment RenderPropertyContent(PropertyMetadata prop) => __builder =>
     {
-        // If DisplayName looks like snake_case or hasn't been customized, format it
         var displayName = string.IsNullOrEmpty(prop.DisplayName) || 
                          prop.DisplayName.Contains('_') ||
                          prop.DisplayName == prop.Name
             ? FormatPropertyName(prop.DisplayName ?? prop.Name)
             : prop.DisplayName;
+
+        var hasError = _validationErrors.ContainsKey(prop.Path);
+        var errorText = hasError ? _validationErrors[prop.Path] : null;
+        var isChanged = IsPropertyChanged(prop.Path);
+        var isNullable = !prop.Required;
             
         if (prop.Component == "switch")
         {
             <MudItem xs="12">
-                <MudSwitch T="bool"
-                           Value="@GetBoolValue(prop)"
-                           ValueChanged="@(v => UpdateValue(prop, v))"
-                           Label="@displayName"
-                           Color="Color.Secondary" />
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                <div class="d-flex align-center">
+                    <MudSwitch T="bool"
+                               Value="@GetBoolValue(prop)"
+                               ValueChanged="@(v => UpdateValue(prop, v))"
+                               Label="@displayName"
+                               Color="@(isChanged ? Color.Warning : Color.Secondary)" />
+                    @if (isChanged)
+                    {
+                        <MudTooltip Text="@($"Default: {prop.DefaultValue}")">
+                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Warning" Class="ml-2" />
+                        </MudTooltip>
+                    }
+                </div>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary ml-12">
                     @prop.Description
+                    @if (!string.IsNullOrEmpty(prop.Tooltip))
+                    {
+                        <MudTooltip Text="@prop.Tooltip">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="ml-1" Style="vertical-align: middle; cursor: help;" />
+                        </MudTooltip>
+                    }
                 </MudText>
             </MudItem>
         }
@@ -333,23 +380,35 @@
                     var minVal = GetIntMin(prop);
                     var maxVal = GetIntMax(prop);
                     
-                    <MudNumericField T="int"
-                                   Value="@GetIntValue(prop)"
+                    <MudNumericField T="int?"
+                                   Value="@GetNullableIntValue(prop)"
                                    ValueChanged="@(v => UpdateValue(prop, v))"
                                    Label="@displayName"
                                    Variant="Variant.Outlined"
-                                   HelperText="@prop.Description"
+                                   HelperText="@GetHelperText(prop)"
+                                   Error="@hasError"
+                                   ErrorText="@errorText"
                                    Min="@(minVal ?? int.MinValue)"
-                                   Max="@(maxVal ?? int.MaxValue)" />
+                                   Max="@(maxVal ?? int.MaxValue)"
+                                   Clearable="@isNullable"
+                                   Adornment="@(isChanged ? Adornment.End : Adornment.None)"
+                                   AdornmentIcon="@Icons.Material.Filled.Edit"
+                                   AdornmentColor="Color.Warning" />
                 }
                 else
                 {
-                    <MudNumericField T="double"
-                                   Value="@GetDoubleValue(prop)"
+                    <MudNumericField T="double?"
+                                   Value="@GetNullableDoubleValue(prop)"
                                    ValueChanged="@(v => UpdateValue(prop, v))"
                                    Label="@displayName"
                                    Variant="Variant.Outlined"
-                                   HelperText="@prop.Description" />
+                                   HelperText="@GetHelperText(prop)"
+                                   Error="@hasError"
+                                   ErrorText="@errorText"
+                                   Clearable="@isNullable"
+                                   Adornment="@(isChanged ? Adornment.End : Adornment.None)"
+                                   AdornmentIcon="@Icons.Material.Filled.Edit"
+                                   AdornmentColor="Color.Warning" />
                 }
             </MudItem>
         }
@@ -361,10 +420,35 @@
                             ValueChanged="@(v => UpdateValue(prop, v))"
                             Label="@displayName"
                             Variant="Variant.Outlined"
-                            HelperText="@prop.Description" />
+                            HelperText="@GetHelperText(prop)"
+                            Error="@hasError"
+                            ErrorText="@errorText"
+                            Clearable="@isNullable"
+                            Adornment="@(isChanged ? Adornment.End : Adornment.None)"
+                            AdornmentIcon="@Icons.Material.Filled.Edit"
+                            AdornmentColor="Color.Warning" />
             </MudItem>
         }
     };
+
+    private string GetHelperText(PropertyMetadata prop)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(prop.Description))
+            parts.Add(prop.Description);
+        if (prop.Min != null || prop.Max != null)
+            parts.Add($"Range: {prop.Min ?? "∞"}–{prop.Max ?? "∞"}");
+        if (!string.IsNullOrEmpty(prop.Tooltip))
+            parts.Add(prop.Tooltip);
+        return string.Join(" · ", parts);
+    }
+
+    private bool IsPropertyChanged(string path)
+    {
+        if (!_currentValues.TryGetValue(path, out var current)) return false;
+        if (!_originalValues.TryGetValue(path, out var original)) return false;
+        return !Equals(current, original);
+    }
 
     private IEnumerable<PropertyMetadata> GetPropertiesInGroup(string groupName)
     {
@@ -397,10 +481,11 @@
         return prop.DefaultValue is bool defaultBool ? defaultBool : false;
     }
 
-    private int GetIntValue(PropertyMetadata prop)
+    private int? GetNullableIntValue(PropertyMetadata prop)
     {
         if (_currentValues.TryGetValue(prop.Path, out var value))
         {
+            if (value == null) return null;
             if (value is int intValue) return intValue;
             if (value is uint uintValue) return (int)uintValue;
             if (value is long longValue) return (int)longValue;
@@ -411,10 +496,13 @@
         return 0;
     }
 
-    private double GetDoubleValue(PropertyMetadata prop)
+    private double? GetNullableDoubleValue(PropertyMetadata prop)
     {
-        if (_currentValues.TryGetValue(prop.Path, out var value) && value is double doubleValue)
-            return doubleValue;
+        if (_currentValues.TryGetValue(prop.Path, out var value))
+        {
+            if (value == null) return null;
+            if (value is double doubleValue) return doubleValue;
+        }
         return prop.DefaultValue is double defaultDouble ? defaultDouble : 0.0;
     }
 
@@ -429,6 +517,7 @@
     {
         if (prop.Min is int intMin) return intMin;
         if (prop.Min is uint uintMin) return (int)uintMin;
+        if (prop.Min is JsonElement je && je.ValueKind == JsonValueKind.Number) return je.GetInt32();
         return null;
     }
 
@@ -436,21 +525,112 @@
     {
         if (prop.Max is int intMax) return intMax;
         if (prop.Max is uint uintMax) return (int)uintMax;
+        if (prop.Max is JsonElement je && je.ValueKind == JsonValueKind.Number) return je.GetInt32();
         return null;
     }
 
     private void UpdateValue(PropertyMetadata prop, object? newValue)
     {
         _currentValues[prop.Path] = newValue;
-        _hasChanges = !_currentValues.All(kvp => 
-            Equals(kvp.Value, _originalValues.GetValueOrDefault(kvp.Key)));
+        _validationErrors.Remove(prop.Path);
+        RecalculateChanges();
+    }
+
+    private void RecalculateChanges()
+    {
+        _changedCount = _currentValues.Count(kvp => 
+            !Equals(kvp.Value, _originalValues.GetValueOrDefault(kvp.Key)));
+        _hasChanges = _changedCount > 0;
     }
 
     private async Task SaveChanges()
     {
-        Snackbar.Add(Loc["SaveNotImplemented"].Value, Severity.Info);
-        // TODO: Implement save to API
-        _hasChanges = false;
+        _saving = true;
+        _validationErrors.Clear();
+        StateHasChanged();
+
+        try
+        {
+            // Build changes dict: only send modified values
+            var changes = new Dictionary<string, object?>();
+            foreach (var kvp in _currentValues)
+            {
+                if (!Equals(kvp.Value, _originalValues.GetValueOrDefault(kvp.Key)))
+                {
+                    changes[kvp.Key] = kvp.Value;
+                }
+            }
+
+            if (changes.Count == 0)
+            {
+                Snackbar.Add(Loc["NoChangesToSave"].Value, Severity.Info);
+                return;
+            }
+
+            var result = await AdminConfigService.UpdateConfigAsync(changes);
+            result.Switch(
+                response =>
+                {
+                    Snackbar.Add(
+                        string.Format(Loc["ConfigSavedCount"].Value, changes.Count),
+                        Severity.Success);
+
+                    // Update originals to reflect saved state
+                    foreach (var kvp in changes)
+                    {
+                        _originalValues[kvp.Key] = _currentValues[kvp.Key];
+                    }
+                    _hasChanges = false;
+                    _changedCount = 0;
+                },
+                error =>
+                {
+                    // Try to parse structured error response
+                    try
+                    {
+                        var errorDoc = JsonDocument.Parse(error.Value);
+                        if (errorDoc.RootElement.TryGetProperty("errors", out var errorsElement))
+                        {
+                            if (errorsElement.ValueKind == JsonValueKind.Object)
+                            {
+                                foreach (var prop in errorsElement.EnumerateObject())
+                                {
+                                    if (prop.Name == "_global")
+                                    {
+                                        Snackbar.Add(prop.Value.GetString() ?? "Validation failed", Severity.Error);
+                                    }
+                                    else
+                                    {
+                                        _validationErrors[prop.Name] = prop.Value.GetString() ?? "Invalid";
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Snackbar.Add(errorsElement.GetString() ?? "Save failed", Severity.Error);
+                            }
+                        }
+                        else
+                        {
+                            Snackbar.Add(error.Value, Severity.Error);
+                        }
+                    }
+                    catch
+                    {
+                        Snackbar.Add(string.Format(Loc["SaveFailed"].Value, error.Value), Severity.Error);
+                    }
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(string.Format(Loc["SaveFailed"].Value, ex.Message), Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+            StateHasChanged();
+        }
     }
 
     private void ResetChanges()
@@ -460,7 +640,20 @@
             _currentValues[kvp.Key] = kvp.Value;
         }
         _hasChanges = false;
+        _changedCount = 0;
+        _validationErrors.Clear();
         StateHasChanged();
+    }
+
+    private void ResetToDefaults()
+    {
+        foreach (var prop in _categoryProperties.Values)
+        {
+            _currentValues[prop.Path] = prop.DefaultValue;
+        }
+        RecalculateChanges();
+        StateHasChanged();
+        Snackbar.Add(Loc["DefaultsRestored"].Value, Severity.Info);
     }
 
     private string MapCategoryName(string urlCategory)
@@ -502,20 +695,17 @@
     {
         if (string.IsNullOrEmpty(name)) return name;
         
-        // Handle snake_case: mud_name -> Mud Name, player_creation -> Player Creation
         if (name.Contains('_'))
         {
             return string.Join(" ", name.Split('_')
                 .Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
         }
         
-        // Handle all-lowercase words: logins -> Logins, guests -> Guests
         if (name.All(char.IsLower))
         {
             return char.ToUpper(name[0]) + name.Substring(1);
         }
         
-        // Handle PascalCase/camelCase: MudName -> Mud Name, mudName -> Mud Name
         return System.Text.RegularExpressions.Regex.Replace(name, "([A-Z])", " $1").Trim();
     }
 }
