@@ -49,6 +49,64 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		}
 	}
 
+	public async Task<OneOf.OneOf<ConfigurationResponse, Error<string>>> UpdateConfigAsync(
+		Dictionary<string, object?> changes)
+	{
+		try
+		{
+			var client = httpClient.CreateClient("api");
+			var response = await client.PatchAsJsonAsync("/api/configuration", changes);
+
+			if (!response.IsSuccessStatusCode)
+			{
+				var errorContent = await response.Content.ReadAsStringAsync();
+				logger.LogError("Config update failed: {StatusCode} {Error}", response.StatusCode, errorContent);
+				return new Error<string>(errorContent);
+			}
+
+			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
+			if (configResponse?.Configuration != null)
+			{
+				_currentOptions = configResponse.Configuration;
+			}
+			return configResponse!;
+		}
+		catch (HttpRequestException ex)
+		{
+			logger.LogError(ex, "Error updating configuration");
+			return new Error<string>(ex.Message);
+		}
+		catch (TaskCanceledException ex)
+		{
+			logger.LogError(ex, "Error updating configuration");
+			return new Error<string>(ex.Message);
+		}
+		catch (System.Text.Json.JsonException ex)
+		{
+			logger.LogError(ex, "Error updating configuration");
+			return new Error<string>(ex.Message);
+		}
+	}
+
+	public async Task<string?> ExportConfigAsync()
+	{
+		try
+		{
+			var client = httpClient.CreateClient("api");
+			return await client.GetStringAsync("/api/configuration/export");
+		}
+		catch (HttpRequestException ex)
+		{
+			logger.LogError(ex, "Error exporting configuration");
+			return null;
+		}
+		catch (TaskCanceledException ex)
+		{
+			logger.LogError(ex, "Error exporting configuration");
+			return null;
+		}
+	}
+
 	public void ResetToDefault()
 	{
 		_currentOptions = null;

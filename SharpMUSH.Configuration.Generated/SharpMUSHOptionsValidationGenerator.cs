@@ -88,6 +88,24 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 
 		var regexFieldName = regexFieldNames[pattern!];
 
+		// Check if the property type is nullable (reference type or Nullable<T>)
+		var isNullable = prop.Type.NullableAnnotation == NullableAnnotation.Annotated
+		                 || prop.Type.OriginalDefinition.SpecialType == SpecialType.None
+		                    && prop.Type is INamedTypeSymbol { IsGenericType: true } namedType
+		                    && namedType.ConstructedFrom.SpecialType == SpecialType.System_Nullable_T;
+
+		if (isNullable)
+		{
+			return
+				$$"""
+				      var {{prop.Name}}Value = {{category.Name}}Value.{{prop.Name}};
+				      if ({{prop.Name}}Value is not null && !{{regexFieldName}}.IsMatch({{prop.Name}}Value.ToString() ?? ""))
+				      {
+				        return ValidateOptionsResult.Fail($"Configuration option ({{category.Name}}) {{prop.Name}} with value '{{{prop.Name}}Value}' is invalid.");
+				      }
+				  """;
+		}
+
 		return
 			$$"""
 			      var {{prop.Name}}Value = {{category.Name}}Value.{{prop.Name}};
