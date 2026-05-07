@@ -24,4 +24,11 @@ public class ConnectionServerOptions
 	/// Starting descriptor number for WebSocket connections
 	/// </summary>
 	public long WebSocketDescriptorStart { get; set; } = 1000000;
+
+	/// <summary>
+	/// Enable Pueblo protocol handshake on telnet connections.
+	/// When true, the server sends the Pueblo hello string on connect
+	/// and listens for PUEBLOCLIENT responses.
+	/// </summary>
+	public bool PuebloEnabled { get; set; } = true;
 }

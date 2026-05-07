@@ -204,6 +204,51 @@ public class ConnectionEstablishedConsumer(
 }
 
 /// <summary>
+/// Consumes Pueblo negotiated messages — sets OUTPUT_FORMAT metadata on the connection.
+/// Only upgrades to Pueblo if not already MXP (MXP is a superset of Pueblo).
+/// </summary>
+public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, IConnectionService connectionService)
+	: IMessageConsumer<PuebloNegotiatedMessage>
+{
+	public Task HandleAsync(PuebloNegotiatedMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogInformation("[NATS-RECV] PuebloNegotiatedMessage - Handle: {Handle}, Client: {Client}",
+			message.Handle, message.ClientResponse);
+
+		// Only set Pueblo if not already upgraded to MXP
+		var conn = connectionService.Get(message.Handle);
+		if (conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") != "mxp")
+		{
+			connectionService.Update(message.Handle, "OUTPUT_FORMAT", "pueblo");
+		}
+
+		// Keep PUEBLO=1 for backward compat (pueblo() function reads it)
+		connectionService.Update(message.Handle, "PUEBLO", "1");
+
+		return Task.CompletedTask;
+	}
+}
+
+/// <summary>
+/// Consumes MXP negotiated messages — sets OUTPUT_FORMAT to "mxp" on the connection.
+/// MXP is a superset of Pueblo, so it takes priority over any prior Pueblo negotiation.
+/// </summary>
+public class MxpNegotiatedConsumer(ILogger<MxpNegotiatedConsumer> logger, IConnectionService connectionService)
+	: IMessageConsumer<MxpNegotiatedMessage>
+{
+	public Task HandleAsync(MxpNegotiatedMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogInformation("[NATS-RECV] MxpNegotiatedMessage - Handle: {Handle}", message.Handle);
+
+		connectionService.Update(message.Handle, "OUTPUT_FORMAT", "mxp");
+		// MXP clients also understand Pueblo tags, so set PUEBLO=1 for pueblo() compat
+		connectionService.Update(message.Handle, "PUEBLO", "1");
+
+		return Task.CompletedTask;
+	}
+}
+
+/// <summary>
 /// Consumes connection closed messages from NATS JetStream
 /// </summary>
 public class ConnectionClosedConsumer(ILogger<ConnectionClosedConsumer> logger, IConnectionService connectionService)

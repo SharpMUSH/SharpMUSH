@@ -1566,6 +1566,11 @@ public partial class Functions
 			terminfo.Add("pueblo");
 		}
 
+		if (metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") == "mxp")
+		{
+			terminfo.Add("mxp");
+		}
+
 		if (metadata.GetValueOrDefault("TELNET", "0") == "1")
 		{
 			terminfo.Add("telnet");

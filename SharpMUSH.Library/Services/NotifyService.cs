@@ -113,16 +113,20 @@ public class NotifyService(
 			}
 		}
 
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
-
-		text = NormalizeLineEnding(text);
-
-		// Apply OUTPUTPREFIX/OUTPUTSUFFIX per-connection since each may have different settings
+		// Render per-connection to support different output formats (ANSI vs Pueblo HTML)
 		await foreach (var conn in connections.Get(who))
 		{
+			var text = what.Match(
+				markupString => conn.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") switch
+					{
+						"pueblo" => markupString.Render("pueblo"),
+						"mxp" => markupString.Render("mxp"),
+						_ => markupString.ToString()
+					},
+				str => str
+			);
+
+			text = NormalizeLineEnding(text);
 			var wrapped = ApplyOutputPrefixSuffix(conn.Handle, text);
 			var bytes = Encoding.UTF8.GetBytes(wrapped);
 			await publishEndpoint.HandlePublish(new TelnetOutputMessage(conn.Handle, bytes));
@@ -142,8 +146,14 @@ public class NotifyService(
 			return;
 		}
 
+		var conn = connections.Get(handle);
 		var text = what.Match(
-			markupString => markupString.ToString(),
+			markupString => conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") switch
+				{
+					"pueblo" => markupString.Render("pueblo"),
+					"mxp" => markupString.Render("mxp"),
+					_ => markupString.ToString()
+				},
 			str => str
 		);
 
@@ -165,16 +175,21 @@ public class NotifyService(
 			return;
 		}
 
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
-
-		text = NormalizeLineEnding(text);
-
-		// Apply OUTPUTPREFIX/OUTPUTSUFFIX per-handle since each may have different settings
+		// Render per-handle to support different output formats (ANSI vs Pueblo HTML)
 		foreach (var handle in handles)
 		{
+			var conn = connections.Get(handle);
+			var text = what.Match(
+				markupString => conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") switch
+					{
+						"pueblo" => markupString.Render("pueblo"),
+						"mxp" => markupString.Render("mxp"),
+						_ => markupString.ToString()
+					},
+				str => str
+			);
+
+			text = NormalizeLineEnding(text);
 			var wrapped = ApplyOutputPrefixSuffix(handle, text);
 			var bytes = Encoding.UTF8.GetBytes(wrapped);
 			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
@@ -200,9 +215,9 @@ public class NotifyService(
 		// (Prompts are usually things like "> " without line breaks)
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
+		await foreach (var conn in connections.Get(who))
 		{
-			await publishEndpoint.HandlePublish(new TelnetPromptMessage(handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetPromptMessage(conn.Handle, bytes));
 		}
 	}
 
