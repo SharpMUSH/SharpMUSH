@@ -24,6 +24,38 @@ public class NotifyService(
 	IMediator? mediator = null) : INotifyService
 {
 	/// <summary>
+	/// MXP secure line prefix: ESC[1z — tells the MXP client that this line
+	/// contains server-generated MXP tags that should be parsed.
+	/// Without this prefix, MXP clients treat lines as plain text (open mode).
+	/// </summary>
+	private const string MxpSecureLinePrefix = "\x1b[1z";
+
+	/// <summary>
+	/// Prepends the MXP secure line prefix (ESC[1z) to each line of MXP output.
+	/// This signals the client that each line contains trusted server-generated MXP.
+	/// </summary>
+	private static string ApplyMxpLinePrefix(string text)
+	{
+		// Prefix each line with ESC[1z for MXP secure mode
+		var lines = text.Split('\n');
+		return string.Join('\n', lines.Select(line => MxpSecureLinePrefix + line));
+	}
+
+	/// <summary>
+	/// Renders an MString/string for a specific output format, applying MXP line prefixes if needed.
+	/// </summary>
+	private static string RenderForFormat(OneOf<MString, string> what, string format) =>
+		what.Match(
+			markupString => format switch
+			{
+				"pueblo" => markupString.Render("pueblo"),
+				"mxp" => ApplyMxpLinePrefix(markupString.Render("mxp")),
+				_ => markupString.ToString()
+			},
+			str => format == "mxp" ? ApplyMxpLinePrefix(str) : str
+		);
+
+	/// <summary>
 	/// Normalizes line endings by replacing all \n with \r\n and ensuring trailing \r\n
 	/// </summary>
 	private static string NormalizeLineEnding(string text)
@@ -116,15 +148,8 @@ public class NotifyService(
 		// Render per-connection to support different output formats (ANSI vs Pueblo HTML)
 		await foreach (var conn in connections.Get(who))
 		{
-			var text = what.Match(
-				markupString => conn.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") switch
-					{
-						"pueblo" => markupString.Render("pueblo"),
-						"mxp" => markupString.Render("mxp"),
-						_ => markupString.ToString()
-					},
-				str => str
-			);
+			var format = conn.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi");
+			var text = RenderForFormat(what, format);
 
 			text = NormalizeLineEnding(text);
 			var wrapped = ApplyOutputPrefixSuffix(conn.Handle, text);
@@ -147,15 +172,8 @@ public class NotifyService(
 		}
 
 		var conn = connections.Get(handle);
-		var text = what.Match(
-			markupString => conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") switch
-				{
-					"pueblo" => markupString.Render("pueblo"),
-					"mxp" => markupString.Render("mxp"),
-					_ => markupString.ToString()
-				},
-			str => str
-		);
+		var format = conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") ?? "ansi";
+		var text = RenderForFormat(what, format);
 
 		text = NormalizeLineEnding(text);
 		text = ApplyOutputPrefixSuffix(handle, text);
@@ -179,15 +197,8 @@ public class NotifyService(
 		foreach (var handle in handles)
 		{
 			var conn = connections.Get(handle);
-			var text = what.Match(
-				markupString => conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") switch
-					{
-						"pueblo" => markupString.Render("pueblo"),
-						"mxp" => markupString.Render("mxp"),
-						_ => markupString.ToString()
-					},
-				str => str
-			);
+			var format = conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") ?? "ansi";
+			var text = RenderForFormat(what, format);
 
 			text = NormalizeLineEnding(text);
 			var wrapped = ApplyOutputPrefixSuffix(handle, text);
