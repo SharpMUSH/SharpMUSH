@@ -25,20 +25,23 @@ public class NotifyService(
 {
 	/// <summary>
 	/// MXP secure line prefix: ESC[1z — tells the MXP client that this line
-	/// contains server-generated MXP tags that should be parsed.
-	/// Without this prefix, MXP clients treat lines as plain text (open mode).
+	/// MXP open line prefix: ESC[0z — signals the client this line may contain
+	/// standard MXP tags (like &lt;send&gt;, &lt;a&gt;). Secure-mode tags
+	/// (like &lt;!ELEMENT&gt;) require ESC[1z and are not yet implemented.
+	/// Without any prefix, MXP clients default to "locked" mode (no tags parsed).
 	/// </summary>
-	private const string MxpSecureLinePrefix = "\x1b[1z";
+	private const string MxpOpenLinePrefix = "\x1b[0z";
 
 	/// <summary>
-	/// Prepends the MXP secure line prefix (ESC[1z) to each line of MXP output.
-	/// This signals the client that each line contains trusted server-generated MXP.
+	/// Prepends the MXP open line prefix (ESC[0z) to each non-empty line of MXP output.
+	/// This signals the client that each line may contain standard open-mode MXP tags.
 	/// </summary>
 	private static string ApplyMxpLinePrefix(string text)
 	{
-		// Prefix each line with ESC[1z for MXP secure mode
+		// Prefix each non-empty line with ESC[0z for MXP open mode
 		var lines = text.Split('\n');
-		return string.Join('\n', lines.Select(line => MxpSecureLinePrefix + line));
+		return string.Join('\n', lines.Select(line =>
+			line.Length == 0 || line == "\r" ? line : MxpOpenLinePrefix + line));
 	}
 
 	/// <summary>

@@ -149,7 +149,7 @@ public class PuebloMxpIntegrationTests
 
 	/// <summary>
 	/// Verifies that when the client responds with IAC DO MXP, and then logs in,
-	/// the output includes MXP secure line prefixes (ESC[1z).
+	/// the output includes MXP open line prefixes (ESC[0z).
 	/// </summary>
 	[Test]
 	[Timeout(120_000)]
@@ -192,9 +192,9 @@ public class PuebloMxpIntegrationTests
 		await Assert.That(postLogin).Contains("Room Zero")
 			.Because("After login with MXP, should see Room Zero");
 
-		// MXP output should contain the secure line prefix
-		await Assert.That(postLogin).Contains("\x1b[1z")
-			.Because("MXP output lines should be prefixed with ESC[1z secure mode");
+		// MXP output should contain the open line prefix
+		await Assert.That(postLogin).Contains("\x1b[0z")
+			.Because("MXP output lines should be prefixed with ESC[0z open mode");
 	}
 
 	/// <summary>
@@ -211,8 +211,8 @@ public class PuebloMxpIntegrationTests
 
 		await using var stream = client.GetStream();
 
-		// Wait for IAC WILL MXP
-		var rawInit = await ReadRawUntilAsync(stream,
+		// Wait for IAC WILL MXP (drain initial negotiation bytes)
+		await ReadRawUntilAsync(stream,
 			bytes => ContainsSequence(bytes, [0xFF, 0xFB, 0x5B]),
 			cancellationToken,
 			timeoutMs: 10_000);
@@ -233,9 +233,9 @@ public class PuebloMxpIntegrationTests
 
 		await Assert.That(postLogin).Contains("Room Zero");
 
-		// Should NOT contain MXP secure line prefix
-		await Assert.That(postLogin).DoesNotContain("\x1b[1z")
-			.Because("ANSI output should not contain MXP secure line prefixes");
+		// Should NOT contain MXP line prefix
+		await Assert.That(postLogin).DoesNotContain("\x1b[0z")
+			.Because("ANSI output should not contain MXP line prefixes");
 		await Assert.That(postLogin).DoesNotContain("<SEND")
 			.Because("ANSI output should not contain MXP SEND tags");
 	}
@@ -357,6 +357,11 @@ public class PuebloMxpIntegrationTests
 			if (cmd is 0xFB or 0xFC or 0xFD or 0xFE)
 			{
 				i += 2;
+			}
+			else if (cmd == 0xFA) // SB subnegotiation — skip until SE (0xF0)
+			{
+				i += 2;
+				while (i < length && data[i] != 0xF0) i++;
 			}
 			else if (cmd == 0xFF)
 			{

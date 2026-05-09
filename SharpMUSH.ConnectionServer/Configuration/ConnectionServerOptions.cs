@@ -29,6 +29,9 @@ public class ConnectionServerOptions
 	/// Enable Pueblo protocol handshake on telnet connections.
 	/// When true, the server sends the Pueblo hello string on connect
 	/// and listens for PUEBLOCLIENT responses.
+	/// Defaults to true; override via appsettings.json "ConnectionServer:PuebloEnabled".
+	/// The main server's NetOptions.Pueblo (mushcnf) is a separate toggle for
+	/// Pueblo feature handling at the application layer.
 	/// </summary>
 	public bool PuebloEnabled { get; set; } = true;
 
@@ -36,6 +39,9 @@ public class ConnectionServerOptions
 	/// Enable MXP (MUD eXtension Protocol) telnet negotiation.
 	/// When true, the server offers MXP via telnet option 91.
 	/// Can be enabled independently of Pueblo.
+	/// Defaults to true; override via appsettings.json "ConnectionServer:MxpEnabled".
+	/// The main server's NetOptions.Mxp (mushcnf) is a separate toggle for
+	/// MXP feature handling at the application layer.
 	/// </summary>
 	public bool MxpEnabled { get; set; } = true;
 }

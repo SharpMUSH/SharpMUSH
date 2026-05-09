@@ -103,13 +103,32 @@ public class TelnetServer : ConnectionHandler
 			builder = builder.AddPlugin<MXPProtocol>().OnMXPEnabled(() =>
 			{
 				_logger.LogInformation("MXP negotiated on handle {Handle}", nextPort);
-				var conn = _connectionService.Get(nextPort);
-				if (conn != null)
+
+				// Connection may not be registered yet (BuildAndStartAsync runs before RegisterAsync).
+				// Retry briefly to handle the race.
+				async ValueTask DoMxpSetup()
 				{
-					_connectionService.UpdateCapabilities(nextPort,
-						conn.Capabilities with { Format = OutputFormat.Mxp });
+					ConnectionServerService.ConnectionData? conn = null;
+					for (var attempt = 0; attempt < 5 && conn is null; attempt++)
+					{
+						conn = _connectionService.Get(nextPort);
+						if (conn is null) await Task.Delay(50, ct);
+					}
+
+					if (conn != null)
+					{
+						_connectionService.UpdateCapabilities(nextPort,
+							conn.Capabilities with { Format = OutputFormat.Mxp });
+					}
+					else
+					{
+						_logger.LogWarning("MXP negotiated but connection {Handle} not yet registered", nextPort);
+					}
+
+					await _publishEndpoint.Publish(new MxpNegotiatedMessage(nextPort), ct);
 				}
-				return new ValueTask(_publishEndpoint.Publish(new MxpNegotiatedMessage(nextPort), ct));
+
+				return DoMxpSetup();
 			});
 		}
 

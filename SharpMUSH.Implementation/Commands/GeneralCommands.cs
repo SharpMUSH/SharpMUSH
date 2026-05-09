@@ -13,6 +13,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using System.Net;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -52,9 +53,9 @@ public partial class Commands
 		// Exit names use ';' for aliases: "North;n;no" → display "North", href "North"
 		var aliases = exitName.Split(';');
 		var displayName = aliases[0];
-		var command = aliases[0];
+		var command = WebUtility.HtmlEncode(aliases[0]);
 		var hint = aliases.Length > 1
-			? string.Join("|", aliases)
+			? WebUtility.HtmlEncode(string.Join("|", aliases))
 			: $"Go {command}";
 		var sendMarkup = HtmlMarkup.Create("send", $"href=\"{command}\" hint=\"{hint}\"");
 		return MModule.MarkupSingle2(sendMarkup, MModule.single(displayName));

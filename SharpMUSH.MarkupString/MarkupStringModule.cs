@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -91,7 +92,7 @@ internal sealed class PlainTextRenderStrategy : IRenderStrategy
 /// </summary>
 internal sealed class PuebloMxpRenderStrategy : IRenderStrategy
 {
-    public string EncodeText(string text) => text;
+    public string EncodeText(string text) => WebUtility.HtmlEncode(text);
     public string ApplyMarkup(IMarkup markup, string text) => markup switch
     {
         HtmlMarkup html => html.Wrap(text),
