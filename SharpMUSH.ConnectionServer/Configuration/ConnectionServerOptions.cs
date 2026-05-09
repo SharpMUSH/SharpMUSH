@@ -31,4 +31,11 @@ public class ConnectionServerOptions
 	/// and listens for PUEBLOCLIENT responses.
 	/// </summary>
 	public bool PuebloEnabled { get; set; } = true;
+
+	/// <summary>
+	/// Enable MXP (MUD eXtension Protocol) telnet negotiation.
+	/// When true, the server offers MXP via telnet option 91.
+	/// Can be enabled independently of Pueblo.
+	/// </summary>
+	public bool MxpEnabled { get; set; } = true;
 }

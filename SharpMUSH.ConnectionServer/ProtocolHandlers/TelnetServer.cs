@@ -56,7 +56,7 @@ public class TelnetServer : ConnectionHandler
 		var ct = connection.ConnectionClosed;
 		var puebloDetected = false;
 
-		var (telnet, readTask) = await _telnetFactory.CreateBuilder()
+		TelnetInterpreterBuilder builder = _telnetFactory.CreateBuilder()
 			.OnSubmit(async (byteArray, encoding, _) =>
 			{
 				var input = encoding.GetString(byteArray);
@@ -96,8 +96,11 @@ public class TelnetServer : ConnectionHandler
 				await _publishEndpoint.Publish(new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct))
 			.AddPlugin<MSDPProtocol>().OnMSDPMessage(MSDPCallback(connection))
 			.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
-			.AddPlugin<MCCPProtocol>()
-			.AddPlugin<MXPProtocol>().OnMXPEnabled(() =>
+			.AddPlugin<MCCPProtocol>();
+
+		if (_options.MxpEnabled)
+		{
+			builder = builder.AddPlugin<MXPProtocol>().OnMXPEnabled(() =>
 			{
 				_logger.LogInformation("MXP negotiated on handle {Handle}", nextPort);
 				var conn = _connectionService.Get(nextPort);
@@ -107,8 +110,10 @@ public class TelnetServer : ConnectionHandler
 						conn.Capabilities with { Format = OutputFormat.Mxp });
 				}
 				return new ValueTask(_publishEndpoint.Publish(new MxpNegotiatedMessage(nextPort), ct));
-			})
-			.BuildAndStartAsync(connection.Transport, ct);
+			});
+		}
+
+		var (telnet, readTask) = await builder.BuildAndStartAsync(connection.Transport, ct);
 
 		var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
 			? "unknown"
