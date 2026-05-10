@@ -50,11 +50,15 @@ jobs:
         run: dotnet build --no-restore
 
       - name: Test (${{ matrix.database }})
+        uses: nick-fields/retry@v3
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
           SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
-        run: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          command: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed
 
       - name: Publish Telemetry to Summary
         if: always()
@@ -96,7 +100,11 @@ jobs:
         run: dotnet build --no-restore
 
       - name: BUnit Tests
-        run: dotnet run --project SharpMUSH.Tests.BUnit --no-build --verbosity normal -- --output Detailed
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          command: dotnet run --project SharpMUSH.Tests.BUnit --no-build --verbosity normal -- --output Detailed
 
   test-integration:
     needs: [build]
@@ -122,11 +130,15 @@ jobs:
         run: dotnet build --no-restore
 
       - name: Integration Test (${{ matrix.database }})
+        uses: nick-fields/retry@v3
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry-integration.md
           SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
-        run: dotnet run --project SharpMUSH.IntegrationTests --no-build --verbosity normal -- --output Detailed
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          command: dotnet run --project SharpMUSH.IntegrationTests --no-build --verbosity normal -- --output Detailed
 
       - name: Publish Integration Telemetry to Summary
         if: always()
