@@ -21,7 +21,7 @@
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-    <ProjectReference Include="..\..\TelnetNegotiationCore\TelnetNegotiationCore\TelnetNegotiationCore.csproj" />
+    <PackageReference Include="TelnetNegotiationCore" Version="2.5.0" />
   </ItemGroup>
 
   <ItemGroup>

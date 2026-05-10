@@ -36,7 +36,7 @@
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-		<ProjectReference Include="..\..\TelnetNegotiationCore\TelnetNegotiationCore\TelnetNegotiationCore.csproj" />
+		<PackageReference Include="TelnetNegotiationCore" Version="2.5.0" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.7" />
 		<PackageReference Include="Testcontainers" Version="4.11.0" />
 		<PackageReference Include="Testcontainers.ArangoDb" Version="4.11.0" />
