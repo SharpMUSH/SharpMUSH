@@ -486,8 +486,10 @@ public partial class Functions
 			parser, executor, executor, objectRef, LocateFlags.All,
 			found =>
 			{
-				// Get the lock data
-				if (!found.Object().Locks.TryGetValue(lockType, out var lockData))
+				// Get the lock data (case-insensitive per PennMUSH)
+				var lockKey = found.Object().Locks.Keys
+					.FirstOrDefault(k => string.Equals(k, lockType, StringComparison.OrdinalIgnoreCase));
+				if (lockKey == null || !found.Object().Locks.TryGetValue(lockKey, out var lockData))
 				{
 					return ValueTask.FromResult(new CallState(string.Empty));
 				}
@@ -544,8 +546,10 @@ public partial class Functions
 				// Check permission: executor must be able to read the lock
 				// TODO: implement Can_Read_Lock check
 
-				// Get the lock string from the object
-				if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
+				// Get the lock string from the object (case-insensitive per PennMUSH)
+				var lockKey = found.Object().Locks.Keys
+					.FirstOrDefault(k => string.Equals(k, lockName, StringComparison.OrdinalIgnoreCase));
+				if (lockKey == null || !found.Object().Locks.TryGetValue(lockKey, out var lockData))
 				{
 					// No lock set = passes (TRUE_BOOLEXP)
 					return new CallState("1");
@@ -802,8 +806,10 @@ LOCATE()
 			parser, executor, executor, objArg, LocateFlags.All,
 			found =>
 			{
-				// Get the lock string from the object
-				if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
+				// Get the lock string from the object (case-insensitive per PennMUSH)
+				var lockKey = found.Object().Locks.Keys
+					.FirstOrDefault(k => string.Equals(k, lockName, StringComparison.OrdinalIgnoreCase));
+				if (lockKey == null || !found.Object().Locks.TryGetValue(lockKey, out var lockData))
 				{
 					// PennMUSH returns *UNLOCKED* for unset locks
 					return ValueTask.FromResult(new CallState("*UNLOCKED*"));
@@ -840,8 +846,10 @@ LOCATE()
 
 			var found = maybeObj.AsAnyObject;
 
-			// Check if object has the lock
-			if (!found.Object().Locks.TryGetValue(lockName, out var lockData))
+			// Check if object has the lock (case-insensitive per PennMUSH)
+			var lockKey = found.Object().Locks.Keys
+				.FirstOrDefault(k => string.Equals(k, lockName, StringComparison.OrdinalIgnoreCase));
+			if (lockKey == null || !found.Object().Locks.TryGetValue(lockKey, out var lockData))
 			{
 				// No lock means it passes if we're looking for passes
 				if (!shouldPass)

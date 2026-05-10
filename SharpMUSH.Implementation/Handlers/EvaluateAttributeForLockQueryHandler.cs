@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
@@ -14,7 +15,8 @@ namespace SharpMUSH.Implementation.Handlers;
 /// </summary>
 public class EvaluateAttributeForLockQueryHandler(
 	IAttributeService attributeService,
-	IMUSHCodeParser parser) : IQueryHandler<EvaluateAttributeForLockQuery, string?>
+	IMUSHCodeParser parser,
+	ILogger<EvaluateAttributeForLockQueryHandler> logger) : IQueryHandler<EvaluateAttributeForLockQuery, string?>
 {
 	public async ValueTask<string?> Handle(EvaluateAttributeForLockQuery query, CancellationToken cancellationToken)
 	{
@@ -34,8 +36,10 @@ public class EvaluateAttributeForLockQueryHandler(
 
 			return result?.ToPlainText();
 		}
-		catch (Exception)
+		catch (Exception ex)
 		{
+			logger.LogWarning(ex, "Failed to evaluate attribute {Attribute} on {Object} for lock evaluation",
+				query.AttributeName, query.GatedObject);
 			return null;
 		}
 	}

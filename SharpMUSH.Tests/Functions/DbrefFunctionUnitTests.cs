@@ -109,7 +109,10 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("elock(%#,Basic)", "#-1 NO SUCH LOCK")]
+	[Arguments("elock(%#/Basic,%#)", "1")]
+	[Arguments("elock(%#,%#)", "1")]
+	[Arguments("elock(%#/basic,%#)", "1")]
+	[Arguments("elock(%#/BASIC,%#)", "1")]
 	public async Task Elock(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
