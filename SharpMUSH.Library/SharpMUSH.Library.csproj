@@ -10,8 +10,8 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNext" Version="6.1.0" />
-    <PackageReference Include="DotNext.Threading" Version="6.1.0" />
+    <PackageReference Include="DotNext" Version="6.2.0" />
+    <PackageReference Include="DotNext.Threading" Version="6.2.0" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.2" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.7" />
