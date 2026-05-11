@@ -99,19 +99,20 @@ public class BooleanExpressionParser(
 	}
 
 	/// <summary>
-	/// Normalizes a lock expression by converting bare dbrefs to objids.
-	/// This ensures locks reference specific object instances and won't match recycled dbrefs.
+	/// Normalizes a lock expression to canonical form, resolving object names to dbrefs.
+	/// PennMUSH resolves all lock targets to dbrefs at @lock time.
 	/// </summary>
 	/// <param name="text">The lock expression to normalize</param>
-	/// <returns>The normalized lock expression with objids instead of bare dbrefs</returns>
-	public string Normalize(string text)
+	/// <param name="executor">The object setting the lock, used for name resolution context. If null, name resolution is skipped.</param>
+	/// <returns>The normalized lock expression with names resolved to dbrefs</returns>
+	public string Normalize(string text, AnySharpObject? executor = null)
 	{
 		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Normalize));
 		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
 		var chatContext = sharpParser.@lock();
-		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new();
+		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new(mediator, executor);
 
 		var normalized = visitor.Visit(chatContext);
 

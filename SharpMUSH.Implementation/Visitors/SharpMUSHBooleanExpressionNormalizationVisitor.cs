@@ -1,12 +1,20 @@
+using Mediator;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Queries;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Visitors;
 
 /// <summary>
 /// Visitor for normalizing PennMUSH lock expressions to canonical form.
 /// Uppercases keyword prefixes and attribute names per PennMUSH conventions.
+/// Resolves object names to dbrefs at lock-set time, matching PennMUSH behavior.
 /// </summary>
-public class SharpMUSHBooleanExpressionNormalizationVisitor
+public class SharpMUSHBooleanExpressionNormalizationVisitor(
+	IMediator? mediator = null,
+	AnySharpObject? executor = null)
 	: SharpMUSHBoolExpParserBaseVisitor<string>
 {
 	protected override string AggregateResult(string aggregate, string nextResult)
@@ -42,13 +50,13 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor
 	public override string VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"${NormalizeDbRef(value)}";
+		return $"${ResolveToDbRef(value)}";
 	}
 
 	public override string VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"+{NormalizeDbRef(value)}";
+		return $"+{ResolveToDbRef(value)}";
 	}
 
 	public override string VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
@@ -103,16 +111,21 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor
 
 	public override string VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
-		var value = context.ATTRIBUTE_COLON() != null
-			? $"{context.@string(0).GetText()}:{context.@string(1).GetText()}"
-			: context.@string(0).GetText();
-		return $"={NormalizeDbRef(value)}";
+		if (context.ATTRIBUTE_COLON() != null)
+		{
+			// Attribute pattern like =attr:value — not an object reference
+			var value = $"{context.@string(0).GetText()}:{context.@string(1).GetText()}";
+			return $"={value}";
+		}
+
+		var target = context.@string(0).GetText();
+		return $"={ResolveToDbRef(target)}";
 	}
 
 	public override string VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
 	{
 		var value = context.@string().GetText();
-		return NormalizeDbRef(value);
+		return ResolveToDbRef(value);
 	}
 
 	public override string VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
@@ -132,7 +145,7 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor
 	public override string VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
 	{
 		var value = context.@string(0).GetText();
-		var normalizedDbRef = NormalizeDbRef(value);
+		var normalizedDbRef = ResolveToDbRef(value);
 
 		if (context.@string().Length > 1)
 		{
@@ -144,13 +157,43 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor
 	}
 
 	/// <summary>
-	/// Normalizes a dbref string. PennMUSH lock readback preserves bare dbrefs (#1)
-	/// without adding creation timestamps. Only returns what was given.
+	/// Resolves a lock target to a dbref. If the value is already a dbref (#N or #N:timestamp),
+	/// returns it as-is. If it's "me", returns it as-is (resolved at evaluation time).
+	/// Otherwise, attempts name resolution using the executor's context, matching PennMUSH's
+	/// behavior of converting names to dbrefs at @lock time.
+	/// If name resolution fails (no executor or no match), preserves the original name.
 	/// </summary>
-	private string NormalizeDbRef(string value)
+	private string ResolveToDbRef(string value)
 	{
-		// PennMUSH preserves the dbref format as-is in lock readback.
-		// No objid expansion needed — return the value unchanged.
-		return value;
+		// Already a dbref — return as-is
+		if (value.StartsWith('#'))
+			return value;
+
+		// "me" is special — resolved at evaluation time
+		if (value.Equals("me", StringComparison.OrdinalIgnoreCase))
+			return value;
+
+		// No executor/mediator — can't resolve names, preserve as-is
+		if (mediator == null || executor == null)
+			return value;
+
+		// Attempt to resolve the name to a dbref using the executor's context
+		try
+		{
+			var exec = executor!;
+			var locateResult = mediator.Send(
+				new LocateObjectQuery(exec, exec, value, LocateFlags.All),
+				CancellationToken.None
+			).AsTask().GetAwaiter().GetResult();
+
+			return locateResult.IsAnyObject
+				? $"#{locateResult.AsAnyObject.Object().DBRef.Number}"
+				: value; // Not found — preserve the name
+		}
+		catch
+		{
+			// If resolution fails for any reason, preserve the original name
+			return value;
+		}
 	}
 }

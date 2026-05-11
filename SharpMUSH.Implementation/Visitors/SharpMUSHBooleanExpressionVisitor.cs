@@ -522,38 +522,10 @@ if (parsedCarryOpt.IsSome())
 				return false;
 			}
 
-			// SharpMUSH Extension: Name-based fallback for OP_TCONST.
-			// PennMUSH normalizes all lock targets to dbrefs at @lock time, so OP_TCONST only
-			// ever sees "#123" or "#123:timestamp" values. SharpMUSH preserves unresolved names
-			// in the lock string and falls back to name/alias matching at evaluation time.
-			// This allows locks like "@lock thing=PlayerName" to work even when the target
-			// wasn't resolved to a dbref during lock creation.
-			// Check if the unlocker itself matches by name
-			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
-				return true;
-
-			// Check aliases
-			if (unlockerObj.Aliases != null && unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
-				return true;
-
-			// Check if unlocker carries an object with this name
-			try
-			{
-				if (unlockerObj.IsContainer)
-				{
-					var contents = unlockerObj.AsContainer.Content(med);
-					return contents
-						.AnyAsync(item =>
-							item.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase),
-							CancellationToken.None)
-						.AsTask().GetAwaiter().GetResult();
-				}
-			}
-			catch (Exception)
-			{
-				// Catch errors during inventory check
-			}
-
+			// Name-based targets should have been resolved to dbrefs at @lock time
+			// by the normalization visitor. If we reach here with a non-dbref value,
+			// the lock was set without name resolution (e.g. programmatically) —
+			// treat as no match, matching PennMUSH behavior.
 			return false;
 		};
 

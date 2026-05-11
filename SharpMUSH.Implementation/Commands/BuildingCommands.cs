@@ -1063,7 +1063,7 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, lockKey));
+				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, lockKey, executor));
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, lockType);
 				return CallState.Empty;
 			}
@@ -1131,7 +1131,7 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new SetLockCommand(obj.Object(), "Enter", lockKey));
+				await Mediator!.Send(new SetLockCommand(obj.Object(), "Enter", lockKey, executor));
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Enter");
 				return CallState.Empty;
 			}
@@ -1190,7 +1190,7 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				await Mediator!.Send(new SetLockCommand(obj.Object(), "Use", lockKey));
+				await Mediator!.Send(new SetLockCommand(obj.Object(), "Use", lockKey, executor));
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Use");
 				return CallState.Empty;
 			}

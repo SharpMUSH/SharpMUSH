@@ -20,7 +20,7 @@ public class SetLockCommandHandler(ISharpDatabase database, IBooleanExpressionPa
 
 		// Normalize the lock string by converting bare dbrefs to objids
 		// This ensures locks won't match recycled dbrefs after objects are destroyed
-		var normalizedLockString = booleanParser.Normalize(request.LockString);
+		var normalizedLockString = booleanParser.Normalize(request.LockString, request.Executor);
 
 		// Determine flags for this lock
 		var flags = lockService.SystemLocks.GetValueOrDefault(request.LockName, Library.Services.LockService.LockFlags.Default);
