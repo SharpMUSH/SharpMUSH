@@ -57,16 +57,14 @@ dbRefListExpr: DBREFLIST string;
 ipExpr: IP string;
 hostNameExpr: HOSTNAME string;
 nameExpr: NAME string;
-exactObjectExpr: EXACTOBJECT string;
-attributeExpr: attributeName ATTRIBUTE_COLON string;
-evaluationExpr: attributeName EVALUATION string;
+exactObjectExpr: EXACTOBJECT string (ATTRIBUTE_COLON string)?;
+attributeExpr: string ATTRIBUTE_COLON string;
+evaluationExpr: string EVALUATION string;
 defaultExpr: string;
 
 indirectExpr:
-    INDIRECT string EVALUATION attributeName
+    INDIRECT string EVALUATION string
     | INDIRECT string
 ;
 
 string: STRING;
-
-attributeName: ATTRIBUTENAME;

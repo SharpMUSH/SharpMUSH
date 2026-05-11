@@ -1382,8 +1382,10 @@ public class SharpMUSHParserVisitor(
 				}
 
 				// Validate switches and check for /extend hook if invalid switches are found
-				var allowedSwitches = libraryCommandDefinition.Attribute.Switches ?? [];
-				var invalidSwitches = switchArray.Where(s => !allowedSwitches.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
+				var allowedSwitches = libraryCommandDefinition.Attribute.Switches;
+				var invalidSwitches = allowedSwitches is null || allowedSwitches.Contains("*")
+					? [] // null or ["*"] means any switch is accepted (e.g. @lock accepts arbitrary lock type names)
+					: switchArray.Where(s => !allowedSwitches.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
 
 				if (invalidSwitches.Length > 0)
 				{

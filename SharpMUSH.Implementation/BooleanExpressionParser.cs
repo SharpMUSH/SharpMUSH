@@ -111,7 +111,7 @@ public class BooleanExpressionParser(
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
 		var chatContext = sharpParser.@lock();
-		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new(mediator);
+		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new();
 
 		var normalized = visitor.Visit(chatContext);
 

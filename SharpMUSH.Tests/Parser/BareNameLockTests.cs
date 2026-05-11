@@ -51,8 +51,8 @@ public class BareNameLockTests
 
 		var normalized = bep.Normalize($"#{dbRef.Number}");
 
-		// Normalization should convert bare dbref to include creation time
-		await Assert.That(normalized).Contains($"#{dbRef.Number}:{dbRef.CreationMilliseconds}");
+		// Normalization preserves bare dbrefs (matches PennMUSH lock() readback)
+		await Assert.That(normalized).IsEqualTo($"#{dbRef.Number}");
 	}
 
 	[Test]

@@ -227,6 +227,13 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			 || await examiner.IsSee_All()
 			 || (await examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
 
+	/// <inheritdoc />
+	public async ValueTask<bool> CanReadLock(AnySharpObject viewer, AnySharpObject target, LockService.LockFlags lockFlags)
+		=> await viewer.IsSee_All()
+			 || await Controls(viewer, target)
+			 || ((await target.IsVisual() || lockFlags.HasFlag(LockService.LockFlags.Visual))
+				 && lockService.Evaluate(LockType.Examine, target, viewer));
+
 	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
 	{
 		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;

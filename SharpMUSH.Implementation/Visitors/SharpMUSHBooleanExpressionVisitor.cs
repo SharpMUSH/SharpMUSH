@@ -462,7 +462,10 @@ if (parsedCarryOpt.IsSome())
 
 	public override Expression VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
-		var targetIdentifier = context.@string().GetText();
+		// Reconstruct full identifier including optional :timestamp for objid format
+		var targetIdentifier = context.ATTRIBUTE_COLON() != null
+			? $"{context.@string(0).GetText()}:{context.@string(1).GetText()}"
+			: context.@string(0).GetText();
 		return BuildExactObjectExpression(targetIdentifier);
 	}
 
@@ -519,7 +522,12 @@ if (parsedCarryOpt.IsSome())
 				return false;
 			}
 
-			// Name-based resolution: resolve target name to an object, then check IS or CARRIES
+			// SharpMUSH Extension: Name-based fallback for OP_TCONST.
+			// PennMUSH normalizes all lock targets to dbrefs at @lock time, so OP_TCONST only
+			// ever sees "#123" or "#123:timestamp" values. SharpMUSH preserves unresolved names
+			// in the lock string and falls back to name/alias matching at evaluation time.
+			// This allows locks like "@lock thing=PlayerName" to work even when the target
+			// wasn't resolved to a dbref during lock creation.
 			// Check if the unlocker itself matches by name
 			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
 				return true;
@@ -554,8 +562,8 @@ if (parsedCarryOpt.IsSome())
 
 	public override Expression VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
-		var value = context.@string().GetText();
-		var attribute = context.attributeName().GetText();
+		var attribute = context.@string(0).GetText();
+		var value = context.@string(1).GetText();
 
 		Func<AnySharpObject, string, string, bool> func = (unlockerObj, attrName, expectedValue) =>
 		{
@@ -608,8 +616,8 @@ if (parsedCarryOpt.IsSome())
 
 	public override Expression VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)
 	{
-		var expectedValue = context.@string().GetText();
-		var attribute = context.attributeName().GetText();
+		var attribute = context.@string(0).GetText();
+		var expectedValue = context.@string(1).GetText();
 
 		// PennMUSH eval lock (ATTR/pattern): evaluate the attribute on the gated object
 		// as MUSHcode with the unlocker as enactor (%#), then compare result to pattern.
@@ -634,8 +642,8 @@ if (parsedCarryOpt.IsSome())
 
 	public override Expression VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
 	{
-		var targetName = context.@string().GetText();
-		var lockName = context.attributeName()?.GetText() ?? "Basic"; // Default to Basic lock if not specified
+		var targetName = context.@string(0).GetText();
+		var lockName = context.@string().Length > 1 ? context.@string(1).GetText() : "Basic"; // Default to Basic lock if not specified
 
 		// Indirect locks check another object's lock
 		// @object means check the Basic lock on object
@@ -713,8 +721,5 @@ if (parsedIndirectOpt.IsSome())
 	}
 
 	public override Expression VisitString(SharpMUSHBoolExpParser.StringContext context) =>
-		throw new ArgumentException("Parser should never reach here.");
-
-	public override Expression VisitAttributeName(SharpMUSHBoolExpParser.AttributeNameContext context) =>
 		throw new ArgumentException("Parser should never reach here.");
 }

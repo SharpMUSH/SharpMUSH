@@ -58,7 +58,7 @@ public partial class Commands
 		}
 
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
-			await executor.Where(),
+			executor.AsContainer,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
 
@@ -1030,7 +1030,7 @@ public partial class Commands
 		return new CallState(response.ToString());
 	}
 
-	[SharpCommand(Name = "@LOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+	[SharpCommand(Name = "@LOCK", Switches = ["*"], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "locktype", "key"])]
 	public static async ValueTask<Option<CallState>> Lock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1043,7 +1043,11 @@ public partial class Commands
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
-			lockType = parser.CurrentState.Switches.First();
+			var switchName = parser.CurrentState.Switches.First();
+			// Resolve to canonical lock name (e.g. "USE" -> "Use") if it's a known system lock
+			var canonicalName = LockService!.SystemLocks.Keys
+				.FirstOrDefault(k => string.Equals(k, switchName, StringComparison.OrdinalIgnoreCase));
+			lockType = canonicalName ?? switchName;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1066,7 +1070,7 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@UNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+	[SharpCommand(Name = "@UNLOCK", Switches = ["*"], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object", "locktype"])]
 	public static async ValueTask<Option<CallState>> Unlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1078,7 +1082,10 @@ public partial class Commands
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
-			lockType = parser.CurrentState.Switches.First();
+			var switchName = parser.CurrentState.Switches.First();
+			var canonicalName = LockService!.SystemLocks.Keys
+				.FirstOrDefault(k => string.Equals(k, switchName, StringComparison.OrdinalIgnoreCase));
+			lockType = canonicalName ?? switchName;
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,

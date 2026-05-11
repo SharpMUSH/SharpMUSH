@@ -1,17 +1,12 @@
-using Mediator;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Visitors;
 
 /// <summary>
-/// Visitor for normalizing PennMUSH lock expressions by converting bare dbrefs to objids.
-/// This ensures that locks reference specific object instances and won't incorrectly match
-/// new objects when dbrefs are recycled after object destruction.
+/// Visitor for normalizing PennMUSH lock expressions to canonical form.
+/// Uppercases keyword prefixes and attribute names per PennMUSH conventions.
 /// </summary>
-/// <param name="med">Mediator for database queries to look up object creation times</param>
-public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
+public class SharpMUSHBooleanExpressionNormalizationVisitor
 	: SharpMUSHBoolExpParserBaseVisitor<string>
 {
 	protected override string AggregateResult(string aggregate, string nextResult)
@@ -59,25 +54,25 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 	public override string VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"flag^{value}";
+		return $"FLAG^{value.ToUpperInvariant()}";
 	}
 
 	public override string VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"power^{value}";
+		return $"POWER^{value.ToUpperInvariant()}";
 	}
 
 	public override string VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
 	{
 		var typeValue = context.objectType().GetText();
-		return $"type^{typeValue}";
+		return $"TYPE^{typeValue.ToUpperInvariant()}";
 	}
 
 	public override string VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"channel^{value}";
+		return $"CHANNEL^{value.ToUpperInvariant()}";
 	}
 
 	public override string VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
@@ -85,30 +80,32 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 		var attrName = context.@string().GetText();
 		// Note: The dbrefs in the attribute list will need to be normalized separately
 		// when the attribute is set, not when the lock is set
-		return $"dbreflist^{attrName}";
+		return $"DBREFLIST^{attrName.ToUpperInvariant()}";
 	}
 
 	public override string VisitIpExpr(SharpMUSHBoolExpParser.IpExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"ip^{value}";
+		return $"IP^{value}";
 	}
 
 	public override string VisitHostNameExpr(SharpMUSHBoolExpParser.HostNameExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"hostname^{value}";
+		return $"HOSTNAME^{value.ToUpperInvariant()}";
 	}
 
 	public override string VisitNameExpr(SharpMUSHBoolExpParser.NameExprContext context)
 	{
 		var pattern = context.@string().GetText();
-		return $"name^{pattern}";
+		return $"NAME^{pattern.ToUpperInvariant()}";
 	}
 
 	public override string VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
-		var value = context.@string().GetText();
+		var value = context.ATTRIBUTE_COLON() != null
+			? $"{context.@string(0).GetText()}:{context.@string(1).GetText()}"
+			: context.@string(0).GetText();
 		return $"={NormalizeDbRef(value)}";
 	}
 
@@ -120,82 +117,40 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 
 	public override string VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
-		var attrName = context.attributeName().GetText();
-		var value = context.@string().GetText();
-		return $"{attrName}:{value}";
+		var attrName = context.@string(0).GetText();
+		var value = context.@string(1).GetText();
+		return $"{attrName.ToUpperInvariant()}:{value}";
 	}
 
 	public override string VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)
 	{
-		var attrName = context.attributeName().GetText();
-		var value = context.@string().GetText();
-		return $"{attrName}/{value}";
+		var attrName = context.@string(0).GetText();
+		var value = context.@string(1).GetText();
+		return $"{attrName.ToUpperInvariant()}/{value}";
 	}
 
 	public override string VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
 	{
-		var value = context.@string().GetText();
+		var value = context.@string(0).GetText();
 		var normalizedDbRef = NormalizeDbRef(value);
 
-		if (context.attributeName() != null)
+		if (context.@string().Length > 1)
 		{
-			var attrName = context.attributeName().GetText();
+			var attrName = context.@string(1).GetText();
 			return $"@{normalizedDbRef}/{attrName}";
 		}
 
-		return $"@{normalizedDbRef}";
+		return $"@{normalizedDbRef}/Basic";
 	}
 
 	/// <summary>
-	/// Normalizes a dbref string by converting bare dbrefs to objids.
-	/// If the input is already an objid or not a dbref, returns it unchanged.
+	/// Normalizes a dbref string. PennMUSH lock readback preserves bare dbrefs (#1)
+	/// without adding creation timestamps. Only returns what was given.
 	/// </summary>
 	private string NormalizeDbRef(string value)
 	{
-		// Try to parse as a dbref
-		var parsed = HelperFunctions.ParseDbRef(value);
-
-		if (parsed.IsNone())
-		{
-			// Not a dbref, return as-is (could be a name like "me" or an object name)
-			return value;
-		}
-
-		var dbref = parsed.AsValue();
-
-		// If it already has a creation timestamp, no normalization needed
-		if (dbref.CreationMilliseconds.HasValue)
-		{
-			return value;
-		}
-
-		// Look up the object to get its creation time
-		try
-		{
-			var objResult = med.Send(
-					new GetObjectNodeQuery(dbref),
-					CancellationToken.None)
-				.AsTask()
-				.ConfigureAwait(false)
-				.GetAwaiter()
-				.GetResult();
-
-			if (objResult.IsNone)
-			{
-				// Object doesn't exist, return original (validation will catch this)
-				return value;
-			}
-
-			var obj = objResult.Known;
-			var objDbRef = obj.Object().DBRef;
-
-			// Return objid format
-			return $"#{objDbRef.Number}:{objDbRef.CreationMilliseconds}";
-		}
-		catch
-		{
-			// If lookup fails, return original value
-			return value;
-		}
+		// PennMUSH preserves the dbref format as-is in lock readback.
+		// No objid expansion needed — return the value unchanged.
+		return value;
 	}
 }
