@@ -51,7 +51,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.LanguageServer", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Database.Memgraph", "SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj", "{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.IntegrationTests", "SharpMUSH.IntegrationTests\SharpMUSH.IntegrationTests.csproj", "{A569B642-D7D5-41D1-A20A-D7839A8E4D25}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Tests.Integration", "SharpMUSH.Tests.Integration\SharpMUSH.Tests.Integration.csproj", "{A569B642-D7D5-41D1-A20A-D7839A8E4D25}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Tests.Infrastructure", "SharpMUSH.Tests.Infrastructure\SharpMUSH.Tests.Infrastructure.csproj", "{71393B85-8409-49EF-BC10-9BB04E71B035}"
 EndProject

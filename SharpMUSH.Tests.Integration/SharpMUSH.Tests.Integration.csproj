@@ -9,6 +9,7 @@
 		<LangVersion>default</LangVersion>
 		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
 		<NoWarn>TUnit0038</NoWarn>
+		<RootNamespace>SharpMUSH.IntegrationTests</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
