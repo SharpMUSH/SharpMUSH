@@ -75,6 +75,12 @@ internal sealed class StringSpanInputStream(string input, string sourceName) : I
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void Seek(int index)
 	{
+		if (index <= Index)
+		{
+			Index = index;
+			return;
+		}
+
 		Index = Math.Min(index, Size);
 	}
 }
