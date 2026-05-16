@@ -4,13 +4,13 @@ using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Implementation;
 
-internal class AntlrInputStreamSpan(ReadOnlyMemory<char> input, string sourceName) : ICharStream
+internal sealed class StringSpanInputStream(string input, string sourceName) : ICharStream
 {
-	private ReadOnlySpan<char> Data => input.Span;
+	private readonly string _input = input ?? string.Empty;
 
 	public int Index { get; private set; }
 
-	public int Size { get; } = input.Length;
+	public int Size => _input.Length;
 
 	public string SourceName => sourceName;
 
@@ -24,19 +24,20 @@ internal class AntlrInputStreamSpan(ReadOnlyMemory<char> input, string sourceNam
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public string GetText(Interval interval)
 	{
-		var a = interval.a;
-		var num = interval.b;
-		if (num >= Size)
+		var start = interval.a;
+		var stop = interval.b;
+		if (stop >= Size)
 		{
-			num = Size - 1;
+			stop = Size - 1;
 		}
 
-		if (a >= Size)
+		var count = stop - start + 1;
+		if (start >= Size || count <= 0)
 		{
 			return string.Empty;
 		}
 
-		return Data[a..(num + 1)].ToString();
+		return _input.Substring(start, count);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -56,12 +57,13 @@ internal class AntlrInputStreamSpan(ReadOnlyMemory<char> input, string sourceNam
 			}
 		}
 
-		if (Index + i - 1 >= Size)
+		var position = Index + i - 1;
+		if (position >= Size)
 		{
 			return -1;
 		}
 
-		return Data[Index + i - 1];
+		return _input[position];
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -73,13 +75,6 @@ internal class AntlrInputStreamSpan(ReadOnlyMemory<char> input, string sourceNam
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void Seek(int index)
 	{
-		if (index <= Index)
-		{
-			Index = index;
-			return;
-		}
-
-		index = Math.Min(index, Size);
-		Index = index;
+		Index = Math.Min(index, Size);
 	}
 }

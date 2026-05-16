@@ -65,7 +65,7 @@ public class BooleanExpressionParser(
 
 	private Func<AnySharpObject, AnySharpObject, bool> CompileInternal(string text)
 	{
-		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Compile));
+		StringSpanInputStream inputStream = new(text, nameof(Compile));
 		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
@@ -86,7 +86,7 @@ public class BooleanExpressionParser(
 	/// <returns>Valid or not.</returns>
 	public bool Validate(string expression, AnySharpObject lockee)
 	{
-		AntlrInputStreamSpan inputStream = new(expression.AsMemory(), nameof(Validate));
+		StringSpanInputStream inputStream = new(expression, nameof(Validate));
 		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
@@ -106,7 +106,7 @@ public class BooleanExpressionParser(
 	/// <returns>The normalized lock expression with objids instead of bare dbrefs</returns>
 	public string Normalize(string text)
 	{
-		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Normalize));
+		StringSpanInputStream inputStream = new(text, nameof(Normalize));
 		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);

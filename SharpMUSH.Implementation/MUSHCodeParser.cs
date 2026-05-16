@@ -28,7 +28,7 @@ namespace SharpMUSH.Implementation;
 /// <item><description>Services are resolved once at construction and cached to avoid repeated DI lookups</description></item>
 /// <item><description>CommandTrie provides O(m) prefix matching where m is the length of the search string</description></item>
 /// <item><description>ParseInternal() consolidates parser/lexer creation to reduce code duplication</description></item>
-/// <item><description>Custom span-based streams (BufferedTokenSpanStream, AntlrInputStreamSpan) minimize allocations</description></item>
+/// <item><description>Custom span-based streams (BufferedTokenSpanStream, StringSpanInputStream) minimize allocations</description></item>
 /// <item><description>Prediction mode can be configured (SLL vs LL) for performance vs accuracy tradeoff</description></item>
 /// </list>
 /// 
@@ -148,7 +148,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Use provided parser or default to this instance
 		parser ??= this;
 
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), methodName);
+		StringSpanInputStream inputStream = new(MModule.plainText(text), methodName);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
@@ -236,7 +236,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public Func<ValueTask<CallState?>> CommandListParseVisitor(MString text)
 	{
 		var plaintext = MModule.plainText(text);
-		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(CommandListParseVisitor));
+		StringSpanInputStream inputStream = new(plaintext, nameof(CommandListParseVisitor));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
@@ -353,7 +353,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IReadOnlyList<TokenInfo> Tokenize(MString text)
 	{
 		var plaintext = MModule.plainText(text);
-		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(Tokenize));
+		StringSpanInputStream inputStream = new(plaintext, nameof(Tokenize));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 
 		var tokens = new List<TokenInfo>();
@@ -385,7 +385,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IReadOnlyList<ParseError> ValidateAndGetErrors(MString text, ParseType parseType = ParseType.Function)
 	{
 		var plaintext = MModule.plainText(text);
-		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(ValidateAndGetErrors));
+		StringSpanInputStream inputStream = new(plaintext, nameof(ValidateAndGetErrors));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
@@ -464,7 +464,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IReadOnlyList<SemanticToken> GetSemanticTokens(MString text, ParseType parseType = ParseType.Function)
 	{
 		var plaintext = MModule.plainText(text);
-		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(GetSemanticTokens));
+		StringSpanInputStream inputStream = new(plaintext, nameof(GetSemanticTokens));
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
@@ -680,7 +680,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	private SemanticTokenType ClassifyByTokenType(IToken token, string sourceText)
 	{
-		var vocabulary = new SharpMUSHLexer(new AntlrInputStreamSpan(ReadOnlyMemory<char>.Empty, "")).Vocabulary;
+		var vocabulary = new SharpMUSHLexer(new StringSpanInputStream(string.Empty, "")).Vocabulary;
 		return vocabulary.GetSymbolicName(token.Type) switch
 		{
 			"ARG_NUM" or "VWX" or "REG_NUM" or "REG_ALPHA" or "REG_STARTCARET" => SemanticTokenType.Register,
