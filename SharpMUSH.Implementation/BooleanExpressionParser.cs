@@ -66,7 +66,10 @@ public class BooleanExpressionParser(
 	private Func<AnySharpObject, AnySharpObject, bool> CompileInternal(string text)
 	{
 		StringSpanInputStream inputStream = new(text, nameof(Compile));
-		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
+		SharpMUSHBoolExpLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
 		var chatContext = sharpParser.@lock();
@@ -87,7 +90,10 @@ public class BooleanExpressionParser(
 	public bool Validate(string expression, AnySharpObject lockee)
 	{
 		StringSpanInputStream inputStream = new(expression, nameof(Validate));
-		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
+		SharpMUSHBoolExpLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
 		var chatContext = sharpParser.@lock();
@@ -107,7 +113,10 @@ public class BooleanExpressionParser(
 	public string Normalize(string text)
 	{
 		StringSpanInputStream inputStream = new(text, nameof(Normalize));
-		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
+		SharpMUSHBoolExpLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
 		var chatContext = sharpParser.@lock();

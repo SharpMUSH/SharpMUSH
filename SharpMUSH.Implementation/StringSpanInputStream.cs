@@ -7,6 +7,7 @@ namespace SharpMUSH.Implementation;
 internal sealed class StringSpanInputStream(string input, string sourceName) : ICharStream
 {
 	private readonly string _input = input ?? string.Empty;
+	internal string Input => _input;
 
 	public int Index { get; private set; }
 

@@ -28,7 +28,7 @@ namespace SharpMUSH.Implementation;
 /// <item><description>Services are resolved once at construction and cached to avoid repeated DI lookups</description></item>
 /// <item><description>CommandTrie provides O(m) prefix matching where m is the length of the search string</description></item>
 /// <item><description>ParseInternal() consolidates parser/lexer creation to reduce code duplication</description></item>
-/// <item><description>Custom span-based streams (BufferedTokenSpanStream, StringSpanInputStream) minimize allocations</description></item>
+/// <item><description>Custom span-based streams and token factory (BufferedTokenSpanStream, StringSpanInputStream, OptimizedTokenFactory) minimize allocations</description></item>
 /// <item><description>Prediction mode can be configured (SLL vs LL) for performance vs accuracy tradeoff</description></item>
 /// </list>
 /// 
@@ -149,7 +149,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		parser ??= this;
 
 		StringSpanInputStream inputStream = new(MModule.plainText(text), methodName);
-		SharpMUSHLexer sharpLexer = new(inputStream);
+		SharpMUSHLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
@@ -237,7 +240,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var plaintext = MModule.plainText(text);
 		StringSpanInputStream inputStream = new(plaintext, nameof(CommandListParseVisitor));
-		SharpMUSHLexer sharpLexer = new(inputStream);
+		SharpMUSHLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
@@ -354,7 +360,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var plaintext = MModule.plainText(text);
 		StringSpanInputStream inputStream = new(plaintext, nameof(Tokenize));
-		SharpMUSHLexer sharpLexer = new(inputStream);
+		SharpMUSHLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 
 		var tokens = new List<TokenInfo>();
 		IToken token;
@@ -386,7 +395,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var plaintext = MModule.plainText(text);
 		StringSpanInputStream inputStream = new(plaintext, nameof(ValidateAndGetErrors));
-		SharpMUSHLexer sharpLexer = new(inputStream);
+		SharpMUSHLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
@@ -465,7 +477,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var plaintext = MModule.plainText(text);
 		StringSpanInputStream inputStream = new(plaintext, nameof(GetSemanticTokens));
-		SharpMUSHLexer sharpLexer = new(inputStream);
+		SharpMUSHLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
