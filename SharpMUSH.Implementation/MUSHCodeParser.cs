@@ -586,14 +586,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// This is the canonical correct approach — it handles all tokens that appear in multiple
 		// grammatical roles (CCARET, EQUALS, COMMAWS, SEMICOLON, FUNCHAR, …) without per-symbol
 		// special-case pre-walks.
-		var classifications = tokenCount > 0
-			? new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>(tokenCount)
-			: new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>();
+		var classifications = new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>(tokenCount);
 		CollectTerminalClassifications(context, classifications, sourceText);
 
-		var semanticTokens = tokenCount > 0
-			? new List<SemanticToken>(tokenCount)
-			: new List<SemanticToken>();
+		var semanticTokens = new List<SemanticToken>(tokenCount);
 
 		// Use the pre-built TokenArray (set when Fill() reaches EOF) to avoid the LINQ
 		// enumerator allocation from tokenStream.tokens.Where(...). EOF is always the
@@ -759,7 +755,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var functionName = functionText.TrimEnd('(', ' ', '\t', '\r', '\n', '\f');
 
 		// Check if it's a built-in function
-		if (FunctionLibrary.TryGetValue(functionName, out var functionInfo))
+		if (FunctionLibrary.TryGetValue(functionName, out var functionInfo)
+			|| FunctionLibrary.TryGetValue(functionName.ToLowerInvariant(), out functionInfo))
 		{
 			return functionInfo.IsSystem
 				? SemanticTokenType.Function
