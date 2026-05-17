@@ -117,4 +117,37 @@ public class PuebloMxpRenderTests
 		await Assert.That(pueblo).DoesNotContain("<B>");
 		await Assert.That(pueblo).DoesNotContain("<b>");
 	}
+
+	/// <summary>
+	/// Plain text is HTML-encoded in Pueblo/MXP output so user-controlled text cannot inject tags.
+	/// </summary>
+	[Test]
+	public async Task PlainText_IsHtmlEncodedInPuebloAndMxp()
+	{
+		var mstr = MModule.single("<send href=\"look\">Tom & \"Sue\"</send>");
+
+		var pueblo = mstr.Render("pueblo");
+		var mxp = mstr.Render("mxp");
+
+		await Assert.That(pueblo).IsEqualTo("&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;");
+		await Assert.That(mxp).IsEqualTo("&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;");
+	}
+
+	/// <summary>
+	/// HtmlMarkup attributes are emitted as-is and plain text is encoded exactly once.
+	/// </summary>
+	[Test]
+	public async Task HtmlMarkupAttributes_AreNotDoubleEncoded()
+	{
+		var send = HtmlMarkup.Create("send", "href=\"North &amp; East\" hint=\"North &amp; East|&quot;N&quot;\"");
+		var mstr = MModule.MarkupSingle(send, "North & East");
+
+		var pueblo = mstr.Render("pueblo");
+
+		await Assert.That(pueblo)
+			.StartsWith("<send href=\"North &amp; East\" hint=\"North &amp; East|&quot;N&quot;\">North &amp; East</send>");
+		await Assert.That(pueblo)
+			.EndsWith("\x1b[0m")
+			.Because("Pueblo/MXP rendering preserves the ANSI clear suffix emitted by the additive render strategy");
+	}
 }

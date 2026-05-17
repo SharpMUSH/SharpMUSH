@@ -84,6 +84,8 @@ public class PuebloMxpIntegrationTests
 
 		await Assert.That(postLogin).Contains("Room Zero")
 			.Because("After login, Pueblo client should see Room Zero");
+		await Assert.That(postLogin).Contains("<send")
+			.Because("Pueblo output should switch to HTML/MXP-style send tags after the handshake");
 	}
 
 	/// <summary>
@@ -184,8 +186,8 @@ public class PuebloMxpIntegrationTests
 		// Log in
 		await SendLineAsync(stream, "connect God", cancellationToken);
 
-		// After login, MXP output should include ESC[1z secure line prefixes
-		// ESC[1z = \x1b[1z
+		// After login, MXP output should include ESC[0z open line prefixes.
+		// ESC[0z = \x1b[0z
 		var postLogin = await ReadUntilAsync(stream,
 			s => s.Contains("Room Zero"), cancellationToken);
 
@@ -195,6 +197,8 @@ public class PuebloMxpIntegrationTests
 		// MXP output should contain the open line prefix
 		await Assert.That(postLogin).Contains("\x1b[0z")
 			.Because("MXP output lines should be prefixed with ESC[0z open mode");
+		await Assert.That(postLogin).Contains("<send")
+			.Because("MXP output should still include send tags when the client accepts MXP");
 	}
 
 	/// <summary>

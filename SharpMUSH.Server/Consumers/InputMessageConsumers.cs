@@ -210,10 +210,41 @@ public class ConnectionEstablishedConsumer(
 public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, IConnectionService connectionService)
 	: IMessageConsumer<PuebloNegotiatedMessage>
 {
-	public Task HandleAsync(PuebloNegotiatedMessage message, CancellationToken cancellationToken = default)
+	internal static async Task<bool> WaitForConnectionRegistration(
+		IConnectionService connectionService,
+		long handle,
+		CancellationToken cancellationToken)
 	{
-		logger.LogInformation("[NATS-RECV] PuebloNegotiatedMessage - Handle: {Handle}, Client: {Client}",
+		for (var attempt = 0; attempt < 5; attempt++)
+		{
+			if (connectionService.Get(handle) is not null)
+			{
+				return true;
+			}
+
+			try
+			{
+				await Task.Delay(50, cancellationToken);
+			}
+			catch (OperationCanceledException)
+			{
+				return false;
+			}
+		}
+
+		return connectionService.Get(handle) is not null;
+	}
+
+	public async Task HandleAsync(PuebloNegotiatedMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogTrace("[NATS-RECV] PuebloNegotiatedMessage - Handle: {Handle}, Client: {Client}",
 			message.Handle, message.ClientResponse);
+
+		if (!await WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping Pueblo negotiation for unregistered handle {Handle}", message.Handle);
+			return;
+		}
 
 		// Only set Pueblo if not already upgraded to MXP
 		var conn = connectionService.Get(message.Handle);
@@ -225,7 +256,6 @@ public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, 
 		// Keep PUEBLO=1 for backward compat (pueblo() function reads it)
 		connectionService.Update(message.Handle, "PUEBLO", "1");
 
-		return Task.CompletedTask;
 	}
 }
 
@@ -236,15 +266,19 @@ public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, 
 public class MxpNegotiatedConsumer(ILogger<MxpNegotiatedConsumer> logger, IConnectionService connectionService)
 	: IMessageConsumer<MxpNegotiatedMessage>
 {
-	public Task HandleAsync(MxpNegotiatedMessage message, CancellationToken cancellationToken = default)
+	public async Task HandleAsync(MxpNegotiatedMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogInformation("[NATS-RECV] MxpNegotiatedMessage - Handle: {Handle}", message.Handle);
+		logger.LogTrace("[NATS-RECV] MxpNegotiatedMessage - Handle: {Handle}", message.Handle);
+
+		if (!await PuebloNegotiatedConsumer.WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping MXP negotiation for unregistered handle {Handle}", message.Handle);
+			return;
+		}
 
 		connectionService.Update(message.Handle, "OUTPUT_FORMAT", "mxp");
 		// MXP clients also understand Pueblo tags, so set PUEBLO=1 for pueblo() compat
 		connectionService.Update(message.Handle, "PUEBLO", "1");
-
-		return Task.CompletedTask;
 	}
 }
 

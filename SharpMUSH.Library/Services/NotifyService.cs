@@ -1,6 +1,7 @@
-﻿using MarkupString;
+using MarkupString;
 using Mediator;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -9,6 +10,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services;
 
@@ -24,13 +26,15 @@ public class NotifyService(
 	IMediator? mediator = null) : INotifyService
 {
 	/// <summary>
-	/// MXP secure line prefix: ESC[1z — tells the MXP client that this line
 	/// MXP open line prefix: ESC[0z — signals the client this line may contain
-	/// standard MXP tags (like &lt;send&gt;, &lt;a&gt;). Secure-mode tags
-	/// (like &lt;!ELEMENT&gt;) require ESC[1z and are not yet implemented.
-	/// Without any prefix, MXP clients default to "locked" mode (no tags parsed).
+	/// standard MXP tags. Without any prefix, MXP clients default to locked mode
+	/// and will not interpret tags on the line.
 	/// </summary>
-	private const string MxpOpenLinePrefix = "\x1b[0z";
+	private const string MxpOpenLinePrefix = ErrorMessages.Notifications.MxpLineOpen;
+
+	private static readonly Regex CompositeFormatPlaceholderRegex = new(
+		@"(?<!\{)\{(\d+)(?:,[^}]*)?(?::[^}]*)?\}(?!\})",
+		RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
 	/// <summary>
 	/// Prepends the MXP open line prefix (ESC[0z) to each non-empty line of MXP output.
@@ -55,8 +59,61 @@ public class NotifyService(
 				"mxp" => ApplyMxpLinePrefix(markupString.Render("mxp")),
 				_ => markupString.ToString()
 			},
-			str => format == "mxp" ? ApplyMxpLinePrefix(str) : str
+			str => RenderPlainTextForFormat(str, format)
 		);
+
+	private static string RenderPlainTextForFormat(string text, string format)
+	{
+		var encoded = format switch
+		{
+			"pueblo" or "mxp" => System.Net.WebUtility.HtmlEncode(text),
+			_ => text
+		};
+
+		return format == "mxp"
+			? ApplyMxpLinePrefix(encoded)
+			: encoded;
+	}
+
+	private static MString FormatLocalizedMarkupTemplate(string template, IReadOnlyList<MString> args)
+	{
+		if (args.Count == 0)
+		{
+			return MModule.single(UnescapeCompositeFormatLiteral(template));
+		}
+
+		var parts = new List<MString>();
+		var cursor = 0;
+
+		foreach (Match match in CompositeFormatPlaceholderRegex.Matches(template))
+		{
+			if (match.Index > cursor)
+			{
+				parts.Add(MModule.single(UnescapeCompositeFormatLiteral(template[cursor..match.Index])));
+			}
+
+			if (int.TryParse(match.Groups[1].Value, out var index) && index >= 0 && index < args.Count)
+			{
+				parts.Add(args[index]);
+			}
+			else
+			{
+				parts.Add(MModule.single(UnescapeCompositeFormatLiteral(match.Value)));
+			}
+
+			cursor = match.Index + match.Length;
+		}
+
+		if (cursor < template.Length)
+		{
+			parts.Add(MModule.single(UnescapeCompositeFormatLiteral(template[cursor..])));
+		}
+
+		return MModule.ConcatMany(parts.ToArray());
+	}
+
+	private static string UnescapeCompositeFormatLiteral(string text) =>
+		text.Replace("{{", "{").Replace("}}", "}");
 
 	/// <summary>
 	/// Normalizes line endings by replacing all \n with \r\n and ensuring trailing \r\n
@@ -364,5 +421,28 @@ public class NotifyService(
 		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
 		var message = localizationService.Format(key, locale, args);
 		await Notify(handle, message, sender: sender);
+	}
+
+	public async ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args)
+	{
+		await foreach (var conn in connections.Get(who))
+		{
+			conn.Metadata.TryGetValue("Locale", out var locale);
+			var template = localizationService.Get(key, locale);
+			var message = FormatLocalizedMarkupTemplate(template, args);
+			await Notify(conn.Handle, message, sender);
+		}
+	}
+
+	public ValueTask NotifyLocalizedMarkup(AnySharpObject who, string key, AnySharpObject? sender, params MString[] args)
+		=> NotifyLocalizedMarkup(who.Object().DBRef, key, sender, args);
+
+	public async ValueTask NotifyLocalizedMarkup(long handle, string key, AnySharpObject? sender, params MString[] args)
+	{
+		var conn = connections.Get(handle);
+		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
+		var template = localizationService.Get(key, locale);
+		var message = FormatLocalizedMarkupTemplate(template, args);
+		await Notify(handle, message, sender);
 	}
 }

@@ -15,6 +15,7 @@ public class ConnectionServerService(
 	IMessageBus publishEndpoint,
 	IConnectionStateStore? stateStore = null) : IConnectionServerService
 {
+	private const int CompareExchangeRetryLimit = 5;
 	private readonly ConcurrentDictionary<long, ConnectionData> _sessionState = [];
 
 	public async Task RegisterAsync(
@@ -143,15 +144,20 @@ public class ConnectionServerService(
 		if (_sessionState.TryGetValue(handle, out var connection))
 		{
 			var updated = connection with { Preferences = preferences };
-			while (!_sessionState.TryUpdate(handle, updated, connection))
+			for (var attempt = 0; attempt < CompareExchangeRetryLimit; attempt++)
 			{
+				if (_sessionState.TryUpdate(handle, updated, connection))
+				{
+					return true;
+				}
+
 				if (!_sessionState.TryGetValue(handle, out connection))
 				{
 					return false;
 				}
+
 				updated = connection with { Preferences = preferences };
 			}
-			return true;
 		}
 		return false;
 	}
@@ -161,15 +167,20 @@ public class ConnectionServerService(
 		if (_sessionState.TryGetValue(handle, out var connection))
 		{
 			var updated = connection with { Capabilities = capabilities };
-			while (!_sessionState.TryUpdate(handle, updated, connection))
+			for (var attempt = 0; attempt < CompareExchangeRetryLimit; attempt++)
 			{
+				if (_sessionState.TryUpdate(handle, updated, connection))
+				{
+					return true;
+				}
+
 				if (!_sessionState.TryGetValue(handle, out connection))
 				{
 					return false;
 				}
+
 				updated = connection with { Capabilities = capabilities };
 			}
-			return true;
 		}
 		return false;
 	}

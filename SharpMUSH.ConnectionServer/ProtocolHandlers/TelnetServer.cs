@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Connections;
 using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
@@ -31,7 +32,7 @@ public class TelnetServer : ConnectionHandler
 	/// Clients that support Pueblo respond with "PUEBLOCLIENT ...".
 	/// </summary>
 	private static readonly byte[] PuebloHelloBytes =
-		Encoding.UTF8.GetBytes("This world is Pueblo 1.10 Enhanced.\r\n");
+		Encoding.UTF8.GetBytes(ErrorMessages.Notifications.PuebloHello);
 
 	public TelnetServer(
 		ILogger<TelnetServer> logger,
@@ -54,27 +55,24 @@ public class TelnetServer : ConnectionHandler
 	{
 		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
-		var puebloDetected = false;
+		var awaitingInitialPuebloHandshake = _options.PuebloEnabled;
 
 		TelnetInterpreterBuilder builder = _telnetFactory.CreateBuilder()
 			.OnSubmit(async (byteArray, encoding, _) =>
 			{
 				var input = encoding.GetString(byteArray);
 
-				// Detect Pueblo handshake response (only check until detected)
-				if (!puebloDetected && _options.PuebloEnabled &&
+				// Detect Pueblo handshake response only on the first submitted line.
+				if (awaitingInitialPuebloHandshake &&
 				    input.StartsWith("PUEBLOCLIENT", StringComparison.OrdinalIgnoreCase))
 				{
-					puebloDetected = true;
+					awaitingInitialPuebloHandshake = false;
 					_logger.LogInformation("Pueblo handshake detected on handle {Handle}: {Response}",
 						nextPort, input.TrimEnd());
 
-					// Update capabilities to Pueblo format
-					var conn = _connectionService.Get(nextPort);
-					if (conn != null)
+					if (await TryUpdateFormatAsync(nextPort, OutputFormat.Pueblo, ct))
 					{
-						_connectionService.UpdateCapabilities(nextPort,
-							conn.Capabilities with { Format = OutputFormat.Pueblo });
+						_logger.LogDebug("Updated Pueblo capabilities for handle {Handle}", nextPort);
 					}
 
 					// Publish metadata update to main process
@@ -85,6 +83,7 @@ public class TelnetServer : ConnectionHandler
 					return;
 				}
 
+				awaitingInitialPuebloHandshake = false;
 				await _publishEndpoint.Publish(new TelnetInputMessage(nextPort, input), ct);
 			})
 			.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>
@@ -104,23 +103,13 @@ public class TelnetServer : ConnectionHandler
 			{
 				_logger.LogInformation("MXP negotiated on handle {Handle}", nextPort);
 
-				// Connection may not be registered yet (BuildAndStartAsync runs before RegisterAsync).
-				// Retry briefly to handle the race.
 				async ValueTask DoMxpSetup()
 				{
-					ConnectionServerService.ConnectionData? conn = null;
-					for (var attempt = 0; attempt < 5 && conn is null; attempt++)
+					if (await TryUpdateFormatAsync(nextPort, OutputFormat.Mxp, ct))
 					{
-						conn = _connectionService.Get(nextPort);
-						if (conn is null) await Task.Delay(50, ct);
+						_logger.LogDebug("Updated MXP capabilities for handle {Handle}", nextPort);
 					}
-
-					if (conn != null)
-					{
-						_connectionService.UpdateCapabilities(nextPort,
-							conn.Capabilities with { Format = OutputFormat.Mxp });
-					}
-					else
+					else if (!ct.IsCancellationRequested)
 					{
 						_logger.LogWarning("MXP negotiated but connection {Handle} not yet registered", nextPort);
 					}
@@ -221,6 +210,34 @@ public class TelnetServer : ConnectionHandler
 		// Disconnect and notify MainProcess
 		await _connectionService.DisconnectAsync(nextPort);
 		_descriptorGenerator.ReleaseTelnetDescriptor(nextPort);
+	}
+
+	private async ValueTask<bool> TryUpdateFormatAsync(long handle, OutputFormat format, CancellationToken cancellationToken)
+	{
+		for (var attempt = 0; attempt < 5; attempt++)
+		{
+			var conn = _connectionService.Get(handle);
+			if (conn != null)
+			{
+				return _connectionService.UpdateCapabilities(handle, conn.Capabilities with { Format = format });
+			}
+
+			if (cancellationToken.IsCancellationRequested)
+			{
+				return false;
+			}
+
+			try
+			{
+				await Task.Delay(50, cancellationToken);
+			}
+			catch (OperationCanceledException)
+			{
+				return false;
+			}
+		}
+
+		return false;
 	}
 
 	private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection)

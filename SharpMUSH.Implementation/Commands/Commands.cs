@@ -51,6 +51,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private static IGameBroadcastService? GameBroadcastService { get; set; }
 
+	private static ILocalizationService? LocalizationService { get; set; }
+
 	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
 	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
 
@@ -83,6 +85,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IWarningService warningService,
 		ITextFileService textFileService,
 		IMessageBus messageBus,
+		ILocalizationService localizationService,
 		IGameBroadcastService gameBroadcastService,
 		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
@@ -111,6 +114,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		WarningService = warningService;
 		TextFileService = textFileService;
 		MessageBus = messageBus;
+		LocalizationService = localizationService;
 		GameBroadcastService = gameBroadcastService;
 		FunctionLibrary = functionLibrary;
 

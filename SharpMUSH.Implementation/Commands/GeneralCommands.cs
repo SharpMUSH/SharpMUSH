@@ -61,6 +61,54 @@ public partial class Commands
 		return MModule.MarkupSingle2(sendMarkup, MModule.single(displayName));
 	}
 
+	private static readonly Regex CompositeFormatPlaceholderRegex = new(
+		@"(?<!\{)\{(\d+)(?:,[^}]*)?(?::[^}]*)?\}(?!\})",
+		RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+	private static MString FormatCompositeMString(string template, params MString[] args)
+	{
+		if (args.Length == 0)
+		{
+			return MModule.single(template.Replace("{{", "{").Replace("}}", "}"));
+		}
+
+		var parts = new List<MString>();
+		var cursor = 0;
+
+		foreach (Match match in CompositeFormatPlaceholderRegex.Matches(template))
+		{
+			if (match.Index > cursor)
+			{
+				parts.Add(MModule.single(template[cursor..match.Index].Replace("{{", "{").Replace("}}", "}")));
+			}
+
+			if (int.TryParse(match.Groups[1].Value, out var index) && index >= 0 && index < args.Length)
+			{
+				parts.Add(args[index]);
+			}
+			else
+			{
+				parts.Add(MModule.single(match.Value.Replace("{{", "{").Replace("}}", "}")));
+			}
+
+			cursor = match.Index + match.Length;
+		}
+
+		if (cursor < template.Length)
+		{
+			parts.Add(MModule.single(template[cursor..].Replace("{{", "{").Replace("}}", "}")));
+		}
+
+		return MModule.ConcatMany(parts.ToArray());
+	}
+
+	private static MString FormatExitNameToDestination(MString exitName, string destName, string? locale = null)
+	{
+		var template = LocalizationService?.Get(nameof(ErrorMessages.Notifications.ExitNameToDestFormat), locale)
+			?? ErrorMessages.Notifications.ExitNameToDestFormat;
+		return FormatCompositeMString(template, exitName, MModule.single(destName));
+	}
+
 	/// <summary>
 	/// Handles delimiter/pid extraction for @dolist and @map commands when /DELIMIT or /PID is used.
 	/// Format: @dolist/delimit <delimiter> <list>=<action>
@@ -792,6 +840,15 @@ public partial class Commands
 				// Exit names are wrapped in <send> tags for Pueblo/MXP clients.
 				// For ANSI clients, HtmlMarkup passes through as plain text.
 				var isTransparent = await realViewing.IsTransparent();
+				string? executorLocale = null;
+				if (ConnectionService != null)
+				{
+					await foreach (var connection in ConnectionService.Get(executor.Object().DBRef))
+					{
+						connection.Metadata.TryGetValue("Locale", out executorLocale);
+						break;
+					}
+				}
 				MString defaultExits;
 				if (isTransparent)
 				{
@@ -810,7 +867,7 @@ public partial class Commands
 						}
 						else
 						{
-							exitParts.Add(MModule.concat(exitMString, MModule.single($" to {destName}")));
+							exitParts.Add(FormatExitNameToDestination(exitMString, destName, executorLocale));
 						}
 					}
 					defaultExits = MModule.ConcatMany(exitParts.SelectMany<MString, MString>((part, i) =>
@@ -848,8 +905,12 @@ public partial class Commands
 						}
 						else
 						{
-							await NotifyService.Notify(executor,
-								MModule.concat(exitMString, MModule.single($" to {destName}")), executor);
+							await NotifyService.NotifyLocalizedMarkup(
+								executor,
+								nameof(ErrorMessages.Notifications.ExitNameToDestFormat),
+								executor,
+								exitMString,
+								MModule.single(destName));
 						}
 					}
 				}

@@ -91,4 +91,20 @@ public interface INotifyService
 	/// Sends a locale-aware notification to a single connection handle, recording the sender.
 	/// </summary>
 	ValueTask NotifyLocalized(long handle, string key, AnySharpObject? sender, params object[] args);
+
+	/// <summary>
+	/// Sends a locale-aware notification whose placeholders are markup-aware <see cref="MString"/> values.
+	/// This preserves HTML/MXP markup while still translating the surrounding text per connection locale.
+	/// </summary>
+	ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args);
+
+	/// <summary>
+	/// Sends a locale-aware markup notification to all connections for an object.
+	/// </summary>
+	ValueTask NotifyLocalizedMarkup(AnySharpObject who, string key, AnySharpObject? sender, params MString[] args);
+
+	/// <summary>
+	/// Sends a locale-aware markup notification to a single connection handle.
+	/// </summary>
+	ValueTask NotifyLocalizedMarkup(long handle, string key, AnySharpObject? sender, params MString[] args);
 }
