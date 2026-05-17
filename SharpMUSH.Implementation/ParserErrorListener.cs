@@ -114,6 +114,7 @@ public class ParserErrorListener : BaseErrorListener
 				return null;
 
 			var vocabulary = parser.Vocabulary;
+			// IntervalSet has no IEnumerable<int>; .ToArray() is its own method returning int[].
 			var expectedTokens = expectedTokenSet.ToArray()
 				.Select(tokenType =>
 				{

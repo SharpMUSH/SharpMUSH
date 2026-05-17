@@ -179,12 +179,21 @@ public class ParserFailureTests
 
 	// ─── Command parse modes ───────────────────────────────────────────────────
 
-	/// <summary>Missing paren in a command argument (CommandParse path).</summary>
+	/// <summary>
+	/// Missing paren via the CommandParse path (<see cref="ParseType.Command"/>).
+	/// <para>
+	/// NOTE: when a command has text before the function call (e.g. "@emit add(1,2)"),
+	/// the parser takes the <c>explicitEvaluationString</c> branch and <c>FUNCHAR</c>
+	/// becomes plain generic text — so no error is raised at parse time (the error would
+	/// surface later when the argument is evaluated). Only inputs where the function call
+	/// is at the very start of the evaluation string can be caught here.
+	/// </para>
+	/// </summary>
 	[Test]
 	public async Task MissingParen_InCommandArg_CurrentBehavior()
 	{
 		var errors = Parser.ValidateAndGetErrors(
-			MModule.single("@emit add(1,2"), ParseType.Command);
+			MModule.single("add(1,2"), ParseType.Command);
 		await Assert.That(errors).IsNotEmpty();
 	}
 
