@@ -127,7 +127,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			ParserPredictionMode.SLL => PredictionMode.SLL,
 			ParserPredictionMode.LL => PredictionMode.LL,
-			_ => PredictionMode.SLL // Default to SLL
+			_ => PredictionMode.LL // Default to LL for correct predicate evaluation
 		};
 	}
 
@@ -146,8 +146,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		MString text,
 		Func<SharpMUSHParser, TContext> entryPoint,
 		string methodName,
-		IMUSHCodeParser? parser = null,
-		PredictionMode? predictionModeOverride = null)
+		IMUSHCodeParser? parser = null)
 		where TContext : ParserRuleContext
 	{
 		// Use provided parser or default to this instance
@@ -165,7 +164,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
-			Interpreter = { PredictionMode = predictionModeOverride ?? GetPredictionMode() },
+			Interpreter = { PredictionMode = GetPredictionMode() },
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
 
@@ -372,10 +371,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		=> ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse));
 
 	public ValueTask<CallState?> CommandEqSplitArgsParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse), predictionModeOverride: PredictionMode.LL);
+		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse));
 
 	public ValueTask<CallState?> CommandEqSplitParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse), predictionModeOverride: PredictionMode.LL);
+		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse));
 
 	/// <summary>
 	/// Tokenizes the input text and returns token information for syntax highlighting.
