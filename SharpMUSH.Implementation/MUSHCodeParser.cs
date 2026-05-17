@@ -49,6 +49,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	private readonly IAttributeService _attributeService = ServiceProvider.GetRequiredService<IAttributeService>();
 	private readonly IHookService _hookService = ServiceProvider.GetRequiredService<IHookService>();
 
+	// Lexer vocabulary is static and immutable — cached once to avoid allocating a new lexer on every fallback classification
+	private static readonly IVocabulary LexerVocabulary =
+		new SharpMUSHLexer(new StringSpanInputStream(string.Empty, string.Empty)).Vocabulary;
+
 	// Command trie for efficient prefix-based command lookup
 	private readonly CommandTrie _commandTrie = BuildCommandTrie(CommandLibrary);
 
@@ -565,22 +569,32 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		CollectTerminalClassifications(context, classifications, sourceText);
 
 		var semanticTokens = new List<SemanticToken>();
-		foreach (var token in tokenStream.tokens.Where(t => t.Type != TokenConstants.EOF))
-		{
-			if (!classifications.TryGetValue(token.TokenIndex, out var info))
-				info = (SemanticTokenType.Text, SemanticTokenModifier.None);
 
-			semanticTokens.Add(new SemanticToken
+		// Use the pre-built TokenArray (set when Fill() reaches EOF) to avoid the LINQ
+		// enumerator allocation from tokenStream.tokens.Where(...). EOF is always the
+		// last element in TokenArray, so iterate all-but-last.
+		var tokenArray = tokenStream.TokenArray;
+		if (tokenArray is not null)
+		{
+			for (var i = 0; i < tokenArray.Length - 1; i++)
 			{
-				Range = new LspRange
+				var token = tokenArray[i];
+				if (!classifications.TryGetValue(token.TokenIndex, out var info))
+					info = (SemanticTokenType.Text, SemanticTokenModifier.None);
+
+				var text = token.Text;
+				semanticTokens.Add(new SemanticToken
 				{
-					Start = new Position(token.Line - 1, token.Column),
-					End = new Position(token.Line - 1, token.Column + token.Text.Length)
-				},
-				TokenType = info.Type,
-				Modifiers = info.Mod,
-				Text = token.Text
-			});
+					Range = new LspRange
+					{
+						Start = new Position(token.Line - 1, token.Column),
+						End = new Position(token.Line - 1, token.Column + text.Length)
+					},
+					TokenType = info.Type,
+					Modifiers = info.Mod,
+					Text = text
+				});
+			}
 		}
 
 		return semanticTokens;
@@ -695,8 +709,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	private SemanticTokenType ClassifyByTokenType(IToken token, string sourceText)
 	{
-		var vocabulary = new SharpMUSHLexer(new StringSpanInputStream(string.Empty, "")).Vocabulary;
-		return vocabulary.GetSymbolicName(token.Type) switch
+		return LexerVocabulary.GetSymbolicName(token.Type) switch
 		{
 			"ARG_NUM" or "VWX" or "REG_NUM" or "REG_ALPHA" or "REG_STARTCARET" => SemanticTokenType.Register,
 			"ENACTOR_NAME" or "CAP_ENACTOR_NAME" or "ACCENT_NAME" or "MONIKER_NAME" => SemanticTokenType.Substitution,
