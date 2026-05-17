@@ -180,22 +180,21 @@ public class ParserFailureTests
 	// ─── Command parse modes ───────────────────────────────────────────────────
 
 	/// <summary>
-	/// Missing paren inside a bracket substitution, via the CommandParse path.
+	/// Missing paren via the CommandList parse path (<see cref="ParseType.CommandList"/>).
 	/// <para>
-	/// A bare "add(1,2" prefix with a command word (e.g. "@emit add(1,2") is NOT
-	/// detectable at command-parse level: the command text before the function call
-	/// pushes the parser into <c>explicitEvaluationString</c> where <c>FUNCHAR</c>
-	/// is just generic text. Using a bracket substitution <c>[add(1,2]</c> is
-	/// representative of real command content and IS detectable: inside the bracket,
-	/// <c>evaluationString</c> starts fresh at <c>add(</c> (FUNCHAR-first → function),
-	/// so the missing <c>)</c> is caught.
+	/// <c>ParseType.Command</c> (<c>startSingleCommandString</c>) is structurally identical
+	/// to <c>ParseType.Function</c> — both reduce to <c>evaluationString EOF</c>.
+	/// <c>ParseType.CommandList</c> is distinct: it uses the <c>commandList</c> rule with
+	/// SEMICOLON splitting. Inside a command list, SEMICOLON cannot appear as generic text
+	/// (the <c>beginGenericText</c> predicate blocks it), so a missing <c>)</c> before <c>;</c>
+	/// is correctly surfaced as a parse error.
 	/// </para>
 	/// </summary>
 	[Test]
 	public async Task MissingParen_InCommandArg_CurrentBehavior()
 	{
 		var errors = Parser.ValidateAndGetErrors(
-			MModule.single("[add(1,2]"), ParseType.Command);
+			MModule.single("add(1,2;look"), ParseType.CommandList);
 		await Assert.That(errors).IsNotEmpty();
 	}
 
