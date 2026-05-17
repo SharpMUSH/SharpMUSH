@@ -235,6 +235,8 @@ x.AddConsumer<Consumers.MSDPUpdateConsumer>();
 x.AddConsumer<Consumers.NAWSUpdateConsumer>();
 x.AddConsumer<Consumers.ConnectionEstablishedConsumer>();
 x.AddConsumer<Consumers.ConnectionClosedConsumer>();
+x.AddConsumer<Consumers.PuebloNegotiatedConsumer>();
+x.AddConsumer<Consumers.MxpNegotiatedConsumer>();
 });
 
 services.AddFusionCache().TryWithAutoSetup();

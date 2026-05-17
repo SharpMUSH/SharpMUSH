@@ -2,6 +2,7 @@ using MarkupString;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Globalization;
@@ -200,6 +201,85 @@ public class ConnectionEstablishedConsumer(
 				{ "HostName", message.Hostname },
 				{ "ConnectionType", message.ConnectionType }
 			}));
+	}
+}
+
+/// <summary>
+/// Consumes Pueblo negotiated messages — sets OUTPUT_FORMAT metadata on the connection.
+/// Only upgrades to Pueblo if not already MXP (MXP is a superset of Pueblo).
+/// </summary>
+public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, IConnectionService connectionService)
+	: IMessageConsumer<PuebloNegotiatedMessage>
+{
+	internal static async Task<bool> WaitForConnectionRegistration(
+		IConnectionService connectionService,
+		long handle,
+		CancellationToken cancellationToken)
+	{
+		for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
+		{
+			if (connectionService.Get(handle) is not null)
+			{
+				return true;
+			}
+
+			try
+			{
+				await Task.Delay(ConnectionRetryPolicy.Delay, cancellationToken);
+			}
+			catch (OperationCanceledException)
+			{
+				return false;
+			}
+		}
+
+		return connectionService.Get(handle) is not null;
+	}
+
+	public async Task HandleAsync(PuebloNegotiatedMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogTrace("[NATS-RECV] PuebloNegotiatedMessage - Handle: {Handle}, Client: {Client}",
+			message.Handle, message.ClientResponse);
+
+		if (!await WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping Pueblo negotiation for unregistered handle {Handle}", message.Handle);
+			return;
+		}
+
+		// Only set Pueblo if not already upgraded to MXP
+		var conn = connectionService.Get(message.Handle);
+		if (conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") != "mxp")
+		{
+			connectionService.Update(message.Handle, "OUTPUT_FORMAT", "pueblo");
+		}
+
+		// Keep PUEBLO=1 for backward compat (pueblo() function reads it)
+		connectionService.Update(message.Handle, "PUEBLO", "1");
+
+	}
+}
+
+/// <summary>
+/// Consumes MXP negotiated messages — sets OUTPUT_FORMAT to "mxp" on the connection.
+/// MXP is a superset of Pueblo, so it takes priority over any prior Pueblo negotiation.
+/// </summary>
+public class MxpNegotiatedConsumer(ILogger<MxpNegotiatedConsumer> logger, IConnectionService connectionService)
+	: IMessageConsumer<MxpNegotiatedMessage>
+{
+	public async Task HandleAsync(MxpNegotiatedMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogTrace("[NATS-RECV] MxpNegotiatedMessage - Handle: {Handle}", message.Handle);
+
+		if (!await PuebloNegotiatedConsumer.WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping MXP negotiation for unregistered handle {Handle}", message.Handle);
+			return;
+		}
+
+		connectionService.Update(message.Handle, "OUTPUT_FORMAT", "mxp");
+		// MXP clients also understand Pueblo tags, so set PUEBLO=1 for pueblo() compat
+		connectionService.Update(message.Handle, "PUEBLO", "1");
 	}
 }
 

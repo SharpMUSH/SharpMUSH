@@ -45,3 +45,15 @@ public record ConnectionClosedMessage(long Handle, DateTimeOffset Timestamp) : I
 /// Message sent from ConnectionServer to MainProcess when a WebSocket client submits input
 /// </summary>
 public record WebSocketInputMessage(long Handle, string Input) : IHandleMessage;
+
+/// <summary>
+/// Message sent from ConnectionServer to MainProcess when Pueblo handshake is detected.
+/// The main process should set PUEBLO metadata on the connection.
+/// </summary>
+public record PuebloNegotiatedMessage(long Handle, string ClientResponse) : IHandleMessage;
+
+/// <summary>
+/// Message sent from ConnectionServer to MainProcess when MXP (telnet option 91) is negotiated.
+/// MXP is a superset of Pueblo — if both negotiate, MXP takes priority.
+/// </summary>
+public record MxpNegotiatedMessage(long Handle) : IHandleMessage;

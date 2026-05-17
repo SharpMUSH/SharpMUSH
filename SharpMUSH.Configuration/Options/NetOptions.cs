@@ -49,6 +49,9 @@ public record NetOptions(
 	[property: SharpConfig(Name = "pueblo", Category = "Net", Description = "Enable Pueblo/HTML client support", Group = "Network Protocol", Order = 1)]
 	bool Pueblo = false,
 
+	[property: SharpConfig(Name = "mxp", Category = "Net", Description = "Enable MXP (MUD eXtension Protocol) support", Group = "Network Protocol", Order = 2)]
+	bool Mxp = false,
+
 	[property: SharpConfig(Name = "sql_platform", Category = "Net", Description = "SQL database platform to use", Group = "Database", Order = 1)]
 	string? SqlPlatform = null,
 
@@ -89,6 +92,7 @@ public record NetOptions(
 		PlayerCreation: true,
 		Guests: true,
 		Pueblo: false,
+		Mxp: false,
 		SqlPlatform: null,
 		SqlHost: null,
 		SqlDatabase: null,

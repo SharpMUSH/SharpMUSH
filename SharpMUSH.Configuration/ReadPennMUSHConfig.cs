@@ -237,6 +237,7 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(NetOptions.PlayerCreation)), true),
 				Boolean(Get(nameof(NetOptions.Guests)), true),
 				Boolean(Get(nameof(NetOptions.Pueblo)), true),
+				Boolean(Get(nameof(NetOptions.Mxp)), true),
 				String(Get(nameof(NetOptions.SqlPlatform)), null),
 				String(Get(nameof(NetOptions.SqlHost)), "localhost"),
 				String(Get(nameof(NetOptions.SqlDatabase)), null),

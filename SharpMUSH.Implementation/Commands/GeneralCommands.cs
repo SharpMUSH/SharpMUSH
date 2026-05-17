@@ -13,6 +13,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using System.Net;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -21,11 +22,14 @@ using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
 using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
+using MarkupString;
+using MarkupString.MarkupImplementation;
 using static MarkupString.MStringInterpolation;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
@@ -38,6 +42,32 @@ public partial class Commands
 {
 	private const string DefaultSemaphoreAttribute = "SEMAPHORE";
 	private static readonly string[] DefaultSemaphoreAttributeArray = [DefaultSemaphoreAttribute];
+
+	/// <summary>
+	/// Wraps an exit name in a &lt;send&gt; HtmlMarkup tag for Pueblo/MXP clients.
+	/// The first alias (before ';') is used as the href command.
+	/// All aliases are pipe-delimited in the hint for right-click menus (BeipMU pattern).
+	/// For ANSI clients, HtmlMarkup passes through as plain text (only the display name).
+	/// </summary>
+	private static MString WrapExitInSendTag(string exitName)
+	{
+		// Exit names use ';' for aliases: "North;n;no" → display "North", href "North"
+		var aliases = exitName.Split(';');
+		var displayName = aliases[0];
+		var command = WebUtility.HtmlEncode(aliases[0]);
+		var hint = aliases.Length > 1
+			? WebUtility.HtmlEncode(string.Join("|", aliases))
+			: $"Go {command}";
+		var sendMarkup = HtmlMarkup.Create("send", $"href=\"{command}\" hint=\"{hint}\"");
+		return MModule.MarkupSingle2(sendMarkup, MModule.single(displayName));
+	}
+
+	private static MString FormatExitNameToDestination(MString exitName, string destName, string? locale = null)
+	{
+		var template = LocalizationService?.Get(nameof(ErrorMessages.Notifications.ExitNameToDestFormat), locale)
+			?? ErrorMessages.Notifications.ExitNameToDestFormat;
+		return MarkupTemplateFormatter.Format(template, exitName, MModule.single(destName));
+	}
 
 	/// <summary>
 	/// Handles delimiter/pid extraction for @dolist and @map commands when /DELIMIT or /PID is used.
@@ -767,32 +797,49 @@ public partial class Commands
 				};
 
 				// Build default exit display
+				// Exit names are wrapped in <send> tags for Pueblo/MXP clients.
+				// For ANSI clients, HtmlMarkup passes through as plain text.
 				var isTransparent = await realViewing.IsTransparent();
+				string? executorLocale = null;
+				if (ConnectionService != null)
+				{
+					await foreach (var connection in ConnectionService.Get(executor.Object().DBRef))
+					{
+						connection.Metadata.TryGetValue("Locale", out executorLocale);
+						break;
+					}
+				}
 				MString defaultExits;
 				if (isTransparent)
 				{
-					var exitDisplays = new List<string>();
+					var exitParts = new List<MString>();
 					foreach (var exit in visibleExits)
 					{
 						var exitObj = exit.WithRoomOption().Object();
 						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
 						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
 
+						var exitMString = WrapExitInSendTag(exitObj.Name);
+
 						if (await exit.WithRoomOption().IsOpaque())
 						{
-							exitDisplays.Add(exitObj.Name);
+							exitParts.Add(exitMString);
 						}
 						else
 						{
-							exitDisplays.Add($"{exitObj.Name} to {destName}");
+							exitParts.Add(FormatExitNameToDestination(exitMString, destName, executorLocale));
 						}
 					}
-					defaultExits = MModule.single(string.Join("\n", exitDisplays));
+					defaultExits = MModule.ConcatMany(exitParts.SelectMany<MString, MString>((part, i) =>
+						i > 0 ? [MModule.single("\n"), part] : [part]).ToArray());
 				}
 				else
 				{
-					var names = visibleExits.Select(x => x.Object().Name).ToList();
-					defaultExits = MModule.single($"Obvious exits:\n{MessageHelpers.FormatWithOxfordComma(names)}");
+					// Non-transparent: "Obvious exits:\nNorth, South, and East"
+					var exitMStrings = visibleExits.Select(x => WrapExitInSendTag(x.Object().Name)).ToList();
+					defaultExits = MModule.concat(
+						MModule.single("Obvious exits:\n"),
+						MessageHelpers.FormatMStringsWithOxfordComma(exitMStrings));
 				}
 
 				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
@@ -810,13 +857,20 @@ public partial class Commands
 						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
 						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
 
+						var exitMString = WrapExitInSendTag(exitObj.Name);
+
 						if (await exit.WithRoomOption().IsOpaque())
 						{
-							await NotifyService.Notify(executor, exitObj.Name, executor);
+							await NotifyService.Notify(executor, exitMString, executor);
 						}
 						else
 						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitNameToDestFormat), executor, exitObj.Name, destName);
+							await NotifyService.NotifyLocalizedMarkup(
+								executor,
+								nameof(ErrorMessages.Notifications.ExitNameToDestFormat),
+								executor,
+								exitMString,
+								MModule.single(destName));
 						}
 					}
 				}
