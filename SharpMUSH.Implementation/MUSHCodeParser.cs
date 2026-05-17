@@ -146,7 +146,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		MString text,
 		Func<SharpMUSHParser, TContext> entryPoint,
 		string methodName,
-		IMUSHCodeParser? parser = null)
+		IMUSHCodeParser? parser = null,
+		PredictionMode? predictionModeOverride = null)
 		where TContext : ParserRuleContext
 	{
 		// Use provided parser or default to this instance
@@ -164,7 +165,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
-			Interpreter = { PredictionMode = GetPredictionMode() },
+			Interpreter = { PredictionMode = predictionModeOverride ?? GetPredictionMode() },
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
 
@@ -205,6 +206,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 	public async ValueTask<CallState?> FunctionParse(MString text)
 	{
+		// Short-circuit: empty input (e.g. trailing comma in allof(1,2,3,)) → empty result.
+		// startPlainString requires a non-empty evaluationString; passing "" would trigger PARSER FAILURE.
+		if (string.IsNullOrEmpty(MModule.plainText(text).ToString()))
+			return CallState.Empty;
+
 		// Ensure we have invocation tracking for standalone function parsing
 		// Check if tracking is already initialized - if not, create a new parser with tracking
 		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
@@ -366,10 +372,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		=> ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse));
 
 	public ValueTask<CallState?> CommandEqSplitArgsParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse));
+		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse), predictionModeOverride: PredictionMode.LL);
 
 	public ValueTask<CallState?> CommandEqSplitParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse));
+		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse), predictionModeOverride: PredictionMode.LL);
 
 	/// <summary>
 	/// Tokenizes the input text and returns token information for syntax highlighting.
