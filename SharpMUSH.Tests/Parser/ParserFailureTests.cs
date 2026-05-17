@@ -180,20 +180,22 @@ public class ParserFailureTests
 	// ─── Command parse modes ───────────────────────────────────────────────────
 
 	/// <summary>
-	/// Missing paren via the CommandParse path (<see cref="ParseType.Command"/>).
+	/// Missing paren inside a bracket substitution, via the CommandParse path.
 	/// <para>
-	/// NOTE: when a command has text before the function call (e.g. "@emit add(1,2)"),
-	/// the parser takes the <c>explicitEvaluationString</c> branch and <c>FUNCHAR</c>
-	/// becomes plain generic text — so no error is raised at parse time (the error would
-	/// surface later when the argument is evaluated). Only inputs where the function call
-	/// is at the very start of the evaluation string can be caught here.
+	/// A bare "add(1,2" prefix with a command word (e.g. "@emit add(1,2") is NOT
+	/// detectable at command-parse level: the command text before the function call
+	/// pushes the parser into <c>explicitEvaluationString</c> where <c>FUNCHAR</c>
+	/// is just generic text. Using a bracket substitution <c>[add(1,2]</c> is
+	/// representative of real command content and IS detectable: inside the bracket,
+	/// <c>evaluationString</c> starts fresh at <c>add(</c> (FUNCHAR-first → function),
+	/// so the missing <c>)</c> is caught.
 	/// </para>
 	/// </summary>
 	[Test]
 	public async Task MissingParen_InCommandArg_CurrentBehavior()
 	{
 		var errors = Parser.ValidateAndGetErrors(
-			MModule.single("add(1,2"), ParseType.Command);
+			MModule.single("[add(1,2]"), ParseType.Command);
 		await Assert.That(errors).IsNotEmpty();
 	}
 
