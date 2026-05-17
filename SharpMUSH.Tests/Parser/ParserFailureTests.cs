@@ -5,7 +5,7 @@ namespace SharpMUSH.Tests.Parser;
 /// <summary>
 /// Tests that the evaluating parser (FunctionParse / CommandParse) correctly surfaces
 /// syntax errors as <c>#-1 PARSER FAILURE: ...</c> messages. ANTLR's <c>DefaultErrorStrategy</c>
-/// still recovers internally, but the collecting <see cref="ParserErrorListener"/> intercepts
+/// still recovers internally, but the collecting <see cref="SharpMUSH.Implementation.ParserErrorListener"/> intercepts
 /// every <c>SyntaxError</c> callback and causes <c>ParseInternal</c> to return the formatted
 /// failure string before visiting the (partial) recovery tree.
 /// </summary>
@@ -67,7 +67,7 @@ public class ParserFailureTests
 
 	/// <summary>
 	/// Unclosed bracket evaluation expression. The bracket opener starts an
-	/// evaluated sub-expression but the closing ']' is missing.
+	/// evaluated sub-expression, but the closing ']' is missing.
 	/// </summary>
 	[Test]
 	public async Task MissingBracket_SingleLevel_CurrentBehavior()
@@ -130,7 +130,7 @@ public class ParserFailureTests
 		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2"), ParseType.Function);
 		await Assert.That(errors).IsNotEmpty();
 		var col = errors[0].Column;
-		Console.WriteLine($"add(1,2  → error column {col}");
+		Console.WriteLine($@"add(1,2 → error column {col}");
 		// EOF is reported at the position after the last character (column 7)
 		await Assert.That(col).IsEqualTo(7);
 	}
@@ -158,7 +158,7 @@ public class ParserFailureTests
 		var errors = Parser.ValidateAndGetErrors(MModule.single(input), ParseType.Function);
 		await Assert.That(errors).IsNotEmpty();
 		var col = errors[0].Column;
-		Console.WriteLine($"{input}  → error column {col}  (input length {input.Length})");
+		Console.WriteLine($@"{input} → error column {col} (input length {input.Length})");
 		await Assert.That(col).IsEqualTo(input.Length);
 	}
 
@@ -194,11 +194,11 @@ public class ParserFailureTests
 	public async Task MissingParen_InCommandArg_CurrentBehavior()
 	{
 		var errors = Parser.ValidateAndGetErrors(
-			MModule.single("add(1,2;look"), ParseType.CommandList);
+			MModule.single("think add(1,2"), ParseType.CommandList);
 		await Assert.That(errors).IsNotEmpty();
 	}
 
-	/// <summary>Missing paren in a CommandEqSplit context (e.g. &ATTR obj=add(1,2).</summary>
+	/// <summary>Missing paren in a CommandEqSplit context (e.g., &ATTR obj=add(1,2).</summary>
 	[Test]
 	public async Task MissingParen_InEqSplit_CurrentBehavior()
 	{
@@ -218,7 +218,7 @@ public class ParserFailureTests
 	{
 		// add(1,5)) — the outer ) closes add(), inner ) has no opener → literal text
 		var result = await Eval("add(1,5))");
-		Console.WriteLine($"add(1,5))  → '{result}'");
+		Console.WriteLine($@"add(1,5)) → '{result}'");
 		// Expect "6)" — the orphaned ) becomes literal text
 		await Assert.That(result).IsEqualTo("6)");
 	}
@@ -230,7 +230,7 @@ public class ParserFailureTests
 	public async Task EscapedCloseParen_IsLiteralText()
 	{
 		var result = await Eval("strcat(a,\\),b)");
-		Console.WriteLine($"strcat(a,\\),b)  → '{result}'");
+		Console.WriteLine($@"strcat(a,\),b) → '{result}'");
 		await Assert.That(result).IsEqualTo("a)b");
 	}
 }
