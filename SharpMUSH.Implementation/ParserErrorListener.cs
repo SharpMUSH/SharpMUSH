@@ -70,14 +70,6 @@ public class ParserErrorListener : BaseErrorListener
 			expectedTokens = ParseExpectedFromMessage(msg);
 		}
 
-		// When structural closers (')' ']' '}') co-appear with separators (',') in the
-		// expected set, drop the separators. A missing closer is the primary problem;
-		// listing ',' alongside ')' is accurate but confusing.
-		if (expectedTokens is { Count: > 1 })
-		{
-			expectedTokens = PrioritiseStructuralTokens(expectedTokens);
-		}
-
 		var snippet = BuildSnippet(_inputText, charPositionInLine);
 		var enhancedMessage = EnhanceErrorMessage(msg, offendingSymbol, expectedTokens);
 
@@ -148,17 +140,6 @@ public class ParserErrorListener : BaseErrorListener
 	/// </summary>
 	internal static string? MapTokenName(string antlrName)
 		=> TokenDisplayNames.TryGetValue(antlrName, out var display) ? display : null;
-
-	/// <summary>
-	/// When the expected-token list contains structural closers (<c>)</c>, <c>]</c>, <c>}</c>)
-	/// alongside separators (<c>,</c>) or other noise, keep only the structural closers.
-	/// This prevents messages like "Expected ) or ," when the real issue is a missing closer.
-	/// </summary>
-	internal static List<string> PrioritiseStructuralTokens(List<string> tokens)
-	{
-		var structural = tokens.Where(t => t is ")" or "]" or "}").ToList();
-		return structural.Count > 0 ? structural : tokens;
-	}
 
 	/// <summary>
 	/// Parses ANTLR's generated error message to extract a list of expected tokens.
