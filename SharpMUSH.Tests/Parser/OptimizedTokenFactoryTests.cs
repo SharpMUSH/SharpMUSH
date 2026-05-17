@@ -52,7 +52,7 @@ public class OptimizedTokenFactoryTests
 		};
 		var baselineTokens = ReadAllTokens(baselineLexer);
 
-		var optimizedStream = CreateStringSpanInputStream(input, nameof(OptimizedTokenFactory_ShouldMatchCommonTokenFactory_ForLexerOutput));
+		var optimizedStream = CreateStringSpanInputStream(input, "OptimizedFactoryTest");
 		var optimizedLexer = new SharpMUSHLexer(optimizedStream)
 		{
 			TokenFactory = GetOptimizedTokenFactory()
@@ -86,7 +86,7 @@ public class OptimizedTokenFactoryTests
 		const int line = 1;
 		const int column = 0;
 
-		var stream = CreateStringSpanInputStream(input, nameof(OptimizedTokenFactory_ShouldMatchCommonTokenFactory_ForOutOfRangeTokenText));
+		var stream = CreateStringSpanInputStream(input, "OutOfRangeTest");
 		var lexer = new SharpMUSHLexer(stream);
 		var source = Tuple.Create<ITokenSource, ICharStream>(lexer, stream);
 		var optimizedFactory = GetOptimizedTokenFactory();
