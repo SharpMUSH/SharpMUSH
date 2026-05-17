@@ -28,7 +28,7 @@ namespace SharpMUSH.Implementation;
 /// <item><description>Services are resolved once at construction and cached to avoid repeated DI lookups</description></item>
 /// <item><description>CommandTrie provides O(m) prefix matching where m is the length of the search string</description></item>
 /// <item><description>ParseInternal() consolidates parser/lexer creation to reduce code duplication</description></item>
-/// <item><description>Custom span-based streams (BufferedTokenSpanStream, AntlrInputStreamSpan) minimize allocations</description></item>
+/// <item><description>Custom span-based streams and token factory (BufferedTokenSpanStream, StringSpanInputStream, OptimizedTokenFactory) minimize allocations</description></item>
 /// <item><description>Prediction mode can be configured (SLL vs LL) for performance vs accuracy tradeoff</description></item>
 /// </list>
 /// 
@@ -48,6 +48,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	private readonly ICommandDiscoveryService _commandDiscoveryService = ServiceProvider.GetRequiredService<ICommandDiscoveryService>();
 	private readonly IAttributeService _attributeService = ServiceProvider.GetRequiredService<IAttributeService>();
 	private readonly IHookService _hookService = ServiceProvider.GetRequiredService<IHookService>();
+
+	// Lexer vocabulary is static and immutable — cached once to avoid allocating a new lexer on every fallback classification
+	private static readonly IVocabulary LexerVocabulary =
+		new SharpMUSHLexer(new StringSpanInputStream(string.Empty, string.Empty)).Vocabulary;
 
 	// Command trie for efficient prefix-based command lookup
 	private readonly CommandTrie _commandTrie = BuildCommandTrie(CommandLibrary);
@@ -148,8 +152,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Use provided parser or default to this instance
 		parser ??= this;
 
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), methodName);
-		SharpMUSHLexer sharpLexer = new(inputStream);
+		StringSpanInputStream inputStream = new(MModule.plainText(text), methodName);
+		SharpMUSHLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
@@ -236,8 +243,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public Func<ValueTask<CallState?>> CommandListParseVisitor(MString text)
 	{
 		var plaintext = MModule.plainText(text);
-		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(CommandListParseVisitor));
-		SharpMUSHLexer sharpLexer = new(inputStream);
+		StringSpanInputStream inputStream = new(plaintext, nameof(CommandListParseVisitor));
+		SharpMUSHLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
@@ -353,17 +363,27 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IReadOnlyList<TokenInfo> Tokenize(MString text)
 	{
 		var plaintext = MModule.plainText(text);
-		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(Tokenize));
-		SharpMUSHLexer sharpLexer = new(inputStream);
-
-		var tokens = new List<TokenInfo>();
-		IToken token;
-
-		while ((token = sharpLexer.NextToken()).Type != TokenConstants.EOF)
+		StringSpanInputStream inputStream = new(plaintext, nameof(Tokenize));
+		SharpMUSHLexer sharpLexer = new(inputStream)
 		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
+
+		var tokenArray = bufferedTokenSpanStream.TokenArray;
+		if (tokenArray is null || tokenArray.Length <= 1)
+		{
+			return [];
+		}
+
+		var tokens = new List<TokenInfo>(tokenArray.Length - 1);
+		for (var i = 0; i < tokenArray.Length - 1; i++)
+		{
+			var token = tokenArray[i];
 			var tokenInfo = new TokenInfo
 			{
-				Type = sharpLexer.Vocabulary.GetSymbolicName(token.Type) ?? $"Token{token.Type}",
+				Type = LexerVocabulary.GetSymbolicName(token.Type) ?? $"Token{token.Type}",
 				StartIndex = token.StartIndex,
 				EndIndex = token.StopIndex,
 				Text = token.Text ?? string.Empty,
@@ -385,8 +405,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IReadOnlyList<ParseError> ValidateAndGetErrors(MString text, ParseType parseType = ParseType.Function)
 	{
 		var plaintext = MModule.plainText(text);
-		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(ValidateAndGetErrors));
-		SharpMUSHLexer sharpLexer = new(inputStream);
+		StringSpanInputStream inputStream = new(plaintext, nameof(ValidateAndGetErrors));
+		SharpMUSHLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
@@ -455,7 +478,18 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IReadOnlyList<Diagnostic> GetDiagnostics(MString text, ParseType parseType = ParseType.Function)
 	{
 		var errors = ValidateAndGetErrors(text, parseType);
-		return errors.Select(e => e.ToDiagnostic()).ToList();
+		if (errors.Count == 0)
+		{
+			return [];
+		}
+
+		var diagnostics = new List<Diagnostic>(errors.Count);
+		for (var i = 0; i < errors.Count; i++)
+		{
+			diagnostics.Add(errors[i].ToDiagnostic());
+		}
+
+		return diagnostics;
 	}
 
 	/// <summary>
@@ -464,8 +498,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IReadOnlyList<SemanticToken> GetSemanticTokens(MString text, ParseType parseType = ParseType.Function)
 	{
 		var plaintext = MModule.plainText(text);
-		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(GetSemanticTokens));
-		SharpMUSHLexer sharpLexer = new(inputStream);
+		StringSpanInputStream inputStream = new(plaintext, nameof(GetSemanticTokens));
+		SharpMUSHLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
@@ -542,30 +579,42 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		BufferedTokenSpanStream tokenStream,
 		string sourceText)
 	{
+		var tokenArray = tokenStream.TokenArray;
+		var tokenCount = tokenArray is not null ? tokenArray.Length - 1 : 0;
+
 		// Single tree walk: classify every terminal by its immediate parse-tree parent context.
 		// This is the canonical correct approach — it handles all tokens that appear in multiple
 		// grammatical roles (CCARET, EQUALS, COMMAWS, SEMICOLON, FUNCHAR, …) without per-symbol
 		// special-case pre-walks.
-		var classifications = new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>();
+		var classifications = new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>(tokenCount);
 		CollectTerminalClassifications(context, classifications, sourceText);
 
-		var semanticTokens = new List<SemanticToken>();
-		foreach (var token in tokenStream.tokens.Where(t => t.Type != TokenConstants.EOF))
-		{
-			if (!classifications.TryGetValue(token.TokenIndex, out var info))
-				info = (SemanticTokenType.Text, SemanticTokenModifier.None);
+		var semanticTokens = new List<SemanticToken>(tokenCount);
 
-			semanticTokens.Add(new SemanticToken
+		// Use the pre-built TokenArray (set when Fill() reaches EOF) to avoid the LINQ
+		// enumerator allocation from tokenStream.tokens.Where(...). EOF is always the
+		// last element in TokenArray, so iterate all-but-last.
+		if (tokenArray is not null)
+		{
+			for (var i = 0; i < tokenArray.Length - 1; i++)
 			{
-				Range = new LspRange
+				var token = tokenArray[i];
+				if (!classifications.TryGetValue(token.TokenIndex, out var info))
+					info = (SemanticTokenType.Text, SemanticTokenModifier.None);
+
+				var text = token.Text;
+				semanticTokens.Add(new SemanticToken
 				{
-					Start = new Position(token.Line - 1, token.Column),
-					End = new Position(token.Line - 1, token.Column + token.Text.Length)
-				},
-				TokenType = info.Type,
-				Modifiers = info.Mod,
-				Text = token.Text
-			});
+					Range = new LspRange
+					{
+						Start = new Position(token.Line - 1, token.Column),
+						End = new Position(token.Line - 1, token.Column + text.Length)
+					},
+					TokenType = info.Type,
+					Modifiers = info.Mod,
+					Text = text
+				});
+			}
 		}
 
 		return semanticTokens;
@@ -680,8 +729,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	private SemanticTokenType ClassifyByTokenType(IToken token, string sourceText)
 	{
-		var vocabulary = new SharpMUSHLexer(new AntlrInputStreamSpan(ReadOnlyMemory<char>.Empty, "")).Vocabulary;
-		return vocabulary.GetSymbolicName(token.Type) switch
+		return LexerVocabulary.GetSymbolicName(token.Type) switch
 		{
 			"ARG_NUM" or "VWX" or "REG_NUM" or "REG_ALPHA" or "REG_STARTCARET" => SemanticTokenType.Register,
 			"ENACTOR_NAME" or "CAP_ENACTOR_NAME" or "ACCENT_NAME" or "MONIKER_NAME" => SemanticTokenType.Substitution,
@@ -707,7 +755,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var functionName = functionText.TrimEnd('(', ' ', '\t', '\r', '\n', '\f');
 
 		// Check if it's a built-in function
-		if (FunctionLibrary.TryGetValue(functionName.ToLower(), out var functionInfo))
+		if (FunctionLibrary.TryGetValue(functionName, out var functionInfo)
+			|| FunctionLibrary.TryGetValue(functionName.ToLowerInvariant(), out functionInfo))
 		{
 			return functionInfo.IsSystem
 				? SemanticTokenType.Function
