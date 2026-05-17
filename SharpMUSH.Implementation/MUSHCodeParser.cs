@@ -168,12 +168,26 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
 
+		// Always collect syntax errors. Remove the default ConsoleErrorListener so ANTLR
+		// does not print noise to stdout, then add our collecting listener.
+		sharpParser.RemoveErrorListeners();
+		var errorListener = new ParserErrorListener(MModule.plainText(text).ToString());
+		sharpParser.AddErrorListener(errorListener);
+
 		if (Configuration.CurrentValue.Debug.DebugSharpParser)
 		{
 			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		}
 
 		var context = entryPoint(sharpParser);
+
+		// If the parser detected a real syntax error, surface it as a MUSH failure string.
+		// We deliberately do NOT visit the partial recovery tree — its result is unreliable.
+		if (errorListener.HasErrors)
+		{
+			return ValueTask.FromResult<CallState?>(
+				new CallState(MModule.single(errorListener.Errors[0].ToMushFailureString())));
+		}
 
 		SharpMUSHParserVisitor visitor = new(Logger, parser,
 			Configuration,

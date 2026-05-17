@@ -115,6 +115,10 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WrongArgumentsRange = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS AND AT MOST {2} BUT GOT {3}";
 
+		// Parser errors
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ParserFailure = "#-1 PARSER FAILURE: {0}";
+
 		// State and operation errors
 		public const string NothingToEvaluate = "#-1 NOTHING TO EVALUATE";
 		public const string NothingToDo = "#-1 NOTHING TO DO";

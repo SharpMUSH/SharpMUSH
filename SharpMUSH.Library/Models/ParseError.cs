@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Definitions;
+
 namespace SharpMUSH.Library.Models;
 
 /// <summary>
@@ -43,6 +45,35 @@ public record ParseError
 	public string? InputText { get; init; }
 
 	/// <summary>
+	/// A short window of text around the error position (±15 characters), for context.
+	/// </summary>
+	public string? Snippet { get; init; }
+
+	/// <summary>
+	/// Formats this error as a MUSH-facing <c>#-1 PARSER FAILURE: ...</c> string.
+	/// Uses <see cref="ExpectedTokens"/> (human-readable), <see cref="Column"/>,
+	/// and <see cref="Snippet"/> to produce a compact, useful message.
+	/// </summary>
+	public string ToMushFailureString()
+	{
+		var isAtEnd = string.IsNullOrEmpty(InputText) || Column >= InputText.Length;
+		var positionLabel = isAtEnd ? "end of expression" : $"position {Column}";
+
+		var expected = ExpectedTokens is { Count: > 0 }
+			? $"Expected {string.Join(" or ", ExpectedTokens)}"
+			: Message;
+
+		var detail = $"{expected} at {positionLabel}";
+
+		if (!string.IsNullOrEmpty(Snippet) && !isAtEnd)
+		{
+			detail += $" (near \"{Snippet}\")";
+		}
+
+		return string.Format(ErrorMessages.Returns.ParserFailure, detail);
+	}
+
+	/// <summary>
 	/// Converts this ParseError to an LSP-compatible Diagnostic.
 	/// </summary>
 	public Diagnostic ToDiagnostic()
@@ -81,3 +112,4 @@ public record ParseError
 		return msg;
 	}
 }
+
