@@ -368,15 +368,22 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			TokenFactory = OptimizedTokenFactory.Default
 		};
+		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
+		bufferedTokenSpanStream.Fill();
 
-		var tokens = new List<TokenInfo>();
-		IToken token;
-
-		while ((token = sharpLexer.NextToken()).Type != TokenConstants.EOF)
+		var tokenArray = bufferedTokenSpanStream.TokenArray;
+		if (tokenArray is null || tokenArray.Length <= 1)
 		{
+			return [];
+		}
+
+		var tokens = new List<TokenInfo>(tokenArray.Length - 1);
+		for (var i = 0; i < tokenArray.Length - 1; i++)
+		{
+			var token = tokenArray[i];
 			var tokenInfo = new TokenInfo
 			{
-				Type = sharpLexer.Vocabulary.GetSymbolicName(token.Type) ?? $"Token{token.Type}",
+				Type = LexerVocabulary.GetSymbolicName(token.Type) ?? $"Token{token.Type}",
 				StartIndex = token.StartIndex,
 				EndIndex = token.StopIndex,
 				Text = token.Text ?? string.Empty,
@@ -471,7 +478,18 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IReadOnlyList<Diagnostic> GetDiagnostics(MString text, ParseType parseType = ParseType.Function)
 	{
 		var errors = ValidateAndGetErrors(text, parseType);
-		return errors.Select(e => e.ToDiagnostic()).ToList();
+		if (errors.Count == 0)
+		{
+			return [];
+		}
+
+		var diagnostics = new List<Diagnostic>(errors.Count);
+		for (var i = 0; i < errors.Count; i++)
+		{
+			diagnostics.Add(errors[i].ToDiagnostic());
+		}
+
+		return diagnostics;
 	}
 
 	/// <summary>
@@ -561,19 +579,25 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		BufferedTokenSpanStream tokenStream,
 		string sourceText)
 	{
+		var tokenArray = tokenStream.TokenArray;
+		var tokenCount = tokenArray is not null ? tokenArray.Length - 1 : 0;
+
 		// Single tree walk: classify every terminal by its immediate parse-tree parent context.
 		// This is the canonical correct approach — it handles all tokens that appear in multiple
 		// grammatical roles (CCARET, EQUALS, COMMAWS, SEMICOLON, FUNCHAR, …) without per-symbol
 		// special-case pre-walks.
-		var classifications = new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>();
+		var classifications = tokenCount > 0
+			? new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>(tokenCount)
+			: new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>();
 		CollectTerminalClassifications(context, classifications, sourceText);
 
-		var semanticTokens = new List<SemanticToken>();
+		var semanticTokens = tokenCount > 0
+			? new List<SemanticToken>(tokenCount)
+			: new List<SemanticToken>();
 
 		// Use the pre-built TokenArray (set when Fill() reaches EOF) to avoid the LINQ
 		// enumerator allocation from tokenStream.tokens.Where(...). EOF is always the
 		// last element in TokenArray, so iterate all-but-last.
-		var tokenArray = tokenStream.TokenArray;
 		if (tokenArray is not null)
 		{
 			for (var i = 0; i < tokenArray.Length - 1; i++)
@@ -735,7 +759,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var functionName = functionText.TrimEnd('(', ' ', '\t', '\r', '\n', '\f');
 
 		// Check if it's a built-in function
-		if (FunctionLibrary.TryGetValue(functionName.ToLower(), out var functionInfo))
+		if (FunctionLibrary.TryGetValue(functionName, out var functionInfo))
 		{
 			return functionInfo.IsSystem
 				? SemanticTokenType.Function
