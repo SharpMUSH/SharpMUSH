@@ -3,17 +3,11 @@ using SharpMUSH.Library.ParserInterfaces;
 namespace SharpMUSH.Tests.Parser;
 
 /// <summary>
-/// Documents the CURRENT behavior of the evaluating parser (FunctionParse / CommandParse)
-/// when it encounters syntax errors. ANTLR's DefaultErrorStrategy recovers silently, so
-/// most cases here currently return a partial/wrong result rather than a #-1 error.
-///
-/// These tests serve two purposes:
-///  1. Establish a baseline of what the parser does TODAY (before error interception).
-///  2. Become the acceptance tests once interception is wired in (todos wire-listener /
-///     implement-error-interception) — at that point the expected values will change to
-///     "#-1 PARSER FAILURE: ..." strings.
-///
-/// Tests marked [Skip] document cases where the expected end-state is not yet decided.
+/// Tests that the evaluating parser (FunctionParse / CommandParse) correctly surfaces
+/// syntax errors as <c>#-1 PARSER FAILURE: ...</c> messages. ANTLR's <c>DefaultErrorStrategy</c>
+/// still recovers internally, but the collecting <see cref="ParserErrorListener"/> intercepts
+/// every <c>SyntaxError</c> callback and causes <c>ParseInternal</c> to return the formatted
+/// failure string before visiting the (partial) recovery tree.
 /// </summary>
 public class ParserFailureTests
 {
@@ -41,17 +35,14 @@ public class ParserFailureTests
 	}
 
 	/// <summary>
-	/// Single-level missing ')'. ANTLR recovers by treating EOF as the closer.
-	/// Documents current (pre-interception) return value.
+	/// Single-level missing ')'. The error listener intercepts ANTLR's EOF error
+	/// and returns a PARSER FAILURE string instead of a partial result.
 	/// </summary>
 	[Test]
 	public async Task MissingParen_SingleLevel_CurrentBehavior()
 	{
 		var result = await Eval("add(1,2");
-		// Document what we get today. After interception this should become:
-		// "#-1 PARSER FAILURE: Expected ) at position 7 ..."
-		Console.WriteLine($"add(1,2  → '{result}'");
-		await Assert.That(result).IsNotNull();
+		await Assert.That(result).IsEqualTo("#-1 PARSER FAILURE: Expected ) or , at end of expression");
 	}
 
 	/// <summary>
@@ -61,8 +52,7 @@ public class ParserFailureTests
 	public async Task MissingParen_FourLevelsDeep_CurrentBehavior()
 	{
 		var result = await Eval("add(1,add(1,add(1,add(1,5)))");
-		Console.WriteLine($"add(1,add(1,add(1,add(1,5)))  → '{result}'");
-		await Assert.That(result).IsNotNull();
+		await Assert.That(result).IsEqualTo("#-1 PARSER FAILURE: Expected ) or , at end of expression");
 	}
 
 	/// <summary>Missing ')' with a string function.</summary>
@@ -70,8 +60,7 @@ public class ParserFailureTests
 	public async Task MissingParen_StrCat_CurrentBehavior()
 	{
 		var result = await Eval("strcat(foo,bar");
-		Console.WriteLine($"strcat(foo,bar  → '{result}'");
-		await Assert.That(result).IsNotNull();
+		await Assert.That(result).IsEqualTo("#-1 PARSER FAILURE: Expected ) or , at end of expression");
 	}
 
 	// ─── Missing closing bracket ───────────────────────────────────────────────
@@ -84,8 +73,8 @@ public class ParserFailureTests
 	public async Task MissingBracket_SingleLevel_CurrentBehavior()
 	{
 		var result = await Eval("[add(1,2)");
-		Console.WriteLine($"[add(1,2)  → '{result}'");
-		await Assert.That(result).IsNotNull();
+		await Assert.That(result).StartsWith("#-1 PARSER FAILURE:");
+		await Assert.That(result).Contains("Expected ]");
 	}
 
 	/// <summary>Function call inside bracket, bracket unclosed.</summary>
@@ -93,8 +82,8 @@ public class ParserFailureTests
 	public async Task MissingBracket_InsideFunction_CurrentBehavior()
 	{
 		var result = await Eval("strcat(a,[add(1,2),b)");
-		Console.WriteLine($"strcat(a,[add(1,2),b)  → '{result}'");
-		await Assert.That(result).IsNotNull();
+		await Assert.That(result).StartsWith("#-1 PARSER FAILURE:");
+		await Assert.That(result).Contains("Expected ]");
 	}
 
 	// ─── Missing closing brace ─────────────────────────────────────────────────
@@ -106,8 +95,8 @@ public class ParserFailureTests
 	public async Task MissingBrace_CurrentBehavior()
 	{
 		var result = await Eval("{unclosed content");
-		Console.WriteLine($"{{unclosed content  → '{result}'");
-		await Assert.That(result).IsNotNull();
+		await Assert.That(result).StartsWith("#-1 PARSER FAILURE:");
+		await Assert.That(result).Contains("Expected }");
 	}
 
 	/// <summary>Unclosed brace inside a function argument.</summary>
@@ -115,8 +104,8 @@ public class ParserFailureTests
 	public async Task MissingBrace_InsideFunction_CurrentBehavior()
 	{
 		var result = await Eval("strcat(a,{unclosed,b)");
-		Console.WriteLine($"strcat(a,{{unclosed,b)  → '{result}'");
-		await Assert.That(result).IsNotNull();
+		await Assert.That(result).StartsWith("#-1 PARSER FAILURE:");
+		await Assert.That(result).Contains("Expected }");
 	}
 
 	// ─── Multiple errors ───────────────────────────────────────────────────────
@@ -126,8 +115,7 @@ public class ParserFailureTests
 	public async Task MultipleErrors_TwoUnclosedFunctions_CurrentBehavior()
 	{
 		var result = await Eval("add(strcat(a,b)");
-		Console.WriteLine($"add(strcat(a,b)  → '{result}'");
-		await Assert.That(result).IsNotNull();
+		await Assert.That(result).IsEqualTo("#-1 PARSER FAILURE: Expected ) or , at end of expression");
 	}
 
 	// ─── Position accuracy (via ValidateAndGetErrors) ──────────────────────────
@@ -156,8 +144,7 @@ public class ParserFailureTests
 		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2"), ParseType.Function);
 		await Assert.That(errors).IsNotEmpty();
 		var snippet = errors[0].Snippet;
-		Console.WriteLine($"add(1,2  → snippet '{snippet}'");
-		await Assert.That(snippet).IsNotNull();
+		await Assert.That(snippet).IsNotEmpty();
 	}
 
 	/// <summary>
@@ -198,13 +185,7 @@ public class ParserFailureTests
 	{
 		var errors = Parser.ValidateAndGetErrors(
 			MModule.single("@emit add(1,2"), ParseType.Command);
-		Console.WriteLine($"@emit add(1,2  → {errors.Count} error(s)");
-		// Just document: how many errors, and what they say.
-		if (errors.Count > 0)
-		{
-			Console.WriteLine($"  First: col={errors[0].Column}, msg={errors[0].Message}");
-		}
-		await Assert.That(errors).IsNotNull();
+		await Assert.That(errors).IsNotEmpty();
 	}
 
 	/// <summary>Missing paren in a CommandEqSplit context (e.g. &ATTR obj=add(1,2).</summary>
@@ -213,12 +194,7 @@ public class ParserFailureTests
 	{
 		var errors = Parser.ValidateAndGetErrors(
 			MModule.single("some=add(1,2"), ParseType.CommandEqSplit);
-		Console.WriteLine($"some=add(1,2  → {errors.Count} error(s)");
-		if (errors.Count > 0)
-		{
-			Console.WriteLine($"  First: col={errors[0].Column}, msg={errors[0].Message}");
-		}
-		await Assert.That(errors).IsNotNull();
+		await Assert.That(errors).IsNotEmpty();
 	}
 
 	// ─── Edge cases ────────────────────────────────────────────────────────────

@@ -56,7 +56,7 @@ public record ParseError
 	/// </summary>
 	public string ToMushFailureString()
 	{
-		var isAtEnd = string.IsNullOrEmpty(InputText) || Column >= InputText.Length;
+		var isAtEnd = string.IsNullOrEmpty(InputText) || IsEndOfLine(InputText, Line, Column);
 		var positionLabel = isAtEnd ? "end of expression" : $"position {Column}";
 
 		var expected = ExpectedTokens is { Count: > 0 }
@@ -71,6 +71,26 @@ public record ParseError
 		}
 
 		return string.Format(ErrorMessages.Returns.ParserFailure, detail);
+	}
+
+	/// <summary>
+	/// Returns <c>true</c> when <paramref name="column"/> is at or past the end of the
+	/// specified 1-based <paramref name="line"/> within <paramref name="text"/>.
+	/// Handles multi-line input correctly.
+	/// </summary>
+	private static bool IsEndOfLine(string text, int line, int column)
+	{
+		var lineStart = 0;
+		for (var i = 1; i < line; i++)
+		{
+			var nl = text.IndexOf('\n', lineStart);
+			if (nl == -1) return column >= text.Length - lineStart;
+			lineStart = nl + 1;
+		}
+
+		var lineEnd = text.IndexOf('\n', lineStart);
+		var lineLength = lineEnd == -1 ? text.Length - lineStart : lineEnd - lineStart;
+		return column >= lineLength;
 	}
 
 	/// <summary>

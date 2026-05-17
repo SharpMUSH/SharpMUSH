@@ -70,7 +70,7 @@ public class ParserErrorListener : BaseErrorListener
 			expectedTokens = ParseExpectedFromMessage(msg);
 		}
 
-		var snippet = BuildSnippet(_inputText, charPositionInLine);
+		var snippet = BuildSnippet(_inputText, line, charPositionInLine);
 		var enhancedMessage = EnhanceErrorMessage(msg, offendingSymbol, expectedTokens);
 
 		LspRange? errorRange = null;
@@ -113,19 +113,16 @@ public class ParserErrorListener : BaseErrorListener
 			if (expectedTokenSet is null || expectedTokenSet.Count == 0)
 				return null;
 
-			var expectedTokens = new List<string>();
 			var vocabulary = parser.Vocabulary;
-
-			foreach (var tokenType in expectedTokenSet.ToArray())
-			{
-				var symbolicName = vocabulary.GetSymbolicName(tokenType);
-				var literalName = vocabulary.GetLiteralName(tokenType)?.Trim('\'');
-
-				// Prefer mapped display names, then literal names, then symbolic names.
-				var raw = symbolicName ?? literalName ?? $"<token {tokenType}>";
-				var display = MapTokenName(raw) ?? literalName ?? raw;
-				expectedTokens.Add(display);
-			}
+			var expectedTokens = expectedTokenSet.ToArray()
+				.Select(tokenType =>
+				{
+					var symbolicName = vocabulary.GetSymbolicName(tokenType);
+					var literalName = vocabulary.GetLiteralName(tokenType)?.Trim('\'');
+					var raw = symbolicName ?? literalName ?? $"<token {tokenType}>";
+					return MapTokenName(raw) ?? literalName ?? raw;
+				})
+				.ToList();
 
 			return expectedTokens.Count > 0 ? expectedTokens : null;
 		}
@@ -211,17 +208,30 @@ public class ParserErrorListener : BaseErrorListener
 	}
 
 	/// <summary>
-	/// Extracts a short window of plain text around <paramref name="column"/>.
-	/// The result is trimmed of leading/trailing whitespace and prefixed with "..." / suffixed
-	/// with "..." when the window does not reach the start/end of the input.
+	/// Extracts a short window of plain text around the error position.
+	/// The result is prefixed with "..." / suffixed with "..." when the window
+	/// does not reach the start/end of the input.
 	/// </summary>
-	internal static string? BuildSnippet(string inputText, int column)
+	/// <param name="inputText">The full input string.</param>
+	/// <param name="line">The 1-based line number of the error.</param>
+	/// <param name="charPositionInLine">The 0-based column within that line.</param>
+	internal static string? BuildSnippet(string inputText, int line, int charPositionInLine)
 	{
-		if (string.IsNullOrEmpty(inputText) || column < 0)
+		if (string.IsNullOrEmpty(inputText) || charPositionInLine < 0)
 			return null;
 
-		var start = Math.Max(0, column - SnippetRadius);
-		var end   = Math.Min(inputText.Length, column + SnippetRadius);
+		// Compute the absolute offset of the error position within the full input.
+		var lineStart = 0;
+		for (var i = 1; i < line; i++)
+		{
+			var newline = inputText.IndexOf('\n', lineStart);
+			if (newline == -1) { lineStart = inputText.Length; break; }
+			lineStart = newline + 1;
+		}
+
+		var absoluteOffset = lineStart + charPositionInLine;
+		var start = Math.Max(0, absoluteOffset - SnippetRadius);
+		var end   = Math.Min(inputText.Length, absoluteOffset + SnippetRadius);
 
 		if (start >= end)
 			return null;
