@@ -27,7 +27,6 @@ public class CommandUnitTests
 	/// but this was previously only working via ANTLR silent error-recovery.
 	/// </summary>
 	[Test]
-	[Skip("Pending: ]command NoEval semantics not yet implemented")]
 	[Arguments("]think [add(1,2)]3", "[add(1,2)]3")]
 	public async Task Test_NoEval(string str, string expected)
 	{
