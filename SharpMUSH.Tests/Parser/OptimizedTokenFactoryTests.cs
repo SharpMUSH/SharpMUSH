@@ -28,15 +28,13 @@ public class OptimizedTokenFactoryTests
 	private static List<IToken> ReadAllTokens(SharpMUSHLexer lexer)
 	{
 		var tokens = new List<IToken>();
-		while (true)
+		IToken token;
+		do
 		{
-			var token = lexer.NextToken();
+			token = lexer.NextToken();
 			tokens.Add(token);
-			if (token.Type == TokenConstants.EOF)
-			{
-				break;
-			}
 		}
+		while (token.Type != TokenConstants.EOF);
 
 		return tokens;
 	}
@@ -82,13 +80,19 @@ public class OptimizedTokenFactoryTests
 	public async Task OptimizedTokenFactory_ShouldMatchCommonTokenFactory_ForOutOfRangeTokenText()
 	{
 		const string input = "abc";
+		const int tokenType = 1;
+		var startIndex = input.Length + 1;
+		var stopIndex = input.Length + 2;
+		const int line = 1;
+		const int column = 0;
+
 		var stream = CreateStringSpanInputStream(input, nameof(OptimizedTokenFactory_ShouldMatchCommonTokenFactory_ForOutOfRangeTokenText));
 		var lexer = new SharpMUSHLexer(stream);
 		var source = Tuple.Create<ITokenSource, ICharStream>(lexer, stream);
 		var optimizedFactory = GetOptimizedTokenFactory();
 
-		var optimized = optimizedFactory.Create(source, 1, null!, TokenConstants.DefaultChannel, input.Length + 1, input.Length + 2, 1, 0);
-		var baseline = CommonTokenFactory.Default.Create(source, 1, null!, TokenConstants.DefaultChannel, input.Length + 1, input.Length + 2, 1, 0);
+		var optimized = optimizedFactory.Create(source, tokenType, null!, TokenConstants.DefaultChannel, startIndex, stopIndex, line, column);
+		var baseline = CommonTokenFactory.Default.Create(source, tokenType, null!, TokenConstants.DefaultChannel, startIndex, stopIndex, line, column);
 
 		await Assert.That(optimized.StartIndex).IsEqualTo(baseline.StartIndex);
 		await Assert.That(optimized.StopIndex).IsEqualTo(baseline.StopIndex);
