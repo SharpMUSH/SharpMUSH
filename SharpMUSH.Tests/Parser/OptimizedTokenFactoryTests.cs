@@ -81,8 +81,8 @@ public class OptimizedTokenFactoryTests
 	{
 		const string input = "abc";
 		const int tokenType = 1;
-		var startIndex = input.Length + 1;
-		var stopIndex = input.Length + 2;
+		var outOfRangeStartIndex = input.Length + 1;
+		var outOfRangeStopIndex = input.Length + 2;
 		const int line = 1;
 		const int column = 0;
 
@@ -91,8 +91,8 @@ public class OptimizedTokenFactoryTests
 		var source = Tuple.Create<ITokenSource, ICharStream>(lexer, stream);
 		var optimizedFactory = GetOptimizedTokenFactory();
 
-		var optimized = optimizedFactory.Create(source, tokenType, null!, TokenConstants.DefaultChannel, startIndex, stopIndex, line, column);
-		var baseline = CommonTokenFactory.Default.Create(source, tokenType, null!, TokenConstants.DefaultChannel, startIndex, stopIndex, line, column);
+		var optimized = optimizedFactory.Create(source, tokenType, null!, TokenConstants.DefaultChannel, outOfRangeStartIndex, outOfRangeStopIndex, line, column);
+		var baseline = CommonTokenFactory.Default.Create(source, tokenType, null!, TokenConstants.DefaultChannel, outOfRangeStartIndex, outOfRangeStopIndex, line, column);
 
 		await Assert.That(optimized.StartIndex).IsEqualTo(baseline.StartIndex);
 		await Assert.That(optimized.StopIndex).IsEqualTo(baseline.StopIndex);
