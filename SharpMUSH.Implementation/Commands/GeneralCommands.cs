@@ -22,6 +22,7 @@ using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
 using System.Drawing;
 using System.Text;
@@ -61,52 +62,11 @@ public partial class Commands
 		return MModule.MarkupSingle2(sendMarkup, MModule.single(displayName));
 	}
 
-	private static readonly Regex CompositeFormatPlaceholderRegex = new(
-		@"(?<!\{)\{(\d+)(?:,[^}]*)?(?::[^}]*)?\}(?!\})",
-		RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
-	private static MString FormatCompositeMString(string template, params MString[] args)
-	{
-		if (args.Length == 0)
-		{
-			return MModule.single(template.Replace("{{", "{").Replace("}}", "}"));
-		}
-
-		var parts = new List<MString>();
-		var cursor = 0;
-
-		foreach (Match match in CompositeFormatPlaceholderRegex.Matches(template))
-		{
-			if (match.Index > cursor)
-			{
-				parts.Add(MModule.single(template[cursor..match.Index].Replace("{{", "{").Replace("}}", "}")));
-			}
-
-			if (int.TryParse(match.Groups[1].Value, out var index) && index >= 0 && index < args.Length)
-			{
-				parts.Add(args[index]);
-			}
-			else
-			{
-				parts.Add(MModule.single(match.Value.Replace("{{", "{").Replace("}}", "}")));
-			}
-
-			cursor = match.Index + match.Length;
-		}
-
-		if (cursor < template.Length)
-		{
-			parts.Add(MModule.single(template[cursor..].Replace("{{", "{").Replace("}}", "}")));
-		}
-
-		return MModule.ConcatMany(parts.ToArray());
-	}
-
 	private static MString FormatExitNameToDestination(MString exitName, string destName, string? locale = null)
 	{
 		var template = LocalizationService?.Get(nameof(ErrorMessages.Notifications.ExitNameToDestFormat), locale)
 			?? ErrorMessages.Notifications.ExitNameToDestFormat;
-		return FormatCompositeMString(template, exitName, MModule.single(destName));
+		return MarkupTemplateFormatter.Format(template, exitName, MModule.single(destName));
 	}
 
 	/// <summary>

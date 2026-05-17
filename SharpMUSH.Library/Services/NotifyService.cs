@@ -7,10 +7,10 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services;
 
@@ -31,10 +31,6 @@ public class NotifyService(
 	/// and will not interpret tags on the line.
 	/// </summary>
 	private const string MxpOpenLinePrefix = ErrorMessages.Notifications.MxpLineOpen;
-
-	private static readonly Regex CompositeFormatPlaceholderRegex = new(
-		@"(?<!\{)\{(\d+)(?:,[^}]*)?(?::[^}]*)?\}(?!\})",
-		RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
 	/// <summary>
 	/// Prepends the MXP open line prefix (ESC[0z) to each non-empty line of MXP output.
@@ -74,46 +70,6 @@ public class NotifyService(
 			? ApplyMxpLinePrefix(encoded)
 			: encoded;
 	}
-
-	private static MString FormatLocalizedMarkupTemplate(string template, IReadOnlyList<MString> args)
-	{
-		if (args.Count == 0)
-		{
-			return MModule.single(UnescapeCompositeFormatLiteral(template));
-		}
-
-		var parts = new List<MString>();
-		var cursor = 0;
-
-		foreach (Match match in CompositeFormatPlaceholderRegex.Matches(template))
-		{
-			if (match.Index > cursor)
-			{
-				parts.Add(MModule.single(UnescapeCompositeFormatLiteral(template[cursor..match.Index])));
-			}
-
-			if (int.TryParse(match.Groups[1].Value, out var index) && index >= 0 && index < args.Count)
-			{
-				parts.Add(args[index]);
-			}
-			else
-			{
-				parts.Add(MModule.single(UnescapeCompositeFormatLiteral(match.Value)));
-			}
-
-			cursor = match.Index + match.Length;
-		}
-
-		if (cursor < template.Length)
-		{
-			parts.Add(MModule.single(UnescapeCompositeFormatLiteral(template[cursor..])));
-		}
-
-		return MModule.ConcatMany(parts.ToArray());
-	}
-
-	private static string UnescapeCompositeFormatLiteral(string text) =>
-		text.Replace("{{", "{").Replace("}}", "}");
 
 	/// <summary>
 	/// Normalizes line endings by replacing all \n with \r\n and ensuring trailing \r\n
@@ -429,7 +385,7 @@ public class NotifyService(
 		{
 			conn.Metadata.TryGetValue("Locale", out var locale);
 			var template = localizationService.Get(key, locale);
-			var message = FormatLocalizedMarkupTemplate(template, args);
+			var message = MarkupTemplateFormatter.Format(template, args);
 			await Notify(conn.Handle, message, sender);
 		}
 	}
@@ -442,7 +398,7 @@ public class NotifyService(
 		var conn = connections.Get(handle);
 		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
 		var template = localizationService.Get(key, locale);
-		var message = FormatLocalizedMarkupTemplate(template, args);
+		var message = MarkupTemplateFormatter.Format(template, args);
 		await Notify(handle, message, sender);
 	}
 }

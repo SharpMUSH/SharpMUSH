@@ -2,6 +2,7 @@ using MarkupString;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Globalization;
@@ -215,7 +216,7 @@ public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, 
 		long handle,
 		CancellationToken cancellationToken)
 	{
-		for (var attempt = 0; attempt < 5; attempt++)
+		for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
 		{
 			if (connectionService.Get(handle) is not null)
 			{
@@ -224,7 +225,7 @@ public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, 
 
 			try
 			{
-				await Task.Delay(50, cancellationToken);
+				await Task.Delay(ConnectionRetryPolicy.Delay, cancellationToken);
 			}
 			catch (OperationCanceledException)
 			{

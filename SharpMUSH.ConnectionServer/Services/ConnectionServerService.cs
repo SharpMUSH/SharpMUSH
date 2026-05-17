@@ -1,5 +1,6 @@
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Collections.Concurrent;
@@ -15,7 +16,6 @@ public class ConnectionServerService(
 	IMessageBus publishEndpoint,
 	IConnectionStateStore? stateStore = null) : IConnectionServerService
 {
-	private const int CompareExchangeRetryLimit = 5;
 	private readonly ConcurrentDictionary<long, ConnectionData> _sessionState = [];
 
 	public async Task RegisterAsync(
@@ -144,7 +144,7 @@ public class ConnectionServerService(
 		if (_sessionState.TryGetValue(handle, out var connection))
 		{
 			var updated = connection with { Preferences = preferences };
-			for (var attempt = 0; attempt < CompareExchangeRetryLimit; attempt++)
+			for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
 			{
 				if (_sessionState.TryUpdate(handle, updated, connection))
 				{
@@ -167,7 +167,7 @@ public class ConnectionServerService(
 		if (_sessionState.TryGetValue(handle, out var connection))
 		{
 			var updated = connection with { Capabilities = capabilities };
-			for (var attempt = 0; attempt < CompareExchangeRetryLimit; attempt++)
+			for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
 			{
 				if (_sessionState.TryUpdate(handle, updated, connection))
 				{

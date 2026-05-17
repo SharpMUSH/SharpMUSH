@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Connections;
 using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
@@ -214,7 +215,7 @@ public class TelnetServer : ConnectionHandler
 
 	private async ValueTask<bool> TryUpdateFormatAsync(long handle, OutputFormat format, CancellationToken cancellationToken)
 	{
-		for (var attempt = 0; attempt < 5; attempt++)
+		for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
 		{
 			var conn = _connectionService.Get(handle);
 			if (conn != null)
@@ -229,7 +230,7 @@ public class TelnetServer : ConnectionHandler
 
 			try
 			{
-				await Task.Delay(50, cancellationToken);
+				await Task.Delay(ConnectionRetryPolicy.Delay, cancellationToken);
 			}
 			catch (OperationCanceledException)
 			{
