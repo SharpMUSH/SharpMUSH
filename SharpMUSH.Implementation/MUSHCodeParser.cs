@@ -127,7 +127,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			ParserPredictionMode.SLL => PredictionMode.SLL,
 			ParserPredictionMode.LL => PredictionMode.LL,
-			_ => PredictionMode.SLL // Default to SLL
+			_ => PredictionMode.LL // Default to LL for correct predicate evaluation
 		};
 	}
 
@@ -168,12 +168,26 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
 
+		// Always collect syntax errors. Remove the default ConsoleErrorListener so ANTLR
+		// does not print noise to stdout, then add our collecting listener.
+		sharpParser.RemoveErrorListeners();
+		var errorListener = new ParserErrorListener(MModule.plainText(text).ToString());
+		sharpParser.AddErrorListener(errorListener);
+
 		if (Configuration.CurrentValue.Debug.DebugSharpParser)
 		{
 			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		}
 
 		var context = entryPoint(sharpParser);
+
+		// If the parser detected a real syntax error, surface it as a MUSH failure string.
+		// We deliberately do NOT visit the partial recovery tree — its result is unreliable.
+		if (errorListener.HasErrors)
+		{
+			return ValueTask.FromResult<CallState?>(
+				new CallState(MModule.single(errorListener.Errors[0].ToMushFailureString())));
+		}
 
 		SharpMUSHParserVisitor visitor = new(Logger, parser,
 			Configuration,
@@ -191,6 +205,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 	public async ValueTask<CallState?> FunctionParse(MString text)
 	{
+		// Short-circuit: empty input (e.g. trailing comma in allof(1,2,3,)) → empty result.
+		// startPlainString requires a non-empty evaluationString; passing "" would trigger PARSER FAILURE.
+		if (string.IsNullOrEmpty(MModule.plainText(text).ToString()))
+			return CallState.Empty;
+
 		// Ensure we have invocation tracking for standalone function parsing
 		// Check if tracking is already initialized - if not, create a new parser with tracking
 		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
@@ -260,12 +279,23 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
+
+		sharpParser.RemoveErrorListeners();
+		var errorListener = new ParserErrorListener(plaintext.ToString());
+		sharpParser.AddErrorListener(errorListener);
+
 		if (Configuration.CurrentValue.Debug.DebugSharpParser)
 		{
 			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		}
 
 		var chatContext = sharpParser.startCommandString();
+
+		if (errorListener.HasErrors)
+		{
+			var failureText = MModule.single(errorListener.Errors[0].ToMushFailureString());
+			return () => ValueTask.FromResult<CallState?>(new CallState(failureText));
+		}
 
 		// Clear DirectInput for the same reason as CommandListParse: this visitor is always
 		// used in a queue/callback context (e.g., @force, @trigger), never for direct player input.
@@ -866,14 +896,15 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 					// Closes a real bracket — decrement depth
 					depth--;
 				}
-				else if (pendingEscapedOpeners > 0)
+				else
 				{
-					// Orphaned CBRACK at depth 0 matching an escaped opener
+					// Orphaned CBRACK at depth 0 — treat as literal ']'
 					if (token is IWritableToken writable)
 					{
 						writable.Type = SharpMUSHLexer.OTHER;
 					}
-					pendingEscapedOpeners--;
+					if (pendingEscapedOpeners > 0)
+						pendingEscapedOpeners--;
 				}
 			}
 			else if (depth == 0
@@ -909,14 +940,15 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 					// Closes a real brace — decrement depth
 					depth--;
 				}
-				else if (pendingEscapedOpeners > 0)
+				else
 				{
-					// Orphaned CBRACE at depth 0 matching an escaped opener
+					// Orphaned CBRACE at depth 0 — treat as literal '}'
 					if (token is IWritableToken writable)
 					{
 						writable.Type = SharpMUSHLexer.OTHER;
 					}
-					pendingEscapedOpeners--;
+					if (pendingEscapedOpeners > 0)
+						pendingEscapedOpeners--;
 				}
 			}
 			else if (depth == 0

@@ -21,13 +21,29 @@ public class CommandUnitTests
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
+	/// <summary>
+	/// Pending: <c>]command</c> NoEval semantics require a dedicated implementation pass.
+	/// The leading <c>]</c> should suppress evaluation of the argument (PennMUSH compat),
+	/// but this was previously only working via ANTLR silent error-recovery.
+	/// </summary>
+	[Test]
+	[Arguments("]think [add(1,2)]3", "[add(1,2)]3")]
+	public async Task Test_NoEval(string str, string expected)
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		Console.WriteLine("Testing NoEval: {0}", str);
+		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
 	[Test]
 	[Arguments("think add(1,2)1",
 		"31")]
 	[Arguments("think [add(1,2)]2",
 		"32")]
-	[Arguments("]think [add(1,2)]3",
-		"[add(1,2)]3")]
 	[Arguments("think Command1 Arg;think Command2 Arg",
 		"Command1 Arg;think Command2 Arg")]
 	public async Task Test(string str, string expected)

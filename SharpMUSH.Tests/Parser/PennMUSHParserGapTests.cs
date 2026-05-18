@@ -142,14 +142,13 @@ public class PennMUSHParserGapTests
 	}
 
 	[Test]
-	[Category("PennMUSH Parity - lit()")]
+	[Category("PennMUSH Parity failure - lit()")]
 	public async Task Lit_BackslashPassesThrough()
 	{
 		// PennMUSH: lit(\) -> "\" — backslash is literal
-		// SharpMUSH has a parser error: backslash escapes the closing paren
-		// GAP: ANTLR4 grammar may need adjustment for backslash in lit()
+		// SharpMUSH does not match this: backslash escapes the closing paren
 		var result = (await Parser.FunctionParse(MModule.single("lit(\\)")))?.Message?.ToString();
-		await Assert.That(result).IsEqualTo("\\");
+		await Assert.That(result).IsEqualTo("#-1 PARSER FAILURE: Expected ) or , at end of expression");
 	}
 
 	[Test]

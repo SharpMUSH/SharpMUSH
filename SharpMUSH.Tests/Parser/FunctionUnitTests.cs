@@ -37,6 +37,7 @@ public class FunctionUnitTests
 	[Arguments("strcat(\\{,hello,\\})", "{hello}")]
 	// Token stream rewriting: escaped braces inside real braces are unaffected
 	[Arguments("strcat(a,{\\{json\\}},b)", "a{json}b")]
+	[Arguments("add(1,add(1,add(1,add(1,5)))","#-1 PARSER FAILURE: Expected ) or , at end of expression")]
 	public async Task Test(string str, string? expected = null)
 	{
 		Console.WriteLine("Testing: {0}", str);
