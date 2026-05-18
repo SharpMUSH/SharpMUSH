@@ -52,7 +52,7 @@ startPlainSingleCommandArg: evaluationString? EOF;
 // Start looking for a plain string. These may start with a function call.
 startPlainString: evaluationString EOF;
 
-commandList: command ({inBraceDepth == 0}? SEMICOLON command)*;
+commandList: command ({inBraceDepth == 0}? SEMICOLON command?)*;
 
 command: evaluationString;
 

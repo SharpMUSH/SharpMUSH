@@ -1,5 +1,6 @@
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Collections.Concurrent;
@@ -143,19 +144,43 @@ public class ConnectionServerService(
 		if (_sessionState.TryGetValue(handle, out var connection))
 		{
 			var updated = connection with { Preferences = preferences };
-			// TryUpdate returns false if the value changed between TryGetValue and TryUpdate
-			// In that case, retry the update
-			while (!_sessionState.TryUpdate(handle, updated, connection))
+			for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
 			{
-				// Connection was updated by another thread, get the latest value and retry
+				if (_sessionState.TryUpdate(handle, updated, connection))
+				{
+					return true;
+				}
+
 				if (!_sessionState.TryGetValue(handle, out connection))
 				{
-					// Connection was removed
 					return false;
 				}
+
 				updated = connection with { Preferences = preferences };
 			}
-			return true;
+		}
+		return false;
+	}
+
+	public bool UpdateCapabilities(long handle, ProtocolCapabilities capabilities)
+	{
+		if (_sessionState.TryGetValue(handle, out var connection))
+		{
+			var updated = connection with { Capabilities = capabilities };
+			for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
+			{
+				if (_sessionState.TryUpdate(handle, updated, connection))
+				{
+					return true;
+				}
+
+				if (!_sessionState.TryGetValue(handle, out connection))
+				{
+					return false;
+				}
+
+				updated = connection with { Capabilities = capabilities };
+			}
 		}
 		return false;
 	}
@@ -196,4 +221,6 @@ public interface IConnectionServerService
 	IEnumerable<ConnectionServerService.ConnectionData> GetAll();
 
 	bool UpdatePreferences(long handle, SharpMUSH.ConnectionServer.Models.PlayerOutputPreferences preferences);
+
+	bool UpdateCapabilities(long handle, SharpMUSH.ConnectionServer.Models.ProtocolCapabilities capabilities);
 }

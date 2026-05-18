@@ -12,11 +12,11 @@ public record DebugOptions(
 	[property: SharpConfig(
 		Name = "parser_prediction_mode",
 		Category = "Debug",
-		Description = "Parser prediction mode: SLL (faster) or LL (more powerful). Default: SLL",
+		Description = "Parser prediction mode: SLL (faster) or LL (more powerful). Default: LL",
 		Group = "Parser Configuration",
 		Order = 1,
-		Tooltip = "SLL is faster but less powerful; LL handles complex grammars")]
-	ParserPredictionMode ParserPredictionMode = ParserPredictionMode.SLL
+		Tooltip = "LL evaluates semantic predicates correctly; SLL is faster but may misparse predicate-gated alternatives")]
+	ParserPredictionMode ParserPredictionMode = ParserPredictionMode.LL
 );
 
 /// <summary>
@@ -25,13 +25,13 @@ public record DebugOptions(
 public enum ParserPredictionMode
 {
 	/// <summary>
-	/// Strong LL parsing - faster but less powerful. Use for simpler grammars.
-	/// Default mode.
+	/// Strong LL parsing - faster but less powerful. Ignores semantic predicates during
+	/// prediction, which can cause incorrect parses for predicate-gated grammar alternatives.
 	/// </summary>
 	SLL,
 
 	/// <summary>
-	/// Full LL(*) parsing - slower but more powerful. Can handle complex grammars.
+	/// Full LL(*) parsing - evaluates semantic predicates correctly. Default mode.
 	/// </summary>
 	LL
 }

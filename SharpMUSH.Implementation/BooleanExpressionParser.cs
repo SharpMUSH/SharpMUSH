@@ -65,8 +65,11 @@ public class BooleanExpressionParser(
 
 	private Func<AnySharpObject, AnySharpObject, bool> CompileInternal(string text)
 	{
-		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Compile));
-		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
+		StringSpanInputStream inputStream = new(text, nameof(Compile));
+		SharpMUSHBoolExpLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
 		var chatContext = sharpParser.@lock();
@@ -86,8 +89,11 @@ public class BooleanExpressionParser(
 	/// <returns>Valid or not.</returns>
 	public bool Validate(string expression, AnySharpObject lockee)
 	{
-		AntlrInputStreamSpan inputStream = new(expression.AsMemory(), nameof(Validate));
-		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
+		StringSpanInputStream inputStream = new(expression, nameof(Validate));
+		SharpMUSHBoolExpLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
 		var chatContext = sharpParser.@lock();
@@ -107,8 +113,11 @@ public class BooleanExpressionParser(
 	/// <returns>The normalized lock expression with names resolved to dbrefs</returns>
 	public string Normalize(string text, AnySharpObject? executor = null)
 	{
-		AntlrInputStreamSpan inputStream = new(text.AsMemory(), nameof(Normalize));
-		SharpMUSHBoolExpLexer sharpLexer = new(inputStream);
+		StringSpanInputStream inputStream = new(text, nameof(Normalize));
+		SharpMUSHBoolExpLexer sharpLexer = new(inputStream)
+		{
+			TokenFactory = OptimizedTokenFactory.Default
+		};
 		BufferedTokenSpanStream commonTokenStream = new(sharpLexer);
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
 		var chatContext = sharpParser.@lock();

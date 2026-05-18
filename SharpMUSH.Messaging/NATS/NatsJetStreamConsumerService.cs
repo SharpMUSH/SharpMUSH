@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
+using NATS.Client.Serializers.Json;
 using System.Text.Json;
 
 namespace SharpMUSH.Messaging.NATS;
@@ -107,7 +108,7 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 			_logger.LogInformation("[NATS-CONSUMER] Consumer active — subject: {Subject}, durable: {Durable}",
 				reg.Subject, reg.DurableName);
 
-			await foreach (var msg in consumer.ConsumeAsync<JsonElement>(cancellationToken: ct))
+			await foreach (var msg in consumer.ConsumeAsync<JsonElement>(serializer: NatsJsonSerializer<JsonElement>.Default, cancellationToken: ct))
 			{
 				try
 				{

@@ -79,6 +79,22 @@ public static class MessageHelpers
 	};
 
 	/// <summary>
+	/// Formats a list of MStrings using Oxford comma style, preserving markup.
+	/// </summary>
+	public static MString FormatMStringsWithOxfordComma(IReadOnlyList<MString> items) => items.Count switch
+	{
+		0 => MModule.Empty(),
+		1 => items[0],
+		2 => MModule.ConcatMany([items[0], MModule.single(" and "), items[1]]),
+		_ => MModule.ConcatMany(
+			items.SelectMany<MString, MString>((item, i) => i == 0
+				? [item]
+				: i < items.Count - 1
+					? [MModule.single(", "), item]
+					: [MModule.single(", and "), item]).ToArray())
+	};
+
+	/// <summary>
 	/// Formats an object name with its dbref and flag symbols, matching PennMUSH display format.
 	/// Example: "Chest(#5Tn)"
 	/// </summary>

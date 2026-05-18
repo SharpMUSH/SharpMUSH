@@ -115,6 +115,10 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WrongArgumentsRange = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS AND AT MOST {2} BUT GOT {3}";
 
+		// Parser errors
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ParserFailure = "#-1 PARSER FAILURE: {0}";
+
 		// State and operation errors
 		public const string NothingToEvaluate = "#-1 NOTHING TO EVALUATE";
 		public const string NothingToDo = "#-1 NOTHING TO DO";
@@ -494,6 +498,14 @@ public static class ErrorMessages
 
 		// --- Pueblo protocol (PennMUSH hdrs/conf.h) ---
 		public const string PuebloHello = "This world is Pueblo 1.10 Enhanced.\r\n";
+
+		// --- MXP line security modes (ESC[Nz) ---
+		/// <summary>Open line — only "safe" tags (B, I, U, COLOR, FONT). For user-generated content.</summary>
+		public const string MxpLineOpen = "\x1b[0z";
+		/// <summary>Secure line — allows SEND, A, IMG, SOUND. For server-generated content.</summary>
+		public const string MxpLineSecure = "\x1b[1z";
+		/// <summary>Locked line — no tag interpretation at all.</summary>
+		public const string MxpLineLocked = "\x1b[2z";
 
 		// --- OUTPUTPREFIX / OUTPUTSUFFIX (PennMUSH hdrs/conf.h) ---
 		public const string OutputPrefixSet = "OUTPUTPREFIX set.";

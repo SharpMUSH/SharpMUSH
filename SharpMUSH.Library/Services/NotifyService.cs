@@ -1,11 +1,13 @@
-﻿using MarkupString;
+using MarkupString;
 using Mediator;
 using OneOf;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Text;
@@ -23,6 +25,52 @@ public class NotifyService(
 	IListenerRoutingService? listenerRoutingService = null,
 	IMediator? mediator = null) : INotifyService
 {
+	/// <summary>
+	/// MXP open line prefix: ESC[0z — signals the client this line may contain
+	/// standard MXP tags. Without any prefix, MXP clients default to locked mode
+	/// and will not interpret tags on the line.
+	/// </summary>
+	private const string MxpOpenLinePrefix = ErrorMessages.Notifications.MxpLineOpen;
+
+	/// <summary>
+	/// Prepends the MXP open line prefix (ESC[0z) to each non-empty line of MXP output.
+	/// This signals the client that each line may contain standard open-mode MXP tags.
+	/// </summary>
+	private static string ApplyMxpLinePrefix(string text)
+	{
+		// Prefix each non-empty line with ESC[0z for MXP open mode
+		var lines = text.Split('\n');
+		return string.Join('\n', lines.Select(line =>
+			line.Length == 0 || line == "\r" ? line : MxpOpenLinePrefix + line));
+	}
+
+	/// <summary>
+	/// Renders an MString/string for a specific output format, applying MXP line prefixes if needed.
+	/// </summary>
+	private static string RenderForFormat(OneOf<MString, string> what, string format) =>
+		what.Match(
+			markupString => format switch
+			{
+				"pueblo" => markupString.Render("pueblo"),
+				"mxp" => ApplyMxpLinePrefix(markupString.Render("mxp")),
+				_ => markupString.ToString()
+			},
+			str => RenderPlainTextForFormat(str, format)
+		);
+
+	private static string RenderPlainTextForFormat(string text, string format)
+	{
+		var encoded = format switch
+		{
+			"pueblo" or "mxp" => System.Net.WebUtility.HtmlEncode(text),
+			_ => text
+		};
+
+		return format == "mxp"
+			? ApplyMxpLinePrefix(encoded)
+			: encoded;
+	}
+
 	/// <summary>
 	/// Normalizes line endings by replacing all \n with \r\n and ensuring trailing \r\n
 	/// </summary>
@@ -113,16 +161,13 @@ public class NotifyService(
 			}
 		}
 
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
-
-		text = NormalizeLineEnding(text);
-
-		// Apply OUTPUTPREFIX/OUTPUTSUFFIX per-connection since each may have different settings
+		// Render per-connection to support different output formats (ANSI vs Pueblo HTML)
 		await foreach (var conn in connections.Get(who))
 		{
+			var format = conn.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi");
+			var text = RenderForFormat(what, format);
+
+			text = NormalizeLineEnding(text);
 			var wrapped = ApplyOutputPrefixSuffix(conn.Handle, text);
 			var bytes = Encoding.UTF8.GetBytes(wrapped);
 			await publishEndpoint.HandlePublish(new TelnetOutputMessage(conn.Handle, bytes));
@@ -142,10 +187,9 @@ public class NotifyService(
 			return;
 		}
 
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
+		var conn = connections.Get(handle);
+		var format = conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") ?? "ansi";
+		var text = RenderForFormat(what, format);
 
 		text = NormalizeLineEnding(text);
 		text = ApplyOutputPrefixSuffix(handle, text);
@@ -165,16 +209,14 @@ public class NotifyService(
 			return;
 		}
 
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
-
-		text = NormalizeLineEnding(text);
-
-		// Apply OUTPUTPREFIX/OUTPUTSUFFIX per-handle since each may have different settings
+		// Render per-handle to support different output formats (ANSI vs Pueblo HTML)
 		foreach (var handle in handles)
 		{
+			var conn = connections.Get(handle);
+			var format = conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") ?? "ansi";
+			var text = RenderForFormat(what, format);
+
+			text = NormalizeLineEnding(text);
 			var wrapped = ApplyOutputPrefixSuffix(handle, text);
 			var bytes = Encoding.UTF8.GetBytes(wrapped);
 			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
@@ -200,9 +242,9 @@ public class NotifyService(
 		// (Prompts are usually things like "> " without line breaks)
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
+		await foreach (var conn in connections.Get(who))
 		{
-			await publishEndpoint.HandlePublish(new TelnetPromptMessage(handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetPromptMessage(conn.Handle, bytes));
 		}
 	}
 
@@ -335,5 +377,28 @@ public class NotifyService(
 		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
 		var message = localizationService.Format(key, locale, args);
 		await Notify(handle, message, sender: sender);
+	}
+
+	public async ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args)
+	{
+		await foreach (var conn in connections.Get(who))
+		{
+			conn.Metadata.TryGetValue("Locale", out var locale);
+			var template = localizationService.Get(key, locale);
+			var message = MarkupTemplateFormatter.Format(template, args);
+			await Notify(conn.Handle, message, sender);
+		}
+	}
+
+	public ValueTask NotifyLocalizedMarkup(AnySharpObject who, string key, AnySharpObject? sender, params MString[] args)
+		=> NotifyLocalizedMarkup(who.Object().DBRef, key, sender, args);
+
+	public async ValueTask NotifyLocalizedMarkup(long handle, string key, AnySharpObject? sender, params MString[] args)
+	{
+		var conn = connections.Get(handle);
+		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
+		var template = localizationService.Get(key, locale);
+		var message = MarkupTemplateFormatter.Format(template, args);
+		await Notify(handle, message, sender);
 	}
 }

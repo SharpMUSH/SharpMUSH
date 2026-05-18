@@ -184,7 +184,9 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 		var csArgs = new[]
 		{
 			$"--ConnectionServer:TelnetPort={TelnetPort}",
-			$"--ConnectionServer:HttpPort={httpPort}"
+			$"--ConnectionServer:HttpPort={httpPort}",
+			"--ConnectionServer:PuebloEnabled=true",
+			"--ConnectionServer:MxpEnabled=true"
 		};
 
 		_connectionServerApp = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync(csArgs, natsUrl);
