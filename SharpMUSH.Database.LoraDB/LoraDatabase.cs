@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net;
 
 namespace SharpMUSH.Database.LoraDB;
