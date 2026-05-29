@@ -85,11 +85,11 @@ public class Startup(
 			{
 				services.AddSingleton<ISharpDatabase, LoraDatabase>(x =>
 				{
-					var dbLogger = x.GetRequiredService<ILogger<SurrealDatabase>>();
+					var loggerFactory = x.GetRequiredService<ILoggerFactory>();
 					var surrealClient = x.GetRequiredService<ISurrealDbClient>();
 					surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
 					var password = x.GetRequiredService<IPasswordService>();
-					var db = new LoraDatabase(dbLogger, surrealClient, password);
+					var db = new LoraDatabase(loggerFactory, surrealClient, password);
 					db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 					return db;
 				});

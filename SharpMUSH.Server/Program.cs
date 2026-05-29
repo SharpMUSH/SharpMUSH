@@ -21,6 +21,7 @@ public class Program
 		// Resolve provider using explicit env override first, then app configuration, then default.
 		var dbProviderStr = Environment.GetEnvironmentVariable(DatabaseProviderSelector.EnvironmentVariableName)
 		                    ?? builder.Configuration[DatabaseProviderSelector.ConfigurationKey]
+		                    // Legacy flat key retained for backward compatibility.
 		                    ?? builder.Configuration["DatabaseProvider"];
 		var databaseProvider = DatabaseProviderSelector.ResolveOrDefault(dbProviderStr);
 

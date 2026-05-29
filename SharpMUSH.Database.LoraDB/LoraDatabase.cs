@@ -11,7 +11,7 @@ namespace SharpMUSH.Database.LoraDB;
 /// This currently reuses the embedded SurrealDB implementation for in-process execution.
 /// </summary>
 public sealed class LoraDatabase(
-ILogger<SurrealDatabase> logger,
+ILoggerFactory loggerFactory,
 ISurrealDbClient db,
 IPasswordService passwordService
-) : SurrealDatabase(logger, db, passwordService);
+) : SurrealDatabase(loggerFactory.CreateLogger<SurrealDatabase>(), db, passwordService);
