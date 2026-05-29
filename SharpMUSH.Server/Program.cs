@@ -16,13 +16,13 @@ public class Program
 {
 	public static async Task Main(params string[] args)
 	{
-		// Determine database provider from environment variable
-		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
-		var databaseProvider = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase)
-			? DatabaseProvider.Memgraph
-			: string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase)
-				? DatabaseProvider.SurrealDB
-				: DatabaseProvider.ArangoDB;
+		var builder = WebApplication.CreateBuilder(args);
+
+		// Resolve provider using explicit env override first, then app configuration, then default.
+		var dbProviderStr = Environment.GetEnvironmentVariable(DatabaseProviderSelector.EnvironmentVariableName)
+		                    ?? builder.Configuration[DatabaseProviderSelector.ConfigurationKey]
+		                    ?? builder.Configuration["DatabaseProvider"];
+		var databaseProvider = DatabaseProviderSelector.ResolveOrDefault(dbProviderStr);
 
 		ArangoConfiguration? arangoConfig = null;
 		string? memgraphUri = null;
@@ -35,7 +35,7 @@ public class Program
 		{
 			arangoConfig = await ArangoStartupStrategyProvider.GetStrategy().ConfigureArango();
 		}
-		// SurrealDB uses embedded in-memory mode, no external configuration needed
+		// SurrealDB/LoraDB use embedded in-memory mode, no external configuration needed
 
 		// Resolve the NATS URL.  Ownership of the testcontainer (when NATS_URL is not set)
 		// belongs to ConnectionServer; Server only needs the URL to connect.
@@ -49,7 +49,6 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var builder = WebApplication.CreateBuilder(args);
 		var startup = new Startup(arangoConfig, colorFile, natsUrl, databaseProvider, memgraphUri);
 		startup.ConfigureServices(builder.Services, builder.Configuration);
 

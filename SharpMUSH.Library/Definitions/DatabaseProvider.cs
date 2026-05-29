@@ -18,5 +18,10 @@ public enum DatabaseProvider
 	/// <summary>
 	/// SurrealDB - a multi-model database using embedded in-memory mode.
 	/// </summary>
-	SurrealDB
+	SurrealDB,
+
+	/// <summary>
+	/// LoraDB - an embedded graph-database mode for local/in-process execution.
+	/// </summary>
+	LoraDB
 }

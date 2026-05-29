@@ -17,6 +17,7 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
 using SharpMUSH.Database.ArangoDB;
+using SharpMUSH.Database.LoraDB;
 using SharpMUSH.Database.Memgraph;
 using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Implementation;
@@ -76,20 +77,36 @@ public class Startup(
 				return db;
 			});
 		}
-		else if (databaseProvider == DatabaseProvider.SurrealDB)
+		else if (databaseProvider == DatabaseProvider.SurrealDB || databaseProvider == DatabaseProvider.LoraDB)
 		{
 			services.AddSurreal("Endpoint=mem://;Namespace=sharpmush;Database=world")
 				.AddInMemoryProvider();
-			services.AddSingleton<ISharpDatabase, SurrealDatabase>(x =>
+			if (databaseProvider == DatabaseProvider.LoraDB)
 			{
-				var dbLogger = x.GetRequiredService<ILogger<SurrealDatabase>>();
-				var surrealClient = x.GetRequiredService<ISurrealDbClient>();
-				surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
-				var password = x.GetRequiredService<IPasswordService>();
-				var db = new SurrealDatabase(dbLogger, surrealClient, password);
-				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
-				return db;
-			});
+				services.AddSingleton<ISharpDatabase, LoraDatabase>(x =>
+				{
+					var dbLogger = x.GetRequiredService<ILogger<SurrealDatabase>>();
+					var surrealClient = x.GetRequiredService<ISurrealDbClient>();
+					surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
+					var password = x.GetRequiredService<IPasswordService>();
+					var db = new LoraDatabase(dbLogger, surrealClient, password);
+					db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+					return db;
+				});
+			}
+			else
+			{
+				services.AddSingleton<ISharpDatabase, SurrealDatabase>(x =>
+				{
+					var dbLogger = x.GetRequiredService<ILogger<SurrealDatabase>>();
+					var surrealClient = x.GetRequiredService<ISurrealDbClient>();
+					surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
+					var password = x.GetRequiredService<IPasswordService>();
+					var db = new SurrealDatabase(dbLogger, surrealClient, password);
+					db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+					return db;
+				});
+			}
 		}
 		else
 		{

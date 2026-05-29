@@ -245,19 +245,23 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		Log.Logger = log;
 
 		// Determine database provider from environment variable
-		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
-		var useMemgraph = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase);
-		var useSurrealDb = string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase);
+		var dbProviderStr = Environment.GetEnvironmentVariable(DatabaseProviderSelector.EnvironmentVariableName);
+		var databaseProvider = DatabaseProviderSelector.ResolveOrDefault(dbProviderStr);
 
-		if (useMemgraph)
+		if (databaseProvider == DatabaseProvider.Memgraph)
 		{
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "memgraph");
 			Environment.SetEnvironmentVariable("MEMGRAPH_URI", MemgraphTestServer.BoltUri);
 		}
-		else if (useSurrealDb)
+		else if (databaseProvider == DatabaseProvider.SurrealDB)
 		{
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "surrealdb");
 			// SurrealDB uses embedded in-memory mode, no external URI needed
+		}
+		else if (databaseProvider == DatabaseProvider.LoraDB)
+		{
+			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "loradb");
+			// LoraDB test mode is embedded and does not require external URI
 		}
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
