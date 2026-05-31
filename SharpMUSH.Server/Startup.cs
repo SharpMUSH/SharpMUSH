@@ -1,11 +1,14 @@
 using Core.Arango;
 using Mediator;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
+using SharpMUSH.Server.Authentication;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using SurrealDb.Net;
@@ -49,7 +52,7 @@ public class Startup(
 
 // This method gets called by the runtime. Use this method to add services to the container.
 // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
-	public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
 		services.AddCors(options =>
 		{
@@ -258,6 +261,13 @@ public class Startup(
 // where the command queue processes one entry at a time.
 			x.UseDefaultThreadPool(tp => tp.MaxConcurrency = 1);
 		});
+		if (environment.IsDevelopment())
+		{
+			services.AddAuthentication(DebugAuthenticationHandler.SchemeName)
+				.AddScheme<AuthenticationSchemeOptions, DebugAuthenticationHandler>(
+					DebugAuthenticationHandler.SchemeName, _ => { });
+		}
+
 		services.AddAuthorization();
 		services.AddRazorPages();
 		services.AddControllers();
