@@ -53,7 +53,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	{
 		_logger.LogDebug("GetObjectAsync {Dbref}", dbref);
 		var infoCmd = RouteLiteral($"SHARP_INFO:{dbref}:[name({dbref})]:[type({dbref})]:[owner({dbref})]");
-		var attrCmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##:[attrflags({dbref}/##)]:[get({dbref}/##)],,%r)");
+		var attrCmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##::[get({dbref}/##)],%b,%r)");
 
 		var infoLines = await terminal.SendCommandAsync(infoCmd);
 		var attrLines = await terminal.SendCommandAsync(attrCmd);
@@ -68,7 +68,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	/// <summary>Get only the attribute list for an object (faster than full GetObjectAsync).</summary>
 	public async Task<List<MushAttribute>> GetAttributesAsync(string dbref)
 	{
-		var cmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##:[attrflags({dbref}/##)]:[get({dbref}/##)],,%r)");
+		var cmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##::[get({dbref}/##)],%b,%r)");
 		var lines = await terminal.SendCommandAsync(cmd);
 		return ParseAttributes(lines);
 	}

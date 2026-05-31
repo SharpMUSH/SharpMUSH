@@ -25,7 +25,29 @@ body {
 
 /* ── Terminal ── */
 .sharp-terminal-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     min-height: 0;
+    overflow: hidden;
+}
+
+/* Bottom terminal drawer: ensure mud-drawer-content is flex so GlobalTerminal fills it */
+.terminal-bottom-drawer .mud-drawer-content {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    height: 100% !important;
+    padding: 0 !important;
+}
+
+/* Softcode editor terminal tab: make tab panel a flex column */
+.softcode-editor-tabs .mud-tab-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .terminal-line {

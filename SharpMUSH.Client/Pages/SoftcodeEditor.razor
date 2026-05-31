@@ -169,6 +169,7 @@
 
             @* Editor + Terminal tabs *@
             <MudTabs @bind-ActivePanelIndex="_editorTab" Elevation="0"
+                     Class="softcode-editor-tabs"
                      Style="display:flex;flex-direction:column;flex:1;overflow:hidden;"
                      TabPanelsClass="flex-panel">
 
@@ -251,7 +252,7 @@
 
                 @* ── Terminal tab ── *@
                 <MudTabPanel Text="Terminal" Icon="@Icons.Material.Filled.Terminal">
-                    <div style="flex:1;min-height:0;height:100%;overflow:hidden;">
+                    <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
                         <GlobalTerminal />
                     </div>
                 </MudTabPanel>

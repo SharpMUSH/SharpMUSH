@@ -79,7 +79,7 @@
             <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
                            Color="Color.Default" OnClick="ToggleTerminal" />
         </MudDrawerHeader>
-        <div style="height: calc(300px - 40px);">
+        <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
             <GlobalTerminal />
         </div>
     </MudDrawer>
