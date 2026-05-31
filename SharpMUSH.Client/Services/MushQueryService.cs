@@ -53,7 +53,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	{
 		_logger.LogDebug("GetObjectAsync {Dbref}", dbref);
 		var infoCmd = RouteLiteral($"SHARP_INFO:{dbref}:[name({dbref})]:[type({dbref})]:[owner({dbref})]");
-		var attrCmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##:[attrflags({dbref}/##)]:[get({dbref}/##)],%r)");
+		var attrCmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##:[attrflags({dbref}/##)]:[get({dbref}/##)],,%r)");
 
 		var infoLines = await terminal.SendCommandAsync(infoCmd);
 		var attrLines = await terminal.SendCommandAsync(attrCmd);
@@ -68,7 +68,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	/// <summary>Get only the attribute list for an object (faster than full GetObjectAsync).</summary>
 	public async Task<List<MushAttribute>> GetAttributesAsync(string dbref)
 	{
-		var cmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##:[attrflags({dbref}/##)]:[get({dbref}/##)],%r)");
+		var cmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##:[attrflags({dbref}/##)]:[get({dbref}/##)],,%r)");
 		var lines = await terminal.SendCommandAsync(cmd);
 		return ParseAttributes(lines);
 	}
@@ -119,7 +119,8 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	/// <summary>Search objects in the current location using lcon/lexits.</summary>
 	public async Task<List<MushSearchResult>> GetContentsAsync()
 	{
-		var cmd = RouteExpr("iter(lcon(loc(me)) lexits(loc(me)),SHARP_OBJ:##:[type(##)]:[name(##)],%r)");
+		// before(##,:) strips the :creationTime suffix that DBRef.ToString() appends
+		var cmd = RouteExpr("iter(lcon(loc(me)) lexits(loc(me)),SHARP_OBJ:[before(##,:)]:[type(##)]:[name(##)],,%r)");
 		var lines = await terminal.SendCommandAsync(cmd);
 		return ParseSearchResults(lines);
 	}
@@ -131,7 +132,9 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	/// </summary>
 	public async Task<List<MushSearchResult>> SearchAsync(string expression)
 	{
-		var cmd = RouteExpr($"iter({expression},SHARP_OBJ:##:[type(##)]:[name(##)],%r)");
+		// before(##,:) strips the :creationTime suffix that DBRef.ToString() appends
+		// ,,%r uses default space iSep and newline oSep (3rd arg = iSep, 4th = oSep)
+		var cmd = RouteExpr($"iter({expression},SHARP_OBJ:[before(##,:)]:[type(##)]:[name(##)],,%r)");
 		var lines = await terminal.SendCommandAsync(cmd);
 		return ParseSearchResults(lines);
 	}
