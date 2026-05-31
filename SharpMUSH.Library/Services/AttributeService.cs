@@ -681,8 +681,15 @@ public class AttributeService(
 
 		var attrArr = await attr.ToArrayAsync();
 
-		if (attrArr.Length == 0
-				|| !await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
+		// If no matching attributes exist, there is nothing to clear — succeed silently.
+		// PennMUSH does not error when clearing a non-existent attribute.
+		if (attrArr.Length == 0)
+		{
+			return new Success();
+		}
+
+		// Attribute exists but executor can't set it — permission denied.
+		if (!await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
