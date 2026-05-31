@@ -69,10 +69,20 @@ body {
 .mush-editor-fill {
     width: 100%;
     height: 100%;
+    background-color: #1a1a2e;
 }
 
 .mush-editor-fill .monaco-editor-container {
     height: 100%;
+}
+
+/* Force dark background on all Monaco editor layers so it's dark even before theme loads */
+.mush-editor-fill > div,
+.mush-editor-fill .monaco-editor,
+.mush-editor-fill .monaco-editor .overflow-guard,
+.mush-editor-fill .monaco-editor-background,
+.mush-editor-fill .inputarea.ime-input {
+    background-color: #1a1a2e !important;
 }
 
 /* Keep flex-panel inside MudTabs filling available height */

@@ -528,8 +528,9 @@
         _newAttrName = string.Empty;
         StateHasChanged();
 
-        // Send the attribute set command and wait for server confirmation
-        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", attrName, string.Empty);
+        // Send the attribute set command with a space so the server creates (not clears) the attribute.
+        // An empty value routes through ClearAttributeAsync which is a no-op for non-existent attrs.
+        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", attrName, " ");
 
         // Re-fetch the full attribute list from server to reflect actual state
         await RefreshAttributesAsync();
