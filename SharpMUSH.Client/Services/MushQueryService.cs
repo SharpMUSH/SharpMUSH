@@ -90,14 +90,57 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 
 	/// <summary>
 	/// Create a new in-game object using the appropriate building command.
-	/// Returns immediately; the result appears in the terminal.
+	/// Returns the new object's dbref if the server confirms creation, otherwise null.
 	/// </summary>
-	public Task CreateObjectAsync(string name, MushObjectType type) => type switch
+	public async Task<int?> CreateObjectAsync(string name, MushObjectType type)
 	{
-		MushObjectType.Room => terminal.SendAsync($"@dig {name}"),
-		MushObjectType.Exit => terminal.SendAsync($"@open {name}"),
-		_                   => terminal.SendAsync($"@create {name}"),
-	};
+		var cmd = type switch
+		{
+			MushObjectType.Room => $"@dig {name}",
+			MushObjectType.Exit => $"@open {name}",
+			_                   => $"@create {name}",
+		};
+
+		var lines = await terminal.SendCommandAsync(cmd);
+		return ParseCreatedDbref(lines, type);
+	}
+
+	/// <summary>Parse the newly-created dbref from server creation output.</summary>
+	private static int? ParseCreatedDbref(string[] lines, MushObjectType type)
+	{
+		foreach (var line in lines)
+		{
+			int? found = type switch
+			{
+				// "Created Name (#5)."  — any (#N) in the line
+				MushObjectType.Thing  => TryParseDbrefInParens(line),
+				// "Name created with room number 5."
+				MushObjectType.Room   => TryParseTrailingNumber(line, "room number"),
+				// "Opened exit Name" — server doesn't echo the dbref
+				MushObjectType.Exit   => null,
+				_                     => TryParseDbrefInParens(line),
+			};
+			if (found.HasValue) return found;
+		}
+		return null;
+	}
+
+	private static int? TryParseDbrefInParens(string line)
+	{
+		var m = DbrefParensRegex().Match(line);
+		return m.Success && int.TryParse(m.Groups[1].Value, out var n) ? n : null;
+	}
+
+	private static int? TryParseTrailingNumber(string line, string afterText)
+	{
+		var idx = line.IndexOf(afterText, StringComparison.OrdinalIgnoreCase);
+		if (idx < 0) return null;
+		var rest = line[(idx + afterText.Length)..].Trim().TrimEnd('.');
+		return int.TryParse(rest, out var n) ? n : null;
+	}
+
+	[GeneratedRegex(@"\(#(\d+)\)")]
+	private static partial Regex DbrefParensRegex();
 
 	// ──────────────────────────────────────────────────────────────────────────────
 	// Object search

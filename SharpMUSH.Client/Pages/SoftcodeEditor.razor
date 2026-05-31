@@ -32,7 +32,7 @@
             </MudTooltip>
         </div>
         <div style="flex:1;overflow:hidden;padding:0 4px;">
-            <ObjectBrowser OnObjectSelected="OnObjectSelected" />
+            <ObjectBrowser @ref="_objectBrowser" OnObjectSelected="OnObjectSelected" />
         </div>
 
         @* Inline create-object prompt *@
@@ -285,6 +285,7 @@
 
 @code {
     private StandaloneCodeEditor? _monacoEditor;
+    private ObjectBrowser? _objectBrowser;
     private MushObject? _selectedObject;
     private MushAttribute? _selectedAttr;
     private bool _loadingAttrs;
@@ -393,10 +394,20 @@
         if (_selectedAttr is null || _selectedObject is null || _monacoEditor is null) return;
 
         var value = await _monacoEditor.GetValue();
-        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", _selectedAttr.Name, value);
+        var savedAttrName = _selectedAttr.Name;
 
-        _selectedAttr.Value = value;
-        _saveMessage = $"Saved &{_selectedAttr.Name} on #{_selectedObject.Dbref}. Check the terminal for server response.";
+        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", savedAttrName, value);
+
+        // Refresh from server to confirm the save was applied
+        await RefreshAttributesAsync();
+
+        // Re-select the same attribute so the editor stays focused on it
+        var refreshed = _selectedObject?.Attributes.FirstOrDefault(a =>
+            string.Equals(a.Name, savedAttrName, StringComparison.OrdinalIgnoreCase));
+        if (refreshed is not null)
+            await OnAttributeSelected(refreshed);
+
+        _saveMessage = $"Saved &{savedAttrName} on #{_selectedObject?.Dbref}.";
         _saveSeverity = Severity.Success;
         StateHasChanged();
     }
@@ -405,16 +416,18 @@
     {
         if (_selectedAttr is null || _selectedObject is null) return;
 
-        await QueryService.DeleteAttributeAsync($"#{_selectedObject.Dbref}", _selectedAttr.Name);
+        var deletedName = _selectedAttr.Name;
+        await QueryService.DeleteAttributeAsync($"#{_selectedObject.Dbref}", deletedName);
 
-        _selectedObject.Attributes.Remove(_selectedAttr);
-        _saveMessage = $"Deleted &{_selectedAttr.Name}. Check terminal for server response.";
+        _saveMessage = $"Deleted &{deletedName}.";
         _saveSeverity = Severity.Info;
         _selectedAttr = null;
 
         if (_monacoEditor is not null)
             await _monacoEditor.SetValue(string.Empty);
 
+        // Refresh from server to reflect actual attribute list
+        await RefreshAttributesAsync();
         StateHasChanged();
     }
 
@@ -465,12 +478,24 @@
     private async Task ExecuteCreateObjectAsync()
     {
         if (_createObjectType is null || string.IsNullOrWhiteSpace(_createObjectName)) return;
-        await QueryService.CreateObjectAsync(_createObjectName.Trim(), _createObjectType.Value);
+        var type = _createObjectType.Value;
+        var name = _createObjectName.Trim();
         _createObjectType = null;
         _createObjectName = string.Empty;
-        // Switch to terminal tab so user sees the server response
-        _editorTab = 1;
         StateHasChanged();
+
+        // Wait for server confirmation and parse the new dbref
+        var newDbref = await QueryService.CreateObjectAsync(name, type);
+
+        // Refresh the object browser to show the new object
+        if (_objectBrowser is not null)
+        {
+            await _objectBrowser.RefreshAsync();
+
+            // Auto-select the newly created object if we got its dbref
+            if (newDbref.HasValue)
+                await _objectBrowser.SelectDbrefAsync(newDbref.Value);
+        }
     }
 
     private async Task OnCreateObjectKeyDown(KeyboardEventArgs e)
@@ -499,16 +524,21 @@
         if (_selectedObject is null || string.IsNullOrWhiteSpace(_newAttrName)) return;
 
         var attrName = _newAttrName.Trim().ToUpperInvariant();
-        // Create empty attribute, then let the user fill it in the editor
-        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", attrName, string.Empty);
-
-        // Add to local list and select it
-        var newAttr = new MushAttribute { Name = attrName, Value = string.Empty, AttributeFlags = [] };
-        _selectedObject.Attributes.Add(newAttr);
         _showCreateAttr = false;
         _newAttrName = string.Empty;
-        await OnAttributeSelected(newAttr);
         StateHasChanged();
+
+        // Send the attribute set command and wait for server confirmation
+        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", attrName, string.Empty);
+
+        // Re-fetch the full attribute list from server to reflect actual state
+        await RefreshAttributesAsync();
+
+        // Select the newly created attribute in the refreshed list
+        var created = _selectedObject?.Attributes.FirstOrDefault(a =>
+            string.Equals(a.Name, attrName, StringComparison.OrdinalIgnoreCase));
+        if (created is not null)
+            await OnAttributeSelected(created);
     }
 
     private async Task OnCreateAttrKeyDown(KeyboardEventArgs e)

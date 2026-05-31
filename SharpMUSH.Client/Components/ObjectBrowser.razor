@@ -100,6 +100,27 @@
             await LoadMyObjectsAsync();
     }
 
+    /// <summary>
+    /// Public refresh — re-runs whichever tab is currently active.
+    /// Can be called from the parent page after mutations (create/delete).
+    /// </summary>
+    public Task RefreshAsync() => _activeTab switch
+    {
+        2 => LoadHereAsync(),
+        _ => LoadMyObjectsAsync(),
+    };
+
+    /// <summary>
+    /// Select a dbref in the list and notify parent without re-fetching.
+    /// Useful after creating an object to auto-highlight it.
+    /// </summary>
+    public async Task SelectDbrefAsync(int dbref)
+    {
+        _selectedDbref = dbref;
+        StateHasChanged();
+        await OnObjectSelected.InvokeAsync(dbref);
+    }
+
     private async Task LoadMyObjectsAsync()
     {
         _activeTab = 0;
