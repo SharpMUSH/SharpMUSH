@@ -92,55 +92,29 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	/// Create a new in-game object using the appropriate building command.
 	/// Returns the new object's dbref if the server confirms creation, otherwise null.
 	/// </summary>
+	/// <summary>
+	/// Create a new in-game object using the appropriate softcode function
+	/// (<c>create()</c>, <c>dig()</c>, or <c>open()</c>) so the new dbref is
+	/// returned directly in one round-trip — no text parsing needed.
+	/// </summary>
 	public async Task<int?> CreateObjectAsync(string name, MushObjectType type)
 	{
-		var cmd = type switch
+		// Each function returns the new dbref (#N or #N:timestamp).
+		// We wrap with before(…,:) to strip any creation-time suffix from dig()/open().
+		var expr = type switch
 		{
-			MushObjectType.Room => $"@dig {name}",
-			MushObjectType.Exit => $"@open {name}",
-			_                   => $"@create {name}",
+			MushObjectType.Room => $"before(dig({name}),:)",
+			MushObjectType.Exit => $"before(open({name}),:)",
+			_                   => $"create({name})",   // create() already returns #N cleanly
 		};
 
-		var lines = await terminal.SendCommandAsync(cmd);
-		return ParseCreatedDbref(lines, type);
-	}
+		var lines = await terminal.SendCommandAsync(RouteExpr(expr));
+		if (lines.Length == 0) return null;
 
-	/// <summary>Parse the newly-created dbref from server creation output.</summary>
-	private static int? ParseCreatedDbref(string[] lines, MushObjectType type)
-	{
-		foreach (var line in lines)
-		{
-			int? found = type switch
-			{
-				// "Created Name (#5)."  — any (#N) in the line
-				MushObjectType.Thing  => TryParseDbrefInParens(line),
-				// "Name created with room number 5."
-				MushObjectType.Room   => TryParseTrailingNumber(line, "room number"),
-				// "Opened exit Name" — server doesn't echo the dbref
-				MushObjectType.Exit   => null,
-				_                     => TryParseDbrefInParens(line),
-			};
-			if (found.HasValue) return found;
-		}
-		return null;
+		// First non-empty line is the dbref, e.g. "#7"
+		var dbrefStr = lines.FirstOrDefault(l => l.TrimStart().StartsWith('#'))?.Trim();
+		return dbrefStr is not null && int.TryParse(dbrefStr.TrimStart('#'), out var n) ? n : null;
 	}
-
-	private static int? TryParseDbrefInParens(string line)
-	{
-		var m = DbrefParensRegex().Match(line);
-		return m.Success && int.TryParse(m.Groups[1].Value, out var n) ? n : null;
-	}
-
-	private static int? TryParseTrailingNumber(string line, string afterText)
-	{
-		var idx = line.IndexOf(afterText, StringComparison.OrdinalIgnoreCase);
-		if (idx < 0) return null;
-		var rest = line[(idx + afterText.Length)..].Trim().TrimEnd('.');
-		return int.TryParse(rest, out var n) ? n : null;
-	}
-
-	[GeneratedRegex(@"\(#(\d+)\)")]
-	private static partial Regex DbrefParensRegex();
 
 	// ──────────────────────────────────────────────────────────────────────────────
 	// Object search
