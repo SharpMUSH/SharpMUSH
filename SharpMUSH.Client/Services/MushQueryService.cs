@@ -88,6 +88,17 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	public Task DeleteAttributeAsync(string dbref, string attrName)
 		=> terminal.SendAsync($"&{attrName} {dbref}=");
 
+	/// <summary>
+	/// Create a new in-game object using the appropriate building command.
+	/// Returns immediately; the result appears in the terminal.
+	/// </summary>
+	public Task CreateObjectAsync(string name, MushObjectType type) => type switch
+	{
+		MushObjectType.Room => terminal.SendAsync($"@dig {name}"),
+		MushObjectType.Exit => terminal.SendAsync($"@open {name}"),
+		_                   => terminal.SendAsync($"@create {name}"),
+	};
+
 	// ──────────────────────────────────────────────────────────────────────────────
 	// Object search
 	// ──────────────────────────────────────────────────────────────────────────────

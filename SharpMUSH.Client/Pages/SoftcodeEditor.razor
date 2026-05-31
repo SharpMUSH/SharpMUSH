@@ -16,10 +16,49 @@
 
     @* ── Left panel: Object Browser ──────────────────────────────────────────── *@
     <MudPaper Elevation="1" Style="width:280px;min-width:220px;display:flex;flex-direction:column;border-radius:0;border-right:1px solid #333;">
-        <MudText Typo="Typo.subtitle2" Class="pa-2 pb-0" Color="Color.Secondary">Objects</MudText>
+        <div style="display:flex;align-items:center;padding:4px 8px 0;gap:4px;">
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Style="flex:1;">Objects</MudText>
+            <MudTooltip Text="Create Thing">
+                <MudIconButton Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small"
+                               title="Create Thing" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Thing))" />
+            </MudTooltip>
+            <MudTooltip Text="Create Room">
+                <MudIconButton Icon="@Icons.Material.Filled.MeetingRoom" Size="Size.Small"
+                               title="Create Room" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Room))" />
+            </MudTooltip>
+            <MudTooltip Text="Create Exit">
+                <MudIconButton Icon="@Icons.Material.Filled.ExitToApp" Size="Size.Small"
+                               title="Create Exit" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Exit))" />
+            </MudTooltip>
+        </div>
         <div style="flex:1;overflow:hidden;padding:0 4px;">
             <ObjectBrowser OnObjectSelected="OnObjectSelected" />
         </div>
+
+        @* Inline create-object prompt *@
+        @if (_createObjectType.HasValue)
+        {
+            <div style="padding:6px 8px;background:#1a1a1a;border-top:1px solid #333;display:flex;gap:6px;align-items:center;">
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="white-space:nowrap;">
+                    @(_createObjectType switch {
+                        MushObjectType.Room => "@dig",
+                        MushObjectType.Exit => "@open",
+                        _ => "@create"
+                    })
+                </MudText>
+                <MudTextField @bind-Value="_createObjectName"
+                              Placeholder="name"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="flex:1;font-size:12px;"
+                              OnKeyDown="OnCreateObjectKeyDown" />
+                <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small"
+                               Color="Color.Success" title="Create"
+                               OnClick="ExecuteCreateObjectAsync" />
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                               Color="Color.Default" title="Cancel"
+                               OnClick="CancelCreateObject" />
+            </div>
+        }
     </MudPaper>
 
     @* ── Right panel ─────────────────────────────────────────────────────────── *@
@@ -58,40 +97,71 @@
                 }
                 else
                 {
-                    <MudDataGrid T="MushAttribute" Items="_selectedObject.Attributes"
-                                 Dense="true" Hover="true" Striped="false"
-                                 SelectedItem="_selectedAttr"
-                                 SelectedItemChanged="OnAttributeSelected"
-                                 RowStyleFunc="@((attr, _) => attr == _selectedAttr ? "background:rgba(0,245,183,0.1)" : "")">
-                        <Columns>
-                            <PropertyColumn Property="a => a.Name" Title="Attribute" />
-                            <TemplateColumn Title="Flags">
-                                <CellTemplate>
-                                    @foreach (var flag in context.Item.AttributeFlags)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning"
-                                                 Style="margin:1px;padding:0 6px;height:18px;font-size:10px;">
-                                            @flag
-                                        </MudChip>
-                                    }
-                                </CellTemplate>
-                            </TemplateColumn>
-                            <TemplateColumn Title="Value">
-                                <CellTemplate>
-                                    <MudText Typo="Typo.caption"
-                                             Style="font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:350px;display:block;"
-                                             title="@context.Item.Value">
-                                        @TruncateValue(context.Item.Value)
-                                    </MudText>
-                                </CellTemplate>
-                            </TemplateColumn>
-                        </Columns>
-                    </MudDataGrid>
+                    <div style="display:flex;flex-direction:column;height:100%;">
+                        <div style="flex:1;overflow-y:auto;">
+                            <MudDataGrid T="MushAttribute" Items="_selectedObject.Attributes"
+                                         Dense="true" Hover="true" Striped="false"
+                                         SelectedItem="_selectedAttr"
+                                         SelectedItemChanged="OnAttributeSelected"
+                                         RowStyleFunc="@((attr, _) => attr == _selectedAttr ? "background:rgba(0,245,183,0.1)" : "")">
+                                <Columns>
+                                    <PropertyColumn Property="a => a.Name" Title="Attribute" />
+                                    <TemplateColumn Title="Flags">
+                                        <CellTemplate>
+                                            @foreach (var flag in context.Item.AttributeFlags)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                                                         Style="margin:1px;padding:0 6px;height:18px;font-size:10px;">
+                                                    @flag
+                                                </MudChip>
+                                            }
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                    <TemplateColumn Title="Value">
+                                        <CellTemplate>
+                                            <MudText Typo="Typo.caption"
+                                                     Style="font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:350px;display:block;"
+                                                     title="@context.Item.Value">
+                                                @TruncateValue(context.Item.Value)
+                                            </MudText>
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                </Columns>
+                            </MudDataGrid>
+                        </div>
 
-                    @if (_selectedObject.Attributes.Count == 0)
+                        @* Inline create-attribute row *@
+                        @if (_showCreateAttr)
+                        {
+                            <div style="display:flex;gap:6px;align-items:center;padding:4px 8px;background:#1a1a1a;border-top:1px solid #333;">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="white-space:nowrap;">&amp;</MudText>
+                                <MudTextField @bind-Value="_newAttrName"
+                                              Placeholder="ATTR_NAME"
+                                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                                              Style="flex:1;font-size:12px;text-transform:uppercase;"
+                                              OnKeyDown="OnCreateAttrKeyDown" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small"
+                                               Color="Color.Success" title="Create attribute"
+                                               OnClick="ExecuteCreateAttrAsync" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                               Color="Color.Default" title="Cancel"
+                                               OnClick="CancelCreateAttr" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="padding:2px 8px;background:#1a1a1a;border-top:1px solid #333;">
+                                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="ShowCreateAttr">New Attribute</MudButton>
+                            </div>
+                        }
+                    </div>
+
+                    @if (_selectedObject.Attributes.Count == 0 && !_showCreateAttr)
                     {
                         <MudText Typo="Typo.body2" Class="pa-3" Color="Color.Secondary">
-                            No attributes. Use &amp;ATTRNAME #@_selectedObject.Dbref=value in the terminal to add one.
+                            No attributes yet.
                         </MudText>
                     }
                 }
@@ -181,7 +251,9 @@
 
                 @* ── Terminal tab ── *@
                 <MudTabPanel Text="Terminal" Icon="@Icons.Material.Filled.Terminal">
-                    <GlobalTerminal />
+                    <div style="flex:1;min-height:0;height:100%;overflow:hidden;">
+                        <GlobalTerminal />
+                    </div>
                 </MudTabPanel>
 
             </MudTabs>
@@ -198,6 +270,14 @@
     private string? _saveMessage;
     private Severity _saveSeverity = Severity.Success;
     private int _editorTab;
+
+    // Create-object inline prompt
+    private MushObjectType? _createObjectType;
+    private string _createObjectName = string.Empty;
+
+    // Create-attribute inline prompt
+    private bool _showCreateAttr;
+    private string _newAttrName = string.Empty;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -228,20 +308,17 @@
 
     private async Task OnEditorInitAsync()
     {
-        // Re-register the language now that Monaco is definitely available.
         await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.ensureRegistered");
     }
 
-    private void OnEditorChanged(ModelContentChangedEvent e)
-    {
-        // Mark dirty state (could add visual indicator)
-    }
+    private void OnEditorChanged(ModelContentChangedEvent e) { }
 
     private async Task OnObjectSelected(int dbref)
     {
         _loadingAttrs = true;
         _selectedAttr = null;
         _saveMessage = null;
+        _showCreateAttr = false;
         StateHasChanged();
 
         try
@@ -249,7 +326,6 @@
             _selectedObject = await QueryService.GetObjectAsync($"#{dbref}");
             if (_selectedObject is null)
             {
-                // Fallback: try to populate with just attributes
                 _selectedObject = new MushObject
                 {
                     Dbref = dbref,
@@ -294,7 +370,6 @@
         var value = await _monacoEditor.GetValue();
         await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", _selectedAttr.Name, value);
 
-        // Update in-memory copy
         _selectedAttr.Value = value;
         _saveMessage = $"Saved &{_selectedAttr.Name} on #{_selectedObject.Dbref}. Check the terminal for server response.";
         _saveSeverity = Severity.Success;
@@ -325,10 +400,81 @@
         var value = await _monacoEditor.GetValue();
         await QueryService.EvalAsync(value);
 
-        // Switch to terminal tab to show output
         _editorTab = 1;
         StateHasChanged();
     }
+
+    // ── Create Object ──────────────────────────────────────────────────────────
+
+    private void ShowCreateObjectDialog(MushObjectType type)
+    {
+        _createObjectType = type;
+        _createObjectName = string.Empty;
+        StateHasChanged();
+    }
+
+    private void CancelCreateObject()
+    {
+        _createObjectType = null;
+        StateHasChanged();
+    }
+
+    private async Task ExecuteCreateObjectAsync()
+    {
+        if (_createObjectType is null || string.IsNullOrWhiteSpace(_createObjectName)) return;
+        await QueryService.CreateObjectAsync(_createObjectName.Trim(), _createObjectType.Value);
+        _createObjectType = null;
+        _createObjectName = string.Empty;
+        // Switch to terminal tab so user sees the server response
+        _editorTab = 1;
+        StateHasChanged();
+    }
+
+    private async Task OnCreateObjectKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await ExecuteCreateObjectAsync();
+        else if (e.Key == "Escape") CancelCreateObject();
+    }
+
+    // ── Create Attribute ───────────────────────────────────────────────────────
+
+    private void ShowCreateAttr()
+    {
+        _showCreateAttr = true;
+        _newAttrName = string.Empty;
+        StateHasChanged();
+    }
+
+    private void CancelCreateAttr()
+    {
+        _showCreateAttr = false;
+        StateHasChanged();
+    }
+
+    private async Task ExecuteCreateAttrAsync()
+    {
+        if (_selectedObject is null || string.IsNullOrWhiteSpace(_newAttrName)) return;
+
+        var attrName = _newAttrName.Trim().ToUpperInvariant();
+        // Create empty attribute, then let the user fill it in the editor
+        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", attrName, string.Empty);
+
+        // Add to local list and select it
+        var newAttr = new MushAttribute { Name = attrName, Value = string.Empty, AttributeFlags = [] };
+        _selectedObject.Attributes.Add(newAttr);
+        _showCreateAttr = false;
+        _newAttrName = string.Empty;
+        await OnAttributeSelected(newAttr);
+        StateHasChanged();
+    }
+
+    private async Task OnCreateAttrKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await ExecuteCreateAttrAsync();
+        else if (e.Key == "Escape") CancelCreateAttr();
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
 
     private static string TruncateValue(string value)
         => value.Length > 80 ? value[..80] + "…" : value;

@@ -8,13 +8,13 @@
 <div class="sharp-terminal-container" style="display:flex;flex-direction:column;height:100%;background:#111;color:#ccc;font-family:monospace;font-size:13px;">
 
     @* Output area *@
-    <div id="sharp-terminal-output"
-         style="flex:1;overflow-y:auto;padding:6px 10px;white-space:pre-wrap;word-break:break-all;">
+    <div id="@_outputId"
+         style="flex:1;min-height:0;overflow-y:auto;padding:6px 10px;white-space:pre-wrap;word-break:break-all;">
         @foreach (var line in _displayLines)
         {
             <div class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@line.Text</div>
         }
-        <div id="sharp-terminal-bottom"></div>
+        <div id="@_bottomId"></div>
     </div>
 
     @* Connection bar *@
@@ -93,6 +93,10 @@
 
 @code {
     [Parameter] public string DefaultServerUri { get; set; } = "ws://localhost:4202/ws";
+
+    // Unique IDs per instance so multiple terminals on the same page don't conflict
+    private readonly string _outputId = $"sharp-terminal-output-{Guid.NewGuid():N}";
+    private readonly string _bottomId = $"sharp-terminal-bottom-{Guid.NewGuid():N}";
 
     private string _serverUri = string.Empty;
     private string _input = string.Empty;
@@ -227,7 +231,7 @@
 
     private async Task ScrollToBottomAsync()
     {
-        try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.scrollToBottom", "sharp-terminal-output"); }
+        try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.scrollToBottom", _outputId); }
         catch { /* ignore if JS not ready */ }
     }
 

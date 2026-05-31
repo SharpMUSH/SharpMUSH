@@ -24,6 +24,10 @@ body {
 }
 
 /* ── Terminal ── */
+.sharp-terminal-container {
+    min-height: 0;
+}
+
 .terminal-line {
     line-height: 1.45;
     padding: 0 2px;
