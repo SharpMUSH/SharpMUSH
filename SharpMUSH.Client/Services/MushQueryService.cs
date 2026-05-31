@@ -65,23 +65,46 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	// Object search
 	// ──────────────────────────────────────────────────────────────────────────────
 
-	/// <summary>Return all objects owned by the currently logged-in player, grouped by type.</summary>
-	public async Task<List<MushSearchResult>> SearchOwnedAsync()
-		=> await SearchAsync("owner=me");
+	/// <summary>
+	/// Returns true if the currently connected player has the WIZARD flag.
+	/// Used to decide whether to run lsearch(all) or lsearch(me).
+	/// </summary>
+	public async Task<bool> IsWizardAsync()
+	{
+		var lines = await terminal.SendCommandAsync("think [hasflag(me,WIZARD)]");
+		return lines.Length > 0 && lines[0].Trim() == "1";
+	}
 
-	/// <summary>Search objects in the current location (examine here).</summary>
+	/// <summary>
+	/// Return all objects owned by the currently logged-in player.
+	/// Wizards automatically get lsearch(all) to see the full database.
+	/// </summary>
+	public async Task<List<MushSearchResult>> SearchOwnedAsync()
+	{
+		var isWiz = await IsWizardAsync();
+		// lsearch(all) — for wizards returns every object; for mortals returns
+		// only objects they can examine (engine enforces this automatically).
+		// lsearch(me)  — strictly only objects owned by me.
+		var expr = isWiz ? "lsearch(all)" : "lsearch(me)";
+		return await SearchAsync(expr);
+	}
+
+	/// <summary>Search objects in the current location using lcon/lexits.</summary>
 	public async Task<List<MushSearchResult>> GetContentsAsync()
 	{
-		// Use examine here to list contents; we parse with our structured approach.
-		var cmd = "think [iter(search(loc=here),SHARP_OBJ:##:[type(##)]:[name(##)],%r)]";
+		var cmd = "think [iter(lcon(loc(me)) lexits(loc(me)),SHARP_OBJ:##:[type(##)]:[name(##)],%r)]";
 		var lines = await terminal.SendCommandAsync(cmd);
 		return ParseSearchResults(lines);
 	}
 
-	/// <summary>Execute a free-form <c>@search</c> expression and parse the results.</summary>
+	/// <summary>
+	/// Execute a free-form softcode expression whose result is a space-separated
+	/// list of dbrefs, and return typed search results.
+	/// Examples: lsearch(me)  ·  lsearch(me, type, room)  ·  lcon(loc(me))
+	/// </summary>
 	public async Task<List<MushSearchResult>> SearchAsync(string expression)
 	{
-		var cmd = $"think [iter(search({expression}),SHARP_OBJ:##:[type(##)]:[name(##)],%r)]";
+		var cmd = $"think [iter({expression},SHARP_OBJ:##:[type(##)]:[name(##)],%r)]";
 		var lines = await terminal.SendCommandAsync(cmd);
 		return ParseSearchResults(lines);
 	}

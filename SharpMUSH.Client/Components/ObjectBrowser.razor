@@ -19,12 +19,15 @@
         </MudTabPanel>
 
         <MudTabPanel Text="Search" Icon="@Icons.Material.Filled.Search">
-            <div style="display:flex;gap:6px;padding:8px 0;">
+            <div style="display:flex;flex-direction:column;gap:4px;padding:8px 0;">
                 <MudTextField @bind-Value="_searchExpr"
-                              Placeholder="owner=me type=thing"
+                              Placeholder="lsearch(me, type, thing)"
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Style="flex:1;" />
+                <MudText Typo="Typo.caption" Style="color:#888;">
+                    Examples: <code>lsearch(me)</code> · <code>lsearch(me, type, room)</code> · <code>lcon(loc(me))</code>
+                </MudText>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                            OnClick="SearchAsync" Disabled="@_loading">Go</MudButton>
             </div>
