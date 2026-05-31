@@ -908,4 +908,12 @@
   <data name="Language" xml:space="preserve">
     <value>Language</value>
   </data>
+
+  <data name="SoftcodeEditor" xml:space="preserve">
+    <value>Softcode Editor</value>
+  </data>
+
+  <data name="Terminal" xml:space="preserve">
+    <value>Terminal</value>
+  </data>
 </root>

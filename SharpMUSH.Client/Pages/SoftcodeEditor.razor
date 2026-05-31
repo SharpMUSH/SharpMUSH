@@ -1,0 +1,348 @@
+@page "/softcode"
+@using BlazorMonaco
+@using BlazorMonaco.Editor
+@using SharpMUSH.Client.Components
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject ITerminalService Terminal
+@inject MushQueryService QueryService
+@inject IJSRuntime JsRuntime
+@inject IStringLocalizer<SharedResource> Loc
+@implements IAsyncDisposable
+
+<PageTitle>Softcode Editor — SharpMUSH</PageTitle>
+
+<div style="display:flex;height:calc(100vh - 64px);gap:0;overflow:hidden;">
+
+    @* ── Left panel: Object Browser ──────────────────────────────────────────── *@
+    <MudPaper Elevation="1" Style="width:280px;min-width:220px;display:flex;flex-direction:column;border-radius:0;border-right:1px solid #333;">
+        <MudText Typo="Typo.subtitle2" Class="pa-2 pb-0" Color="Color.Secondary">Objects</MudText>
+        <div style="flex:1;overflow:hidden;padding:0 4px;">
+            <ObjectBrowser OnObjectSelected="OnObjectSelected" />
+        </div>
+    </MudPaper>
+
+    @* ── Right panel ─────────────────────────────────────────────────────────── *@
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+
+        @* Object title bar *@
+        @if (_selectedObject is not null)
+        {
+            <div style="padding:6px 12px;background:#1a1a1a;border-bottom:1px solid #333;display:flex;align-items:center;gap:8px;">
+                <MudIcon Icon="@GetObjectIcon(_selectedObject.Type)" Size="Size.Small" Color="Color.Secondary" />
+                <MudText Typo="Typo.subtitle1">@_selectedObject.Name</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">(#@_selectedObject.Dbref)</MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@_selectedObject.Type</MudChip>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Owner: @_selectedObject.Owner</MudText>
+                <MudSpacer />
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="RefreshAttributesAsync">Refresh</MudButton>
+            </div>
+        }
+
+        @* Main editor area (upper part: attribute list, lower part: Monaco + toolbar) *@
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+
+            @* Attribute list *@
+            <div style="height:200px;overflow-y:auto;border-bottom:1px solid #333;">
+                @if (_loadingAttrs)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                }
+                else if (_selectedObject is null)
+                {
+                    <div style="display:flex;align-items:center;justify-content:center;height:100%;">
+                        <MudText Color="Color.Secondary" Typo="Typo.body2">Select an object from the browser.</MudText>
+                    </div>
+                }
+                else
+                {
+                    <MudDataGrid T="MushAttribute" Items="_selectedObject.Attributes"
+                                 Dense="true" Hover="true" Striped="false"
+                                 SelectedItem="_selectedAttr"
+                                 SelectedItemChanged="OnAttributeSelected"
+                                 RowStyleFunc="@((attr, _) => attr == _selectedAttr ? "background:rgba(0,245,183,0.1)" : "")">
+                        <Columns>
+                            <PropertyColumn Property="a => a.Name" Title="Attribute" />
+                            <TemplateColumn Title="Flags">
+                                <CellTemplate>
+                                    @foreach (var flag in context.Item.AttributeFlags)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                                                 Style="margin:1px;padding:0 6px;height:18px;font-size:10px;">
+                                            @flag
+                                        </MudChip>
+                                    }
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="Value">
+                                <CellTemplate>
+                                    <MudText Typo="Typo.caption"
+                                             Style="font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:350px;display:block;"
+                                             title="@context.Item.Value">
+                                        @TruncateValue(context.Item.Value)
+                                    </MudText>
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </Columns>
+                    </MudDataGrid>
+
+                    @if (_selectedObject.Attributes.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Class="pa-3" Color="Color.Secondary">
+                            No attributes. Use &amp;ATTRNAME #@_selectedObject.Dbref=value in the terminal to add one.
+                        </MudText>
+                    }
+                }
+            </div>
+
+            @* Editor + Terminal tabs *@
+            <MudTabs @bind-ActivePanelIndex="_editorTab" Elevation="0"
+                     Style="display:flex;flex-direction:column;flex:1;overflow:hidden;"
+                     TabPanelsClass="flex-panel">
+
+                @* ── Editor tab ── *@
+                <MudTabPanel Text="Editor" Icon="@Icons.Material.Filled.Code">
+                    <div style="display:flex;flex-direction:column;height:100%;">
+
+                        @* Attribute name + toolbar *@
+                        <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;background:#1a1a1a;border-bottom:1px solid #333;flex-wrap:wrap;">
+
+                            @if (_selectedAttr is not null)
+                            {
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">
+                                    &amp;@_selectedAttr.Name
+                                    @if (_selectedObject is not null) { <text> #@_selectedObject.Dbref</text> }
+                                </MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Select an attribute above to edit it.</MudText>
+                            }
+
+                            <MudSpacer />
+
+                            @* Eval toggle *@
+                            <MudTooltip Text="Test: evaluate code with 'think' without saving">
+                                <MudToggleIconButton @bind-Toggled="_evalMode"
+                                                     Icon="@Icons.Material.Filled.PlayCircleOutline"
+                                                     ToggledIcon="@Icons.Material.Filled.PlayCircle"
+                                                     Color="Color.Default"
+                                                     ToggledColor="Color.Success"
+                                                     Size="Size.Small"
+                                                     title="Eval mode" />
+                            </MudTooltip>
+
+                            @if (_evalMode)
+                            {
+                                <MudButton Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                                           OnClick="EvalAsync"
+                                           Disabled="@(_selectedAttr is null)">
+                                    Test
+                                </MudButton>
+                            }
+
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Save"
+                                       OnClick="SaveAsync"
+                                       Disabled="@(_selectedAttr is null || _selectedObject is null)">
+                                Save
+                            </MudButton>
+
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Delete"
+                                       OnClick="DeleteAsync"
+                                       Disabled="@(_selectedAttr is null || _selectedObject is null)">
+                                Delete
+                            </MudButton>
+                        </div>
+
+                        @* Monaco Editor *@
+                        <div style="flex:1;min-height:0;">
+                            <StandaloneCodeEditor @ref="_monacoEditor"
+                                                  Id="mush-editor"
+                                                  ConstructionOptions="BuildEditorOptions"
+                                                  OnDidInit="OnEditorInitAsync"
+                                                  OnDidChangeModelContent="OnEditorChanged"
+                                                  CssClass="mush-editor-fill" />
+                        </div>
+
+                        @if (_saveMessage is not null)
+                        {
+                            <MudAlert Severity="@_saveSeverity" Dense="true" ShowCloseIcon="true"
+                                      CloseIconClicked="() => _saveMessage = null">
+                                @_saveMessage
+                            </MudAlert>
+                        }
+                    </div>
+                </MudTabPanel>
+
+                @* ── Terminal tab ── *@
+                <MudTabPanel Text="Terminal" Icon="@Icons.Material.Filled.Terminal">
+                    <GlobalTerminal />
+                </MudTabPanel>
+
+            </MudTabs>
+        </div>
+    </div>
+</div>
+
+@code {
+    private StandaloneCodeEditor? _monacoEditor;
+    private MushObject? _selectedObject;
+    private MushAttribute? _selectedAttr;
+    private bool _loadingAttrs;
+    private bool _evalMode;
+    private string? _saveMessage;
+    private Severity _saveSeverity = Severity.Success;
+    private int _editorTab;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.ensureRegistered");
+        }
+    }
+
+    private StandaloneEditorConstructionOptions BuildEditorOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            Language = "mush",
+            Theme = "mush-dark",
+            AutomaticLayout = true,
+            Value = _selectedAttr?.Value ?? string.Empty,
+            FontFamily = "Consolas, 'Courier New', monospace",
+            FontSize = 14,
+            LineNumbers = "on",
+            WordWrap = "on",
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            ScrollBeyondLastLine = false,
+            SuggestOnTriggerCharacters = true,
+            ReadOnly = false,
+        };
+    }
+
+    private async Task OnEditorInitAsync()
+    {
+        // Re-register the language now that Monaco is definitely available.
+        await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.ensureRegistered");
+    }
+
+    private void OnEditorChanged(ModelContentChangedEvent e)
+    {
+        // Mark dirty state (could add visual indicator)
+    }
+
+    private async Task OnObjectSelected(int dbref)
+    {
+        _loadingAttrs = true;
+        _selectedAttr = null;
+        _saveMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            _selectedObject = await QueryService.GetObjectAsync($"#{dbref}");
+            if (_selectedObject is null)
+            {
+                // Fallback: try to populate with just attributes
+                _selectedObject = new MushObject
+                {
+                    Dbref = dbref,
+                    Name = $"#{dbref}",
+                    Attributes = await QueryService.GetAttributesAsync($"#{dbref}"),
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            _saveMessage = $"Error loading object: {ex.Message}";
+            _saveSeverity = Severity.Error;
+        }
+        finally
+        {
+            _loadingAttrs = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnAttributeSelected(MushAttribute? attr)
+    {
+        _selectedAttr = attr;
+        _saveMessage = null;
+
+        if (_monacoEditor is not null && attr is not null)
+        {
+            await _monacoEditor.SetValue(attr.Value);
+        }
+    }
+
+    private async Task RefreshAttributesAsync()
+    {
+        if (_selectedObject is null) return;
+        await OnObjectSelected(_selectedObject.Dbref);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_selectedAttr is null || _selectedObject is null || _monacoEditor is null) return;
+
+        var value = await _monacoEditor.GetValue();
+        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", _selectedAttr.Name, value);
+
+        // Update in-memory copy
+        _selectedAttr.Value = value;
+        _saveMessage = $"Saved &{_selectedAttr.Name} on #{_selectedObject.Dbref}. Check the terminal for server response.";
+        _saveSeverity = Severity.Success;
+        StateHasChanged();
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_selectedAttr is null || _selectedObject is null) return;
+
+        await QueryService.DeleteAttributeAsync($"#{_selectedObject.Dbref}", _selectedAttr.Name);
+
+        _selectedObject.Attributes.Remove(_selectedAttr);
+        _saveMessage = $"Deleted &{_selectedAttr.Name}. Check terminal for server response.";
+        _saveSeverity = Severity.Info;
+        _selectedAttr = null;
+
+        if (_monacoEditor is not null)
+            await _monacoEditor.SetValue(string.Empty);
+
+        StateHasChanged();
+    }
+
+    private async Task EvalAsync()
+    {
+        if (_selectedAttr is null || _monacoEditor is null) return;
+
+        var value = await _monacoEditor.GetValue();
+        await QueryService.EvalAsync(value);
+
+        // Switch to terminal tab to show output
+        _editorTab = 1;
+        StateHasChanged();
+    }
+
+    private static string TruncateValue(string value)
+        => value.Length > 80 ? value[..80] + "…" : value;
+
+    private static string GetObjectIcon(MushObjectType type) => type switch
+    {
+        MushObjectType.Room => Icons.Material.Filled.MeetingRoom,
+        MushObjectType.Exit => Icons.Material.Filled.ExitToApp,
+        MushObjectType.Player => Icons.Material.Filled.Person,
+        _ => Icons.Material.Filled.Inventory2,
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        await Task.CompletedTask;
+    }
+}

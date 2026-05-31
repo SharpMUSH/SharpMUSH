@@ -1,8 +1,10 @@
 ﻿@using MudBlazor.Utilities
 @using SharpMUSH.Client.Components
+@using SharpMUSH.Client.Services
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
+@inject ITerminalService Terminal
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
 <MudPopoverProvider />
@@ -21,6 +23,12 @@
         }
         <MudSpacer />
         <LanguagePicker />
+        <MudTooltip Text="@(_terminalOpen ? "Close Terminal" : "Open Terminal")">
+            <MudIconButton Icon="@Icons.Material.Filled.Terminal"
+                           Color="@(_terminalOpen ? Color.Success : Color.Inherit)"
+                           OnClick="ToggleTerminal"
+                           title="Terminal" />
+        </MudTooltip>
         <LoginDisplay />
     </MudAppBar>
     
@@ -48,11 +56,33 @@
         </MudDrawer>
     }
     
-    <MudMainContent Class="@(_isConfigRoute ? "config-main-content" : "")">
+    <MudMainContent Class="@(_isConfigRoute ? "config-main-content" : "")"
+                    Style="@(_terminalOpen ? "padding-bottom: 320px;" : "")">
         <MudContainer MaxWidth="MaxWidth.False" Class="@(_isConfigRoute ? "pa-0" : "")">
             @Body
         </MudContainer>
     </MudMainContent>
+
+    @* Global bottom terminal drawer *@
+    <MudDrawer @bind-Open="_terminalOpen"
+               Anchor="Anchor.Bottom"
+               Elevation="4"
+               Variant="DrawerVariant.Temporary"
+               ClipMode="DrawerClipMode.Never"
+               Class="terminal-bottom-drawer"
+               Width="100%"
+               Height="300px">
+        <MudDrawerHeader Style="padding:4px 12px;background:#111;border-bottom:1px solid #333;display:flex;align-items:center;">
+            <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" Color="Color.Secondary" Style="margin-right:8px;" />
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Terminal</MudText>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                           Color="Color.Default" OnClick="ToggleTerminal" />
+        </MudDrawerHeader>
+        <div style="height: calc(300px - 40px);">
+            <GlobalTerminal />
+        </div>
+    </MudDrawer>
 </MudLayout>
 
 @code {
@@ -73,6 +103,7 @@
     private bool _isDarkMode = true;
     private bool _drawerOpen = false;
     private bool _isConfigRoute = false;
+    private bool _terminalOpen = false;
 
     protected override void OnInitialized()
     {
@@ -94,6 +125,11 @@
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
+    }
+
+    void ToggleTerminal()
+    {
+        _terminalOpen = !_terminalOpen;
     }
 
     public void Dispose()

@@ -1,0 +1,164 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject ITerminalService Terminal
+@inject IJSRuntime JsRuntime
+@implements IAsyncDisposable
+
+<div class="sharp-terminal-container" style="display:flex;flex-direction:column;height:100%;background:#111;color:#ccc;font-family:monospace;font-size:13px;">
+
+    @* Output area *@
+    <div id="sharp-terminal-output"
+         style="flex:1;overflow-y:auto;padding:6px 10px;white-space:pre-wrap;word-break:break-all;">
+        @foreach (var line in _displayLines)
+        {
+            <div class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@line.Text</div>
+        }
+        <div id="sharp-terminal-bottom"></div>
+    </div>
+
+    @* Connection bar *@
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;background:#1a1a1a;border-top:1px solid #333;">
+        <MudChip T="string"
+                 Size="Size.Small"
+                 Color="@(_connected ? Color.Success : Color.Error)"
+                 Style="min-width:90px;justify-content:center;">
+            @(_connected ? "Connected" : "Disconnected")
+        </MudChip>
+
+        @if (!_connected)
+        {
+            <MudTextField @bind-Value="_serverUri"
+                          Placeholder="ws://localhost:4202/ws"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Style="flex:1;font-size:12px;"
+                          OnKeyDown="OnUriKeyDown" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="ConnectAsync">Connect</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small"
+                       OnClick="DisconnectAsync">Disconnect</MudButton>
+        }
+    </div>
+
+    @* Input bar *@
+    <div style="display:flex;gap:6px;padding:4px 8px;background:#1a1a1a;border-top:1px solid #333;">
+        <MudTextField @bind-Value="_input"
+                      Placeholder="Enter command..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Style="flex:1;font-family:monospace;font-size:13px;"
+                      Disabled="@(!_connected)"
+                      OnKeyDown="OnInputKeyDown" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   Disabled="@(!_connected)" OnClick="SendAsync">Send</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
+                   OnClick="ClearAsync" title="Clear terminal">
+            <MudIcon Icon="@Icons.Material.Filled.ClearAll" Size="Size.Small" />
+        </MudButton>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string DefaultServerUri { get; set; } = "ws://localhost:4202/ws";
+
+    private string _serverUri = string.Empty;
+    private string _input = string.Empty;
+    private bool _connected;
+    private readonly List<TerminalLine> _displayLines = [];
+    private bool _autoScroll = true;
+
+    protected override void OnInitialized()
+    {
+        _serverUri = DefaultServerUri;
+        _connected = Terminal.IsConnected;
+
+        // Populate from existing buffer
+        _displayLines.AddRange(Terminal.Lines);
+
+        Terminal.LineReceived += OnLineReceived;
+        Terminal.ConnectionStateChanged += OnConnectionChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_autoScroll)
+            await ScrollToBottomAsync();
+    }
+
+    private async Task ConnectAsync()
+    {
+        try { await Terminal.ConnectAsync(_serverUri); }
+        catch (Exception ex) { AddLocalLine($"[Error] {ex.Message}", TerminalLineSource.System); }
+    }
+
+    private async Task DisconnectAsync()
+    {
+        await Terminal.DisconnectAsync();
+    }
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_input) || !_connected) return;
+        await Terminal.SendAsync(_input);
+        _input = string.Empty;
+    }
+
+    private Task ClearAsync()
+    {
+        _displayLines.Clear();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task OnInputKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SendAsync();
+    }
+
+    private async Task OnUriKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await ConnectAsync();
+    }
+
+    private void OnLineReceived(TerminalLine line)
+    {
+        _displayLines.Add(line);
+        if (_displayLines.Count > 2000) _displayLines.RemoveAt(0);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnConnectionChanged(bool connected)
+    {
+        _connected = connected;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void AddLocalLine(string text, TerminalLineSource source)
+    {
+        _displayLines.Add(new TerminalLine(DateTime.Now, text, source));
+        StateHasChanged();
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.scrollToBottom", "sharp-terminal-output"); }
+        catch { /* ignore if JS not ready */ }
+    }
+
+    private static string GetLineClass(TerminalLineSource source) => source switch
+    {
+        TerminalLineSource.Client => "terminal-line terminal-sent",
+        TerminalLineSource.System => "terminal-line terminal-system",
+        _ => "terminal-line"
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        Terminal.LineReceived -= OnLineReceived;
+        Terminal.ConnectionStateChanged -= OnConnectionChanged;
+        await Task.CompletedTask;
+    }
+}

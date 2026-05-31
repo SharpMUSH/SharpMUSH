@@ -24,6 +24,8 @@ builder.Services.AddSingleton<RestrictionsService>();
 builder.Services.AddSingleton<BannedNamesService>();
 builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<IWebSocketClientService, WebSocketClientService>();
+builder.Services.AddSingleton<ITerminalService, TerminalService>();
+builder.Services.AddSingleton<MushQueryService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 
 builder.Services.AddHttpClient("api", sp =>

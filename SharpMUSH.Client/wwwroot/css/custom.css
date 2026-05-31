@@ -22,3 +22,43 @@ body {
 .b-demo-loading {
 	animation: b-loading-indicator-flipper 1200ms linear infinite;
 }
+
+/* ── Terminal ── */
+.terminal-line {
+    line-height: 1.45;
+    padding: 0 2px;
+}
+
+.terminal-sent {
+    color: #88c0d0;
+    opacity: 0.85;
+}
+
+.terminal-system {
+    color: #a3be8c;
+    font-style: italic;
+}
+
+/* ── Softcode Editor ── */
+.mush-editor-fill {
+    width: 100%;
+    height: 100%;
+}
+
+.mush-editor-fill .monaco-editor-container {
+    height: 100%;
+}
+
+/* Keep flex-panel inside MudTabs filling available height */
+.flex-panel {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Bottom terminal drawer */
+.terminal-bottom-drawer .mud-drawer-content {
+    padding: 0;
+}
