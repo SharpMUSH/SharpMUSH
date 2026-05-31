@@ -2,6 +2,7 @@
 @using SharpMUSH.Client.Services
 @inject ITerminalService Terminal
 @inject IJSRuntime JsRuntime
+@inject CredentialService Credentials
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="display:flex;flex-direction:column;height:100%;background:#111;color:#ccc;font-family:monospace;font-size:13px;">
@@ -33,15 +34,44 @@
                           Margin="Margin.Dense"
                           Style="flex:1;font-size:12px;"
                           OnKeyDown="OnUriKeyDown" />
+            <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
+                           title="Login settings"
+                           OnClick="ToggleLoginPanel" />
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                        OnClick="ConnectAsync">Connect</MudButton>
         }
         else
         {
+            <MudText Typo="Typo.caption" Style="color:#888;flex:1;">
+                @(_playerName ?? "not logged in")
+            </MudText>
             <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small"
                        OnClick="DisconnectAsync">Disconnect</MudButton>
         }
     </div>
+
+    @* Collapsible login settings panel *@
+    @if (_showLoginPanel && !_connected)
+    {
+        <div style="padding:6px 10px;background:#1a1a1a;border-top:1px solid #333;display:flex;flex-direction:column;gap:6px;">
+            <MudText Typo="Typo.caption" Style="color:#888;">Auto-login credentials (saved to browser storage)</MudText>
+            <div style="display:flex;gap:8px;align-items:flex-end;">
+                <MudTextField @bind-Value="_loginPlayer"
+                              Label="Player name"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="flex:1;font-size:12px;" />
+                <MudTextField @bind-Value="_loginPassword"
+                              Label="Password"
+                              InputType="InputType.Password"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="flex:1;font-size:12px;" />
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                           OnClick="SaveCredentialsAsync">Save</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small"
+                           OnClick="ClearCredentialsAsync">Clear</MudButton>
+            </div>
+        </div>
+    }
 
     @* Input bar *@
     <div style="display:flex;gap:6px;padding:4px 8px;background:#1a1a1a;border-top:1px solid #333;">
@@ -67,10 +97,14 @@
     private string _serverUri = string.Empty;
     private string _input = string.Empty;
     private bool _connected;
+    private bool _showLoginPanel;
+    private string? _loginPlayer;
+    private string? _loginPassword;
+    private string? _playerName;
     private readonly List<TerminalLine> _displayLines = [];
     private bool _autoScroll = true;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _serverUri = DefaultServerUri;
         _connected = Terminal.IsConnected;
@@ -80,6 +114,13 @@
 
         Terminal.LineReceived += OnLineReceived;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
+
+        // Load saved credentials
+        var (savedPlayer, savedPassword, savedUri) = await Credentials.LoadAsync();
+        _loginPlayer = savedPlayer;
+        _loginPassword = savedPassword;
+        if (!string.IsNullOrWhiteSpace(savedUri))
+            _serverUri = savedUri;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -90,12 +131,25 @@
 
     private async Task ConnectAsync()
     {
-        try { await Terminal.ConnectAsync(_serverUri); }
+        try
+        {
+            await Terminal.ConnectAsync(_serverUri);
+
+            // Auto-login if credentials are saved
+            if (!string.IsNullOrWhiteSpace(_loginPlayer) && !string.IsNullOrWhiteSpace(_loginPassword))
+            {
+                // Small delay so the server's connection banner arrives first
+                await Task.Delay(300);
+                _playerName = _loginPlayer;
+                await Terminal.SendAsync($"connect {_loginPlayer} {_loginPassword}");
+            }
+        }
         catch (Exception ex) { AddLocalLine($"[Error] {ex.Message}", TerminalLineSource.System); }
     }
 
     private async Task DisconnectAsync()
     {
+        _playerName = null;
         await Terminal.DisconnectAsync();
     }
 
@@ -111,6 +165,29 @@
         _displayLines.Clear();
         StateHasChanged();
         return Task.CompletedTask;
+    }
+
+    private void ToggleLoginPanel()
+    {
+        _showLoginPanel = !_showLoginPanel;
+        StateHasChanged();
+    }
+
+    private async Task SaveCredentialsAsync()
+    {
+        await Credentials.SaveAsync(_loginPlayer, _loginPassword, _serverUri);
+        _showLoginPanel = false;
+        AddLocalLine("[System] Credentials saved.", TerminalLineSource.System);
+        StateHasChanged();
+    }
+
+    private async Task ClearCredentialsAsync()
+    {
+        await Credentials.ClearAsync();
+        _loginPlayer = null;
+        _loginPassword = null;
+        AddLocalLine("[System] Credentials cleared.", TerminalLineSource.System);
+        StateHasChanged();
     }
 
     private async Task OnInputKeyDown(KeyboardEventArgs e)
@@ -133,6 +210,7 @@
     private void OnConnectionChanged(bool connected)
     {
         _connected = connected;
+        if (!connected) _playerName = null;
         InvokeAsync(StateHasChanged);
     }
 

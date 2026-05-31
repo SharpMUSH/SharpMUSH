@@ -233,6 +233,7 @@ public class Startup(
 			{
 // Register consumers for input messages from ConnectionServer
 				x.AddConsumer<Consumers.TelnetInputConsumer>();
+				x.AddConsumer<Consumers.WebSocketInputConsumer>();
 				x.AddConsumer<Consumers.GMCPSignalConsumer>();
 				x.AddConsumer<Consumers.MSDPUpdateConsumer>();
 				x.AddConsumer<Consumers.NAWSUpdateConsumer>();
