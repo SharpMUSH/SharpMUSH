@@ -1,5 +1,6 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using SharpMUSH.Library.Definitions;
 using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests;
@@ -33,10 +34,10 @@ public class MemgraphTestServer : IAsyncInitializer, IAsyncDisposable
 	public string BoltUri => $"bolt://localhost:{Instance.GetMappedPublicPort(BoltPort)}";
 
 	private static bool IsMemgraphEnabled =>
-		string.Equals(
-			Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"),
-			"memgraph",
-			StringComparison.OrdinalIgnoreCase);
+		DatabaseProviderSelector.TryResolve(
+			Environment.GetEnvironmentVariable(DatabaseProviderSelector.EnvironmentVariableName),
+			out var provider)
+		&& provider == DatabaseProvider.Memgraph;
 
 	public async Task InitializeAsync()
 	{
