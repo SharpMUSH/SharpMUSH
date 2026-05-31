@@ -142,6 +142,11 @@
                 await Task.Delay(300);
                 _playerName = _loginPlayer;
                 await Terminal.SendAsync($"connect {_loginPlayer} {_loginPassword}");
+
+                // Fire-and-forget: capture the port descriptor once login has settled.
+                // This enables output isolation — subsequent queries go only to this connection.
+                _ = Task.Delay(1500).ContinueWith(_ => Terminal.InitializePortAsync(),
+                    TaskScheduler.Default);
             }
         }
         catch (Exception ex) { AddLocalLine($"[Error] {ex.Message}", TerminalLineSource.System); }

@@ -12,6 +12,12 @@ public interface ITerminalService
 
 	bool IsConnected { get; }
 
+	/// <summary>
+	/// The port descriptor of this WebSocket connection, captured after login via
+	/// <see cref="InitializePortAsync"/>.  Null until initialization completes.
+	/// </summary>
+	long? MyPort { get; }
+
 	/// <summary>Read-only snapshot of the in-memory line buffer (up to 2000 lines).</summary>
 	IReadOnlyList<TerminalLine> Lines { get; }
 
@@ -20,6 +26,14 @@ public interface ITerminalService
 
 	/// <summary>Send a raw command string to the MUSH server.</summary>
 	Task SendAsync(string command);
+
+	/// <summary>
+	/// Queries the server for the current connection's port descriptor and stores it in
+	/// <see cref="MyPort"/>.  Should be called once, ~1.5 s after a successful login, so that
+	/// subsequent <see cref="SendCommandAsync"/> calls route their end-markers — and
+	/// <see cref="MushQueryService"/> routes its output — to this connection only.
+	/// </summary>
+	Task InitializePortAsync();
 
 	/// <summary>
 	/// Send a command and collect all response lines until a unique end-marker is echoed back

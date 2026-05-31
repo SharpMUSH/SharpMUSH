@@ -18,6 +18,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 	private readonly ILogger<TerminalService> _logger = logger;
 	private readonly List<TerminalLine> _lines = new(MaxLines);
+	private long? _myPort;
 
 	// Pending correlated request: (request-id, completion source, accumulated lines)
 	private (string ReqId, TaskCompletionSource<string[]> Tcs, List<string> Buffer)? _pending;
@@ -27,6 +28,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	public event Action<bool>? ConnectionStateChanged;
 
 	public bool IsConnected => wsService.IsConnected;
+
+	/// <inheritdoc/>
+	public long? MyPort => _myPort;
 
 	public IReadOnlyList<TerminalLine> Lines
 	{
@@ -59,6 +63,30 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		await wsService.SendAsync(command);
 	}
 
+	/// <inheritdoc/>
+	public async Task InitializePortAsync()
+	{
+		try
+		{
+			// ports(me) returns descriptors most-recent-first; the first entry is this connection.
+			var lines = await SendCommandAsync("think [ports(me)]", 5000);
+			var firstToken = lines.Length > 0 ? lines[0].Trim().Split(' ')[0] : null;
+			if (long.TryParse(firstToken, out var port))
+			{
+				_myPort = port;
+				_logger.LogInformation("Editor port captured: {Port}", port);
+			}
+			else
+			{
+				_logger.LogWarning("Could not parse port from response: {Response}", string.Join("|", lines));
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning(ex, "Failed to capture editor port number");
+		}
+	}
+
 	public async Task<string[]> SendCommandAsync(string command, int timeoutMs = 5000)
 	{
 		await _sendSemaphore.WaitAsync();
@@ -69,7 +97,12 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 			_pending = (reqId, tcs, []);
 
 			await wsService.SendAsync(command);
-			await wsService.SendAsync($"@pemit me={EndMarkerPrefix}{reqId}");
+
+			// Route end-marker to this specific port when known, otherwise fall back to @pemit me=
+			var endMarkerCmd = _myPort.HasValue
+				? $"think [pemit({_myPort.Value}, {EndMarkerPrefix}{reqId})]"
+				: $"@pemit me={EndMarkerPrefix}{reqId}";
+			await wsService.SendAsync(endMarkerCmd);
 
 			using var cts = new CancellationTokenSource(timeoutMs);
 			cts.Token.Register(() => tcs.TrySetResult(_pending?.Buffer.ToArray() ?? []));
