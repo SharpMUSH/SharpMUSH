@@ -9,10 +9,12 @@ public interface IBooleanExpressionParser
 	void InvalidateCache(string? text = null);
 
 	/// <summary>
-	/// Normalizes a lock expression by converting bare dbrefs to objids.
-	/// This ensures locks reference specific object instances and won't match recycled dbrefs.
+	/// Normalizes a lock expression to canonical form, resolving object names to dbrefs.
+	/// PennMUSH resolves all lock targets (bare names, carry, owner, exact, indirect) to
+	/// dbrefs at @lock time. The executor provides context for name resolution.
 	/// </summary>
 	/// <param name="text">The lock expression to normalize</param>
-	/// <returns>The normalized lock expression with objids instead of bare dbrefs</returns>
-	string Normalize(string text);
+	/// <param name="executor">The object setting the lock, used as context for name resolution. If null, name resolution is skipped.</param>
+	/// <returns>The normalized lock expression with names resolved to dbrefs</returns>
+	string Normalize(string text, AnySharpObject? executor = null);
 }

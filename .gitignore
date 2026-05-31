@@ -414,7 +414,7 @@ TextFiles/
 /nul
 test_output.txt
 TestResults/
-pennmush/
+pennmush
 
 # AI Helpers
 .hermes

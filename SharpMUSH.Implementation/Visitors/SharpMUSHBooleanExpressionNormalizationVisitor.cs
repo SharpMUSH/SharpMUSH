@@ -1,17 +1,20 @@
 using Mediator;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Queries;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Visitors;
 
 /// <summary>
-/// Visitor for normalizing PennMUSH lock expressions by converting bare dbrefs to objids.
-/// This ensures that locks reference specific object instances and won't incorrectly match
-/// new objects when dbrefs are recycled after object destruction.
+/// Visitor for normalizing PennMUSH lock expressions to canonical form.
+/// Uppercases keyword prefixes and attribute names per PennMUSH conventions.
+/// Resolves object names to dbrefs at lock-set time, matching PennMUSH behavior.
 /// </summary>
-/// <param name="med">Mediator for database queries to look up object creation times</param>
-public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
+public class SharpMUSHBooleanExpressionNormalizationVisitor(
+	IMediator? mediator = null,
+	AnySharpObject? executor = null)
 	: SharpMUSHBoolExpParserBaseVisitor<string>
 {
 	protected override string AggregateResult(string aggregate, string nextResult)
@@ -47,37 +50,37 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 	public override string VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"${NormalizeDbRef(value)}";
+		return $"${ResolveToDbRef(value)}";
 	}
 
 	public override string VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"+{NormalizeDbRef(value)}";
+		return $"+{ResolveToDbRef(value)}";
 	}
 
 	public override string VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"flag^{value}";
+		return $"FLAG^{value.ToUpperInvariant()}";
 	}
 
 	public override string VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"power^{value}";
+		return $"POWER^{value.ToUpperInvariant()}";
 	}
 
 	public override string VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
 	{
 		var typeValue = context.objectType().GetText();
-		return $"type^{typeValue}";
+		return $"TYPE^{typeValue.ToUpperInvariant()}";
 	}
 
 	public override string VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"channel^{value}";
+		return $"CHANNEL^{value.ToUpperInvariant()}";
 	}
 
 	public override string VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
@@ -85,116 +88,111 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 		var attrName = context.@string().GetText();
 		// Note: The dbrefs in the attribute list will need to be normalized separately
 		// when the attribute is set, not when the lock is set
-		return $"dbreflist^{attrName}";
+		return $"DBREFLIST^{attrName.ToUpperInvariant()}";
 	}
 
 	public override string VisitIpExpr(SharpMUSHBoolExpParser.IpExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"ip^{value}";
+		return $"IP^{value}";
 	}
 
 	public override string VisitHostNameExpr(SharpMUSHBoolExpParser.HostNameExprContext context)
 	{
 		var value = context.@string().GetText();
-		return $"hostname^{value}";
+		return $"HOSTNAME^{value.ToUpperInvariant()}";
 	}
 
 	public override string VisitNameExpr(SharpMUSHBoolExpParser.NameExprContext context)
 	{
 		var pattern = context.@string().GetText();
-		return $"name^{pattern}";
+		return $"NAME^{pattern.ToUpperInvariant()}";
 	}
 
 	public override string VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
-		var value = context.@string().GetText();
-		return $"={NormalizeDbRef(value)}";
+		if (context.ATTRIBUTE_COLON() != null)
+		{
+			// Attribute pattern like =attr:value — not an object reference
+			var value = $"{context.@string(0).GetText()}:{context.@string(1).GetText()}";
+			return $"={value}";
+		}
+
+		var target = context.@string(0).GetText();
+		return $"={ResolveToDbRef(target)}";
 	}
 
 	public override string VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
 	{
 		var value = context.@string().GetText();
-		return NormalizeDbRef(value);
+		return ResolveToDbRef(value);
 	}
 
 	public override string VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
-		var attrName = context.attributeName().GetText();
-		var value = context.@string().GetText();
-		return $"{attrName}:{value}";
+		var attrName = context.@string(0).GetText();
+		var value = context.@string(1).GetText();
+		return $"{attrName.ToUpperInvariant()}:{value}";
 	}
 
 	public override string VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)
 	{
-		var attrName = context.attributeName().GetText();
-		var value = context.@string().GetText();
-		return $"{attrName}/{value}";
+		var attrName = context.@string(0).GetText();
+		var value = context.@string(1).GetText();
+		return $"{attrName.ToUpperInvariant()}/{value}";
 	}
 
 	public override string VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
 	{
-		var value = context.@string().GetText();
-		var normalizedDbRef = NormalizeDbRef(value);
+		var value = context.@string(0).GetText();
+		var normalizedDbRef = ResolveToDbRef(value);
 
-		if (context.attributeName() != null)
+		if (context.@string().Length > 1)
 		{
-			var attrName = context.attributeName().GetText();
+			var attrName = context.@string(1).GetText();
 			return $"@{normalizedDbRef}/{attrName}";
 		}
 
-		return $"@{normalizedDbRef}";
+		return $"@{normalizedDbRef}/Basic";
 	}
 
 	/// <summary>
-	/// Normalizes a dbref string by converting bare dbrefs to objids.
-	/// If the input is already an objid or not a dbref, returns it unchanged.
+	/// Resolves a lock target to a dbref. If the value is already a dbref (#N or #N:timestamp),
+	/// returns it as-is. If it's "me", returns it as-is (resolved at evaluation time).
+	/// Otherwise, attempts name resolution using the executor's context, matching PennMUSH's
+	/// behavior of converting names to dbrefs at @lock time.
+	/// If name resolution fails (no executor or no match), preserves the original name.
 	/// </summary>
-	private string NormalizeDbRef(string value)
+	private string ResolveToDbRef(string value)
 	{
-		// Try to parse as a dbref
-		var parsed = HelperFunctions.ParseDbRef(value);
-
-		if (parsed.IsNone())
-		{
-			// Not a dbref, return as-is (could be a name like "me" or an object name)
+		// Already a dbref — return as-is
+		if (value.StartsWith('#'))
 			return value;
-		}
 
-		var dbref = parsed.AsValue();
-
-		// If it already has a creation timestamp, no normalization needed
-		if (dbref.CreationMilliseconds.HasValue)
-		{
+		// "me" is special — resolved at evaluation time
+		if (value.Equals("me", StringComparison.OrdinalIgnoreCase))
 			return value;
-		}
 
-		// Look up the object to get its creation time
+		// No executor/mediator — can't resolve names, preserve as-is
+		if (mediator == null || executor == null)
+			return value;
+
+		// Attempt to resolve the name to a dbref using the executor's context
 		try
 		{
-			var objResult = med.Send(
-					new GetObjectNodeQuery(dbref),
-					CancellationToken.None)
-				.AsTask()
-				.ConfigureAwait(false)
-				.GetAwaiter()
-				.GetResult();
+			var exec = executor!;
+			var locateResult = mediator.Send(
+				new LocateObjectQuery(exec, exec, value, LocateFlags.All),
+				CancellationToken.None
+			).AsTask().GetAwaiter().GetResult();
 
-			if (objResult.IsNone)
-			{
-				// Object doesn't exist, return original (validation will catch this)
-				return value;
-			}
-
-			var obj = objResult.Known;
-			var objDbRef = obj.Object().DBRef;
-
-			// Return objid format
-			return $"#{objDbRef.Number}:{objDbRef.CreationMilliseconds}";
+			return locateResult.IsAnyObject
+				? $"#{locateResult.AsAnyObject.Object().DBRef.Number}"
+				: value; // Not found — preserve the name
 		}
 		catch
 		{
-			// If lookup fails, return original value
+			// If resolution fails for any reason, preserve the original name
 			return value;
 		}
 	}

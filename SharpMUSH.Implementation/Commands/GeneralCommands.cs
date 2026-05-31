@@ -3019,7 +3019,7 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
-		var executorLocation = await executor.Where();
+		var executorLocation = await executor.OutermostWhere();
 		var contents = executorLocation.Content(Mediator!);
 		var isSpoof = true;
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
@@ -3996,7 +3996,7 @@ public partial class Commands
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 
-		var executorLocation = await executor.Where();
+		var executorLocation = await executor.OutermostWhere();
 		var contents = executorLocation.Content(Mediator!);
 		var message = args["0"].Message!;
 
@@ -5069,7 +5069,7 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
-		var executorLocation = await executor.Where();
+		var executorLocation = await executor.OutermostWhere();
 		var isSpoof = parser.CurrentState.Switches.Contains("SPOOF");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
@@ -5157,7 +5157,7 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
-		var executorLocation = await executor.Where();
+		var executorLocation = await executor.OutermostWhere();
 		var contents = executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
@@ -5237,8 +5237,8 @@ public partial class Commands
 		}
 		else
 		{
-			// Original behavior: emit to executor's location
-			targetRoom = await executor.Where();
+			// Original behavior: emit to executor's speech location (nearest room)
+			targetRoom = await executor.OutermostWhere();
 			objectsToExclude = objects;
 		}
 

@@ -23,6 +23,12 @@ public interface IPermissionService
 
 	ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee);
 
+	/// <summary>
+	/// PennMUSH Can_Read_Lock: Can the viewer read a specific lock on target?
+	/// See_All || controls || ((Visual(target) || lock is Visual) &amp;&amp; passes Examine lock)
+	/// </summary>
+	ValueTask<bool> CanReadLock(AnySharpObject viewer, AnySharpObject target, LockService.LockFlags lockFlags);
+
 	ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute);
 
 	ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute);

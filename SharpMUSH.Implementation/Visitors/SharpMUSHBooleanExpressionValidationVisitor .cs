@@ -36,15 +36,14 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 
 	public override bool? VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
 	{
-		var value = context.@string().GetText();
-		var result = VisitChildren(context);
-		return result;
+		// Owner locks are always valid syntactically - they check at runtime
+		return true;
 	}
 
 	public override bool? VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
 	{
-		var value = context.@string().GetText();
-		return VisitChildren(context);
+		// Carry locks are always valid syntactically - they check at runtime
+		return true;
 	}
 
 	public override bool? VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
@@ -57,8 +56,8 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 
 	public override bool? VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
 	{
-		var value = context.@string().GetText();
-		return VisitChildren(context);
+		// Power locks are always valid syntactically
+		return true;
 	}
 
 	public override bool? VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
@@ -102,7 +101,6 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 	public override bool? VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
 		// Exact object locks are always valid - they check at runtime
-		var value = context.@string().GetText();
 		return true;
 	}
 
@@ -116,31 +114,22 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 	public override bool? VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
 		// Attribute locks are always valid syntactically
-		var value = context.@string().GetText();
-		var attribute = context.attributeName().GetText();
 		return true;
 	}
 
 	public override bool? VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)
 	{
 		// Evaluation locks are always valid syntactically
-		var value = context.@string().GetText();
-		var attribute = context.attributeName().GetText();
 		return true;
 	}
 
 	public override bool? VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
 	{
 		// Indirect locks are always valid syntactically
-		var value = context.@string().GetText();
-		var attribute = context.attributeName()?.GetText();
 		return true;
 	}
 
 	public override bool? VisitString(SharpMUSHBoolExpParser.StringContext context) =>
-		throw new ArgumentException("Parser should never reach here.");
-
-	public override bool? VisitAttributeName(SharpMUSHBoolExpParser.AttributeNameContext context) =>
 		throw new ArgumentException("Parser should never reach here.");
 
 }

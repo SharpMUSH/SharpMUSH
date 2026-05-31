@@ -7,7 +7,8 @@ using SharpMUSH.Library.ParserInterfaces;
 namespace SharpMUSH.Tests.Parser;
 
 /// <summary>
-/// Tests for lock string normalization - converting bare dbrefs to objids.
+/// Tests for lock string normalization.
+/// PennMUSH preserves bare dbrefs in lock() readback — normalization does NOT expand to objids.
 /// </summary>
 public class LockNormalizationTests
 {
@@ -19,55 +20,50 @@ public class LockNormalizationTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	public async Task Normalize_ExactObjectLock_BareDbRef_ConvertsToObjId()
+	public async Task Normalize_ExactObjectLock_BareDbRef_PreservedAsIs()
 	{
 		// Create a test object
 		var createResult = (await Parser.FunctionParse(MModule.single("create(NormTestObj1)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		// Get full DBRef with creation time from the database (create() returns bare #N; objid includes timestamp)
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
 		var testObjFullDbRef = testObj.Object().DBRef;
 
 		// Create a lock with a bare dbref
 		var lockString = $"=#{testObjFullDbRef.Number}";
 
-		// Normalize should convert it to objid
+		// Normalize preserves bare dbrefs (matches PennMUSH lock() readback)
 		var normalized = BooleanParser.Normalize(lockString);
 
-		// Should contain the objid format with creation time
-		await Assert.That(normalized).Contains($"#{testObjFullDbRef.Number}:{testObjFullDbRef.CreationMilliseconds}");
+		await Assert.That(normalized).IsEqualTo($"=#{testObjFullDbRef.Number}");
 	}
 
 	[Test]
-	public async Task Normalize_ExactObjectLock_ObjId_RemainsUnchanged()
+	public async Task Normalize_ExactObjectLock_ObjId_PreservesObjId()
 	{
 		// Create a test object
 		var createResult = (await Parser.FunctionParse(MModule.single("create(NormTestObjId1)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		// Get full DBRef with creation time from the database (create() returns bare #N; objid includes timestamp)
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
 		var testObjFullDbRef = testObj.Object().DBRef;
 
 		// Create a lock with full objid
 		var lockString = $"=#{testObjFullDbRef.Number}:{testObjFullDbRef.CreationMilliseconds}";
 
-		// Normalize should leave it unchanged
+		// Normalize should preserve objid as-is
 		var normalized = BooleanParser.Normalize(lockString);
 
-		// Should be identical
 		await Assert.That(normalized).IsEqualTo(lockString);
 	}
 
 	[Test]
-	public async Task Normalize_ComplexLock_NormalizesAllDbrefs()
+	public async Task Normalize_ComplexLock_PreservesBareDbrefs()
 	{
 		// Create two test objects
 		var createResult1 = (await Parser.FunctionParse(MModule.single("create(NormTestComplex1)")))?.Message!;
 		var testObjDbRefStr1 = createResult1.ToPlainText();
 		var testObjDbRef1 = HelperFunctions.ParseDbRef(testObjDbRefStr1).AsValue();
-		// Get creation times from database objects (create() returns bare #N; objid includes timestamp)
 		var testObj1 = (await Database.GetObjectNodeAsync(testObjDbRef1)).Known();
 		var testObjFullDbRef1 = testObj1.Object().DBRef;
 
@@ -80,19 +76,17 @@ public class LockNormalizationTests
 		// Create a complex lock with multiple bare dbrefs
 		var lockString = $"=#{testObjFullDbRef1.Number} | +#{testObjFullDbRef2.Number}";
 
-		// Normalize should convert both to objids
+		// Normalize preserves bare dbrefs
 		var normalized = BooleanParser.Normalize(lockString);
 
-		// Should contain both objids
-		await Assert.That(normalized).Contains($"#{testObjFullDbRef1.Number}:{testObjFullDbRef1.CreationMilliseconds}");
-		await Assert.That(normalized).Contains($"#{testObjFullDbRef2.Number}:{testObjFullDbRef2.CreationMilliseconds}");
+		await Assert.That(normalized).IsEqualTo($"=#{testObjFullDbRef1.Number} | +#{testObjFullDbRef2.Number}");
 	}
 
 	[Test]
 	public async Task Normalize_NonDbrefLock_RemainsUnchanged()
 	{
 		// Lock with no dbrefs
-		var lockString = "flag^WIZARD";
+		var lockString = "FLAG^WIZARD";
 
 		// Normalize should leave it unchanged
 		var normalized = BooleanParser.Normalize(lockString);
@@ -105,7 +99,7 @@ public class LockNormalizationTests
 	public async Task Normalize_NameLock_RemainsUnchanged()
 	{
 		// Lock with name pattern
-		var lockString = "name^Test*";
+		var lockString = "NAME^TEST*";
 
 		// Normalize should leave it unchanged
 		var normalized = BooleanParser.Normalize(lockString);

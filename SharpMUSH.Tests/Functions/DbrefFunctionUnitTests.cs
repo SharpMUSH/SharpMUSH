@@ -100,20 +100,95 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("lock(%#)", "")]
-	[Arguments("lock(%#,Basic)", "")]
-	public async Task Lock(string str, string expected)
+	public async Task Lock_OnFreshObject()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		// Create a dedicated object so we don't collide with other tests that set locks on %#
+		var createResult = (await Parser.FunctionParse(MModule.single("create(LockTestObj_Dbref)")))?.Message!;
+		var dbref = createResult.ToPlainText();
+
+		var result = (await Parser.FunctionParse(MModule.single($"lock({dbref})")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("*UNLOCKED*");
+	}
+
+	[Test]
+	[Arguments("Basic")]
+	[Arguments("basic")]
+	[Arguments("BASIC")]
+	public async Task Elock_NoLock_Passes(string lockName)
+	{
+		// Create a dedicated object so parallel tests setting locks on %# don't interfere
+		var createResult = (await Parser.FunctionParse(MModule.single($"create(ElockTestObj_{lockName})")))?.Message!;
+		var dbref = createResult.ToPlainText();
+
+		var result = (await Parser.FunctionParse(MModule.single($"elock({dbref}/{lockName},%#)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task Elock_NoLock_DefaultLock_Passes()
+	{
+		// elock(obj, victim) without /lockname defaults to Basic
+		var createResult = (await Parser.FunctionParse(MModule.single("create(ElockTestObj_Default)")))?.Message!;
+		var dbref = createResult.ToPlainText();
+
+		var result = (await Parser.FunctionParse(MModule.single($"elock({dbref},%#)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task Elock_InvalidObject_ReturnsError()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("elock(#99999,%#)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 NO MATCH");
+	}
+
+	[Test]
+	public async Task Elock_InvalidVictim_ReturnsError()
+	{
+		var createResult = (await Parser.FunctionParse(MModule.single("create(ElockTestObj_BadVictim)")))?.Message!;
+		var dbref = createResult.ToPlainText();
+
+		var result = (await Parser.FunctionParse(MModule.single($"elock({dbref}/Basic,#99999)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
+	}
+
+	[Test]
+	public async Task Lock_CaseInsensitive_LockName()
+	{
+		// lock() with case-variant lock names should all resolve the same lock
+		var createResult = (await Parser.FunctionParse(MModule.single("create(LockTestObj_CaseInsensitive)")))?.Message!;
+		var dbref = createResult.ToPlainText();
+
+		var resultBasic = (await Parser.FunctionParse(MModule.single($"lock({dbref}/Basic)")))?.Message!;
+		var resultLower = (await Parser.FunctionParse(MModule.single($"lock({dbref}/basic)")))?.Message!;
+		var resultUpper = (await Parser.FunctionParse(MModule.single($"lock({dbref}/BASIC)")))?.Message!;
+
+		await Assert.That(resultBasic.ToPlainText()).IsEqualTo(resultLower.ToPlainText());
+		await Assert.That(resultBasic.ToPlainText()).IsEqualTo(resultUpper.ToPlainText());
+	}
+
+	[Test]
+	public async Task Lock_EmptyLockName_AfterSlash()
+	{
+		// lock(obj/) with empty lock name after slash
+		var createResult = (await Parser.FunctionParse(MModule.single("create(LockTestObj_EmptySlash)")))?.Message!;
+		var dbref = createResult.ToPlainText();
+
+		var result = (await Parser.FunctionParse(MModule.single($"lock({dbref}/)")))?.Message!;
+		// Empty lock name should return no lock found
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
-	[Arguments("elock(%#,Basic)", "#-1 NO SUCH LOCK")]
-	public async Task Elock(string str, string expected)
+	public async Task Lockflags_CaseInsensitive()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+		var createResult = (await Parser.FunctionParse(MModule.single("create(LockflagsTestObj_Case)")))?.Message!;
+		var dbref = createResult.ToPlainText();
+
+		var resultBasic = (await Parser.FunctionParse(MModule.single($"lockflags({dbref}/Basic)")))?.Message!;
+		var resultLower = (await Parser.FunctionParse(MModule.single($"lockflags({dbref}/basic)")))?.Message!;
+
+		await Assert.That(resultBasic.ToPlainText()).IsEqualTo(resultLower.ToPlainText());
 	}
 
 	[Test]
