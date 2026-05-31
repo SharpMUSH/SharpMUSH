@@ -155,11 +155,14 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	// ──────────────────────────────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Evaluate a MUSHcode expression and send the result to the terminal (test without saving).
-	/// Wraps in <c>think</c> so output goes only to the sender.
+	/// Evaluate a MUSHcode expression and capture the result.
+	/// Wraps in <c>think</c> so output goes only to the sender and returns the captured lines.
 	/// </summary>
-	public Task EvalAsync(string code)
-		=> terminal.SendAsync($"think {code}");
+	public Task<string[]> EvalAsync(string code)
+	{
+		var cmd = RouteExpr($"think [{code}]");
+		return terminal.SendCommandAsync(cmd);
+	}
 
 	// ──────────────────────────────────────────────────────────────────────────────
 	// Parsing helpers

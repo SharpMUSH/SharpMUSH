@@ -162,13 +162,27 @@
     window.SharpMUSH = window.SharpMUSH || {};
 
     window.SharpMUSH.Monaco = {
-        // Called from Blazor OnAfterRenderAsync to ensure language is registered.
+        // Called from Blazor OnAfterRenderAsync / OnDidInit to ensure language is registered.
+        // After registering, re-applies the mush language and theme to any already-open editors
+        // (the editor is constructed before OnDidInit fires, so language/theme must be re-applied).
         ensureRegistered: function () {
-            if (typeof monaco !== 'undefined') {
-                doRegister();
-                return true;
+            if (typeof monaco === 'undefined') return false;
+            var wasNew = !_registered;
+            doRegister();
+            if (wasNew || _registered) {
+                try {
+                    // Apply theme globally
+                    monaco.editor.setTheme('mush-dark');
+                    // Re-apply 'mush' language to any editor whose model still uses 'plaintext'
+                    monaco.editor.getEditors().forEach(function (ed) {
+                        var model = ed.getModel();
+                        if (model && (model.getLanguageId() === 'plaintext' || model.getLanguageId() !== 'mush')) {
+                            monaco.editor.setModelLanguage(model, 'mush');
+                        }
+                    });
+                } catch (e) { console.warn('SharpMUSH: could not re-apply editor language', e); }
             }
-            return false;
+            return true;
         },
 
         // Set the editor value from C#.

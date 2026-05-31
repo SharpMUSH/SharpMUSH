@@ -88,3 +88,45 @@ body {
 .terminal-bottom-drawer .mud-drawer-content {
     padding: 0;
 }
+
+/* ── Dark DataGrid (attribute list) ── */
+.mush-dark-grid .mud-table-root,
+.mush-dark-grid .mud-table-container,
+.mush-dark-grid .mud-table,
+.mush-dark-grid thead tr,
+.mush-dark-grid tbody tr {
+    background-color: transparent !important;
+}
+.mush-dark-grid thead tr th {
+    background-color: #1a1a1a !important;
+    border-bottom: 1px solid #333 !important;
+    color: rgba(255,255,255,0.6) !important;
+    font-size: 11px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.mush-dark-grid tbody tr td {
+    border-bottom: 1px solid #282828 !important;
+    color: rgba(255,255,255,0.87) !important;
+}
+.mush-dark-grid tbody tr:hover td {
+    background-color: rgba(255,255,255,0.04) !important;
+}
+.mush-dark-grid .mud-table-pagination {
+    background-color: #1a1a1a !important;
+    border-top: 1px solid #333 !important;
+}
+
+/* ── Eval result panel ── */
+.mush-eval-output {
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding: 6px 10px;
+    background: #111;
+    color: #a3e8a0;
+    border-top: 1px solid #333;
+    max-height: 120px;
+    overflow-y: auto;
+}

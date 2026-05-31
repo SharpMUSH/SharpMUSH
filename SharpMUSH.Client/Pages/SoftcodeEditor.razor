@@ -101,6 +101,9 @@
                         <div style="flex:1;overflow-y:auto;">
                             <MudDataGrid T="MushAttribute" Items="_selectedObject.Attributes"
                                          Dense="true" Hover="true" Striped="false"
+                                         Class="mush-dark-grid"
+                                         Style="background:transparent;"
+                                         Elevation="0"
                                          SelectedItem="_selectedAttr"
                                          SelectedItemChanged="OnAttributeSelected"
                                          RowStyleFunc="@((attr, _) => attr == _selectedAttr ? "background:rgba(0,245,183,0.1)" : "")">
@@ -208,9 +211,9 @@
                             @if (_evalMode)
                             {
                                 <MudButton Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                                           StartIcon="@(_evalLoading ? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.PlayArrow)"
                                            OnClick="EvalAsync"
-                                           Disabled="@(_selectedAttr is null)">
+                                           Disabled="@_evalLoading">
                                     Test
                                 </MudButton>
                             }
@@ -239,6 +242,24 @@
                                                   OnDidChangeModelContent="OnEditorChanged"
                                                   CssClass="mush-editor-fill" />
                         </div>
+
+                        @* Inline eval output panel *@
+                        @if (_evalLoading)
+                        {
+                            <MudProgressLinear Indeterminate="true" Color="Color.Success" Style="height:2px;" />
+                        }
+                        else if (_evalOutput is not null)
+                        {
+                            <div class="mush-eval-output">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                                    <MudText Typo="Typo.caption" Color="Color.Success" Style="font-style:italic;">▶ Eval result</MudText>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                                   Style="padding:0;min-width:0;height:16px;" Color="Color.Default"
+                                                   OnClick="@(() => { _evalOutput = null; StateHasChanged(); })" />
+                                </div>
+                                @_evalOutput
+                            </div>
+                        }
 
                         @if (_saveMessage is not null)
                         {
@@ -272,6 +293,10 @@
     private Severity _saveSeverity = Severity.Success;
     private int _editorTab;
 
+    // Inline eval output
+    private string? _evalOutput;
+    private bool _evalLoading;
+
     // Create-object inline prompt
     private MushObjectType? _createObjectType;
     private string _createObjectName = string.Empty;
@@ -282,10 +307,9 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-        {
-            await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.ensureRegistered");
-        }
+        // Always call ensureRegistered — it's cheap after first run and re-applies
+        // language/theme to the editor if it was constructed before registration completed.
+        await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.ensureRegistered");
     }
 
     private StandaloneEditorConstructionOptions BuildEditorOptions(StandaloneCodeEditor editor)
@@ -396,13 +420,31 @@
 
     private async Task EvalAsync()
     {
-        if (_selectedAttr is null || _monacoEditor is null) return;
+        if (_monacoEditor is null) return;
 
         var value = await _monacoEditor.GetValue();
-        await QueryService.EvalAsync(value);
+        if (string.IsNullOrWhiteSpace(value)) return;
 
-        _editorTab = 1;
+        _evalLoading = true;
+        _evalOutput = null;
         StateHasChanged();
+
+        try
+        {
+            var lines = await QueryService.EvalAsync(value);
+            _evalOutput = lines.Length > 0
+                ? string.Join("\n", lines.Where(l => !string.IsNullOrEmpty(l)))
+                : "(no output)";
+        }
+        catch (Exception ex)
+        {
+            _evalOutput = $"[Error] {ex.Message}";
+        }
+        finally
+        {
+            _evalLoading = false;
+            StateHasChanged();
+        }
     }
 
     // ── Create Object ──────────────────────────────────────────────────────────
