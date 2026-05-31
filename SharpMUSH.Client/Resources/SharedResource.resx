@@ -822,6 +822,12 @@
   <data name="ExportConfiguration" xml:space="preserve">
     <value>Export Configuration</value>
   </data>
+  <data name="ExportFailed" xml:space="preserve">
+    <value>Failed to export configuration</value>
+  </data>
+  <data name="ConfigurationExported" xml:space="preserve">
+    <value>Configuration exported</value>
+  </data>
 
   <!-- ======================== -->
   <!-- DynamicConfig.razor      -->

@@ -14,14 +14,6 @@
             @if (!IsCollapsed) { <text>@Loc["Home"]</text> }
         </MudNavLink>
         
-        <MudNavLink Href="/counter" Icon="@Icons.Material.Filled.Add" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["Counter"]</text> }
-        </MudNavLink>
-        
-        <MudNavLink Href="/weather" Icon="@Icons.Material.Filled.Cloud" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["Weather"]</text> }
-        </MudNavLink>
-        
         @if (!IsCollapsed)
         {
             <MudNavGroup Title="@Loc["Settings"].Value" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary" Expanded="true">
@@ -34,10 +26,6 @@
         {
             <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary" />
         }
-        
-        <MudNavLink Href="/about" Icon="@Icons.Material.Filled.Info" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["About"]</text> }
-        </MudNavLink>
     </MudNavMenu>
 </MudPaper>
 
