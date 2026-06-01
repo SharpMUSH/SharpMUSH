@@ -20,7 +20,7 @@ public partial class ArangoDatabase
 				{ "email", email }
 			}, cancellationToken: cancellationToken);
 
-		return result.FirstOrDefault() is { } elem ? AccountFromJson(elem) : null;
+		return result.FirstOrDefault() is { ValueKind: not JsonValueKind.Undefined } elem ? AccountFromJson(elem) : null;
 	}
 
 	public async ValueTask<SharpAccount?> GetAccountByUsernameAsync(string username, CancellationToken cancellationToken = default)
@@ -33,7 +33,7 @@ public partial class ArangoDatabase
 				{ "username", username }
 			}, cancellationToken: cancellationToken);
 
-		return result.FirstOrDefault() is { } elem ? AccountFromJson(elem) : null;
+		return result.FirstOrDefault() is { ValueKind: not JsonValueKind.Undefined } elem ? AccountFromJson(elem) : null;
 	}
 
 	public async ValueTask<SharpAccount?> GetAccountByIdAsync(string accountId, CancellationToken cancellationToken = default)
@@ -47,7 +47,7 @@ public partial class ArangoDatabase
 				{ "key", key }
 			}, cancellationToken: cancellationToken);
 
-		return result.FirstOrDefault() is { } elem ? AccountFromJson(elem) : null;
+		return result.FirstOrDefault() is { ValueKind: not JsonValueKind.Undefined } elem ? AccountFromJson(elem) : null;
 	}
 
 	public async ValueTask<bool> HasAnyAccountAsync(CancellationToken cancellationToken = default)
@@ -194,7 +194,7 @@ public partial class ArangoDatabase
 				{ "playerId", playerId }
 			}, cancellationToken: cancellationToken);
 
-		return result.FirstOrDefault() is { } elem ? AccountFromJson(elem) : null;
+		return result.FirstOrDefault() is { ValueKind: not JsonValueKind.Undefined } elem ? AccountFromJson(elem) : null;
 	}
 
 	private static SharpAccount AccountFromJson(JsonElement elem)
