@@ -199,10 +199,14 @@ public class ConnectionService(
 			{"ConnectionType", connectionType}
 		});
 
-		_sessionState.AddOrUpdate(handle,
-			_ => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected,
-				outputFunction, promptOutputFunction, encoding, metadata),
-			(_, _) => throw new InvalidDataException("Tried to replace an existing handle during Register."));
+		var newEntry = new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected,
+			outputFunction, promptOutputFunction, encoding, metadata);
+
+		if (!_sessionState.TryAdd(handle, newEntry))
+		{
+			// Duplicate registration (e.g. NATS at-least-once redelivery) — silently ignore.
+			return;
+		}
 
 		// Store in Redis if available
 		if (stateStore != null)
