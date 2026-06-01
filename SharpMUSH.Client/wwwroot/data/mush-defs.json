@@ -1,0 +1,6167 @@
+{
+  "commands": {
+    "&": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "object/attribute",
+        "value"
+      ],
+      "switches": []
+    },
+    "@@": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "comment"
+      ],
+      "switches": []
+    },
+    "@ALLHALT": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "@ALLQUOTA": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "type"
+      ],
+      "switches": [
+        "QUIET"
+      ]
+    },
+    "@ASSERT": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "condition"
+      ],
+      "switches": [
+        "INLINE",
+        "QUEUED"
+      ]
+    },
+    "@ATRCHOWN": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object/attribute",
+        "player"
+      ],
+      "switches": []
+    },
+    "@ATRLOCK": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object/attribute",
+        "on-off"
+      ],
+      "switches": []
+    },
+    "@ATTRIBUTE": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "attribute",
+        "options..."
+      ],
+      "switches": [
+        "ACCESS",
+        "DELETE",
+        "RENAME",
+        "RETROACTIVE",
+        "LIMIT",
+        "ENUM",
+        "DECOMPILE"
+      ]
+    },
+    "@BOOT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "player"
+      ],
+      "switches": [
+        "PORT",
+        "ME",
+        "SILENT"
+      ]
+    },
+    "@BREAK": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": [
+        "INLINE",
+        "QUEUED"
+      ]
+    },
+    "@CEMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "channel",
+        "message"
+      ],
+      "switches": [
+        "NOEVAL",
+        "NOISY",
+        "SILENT",
+        "SPOOF"
+      ]
+    },
+    "@CHANNEL": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "channel",
+        "options..."
+      ],
+      "switches": [
+        "LIST",
+        "ADD",
+        "DELETE",
+        "RENAME",
+        "MOGRIFIER",
+        "NAME",
+        "PRIVS",
+        "QUIET",
+        "DECOMPILE",
+        "DESCRIBE",
+        "CHOWN",
+        "WIPE",
+        "MUTE",
+        "UNMUTE",
+        "GAG",
+        "UNGAG",
+        "HIDE",
+        "UNHIDE",
+        "WHAT",
+        "TITLE",
+        "BRIEF",
+        "RECALL",
+        "BUFFER",
+        "COMBINE",
+        "UNCOMBINE",
+        "ON",
+        "JOIN",
+        "OFF",
+        "LEAVE",
+        "WHO"
+      ]
+    },
+    "@CHAT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "channel",
+        "message"
+      ],
+      "switches": []
+    },
+    "@CHOWN": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "player"
+      ],
+      "switches": [
+        "PRESERVE"
+      ]
+    },
+    "@CHOWNALL": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "old-owner",
+        "new-owner"
+      ],
+      "switches": [
+        "PRESERVE",
+        "THINGS",
+        "ROOMS",
+        "EXITS"
+      ]
+    },
+    "@CHZONE": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "zone"
+      ],
+      "switches": [
+        "PRESERVE"
+      ]
+    },
+    "@CHZONEALL": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "old-zone",
+        "new-zone"
+      ],
+      "switches": [
+        "PRESERVE"
+      ]
+    },
+    "@CLIST": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "channel"
+      ],
+      "switches": [
+        "FULL"
+      ]
+    },
+    "@CLOCK": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [],
+      "switches": [
+        "JOIN",
+        "SPEAK",
+        "MOD",
+        "SEE",
+        "HIDE"
+      ]
+    },
+    "@CLONE": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "name",
+        "cost"
+      ],
+      "switches": [
+        "PRESERVE"
+      ]
+    },
+    "@COMMAND": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "command",
+        "code"
+      ],
+      "switches": [
+        "ADD",
+        "ALIAS",
+        "CLONE",
+        "DELETE",
+        "EqSplit",
+        "LSARGS",
+        "RSARGS",
+        "NOEVAL",
+        "ON",
+        "OFF",
+        "QUIET",
+        "ENABLE",
+        "DISABLE",
+        "RESTRICT",
+        "NOPARSE",
+        "RSNoParse"
+      ]
+    },
+    "@CONFIG": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "option",
+        "value"
+      ],
+      "switches": [
+        "SET",
+        "SAVE",
+        "LOWERCASE",
+        "LIST"
+      ]
+    },
+    "@CPATTR": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "source/attribute",
+        "destination/attribute"
+      ],
+      "switches": [
+        "CONVERT",
+        "NOFLAGCOPY"
+      ]
+    },
+    "@CREATE": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "name",
+        "cost",
+        "dbref"
+      ],
+      "switches": []
+    },
+    "@DBCK": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "@DECOMPILE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "object",
+        "name"
+      ],
+      "switches": [
+        "DB",
+        "NAME",
+        "PREFIX",
+        "TF",
+        "FLAGS",
+        "ATTRIBS",
+        "SKIPDEFAULTS"
+      ]
+    },
+    "@DESTROY": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": [
+        "OVERRIDE"
+      ]
+    },
+    "@DIG": {
+      "maxArgs": 6,
+      "minArgs": 1,
+      "parameterNames": [
+        "name",
+        "exits"
+      ],
+      "switches": [
+        "TELEPORT"
+      ]
+    },
+    "@DISABLE": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "command"
+      ],
+      "switches": []
+    },
+    "@DOLIST": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "command"
+      ],
+      "switches": [
+        "CLEARREGS",
+        "DELIMIT",
+        "INLINE",
+        "INPLACE",
+        "LOCALIZE",
+        "NOBREAK",
+        "NOTIFY",
+        "PID"
+      ]
+    },
+    "@DRAIN": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "attribute"
+      ],
+      "switches": [
+        "ALL",
+        "ANY"
+      ]
+    },
+    "@DUMP": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "type"
+      ],
+      "switches": [
+        "PARANOID",
+        "DEBUG",
+        "NOFORK"
+      ]
+    },
+    "@EDIT": {
+      "maxArgs": 0,
+      "minArgs": 1,
+      "parameterNames": [
+        "object/attribute",
+        "from",
+        "to"
+      ],
+      "switches": [
+        "FIRST",
+        "CHECK",
+        "QUIET",
+        "REGEXP",
+        "NOCASE",
+        "ALL"
+      ]
+    },
+    "@ELOCK": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "key"
+      ],
+      "switches": []
+    },
+    "@EMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "NOEVAL",
+        "SPOOF"
+      ]
+    },
+    "@ENABLE": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "command"
+      ],
+      "switches": []
+    },
+    "@ENTRANCES": {
+      "maxArgs": 3,
+      "minArgs": 0,
+      "parameterNames": [
+        "object",
+        "flags"
+      ],
+      "switches": [
+        "EXITS",
+        "THINGS",
+        "PLAYERS",
+        "ROOMS"
+      ]
+    },
+    "@EUNLOCK": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "@FIND": {
+      "maxArgs": 3,
+      "minArgs": 0,
+      "parameterNames": [
+        "name",
+        "flags"
+      ],
+      "switches": []
+    },
+    "@FIRSTEXIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "@FLAG": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "object",
+        "flag"
+      ],
+      "switches": [
+        "ADD",
+        "TYPE",
+        "LETTER",
+        "LIST",
+        "RESTRICT",
+        "DELETE",
+        "ALIAS",
+        "DISABLE",
+        "ENABLE",
+        "DEBUG",
+        "DECOMPILE"
+      ]
+    },
+    "@FORCE": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "object",
+        "command"
+      ],
+      "switches": [
+        "NOEVAL",
+        "INPLACE",
+        "INLINE",
+        "LOCALIZE",
+        "CLEARREGS",
+        "NOBREAK"
+      ]
+    },
+    "@FUNCTION": {
+      "maxArgs": 5,
+      "minArgs": 0,
+      "parameterNames": [
+        "name",
+        "object/attribute"
+      ],
+      "switches": [
+        "ALIAS",
+        "BUILTIN",
+        "CLONE",
+        "DELETE",
+        "ENABLE",
+        "DISABLE",
+        "PRESERVE",
+        "RESTORE",
+        "RESTRICT"
+      ]
+    },
+    "@GREP": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ],
+      "switches": [
+        "LIST",
+        "PRINT",
+        "ILIST",
+        "IPRINT",
+        "REGEXP",
+        "WILD",
+        "NOCASE",
+        "PARENT"
+      ]
+    },
+    "@HALT": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": [
+        "ALL",
+        "NOEVAL",
+        "PID"
+      ]
+    },
+    "@HIDE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "on-off"
+      ],
+      "switches": [
+        "NO",
+        "OFF",
+        "YES",
+        "ON"
+      ]
+    },
+    "@HOOK": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "type",
+        "object/attribute"
+      ],
+      "switches": [
+        "LIST",
+        "AFTER",
+        "BEFORE",
+        "EXTEND",
+        "IGSWITCH",
+        "IGNORE",
+        "OVERRIDE",
+        "INPLACE",
+        "INLINE",
+        "LOCALIZE",
+        "CLEARREGS",
+        "NOBREAK"
+      ]
+    },
+    "@HTTP": {
+      "maxArgs": 3,
+      "minArgs": 0,
+      "parameterNames": [
+        "url",
+        "code"
+      ],
+      "switches": [
+        "DELETE",
+        "POST",
+        "PUT",
+        "GET",
+        "HEAD",
+        "CONNECT",
+        "OPTIONS",
+        "TRACE",
+        "PATCH"
+      ]
+    },
+    "@IFELSE": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "condition",
+        "true-command",
+        "false-command"
+      ],
+      "switches": []
+    },
+    "@INCLUDE": {
+      "maxArgs": 31,
+      "minArgs": 1,
+      "parameterNames": [
+        "file"
+      ],
+      "switches": [
+        "LOCALIZE",
+        "CLEARREGS",
+        "NOBREAK"
+      ]
+    },
+    "@KICK": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "player"
+      ],
+      "switches": []
+    },
+    "@LEMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "NOEVAL",
+        "NOISY",
+        "SILENT",
+        "SPOOF"
+      ]
+    },
+    "@LINK": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "destination"
+      ],
+      "switches": [
+        "PRESERVE"
+      ]
+    },
+    "@LIST": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "type"
+      ],
+      "switches": [
+        "LOWERCASE",
+        "MOTD",
+        "LOCKS",
+        "FLAGS",
+        "FUNCTIONS",
+        "POWERS",
+        "COMMANDS",
+        "ATTRIBS",
+        "ALLOCATIONS",
+        "ALL",
+        "BUILTIN",
+        "LOCAL"
+      ]
+    },
+    "@LISTMOTD": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "@LOCALE": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "locale"
+      ],
+      "switches": []
+    },
+    "@LOCK": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "locktype",
+        "key"
+      ],
+      "switches": []
+    },
+    "@LOG": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "type",
+        "message"
+      ],
+      "switches": [
+        "CHECK",
+        "CMD",
+        "CONN",
+        "ERR",
+        "TRACE",
+        "WIZ",
+        "RECALL"
+      ]
+    },
+    "@LOGWIPE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "type"
+      ],
+      "switches": [
+        "CHECK",
+        "CMD",
+        "CONN",
+        "ERR",
+        "TRACE",
+        "WIZ",
+        "ROTATE",
+        "TRIM",
+        "WIPE"
+      ]
+    },
+    "@LSET": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "position",
+        "value"
+      ],
+      "switches": []
+    },
+    "@MAIL": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "player",
+        "subject"
+      ],
+      "switches": [
+        "NOEVAL",
+        "NOSIG",
+        "STATS",
+        "CSTATS",
+        "DSTATS",
+        "FSTATS",
+        "DEBUG",
+        "NUKE",
+        "FOLDERS",
+        "UNFOLDER",
+        "LIST",
+        "READ",
+        "UNREAD",
+        "CLEAR",
+        "UNCLEAR",
+        "STATUS",
+        "PURGE",
+        "FILE",
+        "TAG",
+        "UNTAG",
+        "FWD",
+        "FORWARD",
+        "SEND",
+        "SILENT",
+        "URGENT",
+        "REVIEW",
+        "RETRACT"
+      ]
+    },
+    "@MALIAS": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "alias",
+        "list"
+      ],
+      "switches": [
+        "SET",
+        "CREATE",
+        "DESTROY",
+        "DESCRIBE",
+        "RENAME",
+        "STATS",
+        "CHOWN",
+        "NUKE",
+        "ADD",
+        "REMOVE",
+        "LIST",
+        "ALL",
+        "WHO",
+        "MEMBERS",
+        "USEFLAG",
+        "SEEFLAG"
+      ]
+    },
+    "@MAP": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "code"
+      ],
+      "switches": [
+        "CLEARREGS",
+        "DELIMIT",
+        "INLINE",
+        "INPLACE",
+        "LOCALIZE",
+        "NOBREAK",
+        "NOTIFY"
+      ]
+    },
+    "@MAPSQL": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "obj/attr",
+        "query"
+      ],
+      "switches": [
+        "NOTIFY",
+        "COLNAMES",
+        "SPOOF",
+        "PREPARE"
+      ]
+    },
+    "@MESSAGE": {
+      "maxArgs": 0,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "type",
+        "message"
+      ],
+      "switches": [
+        "NOEVAL",
+        "SPOOF",
+        "NOSPOOF",
+        "REMIT",
+        "OEMIT",
+        "SILENT",
+        "NOISY"
+      ]
+    },
+    "@MONIKER": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "moniker"
+      ],
+      "switches": []
+    },
+    "@MOTD": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "type",
+        "message"
+      ],
+      "switches": [
+        "CONNECT",
+        "LIST",
+        "WIZARD",
+        "DOWN",
+        "FULL",
+        "CLEAR"
+      ]
+    },
+    "@MVATTR": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "source/attribute",
+        "destination/attribute"
+      ],
+      "switches": [
+        "CONVERT",
+        "NOFLAGCOPY"
+      ]
+    },
+    "@NAME": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "name"
+      ],
+      "switches": []
+    },
+    "@NEWPASSWORD": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "player",
+        "password"
+      ],
+      "switches": [
+        "GENERATE"
+      ]
+    },
+    "@NOTIFY": {
+      "maxArgs": 0,
+      "minArgs": 1,
+      "parameterNames": [
+        "target",
+        "message"
+      ],
+      "switches": [
+        "ALL",
+        "ANY",
+        "SETQ",
+        "QUIET"
+      ]
+    },
+    "@NSCEMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "channel",
+        "message"
+      ],
+      "switches": [
+        "NOEVAL",
+        "NOISY",
+        "SILENT"
+      ]
+    },
+    "@NSEMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "ROOM",
+        "NOEVAL",
+        "SILENT"
+      ]
+    },
+    "@NSLEMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "NOEVAL",
+        "NOISY",
+        "SILENT"
+      ]
+    },
+    "@NSOEMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "NOEVAL"
+      ]
+    },
+    "@NSPEMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "target",
+        "message"
+      ],
+      "switches": [
+        "LIST",
+        "SILENT",
+        "NOISY",
+        "NOEVAL"
+      ]
+    },
+    "@NSPROMPT": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "target",
+        "message"
+      ],
+      "switches": [
+        "SILENT",
+        "NOISY",
+        "NOEVAL"
+      ]
+    },
+    "@NSREMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "room",
+        "message"
+      ],
+      "switches": [
+        "LIST",
+        "NOEVAL",
+        "NOISY",
+        "SILENT"
+      ]
+    },
+    "@NSZEMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "zone",
+        "message"
+      ],
+      "switches": [
+        "NOISY",
+        "SILENT"
+      ]
+    },
+    "@NUKE": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "@OEMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "NOEVAL",
+        "SPOOF"
+      ]
+    },
+    "@OPEN": {
+      "maxArgs": 5,
+      "minArgs": 1,
+      "parameterNames": [
+        "exit",
+        "destination"
+      ],
+      "switches": []
+    },
+    "@PARENT": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "object",
+        "parent"
+      ],
+      "switches": []
+    },
+    "@PASSWORD": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "old",
+        "new"
+      ],
+      "switches": []
+    },
+    "@PCREATE": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "name",
+        "password"
+      ],
+      "switches": []
+    },
+    "@PEMIT": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "target",
+        "message"
+      ],
+      "switches": []
+    },
+    "@POLL": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": [
+        "CLEAR"
+      ]
+    },
+    "@POOR": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "player"
+      ],
+      "switches": []
+    },
+    "@POWER": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "object",
+        "power"
+      ],
+      "switches": [
+        "ADD",
+        "TYPE",
+        "LETTER",
+        "LIST",
+        "RESTRICT",
+        "DELETE",
+        "ALIAS",
+        "DISABLE",
+        "ENABLE",
+        "DECOMPILE"
+      ]
+    },
+    "@PROMPT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "target",
+        "message"
+      ],
+      "switches": [
+        "SILENT",
+        "NOISY",
+        "NOEVAL",
+        "SPOOF"
+      ]
+    },
+    "@PS": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "player"
+      ],
+      "switches": [
+        "ALL",
+        "SUMMARY",
+        "COUNT",
+        "QUICK",
+        "DEBUG"
+      ]
+    },
+    "@PURGE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "@QUOTA": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "player",
+        "quota"
+      ],
+      "switches": [
+        "ALL",
+        "SET"
+      ]
+    },
+    "@READCACHE": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "@RECYCLE": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": [
+        "OVERRIDE"
+      ]
+    },
+    "@REJECTMOTD": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "CLEAR"
+      ]
+    },
+    "@REMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "room",
+        "message"
+      ],
+      "switches": [
+        "LIST",
+        "NOEVAL",
+        "NOISY",
+        "SILENT",
+        "SPOOF"
+      ]
+    },
+    "@RESPOND": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "connection",
+        "response"
+      ],
+      "switches": [
+        "HEADER",
+        "TYPE"
+      ]
+    },
+    "@RESTART": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": [
+        "ALL"
+      ]
+    },
+    "@RETRY": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "@RWALL": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "NOEVAL",
+        "EMIT"
+      ]
+    },
+    "@SCAN": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "object",
+        "code"
+      ],
+      "switches": [
+        "ROOM",
+        "SELF",
+        "ZONE",
+        "GLOBALS"
+      ]
+    },
+    "@SEARCH": {
+      "maxArgs": 3,
+      "minArgs": 0,
+      "parameterNames": [
+        "restriction..."
+      ],
+      "switches": []
+    },
+    "@SELECT": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "expression",
+        "cases..."
+      ],
+      "switches": [
+        "NOTIFY",
+        "REGEXP",
+        "INPLACE",
+        "INLINE",
+        "LOCALIZE",
+        "CLEARREGS",
+        "NOBREAK"
+      ]
+    },
+    "@SET": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "attribute",
+        "value"
+      ],
+      "switches": []
+    },
+    "@SHUTDOWN": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "type"
+      ],
+      "switches": [
+        "PANIC",
+        "REBOOT",
+        "PARANOID"
+      ]
+    },
+    "@SITELOCK": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "site",
+        "rule"
+      ],
+      "switches": [
+        "BAN",
+        "CHECK",
+        "REGISTER",
+        "REMOVE",
+        "NAME",
+        "PLAYER",
+        "LIST"
+      ]
+    },
+    "@SKIP": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": [
+        "IFELSE"
+      ]
+    },
+    "@SLAVE": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": [
+        "RESTART"
+      ]
+    },
+    "@SOCKSET": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "socket",
+        "option",
+        "value"
+      ],
+      "switches": []
+    },
+    "@SQL": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "query"
+      ],
+      "switches": [
+        "PREPARE"
+      ]
+    },
+    "@SQUOTA": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "type",
+        "value"
+      ],
+      "switches": []
+    },
+    "@STATS": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "player"
+      ],
+      "switches": [
+        "CHUNKS",
+        "FREESPACE",
+        "PAGING",
+        "REGIONS",
+        "TABLES",
+        "FLAGS"
+      ]
+    },
+    "@SUGGEST": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "text"
+      ],
+      "switches": [
+        "ADD",
+        "DELETE",
+        "LIST"
+      ]
+    },
+    "@SWEEP": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "flags"
+      ],
+      "switches": [
+        "CONNECTED",
+        "HERE",
+        "INVENTORY",
+        "EXITS"
+      ]
+    },
+    "@SWITCH": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "expression",
+        "cases..."
+      ],
+      "switches": [
+        "NOTIFY",
+        "FIRST",
+        "ALL",
+        "REGEXP",
+        "INPLACE",
+        "INLINE",
+        "LOCALIZE",
+        "CLEARREGS",
+        "NOBREAK"
+      ]
+    },
+    "@TELEPORT": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "destination"
+      ],
+      "switches": [
+        "LIST",
+        "INSIDE",
+        "QUIET"
+      ]
+    },
+    "@TRIGGER": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "object/attribute",
+        "arguments..."
+      ],
+      "switches": [
+        "CLEARREGS",
+        "SPOOF",
+        "INLINE",
+        "NOBREAK",
+        "LOCALIZE",
+        "INPLACE",
+        "MATCH"
+      ]
+    },
+    "@ULOCK": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "key"
+      ],
+      "switches": []
+    },
+    "@UNDESTROY": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "@UNLINK": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "@UNLOCK": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "locktype"
+      ],
+      "switches": []
+    },
+    "@UNRECYCLE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "@UPTIME": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": [
+        "MORTAL"
+      ]
+    },
+    "@UUNLOCK": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "@VERB": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "object",
+        "verb",
+        "target"
+      ],
+      "switches": []
+    },
+    "@VERSION": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "@WAIT": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "seconds",
+        "command"
+      ],
+      "switches": [
+        "PID",
+        "UNTIL"
+      ]
+    },
+    "@WALL": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "NOEVAL",
+        "EMIT"
+      ]
+    },
+    "@WARNINGS": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "@WCHECK": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": [
+        "ALL",
+        "ME"
+      ]
+    },
+    "@WHEREIS": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "name"
+      ],
+      "switches": []
+    },
+    "@WIPE": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "@WIZMOTD": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "CLEAR"
+      ]
+    },
+    "@WIZWALL": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "NOEVAL",
+        "EMIT"
+      ]
+    },
+    "@ZEMIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "zone",
+        "message"
+      ],
+      "switches": [
+        "NOISY",
+        "SILENT"
+      ]
+    },
+    "ADDCOM": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "channel",
+        "alias"
+      ],
+      "switches": []
+    },
+    "AHELP": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "topic"
+      ],
+      "switches": [
+        "SEARCH"
+      ]
+    },
+    "ANEWS": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "topic"
+      ],
+      "switches": [
+        "SEARCH"
+      ]
+    },
+    "BRIEF": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": [
+        "OPAQUE"
+      ]
+    },
+    "BUY": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "COMLIST": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "COMTITLE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "alias",
+        "title"
+      ],
+      "switches": []
+    },
+    "CONNECT": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "player",
+        "password"
+      ],
+      "switches": []
+    },
+    "DELCOM": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "alias"
+      ],
+      "switches": []
+    },
+    "DESERT": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "follower"
+      ],
+      "switches": []
+    },
+    "DISMISS": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "DOING": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": []
+    },
+    "DROP": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "EMPTY": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "ENTER": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "EXAMINE": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": [
+        "BRIEF",
+        "DEBUG",
+        "MORTAL",
+        "PARENT",
+        "ALL",
+        "OPAQUE"
+      ]
+    },
+    "FOLLOW": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "GET": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "GIVE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "player",
+        "amount"
+      ],
+      "switches": [
+        "SILENT"
+      ]
+    },
+    "GOTO": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "destination"
+      ],
+      "switches": []
+    },
+    "HELP": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "topic"
+      ],
+      "switches": [
+        "SEARCH"
+      ]
+    },
+    "HOME": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "HUH_COMMAND": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "INVENTORY": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "LEAVE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "LOOK": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": [
+        "OUTSIDE",
+        "OPAQUE"
+      ]
+    },
+    "NEWS": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "topic"
+      ],
+      "switches": [
+        "SEARCH"
+      ]
+    },
+    "OUTPUTPREFIX": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "prefix"
+      ],
+      "switches": []
+    },
+    "OUTPUTSUFFIX": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "suffix"
+      ],
+      "switches": []
+    },
+    "PAGE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "player",
+        "message"
+      ],
+      "switches": [
+        "LIST",
+        "NOEVAL",
+        "PORT",
+        "OVERRIDE"
+      ]
+    },
+    "POSE": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "NOEVAL",
+        "NOSPACE"
+      ]
+    },
+    "QUIT": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "SAY": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "NOEVAL"
+      ]
+    },
+    "SCORE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "SEMIPOSE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "message"
+      ],
+      "switches": [
+        "NOEVAL"
+      ]
+    },
+    "SESSION": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "TEACH": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "player",
+        "attribute"
+      ],
+      "switches": [
+        "LIST"
+      ]
+    },
+    "THINK": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "expression"
+      ],
+      "switches": []
+    },
+    "UNFOLLOW": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "UNIMPLEMENTED_COMMAND": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "USE": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ],
+      "switches": []
+    },
+    "WARN_ON_MISSING": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "WHISPER": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "player",
+        "message"
+      ],
+      "switches": [
+        "LIST",
+        "NOISY",
+        "SILENT",
+        "NOEVAL"
+      ]
+    },
+    "WHO": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": []
+    },
+    "WITH": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [],
+      "switches": [
+        "NOEVAL",
+        "ROOM"
+      ]
+    },
+    "]": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [],
+      "switches": []
+    }
+  },
+  "functions": {
+    "@@": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "CINFO": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel",
+        "info-type"
+      ]
+    },
+    "CONFIG": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "option"
+      ]
+    },
+    "CONVSECS": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "seconds",
+        "timezone"
+      ]
+    },
+    "CONVTIME": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "time-string",
+        "timezone"
+      ]
+    },
+    "CONVUTCSECS": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "seconds"
+      ]
+    },
+    "CONVUTCTIME": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "time-string"
+      ]
+    },
+    "DELETE": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "position",
+        "delimiter",
+        "output-separator"
+      ]
+    },
+    "IDLESECS": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "player"
+      ]
+    },
+    "INSERT": {
+      "maxArgs": 4,
+      "minArgs": 3,
+      "parameterNames": [
+        "list",
+        "position",
+        "new-item",
+        "delim"
+      ]
+    },
+    "LCSTR2": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "ORDINAL": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "REGREPLACE": {
+      "maxArgs": 4,
+      "minArgs": 3,
+      "parameterNames": [
+        "string",
+        "pattern",
+        "replacement",
+        "flags"
+      ]
+    },
+    "RNUM": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "container",
+        "object"
+      ]
+    },
+    "SHA0": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "text"
+      ]
+    },
+    "UCSTR2": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "WEBSOCKET_HTML": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "html",
+        "player"
+      ]
+    },
+    "WEBSOCKET_JSON": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "json",
+        "player"
+      ]
+    },
+    "abs": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "accent": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "template"
+      ]
+    },
+    "accname": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "acos": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "cosine",
+        "angle-type"
+      ]
+    },
+    "add": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "number1",
+        "number2"
+      ]
+    },
+    "addrlog": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "after": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "substring"
+      ]
+    },
+    "alias": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "align": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "widths",
+        "col",
+        "filler",
+        "colsep",
+        "rowsep"
+      ]
+    },
+    "allof": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "value..."
+      ]
+    },
+    "alphamax": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "word..."
+      ]
+    },
+    "alphamin": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "word..."
+      ]
+    },
+    "and": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "boolean..."
+      ]
+    },
+    "andflags": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "flags"
+      ]
+    },
+    "andlflags": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "flags"
+      ]
+    },
+    "andlpowers": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "powers"
+      ]
+    },
+    "ansi": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "aposs": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "art": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "asin": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "sine",
+        "angle-type"
+      ]
+    },
+    "atan": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "tangent",
+        "angle-type"
+      ]
+    },
+    "atan2": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "number1",
+        "number2",
+        "angle-type"
+      ]
+    },
+    "atrlock": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "attrib_set": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "object/attribute"
+      ]
+    },
+    "attrib_set#": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "object/attribute"
+      ]
+    },
+    "band": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "integer..."
+      ]
+    },
+    "baseconv": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "number",
+        "from-base",
+        "to-base"
+      ]
+    },
+    "beep": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "before": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "string1",
+        "string2"
+      ]
+    },
+    "benchmark": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "bnand": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "integer1",
+        "integer2"
+      ]
+    },
+    "bnot": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "integer"
+      ]
+    },
+    "bor": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "integer..."
+      ]
+    },
+    "bound": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "value",
+        "min",
+        "max"
+      ]
+    },
+    "brackets": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "bxor": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "integer..."
+      ]
+    },
+    "cand": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "boolean..."
+      ]
+    },
+    "capstr": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "case": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "expression",
+        "case...|result...",
+        "default"
+      ]
+    },
+    "caseall": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "string",
+        "expression...|list...",
+        "default"
+      ]
+    },
+    "cat": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "string..."
+      ]
+    },
+    "cbuffer": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel"
+      ]
+    },
+    "cbufferadd": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "channel",
+        "message"
+      ]
+    },
+    "cdesc": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel"
+      ]
+    },
+    "ceil": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "cemit": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "channel",
+        "message"
+      ]
+    },
+    "center": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "text",
+        "width",
+        "fill"
+      ]
+    },
+    "cflags": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel"
+      ]
+    },
+    "channels": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "checkpass": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "children": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "chr": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "clflags": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel"
+      ]
+    },
+    "clock": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel"
+      ]
+    },
+    "clone": {
+      "maxArgs": 4,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "cmds": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "cmogrifier": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel"
+      ]
+    },
+    "cmsgs": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel"
+      ]
+    },
+    "cnand": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "boolean1",
+        "boolean2"
+      ]
+    },
+    "colors": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "ansi-string",
+        "strip"
+      ]
+    },
+    "comp": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "string1",
+        "string2"
+      ]
+    },
+    "con": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "cond": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "expression...|result...",
+        "default"
+      ]
+    },
+    "condall": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "expression...|result...",
+        "default"
+      ]
+    },
+    "conn": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "connlog": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "connrecord": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "controls": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "victim"
+      ]
+    },
+    "cor": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "boolean..."
+      ]
+    },
+    "cos": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "angle",
+        "angle-type"
+      ]
+    },
+    "cowner": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel"
+      ]
+    },
+    "create": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "crecall": {
+      "maxArgs": 5,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel",
+        "lines",
+        "start"
+      ]
+    },
+    "csecs": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "cstatus": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "channel"
+      ]
+    },
+    "ctime": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "seconds"
+      ]
+    },
+    "ctitle": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "channel"
+      ]
+    },
+    "ctu": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "angle",
+        "from",
+        "to"
+      ]
+    },
+    "cusers": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel"
+      ]
+    },
+    "cwho": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "channel"
+      ]
+    },
+    "dec": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "decode64": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "encoded-string"
+      ]
+    },
+    "decompose": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "decomposeweb": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "decrypt": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "password",
+        "encoded"
+      ]
+    },
+    "default": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "object/attribute",
+        "default"
+      ]
+    },
+    "die": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "dig": {
+      "maxArgs": 6,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "digest": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "algorithm",
+        "string"
+      ]
+    },
+    "dist2d": {
+      "maxArgs": 4,
+      "minArgs": 4,
+      "parameterNames": [
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ]
+    },
+    "dist3d": {
+      "maxArgs": 6,
+      "minArgs": 6,
+      "parameterNames": [
+        "x1",
+        "y1",
+        "z1",
+        "x2",
+        "y2",
+        "z2"
+      ]
+    },
+    "div": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "dividend",
+        "divisor"
+      ]
+    },
+    "doing": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "downmotd": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "e": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "edefault": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "object/attribute",
+        "default"
+      ]
+    },
+    "edit": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "string",
+        "find",
+        "replace"
+      ]
+    },
+    "elements": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "positions",
+        "delimiter"
+      ]
+    },
+    "elist": {
+      "maxArgs": 5,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "conjunction",
+        "delim",
+        "osep",
+        "punctuation"
+      ]
+    },
+    "elock": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "locktype"
+      ]
+    },
+    "emit": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "message"
+      ]
+    },
+    "encode64": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "encrypt": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "password",
+        "encode"
+      ]
+    },
+    "endtag": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "tagname"
+      ]
+    },
+    "entrances": {
+      "maxArgs": 4,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "eq": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "value1",
+        "value2"
+      ]
+    },
+    "escape": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "etime": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "seconds"
+      ]
+    },
+    "etimefmt": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "format",
+        "seconds"
+      ]
+    },
+    "eval": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "attribute"
+      ]
+    },
+    "exit": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "extract": {
+      "maxArgs": 4,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "start",
+        "length",
+        "delimiter"
+      ]
+    },
+    "fdiv": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "dividend",
+        "divisor"
+      ]
+    },
+    "filter": {
+      "maxArgs": 35,
+      "minArgs": 2,
+      "parameterNames": [
+        "attribute",
+        "list",
+        "delimiter"
+      ]
+    },
+    "filterbool": {
+      "maxArgs": 35,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "delimiter"
+      ]
+    },
+    "findable": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "looker"
+      ]
+    },
+    "first": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "delimiter"
+      ]
+    },
+    "firstof": {
+      "maxArgs": 2147483647,
+      "minArgs": 0,
+      "parameterNames": [
+        "object..."
+      ]
+    },
+    "flags": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "flip": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "floor": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "floordiv": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "dividend",
+        "divisor"
+      ]
+    },
+    "fmod": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "number",
+        "divisor"
+      ]
+    },
+    "fn": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "fold": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "attribute",
+        "list",
+        "delimiter",
+        "base"
+      ]
+    },
+    "folderstats": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "folder"
+      ]
+    },
+    "followers": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "following": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "foreach": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter",
+        "output-separator"
+      ]
+    },
+    "formdecode": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "fraction": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "number",
+        "whole"
+      ]
+    },
+    "fullalias": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "fullmotd": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "fullname": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "functions": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "get": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object/attribute"
+      ]
+    },
+    "get_eval": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object/attribute"
+      ]
+    },
+    "getpids": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "type"
+      ]
+    },
+    "grab": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "graball": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "grep": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "grepi": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "gt": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "value1",
+        "value2"
+      ]
+    },
+    "gte": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "value1",
+        "value2"
+      ]
+    },
+    "hasattr": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "attribute"
+      ]
+    },
+    "hasattrp": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "attribute"
+      ]
+    },
+    "hasattrpval": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "hasattrval": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "attribute"
+      ]
+    },
+    "hasflag": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "flag"
+      ]
+    },
+    "haspower": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "power"
+      ]
+    },
+    "hastype": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "type"
+      ]
+    },
+    "height": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "hidden": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "hmac": {
+      "maxArgs": 4,
+      "minArgs": 3,
+      "parameterNames": [
+        "algorithm",
+        "key",
+        "string"
+      ]
+    },
+    "home": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "host": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "html": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "tag",
+        "text..."
+      ]
+    },
+    "ibreak": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "level"
+      ]
+    },
+    "idle": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "if": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "boolean",
+        "true-value",
+        "false-value"
+      ]
+    },
+    "ifelse": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "expression"
+      ]
+    },
+    "ilev": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "iname": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "inc": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "integer"
+      ]
+    },
+    "index": {
+      "maxArgs": 4,
+      "minArgs": 4,
+      "parameterNames": [
+        "list",
+        "element",
+        "delimiter"
+      ]
+    },
+    "inum": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "ipaddr": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "isdaylight": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "seconds"
+      ]
+    },
+    "isdbref": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "isint": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "isjson": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "isnum": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "isobjid": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "isregexp": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "isword": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "itemize": {
+      "maxArgs": 4,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "delimiter",
+        "conjunction",
+        "punctuation"
+      ]
+    },
+    "items": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "delimiter"
+      ]
+    },
+    "iter": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter",
+        "output-separator"
+      ]
+    },
+    "itext": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "json": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "expression..."
+      ]
+    },
+    "json_map": {
+      "maxArgs": 33,
+      "minArgs": 2,
+      "parameterNames": [
+        "attribute",
+        "json",
+        "path"
+      ]
+    },
+    "json_mod": {
+      "maxArgs": 4,
+      "minArgs": 3,
+      "parameterNames": [
+        "json",
+        "path",
+        "value"
+      ]
+    },
+    "json_query": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "json",
+        "path"
+      ]
+    },
+    "lalign": {
+      "maxArgs": 6,
+      "minArgs": 2,
+      "parameterNames": [
+        "widths",
+        "colList",
+        "delim",
+        "filler",
+        "colsep",
+        "rowsep"
+      ]
+    },
+    "last": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "count",
+        "delimiter"
+      ]
+    },
+    "lattr": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "lattrp": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "lcon": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "lcstr": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "ldelete": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "position",
+        "delimiter"
+      ]
+    },
+    "left": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "length"
+      ]
+    },
+    "lemit": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "message"
+      ]
+    },
+    "letq": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "lexits": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "lflags": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "link": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "linsert": {
+      "maxArgs": 4,
+      "minArgs": 3,
+      "parameterNames": [
+        "list",
+        "position",
+        "new-item",
+        "delim"
+      ]
+    },
+    "list": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "listq": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "lit": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "argument..."
+      ]
+    },
+    "ljust": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "text",
+        "width",
+        "fill",
+        "truncate"
+      ]
+    },
+    "llockflags": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "object",
+        "lock"
+      ]
+    },
+    "llocks": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "lmath": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "op",
+        "list",
+        "delim"
+      ]
+    },
+    "ln": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "lnum": {
+      "maxArgs": 4,
+      "minArgs": 1,
+      "parameterNames": [
+        "start",
+        "end",
+        "separator",
+        "step"
+      ]
+    },
+    "loc": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "locale": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "localize": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "locate": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "player",
+        "name",
+        "type"
+      ]
+    },
+    "lock": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "locktype"
+      ]
+    },
+    "lockfilter": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "lock",
+        "list",
+        "delimiter"
+      ]
+    },
+    "lockflags": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "object",
+        "lock"
+      ]
+    },
+    "lockowner": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "lock"
+      ]
+    },
+    "locks": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "log": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "number",
+        "base"
+      ]
+    },
+    "lparent": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "generations"
+      ]
+    },
+    "lpids": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "lplayers": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "lports": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "lpos": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "target",
+        "list",
+        "delimiter"
+      ]
+    },
+    "lreplace": {
+      "maxArgs": 5,
+      "minArgs": 3,
+      "parameterNames": [
+        "list",
+        "positions",
+        "new-item",
+        "delimiter",
+        "osep"
+      ]
+    },
+    "lsearch": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "player",
+        "class=restriction..."
+      ]
+    },
+    "lsearchr": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "class=restriction..."
+      ]
+    },
+    "lset": {
+      "maxArgs": 5,
+      "minArgs": 3,
+      "parameterNames": []
+    },
+    "lstats": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "type"
+      ]
+    },
+    "lt": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "value1",
+        "value2"
+      ]
+    },
+    "lte": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "value1",
+        "value2"
+      ]
+    },
+    "lthings": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "lvcon": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "lvexits": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "lvplayers": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "lvthings": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "lwho": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "flag"
+      ]
+    },
+    "lwhoid": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "flags"
+      ]
+    },
+    "mail": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "player",
+        "status"
+      ]
+    },
+    "maildstats": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "player"
+      ]
+    },
+    "mailfrom": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "message"
+      ]
+    },
+    "mailfstats": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "folder"
+      ]
+    },
+    "maillist": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "folder",
+        "flags"
+      ]
+    },
+    "mailsend": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "player",
+        "subject",
+        "message"
+      ]
+    },
+    "mailstats": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "player"
+      ]
+    },
+    "mailstatus": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "message"
+      ]
+    },
+    "mailsubject": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "mailtime": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "message"
+      ]
+    },
+    "malias": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "alias"
+      ]
+    },
+    "map": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "attribute",
+        "list",
+        "delimiter",
+        "outsep"
+      ]
+    },
+    "mapsql": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "obj/attr",
+        "query",
+        "osep",
+        "fieldnames"
+      ]
+    },
+    "match": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "matchall": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter",
+        "outsep"
+      ]
+    },
+    "max": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "number..."
+      ]
+    },
+    "mean": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "number..."
+      ]
+    },
+    "median": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "number..."
+      ]
+    },
+    "member": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "element",
+        "delimiter"
+      ]
+    },
+    "merge": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "list1",
+        "list2",
+        "delimiter"
+      ]
+    },
+    "message": {
+      "maxArgs": 14,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "recipient",
+        "message"
+      ]
+    },
+    "mid": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "string",
+        "first",
+        "length"
+      ]
+    },
+    "min": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "number..."
+      ]
+    },
+    "mix": {
+      "maxArgs": 35,
+      "minArgs": 3,
+      "parameterNames": [
+        "attribute",
+        "list1",
+        "list2",
+        "delimiter",
+        "outsep"
+      ]
+    },
+    "modulo": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "dividend",
+        "divisor..."
+      ]
+    },
+    "money": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "moniker": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "motd": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "msecs": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "mtime": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "mudname": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "mudurl": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "mul": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "number1",
+        "number2"
+      ]
+    },
+    "munge": {
+      "maxArgs": 5,
+      "minArgs": 3,
+      "parameterNames": [
+        "attribute",
+        "list1",
+        "list2",
+        "list3",
+        "delimiter"
+      ]
+    },
+    "mwho": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "flags"
+      ]
+    },
+    "mwhoid": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "flags"
+      ]
+    },
+    "name": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "new name"
+      ]
+    },
+    "namegrab": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "namegraball": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "namelist": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "attribute"
+      ]
+    },
+    "nand": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "boolean..."
+      ]
+    },
+    "nattr": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "nattrp": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "ncand": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "boolean1",
+        "boolean2"
+      ]
+    },
+    "nchildren": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "ncon": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "ncond": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "expression...|result...",
+        "default"
+      ]
+    },
+    "ncondall": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "expression...|result...",
+        "default"
+      ]
+    },
+    "ncor": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "boolean1",
+        "boolean2"
+      ]
+    },
+    "nearby": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object1",
+        "object2"
+      ]
+    },
+    "neq": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "value1",
+        "value2"
+      ]
+    },
+    "nexits": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "next": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "nextdbref": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "nlsearch": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "class=restriction..."
+      ]
+    },
+    "nmwho": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": [
+        "flags"
+      ]
+    },
+    "nor": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "boolean..."
+      ]
+    },
+    "not": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "boolean"
+      ]
+    },
+    "nplayers": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "nscemit": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "channel",
+        "message"
+      ]
+    },
+    "nsearch": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "class=restriction..."
+      ]
+    },
+    "nsemit": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "message"
+      ]
+    },
+    "nslemit": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "message"
+      ]
+    },
+    "nsoemit": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "message"
+      ]
+    },
+    "nspemit": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "target",
+        "message"
+      ]
+    },
+    "nsprompt": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "target",
+        "message"
+      ]
+    },
+    "nsremit": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "room",
+        "message"
+      ]
+    },
+    "nszemit": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "zone",
+        "message"
+      ]
+    },
+    "nthings": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "null": {
+      "maxArgs": 2147483647,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "num": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "numversion": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "nvcon": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "nvexits": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "nvplayers": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "nvthings": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "nwho": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "flags"
+      ]
+    },
+    "obj": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object/attribute"
+      ]
+    },
+    "objeval": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "expression"
+      ]
+    },
+    "objid": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "objmem": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "oemit": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "message"
+      ]
+    },
+    "oob": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "command",
+        "arguments..."
+      ]
+    },
+    "open": {
+      "maxArgs": 4,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "or": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "boolean..."
+      ]
+    },
+    "ord": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "character"
+      ]
+    },
+    "orflags": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "flags"
+      ]
+    },
+    "orlflags": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "flags"
+      ]
+    },
+    "orlpowers": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "powers"
+      ]
+    },
+    "owner": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "parent": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "pcreate": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "pemit": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "target",
+        "message"
+      ]
+    },
+    "pfun": {
+      "maxArgs": 33,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "function",
+        "arguments..."
+      ]
+    },
+    "pgrep": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "pattern",
+        "flags"
+      ]
+    },
+    "pi": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "pidinfo": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "pid",
+        "field",
+        "delimiter"
+      ]
+    },
+    "player": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "descriptor"
+      ]
+    },
+    "playermem": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "pmatch": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "name"
+      ]
+    },
+    "poll": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "ports": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "pos": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "target",
+        "string"
+      ]
+    },
+    "poss": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "power": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "number",
+        "exponent"
+      ]
+    },
+    "powers": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "prompt": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "target",
+        "message"
+      ]
+    },
+    "pueblo": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "quota": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "r": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "rand": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "randextract": {
+      "maxArgs": 5,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "count",
+        "delim",
+        "type",
+        "osep"
+      ]
+    },
+    "randword": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "delimiter"
+      ]
+    },
+    "recv": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "regedit": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "string",
+        "pattern",
+        "replacement"
+      ]
+    },
+    "regeditall": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "string",
+        "pattern",
+        "replacement"
+      ]
+    },
+    "regeditalli": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "pattern",
+        "string",
+        "replacement"
+      ]
+    },
+    "regediti": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "pattern",
+        "string",
+        "replacement"
+      ]
+    },
+    "registers": {
+      "maxArgs": 3,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "reglattr": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "reglattrp": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "reglmatch": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "reglmatchall": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "reglmatchalli": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "reglmatchi": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "regmatch": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "pattern",
+        "registers"
+      ]
+    },
+    "regmatchalli": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "pattern",
+        "registers"
+      ]
+    },
+    "regmatchi": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "pattern",
+        "registers"
+      ]
+    },
+    "regnattr": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "regnattrp": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "regrab": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "regraball": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "regraballi": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "regrabi": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "pattern",
+        "delimiter"
+      ]
+    },
+    "regrep": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "attribute",
+        "pattern"
+      ]
+    },
+    "regrepi": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "attribute",
+        "pattern"
+      ]
+    },
+    "regxattr": {
+      "maxArgs": 4,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "regxattrp": {
+      "maxArgs": 4,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "remainder": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": [
+        "dividend",
+        "divisor..."
+      ]
+    },
+    "remit": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "room",
+        "message"
+      ]
+    },
+    "remove": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "words",
+        "delimiter"
+      ]
+    },
+    "render": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "rendermarkdown": {
+      "maxArgs": 2,
+      "minArgs": 0,
+      "parameterNames": [
+        "text"
+      ]
+    },
+    "rendermarkdowncustom": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "text"
+      ]
+    },
+    "repeat": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "count"
+      ]
+    },
+    "rest": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "delimiter"
+      ]
+    },
+    "restarts": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "restarttime": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "reswitch": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "text",
+        "pattern...|result...",
+        "default"
+      ]
+    },
+    "reswitchall": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "text",
+        "pattern...|result...",
+        "default"
+      ]
+    },
+    "reswitchalli": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "text",
+        "pattern...|result...",
+        "default"
+      ]
+    },
+    "reswitchi": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "text",
+        "pattern...|result...",
+        "default"
+      ]
+    },
+    "revwords": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "delimiter"
+      ]
+    },
+    "right": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "length"
+      ]
+    },
+    "rjust": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "text",
+        "width",
+        "fill",
+        "truncate"
+      ]
+    },
+    "rloc": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "levels"
+      ]
+    },
+    "room": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "root": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "number",
+        "n"
+      ]
+    },
+    "round": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "number",
+        "places",
+        "pad"
+      ]
+    },
+    "s": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "scan": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "scramble": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "secs": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "secscalc": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "timestring"
+      ]
+    },
+    "secure": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "sent": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "set": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object/attribute",
+        "flag or attribute:value"
+      ]
+    },
+    "setdiff": {
+      "maxArgs": 5,
+      "minArgs": 2,
+      "parameterNames": [
+        "list1",
+        "list2",
+        "delimiter"
+      ]
+    },
+    "setinter": {
+      "maxArgs": 5,
+      "minArgs": 2,
+      "parameterNames": [
+        "list1",
+        "list2",
+        "delimiter"
+      ]
+    },
+    "setq": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "setr": {
+      "maxArgs": 2147483647,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "setsymdiff": {
+      "maxArgs": 5,
+      "minArgs": 2,
+      "parameterNames": [
+        "list1",
+        "list2",
+        "delimiter"
+      ]
+    },
+    "setunion": {
+      "maxArgs": 5,
+      "minArgs": 2,
+      "parameterNames": [
+        "list1",
+        "list2",
+        "delimiter"
+      ]
+    },
+    "shl": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "integer",
+        "positions"
+      ]
+    },
+    "shr": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "integer",
+        "positions"
+      ]
+    },
+    "shuffle": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "delimiter"
+      ]
+    },
+    "sign": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "sin": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "angle",
+        "angle-type"
+      ]
+    },
+    "slev": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "sort": {
+      "maxArgs": 4,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "sort-type",
+        "delimiter",
+        "outsep"
+      ]
+    },
+    "sortby": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "attribute",
+        "list",
+        "delimiter",
+        "outsep"
+      ]
+    },
+    "sortkey": {
+      "maxArgs": 5,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "attribute",
+        "delimiter"
+      ]
+    },
+    "soundex": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "soundslike": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "space": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "count"
+      ]
+    },
+    "speak": {
+      "maxArgs": 7,
+      "minArgs": 2,
+      "parameterNames": [
+        "speaker",
+        "string",
+        "say-string",
+        "transform-attr",
+        "isnull-attr",
+        "open",
+        "close"
+      ]
+    },
+    "spellnum": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "splice": {
+      "maxArgs": 4,
+      "minArgs": 3,
+      "parameterNames": [
+        "list1",
+        "list2",
+        "word",
+        "delimiter"
+      ]
+    },
+    "sql": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "query",
+        "rowsep",
+        "fieldsep",
+        "register"
+      ]
+    },
+    "sqlescape": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "sqrt": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "squish": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "string",
+        "delimiter"
+      ]
+    },
+    "ssl": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "starttime": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "stddev": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "number..."
+      ]
+    },
+    "step": {
+      "maxArgs": 5,
+      "minArgs": 3,
+      "parameterNames": [
+        "start",
+        "end",
+        "increment",
+        "expression"
+      ]
+    },
+    "stext": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "strallof": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "expression..."
+      ]
+    },
+    "strcat": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "string..."
+      ]
+    },
+    "strdelete": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "string",
+        "position",
+        "length"
+      ]
+    },
+    "strfirstof": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "expression...",
+        "default"
+      ]
+    },
+    "stringsecs": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "seconds"
+      ]
+    },
+    "strinsert": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "string",
+        "position",
+        "insert"
+      ]
+    },
+    "stripaccents": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "stripansi": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "strlen": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "strmatch": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "pattern"
+      ]
+    },
+    "strreplace": {
+      "maxArgs": 4,
+      "minArgs": 4,
+      "parameterNames": [
+        "string",
+        "position",
+        "character"
+      ]
+    },
+    "sub": {
+      "maxArgs": 32,
+      "minArgs": 2,
+      "parameterNames": [
+        "number1",
+        "number2"
+      ]
+    },
+    "subj": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "suggest": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "switch": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "string",
+        "expression...|list...",
+        "default"
+      ]
+    },
+    "switchall": {
+      "maxArgs": 2147483647,
+      "minArgs": 3,
+      "parameterNames": [
+        "string",
+        "expression...|list...",
+        "default"
+      ]
+    },
+    "t": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": [
+        "value"
+      ]
+    },
+    "table": {
+      "maxArgs": 5,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "width",
+        "delimiter",
+        "line-delimiter"
+      ]
+    },
+    "tag": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "tagname",
+        "content",
+        "attributes"
+      ]
+    },
+    "tagwrap": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "tag",
+        "content"
+      ]
+    },
+    "tan": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "angle",
+        "angle-type"
+      ]
+    },
+    "tel": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "terminfo": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object",
+        "capability"
+      ]
+    },
+    "testlock": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "textentries": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "textfile": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": []
+    },
+    "textsearch": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "time": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "timecalc": {
+      "maxArgs": 2147483647,
+      "minArgs": 1,
+      "parameterNames": [
+        "timestring"
+      ]
+    },
+    "timefmt": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "format",
+        "seconds"
+      ]
+    },
+    "timestring": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "seconds"
+      ]
+    },
+    "tr": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "string",
+        "from",
+        "to"
+      ]
+    },
+    "trim": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "string",
+        "characters",
+        "trim-style"
+      ]
+    },
+    "trimpenn": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "trimtiny": {
+      "maxArgs": 3,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "trunc": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "number"
+      ]
+    },
+    "type": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "ucstr": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "udefault": {
+      "maxArgs": 34,
+      "minArgs": 2,
+      "parameterNames": [
+        "object/attribute",
+        "default..."
+      ]
+    },
+    "ufun": {
+      "maxArgs": 33,
+      "minArgs": 1,
+      "parameterNames": [
+        "object/attribute",
+        "arguments..."
+      ]
+    },
+    "ulambda": {
+      "maxArgs": 33,
+      "minArgs": 1,
+      "parameterNames": [
+        "parameters",
+        "expression",
+        "arguments..."
+      ]
+    },
+    "uldefault": {
+      "maxArgs": 34,
+      "minArgs": 2,
+      "parameterNames": [
+        "object/attribute",
+        "default..."
+      ]
+    },
+    "ulocal": {
+      "maxArgs": 33,
+      "minArgs": 1,
+      "parameterNames": [
+        "object/attribute",
+        "arguments..."
+      ]
+    },
+    "unique": {
+      "maxArgs": 4,
+      "minArgs": 1,
+      "parameterNames": [
+        "list",
+        "delimiter",
+        "osep"
+      ]
+    },
+    "unsetq": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "uptime": {
+      "maxArgs": 1,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "urldecode": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "urlencode": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "string"
+      ]
+    },
+    "utctime": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "v": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "attribute"
+      ]
+    },
+    "vadd": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "vector1",
+        "vector2",
+        "delimiter",
+        "sep"
+      ]
+    },
+    "valid": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "type",
+        "name"
+      ]
+    },
+    "vcross": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "vector1",
+        "vector2",
+        "delimiter",
+        "sep"
+      ]
+    },
+    "vdim": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "vector",
+        "delimiter"
+      ]
+    },
+    "vdot": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "vector1",
+        "vector2",
+        "delimiter",
+        "sep"
+      ]
+    },
+    "version": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "visible": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "looker"
+      ]
+    },
+    "vmag": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "vector",
+        "delimiter"
+      ]
+    },
+    "vmax": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "vector1",
+        "vector2",
+        "delimiter",
+        "sep"
+      ]
+    },
+    "vmin": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "vector1",
+        "vector2",
+        "delimiter",
+        "sep"
+      ]
+    },
+    "vmul": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "vector1",
+        "vector2",
+        "delimiter",
+        "sep"
+      ]
+    },
+    "vsub": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "vector1",
+        "vector2",
+        "delimiter",
+        "sep"
+      ]
+    },
+    "vunit": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "vector",
+        "delimiter"
+      ]
+    },
+    "where": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "width": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "wildgrep": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "attribute",
+        "pattern"
+      ]
+    },
+    "wildgrepi": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "attribute",
+        "pattern"
+      ]
+    },
+    "wipe": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": []
+    },
+    "wizmotd": {
+      "maxArgs": 0,
+      "minArgs": 0,
+      "parameterNames": []
+    },
+    "wordpos": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "list",
+        "number",
+        "delimiter"
+      ]
+    },
+    "words": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "string",
+        "delimiter"
+      ]
+    },
+    "wrap": {
+      "maxArgs": 4,
+      "minArgs": 2,
+      "parameterNames": [
+        "string",
+        "width",
+        "osep",
+        "isep",
+        "indent"
+      ]
+    },
+    "wshtml": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "html"
+      ]
+    },
+    "wsjson": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "message"
+      ]
+    },
+    "xattr": {
+      "maxArgs": 4,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "xattrp": {
+      "maxArgs": 4,
+      "minArgs": 3,
+      "parameterNames": [
+        "object",
+        "pattern"
+      ]
+    },
+    "xcon": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "xexits": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "xget": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "attribute",
+        "default"
+      ]
+    },
+    "xmwho": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "start",
+        "count"
+      ]
+    },
+    "xmwhoid": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "flags"
+      ]
+    },
+    "xor": {
+      "maxArgs": 32,
+      "minArgs": 0,
+      "parameterNames": [
+        "boolean..."
+      ]
+    },
+    "xplayers": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "xthings": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "xvcon": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "xvexits": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "xvplayers": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "xvthings": {
+      "maxArgs": 3,
+      "minArgs": 3,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "xwho": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "flags"
+      ]
+    },
+    "xwhoid": {
+      "maxArgs": 3,
+      "minArgs": 2,
+      "parameterNames": [
+        "flags"
+      ]
+    },
+    "zemit": {
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "zone",
+        "message"
+      ]
+    },
+    "zfind": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "zone",
+        "flags"
+      ]
+    },
+    "zfun": {
+      "maxArgs": 33,
+      "minArgs": 1,
+      "parameterNames": [
+        "zone",
+        "attribute",
+        "arguments..."
+      ]
+    },
+    "zmwho": {
+      "maxArgs": 1,
+      "minArgs": 1,
+      "parameterNames": [
+        "zone"
+      ]
+    },
+    "zone": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "object"
+      ]
+    },
+    "zwho": {
+      "maxArgs": 2,
+      "minArgs": 1,
+      "parameterNames": [
+        "zone"
+      ]
+    }
+  }
+}

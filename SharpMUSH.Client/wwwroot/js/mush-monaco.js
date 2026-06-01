@@ -7,6 +7,9 @@
 
     var _registered = false;
     var _completionData = null;
+    var _hoverProviderDisposable = null;
+    var _sigHelpProviderDisposable = null;
+    var _completionProviderDisposable = null;
 
     function doRegister() {
         if (_registered || typeof monaco === 'undefined') return;
@@ -111,15 +114,31 @@
             // ── Completions ────────────────────────────────────────────────────
             if (_completionData) {
                 registerCompletions(_completionData);
+                registerHoverProvider(_completionData);
+                registerSignatureHelpProvider(_completionData);
             } else {
-                Promise.all([
-                    fetch('data/mush-functions.json').then(function (r) { return r.json(); }),
-                    fetch('data/mush-commands.json').then(function (r) { return r.json(); }),
-                ]).then(function (results) {
-                    _completionData = { functions: results[0], commands: results[1] };
-                    registerCompletions(_completionData);
+                fetch('data/mush-defs.json').then(function (r) { return r.json(); })
+                .then(function (defs) {
+                    _completionData = defs;
+                    registerCompletions(defs);
+                    registerHoverProvider(defs);
+                    registerSignatureHelpProvider(defs);
                 }).catch(function (e) {
-                    console.warn('SharpMUSH: Failed to load completion data', e);
+                    // Fallback to flat arrays if rich defs not available
+                    Promise.all([
+                        fetch('data/mush-functions.json').then(function (r) { return r.json(); }),
+                        fetch('data/mush-commands.json').then(function (r) { return r.json(); }),
+                    ]).then(function (results) {
+                        var fallback = {
+                            functions: Object.fromEntries((results[0] || []).map(function (n) { return [n, { minArgs: 0, maxArgs: 99, parameterNames: [] }]; })),
+                            commands: Object.fromEntries((results[1] || []).map(function (n) { return [n, { minArgs: 0, maxArgs: 99, parameterNames: [], switches: [] }]; })),
+                        };
+                        _completionData = fallback;
+                        registerCompletions(fallback);
+                        registerHoverProvider(fallback);
+                    }).catch(function (e2) {
+                        console.warn('SharpMUSH: Failed to load completion data', e2);
+                    });
                 });
             }
 
@@ -129,8 +148,29 @@
         }
     }
 
+    function buildSignature(name, def, isCommand) {
+        var params = def.parameterNames || [];
+        var max = def.maxArgs;
+        var min = def.minArgs;
+        var paramStr = '';
+        if (params.length > 0) {
+            paramStr = params.map(function (p, i) {
+                return i >= min ? '[' + p + ']' : p;
+            }).join(', ');
+            if (max > params.length) paramStr += ', ...';
+        } else if (max > 0) {
+            var parts = [];
+            for (var i = 0; i < Math.min(min, 6); i++) parts.push('arg' + (i + 1));
+            if (max > min) parts.push('...');
+            paramStr = parts.join(', ');
+        }
+        if (isCommand) return name + ' ' + paramStr;
+        return name + '(' + paramStr + ')';
+    }
+
     function registerCompletions(data) {
-        monaco.languages.registerCompletionItemProvider('mush', {
+        if (_completionProviderDisposable) { try { _completionProviderDisposable.dispose(); } catch (e) {} }
+        _completionProviderDisposable = monaco.languages.registerCompletionItemProvider('mush', {
             triggerCharacters: ['@', '&', '[', '%'],
             provideCompletionItems: function (model, position) {
                 var word = model.getWordUntilPosition(position);
@@ -142,31 +182,167 @@
                 };
 
                 var items = [];
+                var funcs = data.functions || {};
+                var cmds = data.commands || {};
 
-                (data.functions || []).forEach(function (name) {
+                Object.keys(funcs).forEach(function (name) {
                     if (!name || name.startsWith('#') || name === '@@') return;
+                    var def = funcs[name];
                     items.push({
-                        label: name + '()',
+                        label: { label: name + '()', detail: '  ' + buildSignature(name, def, false) },
                         kind: monaco.languages.CompletionItemKind.Function,
                         insertText: name + '(',
-                        documentation: 'MUSHcode function: ' + name,
+                        documentation: { value: '**`' + buildSignature(name, def, false) + '`**' },
                         range: range,
                     });
                 });
 
-                (data.commands || []).forEach(function (name) {
-                    if (!name) return;
-                    var display = name.startsWith('@') ? name : '@' + name;
+                Object.keys(cmds).forEach(function (name) {
+                    var def = cmds[name];
+                    var sw = def.switches && def.switches.length > 0 ? '\n\nSwitches: ' + def.switches.join(', ') : '';
                     items.push({
-                        label: display,
+                        label: { label: name, detail: '  command' },
                         kind: monaco.languages.CompletionItemKind.Keyword,
-                        insertText: display + ' ',
-                        documentation: 'MUSH command: ' + name,
+                        insertText: name + ' ',
+                        documentation: { value: '**`' + buildSignature(name, def, true) + '`**' + sw },
                         range: range,
                     });
                 });
 
                 return { suggestions: items };
+            },
+        });
+    }
+
+    function registerHoverProvider(data) {
+        if (_hoverProviderDisposable) { try { _hoverProviderDisposable.dispose(); } catch (e) {} }
+        _hoverProviderDisposable = monaco.languages.registerHoverProvider('mush', {
+            provideHover: function (model, position) {
+                var word = model.getWordAtPosition(position);
+                if (!word) return null;
+                var name = word.word;
+                var funcs = data.functions || {};
+                var cmds = data.commands || {};
+
+                var def = funcs[name] || funcs[name.toUpperCase()] || funcs[name.toLowerCase()];
+                if (def) {
+                    var sig = buildSignature(name, def, false);
+                    var sw = def.switches && def.switches.length > 0
+                        ? '\n\n**Switches:** ' + def.switches.join(', ') : '';
+                    var params = (def.parameterNames || []).length > 0
+                        ? '\n\n**Parameters:** ' + def.parameterNames.join(', ') : '';
+                    return {
+                        range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn),
+                        contents: [{ value: '**`' + sig + '`**\n\nMUSH function' + params + sw }],
+                    };
+                }
+
+                var cmdName = name.startsWith('@') ? name : '@' + name;
+                def = cmds[name] || cmds[name.toUpperCase()] || cmds[cmdName] || cmds[cmdName.toUpperCase()];
+                if (def) {
+                    var sig = buildSignature(cmdName.toUpperCase(), def, true);
+                    var sw = def.switches && def.switches.length > 0
+                        ? '\n\n**Switches:** ' + def.switches.join(', ') : '';
+                    return {
+                        range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn),
+                        contents: [{ value: '**`' + sig + '`**\n\nMUSH command' + sw }],
+                    };
+                }
+
+                // Special substitution patterns
+                var lineText = model.getLineContent(position.lineNumber);
+                var colIdx = position.column - 1;
+                // Check if cursor is on a % substitution
+                if (colIdx > 0 && lineText[colIdx - 1] === '%') {
+                    var ch = lineText[colIdx];
+                    var subst = subInfo('%' + ch);
+                    if (subst) return { contents: [{ value: subst }] };
+                }
+                return null;
+            },
+        });
+    }
+
+    function subInfo(s) {
+        var map = {
+            '%#': '**`%#`** — Enactor\'s #dbref',
+            '%!': '**`%!`** — Executing object\'s #dbref',
+            '%@': '**`%@`** — Calling object\'s #dbref',
+            '%N': '**`%N`** — Enactor\'s name',
+            '%n': '**`%n`** — Enactor\'s name (lowercase)',
+            '%0': '**`%0`** — Argument 0', '%1': '**`%1`** — Argument 1',
+            '%2': '**`%2`** — Argument 2', '%3': '**`%3`** — Argument 3',
+            '%4': '**`%4`** — Argument 4', '%5': '**`%5`** — Argument 5',
+            '%6': '**`%6`** — Argument 6', '%7': '**`%7`** — Argument 7',
+            '%8': '**`%8`** — Argument 8', '%9': '**`%9`** — Argument 9',
+            '%L': '**`%L`** — Enactor\'s location dbref', '%l': '**`%l`** — Enactor\'s location dbref',
+            '%R': '**`%R`** — Newline', '%r': '**`%r`** — Newline',
+            '%T': '**`%T`** — Tab character', '%t': '**`%t`** — Tab character',
+            '%S': '**`%S`** — Enactor\'s subjective pronoun (he/she/it)',
+            '%s': '**`%s`** — Enactor\'s subjective pronoun',
+            '%P': '**`%P`** — Enactor\'s possessive pronoun (his/her/its)',
+            '%p': '**`%p`** — Enactor\'s possessive pronoun',
+        };
+        return map[s] || null;
+    }
+
+    function registerSignatureHelpProvider(data) {
+        if (_sigHelpProviderDisposable) { try { _sigHelpProviderDisposable.dispose(); } catch (e) {} }
+        _sigHelpProviderDisposable = monaco.languages.registerSignatureHelpProvider('mush', {
+            signatureHelpTriggerCharacters: ['(', ','],
+            signatureHelpRetriggerCharacters: [','],
+            provideSignatureHelp: function (model, position) {
+                var lineText = model.getLineContent(position.lineNumber);
+                var col = position.column - 1;
+                var depth = 0, commas = 0;
+                for (var i = col - 1; i >= 0; i--) {
+                    var c = lineText[i];
+                    if (c === ')') depth++;
+                    else if (c === '(') {
+                        if (depth === 0) {
+                            // Find function name before this (
+                            var end = i;
+                            var j = i - 1;
+                            while (j >= 0 && /\w/.test(lineText[j])) j--;
+                            var funcName = lineText.substring(j + 1, end);
+                            var funcs = data.functions || {};
+                            var def = funcs[funcName] || funcs[funcName.toUpperCase()] || funcs[funcName.toLowerCase()];
+                            if (!def) return null;
+                            var paramNames = def.parameterNames || [];
+                            var params = [];
+                            var label = funcName + '(';
+                            for (var p = 0; p < Math.max(def.maxArgs, paramNames.length, commas + 1); p++) {
+                                if (p > 0) label += ', ';
+                                var pname = paramNames[p] || ('arg' + (p + 1));
+                                var pstart = label.length;
+                                var isOpt = p >= def.minArgs;
+                                if (isOpt) { label += '['; }
+                                label += pname;
+                                if (isOpt) { label += ']'; }
+                                params.push({ label: [pstart, label.length] });
+                                if (def.maxArgs !== -1 && def.maxArgs !== 2147483647 && p >= def.maxArgs - 1) break;
+                                if (p > 20) break; // safety cap
+                            }
+                            label += ')';
+                            return {
+                                value: {
+                                    signatures: [{
+                                        label: label,
+                                        parameters: params,
+                                        activeParameter: Math.min(commas, params.length - 1),
+                                    }],
+                                    activeSignature: 0,
+                                    activeParameter: Math.min(commas, params.length - 1),
+                                },
+                                dispose: function () {},
+                            };
+                        }
+                        depth--;
+                    } else if (c === ',' && depth === 0) {
+                        commas++;
+                    }
+                }
+                return null;
             },
         });
     }
