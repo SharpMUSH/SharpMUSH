@@ -27,7 +27,8 @@ public class AccountAuthService(
 	private record AccountLoginResponse(string AccountId, string Username, IReadOnlyList<CharacterSummary> Characters, string AccountSessionToken, bool MustChangePassword);
 	private record MushTokenWithAccountRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
 	private record MushTokenResponse(string Token, int ExpiresIn);
-	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName);
+	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,
+		string? AccountId, string? AccountUsername, string? AccountSessionToken, bool AccountMustChangePassword);
 	private record CreateCharacterRequest(string Name, string Password);
 	private record CreateCharacterResponse(int DbrefNumber, long? CreationTime);
 	private record ChangePasswordRequest(string OldPassword, string NewPassword);
@@ -158,7 +159,14 @@ public class AccountAuthService(
 				logger.LogWarning("Debug OTT request failed: {Status}", response.StatusCode);
 				return null;
 			}
-			return await response.Content.ReadFromJsonAsync<DebugOttResponse>();
+			var result = await response.Content.ReadFromJsonAsync<DebugOttResponse>();
+			if (result is null) return null;
+
+			// If an account session was returned, persist it so IsLoggedIn becomes true
+			if (result.AccountSessionToken is not null && result.AccountUsername is not null)
+				await PersistSessionAsync(result.AccountSessionToken, result.AccountUsername, result.AccountMustChangePassword);
+
+			return result;
 		}
 		catch (Exception ex)
 		{

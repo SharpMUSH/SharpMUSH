@@ -162,10 +162,12 @@ public class AuthController(
 	}
 
 	/// <summary>Response body for the debug OTT endpoint.</summary>
-	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName);
+	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,
+		string? AccountId, string? AccountUsername, string? AccountSessionToken, bool AccountMustChangePassword);
 
 	/// <summary>
 	/// Development-only endpoint: issue a one-time token for player #1 without credentials.
+	/// Also returns the account session for the account linked to #1 (if one exists).
 	/// Requires DebugAuth (automatically active in development mode).
 	/// </summary>
 	[HttpGet("debug-ott")]
@@ -184,8 +186,17 @@ public class AuthController(
 		const int ttl = 60;
 		var token = await ottStore.CreateTokenAsync(playerRef, TimeSpan.FromSeconds(ttl));
 
-		logger.LogInformation("Debug OTT issued for {Name} (#{Key})", player.Object.Name, player.Object.Key);
-		return Ok(new DebugOttResponse(token, ttl, player.Object.Name));
+		// Look up the account linked to #1 (created by BootstrapService)
+		var account = await accountService.GetAccountForCharacterAsync(playerRef);
+		string? accountSessionToken = null;
+		if (account is not null)
+			accountSessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
+
+		logger.LogInformation("Debug OTT issued for {Name} (#{Key}), account: {AccountId}",
+			player.Object.Name, player.Object.Key, account?.Id ?? "none");
+
+		return Ok(new DebugOttResponse(token, ttl, player.Object.Name,
+			account?.Id, account?.Username, accountSessionToken, account?.MustChangePassword ?? false));
 	}
 
 	private static async Task<IReadOnlyList<CharacterSummary>> BuildCharacterSummariesAsync(IReadOnlyList<SharpPlayer> characters)
