@@ -554,6 +554,7 @@ public partial class SurrealDatabase
 			("XS", []), ("XT", []), ("XU", []), ("XV", []), ("XW", []), ("XX", []),
 			("XY", []), ("XZ", []),
 			("ZENTER", ["no_command","prefixmatch"]),
+			("_", ["veiled"]),
 		};
 
 		foreach (var e in entries)
