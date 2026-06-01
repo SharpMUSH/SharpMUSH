@@ -7,18 +7,18 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface IAccountService
 {
 	/// <summary>
-	/// Attempts to authenticate using either a display name or email plus password.
+	/// Attempts to authenticate using either a username or email plus password.
 	/// Returns the account on success, or <c>null</c> on auth failure / disabled / not found.
 	/// </summary>
-	ValueTask<SharpAccount?> AuthenticateAsync(string displayNameOrEmail, string password, CancellationToken ct = default);
+	ValueTask<SharpAccount?> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default);
 
 	/// <summary>
 	/// Creates a new account. <paramref name="email"/> is optional (pass null to omit).
-	/// Returns an <see cref="Error{T}"/> if the display name or email is already taken.
+	/// Returns an <see cref="Error{T}"/> if the username or email is already taken.
 	/// </summary>
-	ValueTask<OneOf<SharpAccount, Error<string>>> CreateAccountAsync(string displayName, string? email, string password, CancellationToken ct = default);
+	ValueTask<OneOf<SharpAccount, Error<string>>> CreateAccountAsync(string username, string? email, string password, CancellationToken ct = default);
 
-	ValueTask<bool> DisplayNameExistsAsync(string displayName, CancellationToken ct = default);
+	ValueTask<bool> UsernameExistsAsync(string username, CancellationToken ct = default);
 
 	ValueTask<bool> EmailExistsAsync(string email, CancellationToken ct = default);
 
@@ -31,9 +31,9 @@ public interface IAccountService
 	ValueTask<OneOf<Success, Error<string>>> ChangeEmailAsync(string accountId, string? newEmail, string currentPassword, CancellationToken ct = default);
 
 	/// <summary>
-	/// Changes the display name. Returns an error if the new name is already taken.
+	/// Changes the username. Returns an error if the new username is already taken.
 	/// </summary>
-	ValueTask<OneOf<Success, Error<string>>> ChangeDisplayNameAsync(string accountId, string newDisplayName, CancellationToken ct = default);
+	ValueTask<OneOf<Success, Error<string>>> ChangeUsernameAsync(string accountId, string newUsername, CancellationToken ct = default);
 
 	ValueTask<IReadOnlyList<SharpPlayer>> GetCharactersAsync(string accountId, CancellationToken ct = default);
 
@@ -45,7 +45,7 @@ public interface IAccountService
 
 	ValueTask<SharpAccount?> GetByIdAsync(string accountId, CancellationToken ct = default);
 
-	ValueTask<SharpAccount?> GetByDisplayNameAsync(string displayName, CancellationToken ct = default);
+	ValueTask<SharpAccount?> GetByUsernameAsync(string username, CancellationToken ct = default);
 
 	ValueTask<SharpAccount?> GetByEmailAsync(string email, CancellationToken ct = default);
 

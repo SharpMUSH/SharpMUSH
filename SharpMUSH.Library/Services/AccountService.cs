@@ -10,12 +10,12 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 	// Account IDs are used as the "user" salt key for hashing
 	private static string AccountKey(SharpAccount account) => $"account:{account.Id}:{account.CreatedAt}";
 
-	public async ValueTask<SharpAccount?> AuthenticateAsync(string displayNameOrEmail, string password, CancellationToken ct = default)
+	public async ValueTask<SharpAccount?> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default)
 	{
-		// Detect email vs display name by presence of '@'
-		SharpAccount? account = displayNameOrEmail.Contains('@')
-			? await database.GetAccountByEmailAsync(displayNameOrEmail, ct)
-			: await database.GetAccountByDisplayNameAsync(displayNameOrEmail, ct);
+		// Detect email vs username by presence of '@'
+		SharpAccount? account = usernameOrEmail.Contains('@')
+			? await database.GetAccountByEmailAsync(usernameOrEmail, ct)
+			: await database.GetAccountByUsernameAsync(usernameOrEmail, ct);
 
 		if (account is null || account.IsDisabled)
 			return null;
@@ -26,10 +26,10 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 		return account;
 	}
 
-	public async ValueTask<OneOf<SharpAccount, Error<string>>> CreateAccountAsync(string displayName, string? email, string password, CancellationToken ct = default)
+	public async ValueTask<OneOf<SharpAccount, Error<string>>> CreateAccountAsync(string username, string? email, string password, CancellationToken ct = default)
 	{
-		if (await database.GetAccountByDisplayNameAsync(displayName, ct) is not null)
-			return new Error<string>($"Display name '{displayName}' is already taken.");
+		if (await database.GetAccountByUsernameAsync(username, ct) is not null)
+			return new Error<string>($"Username '{username}' is already taken.");
 
 		if (email is not null && await database.GetAccountByEmailAsync(email, ct) is not null)
 			return new Error<string>($"Email '{email}' is already registered.");
@@ -37,7 +37,7 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 		// Create with a temporary hash first to get the ID, then update with final hash
 		// (We need the ID to salt the password, but we need the password to create)
 		var tempHash = passwordService.HashPassword($"account:pending:{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}", password);
-		var account = await database.CreateAccountAsync(displayName, email, tempHash, ct);
+		var account = await database.CreateAccountAsync(username, email, tempHash, ct);
 
 		// Rehash with the proper key now that we have the ID
 		var realHash = passwordService.HashPassword(AccountKey(account), password);
@@ -47,8 +47,8 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 		return account;
 	}
 
-	public async ValueTask<bool> DisplayNameExistsAsync(string displayName, CancellationToken ct = default)
-		=> await database.GetAccountByDisplayNameAsync(displayName, ct) is not null;
+	public async ValueTask<bool> UsernameExistsAsync(string username, CancellationToken ct = default)
+		=> await database.GetAccountByUsernameAsync(username, ct) is not null;
 
 	public async ValueTask<bool> EmailExistsAsync(string email, CancellationToken ct = default)
 		=> await database.GetAccountByEmailAsync(email, ct) is not null;
@@ -83,12 +83,12 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 		return new Success();
 	}
 
-	public async ValueTask<OneOf<Success, Error<string>>> ChangeDisplayNameAsync(string accountId, string newDisplayName, CancellationToken ct = default)
+	public async ValueTask<OneOf<Success, Error<string>>> ChangeUsernameAsync(string accountId, string newUsername, CancellationToken ct = default)
 	{
-		if (await database.GetAccountByDisplayNameAsync(newDisplayName, ct) is not null)
-			return new Error<string>($"Display name '{newDisplayName}' is already taken.");
+		if (await database.GetAccountByUsernameAsync(newUsername, ct) is not null)
+			return new Error<string>($"Username '{newUsername}' is already taken.");
 
-		await database.UpdateAccountDisplayNameAsync(accountId, newDisplayName, ct);
+		await database.UpdateAccountUsernameAsync(accountId, newUsername, ct);
 		return new Success();
 	}
 
@@ -107,8 +107,8 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 	public ValueTask<SharpAccount?> GetByIdAsync(string accountId, CancellationToken ct = default)
 		=> database.GetAccountByIdAsync(accountId, ct);
 
-	public ValueTask<SharpAccount?> GetByDisplayNameAsync(string displayName, CancellationToken ct = default)
-		=> database.GetAccountByDisplayNameAsync(displayName, ct);
+	public ValueTask<SharpAccount?> GetByUsernameAsync(string username, CancellationToken ct = default)
+		=> database.GetAccountByUsernameAsync(username, ct);
 
 	public ValueTask<SharpAccount?> GetByEmailAsync(string email, CancellationToken ct = default)
 		=> database.GetAccountByEmailAsync(email, ct);

@@ -104,28 +104,28 @@ public class AuthController(
 	}
 
 	/// <summary>Request body for account login.</summary>
-	public record AccountLoginRequest(string DisplayNameOrEmail, string Password);
+	public record AccountLoginRequest(string UsernameOrEmail, string Password);
 
 	/// <summary>Character summary included in account login/register responses.</summary>
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 
 	/// <summary>Response body for account login and registration.</summary>
-	public record AccountLoginResponse(string AccountId, string DisplayName, IReadOnlyList<CharacterSummary> Characters, string AccountSessionToken);
+	public record AccountLoginResponse(string AccountId, string Username, IReadOnlyList<CharacterSummary> Characters, string AccountSessionToken);
 
 	/// <summary>
-	/// Authenticate to an account (by display name or email) and get the character list.
+	/// Authenticate to an account (by username or email) and get the character list.
 	/// Returns an account session token valid for 15 minutes (sliding window).
 	/// </summary>
 	[HttpPost("account-login")]
 	public async Task<IActionResult> AccountLogin([FromBody] AccountLoginRequest request)
 	{
-		if (string.IsNullOrWhiteSpace(request.DisplayNameOrEmail) || string.IsNullOrWhiteSpace(request.Password))
-			return BadRequest("DisplayNameOrEmail and Password are required.");
+		if (string.IsNullOrWhiteSpace(request.UsernameOrEmail) || string.IsNullOrWhiteSpace(request.Password))
+			return BadRequest("UsernameOrEmail and Password are required.");
 
-		var account = await accountService.AuthenticateAsync(request.DisplayNameOrEmail, request.Password);
+		var account = await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password);
 		if (account is null)
 		{
-			logger.LogInformation("Account login failed for {Identifier}", request.DisplayNameOrEmail);
+			logger.LogInformation("Account login failed for {Identifier}", request.UsernameOrEmail);
 			return Unauthorized("Invalid account credentials.");
 		}
 
@@ -133,12 +133,12 @@ public class AuthController(
 		var charSummaries = await BuildCharacterSummariesAsync(characters);
 
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
-		logger.LogInformation("Account login success for {DisplayName} ({Id})", account.DisplayName, account.Id);
-		return Ok(new AccountLoginResponse(account.Id!, account.DisplayName, charSummaries, sessionToken));
+		logger.LogInformation("Account login success for {Username} ({Id})", account.Username, account.Id);
+		return Ok(new AccountLoginResponse(account.Id!, account.Username, charSummaries, sessionToken));
 	}
 
 	/// <summary>Request body for account registration.</summary>
-	public record AccountRegisterRequest(string DisplayName, string? Email, string Password);
+	public record AccountRegisterRequest(string Username, string? Email, string Password);
 
 	/// <summary>
 	/// Create a new account and return an account session. Email is optional.
@@ -146,18 +146,18 @@ public class AuthController(
 	[HttpPost("account-register")]
 	public async Task<IActionResult> AccountRegister([FromBody] AccountRegisterRequest request)
 	{
-		if (string.IsNullOrWhiteSpace(request.DisplayName) || string.IsNullOrWhiteSpace(request.Password))
-			return BadRequest("DisplayName and Password are required.");
+		if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+			return BadRequest("Username and Password are required.");
 
-		var result = await accountService.CreateAccountAsync(request.DisplayName, request.Email, request.Password);
+		var result = await accountService.CreateAccountAsync(request.Username, request.Email, request.Password);
 		if (result.IsT1)
 			return Conflict(result.AsT1.Value);
 
 		var account = result.AsT0;
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
 
-		logger.LogInformation("Account registered: {DisplayName} ({Id})", account.DisplayName, account.Id);
-		return Ok(new AccountLoginResponse(account.Id!, account.DisplayName, [], sessionToken));
+		logger.LogInformation("Account registered: {Username} ({Id})", account.Username, account.Id);
+		return Ok(new AccountLoginResponse(account.Id!, account.Username, [], sessionToken));
 	}
 
 	private static async Task<IReadOnlyList<CharacterSummary>> BuildCharacterSummariesAsync(IReadOnlyList<SharpPlayer> characters)

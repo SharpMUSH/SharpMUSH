@@ -10,8 +10,8 @@ public class SharpAccount
 	/// <summary>Database document ID: "node_accounts/&lt;key&gt;"</summary>
 	public string? Id { get; set; }
 
-	/// <summary>Human-readable unique account name. Used for login.</summary>
-	public required string DisplayName { get; set; }
+	/// <summary>Unique username for login. Also used as the display name.</summary>
+	public required string Username { get; set; }
 
 	/// <summary>Optional email address. If set, must be globally unique. Used for login and future password recovery.</summary>
 	public string? Email { get; set; }

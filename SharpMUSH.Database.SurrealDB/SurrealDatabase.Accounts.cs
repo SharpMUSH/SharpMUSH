@@ -6,7 +6,7 @@ namespace SharpMUSH.Database.SurrealDB;
 
 internal record AccountDbRecord(
 	[property: JsonPropertyName("id")] string Id,
-	[property: JsonPropertyName("displayName")] string DisplayName,
+	[property: JsonPropertyName("username")] string Username,
 	[property: JsonPropertyName("email")] string? Email,
 	[property: JsonPropertyName("passwordHash")] string PasswordHash,
 	[property: JsonPropertyName("createdAt")] long CreatedAt,
@@ -27,10 +27,10 @@ public partial class SurrealDatabase
 		return results?.Count > 0 ? MapRecordToAccount(results[0]) : null;
 	}
 
-	public async ValueTask<SharpAccount?> GetAccountByDisplayNameAsync(string displayName, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpAccount?> GetAccountByUsernameAsync(string username, CancellationToken cancellationToken = default)
 	{
-		var parameters = new Dictionary<string, object?> { ["displayName"] = displayName };
-		var response = await ExecuteAsync("SELECT * FROM account WHERE displayName = $displayName", parameters, cancellationToken);
+		var parameters = new Dictionary<string, object?> { ["username"] = username };
+		var response = await ExecuteAsync("SELECT * FROM account WHERE username = $username", parameters, cancellationToken);
 		var results = response.GetValue<List<AccountDbRecord>>(0);
 		return results?.Count > 0 ? MapRecordToAccount(results[0]) : null;
 	}
@@ -44,12 +44,12 @@ public partial class SurrealDatabase
 		return results?.Count > 0 ? MapRecordToAccount(results[0]) : null;
 	}
 
-	public async ValueTask<SharpAccount> CreateAccountAsync(string displayName, string? email, string hashedPassword, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpAccount> CreateAccountAsync(string username, string? email, string hashedPassword, CancellationToken cancellationToken = default)
 	{
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var parameters = new Dictionary<string, object?>
 		{
-			["displayName"] = displayName,
+			["username"] = username,
 			["email"] = email,
 			["passwordHash"] = hashedPassword,
 			["createdAt"] = now,
@@ -57,7 +57,7 @@ public partial class SurrealDatabase
 		};
 		var response = await ExecuteAsync("""
 CREATE account CONTENT {
-	displayName: $displayName, email: $email, passwordHash: $passwordHash,
+	username: $username, email: $email, passwordHash: $passwordHash,
 	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, isDisabled: false
 }
 """, parameters, cancellationToken);
@@ -79,11 +79,11 @@ CREATE account CONTENT {
 		await ExecuteAsync("UPDATE $id SET email = $email, updatedAt = $now", parameters, cancellationToken);
 	}
 
-	public async ValueTask UpdateAccountDisplayNameAsync(string accountId, string newDisplayName, CancellationToken cancellationToken = default)
+	public async ValueTask UpdateAccountUsernameAsync(string accountId, string newUsername, CancellationToken cancellationToken = default)
 	{
 		var key = NormalizeSurrealId(accountId, "account");
-		var parameters = new Dictionary<string, object?> { ["id"] = key, ["displayName"] = newDisplayName, ["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
-		await ExecuteAsync("UPDATE $id SET displayName = $displayName, updatedAt = $now", parameters, cancellationToken);
+		var parameters = new Dictionary<string, object?> { ["id"] = key, ["username"] = newUsername, ["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+		await ExecuteAsync("UPDATE $id SET username = $username, updatedAt = $now", parameters, cancellationToken);
 	}
 
 	public async ValueTask DeleteAccountAsync(string accountId, CancellationToken cancellationToken = default)
@@ -149,7 +149,7 @@ SELECT in.* FROM account_owns_character WHERE out.object.key = $dbref
 	private static SharpAccount MapRecordToAccount(AccountDbRecord rec) => new()
 	{
 		Id = rec.Id.Contains(':') ? $"node_accounts/{rec.Id.Split(':')[1]}" : rec.Id,
-		DisplayName = rec.DisplayName,
+		Username = rec.Username,
 		Email = rec.Email,
 		PasswordHash = rec.PasswordHash,
 		CreatedAt = rec.CreatedAt,

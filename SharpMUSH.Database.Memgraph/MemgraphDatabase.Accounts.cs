@@ -15,11 +15,11 @@ public partial class MemgraphDatabase
 		return result.Result.Count > 0 ? MapNodeToAccount(result.Result[0]["a"].As<INode>()) : null;
 	}
 
-	public async ValueTask<SharpAccount?> GetAccountByDisplayNameAsync(string displayName, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpAccount?> GetAccountByUsernameAsync(string username, CancellationToken cancellationToken = default)
 	{
 		var result = await ExecuteWithRetryAsync(
-			"MATCH (a:Account {displayName: $displayName}) RETURN a",
-			new { displayName }, cancellationToken);
+			"MATCH (a:Account {username: $username}) RETURN a",
+			new { username }, cancellationToken);
 		return result.Result.Count > 0 ? MapNodeToAccount(result.Result[0]["a"].As<INode>()) : null;
 	}
 
@@ -32,21 +32,21 @@ public partial class MemgraphDatabase
 		return result.Result.Count > 0 ? MapNodeToAccount(result.Result[0]["a"].As<INode>()) : null;
 	}
 
-	public async ValueTask<SharpAccount> CreateAccountAsync(string displayName, string? email, string hashedPassword, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpAccount> CreateAccountAsync(string username, string? email, string hashedPassword, CancellationToken cancellationToken = default)
 	{
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var id = Guid.NewGuid().ToString("N");
 		await ExecuteWithRetryAsync("""
 CREATE (a:Account {
-	id: $id, displayName: $displayName, email: $email, passwordHash: $passwordHash,
+	id: $id, username: $username, email: $email, passwordHash: $passwordHash,
 	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, isDisabled: false
 })
-""", new { id, displayName, email = (object?)email ?? DBNull.Value, passwordHash = hashedPassword, createdAt = now, updatedAt = now }, cancellationToken);
+""", new { id, username, email = (object?)email ?? DBNull.Value, passwordHash = hashedPassword, createdAt = now, updatedAt = now }, cancellationToken);
 
 		return new SharpAccount
 		{
 			Id = $"node_accounts/{id}",
-			DisplayName = displayName,
+			Username = username,
 			Email = email,
 			PasswordHash = hashedPassword,
 			CreatedAt = now,
@@ -70,12 +70,12 @@ CREATE (a:Account {
 			new { id = key, email = (object?)newEmail ?? DBNull.Value, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
 	}
 
-	public async ValueTask UpdateAccountDisplayNameAsync(string accountId, string newDisplayName, CancellationToken cancellationToken = default)
+	public async ValueTask UpdateAccountUsernameAsync(string accountId, string newUsername, CancellationToken cancellationToken = default)
 	{
 		var key = accountId.Contains('/') ? accountId.Split('/')[1] : accountId;
 		await ExecuteWithRetryAsync(
-			"MATCH (a:Account {id: $id}) SET a.displayName = $displayName, a.updatedAt = $now",
-			new { id = key, displayName = newDisplayName, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
+			"MATCH (a:Account {id: $id}) SET a.username = $username, a.updatedAt = $now",
+			new { id = key, username = newUsername, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
 	}
 
 	public async ValueTask DeleteAccountAsync(string accountId, CancellationToken cancellationToken = default)
@@ -141,7 +141,7 @@ RETURN a
 		return new SharpAccount
 		{
 			Id = $"node_accounts/{node["id"]}",
-			DisplayName = node["displayName"].As<string>(),
+			Username = node["username"].As<string>(),
 			Email = email,
 			PasswordHash = node["passwordHash"].As<string>(),
 			CreatedAt = node.Properties.TryGetValue("createdAt", out var created) ? Convert.ToInt64(created) : 0,

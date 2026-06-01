@@ -31,7 +31,7 @@ public partial class Commands
 		// Parse args from the raw input: "register arg0 [arg1] arg2"
 		// MinArgs=2 (displayname + password), MaxArgs=3 (displayname + email + password)
 		var rawArgs = parser.CurrentState.Arguments;
-		string displayName, password;
+		string username, password;
 		string? email = null;
 
 		// The command framework places args in "0", "1", "2"
@@ -41,30 +41,30 @@ public partial class Commands
 
 		if (arg2 is not null)
 		{
-			// 3-arg form: displayname email password
-			displayName = arg0 ?? string.Empty;
+			// 3-arg form: username email password
+			username = arg0 ?? string.Empty;
 			email = arg1;
 			password = arg2;
 		}
 		else if (arg1 is not null)
 		{
-			// 2-arg form: displayname password
-			displayName = arg0 ?? string.Empty;
+			// 2-arg form: username password
+			username = arg0 ?? string.Empty;
 			password = arg1;
 		}
 		else
 		{
-			await NotifyService!.Notify(handle, "Usage: register <display-name> [email] <password>");
+			await NotifyService!.Notify(handle, "Usage: register <username> [email] <password>");
 			return new None();
 		}
 
-		if (string.IsNullOrWhiteSpace(displayName) || string.IsNullOrWhiteSpace(password))
+		if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
 		{
-			await NotifyService!.Notify(handle, "Display name and password cannot be empty.");
+			await NotifyService!.Notify(handle, "Username and password cannot be empty.");
 			return new None();
 		}
 
-		var result = await AccountService!.CreateAccountAsync(displayName, email, password);
+		var result = await AccountService!.CreateAccountAsync(username, email, password);
 		if (result.IsT1)
 		{
 			await NotifyService!.Notify(handle, result.AsT1.Value);
@@ -75,7 +75,7 @@ public partial class Commands
 		await ConnectionService.BindAccount(handle, account.Id!);
 
 		await NotifyService!.Notify(handle,
-			$"Account '{account.DisplayName}' created successfully.\n" +
+			$"Account '{account.Username}' created successfully.\n" +
 			"You have no characters yet.\n" +
 			"Use: make <character-name> <password>    to create your first character.");
 		return new CallState(account.Id!);
@@ -119,14 +119,14 @@ public partial class Commands
 		if (characters.Count == 0)
 		{
 			await NotifyService!.Notify(handle,
-				$"Logged in as {account.DisplayName}. You have no characters yet.\n" +
+				$"Logged in as {account.Username}. You have no characters yet.\n" +
 				"Use: make <character-name> <password>    to create a character.");
 		}
 		else
 		{
 			var charList = string.Join("\n", characters.Select(c => $"  {c.Object.Name} (#{c.Object.Key})"));
 			await NotifyService!.Notify(handle,
-				$"Logged in as {account.DisplayName}. Your characters:\n{charList}\n" +
+				$"Logged in as {account.Username}. Your characters:\n{charList}\n" +
 				"Use: play <name>    to connect as a character\n" +
 				"Use: make <name> <password>    to create a new character");
 		}

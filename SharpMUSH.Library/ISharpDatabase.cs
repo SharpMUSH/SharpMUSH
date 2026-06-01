@@ -766,21 +766,21 @@ public interface ISharpDatabase
 	/// <summary>Finds an account by its unique email address. Returns null if not found or email is null.</summary>
 	ValueTask<SharpAccount?> GetAccountByEmailAsync(string email, CancellationToken cancellationToken = default);
 
-	/// <summary>Finds an account by its unique display name.</summary>
-	ValueTask<SharpAccount?> GetAccountByDisplayNameAsync(string displayName, CancellationToken cancellationToken = default);
+	/// <summary>Finds an account by its unique username.</summary>
+	ValueTask<SharpAccount?> GetAccountByUsernameAsync(string username, CancellationToken cancellationToken = default);
 
 	/// <summary>Finds an account by its internal document ID (e.g. "node_accounts/123").</summary>
 	ValueTask<SharpAccount?> GetAccountByIdAsync(string accountId, CancellationToken cancellationToken = default);
 
 	/// <summary>Creates a new account. Email is optional; pass null to omit.</summary>
-	ValueTask<SharpAccount> CreateAccountAsync(string displayName, string? email, string hashedPassword, CancellationToken cancellationToken = default);
+	ValueTask<SharpAccount> CreateAccountAsync(string username, string? email, string hashedPassword, CancellationToken cancellationToken = default);
 
 	ValueTask UpdateAccountPasswordAsync(string accountId, string newHash, CancellationToken cancellationToken = default);
 
 	/// <summary>Updates the account email. Pass null to clear the email.</summary>
 	ValueTask UpdateAccountEmailAsync(string accountId, string? newEmail, CancellationToken cancellationToken = default);
 
-	ValueTask UpdateAccountDisplayNameAsync(string accountId, string newDisplayName, CancellationToken cancellationToken = default);
+	ValueTask UpdateAccountUsernameAsync(string accountId, string newUsername, CancellationToken cancellationToken = default);
 
 	ValueTask DeleteAccountAsync(string accountId, CancellationToken cancellationToken = default);
 

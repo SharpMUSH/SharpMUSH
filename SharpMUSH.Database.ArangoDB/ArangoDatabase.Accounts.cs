@@ -23,14 +23,14 @@ public partial class ArangoDatabase
 		return result.FirstOrDefault() is { } elem ? AccountFromJson(elem) : null;
 	}
 
-	public async ValueTask<SharpAccount?> GetAccountByDisplayNameAsync(string displayName, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpAccount?> GetAccountByUsernameAsync(string username, CancellationToken cancellationToken = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
-			"FOR a IN @@c FILTER a.DisplayName == @displayName RETURN a",
+			"FOR a IN @@c FILTER a.Username == @username RETURN a",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "@c", DatabaseConstants.Accounts },
-				{ "displayName", displayName }
+				{ "username", username }
 			}, cancellationToken: cancellationToken);
 
 		return result.FirstOrDefault() is { } elem ? AccountFromJson(elem) : null;
@@ -50,12 +50,12 @@ public partial class ArangoDatabase
 		return result.FirstOrDefault() is { } elem ? AccountFromJson(elem) : null;
 	}
 
-	public async ValueTask<SharpAccount> CreateAccountAsync(string displayName, string? email, string hashedPassword, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpAccount> CreateAccountAsync(string username, string? email, string hashedPassword, CancellationToken cancellationToken = default)
 	{
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var doc = new
 		{
-			DisplayName = displayName,
+			Username = username,
 			Email = email,
 			PasswordHash = hashedPassword,
 			CreatedAt = now,
@@ -87,11 +87,11 @@ public partial class ArangoDatabase
 			mergeObjects: true, cancellationToken: cancellationToken);
 	}
 
-	public async ValueTask UpdateAccountDisplayNameAsync(string accountId, string newDisplayName, CancellationToken cancellationToken = default)
+	public async ValueTask UpdateAccountUsernameAsync(string accountId, string newUsername, CancellationToken cancellationToken = default)
 	{
 		var key = ExtractKey(accountId);
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Accounts,
-			new { _key = key, DisplayName = newDisplayName, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+			new { _key = key, Username = newUsername, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
 			mergeObjects: true, cancellationToken: cancellationToken);
 	}
 
@@ -189,7 +189,7 @@ public partial class ArangoDatabase
 		return new SharpAccount
 		{
 			Id = id,
-			DisplayName = elem.GetProperty("DisplayName").GetString()!,
+			Username = elem.GetProperty("Username").GetString()!,
 			Email = email,
 			PasswordHash = elem.GetProperty("PasswordHash").GetString()!,
 			CreatedAt = elem.TryGetProperty("CreatedAt", out var createdProp) ? createdProp.GetInt64() : 0,

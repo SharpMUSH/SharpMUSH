@@ -129,7 +129,7 @@
                                     Create a new account. Email is optional.
                                 </MudText>
                                 <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-                                    <MudTextField @bind-Value="_regDisplayName"
+                                    <MudTextField @bind-Value="_regUsername"
                                                   Label="Account name (required)"
                                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                                   Style="flex:1;min-width:140px;font-size:12px;" />
@@ -199,7 +199,7 @@
     private string _accountIdentifier = string.Empty;
     private string _accountPassword = string.Empty;
     private bool _showAccountRegister;
-    private string _regDisplayName = string.Empty;
+    private string _regUsername = string.Empty;
     private string _regEmail = string.Empty;
     private string _regPassword = string.Empty;
     private bool _accountBusy;
@@ -226,8 +226,8 @@
 
         // Restore account session (sessionStorage is tab-scoped)
         await AccountAuth.InitAsync();
-        if (!string.IsNullOrWhiteSpace(AccountAuth.DisplayName))
-            _accountIdentifier = AccountAuth.DisplayName;
+        if (!string.IsNullOrWhiteSpace(AccountAuth.Username))
+            _accountIdentifier = AccountAuth.Username;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -265,7 +265,7 @@
         _accountBusy = true;
         StateHasChanged();
 
-        var (success, error, _) = await AccountAuth.RegisterAsync(_regDisplayName, _regEmail, _regPassword);
+        var (success, error, _) = await AccountAuth.RegisterAsync(_regUsername, _regEmail, _regPassword);
         _accountBusy = false;
 
         if (!success)

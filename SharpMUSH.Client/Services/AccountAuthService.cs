@@ -15,27 +15,27 @@ public class AccountAuthService(
 	ILogger<AccountAuthService> logger)
 {
 	private const string SessionTokenKey = "sharpmush.account.sessionToken";
-	private const string DisplayNameKey = "sharpmush.account.displayName";
+	private const string UsernameKey = "sharpmush.account.username";
 
 	// ── DTO records ─────────────────────────────────────────────────────────
 
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 
 	private record AccountLoginRequest(string Identifier, string Password);
-	private record AccountRegisterRequest(string DisplayName, string? Email, string Password);
-	private record AccountLoginResponse(string AccountId, string DisplayName, IReadOnlyList<CharacterSummary> Characters, string AccountSessionToken);
+	private record AccountRegisterRequest(string Username, string? Email, string Password);
+	private record AccountLoginResponse(string AccountId, string Username, IReadOnlyList<CharacterSummary> Characters, string AccountSessionToken);
 	private record MushTokenWithAccountRequest(string AccountSessionToken, int CharacterDbrefNumber, long CharacterCreationTime);
 	private record MushTokenResponse(string Token, int ExpiresIn);
 	private record CreateCharacterRequest(string Name, string Password);
 	private record CreateCharacterResponse(int DbrefNumber, long? CreationTime);
 	private record ChangePasswordRequest(string OldPassword, string NewPassword);
 	private record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
-	private record ChangeDisplayNameRequest(string NewDisplayName);
+	private record ChangeUsernameRequest(string NewUsername);
 
 	// ── In-memory state ──────────────────────────────────────────────────────
 
 	public string? AccountSessionToken { get; private set; }
-	public string? DisplayName { get; private set; }
+	public string? Username { get; private set; }
 	public IReadOnlyList<CharacterSummary> Characters { get; private set; } = [];
 	public bool IsLoggedIn => AccountSessionToken is not null;
 
@@ -44,7 +44,7 @@ public class AccountAuthService(
 	public async Task InitAsync()
 	{
 		AccountSessionToken = await js.InvokeAsync<string?>("sessionStorage.getItem", SessionTokenKey);
-		DisplayName = await js.InvokeAsync<string?>("localStorage.getItem", DisplayNameKey);
+		Username = await js.InvokeAsync<string?>("localStorage.getItem", UsernameKey);
 	}
 
 	// ── Login / Register ─────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ public class AccountAuthService(
 			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
 			if (result is null) return (false, "Unexpected server response.", []);
 
-			await PersistSessionAsync(result.AccountSessionToken, result.DisplayName);
+			await PersistSessionAsync(result.AccountSessionToken, result.Username);
 			Characters = result.Characters;
 			return (true, null, result.Characters);
 		}
@@ -76,13 +76,13 @@ public class AccountAuthService(
 	}
 
 	public async Task<(bool Success, string? Error, IReadOnlyList<CharacterSummary> Characters)> RegisterAsync(
-		string displayName, string? email, string password)
+		string username, string? email, string password)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var response = await http.PostAsJsonAsync("api/auth/account-register",
-				new AccountRegisterRequest(displayName, string.IsNullOrWhiteSpace(email) ? null : email, password));
+				new AccountRegisterRequest(username, string.IsNullOrWhiteSpace(email) ? null : email, password));
 
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync(), []);
@@ -90,7 +90,7 @@ public class AccountAuthService(
 			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
 			if (result is null) return (false, "Unexpected server response.", []);
 
-			await PersistSessionAsync(result.AccountSessionToken, result.DisplayName);
+			await PersistSessionAsync(result.AccountSessionToken, result.Username);
 			Characters = result.Characters;
 			return (true, null, result.Characters);
 		}
@@ -221,14 +221,14 @@ public class AccountAuthService(
 		return await PutAsync("api/account/email", new ChangeEmailRequest(newEmail, currentPassword));
 	}
 
-	public async Task<(bool Success, string? Error)> ChangeDisplayNameAsync(string newDisplayName)
+	public async Task<(bool Success, string? Error)> ChangeUsernameAsync(string newUsername)
 	{
 		if (AccountSessionToken is null) return (false, "Not logged in.");
-		var (success, error) = await PutAsync("api/account/display-name", new ChangeDisplayNameRequest(newDisplayName));
+		var (success, error) = await PutAsync("api/account/username", new ChangeUsernameRequest(newUsername));
 		if (success)
 		{
-			DisplayName = newDisplayName;
-			await js.InvokeVoidAsync("localStorage.setItem", DisplayNameKey, newDisplayName);
+			Username = newUsername;
+			await js.InvokeVoidAsync("localStorage.setItem", UsernameKey, newUsername);
 		}
 		return (success, error);
 	}
@@ -250,19 +250,19 @@ public class AccountAuthService(
 		}
 
 		AccountSessionToken = null;
-		DisplayName = null;
+		Username = null;
 		Characters = [];
 		await js.InvokeVoidAsync("sessionStorage.removeItem", SessionTokenKey);
 	}
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
 
-	private async Task PersistSessionAsync(string token, string displayName)
+	private async Task PersistSessionAsync(string token, string username)
 	{
 		AccountSessionToken = token;
-		DisplayName = displayName;
+		Username = username;
 		await js.InvokeVoidAsync("sessionStorage.setItem", SessionTokenKey, token);
-		await js.InvokeVoidAsync("localStorage.setItem", DisplayNameKey, displayName);
+		await js.InvokeVoidAsync("localStorage.setItem", UsernameKey, username);
 	}
 
 	private async Task<(bool Success, string? Error)> PutAsync<T>(string path, T body)

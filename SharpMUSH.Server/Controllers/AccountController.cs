@@ -139,24 +139,19 @@ public class AccountController(
 		}
 	}
 
-	public record ChangeDisplayNameRequest(string NewDisplayName);
+	public record ChangeUsernameRequest(string NewUsername);
 
-	/// <summary>Change the account display name.</summary>
-	[HttpPut("display-name")]
-	public async Task<IActionResult> ChangeDisplayName([FromBody] ChangeDisplayNameRequest request)
+	/// <summary>Change the account username.</summary>
+	[HttpPut("username")]
+	public async Task<IActionResult> ChangeUsername([FromBody] ChangeUsernameRequest request)
 	{
 		var accountId = await GetAccountIdFromBearerAsync();
 		if (accountId is null) return Unauthorized("Invalid or expired account session.");
 
-		try
-		{
-			await accountService.ChangeDisplayNameAsync(accountId, request.NewDisplayName);
-			return NoContent();
-		}
-		catch (InvalidOperationException ex)
-		{
-			return Conflict(ex.Message);
-		}
+		var result = await accountService.ChangeUsernameAsync(accountId, request.NewUsername);
+		return result.Match<IActionResult>(
+			_ => NoContent(),
+			err => Conflict(err.Value));
 	}
 
 	// ── Logout ──────────────────────────────────────────────────────────────────

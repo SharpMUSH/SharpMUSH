@@ -34,13 +34,13 @@
                                EndIcon="@Icons.Material.Filled.ArrowDropDown"
                                Style="text-transform:none;font-size:13px;">
                         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
-                        @(_terminalPlayerName ?? AccountAuth.DisplayName)
+                        @(_terminalPlayerName ?? AccountAuth.Username)
                     </MudButton>
                 </ActivatorContent>
                 <ChildContent>
                     <MudMenuItem Disabled="true">
                         <MudText Typo="Typo.caption" Style="color:#888;">
-                            Account: @AccountAuth.DisplayName
+                            Account: @AccountAuth.Username
                         </MudText>
                     </MudMenuItem>
                     @if (AccountAuth.Characters.Count > 1)

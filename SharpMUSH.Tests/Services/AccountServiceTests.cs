@@ -22,12 +22,12 @@ public class AccountServiceTests
 		return (new AccountService(db, pw), db, pw);
 	}
 
-	private static SharpAccount MakeAccount(string id = "accounts/1", string displayName = "TestUser",
+	private static SharpAccount MakeAccount(string id = "accounts/1", string username = "TestUser",
 		string? email = null, bool isDisabled = false)
 		=> new()
 		{
 			Id = id,
-			DisplayName = displayName,
+			Username = username,
 			Email = email,
 			PasswordHash = "hash",
 			CreatedAt = 1_000_000,
@@ -41,12 +41,12 @@ public class AccountServiceTests
 	{
 		var (svc, db, pw) = Build();
 
-		db.GetAccountByDisplayNameAsync("Alice", Arg.Any<CancellationToken>())
+		db.GetAccountByUsernameAsync("Alice", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
 		db.GetAccountByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
 
-		var created = MakeAccount(displayName: "Alice");
+		var created = MakeAccount(username: "Alice");
 		db.CreateAccountAsync(Arg.Any<string>(), Arg.Is<string?>(x => x == null), Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(created);
 		pw.HashPassword(Arg.Any<string>(), Arg.Any<string>()).Returns("real-hash");
@@ -54,7 +54,7 @@ public class AccountServiceTests
 		var result = await svc.CreateAccountAsync("Alice", null, "password123");
 
 		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.DisplayName).IsEqualTo("Alice");
+		await Assert.That(result.AsT0.Username).IsEqualTo("Alice");
 		await db.Received(1).UpdateAccountPasswordAsync("accounts/1", "real-hash", Arg.Any<CancellationToken>());
 	}
 
@@ -63,8 +63,8 @@ public class AccountServiceTests
 	{
 		var (svc, db, _) = Build();
 
-		db.GetAccountByDisplayNameAsync("Alice", Arg.Any<CancellationToken>())
-			.Returns(MakeAccount(displayName: "Alice"));
+		db.GetAccountByUsernameAsync("Alice", Arg.Any<CancellationToken>())
+			.Returns(MakeAccount(username: "Alice"));
 
 		var result = await svc.CreateAccountAsync("Alice", null, "password");
 
@@ -77,7 +77,7 @@ public class AccountServiceTests
 	{
 		var (svc, db, _) = Build();
 
-		db.GetAccountByDisplayNameAsync("NewUser", Arg.Any<CancellationToken>())
+		db.GetAccountByUsernameAsync("NewUser", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
 		db.GetAccountByEmailAsync("used@example.com", Arg.Any<CancellationToken>())
 			.Returns(MakeAccount(email: "used@example.com"));
@@ -93,7 +93,7 @@ public class AccountServiceTests
 	{
 		var (svc, db, pw) = Build();
 
-		db.GetAccountByDisplayNameAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+		db.GetAccountByUsernameAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
 
 		var created = MakeAccount();
@@ -116,13 +116,13 @@ public class AccountServiceTests
 		var (svc, db, pw) = Build();
 
 		var account = MakeAccount();
-		db.GetAccountByDisplayNameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
+		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
 		pw.PasswordIsValid(Arg.Any<string>(), "correct", "hash").Returns(true);
 
 		var result = await svc.AuthenticateAsync("TestUser", "correct");
 
 		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.DisplayName).IsEqualTo("TestUser");
+		await Assert.That(result!.Username).IsEqualTo("TestUser");
 	}
 
 	[Test]
@@ -138,7 +138,7 @@ public class AccountServiceTests
 
 		await Assert.That(result).IsNotNull();
 		await db.Received(1).GetAccountByEmailAsync("user@test.com", Arg.Any<CancellationToken>());
-		await db.DidNotReceive().GetAccountByDisplayNameAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+		await db.DidNotReceive().GetAccountByUsernameAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -147,7 +147,7 @@ public class AccountServiceTests
 		var (svc, db, pw) = Build();
 
 		var account = MakeAccount();
-		db.GetAccountByDisplayNameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
+		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
 		pw.PasswordIsValid(Arg.Any<string>(), "wrong", "hash").Returns(false);
 
 		var result = await svc.AuthenticateAsync("TestUser", "wrong");
@@ -160,7 +160,7 @@ public class AccountServiceTests
 	{
 		var (svc, db, _) = Build();
 
-		db.GetAccountByDisplayNameAsync("Ghost", Arg.Any<CancellationToken>())
+		db.GetAccountByUsernameAsync("Ghost", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
 
 		var result = await svc.AuthenticateAsync("Ghost", "pass");
@@ -174,7 +174,7 @@ public class AccountServiceTests
 		var (svc, db, pw) = Build();
 
 		var disabled = MakeAccount(isDisabled: true);
-		db.GetAccountByDisplayNameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(disabled);
+		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(disabled);
 		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 
 		var result = await svc.AuthenticateAsync("TestUser", "correct");
@@ -282,20 +282,20 @@ public class AccountServiceTests
 		await db.DidNotReceive().GetAccountByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
-	// ── ChangeDisplayNameAsync ────────────────────────────────────────────────
+	// ── ChangeUsernameAsync ────────────────────────────────────────────────
 
 	[Test]
 	public async ValueTask ChangeDisplayName_Unique_UpdatesName()
 	{
 		var (svc, db, _) = Build();
 
-		db.GetAccountByDisplayNameAsync("NewName", Arg.Any<CancellationToken>())
+		db.GetAccountByUsernameAsync("NewName", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
 
-		var result = await svc.ChangeDisplayNameAsync("accounts/1", "NewName");
+		var result = await svc.ChangeUsernameAsync("accounts/1", "NewName");
 
 		await Assert.That(result.IsT0).IsTrue();
-		await db.Received(1).UpdateAccountDisplayNameAsync("accounts/1", "NewName", Arg.Any<CancellationToken>());
+		await db.Received(1).UpdateAccountUsernameAsync("accounts/1", "NewName", Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -303,26 +303,26 @@ public class AccountServiceTests
 	{
 		var (svc, db, _) = Build();
 
-		db.GetAccountByDisplayNameAsync("Taken", Arg.Any<CancellationToken>())
-			.Returns(MakeAccount(id: "accounts/99", displayName: "Taken"));
+		db.GetAccountByUsernameAsync("Taken", Arg.Any<CancellationToken>())
+			.Returns(MakeAccount(id: "accounts/99", username: "Taken"));
 
-		var result = await svc.ChangeDisplayNameAsync("accounts/1", "Taken");
+		var result = await svc.ChangeUsernameAsync("accounts/1", "Taken");
 
 		await Assert.That(result.IsT1).IsTrue();
 		await Assert.That(result.AsT1.Value).Contains("already taken");
 	}
 
-	// ── DisplayNameExistsAsync / EmailExistsAsync ─────────────────────────────
+	// ── UsernameExistsAsync / EmailExistsAsync ─────────────────────────────
 
 	[Test]
 	public async ValueTask DisplayNameExists_WhenPresent_ReturnsTrue()
 	{
 		var (svc, db, _) = Build();
 
-		db.GetAccountByDisplayNameAsync("Alice", Arg.Any<CancellationToken>())
-			.Returns(MakeAccount(displayName: "Alice"));
+		db.GetAccountByUsernameAsync("Alice", Arg.Any<CancellationToken>())
+			.Returns(MakeAccount(username: "Alice"));
 
-		var result = await svc.DisplayNameExistsAsync("Alice");
+		var result = await svc.UsernameExistsAsync("Alice");
 
 		await Assert.That(result).IsTrue();
 	}
@@ -332,10 +332,10 @@ public class AccountServiceTests
 	{
 		var (svc, db, _) = Build();
 
-		db.GetAccountByDisplayNameAsync("Ghost", Arg.Any<CancellationToken>())
+		db.GetAccountByUsernameAsync("Ghost", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
 
-		var result = await svc.DisplayNameExistsAsync("Ghost");
+		var result = await svc.UsernameExistsAsync("Ghost");
 
 		await Assert.That(result).IsFalse();
 	}

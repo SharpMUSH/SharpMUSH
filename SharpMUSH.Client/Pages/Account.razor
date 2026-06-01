@@ -17,28 +17,28 @@
         return;
     }
 
-    <MudText Typo="Typo.h5" Class="mb-4">My Account: @AccountAuth.DisplayName</MudText>
+    <MudText Typo="Typo.h5" Class="mb-4">My Account: @AccountAuth.Username</MudText>
 
     @* ── Profile section ── *@
     <MudPaper Elevation="1" Class="pa-4 mb-4">
         <MudText Typo="Typo.h6" Class="mb-3">Profile</MudText>
 
-        @* Display name *@
+        @* Username *@
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-            @if (_editingDisplayName)
+            @if (_editingUsername)
             {
-                <MudTextField @bind-Value="_newDisplayName" Label="Display name"
+                <MudTextField @bind-Value="_newUsername" Label="Username"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1;" />
                 <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
-                           Disabled="_busy" OnClick="SaveDisplayNameAsync">Save</MudButton>
+                           Disabled="_busy" OnClick="SaveUsernameAsync">Save</MudButton>
                 <MudButton Size="Size.Small" Variant="Variant.Text"
-                           OnClick="() => _editingDisplayName = false">Cancel</MudButton>
+                           OnClick="() => _editingUsername = false">Cancel</MudButton>
             }
             else
             {
-                <MudText Style="flex:1;"><strong>Display name:</strong> @AccountAuth.DisplayName</MudText>
+                <MudText Style="flex:1;"><strong>Username:</strong> @AccountAuth.Username</MudText>
                 <MudButton Size="Size.Small" Variant="Variant.Outlined"
-                           OnClick="() => { _newDisplayName = AccountAuth.DisplayName ?? string.Empty; _editingDisplayName = true; }">
+                           OnClick="() => { _newUsername = AccountAuth.Username ?? string.Empty; _editingUsername = true; }">
                     Edit
                 </MudButton>
             }
@@ -166,9 +166,9 @@
 </MudContainer>
 
 @code {
-    private bool _editingDisplayName;
+    private bool _editingUsername;
     private bool _editingPassword;
-    private string _newDisplayName = string.Empty;
+    private string _newUsername = string.Empty;
     private string _oldPassword = string.Empty;
     private string _newPassword = string.Empty;
     private string? _profileError;
@@ -196,14 +196,14 @@
         StateHasChanged();
     }
 
-    private async Task SaveDisplayNameAsync()
+    private async Task SaveUsernameAsync()
     {
         ClearMessages();
         _busy = true;
-        var (success, error) = await AccountAuth.ChangeDisplayNameAsync(_newDisplayName);
+        var (success, error) = await AccountAuth.ChangeUsernameAsync(_newUsername);
         _busy = false;
-        _editingDisplayName = !success;
-        if (success) _profileSuccess = "Display name updated.";
+        _editingUsername = !success;
+        if (success) _profileSuccess = "Username updated.";
         else _profileError = error;
         StateHasChanged();
     }
