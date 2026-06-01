@@ -46,14 +46,13 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	// Object info
 	// ──────────────────────────────────────────────────────────────────────────────
 
-	/// <summary>
-	/// Retrieve basic details (name, type, owner) and the full attribute list for a single object.
-	/// </summary>
+	/// <summary>Retrieve basic details (name, type, owner) and the full attribute list for a single object.</summary>
 	public async Task<MushObject?> GetObjectAsync(string dbref)
 	{
 		_logger.LogDebug("GetObjectAsync {Dbref}", dbref);
 		var infoCmd = RouteLiteral($"SHARP_INFO:{dbref}:[name({dbref})]:[type({dbref})]:[owner({dbref})]");
-		var attrCmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##::[get({dbref}/##)],%b,%r)");
+		// edit() collapses actual newlines in values to @@NL@@ so SHARP_ATTR stays single-line.
+		var attrCmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##::[edit(get({dbref}/##),%r,@@NL@@)],%b,%r)");
 
 		var infoLines = await terminal.SendCommandAsync(infoCmd);
 		var attrLines = await terminal.SendCommandAsync(attrCmd);
@@ -68,7 +67,9 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	/// <summary>Get only the attribute list for an object (faster than full GetObjectAsync).</summary>
 	public async Task<List<MushAttribute>> GetAttributesAsync(string dbref)
 	{
-		var cmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##::[get({dbref}/##)],%b,%r)");
+		// edit() replaces any actual newlines in the attribute value with @@NL@@ so the
+		// SHARP_ATTR marker stays on a single line — safe even when attrs contain %r output.
+		var cmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##::[edit(get({dbref}/##),%r,@@NL@@)],%b,%r)");
 		var lines = await terminal.SendCommandAsync(cmd);
 		return ParseAttributes(lines);
 	}
@@ -80,9 +81,17 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		return lines.Length > 0 ? string.Join("\n", lines) : null;
 	}
 
-	/// <summary>Set (or clear) an attribute via the standard &amp;ATTR command.</summary>
+	/// <summary>Set (or clear) an attribute via the standard &amp;ATTR command.
+	/// Newlines in <paramref name="value"/> are converted to the MUSH <c>%r</c> substitution
+	/// so the command is always a single-line WebSocket message.</summary>
 	public Task SetAttributeAsync(string dbref, string attrName, string value)
-		=> terminal.SendAsync($"&{attrName} {dbref}={value}");
+	{
+		// Replace actual newlines with %r (MUSH convention) so the &ATTR command
+		// is a single WebSocket message — a multi-line message would be split by
+		// the server into separate commands, truncating the attribute value.
+		var safeValue = value.Replace("\r\n", "%r").Replace("\r", "%r").Replace("\n", "%r");
+		return terminal.SendAsync($"&{attrName} {dbref}={safeValue}");
+	}
 
 	/// <summary>Delete an attribute by setting it to empty.</summary>
 	public Task DeleteAttributeAsync(string dbref, string attrName)
@@ -223,13 +232,16 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 			var parts = line.Split(':', 4);
 			if (parts.Length < 4) continue;
 
+			// Decode @@NL@@ placeholders back to actual newlines (see edit() in iter expr).
+			var value = parts[3].Replace("@@NL@@", "\n");
+
 			attrs.Add(new MushAttribute
 			{
 				Name = parts[1],
 				AttributeFlags = string.IsNullOrEmpty(parts[2])
 					? []
 					: [.. parts[2].Split(' ', StringSplitOptions.RemoveEmptyEntries)],
-				Value = parts[3],
+				Value = value,
 			});
 		}
 

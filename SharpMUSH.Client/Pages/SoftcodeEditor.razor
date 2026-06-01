@@ -386,7 +386,10 @@
 
         if (_monacoEditor is not null && attr is not null)
         {
-            await _monacoEditor.SetValue(attr.Value);
+            // Display %r substitutions as actual newlines in Monaco for readability.
+            // SaveAsync converts them back to %r before sending &ATTR.
+            var display = attr.Value.Replace("%r", "\n").Replace("%R", "\n");
+            await _monacoEditor.SetValue(display);
         }
     }
 
