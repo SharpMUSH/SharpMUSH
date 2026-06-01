@@ -180,6 +180,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		}
 
+		// In lenient mode, swap to LenientErrorStrategy so that synthetic recovery
+		// tokens have empty text and sit at the real input boundary. This prevents
+		// ANTLR's "<missing X>" annotations from polluting the stored attribute value.
+		if (lenient)
+		{
+			sharpParser.ErrorHandler = new LenientErrorStrategy();
+		}
+
 		var context = entryPoint(sharpParser);
 
 		// In strict mode (default for function evaluation), surface any syntax error
