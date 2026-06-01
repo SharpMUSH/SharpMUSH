@@ -3,6 +3,7 @@
 @inject ITerminalService Terminal
 @inject IJSRuntime JsRuntime
 @inject CredentialService Credentials
+@inject OttAuthService OttAuth
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="background:#111;color:#ccc;font-family:monospace;font-size:13px;">
@@ -54,19 +55,21 @@
     @if (_showLoginPanel && !_connected)
     {
         <div style="padding:6px 10px;background:#1a1a1a;border-top:1px solid #333;display:flex;flex-direction:column;gap:6px;">
-            <MudText Typo="Typo.caption" Style="color:#888;">Auto-login credentials (saved to browser storage)</MudText>
+            <MudText Typo="Typo.caption" Style="color:#888;">
+                Login — player name is saved; password is sent once via HTTPS and never stored.
+            </MudText>
             <div style="display:flex;gap:8px;align-items:flex-end;">
                 <MudTextField @bind-Value="_loginPlayer"
                               Label="Player name"
                               Variant="Variant.Outlined" Margin="Margin.Dense"
                               Style="flex:1;font-size:12px;" />
                 <MudTextField @bind-Value="_loginPassword"
-                              Label="Password"
+                              Label="Password (not stored)"
                               InputType="InputType.Password"
                               Variant="Variant.Outlined" Margin="Margin.Dense"
                               Style="flex:1;font-size:12px;" />
                 <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
-                           OnClick="SaveCredentialsAsync">Save</MudButton>
+                           OnClick="SaveCredentialsAsync">Save name</MudButton>
                 <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small"
                            OnClick="ClearCredentialsAsync">Clear</MudButton>
             </div>
@@ -137,20 +140,16 @@
     {
         try
         {
-            await Terminal.ConnectAsync(_serverUri);
-
-            // Auto-login if credentials are saved
             if (!string.IsNullOrWhiteSpace(_loginPlayer) && !string.IsNullOrWhiteSpace(_loginPassword))
             {
-                // Small delay so the server's connection banner arrives first
-                await Task.Delay(300);
+                // Use OTT flow: credentials go to API over HTTPS, WS only receives a token
                 _playerName = _loginPlayer;
-                await Terminal.SendAsync($"connect {_loginPlayer} {_loginPassword}");
-
-                // Fire-and-forget: capture the port descriptor once login has settled.
-                // This enables output isolation — subsequent queries go only to this connection.
-                _ = Task.Delay(1500).ContinueWith(_ => Terminal.InitializePortAsync(),
-                    TaskScheduler.Default);
+                await Terminal.ConnectAndLoginAsync(_serverUri, _loginPlayer, _loginPassword, OttAuth);
+            }
+            else
+            {
+                // No credentials saved — just open the socket; user can type connect manually
+                await Terminal.ConnectAsync(_serverUri);
             }
         }
         catch (Exception ex) { AddLocalLine($"[Error] {ex.Message}", TerminalLineSource.System); }
@@ -184,9 +183,10 @@
 
     private async Task SaveCredentialsAsync()
     {
-        await Credentials.SaveAsync(_loginPlayer, _loginPassword, _serverUri);
+        // Password is deliberately not saved — it's sent once via HTTPS to get an OTT
+        await Credentials.SaveAsync(_loginPlayer, null, _serverUri);
         _showLoginPanel = false;
-        AddLocalLine("[System] Credentials saved.", TerminalLineSource.System);
+        AddLocalLine("[System] Player name saved. Password is not stored.", TerminalLineSource.System);
         StateHasChanged();
     }
 

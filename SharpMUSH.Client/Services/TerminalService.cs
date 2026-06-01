@@ -49,6 +49,33 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		AddSystemLine($"Connected to {serverUri}");
 	}
 
+	/// <inheritdoc/>
+	public async Task ConnectAndLoginAsync(string serverUri, string playerName, string password, OttAuthService ottAuth)
+	{
+		await ConnectAsync(serverUri);
+
+		// Give the server a moment to send the connection banner
+		await Task.Delay(300);
+
+		var token = await ottAuth.GetTokenAsync(playerName, password);
+		if (token is not null)
+		{
+			_logger.LogInformation("Using OTT login for player {Name}", playerName);
+			await wsService.SendAsync($"connect token {token}");
+			AddSystemLine("[OTT] Authenticating…");
+		}
+		else
+		{
+			// OTT unavailable — fall back to direct connect (password over WSS, still encrypted)
+			_logger.LogWarning("OTT unavailable, falling back to direct connect for {Name}", playerName);
+			await wsService.SendAsync($"connect {playerName} {password}");
+			AddSystemLine("[Login] Connecting with credentials…");
+		}
+
+		// Capture the port descriptor once login has settled
+		_ = Task.Delay(1500).ContinueWith(_ => InitializePortAsync(), TaskScheduler.Default);
+	}
+
 	public async Task DisconnectAsync()
 	{
 		await wsService.DisconnectAsync();

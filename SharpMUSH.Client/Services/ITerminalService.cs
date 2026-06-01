@@ -22,6 +22,14 @@ public interface ITerminalService
 	IReadOnlyList<TerminalLine> Lines { get; }
 
 	Task ConnectAsync(string serverUri);
+
+	/// <summary>
+	/// Connect to the WebSocket server and authenticate using a One-Time Token fetched from
+	/// the SharpMUSH API.  Falls back to direct <c>connect name password</c> if the OTT
+	/// request fails (e.g. API server unreachable).
+	/// </summary>
+	Task ConnectAndLoginAsync(string serverUri, string playerName, string password, OttAuthService ottAuth);
+
 	Task DisconnectAsync();
 
 	/// <summary>Send a raw command string to the MUSH server.</summary>

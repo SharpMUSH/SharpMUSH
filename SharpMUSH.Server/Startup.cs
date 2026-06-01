@@ -152,6 +152,7 @@ public class Startup(
 		services.AddSingleton<IManipulateSharpObjectService, ManipulateSharpObjectService>();
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
+		services.AddSingleton<IOttStore, InMemoryOttStore>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<ICommunicationService, CommunicationService>();
 		services.AddSingleton<ILockService, LockService>();

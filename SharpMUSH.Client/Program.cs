@@ -36,6 +36,7 @@ builder.Services.AddSingleton<HelpService>(sp =>
 	return new HelpService(factory.CreateClient("help"));
 });
 builder.Services.AddScoped<CredentialService>();
+builder.Services.AddSingleton<OttAuthService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 
 builder.Services.AddHttpClient("api", sp =>
