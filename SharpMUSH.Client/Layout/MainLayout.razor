@@ -34,7 +34,8 @@
                 <ActivatorContent>
                     <MudButton Variant="Variant.Text" Color="Color.Inherit"
                                EndIcon="@Icons.Material.Filled.ArrowDropDown"
-                               Style="text-transform:none;font-size:13px;">
+                               Style="text-transform:none;font-size:13px;"
+                               OnClick="@context.ToggleAsync">
                         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
                         @(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")
                     </MudButton>
