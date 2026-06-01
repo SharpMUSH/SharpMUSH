@@ -213,7 +213,7 @@
                                 <MudButton Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small"
                                            StartIcon="@(_evalLoading ? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.PlayArrow)"
                                            OnClick="EvalAsync"
-                                           Disabled="@_evalLoading">
+                                           Disabled="@(_evalLoading || _selectedAttr is null || _selectedObject is null)">
                                     Test
                                 </MudButton>
                             }
@@ -440,10 +440,7 @@
 
     private async Task EvalAsync()
     {
-        if (_monacoEditor is null) return;
-
-        var value = await _monacoEditor.GetValue();
-        if (string.IsNullOrWhiteSpace(value)) return;
+        if (_monacoEditor is null || _selectedObject is null || _selectedAttr is null) return;
 
         _evalLoading = true;
         _evalOutput = null;
@@ -451,7 +448,10 @@
 
         try
         {
-            var lines = await QueryService.EvalAsync(value);
+            // Evaluate via u(#dbref/ATTR) so MUSH evaluates the attribute in-object context.
+            // This avoids the "think prefix" problem where wrapping in think [code] inside
+            // pemit() emits "think <result>" literally.
+            var lines = await QueryService.EvalAsync($"#{_selectedObject.Dbref}", _selectedAttr.Name);
             _evalOutput = lines.Length > 0
                 ? string.Join("\n", lines.Where(l => !string.IsNullOrEmpty(l)))
                 : "(no output)";
@@ -535,9 +535,10 @@
         _newAttrName = string.Empty;
         StateHasChanged();
 
-        // Send the attribute set command with a space so the server creates (not clears) the attribute.
-        // An empty value routes through ClearAttributeAsync which is a no-op for non-existent attrs.
-        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", attrName, " ");
+        // Send the attribute set command with null() — a MUSH function that evaluates to
+        // empty string but is a valid non-empty value, so the server creates the attribute
+        // rather than routing through ClearAttributeAsync.
+        await QueryService.SetAttributeAsync($"#{_selectedObject.Dbref}", attrName, "null()");
 
         // Re-fetch the full attribute list from server to reflect actual state
         await RefreshAttributesAsync();

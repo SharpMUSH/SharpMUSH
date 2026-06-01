@@ -172,13 +172,15 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	// ──────────────────────────────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Evaluate a MUSHcode expression and capture the result.
-	/// Wraps in <c>think</c> so output goes only to the sender and returns the captured lines.
+	/// Evaluate the attribute on <paramref name="dbref"/> using <c>u()</c> so MUSH evaluates
+	/// the attribute in object context. Uses <c>RouteLiteral</c> so the output is just the
+	/// result — no "think " prefix that appears when using <c>think [code]</c> inside pemit.
 	/// </summary>
-	public Task<string[]> EvalAsync(string code)
+	public Task<string[]> EvalAsync(string dbref, string attrName)
 	{
-		var cmd = RouteExpr($"think [{code}]");
-		return terminal.SendCommandAsync(cmd);
+		// RouteLiteral wraps in: think [pemit(port, <text>)]
+		// The text [u(dbref/attr)] is evaluated inline — just the u() result is emitted.
+		return terminal.SendCommandAsync(RouteLiteral($"[u({dbref}/{attrName})]"));
 	}
 
 	// ──────────────────────────────────────────────────────────────────────────────
