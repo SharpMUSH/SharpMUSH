@@ -31,6 +31,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	public bool IsConnected => wsService.IsConnected;
 
 	/// <inheritdoc/>
+	public string? ConnectedPlayerName { get; set; }
+
+	/// <inheritdoc/>
 	public long? MyPort => _myPort;
 
 	/// <inheritdoc/>
@@ -93,6 +96,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 	public async Task DisconnectAsync()
 	{
+		ConnectedPlayerName = null;
 		await wsService.DisconnectAsync();
 		wsService.MessageReceived -= HandleMessage;
 		wsService.ConnectionStateChanged -= HandleStateChange;

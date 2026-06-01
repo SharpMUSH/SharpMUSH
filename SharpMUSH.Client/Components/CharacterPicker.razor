@@ -118,6 +118,7 @@
 
         try
         {
+            Terminal.ConnectedPlayerName = character.Name;
             await Terminal.ConnectWithOttAsync(ServerUri, token);
             await OnConnected.InvokeAsync();
         }

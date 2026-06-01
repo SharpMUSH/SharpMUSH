@@ -12,6 +12,9 @@ public interface ITerminalService
 
 	bool IsConnected { get; }
 
+	/// <summary>The player name that authenticated on this connection, or null if unknown.</summary>
+	string? ConnectedPlayerName { get; set; }
+
 	/// <summary>The last server URI connected to (or null if never connected).</summary>
 	string? ServerUri { get; }
 

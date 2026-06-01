@@ -219,6 +219,9 @@
         Terminal.LineReceived += OnLineReceived;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
 
+        // Restore player name from the shared terminal service (survives component re-mounts)
+        _playerName = Terminal.ConnectedPlayerName;
+
         // Load saved credentials
         var (savedPlayer, savedPassword, savedUri) = await Credentials.LoadAsync();
         _loginPlayer = savedPlayer;
@@ -231,19 +234,37 @@
         if (!string.IsNullOrWhiteSpace(AccountAuth.Username))
             _accountIdentifier = AccountAuth.Username;
 
-        // If already authenticated, auto-load characters and show the picker
-        if (AccountAuth.IsLoggedIn && !Terminal.IsConnected)
+        // If already connected and player name is unknown, try to fill from account
+        if (_connected && _playerName is null && AccountAuth.Characters.Count > 0)
+            _playerName = AccountAuth.Characters[0].Name;
+
+        // If logged in to an account and terminal is not yet connected: auto-connect
+        if (!_connected && AccountAuth.IsLoggedIn)
         {
-            var chars = await AccountAuth.GetCharactersAsync();
-            if (chars.Count > 0)
+            var chars = AccountAuth.Characters.Count > 0
+                ? AccountAuth.Characters
+                : await AccountAuth.GetCharactersAsync();
+
+            if (chars.Count == 1)
             {
+                // Single character — auto-connect silently
+                var ott = await AccountAuth.GetOttForCharacterAsync(chars[0]);
+                if (ott is not null)
+                {
+                    SetPlayerName(chars[0].Name);
+                    await Terminal.ConnectWithOttAsync(_serverUri, ott);
+                }
+            }
+            else if (chars.Count > 1)
+            {
+                // Multiple characters — show picker
                 _showLoginPanel = true;
                 _showCharacterPicker = true;
             }
         }
 
-        // DebugAdmin: no account session, but Blazor auth is active → auto-connect as #1
-        if (!AccountAuth.IsLoggedIn && !Terminal.IsConnected)
+        // DebugAdmin path: authenticated via Blazor but no account session
+        if (!_connected && !AccountAuth.IsLoggedIn)
         {
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated == true)
@@ -251,7 +272,7 @@
                 var debugOtt = await AccountAuth.GetDebugOttAsync();
                 if (debugOtt is not null)
                 {
-                    _playerName = debugOtt.PlayerName;
+                    SetPlayerName(debugOtt.PlayerName);
                     await Terminal.ConnectWithOttAsync(_serverUri, debugOtt.Token);
                 }
             }
@@ -308,8 +329,16 @@
         StateHasChanged();
     }
 
+    private void SetPlayerName(string? name)
+    {
+        _playerName = name;
+        Terminal.ConnectedPlayerName = name;
+    }
+
     private Task OnCharacterPickerConnected()
     {
+        // CharacterPicker handles connection; grab name from terminal service
+        _playerName = Terminal.ConnectedPlayerName;
         _showLoginPanel = false;
         _showCharacterPicker = false;
         StateHasChanged();
@@ -330,7 +359,7 @@
             if (!string.IsNullOrWhiteSpace(_loginPlayer) && !string.IsNullOrWhiteSpace(_loginPassword))
             {
                 // Use OTT flow: credentials go to API over HTTPS, WS only receives a token
-                _playerName = _loginPlayer;
+                SetPlayerName(_loginPlayer);
                 await Terminal.ConnectAndLoginAsync(_serverUri, _loginPlayer, _loginPassword, OttAuth);
             }
             else
@@ -344,7 +373,7 @@
 
     private async Task DisconnectAsync()
     {
-        _playerName = null;
+        SetPlayerName(null);
         await Terminal.DisconnectAsync();
     }
 
@@ -358,7 +387,7 @@
         {
             var parts = trimmed.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2 && !string.Equals(parts[1], "token", StringComparison.OrdinalIgnoreCase))
-                _playerName = parts[1];
+                SetPlayerName(parts[1]);
         }
 
         await Terminal.SendAsync(_input);
@@ -416,7 +445,7 @@
     private void OnConnectionChanged(bool connected)
     {
         _connected = connected;
-        if (!connected) _playerName = null;
+        if (!connected) SetPlayerName(null);
         InvokeAsync(StateHasChanged);
     }
 

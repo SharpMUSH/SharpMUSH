@@ -133,9 +133,9 @@
                     <MudTd>@context.Name</MudTd>
                     <MudTd>#@context.DbrefNumber</MudTd>
                     <MudTd>
-                        @if (!string.IsNullOrWhiteSpace(context.Flags))
+                        @foreach (var flag in (context.Flags ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.Flags</MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Style="margin:1px;">@flag</MudChip>
                         }
                     </MudTd>
                     <MudTd>
