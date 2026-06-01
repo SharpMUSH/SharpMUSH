@@ -50,6 +50,15 @@ public partial class ArangoDatabase
 		return result.FirstOrDefault() is { } elem ? AccountFromJson(elem) : null;
 	}
 
+	public async ValueTask<bool> HasAnyAccountAsync(CancellationToken cancellationToken = default)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<bool>(handle,
+			"FOR a IN @@c LIMIT 1 RETURN true",
+			bindVars: new Dictionary<string, object> { { "@c", DatabaseConstants.Accounts } },
+			cancellationToken: cancellationToken);
+		return result.FirstOrDefault();
+	}
+
 	public async ValueTask<SharpAccount> CreateAccountAsync(string username, string? email, string hashedPassword, CancellationToken cancellationToken = default)
 	{
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -61,6 +70,7 @@ public partial class ArangoDatabase
 			CreatedAt = now,
 			UpdatedAt = now,
 			IsVerified = false,
+			MustChangePassword = false,
 			IsDisabled = false
 		};
 
@@ -76,6 +86,14 @@ public partial class ArangoDatabase
 		var key = ExtractKey(accountId);
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Accounts,
 			new { _key = key, PasswordHash = newHash, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+			mergeObjects: true, cancellationToken: cancellationToken);
+	}
+
+	public async ValueTask UpdateAccountMustChangePasswordAsync(string accountId, bool value, CancellationToken cancellationToken = default)
+	{
+		var key = ExtractKey(accountId);
+		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Accounts,
+			new { _key = key, MustChangePassword = value, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
 			mergeObjects: true, cancellationToken: cancellationToken);
 	}
 
@@ -195,6 +213,7 @@ public partial class ArangoDatabase
 			CreatedAt = elem.TryGetProperty("CreatedAt", out var createdProp) ? createdProp.GetInt64() : 0,
 			UpdatedAt = elem.TryGetProperty("UpdatedAt", out var updatedProp) ? updatedProp.GetInt64() : 0,
 			IsVerified = elem.TryGetProperty("IsVerified", out var verifiedProp) && verifiedProp.GetBoolean(),
+			MustChangePassword = elem.TryGetProperty("MustChangePassword", out var mustChangeProp) && mustChangeProp.GetBoolean(),
 			IsDisabled = elem.TryGetProperty("IsDisabled", out var disabledProp) && disabledProp.GetBoolean()
 		};
 	}

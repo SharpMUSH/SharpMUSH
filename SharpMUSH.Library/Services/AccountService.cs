@@ -26,6 +26,9 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 		return account;
 	}
 
+	public ValueTask<bool> HasAnyAccountAsync(CancellationToken ct = default)
+		=> database.HasAnyAccountAsync(ct);
+
 	public async ValueTask<OneOf<SharpAccount, Error<string>>> CreateAccountAsync(string username, string? email, string password, CancellationToken ct = default)
 	{
 		if (await database.GetAccountByUsernameAsync(username, ct) is not null)
@@ -53,6 +56,9 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 	public async ValueTask<bool> EmailExistsAsync(string email, CancellationToken ct = default)
 		=> await database.GetAccountByEmailAsync(email, ct) is not null;
 
+	public ValueTask ForcePasswordChangeAsync(string accountId, CancellationToken ct = default)
+		=> database.UpdateAccountMustChangePasswordAsync(accountId, true, ct);
+
 	public async ValueTask<OneOf<Success, Error<string>>> ChangePasswordAsync(string accountId, string oldPassword, string newPassword, CancellationToken ct = default)
 	{
 		var account = await database.GetAccountByIdAsync(accountId, ct);
@@ -64,6 +70,7 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 
 		var newHash = passwordService.HashPassword(AccountKey(account), newPassword);
 		await database.UpdateAccountPasswordAsync(accountId, newHash, ct);
+		await database.UpdateAccountMustChangePasswordAsync(accountId, false, ct);
 		return new Success();
 	}
 

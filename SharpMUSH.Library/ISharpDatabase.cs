@@ -772,10 +772,15 @@ public interface ISharpDatabase
 	/// <summary>Finds an account by its internal document ID (e.g. "node_accounts/123").</summary>
 	ValueTask<SharpAccount?> GetAccountByIdAsync(string accountId, CancellationToken cancellationToken = default);
 
+	/// <summary>Returns true if at least one account exists in the database.</summary>
+	ValueTask<bool> HasAnyAccountAsync(CancellationToken cancellationToken = default);
+
 	/// <summary>Creates a new account. Email is optional; pass null to omit.</summary>
 	ValueTask<SharpAccount> CreateAccountAsync(string username, string? email, string hashedPassword, CancellationToken cancellationToken = default);
 
 	ValueTask UpdateAccountPasswordAsync(string accountId, string newHash, CancellationToken cancellationToken = default);
+
+	ValueTask UpdateAccountMustChangePasswordAsync(string accountId, bool value, CancellationToken cancellationToken = default);
 
 	/// <summary>Updates the account email. Pass null to clear the email.</summary>
 	ValueTask UpdateAccountEmailAsync(string accountId, string? newEmail, CancellationToken cancellationToken = default);

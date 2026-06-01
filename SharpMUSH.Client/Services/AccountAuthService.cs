@@ -16,15 +16,16 @@ public class AccountAuthService(
 {
 	private const string SessionTokenKey = "sharpmush.account.sessionToken";
 	private const string UsernameKey = "sharpmush.account.username";
+	private const string MustChangePasswordKey = "sharpmush.account.mustChangePassword";
 
 	// ── DTO records ─────────────────────────────────────────────────────────
 
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 
-	private record AccountLoginRequest(string Identifier, string Password);
+	private record AccountLoginRequest(string UsernameOrEmail, string Password);
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
-	private record AccountLoginResponse(string AccountId, string Username, IReadOnlyList<CharacterSummary> Characters, string AccountSessionToken);
-	private record MushTokenWithAccountRequest(string AccountSessionToken, int CharacterDbrefNumber, long CharacterCreationTime);
+	private record AccountLoginResponse(string AccountId, string Username, IReadOnlyList<CharacterSummary> Characters, string AccountSessionToken, bool MustChangePassword);
+	private record MushTokenWithAccountRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
 	private record MushTokenResponse(string Token, int ExpiresIn);
 	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName);
 	private record CreateCharacterRequest(string Name, string Password);
@@ -32,12 +33,15 @@ public class AccountAuthService(
 	private record ChangePasswordRequest(string OldPassword, string NewPassword);
 	private record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
 	private record ChangeUsernameRequest(string NewUsername);
+	private record SetupStatusResponse(bool NeedsSetup);
+	private record SetupCompleteRequest(string Username, string Password);
 
 	// ── In-memory state ──────────────────────────────────────────────────────
 
 	public string? AccountSessionToken { get; private set; }
 	public string? Username { get; private set; }
 	public IReadOnlyList<CharacterSummary> Characters { get; private set; } = [];
+	public bool MustChangePassword { get; private set; }
 	public bool IsLoggedIn => AccountSessionToken is not null;
 
 	// ── Initialization ────────────────────────────────────────────────────────
@@ -46,6 +50,8 @@ public class AccountAuthService(
 	{
 		AccountSessionToken = await js.InvokeAsync<string?>("sessionStorage.getItem", SessionTokenKey);
 		Username = await js.InvokeAsync<string?>("localStorage.getItem", UsernameKey);
+		var mustChangePassword = await js.InvokeAsync<string?>("sessionStorage.getItem", MustChangePasswordKey);
+		MustChangePassword = string.Equals(mustChangePassword, bool.TrueString, StringComparison.OrdinalIgnoreCase);
 	}
 
 	// ── Login / Register ─────────────────────────────────────────────────────
@@ -65,7 +71,7 @@ public class AccountAuthService(
 			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
 			if (result is null) return (false, "Unexpected server response.", []);
 
-			await PersistSessionAsync(result.AccountSessionToken, result.Username);
+			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword);
 			Characters = result.Characters;
 			return (true, null, result.Characters);
 		}
@@ -91,7 +97,7 @@ public class AccountAuthService(
 			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
 			if (result is null) return (false, "Unexpected server response.", []);
 
-			await PersistSessionAsync(result.AccountSessionToken, result.Username);
+			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword);
 			Characters = result.Characters;
 			return (true, null, result.Characters);
 		}
@@ -99,6 +105,39 @@ public class AccountAuthService(
 		{
 			logger.LogError(ex, "Account registration failed");
 			return (false, ex.Message, []);
+		}
+	}
+
+	public async Task<bool> NeedsSetupAsync()
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var result = await http.GetFromJsonAsync<SetupStatusResponse>("api/setup/status");
+			return result?.NeedsSetup ?? false;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Failed to check setup status");
+			return false;
+		}
+	}
+
+	public async Task<(bool Success, string? Error)> CompleteSetupAsync(string username, string password)
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var response = await http.PostAsJsonAsync("api/setup/complete",
+				new SetupCompleteRequest(username, password));
+			if (!response.IsSuccessStatusCode)
+				return (false, await response.Content.ReadAsStringAsync());
+			return (true, null);
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Setup completion failed");
+			return (false, ex.Message);
 		}
 	}
 
@@ -237,7 +276,10 @@ public class AccountAuthService(
 	public async Task<(bool Success, string? Error)> ChangePasswordAsync(string oldPassword, string newPassword)
 	{
 		if (AccountSessionToken is null) return (false, "Not logged in.");
-		return await PutAsync("api/account/password", new ChangePasswordRequest(oldPassword, newPassword));
+		var (success, error) = await PutAsync("api/account/password", new ChangePasswordRequest(oldPassword, newPassword));
+		if (success)
+			await SetMustChangePasswordAsync(false);
+		return (success, error);
 	}
 
 	public async Task<(bool Success, string? Error)> ChangeEmailAsync(string? newEmail, string currentPassword)
@@ -277,17 +319,26 @@ public class AccountAuthService(
 		AccountSessionToken = null;
 		Username = null;
 		Characters = [];
+		MustChangePassword = false;
 		await js.InvokeVoidAsync("sessionStorage.removeItem", SessionTokenKey);
+		await js.InvokeVoidAsync("sessionStorage.removeItem", MustChangePasswordKey);
 	}
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
 
-	private async Task PersistSessionAsync(string token, string username)
+	private async Task PersistSessionAsync(string token, string username, bool mustChangePassword)
 	{
 		AccountSessionToken = token;
 		Username = username;
 		await js.InvokeVoidAsync("sessionStorage.setItem", SessionTokenKey, token);
 		await js.InvokeVoidAsync("localStorage.setItem", UsernameKey, username);
+		await SetMustChangePasswordAsync(mustChangePassword);
+	}
+
+	private async Task SetMustChangePasswordAsync(bool value)
+	{
+		MustChangePassword = value;
+		await js.InvokeVoidAsync("sessionStorage.setItem", MustChangePasswordKey, value.ToString());
 	}
 
 	private async Task<(bool Success, string? Error)> PutAsync<T>(string path, T body)

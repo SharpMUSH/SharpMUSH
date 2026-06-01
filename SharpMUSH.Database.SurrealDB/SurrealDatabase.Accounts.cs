@@ -12,6 +12,7 @@ internal record AccountDbRecord(
 	[property: JsonPropertyName("createdAt")] long CreatedAt,
 	[property: JsonPropertyName("updatedAt")] long UpdatedAt,
 	[property: JsonPropertyName("isVerified")] bool IsVerified,
+	[property: JsonPropertyName("mustChangePassword")] bool MustChangePassword,
 	[property: JsonPropertyName("isDisabled")] bool IsDisabled
 );
 
@@ -44,6 +45,13 @@ public partial class SurrealDatabase
 		return results?.Count > 0 ? MapRecordToAccount(results[0]) : null;
 	}
 
+	public async ValueTask<bool> HasAnyAccountAsync(CancellationToken cancellationToken = default)
+	{
+		var response = await ExecuteAsync("SELECT id FROM account LIMIT 1", new Dictionary<string, object?>(), cancellationToken);
+		var results = response.GetValue<List<System.Text.Json.JsonElement>>(0);
+		return results?.Count > 0;
+	}
+
 	public async ValueTask<SharpAccount> CreateAccountAsync(string username, string? email, string hashedPassword, CancellationToken cancellationToken = default)
 	{
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -58,7 +66,7 @@ public partial class SurrealDatabase
 		var response = await ExecuteAsync("""
 CREATE account CONTENT {
 	username: $username, email: $email, passwordHash: $passwordHash,
-	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, isDisabled: false
+	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, mustChangePassword: false, isDisabled: false
 }
 """, parameters, cancellationToken);
 		var results = response.GetValue<List<AccountDbRecord>>(0)!;
@@ -70,6 +78,13 @@ CREATE account CONTENT {
 		var key = NormalizeSurrealId(accountId, "account");
 		var parameters = new Dictionary<string, object?> { ["id"] = key, ["hash"] = newHash, ["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
 		await ExecuteAsync("UPDATE $id SET passwordHash = $hash, updatedAt = $now", parameters, cancellationToken);
+	}
+
+	public async ValueTask UpdateAccountMustChangePasswordAsync(string accountId, bool value, CancellationToken cancellationToken = default)
+	{
+		var key = NormalizeSurrealId(accountId, "account");
+		var parameters = new Dictionary<string, object?> { ["id"] = key, ["value"] = value, ["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+		await ExecuteAsync("UPDATE $id SET mustChangePassword = $value, updatedAt = $now", parameters, cancellationToken);
 	}
 
 	public async ValueTask UpdateAccountEmailAsync(string accountId, string? newEmail, CancellationToken cancellationToken = default)
@@ -155,6 +170,7 @@ SELECT in.* FROM account_owns_character WHERE out.object.key = $dbref
 		CreatedAt = rec.CreatedAt,
 		UpdatedAt = rec.UpdatedAt,
 		IsVerified = rec.IsVerified,
+		MustChangePassword = rec.MustChangePassword,
 		IsDisabled = rec.IsDisabled
 	};
 

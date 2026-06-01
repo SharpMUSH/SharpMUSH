@@ -32,6 +32,14 @@ public partial class MemgraphDatabase
 		return result.Result.Count > 0 ? MapNodeToAccount(result.Result[0]["a"].As<INode>()) : null;
 	}
 
+	public async ValueTask<bool> HasAnyAccountAsync(CancellationToken cancellationToken = default)
+	{
+		var result = await ExecuteWithRetryAsync(
+			"MATCH (a:Account) RETURN a LIMIT 1",
+			new { }, cancellationToken);
+		return result.Result.Count > 0;
+	}
+
 	public async ValueTask<SharpAccount> CreateAccountAsync(string username, string? email, string hashedPassword, CancellationToken cancellationToken = default)
 	{
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -39,7 +47,7 @@ public partial class MemgraphDatabase
 		await ExecuteWithRetryAsync("""
 CREATE (a:Account {
 	id: $id, username: $username, email: $email, passwordHash: $passwordHash,
-	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, isDisabled: false
+	createdAt: $createdAt, updatedAt: $updatedAt, isVerified: false, mustChangePassword: false, isDisabled: false
 })
 """, new { id, username, email = (object?)email ?? DBNull.Value, passwordHash = hashedPassword, createdAt = now, updatedAt = now }, cancellationToken);
 
@@ -60,6 +68,14 @@ CREATE (a:Account {
 		await ExecuteWithRetryAsync(
 			"MATCH (a:Account {id: $id}) SET a.passwordHash = $hash, a.updatedAt = $now",
 			new { id = key, hash = newHash, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
+	}
+
+	public async ValueTask UpdateAccountMustChangePasswordAsync(string accountId, bool value, CancellationToken cancellationToken = default)
+	{
+		var key = accountId.Contains('/') ? accountId.Split('/')[1] : accountId;
+		await ExecuteWithRetryAsync(
+			"MATCH (a:Account {id: $id}) SET a.mustChangePassword = $value, a.updatedAt = $now",
+			new { id = key, value, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
 	}
 
 	public async ValueTask UpdateAccountEmailAsync(string accountId, string? newEmail, CancellationToken cancellationToken = default)
@@ -147,6 +163,7 @@ RETURN a
 			CreatedAt = node.Properties.TryGetValue("createdAt", out var created) ? Convert.ToInt64(created) : 0,
 			UpdatedAt = node.Properties.TryGetValue("updatedAt", out var updated) ? Convert.ToInt64(updated) : 0,
 			IsVerified = node.Properties.TryGetValue("isVerified", out var verified) && (bool)verified,
+			MustChangePassword = node.Properties.TryGetValue("mustChangePassword", out var mustChange) && (bool)mustChange,
 			IsDisabled = node.Properties.TryGetValue("isDisabled", out var disabled) && (bool)disabled
 		};
 	}

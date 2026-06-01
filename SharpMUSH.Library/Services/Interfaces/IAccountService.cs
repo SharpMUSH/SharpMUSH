@@ -12,6 +12,9 @@ public interface IAccountService
 	/// </summary>
 	ValueTask<SharpAccount?> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default);
 
+	/// <summary>Returns true if at least one account exists.</summary>
+	ValueTask<bool> HasAnyAccountAsync(CancellationToken ct = default);
+
 	/// <summary>
 	/// Creates a new account. <paramref name="email"/> is optional (pass null to omit).
 	/// Returns an <see cref="Error{T}"/> if the username or email is already taken.
@@ -21,6 +24,8 @@ public interface IAccountService
 	ValueTask<bool> UsernameExistsAsync(string username, CancellationToken ct = default);
 
 	ValueTask<bool> EmailExistsAsync(string email, CancellationToken ct = default);
+
+	ValueTask ForcePasswordChangeAsync(string accountId, CancellationToken ct = default);
 
 	/// <summary>
 	/// Changes the account password. Returns an error if the account is not found or the old password is wrong.

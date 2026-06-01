@@ -31,6 +31,14 @@
 
     <MudText Typo="Typo.h5" Class="mb-4">My Account: @AccountAuth.Username</MudText>
 
+    @if (AccountAuth.MustChangePassword)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            <strong>Password change required.</strong>
+            Please update your password before continuing.
+        </MudAlert>
+    }
+
     @* ── Profile section ── *@
     <MudPaper Elevation="1" Class="pa-4 mb-4">
         <MudText Typo="Typo.h6" Class="mb-3">Profile</MudText>

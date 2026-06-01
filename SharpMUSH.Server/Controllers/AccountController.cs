@@ -104,15 +104,10 @@ public class AccountController(
 		var accountId = await GetAccountIdFromBearerAsync();
 		if (accountId is null) return Unauthorized("Invalid or expired account session.");
 
-		try
-		{
-			await accountService.ChangePasswordAsync(accountId, request.OldPassword, request.NewPassword);
-			return NoContent();
-		}
-		catch (UnauthorizedAccessException ex)
-		{
-			return Unauthorized(ex.Message);
-		}
+		var result = await accountService.ChangePasswordAsync(accountId, request.OldPassword, request.NewPassword);
+		return result.Match<IActionResult>(
+			_ => NoContent(),
+			err => Unauthorized(err.Value));
 	}
 
 	public record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
@@ -124,19 +119,12 @@ public class AccountController(
 		var accountId = await GetAccountIdFromBearerAsync();
 		if (accountId is null) return Unauthorized("Invalid or expired account session.");
 
-		try
-		{
-			await accountService.ChangeEmailAsync(accountId, request.NewEmail, request.CurrentPassword);
-			return NoContent();
-		}
-		catch (UnauthorizedAccessException ex)
-		{
-			return Unauthorized(ex.Message);
-		}
-		catch (InvalidOperationException ex)
-		{
-			return Conflict(ex.Message);
-		}
+		var result = await accountService.ChangeEmailAsync(accountId, request.NewEmail, request.CurrentPassword);
+		return result.Match<IActionResult>(
+			_ => NoContent(),
+			err => err.Value.Contains("already registered", StringComparison.OrdinalIgnoreCase)
+				? Conflict(err.Value)
+				: Unauthorized(err.Value));
 	}
 
 	public record ChangeUsernameRequest(string NewUsername);

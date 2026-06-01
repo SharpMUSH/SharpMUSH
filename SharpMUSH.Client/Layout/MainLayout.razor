@@ -175,6 +175,7 @@
         await AccountAuth.InitAsync();
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _isDebugAuth = authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
+        await EnsureAccountRoutingAsync();
     }
 
     private async Task SwitchCharacterAsync(AccountAuthService.CharacterSummary character)
@@ -201,14 +202,39 @@
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        UpdateConfigRouteState();
-        StateHasChanged();
+        _ = InvokeAsync(async () =>
+        {
+            UpdateConfigRouteState();
+            await EnsureAccountRoutingAsync();
+            StateHasChanged();
+        });
     }
 
     private void UpdateConfigRouteState()
     {
         _isConfigRoute = NavigationManager.Uri.Contains("/admin/config");
     }
+
+    private async Task EnsureAccountRoutingAsync()
+    {
+        var currentPath = new Uri(NavigationManager.Uri).AbsolutePath;
+
+        if (AccountAuth.IsLoggedIn && AccountAuth.MustChangePassword)
+        {
+            if (!string.Equals(currentPath, "/account", StringComparison.OrdinalIgnoreCase))
+                NavigationManager.NavigateTo("/account");
+            return;
+        }
+
+        if (AccountAuth.IsLoggedIn || _isDebugAuth || !IsHomePath(currentPath))
+            return;
+
+        if (await AccountAuth.NeedsSetupAsync())
+            NavigationManager.NavigateTo("/setup");
+    }
+
+    private static bool IsHomePath(string currentPath)
+        => string.IsNullOrEmpty(currentPath) || currentPath == "/";
 
     void DrawerToggle()
     {

@@ -25,5 +25,7 @@ public class SharpAccount
 	/// <summary>Only meaningful when <see cref="Email"/> is set. Reserved for future email-verification flow.</summary>
 	public bool IsVerified { get; set; }
 
+	public bool MustChangePassword { get; set; }
+
 	public bool IsDisabled { get; set; }
 }

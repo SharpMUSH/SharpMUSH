@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using SurrealDb.Net;
@@ -28,6 +29,7 @@ using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
@@ -54,6 +56,18 @@ public class Startup(
 // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
+		services.Configure<BootstrapOptions>(configuration.GetSection(BootstrapOptions.Section));
+		services.PostConfigure<BootstrapOptions>(options =>
+		{
+			var adminUsername = Environment.GetEnvironmentVariable("SHARPMUSH_BOOTSTRAP_USERNAME");
+			if (!string.IsNullOrWhiteSpace(adminUsername))
+				options.AdminUsername = adminUsername;
+
+			var adminPassword = Environment.GetEnvironmentVariable("SHARPMUSH_BOOTSTRAP_PASSWORD");
+			if (!string.IsNullOrWhiteSpace(adminPassword))
+				options.AdminPassword = adminPassword;
+		});
+
 		services.AddCors(options =>
 		{
 			options.AddDefaultPolicy(builder => builder
@@ -155,6 +169,7 @@ public class Startup(
 		services.AddSingleton<IOttStore, InMemoryOttStore>();
 		services.AddSingleton<IAccountSessionStore, InMemoryAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();
+		services.AddHostedService<BootstrapService>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<ICommunicationService, CommunicationService>();
 		services.AddSingleton<ILockService, LockService>();
