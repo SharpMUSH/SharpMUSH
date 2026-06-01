@@ -149,18 +149,15 @@ public class AuthController(
 		if (string.IsNullOrWhiteSpace(request.DisplayName) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("DisplayName and Password are required.");
 
-		try
-		{
-			var account = await accountService.CreateAccountAsync(request.DisplayName, request.Email, request.Password);
-			var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
+		var result = await accountService.CreateAccountAsync(request.DisplayName, request.Email, request.Password);
+		if (result.IsT1)
+			return Conflict(result.AsT1.Value);
 
-			logger.LogInformation("Account registered: {DisplayName} ({Id})", account.DisplayName, account.Id);
-			return Ok(new AccountLoginResponse(account.Id!, account.DisplayName, [], sessionToken));
-		}
-		catch (InvalidOperationException ex)
-		{
-			return Conflict(ex.Message);
-		}
+		var account = result.AsT0;
+		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
+
+		logger.LogInformation("Account registered: {DisplayName} ({Id})", account.DisplayName, account.Id);
+		return Ok(new AccountLoginResponse(account.Id!, account.DisplayName, [], sessionToken));
 	}
 
 	private static async Task<IReadOnlyList<CharacterSummary>> BuildCharacterSummariesAsync(IReadOnlyList<SharpPlayer> characters)

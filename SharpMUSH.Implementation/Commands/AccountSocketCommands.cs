@@ -64,22 +64,21 @@ public partial class Commands
 			return new None();
 		}
 
-		try
+		var result = await AccountService!.CreateAccountAsync(displayName, email, password);
+		if (result.IsT1)
 		{
-			var account = await AccountService!.CreateAccountAsync(displayName, email, password);
-			await ConnectionService.BindAccount(handle, account.Id!);
-
-			await NotifyService!.Notify(handle,
-				$"Account '{account.DisplayName}' created successfully.\n" +
-				"You have no characters yet.\n" +
-				"Use: make <character-name> <password>    to create your first character.");
-			return new CallState(account.Id!);
-		}
-		catch (InvalidOperationException ex)
-		{
-			await NotifyService!.Notify(handle, ex.Message);
+			await NotifyService!.Notify(handle, result.AsT1.Value);
 			return new None();
 		}
+
+		var account = result.AsT0;
+		await ConnectionService.BindAccount(handle, account.Id!);
+
+		await NotifyService!.Notify(handle,
+			$"Account '{account.DisplayName}' created successfully.\n" +
+			"You have no characters yet.\n" +
+			"Use: make <character-name> <password>    to create your first character.");
+		return new CallState(account.Id!);
 	}
 
 	/// <summary>
