@@ -26,6 +26,7 @@ public class AccountAuthService(
 	private record AccountLoginResponse(string AccountId, string Username, IReadOnlyList<CharacterSummary> Characters, string AccountSessionToken);
 	private record MushTokenWithAccountRequest(string AccountSessionToken, int CharacterDbrefNumber, long CharacterCreationTime);
 	private record MushTokenResponse(string Token, int ExpiresIn);
+	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName);
 	private record CreateCharacterRequest(string Name, string Password);
 	private record CreateCharacterResponse(int DbrefNumber, long? CreationTime);
 	private record ChangePasswordRequest(string OldPassword, string NewPassword);
@@ -102,6 +103,30 @@ public class AccountAuthService(
 	}
 
 	// ── OTT for a character ───────────────────────────────────────────────────
+
+	/// <summary>
+	/// Development-only: get a debug OTT for player #1 without credentials.
+	/// The server endpoint is only active when DebugAuth is enabled (development mode).
+	/// </summary>
+	public async Task<DebugOttResponse?> GetDebugOttAsync()
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var response = await http.GetAsync("api/auth/debug-ott");
+			if (!response.IsSuccessStatusCode)
+			{
+				logger.LogWarning("Debug OTT request failed: {Status}", response.StatusCode);
+				return null;
+			}
+			return await response.Content.ReadFromJsonAsync<DebugOttResponse>();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Debug OTT request threw an exception");
+			return null;
+		}
+	}
 
 	/// <summary>
 	/// Exchange an account session token + character selection for a MUSH OTT.

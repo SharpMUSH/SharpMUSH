@@ -1,11 +1,13 @@
 ﻿@using MudBlazor.Utilities
 @using SharpMUSH.Client.Components
 @using SharpMUSH.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
 @inject ITerminalService Terminal
 @inject AccountAuthService AccountAuth
+@inject AuthenticationStateProvider AuthStateProvider
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
 <MudPopoverProvider />
@@ -25,8 +27,8 @@
         <MudSpacer />
         <LanguagePicker />
 
-        @* Character / Account switcher — shown when logged in to an account *@
-        @if (AccountAuth.IsLoggedIn)
+        @* Character / Account switcher — shown when logged in to an account or in debug mode *@
+        @if (AccountAuth.IsLoggedIn || _isDebugAuth)
         {
             <MudMenu Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
                 <ActivatorContent>
@@ -34,27 +36,36 @@
                                EndIcon="@Icons.Material.Filled.ArrowDropDown"
                                Style="text-transform:none;font-size:13px;">
                         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
-                        @(_terminalPlayerName ?? AccountAuth.Username)
+                        @(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")
                     </MudButton>
                 </ActivatorContent>
                 <ChildContent>
-                    <MudMenuItem Disabled="true">
-                        <MudText Typo="Typo.caption" Style="color:#888;">
-                            Account: @AccountAuth.Username
-                        </MudText>
-                    </MudMenuItem>
-                    @if (AccountAuth.Characters.Count > 1)
+                    @if (_isDebugAuth)
                     {
-                        <MudDivider />
                         <MudMenuItem Disabled="true">
-                            <MudText Typo="Typo.caption" Style="color:#888;">Switch to:</MudText>
+                            <MudText Typo="Typo.caption" Style="color:#888;">Dev Mode (DebugAdmin)</MudText>
                         </MudMenuItem>
-                        @foreach (var c in AccountAuth.Characters)
+                    }
+                    else
+                    {
+                        <MudMenuItem Disabled="true">
+                            <MudText Typo="Typo.caption" Style="color:#888;">
+                                Account: @AccountAuth.Username
+                            </MudText>
+                        </MudMenuItem>
+                        @if (AccountAuth.Characters.Count > 1)
                         {
-                            var character = c;
-                            <MudMenuItem OnClick="() => SwitchCharacterAsync(character)">
-                                @character.Name (#@character.DbrefNumber)
+                            <MudDivider />
+                            <MudMenuItem Disabled="true">
+                                <MudText Typo="Typo.caption" Style="color:#888;">Switch to:</MudText>
                             </MudMenuItem>
+                            @foreach (var c in AccountAuth.Characters)
+                            {
+                                var character = c;
+                                <MudMenuItem OnClick="() => SwitchCharacterAsync(character)">
+                                    @character.Name (#@character.DbrefNumber)
+                                </MudMenuItem>
+                            }
                         }
                     }
                     <MudDivider />
@@ -62,10 +73,13 @@
                         <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small" Class="mr-2" />
                         Account Settings
                     </MudMenuItem>
-                    <MudMenuItem OnClick="AccountLogoutAsync">
-                        <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Class="mr-2" />
-                        Disconnect
-                    </MudMenuItem>
+                    @if (!_isDebugAuth)
+                    {
+                        <MudMenuItem OnClick="AccountLogoutAsync">
+                            <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Class="mr-2" />
+                            Disconnect
+                        </MudMenuItem>
+                    }
                 </ChildContent>
             </MudMenu>
         }
@@ -152,12 +166,15 @@
     private bool _isConfigRoute = false;
     private bool _terminalOpen = false;
     private string? _terminalPlayerName;
+    private bool _isDebugAuth;
 
     protected override async Task OnInitializedAsync()
     {
         NavigationManager.LocationChanged += OnLocationChanged;
         UpdateConfigRouteState();
         await AccountAuth.InitAsync();
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _isDebugAuth = authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
     }
 
     private async Task SwitchCharacterAsync(AccountAuthService.CharacterSummary character)

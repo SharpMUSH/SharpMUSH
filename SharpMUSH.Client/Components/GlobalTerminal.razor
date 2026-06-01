@@ -1,10 +1,12 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject ITerminalService Terminal
 @inject IJSRuntime JsRuntime
 @inject CredentialService Credentials
 @inject OttAuthService OttAuth
 @inject AccountAuthService AccountAuth
+@inject AuthenticationStateProvider AuthStateProvider
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="background:#111;color:#ccc;font-family:monospace;font-size:13px;">
@@ -239,6 +241,21 @@
                 _showCharacterPicker = true;
             }
         }
+
+        // DebugAdmin: no account session, but Blazor auth is active → auto-connect as #1
+        if (!AccountAuth.IsLoggedIn && !Terminal.IsConnected)
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                var debugOtt = await AccountAuth.GetDebugOttAsync();
+                if (debugOtt is not null)
+                {
+                    _playerName = debugOtt.PlayerName;
+                    await Terminal.ConnectWithOttAsync(_serverUri, debugOtt.Token);
+                }
+            }
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -334,6 +351,16 @@
     private async Task SendAsync()
     {
         if (string.IsNullOrWhiteSpace(_input) || !_connected) return;
+
+        // Track player name when a manual 'connect <name> ...' is typed
+        var trimmed = _input.Trim();
+        if (trimmed.StartsWith("connect ", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = trimmed.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2 && !string.Equals(parts[1], "token", StringComparison.OrdinalIgnoreCase))
+                _playerName = parts[1];
+        }
+
         await Terminal.SendAsync(_input);
         _input = string.Empty;
     }

@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models;
@@ -158,6 +159,33 @@ public class AuthController(
 
 		logger.LogInformation("Account registered: {Username} ({Id})", account.Username, account.Id);
 		return Ok(new AccountLoginResponse(account.Id!, account.Username, [], sessionToken));
+	}
+
+	/// <summary>Response body for the debug OTT endpoint.</summary>
+	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName);
+
+	/// <summary>
+	/// Development-only endpoint: issue a one-time token for player #1 without credentials.
+	/// Requires DebugAuth (automatically active in development mode).
+	/// </summary>
+	[HttpGet("debug-ott")]
+	[Authorize]
+	public async Task<IActionResult> GetDebugOtt()
+	{
+		var obj = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		if (!obj.IsT0)
+		{
+			logger.LogWarning("Debug OTT: #1 is not a player or does not exist");
+			return NotFound("Player #1 not found.");
+		}
+
+		var player = obj.AsPlayer;
+		var playerRef = new DBRef(player.Object.Key, player.Object.CreationTime);
+		const int ttl = 60;
+		var token = await ottStore.CreateTokenAsync(playerRef, TimeSpan.FromSeconds(ttl));
+
+		logger.LogInformation("Debug OTT issued for {Name} (#{Key})", player.Object.Name, player.Object.Key);
+		return Ok(new DebugOttResponse(token, ttl, player.Object.Name));
 	}
 
 	private static async Task<IReadOnlyList<CharacterSummary>> BuildCharacterSummariesAsync(IReadOnlyList<SharpPlayer> characters)

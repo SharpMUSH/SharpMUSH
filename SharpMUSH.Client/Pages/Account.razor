@@ -1,7 +1,9 @@
 @page "/account"
 @using SharpMUSH.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject AccountAuthService AccountAuth
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>My Account — SharpMUSH</PageTitle>
 
@@ -9,9 +11,19 @@
 
     @if (!AccountAuth.IsLoggedIn)
     {
-        <MudAlert Severity="Severity.Info">
-            You are not logged in to an account. Use the terminal login panel to log in.
-        </MudAlert>
+        @if (_isDebugAuth)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-2">
+                <strong>Debug Mode</strong> — You are authenticated as <em>DebugAdmin</em> (development environment).
+                No account session is associated; account management features require a real account login.
+            </MudAlert>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">
+                You are not logged in to an account. Use the terminal login panel to log in.
+            </MudAlert>
+        }
         <MudButton Class="mt-2" Variant="Variant.Filled" Color="Color.Primary"
                    OnClick='() => Nav.NavigateTo("/")'>Go to Home</MudButton>
         return;
@@ -179,10 +191,13 @@
     private string _newCharName = string.Empty;
     private string _newCharPassword = string.Empty;
     private string? _charError;
+    private bool _isDebugAuth;
 
     protected override async Task OnInitializedAsync()
     {
         await AccountAuth.InitAsync();
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _isDebugAuth = authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
             await RefreshCharactersAsync();
     }
