@@ -17,8 +17,11 @@
             monaco.languages.register({ id: 'mush', extensions: ['.mush', '.mu'], aliases: ['MUSHcode', 'MUSH'] });
 
             // ── Monarch tokenizer ──────────────────────────────────────────────
-            // NOTE: Monarch does not support character-class ranges (e.g. 0-9) when
-            // mixed with bare letters inside [...]. List digits explicitly instead.
+            // NOTE: Monarch performs @attribute expansion on regex strings at the
+            // text level — BEFORE parsing char classes. Any @word inside [...] is
+            // treated as an @attrName reference and fails if not defined. To avoid
+            // this, @ must NEVER appear inside a [...] character class in Monarch.
+            // We use (?:...) alternation so @ stands alone without following letters.
             monaco.languages.setMonarchTokensProvider('mush', {
                 tokenizer: {
                     root: [
@@ -34,9 +37,10 @@
                         // Register substitutions: %q<x> %v<x> %Q<x> %V<x>
                         [/%[qvQV][a-zA-Z0-9]/, 'variable.other.register'],
 
-                        // Single-char MUSH substitutions — digits listed individually
-                        // to avoid Monarch's restricted character-class range handling
-                        [/%[#!@nNlLsSrRdDcCpPtT0123456789]/, 'variable.other'],
+                        // MUSH percent-substitutions — @ must NOT be inside [...] in
+                        // Monarch (it expands @word as an attribute reference).
+                        // Use (?:...|@) alternation so @ appears outside char classes.
+                        [/%(?:[#!]|@|[nNlLsSrRdDcCpPtT]|[0-9])/, 'variable.other'],
 
                         // Object dbrefs: #123, #-1
                         [/#-?[0-9]+/, 'constant.other.dbref'],
