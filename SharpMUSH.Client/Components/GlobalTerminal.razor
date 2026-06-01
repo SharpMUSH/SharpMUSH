@@ -228,6 +228,17 @@
         await AccountAuth.InitAsync();
         if (!string.IsNullOrWhiteSpace(AccountAuth.Username))
             _accountIdentifier = AccountAuth.Username;
+
+        // If already authenticated, auto-load characters and show the picker
+        if (AccountAuth.IsLoggedIn && !Terminal.IsConnected)
+        {
+            var chars = await AccountAuth.GetCharactersAsync();
+            if (chars.Count > 0)
+            {
+                _showLoginPanel = true;
+                _showCharacterPicker = true;
+            }
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -23,6 +23,7 @@ public class DebugAuthenticationHandler(
 		var claims = new[]
 		{
 			new Claim(ClaimTypes.Name, "DebugAdmin"),
+			new Claim(ClaimTypes.NameIdentifier, "1"),
 			new Claim(ClaimTypes.Role, "Admin")
 		};
 		var identity = new ClaimsIdentity(claims, SchemeName);

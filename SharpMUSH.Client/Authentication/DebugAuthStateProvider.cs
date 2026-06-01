@@ -12,6 +12,7 @@ public class DebugAuthStateProvider : AuthenticationStateProvider
 		var claims = new List<Claim>
 		{
 			new(ClaimTypes.Name, "DebugAdmin"),
+			new(ClaimTypes.NameIdentifier, "1"),
 			new(ClaimTypes.Role, "Admin")
 		};
 
