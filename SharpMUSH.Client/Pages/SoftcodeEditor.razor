@@ -308,17 +308,22 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Always call ensureRegistered — it's cheap after first run and re-applies
-        // language/theme to the editor if it was constructed before registration completed.
-        await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.ensureRegistered");
+        // initEditor is a no-op until the editor has been created by BlazorMonaco
+        // (OnEditorInitAsync calls it too, but calling it here as a belt-and-suspenders
+        // ensures theme is set even on subsequent renders/navigations)
+        if (firstRender)
+            await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.initEditor", "mush-editor");
     }
 
     private StandaloneEditorConstructionOptions BuildEditorOptions(StandaloneCodeEditor editor)
     {
         return new StandaloneEditorConstructionOptions
         {
-            Language = "mush",
-            Theme = "mush-dark",
+            // Language and theme are applied explicitly in OnEditorInitAsync via initEditor().
+            // We avoid setting 'mush' here because the language may not be registered yet
+            // when Monaco constructs the editor (AMD async loading race condition).
+            Language = "plaintext",
+            Theme = "vs-dark",
             AutomaticLayout = true,
             Value = _selectedAttr?.Value ?? string.Empty,
             FontFamily = "Consolas, 'Courier New', monospace",
@@ -334,7 +339,9 @@
 
     private async Task OnEditorInitAsync()
     {
-        await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.ensureRegistered");
+        // Editor has just been created by BlazorMonaco — apply mush language + mush-dark theme.
+        // This is the primary hook; language/theme are applied directly to the new editor instance.
+        await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.initEditor", "mush-editor");
     }
 
     private void OnEditorChanged(ModelContentChangedEvent e) { }

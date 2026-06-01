@@ -162,32 +162,49 @@
     window.SharpMUSH = window.SharpMUSH || {};
 
     window.SharpMUSH.Monaco = {
-        // Called from Blazor OnAfterRenderAsync / OnDidInit to ensure language is registered.
-        // After registering, re-applies the mush language and theme to any already-open editors
-        // (the editor is constructed before OnDidInit fires, so language/theme must be re-applied).
-        ensureRegistered: function () {
-            if (typeof monaco === 'undefined') return false;
-            var wasNew = !_registered;
-            doRegister();
-            if (wasNew || _registered) {
-                try {
-                    // Apply theme globally
-                    monaco.editor.setTheme('mush-dark');
-                    // Re-apply 'mush' language to any editor whose model still uses 'plaintext'
-                    monaco.editor.getEditors().forEach(function (ed) {
-                        var model = ed.getModel();
-                        if (model && (model.getLanguageId() === 'plaintext' || model.getLanguageId() !== 'mush')) {
-                            monaco.editor.setModelLanguage(model, 'mush');
-                        }
+        // Called from C# OnEditorInitAsync after BlazorMonaco creates the editor.
+        // Ensures language/theme are registered, then applies them to the named editor
+        // by looking it up in window.blazorMonaco.editors (BlazorMonaco's registry).
+        initEditor: function (editorId) {
+            if (typeof monaco === 'undefined') {
+                // Monaco not ready yet — try via AMD callback, then retry
+                if (typeof require !== 'undefined') {
+                    require(['vs/editor/editor.main'], function () {
+                        doRegister();
+                        window.SharpMUSH.Monaco.initEditor(editorId);
                     });
-                } catch (e) { console.warn('SharpMUSH: could not re-apply editor language', e); }
+                }
+                return false;
+            }
+
+            doRegister();
+
+            try {
+                // Set global theme
+                monaco.editor.setTheme('mush-dark');
+
+                // Find the editor by ID from BlazorMonaco's own registry
+                var entry = (window.blazorMonaco && window.blazorMonaco.editors || [])
+                    .find(function (e) { return e.id === editorId; });
+
+                var editor = entry ? entry.editor : null;
+
+                // Fallback: iterate monaco's own editor list
+                if (!editor) {
+                    var all = monaco.editor.getEditors();
+                    editor = all && all.length > 0 ? all[all.length - 1] : null;
+                }
+
+                if (editor) {
+                    var model = editor.getModel();
+                    if (model && model.getLanguageId() !== 'mush') {
+                        monaco.editor.setModelLanguage(model, 'mush');
+                    }
+                }
+            } catch (e) {
+                console.warn('SharpMUSH: initEditor failed', e);
             }
             return true;
-        },
-
-        // Set the editor value from C#.
-        setValue: function (editorId, value) {
-            // BlazorMonaco handles this via its API; this is a fallback.
         },
 
         // Focus the editor.
@@ -206,7 +223,7 @@
         },
     };
 
-    // Attempt immediate registration (if Monaco loaded synchronously)
+    // Attempt immediate registration (if Monaco loaded synchronously before Blazor starts)
     doRegister();
 
     // Also hook into AMD require in case Monaco uses async loading
