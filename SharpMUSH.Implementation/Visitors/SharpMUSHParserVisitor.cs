@@ -253,11 +253,31 @@ public class SharpMUSHParserVisitor(
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private MString GetContextText(ParserRuleContext context)
 	{
-		var length = context.Stop?.StopIndex is null
-			? 0
-			: context.Stop.StopIndex - context.Start.StartIndex + 1;
-
+		var stopIndex = GetLastRealStopIndex(context);
+		var length = stopIndex >= 0 ? stopIndex - context.Start.StartIndex + 1 : 0;
 		return MModule.substring(context.Start.StartIndex, length, source);
+	}
+
+	/// <summary>
+	/// Walks the parse tree right-to-left to find the stop index of the last
+	/// real (non-synthetic) token. Virtual tokens inserted by ANTLR error recovery
+	/// have a negative <see cref="IToken.TokenIndex"/>; we skip those.
+	/// </summary>
+	private static int GetLastRealStopIndex(IParseTree tree)
+	{
+		if (tree is ITerminalNode terminal)
+			return terminal.Symbol.TokenIndex >= 0 ? terminal.Symbol.StopIndex : -1;
+
+		if (tree is ParserRuleContext ctx)
+		{
+			for (var i = ctx.ChildCount - 1; i >= 0; i--)
+			{
+				var result = GetLastRealStopIndex(ctx.GetChild(i));
+				if (result >= 0) return result;
+			}
+		}
+
+		return -1;
 	}
 
 	/// <summary>
@@ -284,15 +304,14 @@ public class SharpMUSHParserVisitor(
 	{
 		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
 		{
-			// var a = await VisitChildren(context);
-			return new CallState(context.GetText());
+			return new CallState(GetContextText(context));
 		}
 
 		// PennMUSH: Inside function-arg braces, PE_FUNCTION_CHECK is removed.
 		// Functions are not recognized — return literal text of the function call.
 		if (_suppressFunctionEval > 0)
 		{
-			return new CallState(context.GetText());
+			return new CallState(GetContextText(context));
 		}
 
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
@@ -561,7 +580,7 @@ public class SharpMUSHParserVisitor(
 			else if (attribute.Flags.HasFlag(FunctionFlags.NoParse) && attribute.MaxArgs == 1)
 			{
 				return new CallState(
-					MModule.substring(context.Start.StartIndex, context.Stop.StopIndex - context.Start.StartIndex + 1, src),
+					MModule.substring(context.Start.StartIndex, GetLastRealStopIndex(context) - context.Start.StartIndex + 1, src),
 					contextDepth,
 					null,
 					async () => (await visitor.VisitChildren(context) ?? CallState.Empty with { Depth = context.Depth() })
@@ -2099,12 +2118,7 @@ public class SharpMUSHParserVisitor(
 			return result;
 		}
 
-		var text = MModule.substring(
-			context.Start.StartIndex,
-			context.Stop?.StopIndex is null
-				? 0
-				: context.Stop.StopIndex - context.Start.StartIndex + 1,
-			source);
+		var text = GetContextText(context);
 		return new CallState(text, context.Depth());
 	}
 
@@ -2125,12 +2139,8 @@ public class SharpMUSHParserVisitor(
 			return result;
 		}
 
-		var text = MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex is null
-				? 0
-				: context.Stop.StopIndex - context.Start.StartIndex + 1,
-			source);
-		return new CallState(text, context.Depth());
+		var text2 = GetContextText(context);
+		return new CallState(text2, context.Depth());
 	}
 
 	public override async ValueTask<CallState?> VisitStartSingleCommandString(

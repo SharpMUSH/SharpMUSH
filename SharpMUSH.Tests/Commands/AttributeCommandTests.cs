@@ -528,6 +528,11 @@ public class AttributeCommandTests
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr.IsAttribute).IsTrue()
 			.Because("lenient command parsing should store the ANTLR-recovered value");
+
+		// The stored value must NOT contain ANTLR recovery annotations like <missing ')'>
+		var storedValue = attr.AsAttribute.Last().Value.ToPlainText();
+		await Assert.That(storedValue).IsEqualTo("ansi(hr,fun")
+			.Because("lenient mode stores verbatim source text, not ANTLR error-recovery annotations");
 	}
 
 	[Test]
