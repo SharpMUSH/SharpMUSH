@@ -5,6 +5,7 @@
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
 @inject ITerminalService Terminal
+@inject AccountAuthService AccountAuth
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
 <MudPopoverProvider />
@@ -23,6 +24,52 @@
         }
         <MudSpacer />
         <LanguagePicker />
+
+        @* Character / Account switcher — shown when logged in to an account *@
+        @if (AccountAuth.IsLoggedIn)
+        {
+            <MudMenu Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                <ActivatorContent>
+                    <MudButton Variant="Variant.Text" Color="Color.Inherit"
+                               EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                               Style="text-transform:none;font-size:13px;">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
+                        @(_terminalPlayerName ?? AccountAuth.DisplayName)
+                    </MudButton>
+                </ActivatorContent>
+                <ChildContent>
+                    <MudMenuItem Disabled="true">
+                        <MudText Typo="Typo.caption" Style="color:#888;">
+                            Account: @AccountAuth.DisplayName
+                        </MudText>
+                    </MudMenuItem>
+                    @if (AccountAuth.Characters.Count > 1)
+                    {
+                        <MudDivider />
+                        <MudMenuItem Disabled="true">
+                            <MudText Typo="Typo.caption" Style="color:#888;">Switch to:</MudText>
+                        </MudMenuItem>
+                        @foreach (var c in AccountAuth.Characters)
+                        {
+                            var character = c;
+                            <MudMenuItem OnClick="() => SwitchCharacterAsync(character)">
+                                @character.Name (#@character.DbrefNumber)
+                            </MudMenuItem>
+                        }
+                    }
+                    <MudDivider />
+                    <MudMenuItem Href="/account">
+                        <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small" Class="mr-2" />
+                        Account Settings
+                    </MudMenuItem>
+                    <MudMenuItem OnClick="AccountLogoutAsync">
+                        <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Class="mr-2" />
+                        Disconnect
+                    </MudMenuItem>
+                </ChildContent>
+            </MudMenu>
+        }
+
         <MudTooltip Text="@(_terminalOpen ? "Close Terminal" : "Open Terminal")">
             <MudIconButton Icon="@Icons.Material.Filled.Terminal"
                            Color="@(_terminalOpen ? Color.Success : Color.Inherit)"
@@ -104,11 +151,35 @@
     private bool _drawerOpen = false;
     private bool _isConfigRoute = false;
     private bool _terminalOpen = false;
+    private string? _terminalPlayerName;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         NavigationManager.LocationChanged += OnLocationChanged;
         UpdateConfigRouteState();
+        await AccountAuth.InitAsync();
+    }
+
+    private async Task SwitchCharacterAsync(AccountAuthService.CharacterSummary character)
+    {
+        var token = await AccountAuth.GetOttForCharacterAsync(character);
+        if (token is null) return;
+        await Terminal.DisconnectAsync();
+        await Task.Delay(200);
+
+        var serverUri = Terminal.ServerUri ?? "ws://localhost:4202/ws";
+        await Terminal.ConnectWithOttAsync(serverUri, token);
+        _terminalPlayerName = character.Name;
+        _terminalOpen = true;
+        StateHasChanged();
+    }
+
+    private async Task AccountLogoutAsync()
+    {
+        await AccountAuth.LogoutAsync();
+        await Terminal.DisconnectAsync();
+        _terminalPlayerName = null;
+        StateHasChanged();
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)

@@ -1,0 +1,261 @@
+@page "/account"
+@using SharpMUSH.Client.Services
+@inject AccountAuthService AccountAuth
+@inject NavigationManager Nav
+
+<PageTitle>My Account — SharpMUSH</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="pa-4">
+
+    @if (!AccountAuth.IsLoggedIn)
+    {
+        <MudAlert Severity="Severity.Info">
+            You are not logged in to an account. Use the terminal login panel to log in.
+        </MudAlert>
+        <MudButton Class="mt-2" Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick='() => Nav.NavigateTo("/")'>Go to Home</MudButton>
+        return;
+    }
+
+    <MudText Typo="Typo.h5" Class="mb-4">My Account: @AccountAuth.DisplayName</MudText>
+
+    @* ── Profile section ── *@
+    <MudPaper Elevation="1" Class="pa-4 mb-4">
+        <MudText Typo="Typo.h6" Class="mb-3">Profile</MudText>
+
+        @* Display name *@
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            @if (_editingDisplayName)
+            {
+                <MudTextField @bind-Value="_newDisplayName" Label="Display name"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1;" />
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
+                           Disabled="_busy" OnClick="SaveDisplayNameAsync">Save</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Text"
+                           OnClick="() => _editingDisplayName = false">Cancel</MudButton>
+            }
+            else
+            {
+                <MudText Style="flex:1;"><strong>Display name:</strong> @AccountAuth.DisplayName</MudText>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                           OnClick="() => { _newDisplayName = AccountAuth.DisplayName ?? string.Empty; _editingDisplayName = true; }">
+                    Edit
+                </MudButton>
+            }
+        </div>
+
+        @* Password *@
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            @if (_editingPassword)
+            {
+                <div style="display:flex;flex-direction:column;gap:6px;flex:1;">
+                    <MudTextField @bind-Value="_oldPassword" Label="Current password"
+                                  InputType="InputType.Password"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField @bind-Value="_newPassword" Label="New password"
+                                  InputType="InputType.Password"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
+                               Disabled="_busy" OnClick="SavePasswordAsync">Save</MudButton>
+                    <MudButton Size="Size.Small" Variant="Variant.Text"
+                               OnClick="() => _editingPassword = false">Cancel</MudButton>
+                </div>
+            }
+            else
+            {
+                <MudText Style="flex:1;"><strong>Password:</strong> ••••••••</MudText>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                           OnClick="() => _editingPassword = true">Change</MudButton>
+            }
+        </div>
+
+        @if (_profileError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-2">@_profileError</MudAlert>
+        }
+        @if (_profileSuccess is not null)
+        {
+            <MudAlert Severity="Severity.Success" Class="mt-2">@_profileSuccess</MudAlert>
+        }
+    </MudPaper>
+
+    @* ── Characters section ── *@
+    <MudPaper Elevation="1" Class="pa-4 mb-4">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <MudText Typo="Typo.h6">Characters</MudText>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                       OnClick="RefreshCharactersAsync" Disabled="_busy">
+                <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Class="mr-1" />
+                Refresh
+            </MudButton>
+        </div>
+
+        @if (_loadingChars)
+        {
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        }
+        else if (AccountAuth.Characters.Count == 0)
+        {
+            <MudText Style="color:#888;">No characters linked to this account.</MudText>
+        }
+        else
+        {
+            <MudTable Items="AccountAuth.Characters" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Dbref</MudTh>
+                    <MudTh>Flags</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Name</MudTd>
+                    <MudTd>#@context.DbrefNumber</MudTd>
+                    <MudTd>
+                        @if (!string.IsNullOrWhiteSpace(context.Flags))
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.Flags</MudChip>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.LinkOff" Size="Size.Small"
+                                       Color="Color.Warning" aria-label="Unlink character"
+                                       OnClick="() => UnlinkCharacterAsync(context.DbrefNumber)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+
+        @* Create new character *@
+        @if (_showCreateChar)
+        {
+            <MudDivider Class="my-3" />
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Create new character</MudText>
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                <MudTextField @bind-Value="_newCharName" Label="Character name"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1;min-width:140px;" />
+                <MudTextField @bind-Value="_newCharPassword" Label="Password"
+                              InputType="InputType.Password"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1;min-width:140px;" />
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
+                           Disabled="_busy" OnClick="CreateCharacterAsync">Create</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Text"
+                           OnClick="() => _showCreateChar = false">Cancel</MudButton>
+            </div>
+            @if (_charError is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-2">@_charError</MudAlert>
+            }
+        }
+        else
+        {
+            <MudButton Class="mt-3" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                       OnClick="() => { _showCreateChar = true; _charError = null; }">
+                + Create new character
+            </MudButton>
+        }
+    </MudPaper>
+
+    @* ── Logout ── *@
+    <MudButton Variant="Variant.Outlined" Color="Color.Error"
+               OnClick="LogoutAsync">
+        Log out of account
+    </MudButton>
+
+</MudContainer>
+
+@code {
+    private bool _editingDisplayName;
+    private bool _editingPassword;
+    private string _newDisplayName = string.Empty;
+    private string _oldPassword = string.Empty;
+    private string _newPassword = string.Empty;
+    private string? _profileError;
+    private string? _profileSuccess;
+    private bool _busy;
+    private bool _loadingChars;
+    private bool _showCreateChar;
+    private string _newCharName = string.Empty;
+    private string _newCharPassword = string.Empty;
+    private string? _charError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AccountAuth.InitAsync();
+        if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
+            await RefreshCharactersAsync();
+    }
+
+    private async Task RefreshCharactersAsync()
+    {
+        _loadingChars = true;
+        StateHasChanged();
+        await AccountAuth.GetCharactersAsync();
+        _loadingChars = false;
+        StateHasChanged();
+    }
+
+    private async Task SaveDisplayNameAsync()
+    {
+        ClearMessages();
+        _busy = true;
+        var (success, error) = await AccountAuth.ChangeDisplayNameAsync(_newDisplayName);
+        _busy = false;
+        _editingDisplayName = !success;
+        if (success) _profileSuccess = "Display name updated.";
+        else _profileError = error;
+        StateHasChanged();
+    }
+
+    private async Task SavePasswordAsync()
+    {
+        ClearMessages();
+        _busy = true;
+        var (success, error) = await AccountAuth.ChangePasswordAsync(_oldPassword, _newPassword);
+        _busy = false;
+        _editingPassword = !success;
+        _oldPassword = string.Empty;
+        _newPassword = string.Empty;
+        if (success) _profileSuccess = "Password updated.";
+        else _profileError = error;
+        StateHasChanged();
+    }
+
+    private async Task CreateCharacterAsync()
+    {
+        _charError = null;
+        _busy = true;
+        StateHasChanged();
+        var (success, error, _) = await AccountAuth.CreateCharacterAsync(_newCharName, _newCharPassword);
+        _busy = false;
+        if (success)
+        {
+            _showCreateChar = false;
+            _newCharName = string.Empty;
+            _newCharPassword = string.Empty;
+        }
+        else
+        {
+            _charError = error;
+        }
+        StateHasChanged();
+    }
+
+    private async Task UnlinkCharacterAsync(int dbrefNumber)
+    {
+        _busy = true;
+        var (success, error) = await AccountAuth.UnlinkCharacterAsync(dbrefNumber);
+        _busy = false;
+        if (!success) _profileError = error;
+        StateHasChanged();
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AccountAuth.LogoutAsync();
+        Nav.NavigateTo("/");
+    }
+
+    private void ClearMessages() { _profileError = null; _profileSuccess = null; }
+}

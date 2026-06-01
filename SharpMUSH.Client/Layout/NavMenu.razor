@@ -17,6 +17,10 @@
         <MudNavLink Href="/softcode" Icon="@Icons.Material.Filled.Code" IconColor="Color.Secondary">
             @if (!IsCollapsed) { <text>@Loc["SoftcodeEditor"]</text> }
         </MudNavLink>
+
+        <MudNavLink Href="/account" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>My Account</text> }
+        </MudNavLink>
         
         @if (!IsCollapsed)
         {

@@ -12,6 +12,9 @@ public interface ITerminalService
 
 	bool IsConnected { get; }
 
+	/// <summary>The last server URI connected to (or null if never connected).</summary>
+	string? ServerUri { get; }
+
 	/// <summary>
 	/// The port descriptor of this WebSocket connection, captured after login via
 	/// <see cref="InitializePortAsync"/>.  Null until initialization completes.
@@ -29,6 +32,12 @@ public interface ITerminalService
 	/// request fails (e.g. API server unreachable).
 	/// </summary>
 	Task ConnectAndLoginAsync(string serverUri, string playerName, string password, OttAuthService ottAuth);
+
+	/// <summary>
+	/// Connect to <paramref name="serverUri"/> and authenticate with an already-obtained OTT.
+	/// Used when the account session provided the token directly.
+	/// </summary>
+	Task ConnectWithOttAsync(string serverUri, string ott);
 
 	Task DisconnectAsync();
 

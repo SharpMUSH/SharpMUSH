@@ -1,0 +1,163 @@
+@using SharpMUSH.Client.Services
+@inject AccountAuthService AccountAuth
+@inject ITerminalService Terminal
+@inject OttAuthService OttAuth
+
+<MudPaper Elevation="0" Style="padding:12px;min-width:320px;">
+    <MudText Typo="Typo.subtitle1" Style="margin-bottom:8px;">
+        Welcome back, <strong>@AccountAuth.DisplayName</strong>
+    </MudText>
+    <MudText Typo="Typo.body2" Style="color:#888;margin-bottom:12px;">Select a character to connect as:</MudText>
+
+    @if (AccountAuth.Characters.Count == 0 && !_showCreate)
+    {
+        <MudText Typo="Typo.body2" Style="color:#aaa;">
+            You have no characters yet. Create one below.
+        </MudText>
+    }
+    else
+    {
+        <MudRadioGroup @bind-Value="_selectedDbref">
+            @foreach (var c in AccountAuth.Characters)
+            {
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                    <MudRadio Value="@c.DbrefNumber" Color="Color.Primary" Size="Size.Small">
+                        @c.Name <MudChip T="string" Size="Size.Small" Style="font-size:10px;padding:0 4px;">
+                            #@c.DbrefNumber
+                        </MudChip>
+                        @if (!string.IsNullOrWhiteSpace(c.Flags))
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info"
+                                     Style="font-size:10px;padding:0 4px;">@c.Flags</MudChip>
+                        }
+                    </MudRadio>
+                </div>
+            }
+        </MudRadioGroup>
+    }
+
+    @* Create character form *@
+    @if (_showCreate)
+    {
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px;">
+            <MudText Typo="Typo.subtitle2">New character</MudText>
+            <MudTextField @bind-Value="_newCharName" Label="Character name"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <MudTextField @bind-Value="_newCharPassword" Label="Password"
+                          InputType="InputType.Password"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+            @if (_createError is not null)
+            {
+                <MudText Color="Color.Error" Typo="Typo.caption">@_createError</MudText>
+            }
+            <div style="display:flex;gap:6px;">
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                           OnClick="CreateCharacterAsync" Disabled="_busy">Create</MudButton>
+                <MudButton Variant="Variant.Text" Size="Size.Small"
+                           OnClick="() => _showCreate = false">Cancel</MudButton>
+            </div>
+        </div>
+    }
+    else
+    {
+        <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
+                   Style="margin-top:8px;"
+                   OnClick="() => _showCreate = true">+ Create new character</MudButton>
+    }
+
+    @if (_connectError is not null)
+    {
+        <MudText Color="Color.Error" Typo="Typo.caption" Style="margin-top:6px;">@_connectError</MudText>
+    }
+
+    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="OnCancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   Disabled="@(_selectedDbref == 0 || _busy)"
+                   OnClick="ConnectAsCharacterAsync">Connect</MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public string ServerUri { get; set; } = "ws://localhost:4202/ws";
+    [Parameter] public EventCallback OnConnected { get; set; }
+    [Parameter] public EventCallback OnCancelled { get; set; }
+
+    private int _selectedDbref;
+    private bool _busy;
+    private bool _showCreate;
+    private string _newCharName = string.Empty;
+    private string _newCharPassword = string.Empty;
+    private string? _createError;
+    private string? _connectError;
+
+    protected override void OnParametersSet()
+    {
+        // Pre-select the first character if none selected
+        if (_selectedDbref == 0 && AccountAuth.Characters.Count > 0)
+            _selectedDbref = AccountAuth.Characters[0].DbrefNumber;
+    }
+
+    private async Task ConnectAsCharacterAsync()
+    {
+        _busy = true;
+        _connectError = null;
+        StateHasChanged();
+
+        var character = AccountAuth.Characters.FirstOrDefault(c => c.DbrefNumber == _selectedDbref);
+        if (character is null) { _connectError = "Character not found."; _busy = false; return; }
+
+        var token = await AccountAuth.GetOttForCharacterAsync(character);
+        if (token is null)
+        {
+            _connectError = "Failed to get authentication token. The account session may have expired — please log in again.";
+            _busy = false;
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            await Terminal.ConnectWithOttAsync(ServerUri, token);
+            await OnConnected.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _connectError = ex.Message;
+        }
+
+        _busy = false;
+        StateHasChanged();
+    }
+
+    private async Task CreateCharacterAsync()
+    {
+        _createError = null;
+        _busy = true;
+        StateHasChanged();
+
+        var (success, error, character) = await AccountAuth.CreateCharacterAsync(_newCharName, _newCharPassword);
+        if (!success)
+        {
+            _createError = error ?? "Creation failed.";
+            _busy = false;
+            StateHasChanged();
+            return;
+        }
+
+        _showCreate = false;
+        _newCharName = string.Empty;
+        _newCharPassword = string.Empty;
+        if (character is not null)
+            _selectedDbref = character.DbrefNumber;
+
+        _busy = false;
+        StateHasChanged();
+    }
+
+    private async Task OnCancel()
+    {
+        await AccountAuth.LogoutAsync();
+        await OnCancelled.InvokeAsync();
+    }
+}

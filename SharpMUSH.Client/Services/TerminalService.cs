@@ -19,6 +19,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	private readonly ILogger<TerminalService> _logger = logger;
 	private readonly List<TerminalLine> _lines = new(MaxLines);
 	private long? _myPort;
+	private string? _serverUri;
 
 	// Pending correlated request: (request-id, completion source, accumulated lines)
 	private (string ReqId, TaskCompletionSource<string[]> Tcs, List<string> Buffer)? _pending;
@@ -32,6 +33,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// <inheritdoc/>
 	public long? MyPort => _myPort;
 
+	/// <inheritdoc/>
+	public string? ServerUri => _serverUri;
+
 	public IReadOnlyList<TerminalLine> Lines
 	{
 		get { lock (_lines) return _lines.AsReadOnly(); }
@@ -39,6 +43,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 	public async Task ConnectAsync(string serverUri)
 	{
+		_serverUri = serverUri;
 		wsService.MessageReceived -= HandleMessage;
 		wsService.ConnectionStateChanged -= HandleStateChange;
 		wsService.MessageReceived += HandleMessage;
@@ -50,6 +55,16 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	}
 
 	/// <inheritdoc/>
+	public async Task ConnectWithOttAsync(string serverUri, string ott)
+	{
+		await ConnectAsync(serverUri);
+		await Task.Delay(300);
+		_logger.LogInformation("Using pre-fetched OTT for account character login");
+		await wsService.SendAsync($"connect token {ott}");
+		AddSystemLine("[OTT] Authenticating…");
+		_ = Task.Delay(1500).ContinueWith(_ => InitializePortAsync(), TaskScheduler.Default);
+	}
+
 	public async Task ConnectAndLoginAsync(string serverUri, string playerName, string password, OttAuthService ottAuth)
 	{
 		await ConnectAsync(serverUri);

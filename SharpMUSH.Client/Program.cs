@@ -37,6 +37,7 @@ builder.Services.AddSingleton<HelpService>(sp =>
 });
 builder.Services.AddScoped<CredentialService>();
 builder.Services.AddSingleton<OttAuthService>();
+builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 
 builder.Services.AddHttpClient("api", sp =>
