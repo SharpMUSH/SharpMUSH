@@ -8,13 +8,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
-/// Issues One-Time Tokens (OTTs) for web-based MUSH authentication.
-/// <para>
-/// The Blazor client POSTs MUSH credentials here over HTTPS.  On successful
-/// validation the endpoint returns a short-lived OTT that the client uses to
-/// authenticate the WebSocket connection via <c>connect token &lt;ott&gt;</c>.
-/// The plain-text password never touches the WebSocket.
-/// </para>
+/// Issues One-Time Tokens (OTTs) for web-based MUSH authentication and handles
+/// account-level login/registration for the web UI.
 /// </summary>
 [ApiController]
 [Route("api/auth")]
@@ -22,23 +17,55 @@ public class AuthController(
 	IMediator mediator,
 	IPasswordService passwordService,
 	IOttStore ottStore,
+	IAccountService accountService,
+	IAccountSessionStore accountSessionStore,
 	ILogger<AuthController> logger) : ControllerBase
 {
-	/// <summary>Request body for OTT issuance.</summary>
-	public record MushTokenRequest(string PlayerName, string Password);
+	/// <summary>Request body for OTT issuance via MUSH character credentials.</summary>
+	public record MushTokenRequest(string? PlayerName, string? Password, string? AccountSessionToken, int? CharacterKey, long? CharacterCreationTime);
 
 	/// <summary>Response body containing the one-time token.</summary>
 	public record MushTokenResponse(string Token, int ExpiresIn);
 
 	/// <summary>
 	/// Validate MUSH credentials and issue a one-time login token.
-	/// The token is valid for 60 seconds and can only be used once.
+	/// Accepts either:<br/>
+	/// - Character credentials: <c>{ PlayerName, Password }</c><br/>
+	/// - Account session: <c>{ AccountSessionToken, CharacterKey, CharacterCreationTime }</c>
 	/// </summary>
 	[HttpPost("mush-token")]
 	public async Task<IActionResult> GetMushToken([FromBody] MushTokenRequest request)
 	{
+		// Path A: Account session token + character reference
+		if (!string.IsNullOrWhiteSpace(request.AccountSessionToken) && request.CharacterKey.HasValue)
+		{
+			var accountId = await accountSessionStore.ValidateAsync(request.AccountSessionToken);
+			if (accountId is null)
+			{
+				logger.LogInformation("OTT via account session: invalid or expired session token");
+				return Unauthorized("Invalid or expired account session.");
+			}
+
+			// Verify that this character belongs to the account
+			var characters = await accountService.GetCharactersAsync(accountId);
+			var character = characters.FirstOrDefault(c => c.Object.Key == request.CharacterKey.Value);
+			if (character is null)
+			{
+				logger.LogInformation("OTT via account session: character #{Key} not linked to account {AccountId}", request.CharacterKey.Value, accountId);
+				return Unauthorized("Character is not linked to this account.");
+			}
+
+			var charRef = new DBRef(character.Object.Key, character.Object.CreationTime);
+			const int sessionTtl = 60;
+			var sessionToken = await ottStore.CreateTokenAsync(charRef, TimeSpan.FromSeconds(sessionTtl));
+
+			logger.LogInformation("Issued OTT for character {Name} (#{Key}) via account session", character.Object.Name, character.Object.Key);
+			return Ok(new MushTokenResponse(sessionToken, sessionTtl));
+		}
+
+		// Path B: Direct character credentials
 		if (string.IsNullOrWhiteSpace(request.PlayerName))
-			return BadRequest("PlayerName is required.");
+			return BadRequest("PlayerName or AccountSessionToken is required.");
 
 		var player = await mediator
 			.CreateStream(new GetPlayerQuery(request.PlayerName))
@@ -75,4 +102,78 @@ public class AuthController(
 		logger.LogInformation("Issued OTT for player {Name} (#{Key})", player.Object.Name, player.Object.Key);
 		return Ok(new MushTokenResponse(token, ttlSeconds));
 	}
+
+	/// <summary>Request body for account login.</summary>
+	public record AccountLoginRequest(string DisplayNameOrEmail, string Password);
+
+	/// <summary>Character summary included in account login/register responses.</summary>
+	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
+
+	/// <summary>Response body for account login and registration.</summary>
+	public record AccountLoginResponse(string AccountId, string DisplayName, IReadOnlyList<CharacterSummary> Characters, string AccountSessionToken);
+
+	/// <summary>
+	/// Authenticate to an account (by display name or email) and get the character list.
+	/// Returns an account session token valid for 15 minutes (sliding window).
+	/// </summary>
+	[HttpPost("account-login")]
+	public async Task<IActionResult> AccountLogin([FromBody] AccountLoginRequest request)
+	{
+		if (string.IsNullOrWhiteSpace(request.DisplayNameOrEmail) || string.IsNullOrWhiteSpace(request.Password))
+			return BadRequest("DisplayNameOrEmail and Password are required.");
+
+		var account = await accountService.AuthenticateAsync(request.DisplayNameOrEmail, request.Password);
+		if (account is null)
+		{
+			logger.LogInformation("Account login failed for {Identifier}", request.DisplayNameOrEmail);
+			return Unauthorized("Invalid account credentials.");
+		}
+
+		var characters = await accountService.GetCharactersAsync(account.Id!);
+		var charSummaries = await BuildCharacterSummariesAsync(characters);
+
+		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
+		logger.LogInformation("Account login success for {DisplayName} ({Id})", account.DisplayName, account.Id);
+		return Ok(new AccountLoginResponse(account.Id!, account.DisplayName, charSummaries, sessionToken));
+	}
+
+	/// <summary>Request body for account registration.</summary>
+	public record AccountRegisterRequest(string DisplayName, string? Email, string Password);
+
+	/// <summary>
+	/// Create a new account and return an account session. Email is optional.
+	/// </summary>
+	[HttpPost("account-register")]
+	public async Task<IActionResult> AccountRegister([FromBody] AccountRegisterRequest request)
+	{
+		if (string.IsNullOrWhiteSpace(request.DisplayName) || string.IsNullOrWhiteSpace(request.Password))
+			return BadRequest("DisplayName and Password are required.");
+
+		try
+		{
+			var account = await accountService.CreateAccountAsync(request.DisplayName, request.Email, request.Password);
+			var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
+
+			logger.LogInformation("Account registered: {DisplayName} ({Id})", account.DisplayName, account.Id);
+			return Ok(new AccountLoginResponse(account.Id!, account.DisplayName, [], sessionToken));
+		}
+		catch (InvalidOperationException ex)
+		{
+			return Conflict(ex.Message);
+		}
+	}
+
+	private static async Task<IReadOnlyList<CharacterSummary>> BuildCharacterSummariesAsync(IReadOnlyList<SharpPlayer> characters)
+	{
+		var summaries = new List<CharacterSummary>();
+		foreach (var c in characters)
+		{
+			var flagString = string.Join(" ", await c.Object.Flags.Value
+				.Select(f => f.Name)
+				.ToListAsync());
+			summaries.Add(new CharacterSummary(c.Object.Key, c.Object.CreationTime, c.Object.Name, flagString));
+		}
+		return summaries;
+	}
 }
+

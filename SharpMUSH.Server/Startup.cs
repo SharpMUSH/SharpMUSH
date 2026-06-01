@@ -153,6 +153,8 @@ public class Startup(
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
 		services.AddSingleton<IOttStore, InMemoryOttStore>();
+		services.AddSingleton<IAccountSessionStore, InMemoryAccountSessionStore>();
+		services.AddSingleton<IAccountService, AccountService>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<ICommunicationService, CommunicationService>();
 		services.AddSingleton<ILockService, LockService>();

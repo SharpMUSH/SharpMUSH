@@ -86,6 +86,38 @@ public class ConnectionService(
 			IConnectionService.ConnectionState.LoggedIn));
 	}
 
+	public async ValueTask BindAccount(long handle, string accountId)
+	{
+		var get = Get(handle);
+		if (get is null) return;
+
+		var oldState = get.State;
+		_sessionState.AddOrUpdate(handle,
+			_ => throw new InvalidDataException("Tried to add a new handle during BindAccount."),
+			(_, y) =>
+			{
+				y.Metadata["AccountId"] = accountId;
+				return y with { State = IConnectionService.ConnectionState.AccountMode };
+			});
+
+		if (stateStore != null)
+		{
+			await stateStore.UpdateMetadataAsync(handle, "AccountId", accountId);
+			await stateStore.UpdateMetadataAsync(handle, "State", "AccountMode");
+		}
+
+		foreach (var handler in _handlers)
+		{
+			handler((handle, null, oldState, IConnectionService.ConnectionState.AccountMode));
+		}
+
+		await publisher.Publish(new ConnectionStateChangeNotification(handle, null, oldState,
+			IConnectionService.ConnectionState.AccountMode));
+
+		telemetryService?.RecordConnectionEvent("account_mode");
+		UpdateConnectionMetrics();
+	}
+
 	public void Update(long handle, string key, string value)
 	{
 		var get = Get(handle);
@@ -224,6 +256,7 @@ public class ConnectionService(
 			var state = data.State switch
 			{
 				"LoggedIn" => IConnectionService.ConnectionState.LoggedIn,
+				"AccountMode" => IConnectionService.ConnectionState.AccountMode,
 				"Connected" => IConnectionService.ConnectionState.Connected,
 				_ => IConnectionService.ConnectionState.Connected
 			};
@@ -246,7 +279,7 @@ public class ConnectionService(
 
 	private void UpdateConnectionMetrics()
 	{
-		var activeConnections = _sessionState.Count(x => x.Value.State is IConnectionService.ConnectionState.Connected or IConnectionService.ConnectionState.LoggedIn);
+		var activeConnections = _sessionState.Count(x => x.Value.State is IConnectionService.ConnectionState.Connected or IConnectionService.ConnectionState.AccountMode or IConnectionService.ConnectionState.LoggedIn);
 		var loggedInPlayers = _sessionState.Count(x => x.Value.State is IConnectionService.ConnectionState.LoggedIn);
 
 		telemetryService?.SetActiveConnectionCount(activeConnections);
