@@ -140,3 +140,25 @@ body {
     max-height: 120px;
     overflow-y: auto;
 }
+
+/* ── Monaco Editor: ensure hover/suggestion widgets appear above MudBlazor tabs ── */
+/* fixedOverflowWidgets:true moves them to document body, but belt-and-suspenders z-index */
+.monaco-editor-overlaymessage,
+.monaco-hover,
+.monaco-editor .suggest-widget,
+.monaco-editor .parameter-hints-widget {
+    z-index: 10000 !important;
+}
+
+/* ── MUSH Help Dialog content ── */
+.mush-help-content pre {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    padding: 8px 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+.mush-help-content code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.9em;
+}

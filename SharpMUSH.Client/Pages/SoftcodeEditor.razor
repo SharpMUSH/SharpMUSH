@@ -9,6 +9,7 @@
 @inject IJSRuntime JsRuntime
 @inject IStringLocalizer<SharedResource> Loc
 @implements IAsyncDisposable
+@inject IDialogService DialogService
 
 <PageTitle>Softcode Editor — SharpMUSH</PageTitle>
 
@@ -306,6 +307,9 @@
     private bool _showCreateAttr;
     private string _newAttrName = string.Empty;
 
+    // JS interop reference passed to Monaco so it can invoke ShowFullHelp
+    private DotNetObjectReference<SoftcodeEditor>? _dotNetRef;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // initEditor is a no-op until the editor has been created by BlazorMonaco
@@ -334,6 +338,9 @@
             ScrollBeyondLastLine = false,
             SuggestOnTriggerCharacters = true,
             ReadOnly = false,
+            // Render hover/suggestion widgets in the document body so they appear
+            // above MudBlazor tab and drawer components that have a higher z-index.
+            FixedOverflowWidgets = true,
         };
     }
 
@@ -342,6 +349,26 @@
         // Editor has just been created by BlazorMonaco — apply mush language + mush-dark theme.
         // This is the primary hook; language/theme are applied directly to the new editor instance.
         await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.initEditor", "mush-editor");
+
+        // Pass a .NET object reference to JS so Monaco actions can invoke ShowFullHelp.
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.setDotNetRef", _dotNetRef);
+    }
+
+    /// <summary>
+    /// Invoked from JavaScript (Monaco editor action Shift+F1) to display full help for a MUSH
+    /// function or command in a dialog.
+    /// </summary>
+    [JSInvokable]
+    public async Task ShowFullHelp(string name, string title, string content)
+    {
+        var parameters = new DialogParameters<MushHelpDialog>
+        {
+            { d => d.Title, title },
+            { d => d.Content, content },
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        await DialogService.ShowAsync<MushHelpDialog>("MUSH Help", parameters, options);
     }
 
     private void OnEditorChanged(ModelContentChangedEvent e) { }
@@ -574,6 +601,11 @@
 
     public async ValueTask DisposeAsync()
     {
-        await Task.CompletedTask;
+        if (_dotNetRef is not null)
+        {
+            await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.clearDotNetRef");
+            _dotNetRef.Dispose();
+            _dotNetRef = null;
+        }
     }
 }

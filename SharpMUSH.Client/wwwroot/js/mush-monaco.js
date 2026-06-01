@@ -10,6 +10,8 @@
     var _hoverProviderDisposable = null;
     var _sigHelpProviderDisposable = null;
     var _completionProviderDisposable = null;
+    var _dotNetRef = null;
+    var _fullHelpActionDisposable = null;
 
     function doRegister() {
         if (_registered || typeof monaco === 'undefined') return;
@@ -231,9 +233,16 @@
                         ? '\n\n**Switches:** ' + def.switches.join(', ') : '';
                     var params = (def.parameterNames || []).length > 0
                         ? '\n\n**Parameters:** ' + def.parameterNames.join(', ') : '';
+                    var contents = [{ value: '**`' + sig + '`**\n\nMUSH function' + params + sw }];
+                    if (def.helpPreview) {
+                        contents.push({ value: def.helpPreview });
+                    }
+                    if (def.helpFull && def.helpFull !== def.helpPreview) {
+                        contents.push({ value: '*Press **Shift+F1** for full help*' });
+                    }
                     return {
                         range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn),
-                        contents: [{ value: '**`' + sig + '`**\n\nMUSH function' + params + sw }],
+                        contents: contents,
                     };
                 }
 
@@ -243,16 +252,22 @@
                     var sig = buildSignature(cmdName.toUpperCase(), def, true);
                     var sw = def.switches && def.switches.length > 0
                         ? '\n\n**Switches:** ' + def.switches.join(', ') : '';
+                    var contents = [{ value: '**`' + sig + '`**\n\nMUSH command' + sw }];
+                    if (def.helpPreview) {
+                        contents.push({ value: def.helpPreview });
+                    }
+                    if (def.helpFull && def.helpFull !== def.helpPreview) {
+                        contents.push({ value: '*Press **Shift+F1** for full help*' });
+                    }
                     return {
                         range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn),
-                        contents: [{ value: '**`' + sig + '`**\n\nMUSH command' + sw }],
+                        contents: contents,
                     };
                 }
 
                 // Special substitution patterns
                 var lineText = model.getLineContent(position.lineNumber);
                 var colIdx = position.column - 1;
-                // Check if cursor is on a % substitution
                 if (colIdx > 0 && lineText[colIdx - 1] === '%') {
                     var ch = lineText[colIdx];
                     var subst = subInfo('%' + ch);
@@ -386,6 +401,36 @@
                     if (model && model.getLanguageId() !== 'mush') {
                         monaco.editor.setModelLanguage(model, 'mush');
                     }
+
+                    // Register Shift+F1 "Show Full Help" action on this editor instance
+                    if (_fullHelpActionDisposable) {
+                        try { _fullHelpActionDisposable.dispose(); } catch (_) {}
+                    }
+                    _fullHelpActionDisposable = editor.addAction({
+                        id: 'sharpmush.showFullHelp',
+                        label: 'Show Full MUSH Help',
+                        keybindings: [monaco.KeyMod.Shift | monaco.KeyCode.F1],
+                        contextMenuGroupId: 'navigation',
+                        contextMenuOrder: 1.5,
+                        run: function (ed) {
+                            if (!_dotNetRef || !_completionData) return;
+                            var pos = ed.getPosition();
+                            var word = ed.getModel().getWordAtPosition(pos);
+                            if (!word) return;
+                            var name = word.word.toUpperCase();
+                            var funcs = _completionData.functions || {};
+                            var cmds = _completionData.commands || {};
+                            var def = funcs[name] || funcs[name.toLowerCase()];
+                            var isCmd = false;
+                            if (!def) {
+                                def = cmds[name] || cmds['@' + name];
+                                isCmd = !!def;
+                            }
+                            if (!def || !def.helpFull) return;
+                            var sig = buildSignature(isCmd ? '@' + name : name, def, isCmd);
+                            _dotNetRef.invokeMethodAsync('ShowFullHelp', name, sig, def.helpFull);
+                        },
+                    });
                 }
             } catch (e) {
                 console.warn('SharpMUSH: initEditor failed', e);
@@ -398,6 +443,20 @@
                 var editors = monaco.editor.getEditors();
                 if (editors && editors.length > 0) editors[editors.length - 1].focus();
             } catch (e) { }
+        },
+
+        // Called from C# OnEditorInitAsync to give Monaco a .NET reference for invoking
+        // ShowFullHelp when Shift+F1 is pressed.
+        setDotNetRef: function (ref) {
+            _dotNetRef = ref;
+        },
+
+        clearDotNetRef: function () {
+            _dotNetRef = null;
+            if (_fullHelpActionDisposable) {
+                try { _fullHelpActionDisposable.dispose(); } catch (_) {}
+                _fullHelpActionDisposable = null;
+            }
         },
     };
 
