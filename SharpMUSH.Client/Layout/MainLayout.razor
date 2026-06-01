@@ -53,11 +53,11 @@
                                 Account: @AccountAuth.Username
                             </MudText>
                         </MudMenuItem>
-                        @if (AccountAuth.Characters.Count > 1)
+                        @if (AccountAuth.Characters.Count > 0)
                         {
                             <MudDivider />
                             <MudMenuItem Disabled="true">
-                                <MudText Typo="Typo.caption" Style="color:#888;">Switch to:</MudText>
+                                <MudText Typo="Typo.caption" Style="color:#888;">Play as:</MudText>
                             </MudMenuItem>
                             @foreach (var c in AccountAuth.Characters)
                             {
@@ -179,6 +179,10 @@
         // so IsLoggedIn becomes true before we compute _isDebugAuth
         if (authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn)
             await AccountAuth.GetDebugOttAsync();
+
+        // Load characters if logged in and not yet populated
+        if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
+            await AccountAuth.GetCharactersAsync();
 
         _isDebugAuth = authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         await EnsureAccountRoutingAsync();
