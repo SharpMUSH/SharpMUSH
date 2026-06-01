@@ -200,7 +200,7 @@ public class ParserFailureTests
 	/// </para>
 	/// </summary>
 	[Test]
-	[Skip("ParseType.Command and ParseType.CommandList currently tolerate missing parens - needs investigation")]
+	[Skip("ParseType.Command and ParseType.CommandList tolerate missing parens by design — command argument parsers now use lenient (ANTLR recovery) mode by default")]
 	public async Task MissingParen_InCommandArg_CurrentBehavior()
 	{
 		var errors = Parser.ValidateAndGetErrors(

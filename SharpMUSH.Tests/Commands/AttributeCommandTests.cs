@@ -504,26 +504,30 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	public async ValueTask SetAttribute_UnclosedParen_ReportsParseFailure()
+	public async ValueTask SetAttribute_UnclosedParen_StoresViaLenientParse()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrUnclosed");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var objName = obj.Known.Object().Name;
 
-		// Missing closing ')' — the parser should report a parse failure, not silently succeed.
+		// Missing closing ')' — lenient (ANTLR-recovery) command parsing should store the
+		// best-effort value rather than silently dropping or rejecting the input.
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&UNCLOSED_PAREN_ATTR {objDbRef}=ansi(hr,fun"));
 
-		// The player should receive a #-1 PARSER FAILURE message.
+		// The player should receive "Set." confirmation, not a parse failure.
 		await NotifyService
 			.Received(1)
-			.Notify(1L, Arg.Is<OneOf<MString, string>>(msg =>
-				msg.Match(ms => ms.ToPlainText(), s => s).StartsWith("#-1 PARSER FAILURE")),
-				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageEquals(msg, $"{objName}/UNCLOSED_PAREN_ATTR - Set.")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
-		// The attribute must NOT have been set.
+		// The attribute must have been set (ANTLR recovered the input).
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNCLOSED_PAREN_ATTR",
 			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(attr.IsAttribute).IsFalse()
-			.Because("a parse failure should prevent the attribute from being stored");
+		await Assert.That(attr.IsAttribute).IsTrue()
+			.Because("lenient command parsing should store the ANTLR-recovered value");
 	}
 }
 
