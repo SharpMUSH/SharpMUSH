@@ -10,8 +10,8 @@
     var _hoverProviderDisposable = null;
     var _sigHelpProviderDisposable = null;
     var _completionProviderDisposable = null;
-    var _dotNetRef = null;
-    var _fullHelpActionDisposable = null;
+    var _helpOverlay = null;
+    var _altKeyListeners = null;
 
     function doRegister() {
         if (_registered || typeof monaco === 'undefined') return;
@@ -238,7 +238,7 @@
                         contents.push({ value: def.helpPreview });
                     }
                     if (def.helpFull && def.helpFull !== def.helpPreview) {
-                        contents.push({ value: '*Press **Shift+F1** for full help*' });
+                        contents.push({ value: '*Hold **Alt** to expand full help*' });
                     }
                     return {
                         range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn),
@@ -257,7 +257,7 @@
                         contents.push({ value: def.helpPreview });
                     }
                     if (def.helpFull && def.helpFull !== def.helpPreview) {
-                        contents.push({ value: '*Press **Shift+F1** for full help*' });
+                        contents.push({ value: '*Hold **Alt** to expand full help*' });
                     }
                     return {
                         range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn),
@@ -362,6 +362,41 @@
         });
     }
 
+    // ── Help Overlay (Alt-held) ────────────────────────────────────────────────
+    function escHtml(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function showHelpOverlay(title, content) {
+        hideHelpOverlay();
+        var el = document.createElement('div');
+        el.id = 'sharpmush-help-overlay';
+        el.setAttribute('style', [
+            'position:fixed', 'right:24px', 'bottom:24px',
+            'width:500px', 'max-height:420px', 'overflow-y:auto',
+            'background:#1e1e1e', 'color:#d4d4d4',
+            'border:1px solid #555', 'border-radius:6px',
+            'padding:14px 18px', 'z-index:99999',
+            'box-shadow:0 6px 24px rgba(0,0,0,.65)',
+            'font-family:Consolas,"Courier New",monospace', 'font-size:13px',
+            'line-height:1.55', 'white-space:pre-wrap', 'pointer-events:none',
+        ].join(';'));
+        el.innerHTML =
+            '<div style="color:#9cdcfe;font-weight:700;margin-bottom:8px;' +
+            'border-bottom:1px solid #444;padding-bottom:6px;">' + escHtml(title) + '</div>' +
+            escHtml(content);
+        document.body.appendChild(el);
+        _helpOverlay = el;
+    }
+
+    function hideHelpOverlay() {
+        if (_helpOverlay) { _helpOverlay.remove(); _helpOverlay = null; }
+    }
+
+    // Hide whenever Alt is released anywhere in the page
+    window.addEventListener('keyup', function (e) { if (e.key === 'Alt') hideHelpOverlay(); });
+    window.addEventListener('blur',  function ()  { hideHelpOverlay(); });
+
     // ── Public API ─────────────────────────────────────────────────────────────
     window.SharpMUSH = window.SharpMUSH || {};
 
@@ -402,35 +437,33 @@
                         monaco.editor.setModelLanguage(model, 'mush');
                     }
 
-                    // Register Shift+F1 "Show Full Help" action on this editor instance
-                    if (_fullHelpActionDisposable) {
-                        try { _fullHelpActionDisposable.dispose(); } catch (_) {}
+                    // Alt-held: show full help overlay for word under cursor.
+                    // Remove any previous listeners on this editor's DOM node.
+                    if (_altKeyListeners) {
+                        try { editor.getDomNode().removeEventListener('keydown', _altKeyListeners.down); } catch (_) {}
+                        _altKeyListeners = null;
                     }
-                    _fullHelpActionDisposable = editor.addAction({
-                        id: 'sharpmush.showFullHelp',
-                        label: 'Show Full MUSH Help',
-                        keybindings: [monaco.KeyMod.Shift | monaco.KeyCode.F1],
-                        contextMenuGroupId: 'navigation',
-                        contextMenuOrder: 1.5,
-                        run: function (ed) {
-                            if (!_dotNetRef || !_completionData) return;
-                            var pos = ed.getPosition();
-                            var word = ed.getModel().getWordAtPosition(pos);
-                            if (!word) return;
-                            var name = word.word.toUpperCase();
-                            var funcs = _completionData.functions || {};
-                            var cmds = _completionData.commands || {};
-                            var def = funcs[name] || funcs[name.toLowerCase()];
-                            var isCmd = false;
-                            if (!def) {
-                                def = cmds[name] || cmds['@' + name];
-                                isCmd = !!def;
-                            }
-                            if (!def || !def.helpFull) return;
-                            var sig = buildSignature(isCmd ? '@' + name : name, def, isCmd);
-                            _dotNetRef.invokeMethodAsync('ShowFullHelp', name, sig, def.helpFull);
-                        },
-                    });
+
+                    function onAltDown(e) {
+                        if (e.key !== 'Alt' || !_completionData) return;
+                        e.preventDefault();
+                        var pos = editor.getPosition();
+                        if (!pos) return;
+                        var word = editor.getModel().getWordAtPosition(pos);
+                        if (!word) return;
+                        var name = word.word.toUpperCase();
+                        var funcs = _completionData.functions || {};
+                        var cmds = _completionData.commands || {};
+                        var def = funcs[name] || funcs[name.toLowerCase()];
+                        var isCmd = false;
+                        if (!def) { def = cmds[name] || cmds['@' + name]; isCmd = !!def; }
+                        if (!def || !def.helpFull) return;
+                        var sig = buildSignature(isCmd ? '@' + name : name, def, isCmd);
+                        showHelpOverlay(sig, def.helpFull);
+                    }
+
+                    editor.getDomNode().addEventListener('keydown', onAltDown);
+                    _altKeyListeners = { down: onAltDown };
                 }
             } catch (e) {
                 console.warn('SharpMUSH: initEditor failed', e);
@@ -443,20 +476,6 @@
                 var editors = monaco.editor.getEditors();
                 if (editors && editors.length > 0) editors[editors.length - 1].focus();
             } catch (e) { }
-        },
-
-        // Called from C# OnEditorInitAsync to give Monaco a .NET reference for invoking
-        // ShowFullHelp when Shift+F1 is pressed.
-        setDotNetRef: function (ref) {
-            _dotNetRef = ref;
-        },
-
-        clearDotNetRef: function () {
-            _dotNetRef = null;
-            if (_fullHelpActionDisposable) {
-                try { _fullHelpActionDisposable.dispose(); } catch (_) {}
-                _fullHelpActionDisposable = null;
-            }
         },
     };
 
