@@ -379,16 +379,20 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	public ValueTask<CallState?> CommandCommaArgsParse(MString text)
-		=> ParseInternal(text, p => p.commaCommandArgs(), nameof(CommandCommaArgsParse), lenient: true);
+		=> ParseInternal(text, p => p.commaCommandArgs(), nameof(CommandCommaArgsParse),
+			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	public ValueTask<CallState?> CommandSingleArgParse(MString text)
-		=> ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse), lenient: true);
+		=> ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse),
+			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	public ValueTask<CallState?> CommandEqSplitArgsParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse), lenient: true);
+		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse),
+			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	public ValueTask<CallState?> CommandEqSplitParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse), lenient: true);
+		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse),
+			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	/// <summary>
 	/// Tokenizes the input text and returns token information for syntax highlighting.

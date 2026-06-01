@@ -27,6 +27,30 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
+	/// <summary>
+	/// The <c>~</c> prefix command switches command argument parsing to strict mode for the
+	/// remainder of the command.  By default, SharpMUSH uses lenient (ANTLR error-recovery)
+	/// parsing for command arguments so that minor syntax errors are tolerated.  Prefixing any
+	/// command with <c>~</c> opts that single invocation back into strict parsing: an unclosed
+	/// parenthesis or other grammar error surfaces as <c>#-1 PARSER FAILURE</c> and the command
+	/// is not executed.
+	/// </summary>
+	[SharpCommand(Name = "~", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = [])]
+	public static async ValueTask<Option<CallState>> StrictParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var oldCommand = MModule.multipleWithDelimiter(MModule.single(" "),
+		[
+			parser.CurrentState.Arguments["0"].Message!,
+			parser.CurrentState.Arguments["1"].Message!
+		]);
+
+		await parser.With(
+			s => s with { Flags = s.Flags | ParserStateFlags.StrictParse },
+			async sp => await sp.CommandParse(oldCommand));
+
+		return new CallState(string.Empty);
+	}
+
 	// RSNoParse: only the RHS value is kept unevaluated (deferred/literal).
 	// The LHS (object/attribute name slot) is evaluated normally by ArgumentSplit so that
 	// register substitutions like %q0 in "& attr %q0=[value]" resolve before the locate step.

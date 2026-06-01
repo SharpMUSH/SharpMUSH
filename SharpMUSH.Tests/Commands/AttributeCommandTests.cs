@@ -529,5 +529,28 @@ public class AttributeCommandTests
 		await Assert.That(attr.IsAttribute).IsTrue()
 			.Because("lenient command parsing should store the ANTLR-recovered value");
 	}
-}
 
+	[Test]
+	public async ValueTask SetAttribute_TildePrefix_UnclosedParen_ReportsParseFailure()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrTildeStrict");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+
+		// The ~ prefix opts into strict parsing — an unclosed ')' must surface as #-1 PARSER FAILURE.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"~&UNCLOSED_TILDE_ATTR {objDbRef}=ansi(hr,fun"));
+
+		// The player should receive a #-1 PARSER FAILURE message.
+		await NotifyService
+			.Received(1)
+			.Notify(Arg.Any<long>(), Arg.Is<OneOf<MString, string>>(msg =>
+				msg.Match(ms => ms.ToPlainText(), s => s).StartsWith("#-1 PARSER FAILURE")),
+				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+
+		// The attribute must NOT have been set.
+		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNCLOSED_TILDE_ATTR",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(attr.IsAttribute).IsFalse()
+			.Because("strict (~) parse mode should reject the command on syntax error");
+	}
+}
