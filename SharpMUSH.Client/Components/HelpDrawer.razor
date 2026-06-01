@@ -192,17 +192,32 @@
     /// </summary>
     private static string LinkifyHelpText(string md)
     {
-        // The helpfiles write cross-references as bare markdown links: [iter()]
-        // with no URL — Markdig renders those as plain text.
-        // Transform [word()] → [word()](help:WORD) and [@word] → [@word](help:@WORD)
+        // Helpfiles use three cross-reference styles — none of which include a URL,
+        // so Markdig would render them as plain text without this pre-processing.
+        //
+        //   [word()]    function ref  → [word()](help:WORD)
+        //   [@cmd]      command ref   → [@cmd](help:@CMD)
+        //   [TOPIC]     topic ref     → [TOPIC](help:TOPIC)   (bare word, letters/digits/hyphens)
+
+        // 1. Function refs: [word()] or [word/sub()]
         md = System.Text.RegularExpressions.Regex.Replace(
             md,
             @"\[(@?[\w][\w\-\/]*\(\))\](?!\()",
             m => $"{m.Value}(help:{m.Groups[1].Value.TrimEnd(')').TrimEnd('(').ToUpperInvariant()})");
+
+        // 2. Command refs: [@cmd]
         md = System.Text.RegularExpressions.Regex.Replace(
             md,
             @"\[(@[\w][\w\-\/]*)\](?!\()",
             m => $"{m.Value}(help:{m.Groups[1].Value.ToUpperInvariant()})");
+
+        // 3. Bare topic refs: [WORD], [ansi3], [COLOR] — single token, no spaces
+        //    Must start with a letter (avoids [1], [!], etc.) and not already linked.
+        md = System.Text.RegularExpressions.Regex.Replace(
+            md,
+            @"\[([A-Za-z][\w\-\/]*)\](?!\()",
+            m => $"{m.Value}(help:{m.Groups[1].Value.ToUpperInvariant()})");
+
         return md;
     }
 
