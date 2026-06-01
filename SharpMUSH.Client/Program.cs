@@ -26,6 +26,15 @@ builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<IWebSocketClientService, WebSocketClientService>();
 builder.Services.AddSingleton<ITerminalService, TerminalService>();
 builder.Services.AddSingleton<MushQueryService>();
+builder.Services.AddHttpClient("help", c =>
+{
+	c.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+});
+builder.Services.AddSingleton<HelpService>(sp =>
+{
+	var factory = sp.GetRequiredService<IHttpClientFactory>();
+	return new HelpService(factory.CreateClient("help"));
+});
 builder.Services.AddScoped<CredentialService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 

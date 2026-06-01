@@ -10,7 +10,6 @@
     var _hoverProviderDisposable = null;
     var _sigHelpProviderDisposable = null;
     var _completionProviderDisposable = null;
-    var _helpOverlay = null;
 
     function doRegister() {
         if (_registered || typeof monaco === 'undefined') return;
@@ -112,18 +111,11 @@
                 },
             });
 
-            // ── Global command: show full help overlay (triggered from hover link) ──
+            // ── Global command: show full help in drawer (triggered from hover link) ──
             monaco.editor.registerCommand('sharpmush.showHelp', function (_accessor, name) {
-                if (!_completionData || !name) return;
-                var n = String(name).toUpperCase();
-                var funcs = _completionData.functions || {};
-                var cmds  = _completionData.commands  || {};
-                var def = funcs[n] || funcs[n.toLowerCase()];
-                var isCmd = false;
-                if (!def) { def = cmds[n] || cmds['@' + n]; isCmd = !!def; }
-                if (!def || !def.helpFull) return;
-                var sig = buildSignature(isCmd ? '@' + n : n, def, isCmd);
-                showHelpOverlay(sig, def.helpFull);
+                if (window.SharpMUSH && window.SharpMUSH.Help) {
+                    window.SharpMUSH.Help.show(String(name || ''));
+                }
             });
 
             // ── Completions ────────────────────────────────────────────────────
@@ -377,44 +369,6 @@
         });
     }
 
-    // ── Help Overlay ───────────────────────────────────────────────────────────
-    function escHtml(s) {
-        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-    function showHelpOverlay(title, content) {
-        hideHelpOverlay();
-        var el = document.createElement('div');
-        el.id = 'sharpmush-help-overlay';
-        el.setAttribute('style', [
-            'position:fixed', 'right:24px', 'bottom:24px',
-            'width:520px', 'max-height:480px',
-            'display:flex', 'flex-direction:column',
-            'background:#1e1e1e', 'color:#d4d4d4',
-            'border:1px solid #555', 'border-radius:6px',
-            'z-index:99999',
-            'box-shadow:0 6px 24px rgba(0,0,0,.65)',
-            'font-family:Consolas,"Courier New",monospace', 'font-size:13px',
-        ].join(';'));
-        el.innerHTML =
-            '<div style="display:flex;align-items:center;padding:10px 14px 8px;' +
-            'border-bottom:1px solid #444;flex-shrink:0;">' +
-              '<span style="color:#9cdcfe;font-weight:700;flex:1;">' + escHtml(title) + '</span>' +
-              '<button onclick="document.getElementById(\'sharpmush-help-overlay\').remove()" ' +
-              'style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;' +
-              'line-height:1;padding:0 2px;" title="Close">✕</button>' +
-            '</div>' +
-            '<div style="overflow-y:auto;padding:10px 14px;line-height:1.55;white-space:pre-wrap;">' +
-            escHtml(content) +
-            '</div>';
-        document.body.appendChild(el);
-        _helpOverlay = el;
-    }
-
-    function hideHelpOverlay() {
-        if (_helpOverlay) { _helpOverlay.remove(); _helpOverlay = null; }
-    }
-
     // ── Public API ─────────────────────────────────────────────────────────────
     window.SharpMUSH = window.SharpMUSH || {};
 
@@ -473,6 +427,44 @@
         scrollToBottom: function (elementId) {
             var el = document.getElementById(elementId);
             if (el) el.scrollTop = el.scrollHeight;
+        },
+    };
+
+    // ── Help Drawer bridge ─────────────────────────────────────────────────────
+    // Called by HelpDrawer.razor via JS interop to register a link interceptor on
+    // the help content container. Also exposes window.SharpMUSH.Help.show(name)
+    // so the Monaco hover command can open the drawer without needing a DotNetRef.
+    window.SharpMUSH.Help = {
+        _dotNetRef: null,
+
+        // Called from HelpDrawer OnAfterRenderAsync — stores the DotNetRef and
+        // attaches a click delegate on document to intercept help: links.
+        registerLinkInterceptor: function (dotNetRef) {
+            window.SharpMUSH.Help._dotNetRef = dotNetRef;
+
+            function onClick(e) {
+                var a = e.target.closest('a[href^="help:"]');
+                if (!a) return;
+                e.preventDefault();
+                var name = a.getAttribute('href').slice(5); // strip "help:"
+                dotNetRef.invokeMethodAsync('JsNavigateTo', name);
+            }
+
+            document.addEventListener('click', onClick);
+
+            // Return a disposable object that removes the listener on dispose
+            return {
+                dispose: function () {
+                    document.removeEventListener('click', onClick);
+                    window.SharpMUSH.Help._dotNetRef = null;
+                },
+            };
+        },
+
+        // Called from Monaco sharpmush.showHelp command
+        show: function (name) {
+            var ref = window.SharpMUSH.Help._dotNetRef;
+            if (ref && name) ref.invokeMethodAsync('JsNavigateTo', name);
         },
     };
 

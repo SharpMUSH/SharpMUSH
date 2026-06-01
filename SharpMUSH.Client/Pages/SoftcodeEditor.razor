@@ -231,6 +231,12 @@
                                        Disabled="@(_selectedAttr is null || _selectedObject is null)">
                                 Delete
                             </MudButton>
+
+                            <MudTooltip Text="Open MUSH Help reference">
+                                <MudIconButton Icon="@Icons.Material.Filled.MenuBook"
+                                               Size="Size.Small" Color="Color.Secondary"
+                                               OnClick="@(() => _helpDrawer?.Open())" />
+                            </MudTooltip>
                         </div>
 
                         @* Monaco Editor *@
@@ -283,9 +289,12 @@
     </div>
 </div>
 
+<HelpDrawer @ref="_helpDrawer" />
+
 @code {
     private StandaloneCodeEditor? _monacoEditor;
     private ObjectBrowser? _objectBrowser;
+    private HelpDrawer? _helpDrawer;
     private MushObject? _selectedObject;
     private MushAttribute? _selectedAttr;
     private bool _loadingAttrs;
@@ -452,7 +461,7 @@
         {
             // Evaluate via u(#dbref/ATTR) so MUSH evaluates the attribute in-object context.
             // This avoids the "think prefix" problem where wrapping in think [code] inside
-            // pemit() emits "think <result>" literally.
+            // pemit() emits "think RESULT" literally.
             var lines = await QueryService.EvalAsync($"#{_selectedObject.Dbref}", _selectedAttr.Name);
             _evalOutput = lines.Length > 0
                 ? string.Join("\n", lines.Where(l => !string.IsNullOrEmpty(l)))
@@ -571,5 +580,5 @@
         _ => Icons.Material.Filled.Inventory2,
     };
 
-    public async ValueTask DisposeAsync() => await Task.CompletedTask;
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
