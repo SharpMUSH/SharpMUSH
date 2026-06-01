@@ -502,4 +502,28 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EditNoMatchingAttributesFound), executor, executor)).IsTrue();
 	}
+
+	[Test]
+	public async ValueTask SetAttribute_UnclosedParen_ReportsParseFailure()
+	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrUnclosed");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+
+		// Missing closing ')' — the parser should report a parse failure, not silently succeed.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&UNCLOSED_PAREN_ATTR {objDbRef}=ansi(hr,fun"));
+
+		// The player should receive a #-1 PARSER FAILURE message.
+		await NotifyService
+			.Received(1)
+			.Notify(1L, Arg.Is<OneOf<MString, string>>(msg =>
+				msg.Match(ms => ms.ToPlainText(), s => s).StartsWith("#-1 PARSER FAILURE")),
+				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+
+		// The attribute must NOT have been set.
+		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNCLOSED_PAREN_ATTR",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(attr.IsAttribute).IsFalse()
+			.Because("a parse failure should prevent the attribute from being stored");
+	}
 }
+
