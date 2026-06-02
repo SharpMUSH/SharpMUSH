@@ -51,9 +51,9 @@ public partial class SurrealDatabase
 
 	public async ValueTask<bool> HasAnyAccountAsync(CancellationToken cancellationToken = default)
 	{
-		var response = await ExecuteAsync("SELECT * FROM account LIMIT 1", new Dictionary<string, object?>(), cancellationToken);
-		var results = response.GetValue<List<AccountDbRecord>>(0);
-		return results?.Count > 0;
+		var response = await ExecuteAsync("SELECT count() AS cnt FROM account GROUP ALL", new Dictionary<string, object?>(), cancellationToken);
+		var results = response.GetValue<List<CountRecord>>(0);
+		return results?.Count > 0 && results[0].cnt > 0;
 	}
 
 	public async ValueTask<SharpAccount> CreateAccountAsync(string username, string? email, string hashedPassword, CancellationToken cancellationToken = default)
