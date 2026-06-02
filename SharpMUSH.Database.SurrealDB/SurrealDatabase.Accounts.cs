@@ -4,6 +4,10 @@ using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Database.SurrealDB;
 
+internal record AccountCharacterRef(
+	[property: JsonPropertyName("dbref")] int Dbref
+);
+
 internal record AccountDbRecord(
 	[property: JsonPropertyName("id")] string Id,
 	[property: JsonPropertyName("username")] string Username,
@@ -47,8 +51,8 @@ public partial class SurrealDatabase
 
 	public async ValueTask<bool> HasAnyAccountAsync(CancellationToken cancellationToken = default)
 	{
-		var response = await ExecuteAsync("SELECT id FROM account LIMIT 1", new Dictionary<string, object?>(), cancellationToken);
-		var results = response.GetValue<List<System.Text.Json.JsonElement>>(0);
+		var response = await ExecuteAsync("SELECT * FROM account LIMIT 1", new Dictionary<string, object?>(), cancellationToken);
+		var results = response.GetValue<List<AccountDbRecord>>(0);
 		return results?.Count > 0;
 	}
 
@@ -137,16 +141,13 @@ DELETE account_owns_character WHERE in = $accountId AND out.object.key = $dbref
 SELECT out.object.key AS dbref FROM account_owns_character WHERE in = $accountId
 """, parameters, cancellationToken);
 
-		var records = response.GetValue<List<System.Text.Json.JsonElement>>(0) ?? [];
+		var records = response.GetValue<List<AccountCharacterRef>>(0) ?? [];
 		var players = new List<SharpPlayer>();
 		foreach (var record in records)
 		{
-			if (record.TryGetProperty("dbref", out var dbrefProp))
-			{
-				var obj = await GetObjectNodeAsync(new DBRef(dbrefProp.GetInt32()), cancellationToken);
-				if (obj.IsPlayer)
-					players.Add(obj.AsPlayer);
-			}
+			var obj = await GetObjectNodeAsync(new DBRef(record.Dbref), cancellationToken);
+			if (obj.IsPlayer)
+				players.Add(obj.AsPlayer);
 		}
 		return players.AsReadOnly();
 	}
