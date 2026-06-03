@@ -502,4 +502,55 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EditNoMatchingAttributesFound), executor, executor)).IsTrue();
 	}
+
+	[Test]
+	public async ValueTask SetAttribute_UnclosedParen_StoresViaLenientParse()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrUnclosed");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var objName = obj.Known.Object().Name;
+
+		// Missing closing ')' — lenient (ANTLR-recovery) command parsing should store the
+		// best-effort value rather than silently dropping or rejecting the input.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&UNCLOSED_PAREN_ATTR {objDbRef}=ansi(hr,fun"));
+
+		// The player should receive "Set." confirmation, not a parse failure.
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageEquals(msg, $"{objName}/UNCLOSED_PAREN_ATTR - Set.")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+
+		// The attribute must have been set (ANTLR recovered the input).
+		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNCLOSED_PAREN_ATTR",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(attr.IsAttribute).IsTrue()
+			.Because("lenient command parsing should store the ANTLR-recovered value");
+	}
+
+	[Test]
+	public async ValueTask SetAttribute_TildePrefix_UnclosedParen_ReportsParseFailure()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrTildeStrict");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+
+		// The ~ prefix opts into strict parsing — an unclosed ')' must surface as #-1 PARSER FAILURE.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"~&UNCLOSED_TILDE_ATTR {objDbRef}=ansi(hr,fun"));
+
+		// The player should receive a #-1 PARSER FAILURE message.
+		await NotifyService
+			.Received(1)
+			.Notify(Arg.Any<long>(), Arg.Is<OneOf<MString, string>>(msg =>
+				msg.Match(ms => ms.ToPlainText(), s => s).StartsWith("#-1 PARSER FAILURE")),
+				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+
+		// The attribute must NOT have been set.
+		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNCLOSED_TILDE_ATTR",
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(attr.IsAttribute).IsFalse()
+			.Because("strict (~) parse mode should reject the command on syntax error");
+	}
 }

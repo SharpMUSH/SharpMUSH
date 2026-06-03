@@ -11,6 +11,7 @@ public interface IConnectionService
 		Error,
 		None,
 		Connected,
+		AccountMode,   // authenticated to an account; not yet playing a character
 		LoggedIn,
 		Disconnected
 	}
@@ -26,13 +27,13 @@ public interface IConnectionService
 	)
 	{
 		public TimeSpan? Connected
-			=> State is ConnectionState.Connected or ConnectionState.LoggedIn
+			=> State is ConnectionState.Connected or ConnectionState.AccountMode or ConnectionState.LoggedIn
 			? DateTimeOffset.UtcNow -
 				DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["ConnectionStartTime"]))
 			: null;
 
 		public TimeSpan? Idle
-			=> State is ConnectionState.Connected or ConnectionState.LoggedIn
+			=> State is ConnectionState.Connected or ConnectionState.AccountMode or ConnectionState.LoggedIn
 			? DateTimeOffset.UtcNow -
 				DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["LastConnectionSignal"]))
 			: null;
@@ -51,6 +52,12 @@ public interface IConnectionService
 		ConcurrentDictionary<string, string>? metaData = null);
 
 	ValueTask Bind(long handle, DBRef player);
+
+	/// <summary>
+	/// Transitions a connection to <see cref="ConnectionState.AccountMode"/>, storing the account ID in metadata.
+	/// The connection is not yet associated with a MUSH character.
+	/// </summary>
+	ValueTask BindAccount(long handle, string accountId);
 
 	void Update(long handle, string key, string value);
 

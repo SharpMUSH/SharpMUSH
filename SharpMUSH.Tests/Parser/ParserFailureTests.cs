@@ -179,26 +179,6 @@ public class ParserFailureTests
 
 	// ─── Command parse modes ───────────────────────────────────────────────────
 
-	/// <summary>
-	/// Missing paren via the CommandList parse path (<see cref="ParseType.CommandList"/>).
-	/// <para>
-	/// <c>ParseType.Command</c> (<c>startSingleCommandString</c>) is structurally identical
-	/// to <c>ParseType.Function</c> — both reduce to <c>evaluationString EOF</c>.
-	/// <c>ParseType.CommandList</c> is distinct: it uses the <c>commandList</c> rule with
-	/// SEMICOLON splitting. Inside a command list, SEMICOLON cannot appear as generic text
-	/// (the <c>beginGenericText</c> predicate blocks it), so a missing <c>)</c> before <c>;</c>
-	/// is correctly surfaced as a parse error.
-	/// </para>
-	/// </summary>
-	[Test]
-	[Skip("ParseType.Command and ParseType.CommandList currently tolerate missing parens - needs investigation")]
-	public async Task MissingParen_InCommandArg_CurrentBehavior()
-	{
-		var errors = Parser.ValidateAndGetErrors(
-			MModule.single("think add(1,2"), ParseType.CommandList);
-		await Assert.That(errors).IsNotEmpty();
-	}
-
 	/// <summary>Missing paren in a CommandEqSplit context (e.g., &ATTR obj=add(1,2).</summary>
 	[Test]
 	public async Task MissingParen_InEqSplit_CurrentBehavior()

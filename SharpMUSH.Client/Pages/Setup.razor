@@ -1,0 +1,66 @@
+@page "/setup"
+@using SharpMUSH.Client.Services
+@inject AccountAuthService AccountAuth
+@inject NavigationManager Nav
+
+<PageTitle>First-Run Setup — SharpMUSH</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="pa-4" Style="margin-top:80px;">
+	<MudPaper Elevation="3" Class="pa-6">
+		<MudText Typo="Typo.h5" Class="mb-2">Welcome to SharpMUSH</MudText>
+		<MudText Typo="Typo.body2" Class="mb-4" Style="color:#888;">
+			No accounts exist yet. Create your administrator account to get started.
+			This account will be linked to player #1 (God).
+		</MudText>
+
+		@if (_error is not null)
+		{
+			<MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+		}
+
+		<MudTextField @bind-Value="_username" Label="Username" Variant="Variant.Outlined"
+					  Margin="Margin.Dense" Class="mb-3" Disabled="@_busy" />
+		<MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password"
+					  Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" Disabled="@_busy" />
+		<MudTextField @bind-Value="_confirm" Label="Confirm Password" InputType="InputType.Password"
+					  Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4" Disabled="@_busy" />
+
+		<MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+				   Disabled="@_busy" OnClick="SubmitAsync">
+			@(_busy ? "Setting up…" : "Create Admin Account")
+		</MudButton>
+	</MudPaper>
+</MudContainer>
+
+@code {
+	private string _username = string.Empty;
+	private string _password = string.Empty;
+	private string _confirm = string.Empty;
+	private string? _error;
+	private bool _busy;
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (!await AccountAuth.NeedsSetupAsync())
+			Nav.NavigateTo("/", replace: true);
+	}
+
+	private async Task SubmitAsync()
+	{
+		_error = null;
+		if (string.IsNullOrWhiteSpace(_username)) { _error = "Username is required."; return; }
+		if (string.IsNullOrWhiteSpace(_password)) { _error = "Password is required."; return; }
+		if (_password != _confirm) { _error = "Passwords do not match."; return; }
+		if (_password.Length < 8) { _error = "Password must be at least 8 characters."; return; }
+
+		_busy = true;
+		StateHasChanged();
+
+		var (success, error) = await AccountAuth.CompleteSetupAsync(_username, _password);
+		_busy = false;
+
+		if (!success) { _error = error; StateHasChanged(); return; }
+
+		Nav.NavigateTo("/", replace: true);
+	}
+}

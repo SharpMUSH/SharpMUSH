@@ -34,6 +34,12 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
+    <!-- Monaco Editor (BlazorMonaco) — must come before blazor.webassembly.js -->
+    <script src="_content/BlazorMonaco/jsInterop.js"></script>
+    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
+    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
+    <!-- SharpMUSH MUSH language definition for Monaco -->
+    <script src="js/mush-monaco.js"></script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>   
     <script src="/_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js"></script>

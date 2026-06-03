@@ -21,6 +21,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private static IOptionsWrapper<SharpMUSHOptions>? Configuration { get; set; }
 	private static IPasswordService? PasswordService { get; set; }
 	private static IConnectionService? ConnectionService { get; set; }
+	private static IOttStore? OttStore { get; set; }
+	private static IAccountService? AccountService { get; set; }
+	private static IAccountSessionStore? AccountSessionStore { get; set; }
 	private static IExpandedObjectDataService? ObjectDataService { get; set; }
 	private static IManipulateSharpObjectService? ManipulateSharpObjectService { get; set; }
 	private static IHttpClientFactory? HttpClientFactory { get; set; }
@@ -70,6 +73,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		IPasswordService passwordService,
 		IConnectionService connectionService,
+		IOttStore ottStore,
+		IAccountService accountService,
+		IAccountSessionStore accountSessionStore,
 		IExpandedObjectDataService objectDataService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
 		IHttpClientFactory httpClientFactory,
@@ -99,6 +105,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		Configuration = configuration;
 		PasswordService = passwordService;
 		ConnectionService = connectionService;
+		OttStore = ottStore;
+		AccountService = accountService;
+		AccountSessionStore = accountSessionStore;
 		ObjectDataService = objectDataService;
 		HttpClientFactory = httpClientFactory;
 		ManipulateSharpObjectService = manipulateSharpObjectService;

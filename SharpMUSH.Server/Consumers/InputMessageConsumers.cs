@@ -41,6 +41,39 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 }
 
 /// <summary>
+/// Consumes WebSocket input messages from NATS JetStream and processes them.
+/// WebSocket connections publish <see cref="WebSocketInputMessage"/> rather than
+/// <see cref="TelnetInputMessage"/>; both are processed identically by the MUSH engine.
+/// </summary>
+public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITaskScheduler scheduler)
+	: IMessageConsumer<WebSocketInputMessage>
+{
+	public async Task HandleAsync(WebSocketInputMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogDebug("[NATS-RECV] WebSocketInputMessage received - Handle: {Handle}, InputLength: {InputLength}",
+			message.Handle, message.Input?.Length ?? 0);
+
+		try
+		{
+			if (string.IsNullOrWhiteSpace(message.Input))
+			{
+				logger.LogDebug("[NATS-RECV] WebSocketInputMessage ignored - empty input for Handle: {Handle}", message.Handle);
+				return;
+			}
+
+			await scheduler.WriteUserCommand(
+				handle: message.Handle,
+				command: MModule.single(message.Input),
+				state: ParserState.Empty with { Handle = message.Handle });
+		}
+		catch (Exception ex)
+		{
+			logger.LogCritical(ex, "Error processing WebSocket input from handle {Handle}", message.Handle);
+		}
+	}
+}
+
+/// <summary>
 /// Consumes GMCP signal messages from NATS JetStream
 /// </summary>
 public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionService connectionService)

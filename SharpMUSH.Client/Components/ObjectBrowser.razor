@@ -1,0 +1,187 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject MushQueryService QueryService
+@inject ITerminalService Terminal
+
+<div style="display:flex;flex-direction:column;height:100%;gap:4px;">
+
+    @* Search tabs *@
+    <MudTabs Elevation="0" @bind-ActivePanelIndex="_activeTab" TabPanelsClass="pa-0">
+
+        <MudTabPanel Text="My Objects" Icon="@Icons.Material.Filled.Person">
+            <div style="padding:8px 0;">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadMyObjectsAsync"
+                           Disabled="@_loading">
+                    @(_loading ? "Loading…" : "Refresh")
+                </MudButton>
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Search" Icon="@Icons.Material.Filled.Search">
+            <div style="display:flex;flex-direction:column;gap:4px;padding:8px 0;">
+                <MudTextField @bind-Value="_searchExpr"
+                              Placeholder="lsearch(me, type, thing)"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Style="flex:1;" />
+                <MudText Typo="Typo.caption" Style="color:#888;">
+                    Examples: <code>lsearch(me)</code> · <code>lsearch(me, type, room)</code> · <code>lcon(loc(me))</code>
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           OnClick="SearchAsync" Disabled="@_loading">Go</MudButton>
+            </div>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Here" Icon="@Icons.Material.Filled.Home">
+            <div style="padding:8px 0;">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadHereAsync"
+                           Disabled="@_loading">
+                    @(_loading ? "Loading…" : "Refresh")
+                </MudButton>
+            </div>
+        </MudTabPanel>
+
+    </MudTabs>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true">@_error</MudAlert>
+    }
+
+    @* Object tree *@
+    <div style="flex:1;overflow-y:auto;">
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+
+        @if (_groups.Count == 0 && !_loading)
+        {
+            <MudText Typo="Typo.body2" Class="pa-2" Color="Color.Secondary">
+                No objects found.
+            </MudText>
+        }
+
+        <MudTreeView T="MushSearchResult" Dense="true" Hover="true">
+            @foreach (var (typeName, items) in _groups)
+            {
+                <MudTreeViewItem Value="@((MushSearchResult?)null)" Text="@($"{typeName} ({items.Count})")"
+                                 Icon="@GetTypeIcon(typeName)" Expanded="true">
+                    @foreach (var item in items)
+                    {
+                        <MudTreeViewItem Value="@item"
+                                         Text="@($"{item.Name} (#{item.Dbref})")"
+                                         Icon="@Icons.Material.Filled.DataObject"
+                                         OnClick="@(() => SelectObject(item))"
+                                         Style="@(_selectedDbref == item.Dbref ? "background:rgba(0,245,183,0.08)" : "")" />
+                    }
+                </MudTreeViewItem>
+            }
+        </MudTreeView>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<int> OnObjectSelected { get; set; }
+
+    private int _activeTab;
+    private string _searchExpr = string.Empty;
+    private bool _loading;
+    private string _error = string.Empty;
+    private int _selectedDbref = -1;
+
+    private readonly List<(string TypeName, List<MushSearchResult> Items)> _groups = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Terminal.IsConnected)
+            await LoadMyObjectsAsync();
+    }
+
+    /// <summary>
+    /// Public refresh — re-runs whichever tab is currently active.
+    /// Can be called from the parent page after mutations (create/delete).
+    /// </summary>
+    public Task RefreshAsync() => _activeTab switch
+    {
+        2 => LoadHereAsync(),
+        _ => LoadMyObjectsAsync(),
+    };
+
+    /// <summary>
+    /// Select a dbref in the list and notify parent without re-fetching.
+    /// Useful after creating an object to auto-highlight it.
+    /// </summary>
+    public async Task SelectDbrefAsync(int dbref)
+    {
+        _selectedDbref = dbref;
+        StateHasChanged();
+        await OnObjectSelected.InvokeAsync(dbref);
+    }
+
+    private async Task LoadMyObjectsAsync()
+    {
+        _activeTab = 0;
+        await FetchResultsAsync(() => QueryService.SearchOwnedAsync());
+    }
+
+    private async Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_searchExpr)) return;
+        await FetchResultsAsync(() => QueryService.SearchAsync(_searchExpr));
+    }
+
+    private async Task LoadHereAsync()
+    {
+        _activeTab = 2;
+        await FetchResultsAsync(() => QueryService.GetContentsAsync());
+    }
+
+    private async Task FetchResultsAsync(Func<Task<List<MushSearchResult>>> fetch)
+    {
+        _loading = true;
+        _error = string.Empty;
+        _groups.Clear();
+        StateHasChanged();
+
+        try
+        {
+            var results = await fetch();
+            BuildGroups(results);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void BuildGroups(List<MushSearchResult> results)
+    {
+        var grouped = results.GroupBy(r => r.Type.ToString());
+        _groups.Clear();
+        foreach (var g in grouped.OrderBy(g => g.Key))
+            _groups.Add((g.Key, g.ToList()));
+    }
+
+    private async Task SelectObject(MushSearchResult item)
+    {
+        _selectedDbref = item.Dbref;
+        await OnObjectSelected.InvokeAsync(item.Dbref);
+    }
+
+    private static string GetTypeIcon(string typeName) => typeName switch
+    {
+        "Thing" => Icons.Material.Filled.Inventory2,
+        "Room" => Icons.Material.Filled.MeetingRoom,
+        "Exit" => Icons.Material.Filled.ExitToApp,
+        "Player" => Icons.Material.Filled.Person,
+        _ => Icons.Material.Filled.DataObject,
+    };
+}
