@@ -54,7 +54,7 @@ public class TelDiagnosticTests
 			.ToList()!;
 	}
 
-	private async ValueTask WaitUntilAsync(Func<ValueTask<bool>> condition, int attempts = 20, int delayMs = 100)
+	private async ValueTask WaitUntilAsync(Func<ValueTask<bool>> condition, string failureMessage, int attempts = 20, int delayMs = 100)
 	{
 		for (var attempt = 0; attempt < attempts; attempt++)
 		{
@@ -65,6 +65,8 @@ public class TelDiagnosticTests
 
 			await Task.Delay(delayMs);
 		}
+
+		throw new TimeoutException(failureMessage);
 	}
 
 	/// <summary>
@@ -161,7 +163,8 @@ public class TelDiagnosticTests
 
 		await WaitUntilAsync(async () =>
 			(await Eval($"name({objName})")) == objName &&
-			(await Eval($"get({objName}/last_mod)")) == "2024-01-01");
+			(await Eval($"get({objName}/last_mod)")) == "2024-01-01",
+			"name() and get() by object name never became visible after object creation");
 
 		var nameResult2 = await Eval($"name({objName})");
 		Console.WriteLine($"name({objName}) = {nameResult2}");
@@ -559,7 +562,8 @@ public class TelDiagnosticTests
 
 		await WaitUntilAsync(async () =>
 			!(await Eval($"num({aName})")).Contains("NO MATCH", StringComparison.OrdinalIgnoreCase) &&
-			!(await Eval($"num({bName})")).Contains("NO MATCH", StringComparison.OrdinalIgnoreCase));
+			!(await Eval($"num({bName})")).Contains("NO MATCH", StringComparison.OrdinalIgnoreCase),
+			"@tel source/destination objects never became locatable by name after @force @edit");
 
 		// Now @tel by name (NO @wait)
 		var errors = await ExecAndCollectErrors($"@tel {aName}={bName}");

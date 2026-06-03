@@ -21,12 +21,24 @@ public class ControlFlowCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	private static string? ExtractMessageForExecutor(object?[] args, DBRef executor)
-		=> args.Length >= 2 &&
-		   args[0] is AnySharpObject who &&
-		   who.Object().DBRef == executor &&
-		   args[1] is OneOf<MString, string> msg
-			? msg.Match(m => m.ToString(), s => s)
-			: null;
+	{
+		if (args.Length < 2)
+		{
+			return null;
+		}
+
+		if (args[0] is not AnySharpObject who || who.Object().DBRef != executor)
+		{
+			return null;
+		}
+
+		if (args[1] is not OneOf<MString, string> msg)
+		{
+			return null;
+		}
+
+		return msg.Match(m => m.ToString(), s => s);
+	}
 
 	[Test]
 	[Category("NotImplemented")]
@@ -240,12 +252,12 @@ public class ControlFlowCommandTests
 	public async ValueTask Break_QueuedSwitch_BreaksCommandList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		var preCount = NotifyService.ReceivedCalls().Count();
+		var baselineNotificationCount = NotifyService.ReceivedCalls().Count();
 		// Test that @break/queued with a truthy condition still breaks the command list
 		await Parser.CommandListParse(
 			MModule.single("@pemit #1=BreakQueued_Before_36489;@break/queued 1=@pemit #1=BreakQueued_Action_36489;@pemit #1=BreakQueued_After_36489"));
 
-		var newCalls = NotifyService.ReceivedCalls().Skip(preCount).ToList();
+		var newCalls = NotifyService.ReceivedCalls().Skip(baselineNotificationCount).ToList();
 		var newMessages = newCalls
 			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
 			.Select(call => call.GetArguments())
