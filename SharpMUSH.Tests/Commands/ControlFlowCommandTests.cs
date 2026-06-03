@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.Core;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
@@ -19,6 +19,14 @@ public class ControlFlowCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+
+	private static string? ExtractMessageForExecutor(object?[] args, DBRef executor)
+		=> args.Length >= 2 &&
+		   args[0] is AnySharpObject who &&
+		   who.Object().DBRef == executor &&
+		   args[1] is OneOf<MString, string> msg
+			? msg.Match(m => m.ToString(), s => s)
+			: null;
 
 	[Test]
 	[Category("NotImplemented")]
@@ -241,12 +249,7 @@ public class ControlFlowCommandTests
 		var newMessages = newCalls
 			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
 			.Select(call => call.GetArguments())
-			.Select(args => args.Length >= 2 &&
-				args[0] is AnySharpObject who &&
-				who.Object().DBRef == executor &&
-				args[1] is OneOf<MString, string> msg
-					? msg.Match(m => m.ToString(), s => s)
-					: null)
+			.Select(args => ExtractMessageForExecutor(args, executor))
 			.Where(message => message is not null)
 			.Select(message => message!)
 			.ToList();
