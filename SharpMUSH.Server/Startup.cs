@@ -1,11 +1,15 @@
 using Core.Arango;
 using Mediator;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
+using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using SurrealDb.Net;
@@ -25,6 +29,7 @@ using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
@@ -49,8 +54,20 @@ public class Startup(
 
 // This method gets called by the runtime. Use this method to add services to the container.
 // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
-	public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
+		services.Configure<BootstrapOptions>(configuration.GetSection(BootstrapOptions.Section));
+		services.PostConfigure<BootstrapOptions>(options =>
+		{
+			var adminUsername = Environment.GetEnvironmentVariable("SHARPMUSH_BOOTSTRAP_USERNAME");
+			if (!string.IsNullOrWhiteSpace(adminUsername))
+				options.AdminUsername = adminUsername;
+
+			var adminPassword = Environment.GetEnvironmentVariable("SHARPMUSH_BOOTSTRAP_PASSWORD");
+			if (!string.IsNullOrWhiteSpace(adminPassword))
+				options.AdminPassword = adminPassword;
+		});
+
 		services.AddCors(options =>
 		{
 			options.AddDefaultPolicy(builder => builder
@@ -149,6 +166,10 @@ public class Startup(
 		services.AddSingleton<IManipulateSharpObjectService, ManipulateSharpObjectService>();
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
+		services.AddSingleton<IOttStore, InMemoryOttStore>();
+		services.AddSingleton<IAccountSessionStore, InMemoryAccountSessionStore>();
+		services.AddSingleton<IAccountService, AccountService>();
+		services.AddHostedService<BootstrapService>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<ICommunicationService, CommunicationService>();
 		services.AddSingleton<ILockService, LockService>();
@@ -230,6 +251,7 @@ public class Startup(
 			{
 // Register consumers for input messages from ConnectionServer
 				x.AddConsumer<Consumers.TelnetInputConsumer>();
+				x.AddConsumer<Consumers.WebSocketInputConsumer>();
 				x.AddConsumer<Consumers.GMCPSignalConsumer>();
 				x.AddConsumer<Consumers.MSDPUpdateConsumer>();
 				x.AddConsumer<Consumers.NAWSUpdateConsumer>();
@@ -258,6 +280,13 @@ public class Startup(
 // where the command queue processes one entry at a time.
 			x.UseDefaultThreadPool(tp => tp.MaxConcurrency = 1);
 		});
+		if (environment.IsDevelopment())
+		{
+			services.AddAuthentication(DebugAuthenticationHandler.SchemeName)
+				.AddScheme<AuthenticationSchemeOptions, DebugAuthenticationHandler>(
+					DebugAuthenticationHandler.SchemeName, _ => { });
+		}
+
 		services.AddAuthorization();
 		services.AddRazorPages();
 		services.AddControllers();

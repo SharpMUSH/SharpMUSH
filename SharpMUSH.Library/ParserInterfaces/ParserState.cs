@@ -70,6 +70,14 @@ public enum ParserStateFlags
 	/// rather than happening during argument tokenization.
 	/// </summary>
 	PreserveBraces = 1 << 3,
+
+	/// <summary>
+	/// Equivalent to prefixing a command with <c>~</c>.
+	/// When set, command argument parsers run in strict mode: ANTLR syntax errors are surfaced
+	/// as <c>#-1 PARSER FAILURE</c> instead of using error-recovery (lenient) parsing.
+	/// By default, command argument parsing is lenient. This flag overrides that default.
+	/// </summary>
+	StrictParse = 1 << 4,
 }
 
 /// <summary>

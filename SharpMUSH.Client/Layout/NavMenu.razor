@@ -14,12 +14,12 @@
             @if (!IsCollapsed) { <text>@Loc["Home"]</text> }
         </MudNavLink>
         
-        <MudNavLink Href="/counter" Icon="@Icons.Material.Filled.Add" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["Counter"]</text> }
+        <MudNavLink Href="/softcode" Icon="@Icons.Material.Filled.Code" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>@Loc["SoftcodeEditor"]</text> }
         </MudNavLink>
-        
-        <MudNavLink Href="/weather" Icon="@Icons.Material.Filled.Cloud" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["Weather"]</text> }
+
+        <MudNavLink Href="/account" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>My Account</text> }
         </MudNavLink>
         
         @if (!IsCollapsed)
@@ -33,11 +33,8 @@
         else
         {
             <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary" />
+            <MudNavLink Href="/softcode" Icon="@Icons.Material.Filled.Code" IconColor="Color.Secondary" />
         }
-        
-        <MudNavLink Href="/about" Icon="@Icons.Material.Filled.Info" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["About"]</text> }
-        </MudNavLink>
     </MudNavMenu>
 </MudPaper>
 

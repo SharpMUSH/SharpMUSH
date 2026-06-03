@@ -1,0 +1,231 @@
+@using Markdig
+@using Markdig.Renderers
+@using Markdig.Renderers.Html
+@using Markdig.Syntax
+@using Markdig.Syntax.Inlines
+@using SharpMUSH.Client.Services
+@inject HelpService Help
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<MudDrawer @bind-Open="_open"
+           Anchor="Anchor.Right"
+           Variant="DrawerVariant.Temporary"
+           Elevation="2"
+           Width="480px"
+           Style="z-index:1400;">
+    <div style="display:flex;flex-direction:column;height:100%;background:#1a1a1a;color:#d4d4d4;">
+
+        @* ── Header ── *@
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #333;flex-shrink:0;">
+            <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Secondary" Size="Size.Small" />
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Style="flex:1;">MUSH Help</MudText>
+
+            @if (_history.Count > 0)
+            {
+                <MudTooltip Text="Back">
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"
+                                   Color="Color.Default" OnClick="GoBack" />
+                </MudTooltip>
+            }
+            <MudTooltip Text="Close">
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                               Color="Color.Default" OnClick="Close" />
+            </MudTooltip>
+        </div>
+
+        @* ── Search ── *@
+        <div style="padding:8px 12px;border-bottom:1px solid #333;flex-shrink:0;">
+            <MudAutocomplete T="HelpEntry"
+                             Value="_searchValue"
+                             SearchFunc="SearchEntries"
+                             ValueChanged="OnEntrySelected"
+                             ToStringFunc="@(e => e?.Name ?? string.Empty)"
+                             Placeholder="Search functions &amp; commands…"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.Search"
+                             AdornmentColor="Color.Secondary"
+                             ShowProgressIndicator="true"
+                             Dense="true"
+                             FullWidth="true"
+                             Style="font-family:monospace;font-size:13px;" />
+        </div>
+
+        @* ── Content ── *@
+        <div style="flex:1;overflow-y:auto;padding:12px 16px;" id="help-drawer-content" @ref="_contentRef">
+            @if (_current is null)
+            {
+                <div style="color:#666;font-style:italic;font-size:13px;margin-top:16px;">
+                    Search above or click "📖 Show full help" in the editor.
+                </div>
+            }
+            else
+            {
+                @* Entry header *@
+                <div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #333;">
+                    <MudText Typo="Typo.h6" Style="font-family:monospace;color:#9cdcfe;">
+                        @(_current.IsCommand ? _current.Name : _current.Name + "()")
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:#666;">
+                        @(_current.IsCommand ? "Command" : "Function")
+                        @if (_current.Switches.Length > 0)
+                        {
+                            <text> · Switches: @string.Join(", ", _current.Switches)</text>
+                        }
+                    </MudText>
+                </div>
+
+                @* Markdown body *@
+                <div class="mush-help-md" @ref="_mdRef">
+                    @_renderedHtml
+                </div>
+            }
+        </div>
+    </div>
+</MudDrawer>
+
+@code {
+    private bool _open;
+    private HelpEntry? _current;
+    private HelpEntry? _searchValue;
+    private MarkupString _renderedHtml;
+    private ElementReference _contentRef;
+    private ElementReference _mdRef;
+    private DotNetObjectReference<HelpDrawer>? _dotNetRef;
+    private IJSObjectReference? _clickHandler;
+    private readonly Stack<string> _history = new();
+    private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Help.OnNavigate    += HandleNavigate;
+        Help.OnDrawerToggle += HandleDrawerToggle;
+        await Help.EnsureLoadedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            _clickHandler = await JS.InvokeAsync<IJSObjectReference>(
+                "SharpMUSH.Help.registerLinkInterceptor", _dotNetRef);
+        }
+    }
+
+    // ── Public entry points ─────────────────────────────────────────────────────
+
+    public void Open() { _open = true; StateHasChanged(); }
+    public void Close() { _open = false; StateHasChanged(); }
+
+    public void NavigateTo(string name)
+    {
+        var entry = Help.Get(name);
+        if (entry is null) return;
+        if (_current is not null) _history.Push(_current.Name);
+        SetEntry(entry);
+        _open = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void JsNavigateTo(string name) => NavigateTo(name);
+
+    // ── Internal ────────────────────────────────────────────────────────────────
+
+    private void HandleNavigate(string name)
+    {
+        // Called from service thread — marshal to UI thread
+        _ = InvokeAsync(() => NavigateTo(name));
+    }
+
+    private void HandleDrawerToggle(bool open)
+    {
+        _ = InvokeAsync(() => { _open = open; StateHasChanged(); });
+    }
+
+    private void SetEntry(HelpEntry entry)
+    {
+        _current = entry;
+        var md = LinkifyHelpText(entry.HelpFull);
+        _renderedHtml = (MarkupString)Markdown.ToHtml(md, _pipeline);
+    }
+
+    private void GoBack()
+    {
+        if (_history.Count == 0) return;
+        var prev = _history.Pop();
+        var entry = Help.Get(prev);
+        if (entry is not null) SetEntry(entry);
+        StateHasChanged();
+    }
+
+    private Task<IEnumerable<HelpEntry>> SearchEntries(string text, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return Task.FromResult(Help.AllEntries.Take(30));
+        var q = text.Trim().ToUpperInvariant().TrimStart('@');
+        var results = Help.AllEntries
+            .Where(e => e.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
+            .Take(40);
+        return Task.FromResult(results);
+    }
+
+    private void OnEntrySelected(HelpEntry? entry)
+    {
+        if (entry is null) return;
+        if (_current is not null) _history.Push(_current.Name);
+        SetEntry(entry);
+        _searchValue = null;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Post-processes helpfile markdown to turn [name()] and [@cmd] link syntax
+    /// into help: URI links that the JS click interceptor will handle.
+    /// The helpfiles already contain markdown links like [itext()] and [@dolist]
+    /// that use the entry name as both the label and target.
+    /// </summary>
+    private static string LinkifyHelpText(string md)
+    {
+        // Helpfiles use three cross-reference styles — none of which include a URL,
+        // so Markdig would render them as plain text without this pre-processing.
+        //
+        //   [word()]    function ref  → [word()](help:WORD)
+        //   [@cmd]      command ref   → [@cmd](help:@CMD)
+        //   [TOPIC]     topic ref     → [TOPIC](help:TOPIC)   (bare word, letters/digits/hyphens)
+
+        // 1. Function refs: [word()] or [word/sub()]
+        md = System.Text.RegularExpressions.Regex.Replace(
+            md,
+            @"\[(@?[\w][\w\-\/]*\(\))\](?!\()",
+            m => $"{m.Value}(help:{m.Groups[1].Value.TrimEnd(')').TrimEnd('(').ToUpperInvariant()})");
+
+        // 2. Command refs: [@cmd]
+        md = System.Text.RegularExpressions.Regex.Replace(
+            md,
+            @"\[(@[\w][\w\-\/]*)\](?!\()",
+            m => $"{m.Value}(help:{m.Groups[1].Value.ToUpperInvariant()})");
+
+        // 3. Bare topic refs: [WORD], [ansi3], [COLOR] — single token, no spaces
+        //    Must start with a letter (avoids [1], [!], etc.) and not already linked.
+        md = System.Text.RegularExpressions.Regex.Replace(
+            md,
+            @"\[([A-Za-z][\w\-\/]*)\](?!\()",
+            m => $"{m.Value}(help:{m.Groups[1].Value.ToUpperInvariant()})");
+
+        return md;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Help.OnNavigate     -= HandleNavigate;
+        Help.OnDrawerToggle -= HandleDrawerToggle;
+        if (_clickHandler is not null) { await _clickHandler.DisposeAsync(); }
+        _dotNetRef?.Dispose();
+    }
+}

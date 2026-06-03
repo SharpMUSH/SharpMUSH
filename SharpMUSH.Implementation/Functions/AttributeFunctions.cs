@@ -549,7 +549,7 @@ public partial class Functions
 		{
 			return await realLocated.Object().Flags.Value.AnyAsync(f =>
 				string.Equals(f.Name, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase) ||
-				string.Equals(f.Symbol.ToString(), flagNameOrSymbol, StringComparison.OrdinalIgnoreCase));
+				string.Equals(f.Symbol, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase));
 		}
 
 		async ValueTask<CallState> HasAttributeFlag(AnySharpObject realLocated)

@@ -146,7 +146,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		MString text,
 		Func<SharpMUSHParser, TContext> entryPoint,
 		string methodName,
-		IMUSHCodeParser? parser = null)
+		IMUSHCodeParser? parser = null,
+		bool lenient = false)
 		where TContext : ParserRuleContext
 	{
 		// Use provided parser or default to this instance
@@ -181,9 +182,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var context = entryPoint(sharpParser);
 
-		// If the parser detected a real syntax error, surface it as a MUSH failure string.
-		// We deliberately do NOT visit the partial recovery tree — its result is unreliable.
-		if (errorListener.HasErrors)
+		// In strict mode (default for function evaluation), surface any syntax error
+		// immediately as a MUSH failure string without visiting the recovery tree.
+		// In lenient mode (command argument parsing), proceed to visit ANTLR's
+		// error-recovery tree so the best-effort split is returned to the caller.
+		if (errorListener.HasErrors && !lenient)
 		{
 			return ValueTask.FromResult<CallState?>(
 				new CallState(MModule.single(errorListener.Errors[0].ToMushFailureString())));
@@ -376,16 +379,20 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	public ValueTask<CallState?> CommandCommaArgsParse(MString text)
-		=> ParseInternal(text, p => p.commaCommandArgs(), nameof(CommandCommaArgsParse));
+		=> ParseInternal(text, p => p.commaCommandArgs(), nameof(CommandCommaArgsParse),
+			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	public ValueTask<CallState?> CommandSingleArgParse(MString text)
-		=> ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse));
+		=> ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse),
+			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	public ValueTask<CallState?> CommandEqSplitArgsParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse));
+		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse),
+			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	public ValueTask<CallState?> CommandEqSplitParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse));
+		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse),
+			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	/// <summary>
 	/// Tokenizes the input text and returns token information for syntax highlighting.

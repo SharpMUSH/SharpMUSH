@@ -128,6 +128,12 @@ public partial class Commands
 			return await HandleGuestLogin(parser, handle, ipAddress);
 		}
 
+		// Check if this is a one-time token login from the web UI
+		if (username.Equals("token", StringComparison.OrdinalIgnoreCase))
+		{
+			return await HandleTokenLogin(parser, handle, password, ipAddress);
+		}
+
 		var nameItems = ArgHelpers.NameList(username).ToList();
 
 		if (nameItems.Count != 1)
@@ -227,6 +233,46 @@ public partial class Commands
 		await ShowPostLoginMessages(parser, parser.CurrentState.Handle!.Value, new AnySharpObject(foundDB));
 		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new CallState(playerDbRef);
+	}
+
+	private static async ValueTask<Option<CallState>> HandleTokenLogin(
+		IMUSHCodeParser parser, long handle, string token, string ipAddress)
+	{
+		var playerDbRef = await OttStore!.ValidateAndConsumeAsync(token);
+
+		if (playerDbRef is null)
+		{
+			await EventService!.TriggerEventAsync(
+				parser, "SOCKET`LOGINFAIL", null,
+				handle.ToString(), ipAddress, "1",
+				"invalid or expired login token", "#-1", "token");
+			await NotifyService!.Notify(handle, "Invalid or expired login token.");
+			Logger?.LogWarning("OTT login failed for handle {Handle} from {IP}: token invalid/expired", handle, ipAddress);
+			return new CallState(ErrorMessages.Returns.InvalidPassword);
+		}
+
+		var playerNode = await Mediator!.Send(new GetObjectNodeQuery(playerDbRef.Value));
+		if (!playerNode.IsPlayer)
+		{
+			await NotifyService!.Notify(handle, "Could not find that player.");
+			return new CallState(ErrorMessages.Returns.PlayerNotFound);
+		}
+		var foundPlayer = playerNode.AsPlayer;
+
+		await ConnectionService!.Bind(handle, playerDbRef.Value);
+
+		var connectionCount = await ConnectionService.Get(playerDbRef.Value).CountAsync();
+		await EventService!.TriggerEventAsync(
+			parser, "PLAYER`CONNECT", playerDbRef,
+			$"#{foundPlayer.Object.Key}",
+			connectionCount.ToString(),
+			handle.ToString());
+
+		await SyncPlayerOutputPreferences(handle, foundPlayer.Object);
+		await ShowPostLoginMessages(parser, handle, new AnySharpObject(foundPlayer));
+		Logger?.LogInformation("OTT login succeeded for player {Name} (#{Key}) from {IP}",
+			foundPlayer.Object.Name, foundPlayer.Object.Key, ipAddress);
+		return new CallState(playerDbRef.Value);
 	}
 
 	private static async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress)
