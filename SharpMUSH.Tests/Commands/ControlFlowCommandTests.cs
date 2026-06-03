@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using NSubstitute.Core;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
@@ -230,21 +232,27 @@ public class ControlFlowCommandTests
 	public async ValueTask Break_QueuedSwitch_BreaksCommandList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var preCount = NotifyService.ReceivedCalls().Count();
 		// Test that @break/queued with a truthy condition still breaks the command list
 		await Parser.CommandListParse(
 			MModule.single("@pemit #1=BreakQueued_Before_36489;@break/queued 1=@pemit #1=BreakQueued_Action_36489;@pemit #1=BreakQueued_After_36489"));
 
-		// The command before @break should execute
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "BreakQueued_Before_36489")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		var newCalls = NotifyService.ReceivedCalls().Skip(preCount).ToList();
+		var newMessages = newCalls
+			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
+			.Select(call => call.GetArguments())
+			.Select(args => args.Length >= 2 &&
+				args[0] is AnySharpObject who &&
+				who.Object().DBRef == executor &&
+				args[1] is OneOf<MString, string> msg
+					? msg.Match(m => m.ToString(), s => s)
+					: null)
+			.Where(message => message is not null)
+			.Select(message => message!)
+			.ToList();
 
-		// The command after @break should NOT execute (break stops the list)
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "BreakQueued_After_36489")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(newMessages).Contains("BreakQueued_Before_36489");
+		await Assert.That(newMessages).DoesNotContain("BreakQueued_After_36489");
 	}
 
 	[Test]

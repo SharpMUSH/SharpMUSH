@@ -54,6 +54,19 @@ public class TelDiagnosticTests
 			.ToList()!;
 	}
 
+	private async ValueTask WaitUntilAsync(Func<ValueTask<bool>> condition, int attempts = 20, int delayMs = 100)
+	{
+		for (var attempt = 0; attempt < attempts; attempt++)
+		{
+			if (await condition())
+			{
+				return;
+			}
+
+			await Task.Delay(delayMs);
+		}
+	}
+
 	/// <summary>
 	/// Verify @tel thing-into-thing by name works without errors.
 	/// </summary>
@@ -145,6 +158,10 @@ public class TelDiagnosticTests
 
 		var getResult = await Eval($"get({dbref}/last_mod)");
 		Console.WriteLine($"get({dbref}/last_mod) = {getResult}");
+
+		await WaitUntilAsync(async () =>
+			(await Eval($"name({objName})")) == objName &&
+			(await Eval($"get({objName}/last_mod)")) == "2024-01-01");
 
 		var nameResult2 = await Eval($"name({objName})");
 		Console.WriteLine($"name({objName}) = {nameResult2}");
@@ -539,6 +556,10 @@ public class TelDiagnosticTests
 		Console.WriteLine($"After @force @edit: get({aDbref}/ref) = {refVal}");
 		await Assert.That(refVal).IsEqualTo(aDbref)
 			.Because("@force @edit should have replaced #222 with actual dbref");
+
+		await WaitUntilAsync(async () =>
+			!(await Eval($"num({aName})")).Contains("NO MATCH", StringComparison.OrdinalIgnoreCase) &&
+			!(await Eval($"num({bName})")).Contains("NO MATCH", StringComparison.OrdinalIgnoreCase));
 
 		// Now @tel by name (NO @wait)
 		var errors = await ExecAndCollectErrors($"@tel {aName}={bName}");
