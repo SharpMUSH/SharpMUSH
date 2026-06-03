@@ -241,6 +241,26 @@ public class LockIntegrationTests
 		await Assert.That(result).Contains("Use");
 	}
 
+	[Test]
+	public async Task LockUseSwitch_EndToEndBehaviorMatchesOracle()
+	{
+		var obj = await CreateObject("LockUseEndToEnd");
+
+		var lockUseResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@lock/use #{obj.Number}=#FALSE"));
+		await Assert.That(lockUseResult.Message?.ToPlainText() ?? string.Empty).DoesNotContain("#-1 INVALID SWITCH");
+
+		var elockResult = await Eval($"elock(#{obj.Number}/Use,%#)");
+		await Assert.That(elockResult).IsEqualTo("0");
+
+		var indirectResult = await Eval($"testlock(@#{obj.Number}/Use,%#)");
+		await Assert.That(indirectResult).IsEqualTo("0");
+
+		await Command($"@lock #{obj.Number}=#TRUE");
+		var llocksResult = await Eval($"llocks(#{obj.Number})");
+		await Assert.That(llocksResult).Contains("Basic");
+		await Assert.That(llocksResult).Contains("Use");
+	}
+
 	// === lockowner() with lock set ===
 	// Oracle: lockowner(obj/Basic) returns the dbref of who set the lock
 
