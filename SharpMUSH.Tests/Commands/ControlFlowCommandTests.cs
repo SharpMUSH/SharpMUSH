@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
@@ -17,6 +19,26 @@ public class ControlFlowCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+
+	private static string? ExtractMessageForExecutor(object?[] args, DBRef executor)
+	{
+		if (args.Length < 2)
+		{
+			return null;
+		}
+
+		if (args[0] is not AnySharpObject who || who.Object().DBRef != executor)
+		{
+			return null;
+		}
+
+		if (args[1] is not OneOf<MString, string> msg)
+		{
+			return null;
+		}
+
+		return msg.Match(m => m.ToString(), s => s);
+	}
 
 	[Test]
 	[Category("NotImplemented")]
@@ -230,21 +252,22 @@ public class ControlFlowCommandTests
 	public async ValueTask Break_QueuedSwitch_BreaksCommandList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var baselineNotificationCount = NotifyService.ReceivedCalls().Count();
 		// Test that @break/queued with a truthy condition still breaks the command list
 		await Parser.CommandListParse(
 			MModule.single("@pemit #1=BreakQueued_Before_36489;@break/queued 1=@pemit #1=BreakQueued_Action_36489;@pemit #1=BreakQueued_After_36489"));
 
-		// The command before @break should execute
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "BreakQueued_Before_36489")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		var newCalls = NotifyService.ReceivedCalls().Skip(baselineNotificationCount).ToList();
+		var newMessages = newCalls
+			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
+			.Select(call => call.GetArguments())
+			.Select(args => ExtractMessageForExecutor(args, executor))
+			.Where(message => message is not null)
+			.Select(message => message!)
+			.ToList();
 
-		// The command after @break should NOT execute (break stops the list)
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "BreakQueued_After_36489")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(newMessages).Contains("BreakQueued_Before_36489");
+		await Assert.That(newMessages).DoesNotContain("BreakQueued_After_36489");
 	}
 
 	[Test]

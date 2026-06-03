@@ -179,35 +179,6 @@ public class ParserFailureTests
 
 	// ─── Command parse modes ───────────────────────────────────────────────────
 
-	/// <summary>
-	/// Missing paren via the CommandList parse path (<see cref="ParseType.CommandList"/>).
-	/// <para>
-	/// <c>ParseType.Command</c> (<c>startSingleCommandString</c>) is structurally identical
-	/// to <c>ParseType.Function</c> — both reduce to <c>evaluationString EOF</c>.
-	/// <c>ParseType.CommandList</c> is distinct: it uses the <c>commandList</c> rule with
-	/// SEMICOLON splitting. Inside a command list, SEMICOLON cannot appear as generic text
-	/// (the <c>beginGenericText</c> predicate blocks it), so a missing <c>)</c> before <c>;</c>
-	/// is correctly surfaced as a parse error.
-	/// </para>
-	/// <para>
-	/// Note: the silent-failure bug for <c>&amp;ATTR obj=ansi(hr,fun</c> (unclosed paren in
-	/// the EqSplit RHS) was fixed separately — <c>ArgumentSplit</c> now bubbles the
-	/// <c>CommandEqSplitParse</c> parse error up to the player as a <c>#-1 PARSER FAILURE</c>
-	/// message. That fix covers the <c>&amp;</c> (single-token) command path.
-	/// This test is about <c>ValidateAndGetErrors</c> on <c>ParseType.CommandList</c> / 
-	/// <c>ParseType.Command</c> not surfacing the error at the grammar level, which is a
-	/// separate and distinct issue.
-	/// </para>
-	/// </summary>
-	[Test]
-	[Skip("ParseType.Command and ParseType.CommandList tolerate missing parens by design — command argument parsers now use lenient (ANTLR recovery) mode by default")]
-	public async Task MissingParen_InCommandArg_CurrentBehavior()
-	{
-		var errors = Parser.ValidateAndGetErrors(
-			MModule.single("think add(1,2"), ParseType.CommandList);
-		await Assert.That(errors).IsNotEmpty();
-	}
-
 	/// <summary>Missing paren in a CommandEqSplit context (e.g., &ATTR obj=add(1,2).</summary>
 	[Test]
 	public async Task MissingParen_InEqSplit_CurrentBehavior()
