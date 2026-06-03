@@ -51,7 +51,7 @@ public class Program
 
 		var builder = WebApplication.CreateBuilder(args);
 		var startup = new Startup(arangoConfig, colorFile, natsUrl, databaseProvider, memgraphUri);
-		startup.ConfigureServices(builder.Services, builder.Configuration);
+		startup.ConfigureServices(builder.Services, builder.Configuration, builder.Environment);
 
 		var app = builder.Build();
 
@@ -106,6 +106,7 @@ public class Program
 		}
 
 		app.UseHttpsRedirection();
+		app.UseAuthentication();
 		app.UseAuthorization();
 		app.MapControllers();
 		app.MapRazorPages();

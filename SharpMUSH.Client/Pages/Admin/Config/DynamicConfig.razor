@@ -306,18 +306,16 @@
                 .Where(kvp => kvp.Value.Category.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-            var result = await AdminConfigService.GetOptionsAsync();
-            if (result.IsT1)
+            var configResponse = await AdminConfigService.FetchConfigurationFromServer();
+            if (configResponse.Configuration == null)
             {
                 Snackbar.Add(Loc["FailedToLoadValues"].Value, Severity.Error);
                 return;
             }
 
-            var config = result.AsT0;
-            
             foreach (var prop in _categoryProperties.Values)
             {
-                var value = GetPropertyValue(config, prop.Path);
+                var value = GetPropertyValue(configResponse.Configuration, prop.Path);
                 _currentValues[prop.Path] = value;
                 _originalValues[prop.Path] = value;
             }

@@ -20,6 +20,7 @@ public static class DatabaseConstants
 	public const string Channels = "node_channels";
 	public const string Mails = "node_mails";
 	public const string Logs = "logs";
+	public const string Accounts = "node_accounts";
 
 	public static readonly string[] verticesContainer = [Rooms, Players, Things];
 	public static readonly string[] verticesContent = [Players, Exits, Things];
@@ -44,6 +45,7 @@ public static class DatabaseConstants
 	public const string SenderOfMail = "edge_mail_sender";
 	public const string ReceivedMail = "edge_received_mail";
 	public const string HasZone = "edge_has_zone";
+	public const string AccountOwnsCharacter = "edge_account_owns_character";
 
 	/// <summary>
 	/// Describes the relationship between actualized types and their objects.
@@ -130,6 +132,11 @@ public static class DatabaseConstants
 	/// <see cref="Objects"/> -> <see cref="HasZone"/> -> <see cref="Objects"/>
 	/// </summary>
 	public const string GraphZones = "graph_zones";
+	/// <summary>
+	/// Describes the relationship between web accounts and their MUSH characters.
+	/// <see cref="Accounts"/> -> <see cref="AccountOwnsCharacter"/> -> <see cref="Players"/>
+	/// </summary>
+	public const string GraphAccounts = "graph_accounts";
 
 	public const string TypeObject = "object";
 	public const string TypeString = "string";

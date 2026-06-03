@@ -822,6 +822,12 @@
   <data name="ExportConfiguration" xml:space="preserve">
     <value>Export Configuration</value>
   </data>
+  <data name="ExportFailed" xml:space="preserve">
+    <value>Failed to export configuration</value>
+  </data>
+  <data name="ConfigurationExported" xml:space="preserve">
+    <value>Configuration exported</value>
+  </data>
 
   <!-- ======================== -->
   <!-- DynamicConfig.razor      -->
@@ -901,5 +907,13 @@
   <!-- ======================== -->
   <data name="Language" xml:space="preserve">
     <value>Language</value>
+  </data>
+
+  <data name="SoftcodeEditor" xml:space="preserve">
+    <value>Softcode Editor</value>
+  </data>
+
+  <data name="Terminal" xml:space="preserve">
+    <value>Terminal</value>
   </data>
 </root>

@@ -22,3 +22,196 @@ body {
 .b-demo-loading {
 	animation: b-loading-indicator-flipper 1200ms linear infinite;
 }
+
+/* ── Terminal ── */
+.sharp-terminal-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Bottom terminal drawer: ensure mud-drawer-content is flex so GlobalTerminal fills it */
+.terminal-bottom-drawer .mud-drawer-content {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    height: 100% !important;
+    padding: 0 !important;
+}
+
+/* Softcode editor terminal tab: make tab panel a flex column */
+.softcode-editor-tabs .mud-tab-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.terminal-line {
+    line-height: 1.45;
+    padding: 0 2px;
+}
+
+.terminal-sent {
+    color: #88c0d0;
+    opacity: 0.85;
+}
+
+.terminal-system {
+    color: #a3be8c;
+    font-style: italic;
+}
+
+/* ── Softcode Editor ── */
+.mush-editor-fill {
+    width: 100%;
+    height: 100%;
+    background-color: #1a1a2e;
+}
+
+.mush-editor-fill .monaco-editor-container {
+    height: 100%;
+}
+
+/* Force dark background on all Monaco editor layers so it's dark even before theme loads */
+.mush-editor-fill > div,
+.mush-editor-fill .monaco-editor,
+.mush-editor-fill .monaco-editor .overflow-guard,
+.mush-editor-fill .monaco-editor-background,
+.mush-editor-fill .inputarea.ime-input {
+    background-color: #1a1a2e !important;
+}
+
+/* Keep flex-panel inside MudTabs filling available height */
+.flex-panel {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Bottom terminal drawer */
+.terminal-bottom-drawer .mud-drawer-content {
+    padding: 0;
+}
+
+/* ── Dark DataGrid (attribute list) ── */
+.mush-dark-grid .mud-table-root,
+.mush-dark-grid .mud-table-container,
+.mush-dark-grid .mud-table,
+.mush-dark-grid thead tr,
+.mush-dark-grid tbody tr {
+    background-color: transparent !important;
+}
+.mush-dark-grid thead tr th {
+    background-color: #1a1a1a !important;
+    border-bottom: 1px solid #333 !important;
+    color: rgba(255,255,255,0.6) !important;
+    font-size: 11px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.mush-dark-grid tbody tr td {
+    border-bottom: 1px solid #282828 !important;
+    color: rgba(255,255,255,0.87) !important;
+}
+.mush-dark-grid tbody tr:hover td {
+    background-color: rgba(255,255,255,0.04) !important;
+}
+.mush-dark-grid .mud-table-pagination {
+    background-color: #1a1a1a !important;
+    border-top: 1px solid #333 !important;
+}
+
+/* ── Eval result panel ── */
+.mush-eval-output {
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding: 6px 10px;
+    background: #111;
+    color: #a3e8a0;
+    border-top: 1px solid #333;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+/* ── Monaco Editor: ensure hover/suggestion widgets appear above MudBlazor tabs ── */
+/* fixedOverflowWidgets:true moves them to document body, but belt-and-suspenders z-index */
+.monaco-editor-overlaymessage,
+.monaco-hover,
+.monaco-editor .suggest-widget,
+.monaco-editor .parameter-hints-widget {
+    z-index: 10000 !important;
+}
+
+/* ── MUSH Help Dialog content ── */
+.mush-help-content pre {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    padding: 8px 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+.mush-help-content code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+/* ── HelpDrawer markdown rendering ── */
+.mush-help-md {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #d4d4d4;
+}
+.mush-help-md p { margin: 0 0 8px; }
+.mush-help-md pre {
+    background: #0d0d0d;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 8px 12px;
+    overflow-x: auto;
+    white-space: pre;
+}
+.mush-help-md code {
+    background: rgba(255,255,255,0.07);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-family: inherit;
+    font-size: 0.92em;
+    color: #ce9178;
+}
+.mush-help-md pre code {
+    background: none;
+    padding: 0;
+    color: #d4d4d4;
+}
+.mush-help-md a[href^="help:"] {
+    color: #4ec9b0;
+    text-decoration: none;
+    cursor: pointer;
+}
+.mush-help-md a[href^="help:"]:hover {
+    text-decoration: underline;
+}
+.mush-help-md h1, .mush-help-md h2, .mush-help-md h3 {
+    color: #9cdcfe;
+    margin: 12px 0 6px;
+}
+.mush-help-md ul, .mush-help-md ol {
+    padding-left: 20px;
+    margin: 0 0 8px;
+}
+.mush-help-md blockquote {
+    border-left: 3px solid #555;
+    padding-left: 10px;
+    color: #888;
+    margin: 0 0 8px;
+}
+.mush-help-md strong { color: #dcdcaa; }

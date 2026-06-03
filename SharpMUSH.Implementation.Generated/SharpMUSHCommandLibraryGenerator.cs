@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SharpMUSH.Implementation.Generated;
 
-using CommandInformation = (string Name, string ClassName, string MethodName, string AttributeName, string MinArgs, string MaxArgs, string CommandLock, string CommandBehavior, string[] Switches);
+using CommandInformation = (string Name, string ClassName, string MethodName, string AttributeName, string MinArgs, string MaxArgs, string CommandLock, string CommandBehavior, string[] Switches, string[] ParameterNames);
 
 [Generator]
 public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
@@ -40,7 +40,11 @@ public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
 		var switches = switchesArg.Kind == TypedConstantKind.Array
 			? switchesArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()
 			: [];
-		return (name, className, methodName, attrName, minArgs, maxArgs, commandLock, commandBehavior, switches);
+		var paramNamesArg = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "ParameterNames").Value;
+		var parameterNames = paramNamesArg.Kind == TypedConstantKind.Array
+			? paramNamesArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()
+			: [];
+		return (name, className, methodName, attrName, minArgs, maxArgs, commandLock, commandBehavior, switches, parameterNames);
 	}
 
 	private static void Execute(SourceProductionContext context,
@@ -69,6 +73,8 @@ public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
 		context.AddSource("SharpMUSH.Implementation.Generated.CommandLibrary.g.cs", code);
 	}
 
+	private static string EscapeString(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
 	private static string InfoToSource(CommandInformation info)
 	{
 		return
@@ -83,7 +89,8 @@ public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
 			  					MaxArgs = {{info.MaxArgs}},
 			  					CommandLock = "{{info.CommandLock}}",
 			  					Behavior = (SharpMUSH.Library.Definitions.CommandBehavior){{info.CommandBehavior}},
-			  					Switches = [ {{string.Join(", ", info.Switches.Select(x => $"\"{x}\""))}} ]
+			  					Switches = [ {{string.Join(", ", info.Switches.Select(x => $"\"{x}\""))}} ],
+			  					ParameterNames = [ {{string.Join(", ", info.ParameterNames.Select(x => $"\"{EscapeString(x)}\""))}} ]
 			  				},
 			  				{{info.ClassName}}.{{info.MethodName}})
 			  		}

@@ -242,6 +242,12 @@
   <data name="ExportConfiguration" xml:space="preserve">
     <value>Exporter la configuration</value>
   </data>
+  <data name="ExportFailed" xml:space="preserve">
+    <value>Échec de l'exportation de la configuration</value>
+  </data>
+  <data name="ConfigurationExported" xml:space="preserve">
+    <value>Configuration exportée</value>
+  </data>
   <data name="ComingSoon" xml:space="preserve">
     <value>Bientôt disponible</value>
   </data>

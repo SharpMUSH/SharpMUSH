@@ -4,6 +4,7 @@ using Antlr4.Runtime.Tree;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -1278,7 +1279,13 @@ public class SharpMUSHParserVisitor(
 		CommandContext context, string rootCommand, IEnumerable<string> switches,
 		CommandDefinition libraryCommandDefinition)
 	{
-		var arguments = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand);
+		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand);
+		if (splitResult.TryPickT1(out var splitError, out var arguments))
+		{
+			if (prs.CurrentState.Handle.HasValue)
+				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
+			return new None();
+		}
 
 		// Hook execution integration
 		// Get executor for permission checks in hooks
@@ -1630,13 +1637,19 @@ public class SharpMUSHParserVisitor(
 		return CallState.Empty;
 	}
 
-	private static async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser prs, MString src,
+	private async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser prs, MString src,
 		CommandContext context, string command,
 		IEnumerable<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>> socketCommandPattern,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			librarySocketCommandDefinition)
 	{
-		var arguments = await ArgumentSplit(prs, src, context, librarySocketCommandDefinition);
+		var splitResult = await ArgumentSplit(prs, src, context, librarySocketCommandDefinition);
+		if (splitResult.TryPickT1(out var splitError, out var arguments))
+		{
+			if (prs.CurrentState.Handle.HasValue)
+				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
+			return new None();
+		}
 
 		return await prs.With(state => state with
 		{
@@ -1648,7 +1661,7 @@ public class SharpMUSHParserVisitor(
 		}, async newParser => await socketCommandPattern.First().Value.LibraryInformation.Command.Invoke(newParser));
 	}
 
-	private static async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser prs,
+	private async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser prs,
 		MString src, CommandContext context, string command,
 		IEnumerable<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>> singleTokenCommandPattern)
 	{
@@ -1658,7 +1671,13 @@ public class SharpMUSHParserVisitor(
 
 		// TODO: Investigate if single-token commands should support argument splitting.
 		// Currently causing errors, may require special handling for single-character commands.
-		var arguments = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition.LibraryInformation);
+		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition.LibraryInformation);
+		if (splitResult.TryPickT1(out var splitError, out var arguments))
+		{
+			if (prs.CurrentState.Handle.HasValue)
+				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
+			return new None();
+		}
 
 		return await prs.With(state =>
 				state with
@@ -1674,7 +1693,7 @@ public class SharpMUSHParserVisitor(
 		);
 	}
 
-	private static async ValueTask<List<CallState>> ArgumentSplit(IMUSHCodeParser prs, MString src,
+	private static async ValueTask<OneOf<List<CallState>, Error<string>>> ArgumentSplit(IMUSHCodeParser prs, MString src,
 		CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			libraryCommandDefinition,
@@ -1794,9 +1813,16 @@ public class SharpMUSHParserVisitor(
 		// TODO: Implement lsargs (list-style arguments) support.
 		// No immediate commands require this feature yet, so implementation is deferred.
 		// Also return early when Arguments is empty (EmptyArgument sentinel), meaning no args were provided.
-		if (argCallState is null or { Arguments: null } or { Arguments: [] })
+		if (argCallState is null or { Arguments: [] })
 		{
 			return arguments;
+		}
+
+		// Parse failure: the argument split detected a syntax error. Bubble it up as Error<string>.
+		if (argCallState is { Arguments: null })
+		{
+			var errorText = MModule.plainText(argCallState.Message ?? MModule.empty()).ToString();
+			return new Error<string>(errorText);
 		}
 
 		if (eqSplit)

@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SharpMUSH.Implementation.Generated;
 
-using FunctionInformation = (string Name, string ClassName, string MethodName, string AttributeName, string MinArgs, string MaxArgs, string Flags, string[] Restrict);
+using FunctionInformation = (string Name, string ClassName, string MethodName, string AttributeName, string MinArgs, string MaxArgs, string Flags, string[] Restrict, string[] ParameterNames);
 
 [Generator]
 public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
@@ -43,7 +43,11 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 		var restrict = restrictArg.Kind == TypedConstantKind.Array
 			? restrictArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()
 			: [];
-		return (name, className, methodName, attrName, minArgs, maxArgs, flags, restrict);
+		var paramNamesArg = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "ParameterNames").Value;
+		var parameterNames = paramNamesArg.Kind == TypedConstantKind.Array
+			? paramNamesArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()
+			: [];
+		return (name, className, methodName, attrName, minArgs, maxArgs, flags, restrict, parameterNames);
 	}
 
 	private static void Execute(SourceProductionContext context,
@@ -72,6 +76,8 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 		context.AddSource("SharpMUSH.Implementation.Generated.FunctionLibrary.g.cs", code);
 	}
 
+	private static string EscapeString(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
 	private static string InfoToSource(FunctionInformation info)
 	{
 		return
@@ -85,7 +91,8 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 			  					MinArgs = {{info.MinArgs}},
 			  					MaxArgs = {{info.MaxArgs}},
 			  					Flags = (SharpMUSH.Library.Definitions.FunctionFlags){{info.Flags}},
-			  					Restrict = [ {{string.Join(", ", info.Restrict.Select(x => $"\"{x}\""))}} ]
+			  					Restrict = [ {{string.Join(", ", info.Restrict.Select(x => $"\"{x}\""))}} ],
+			  					ParameterNames = [ {{string.Join(", ", info.ParameterNames.Select(x => $"\"{EscapeString(x)}\""))}} ]
 			  				},
 			  				{{info.ClassName}}.{{info.MethodName}})
 			  		}
