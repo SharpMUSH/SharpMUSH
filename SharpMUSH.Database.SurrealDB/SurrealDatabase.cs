@@ -170,6 +170,7 @@ public partial class SurrealDatabase(
 	private static string SerializeValue(object? value) => value switch
 	{
 		null => "NONE",
+		SurrealDb.Net.Models.StringRecordId id => id.Value,
 		string s => $"'{EscapeString(s)}'",
 		int i => i.ToString(),
 		long l => l.ToString(),
@@ -190,6 +191,7 @@ public partial class SurrealDatabase(
 	private static string SerializeValueRaw(object? value) => value switch
 	{
 		null => "",
+		SurrealDb.Net.Models.StringRecordId id => id.Value,
 		string s => s,
 		int i => i.ToString(),
 		long l => l.ToString(),

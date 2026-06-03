@@ -16,14 +16,12 @@ public class NavMenuTests : MudBlazorTestContext
 
 		// Assert - Verify all expected navigation links are present
 		var homeLink = cut.Find("a[href='/']");
-		var counterLink = cut.Find("a[href='/counter']");
-		var weatherLink = cut.Find("a[href='/weather']");
-		var aboutLink = cut.Find("a[href='/about']");
+		var softcodeLink = cut.Find("a[href='/softcode']");
+		var accountLink = cut.Find("a[href='/account']");
 
 		await Assert.That(homeLink).IsNotNull();
-		await Assert.That(counterLink).IsNotNull();
-		await Assert.That(weatherLink).IsNotNull();
-		await Assert.That(aboutLink).IsNotNull();
+		await Assert.That(softcodeLink).IsNotNull();
+		await Assert.That(accountLink).IsNotNull();
 	}
 
 	[Test]
@@ -38,25 +36,25 @@ public class NavMenuTests : MudBlazorTestContext
 	}
 
 	[Test]
-	public async Task NavMenu_CounterLinkText_IsCorrect()
+	public async Task NavMenu_SoftcodeLinkText_IsCorrect()
 	{
 		// Arrange & Act
 		var cut = Render<NavMenu>();
 
 		// Assert
-		var counterLink = cut.Find("a[href='/counter']");
-		await Assert.That(counterLink.TextContent).Contains("Counter");
+		var softcodeLink = cut.Find("a[href='/softcode']");
+		await Assert.That(softcodeLink.TextContent).Contains("Softcode");
 	}
 
 	[Test]
-	public async Task NavMenu_WeatherLinkText_IsCorrect()
+	public async Task NavMenu_AccountLinkText_IsCorrect()
 	{
 		// Arrange & Act
 		var cut = Render<NavMenu>();
 
 		// Assert
-		var weatherLink = cut.Find("a[href='/weather']");
-		await Assert.That(weatherLink.TextContent).Contains("Weather");
+		var accountLink = cut.Find("a[href='/account']");
+		await Assert.That(accountLink.TextContent).Contains("My Account");
 	}
 
 	[Test]
