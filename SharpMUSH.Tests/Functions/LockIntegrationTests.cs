@@ -340,7 +340,8 @@ public class LockIntegrationTests
 	public async Task Testlock_CarryPrefix_CarriedObject()
 	{
 		var obj = await CreateObject("CarryLockTest");
-		// Object was created by executor, so it's in their inventory
+		// Ensure deterministic carry state across providers/runtimes.
+		await Command($"@tel #{obj.Number}=%#");
 		var result = await Eval($"testlock(+#{obj.Number},%#)");
 		await Assert.That(result).IsEqualTo("1");
 	}
