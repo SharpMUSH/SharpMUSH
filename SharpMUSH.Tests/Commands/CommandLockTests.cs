@@ -83,4 +83,20 @@ public class CommandLockTests
 		// Should be denied
 		await Assert.That(resultText).Contains("PERMISSION DENIED");
 	}
+
+	[Test]
+	public async ValueTask LockCommandWildcardSwitchAcceptsUseAndSetsUseLock()
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LockUseWildcard");
+
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@lock/use {obj}=#FALSE"));
+		var resultText = result.Message?.ToPlainText() ?? string.Empty;
+
+		await Assert.That(resultText).DoesNotContain("#-1 INVALID SWITCH");
+
+		var found = await Mediator.Send(new GetObjectNodeQuery(obj));
+		await Assert.That(found.IsNone).IsFalse();
+		await Assert.That(found.Known.Object().Locks.ContainsKey("Use")).IsTrue();
+		await Assert.That(found.Known.Object().Locks["Use"].LockString).IsEqualTo("#FALSE");
+	}
 }

@@ -56,12 +56,8 @@ EXACTOBJECT: '=';
 FALSE: POUND F A L S E;
 TRUE: POUND T R U E;
 ATTRIBUTE_COLON: ':';
-// STRING - must come BEFORE ATTRIBUTENAME so it matches in `string` parser rules
-// Allow colons for objid format (#123:456) but exclude other operator characters
-// FALSE/TRUE tokens will match #FALSE and #TRUE before STRING can
-STRING: ~( '&' | '|' | '!' | ')' | '(' | '^' | ' ' | '/' | '+' | '$' | '@' | '=')+;
-// ATTRIBUTENAME - used specifically for attribute names in certain contexts
-// Excludes colons to distinguish from general strings with objid format
-ATTRIBUTENAME:
-    ~('&' | '|' | ':' | '!' | ')' | '(' | '/' | ' ' | '^' | '+' | '$' | '@' | '=')+
-;
+// STRING - general token for names, dbrefs, patterns.
+// Excludes operator chars AND colon (colon is its own ATTRIBUTE_COLON token
+// so attribute locks like RACE:Elf tokenize as STRING ATTRIBUTE_COLON STRING).
+// FALSE/TRUE tokens will match #FALSE and #TRUE before STRING can.
+STRING: ~( '&' | '|' | ':' | '!' | ')' | '(' | '^' | ' ' | '/' | '+' | '$' | '@' | '=')+;

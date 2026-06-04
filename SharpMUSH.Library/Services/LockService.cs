@@ -11,7 +11,7 @@ namespace SharpMUSH.Library.Services;
 
 public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMediator med) : ILockService
 {
-	public Dictionary<string, (string, LockFlags)> LockPrivileges { get; } = new()
+	public Dictionary<string, (string, LockFlags)> LockPrivileges { get; } = new(StringComparer.OrdinalIgnoreCase)
 	{
 		{ "visual", ("v", LockFlags.Visual) },
 		{ "no_inherit", ("n", LockFlags.Private) },
@@ -21,7 +21,7 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		{ "locked", ("l", LockFlags.Locked) }
 	};
 
-	public Dictionary<string, LockFlags> SystemLocks { get; } = new()
+	public Dictionary<string, LockFlags> SystemLocks { get; } = new(StringComparer.OrdinalIgnoreCase)
 	{
 		{ "Basic", LockFlags.Private },
 		{ "Enter", LockFlags.Private },

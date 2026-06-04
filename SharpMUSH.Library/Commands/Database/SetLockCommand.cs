@@ -1,10 +1,11 @@
 using Mediator;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
 
-public record SetLockCommand(SharpObject Target, string LockName, string LockString) : ICommand, ICacheInvalidating
+public record SetLockCommand(SharpObject Target, string LockName, string LockString, AnySharpObject? Executor = null) : ICommand, ICacheInvalidating
 {
 	public string[] CacheKeys => [$"object:{Target.DBRef}", $"lock:{Target.DBRef}:{LockName}"];
 	public string[] CacheTags => [];

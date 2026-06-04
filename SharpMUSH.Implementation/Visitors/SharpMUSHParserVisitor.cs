@@ -1415,8 +1415,10 @@ public class SharpMUSHParserVisitor(
 
 				// Validate switches and check for /extend hook if invalid switches are found
 				var allowedSwitches = libraryCommandDefinition.Attribute.Switches ?? [];
-				var invalidSwitches = switchArray.Where(s => !allowedSwitches.Contains(s, StringComparer.OrdinalIgnoreCase))
-					.ToArray();
+				var allowsAnySwitch = allowedSwitches.Contains("*", StringComparer.OrdinalIgnoreCase);
+				var invalidSwitches = allowsAnySwitch
+					? []
+					: switchArray.Where(s => !allowedSwitches.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
 
 				if (invalidSwitches.Length > 0)
 				{

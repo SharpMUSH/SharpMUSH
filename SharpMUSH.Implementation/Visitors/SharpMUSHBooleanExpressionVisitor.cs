@@ -189,16 +189,9 @@ if (parsedTargetOpt.IsSome())
 	{
 		var targetName = context.@string().GetText();
 
-		// For carry locks, check if the unlocker is carrying the named object or IS the object
+		// PennMUSH OP_TCARRY: passes ONLY if unlocker CARRIES the target (not if IS the target)
 		Func<AnySharpObject, string, bool> func = (unlockerObj, target) =>
 		{
-			// Check if unlocker IS the target object (name match)
-			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
-				return true;
-
-			// Check aliases too
-			if (unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
-				return true;
 
 			// If target is a DBRef or objid like "#123" or "#123:timestamp", check if carrying that specific object
 			var parsedCarryOpt = HelperFunctions.ParseDbRef(target);
@@ -469,7 +462,10 @@ if (parsedCarryOpt.IsSome())
 
 	public override Expression VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
-		var targetIdentifier = context.@string().GetText();
+		// Reconstruct full identifier including optional :timestamp for objid format
+		var targetIdentifier = context.ATTRIBUTE_COLON() != null
+			? $"{context.@string(0).GetText()}:{context.@string(1).GetText()}"
+			: context.@string(0).GetText();
 		return BuildExactObjectExpression(targetIdentifier);
 	}
 
@@ -481,7 +477,7 @@ if (parsedCarryOpt.IsSome())
 
 	private Expression BuildExactObjectExpression(string targetIdentifier)
 	{
-		// Check if unlocker matches the exact target object
+		// PennMUSH OP_TCONST: passes if unlocker IS the target OR unlocker CARRIES the target
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, target) =>
 		{
 			// If target is "me", it refers to the gated object's owner
@@ -499,29 +495,37 @@ if (parsedCarryOpt.IsSome())
 				var lockDbRef = parsedDbRef.AsValue();
 				var unlockerDbRef = unlockerObj.Object().DBRef;
 
-				// If lock specifies creation time (objid format), both number and timestamp must match
-				// This prevents locks from matching recycled dbrefs after objects are destroyed
-				if (lockDbRef.CreationMilliseconds.HasValue)
+				// Check if unlocker IS the target
+				bool isMatch = lockDbRef.CreationMilliseconds.HasValue
+					? (lockDbRef.Number == unlockerDbRef.Number && lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds)
+					: lockDbRef.Number == unlockerDbRef.Number;
+
+				if (isMatch)
+					return true;
+
+				// Check if unlocker CARRIES the target (PennMUSH: member(arg, Contents(player)))
+				try
 				{
-					return (lockDbRef.Number == unlockerDbRef.Number)
-								 && (lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds);
+					if (unlockerObj.IsContainer)
+					{
+						var contents = unlockerObj.AsContainer.Content(med);
+						return contents
+							.AnyAsync(item => item.Object().DBRef.Matches(lockDbRef), CancellationToken.None)
+							.AsTask().GetAwaiter().GetResult();
+					}
 				}
-				// If lock doesn't specify creation time (bare dbref), only match number for backward compatibility
-				else
+				catch (Exception)
 				{
-					return lockDbRef.Number == unlockerDbRef.Number;
+					// Catch errors during inventory check
 				}
+
+				return false;
 			}
 
-			// Otherwise try exact name match
-			// Check if the unlocker itself matches
-			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
-				return true;
-
-			// Check aliases
-			if (unlockerObj.Aliases != null && unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
-				return true;
-
+			// Name-based targets should have been resolved to dbrefs at @lock time
+			// by the normalization visitor. If we reach here with a non-dbref value,
+			// the lock was set without name resolution (e.g. programmatically) —
+			// treat as no match, matching PennMUSH behavior.
 			return false;
 		};
 
@@ -530,8 +534,8 @@ if (parsedCarryOpt.IsSome())
 
 	public override Expression VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
-		var value = context.@string().GetText();
-		var attribute = context.attributeName().GetText();
+		var attribute = context.@string(0).GetText();
+		var value = context.@string(1).GetText();
 
 		Func<AnySharpObject, string, string, bool> func = (unlockerObj, attrName, expectedValue) =>
 		{
@@ -584,39 +588,25 @@ if (parsedCarryOpt.IsSome())
 
 	public override Expression VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)
 	{
-		var expectedValue = context.@string().GetText();
-		var attribute = context.attributeName().GetText();
+		var attribute = context.@string(0).GetText();
+		var expectedValue = context.@string(1).GetText();
 
-		// Evaluation locks evaluate an attribute on the gated object (not the unlocker)
-		// The result is compared to the expected value
-		// %# is the unlocker, %! is the gated object during evaluation
+		// PennMUSH eval lock (ATTR/pattern): evaluate the attribute on the gated object
+		// as MUSHcode with the unlocker as enactor (%#), then compare result to pattern.
 		Func<AnySharpObject, AnySharpObject, string, string, bool> func = (gatedObj, unlockerObj, attrName, expected) =>
 		{
-			var attrResult = med.Send(
-					new GetAttributeServiceQuery(gatedObj, gatedObj, attrName, IAttributeService.AttributeMode.Execute, true),
+			// Use the mediator query to evaluate the attribute as MUSHcode
+			var evalResult = med.Send(
+					new EvaluateAttributeForLockQuery(gatedObj, unlockerObj, attrName),
 					CancellationToken.None)
 				.AsTask()
 				.ConfigureAwait(false).GetAwaiter().GetResult();
 
-			return attrResult.Match(
-				attributes =>
-				{
-					if (!attributes.Any())
-						return false;
+			if (evalResult == null)
+				return false;
 
-					// Get the attribute value and evaluate it
-					// NOTE: For full PennMUSH compatibility, the attribute should be evaluated with:
-					// %# = unlocker (the object trying to pass the lock)
-					// %! = gated object (the object being locked)
-					// This would require parser context injection
-					var actualValue = MModule.plainText(attributes.First().Value);
-
-					// Compare with expected value (case-insensitive)
-					return actualValue.Equals(expected, StringComparison.OrdinalIgnoreCase);
-				},
-				none => false,
-				error => false
-			);
+			// Compare with expected value (case-insensitive, per PennMUSH strcasecmp)
+			return evalResult.Equals(expected, StringComparison.OrdinalIgnoreCase);
 		};
 
 		return Expression.Invoke(Expression.Constant(func), gated, unlocker, Expression.Constant(attribute), Expression.Constant(expectedValue));
@@ -624,8 +614,8 @@ if (parsedCarryOpt.IsSome())
 
 	public override Expression VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
 	{
-		var targetName = context.@string().GetText();
-		var lockName = context.attributeName()?.GetText() ?? "Basic"; // Default to Basic lock if not specified
+		var targetName = context.@string(0).GetText();
+		var lockName = context.@string().Length > 1 ? context.@string(1).GetText() : "Basic"; // Default to Basic lock if not specified
 
 		// Indirect locks check another object's lock
 		// @object means check the Basic lock on object
@@ -703,8 +693,5 @@ if (parsedIndirectOpt.IsSome())
 	}
 
 	public override Expression VisitString(SharpMUSHBoolExpParser.StringContext context) =>
-		throw new ArgumentException("Parser should never reach here.");
-
-	public override Expression VisitAttributeName(SharpMUSHBoolExpParser.AttributeNameContext context) =>
 		throw new ArgumentException("Parser should never reach here.");
 }
