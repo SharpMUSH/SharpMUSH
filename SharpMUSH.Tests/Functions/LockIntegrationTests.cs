@@ -337,6 +337,7 @@ public class LockIntegrationTests
 	// Oracle: testlock(+num(TestObj), me) = 1 when TestObj is in inventory
 
 	[Test]
+	[NotInParallel]
 	public async Task Testlock_CarryPrefix_CarriedObject()
 	{
 		var obj = await CreateObject("CarryLockTest");
