@@ -221,7 +221,11 @@ CREATE (src)-[:AT_LOCATION]->(dest)
 			yield return item.WithRoomOption();
 
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
+		{
+			// Skip self — already yielded above
+			if (item.Object().DBRef == obj) continue;
 			yield return item.WithRoomOption();
+		}
 	}
 
 	public async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(AnySharpObject obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -234,7 +238,11 @@ CREATE (src)-[:AT_LOCATION]->(dest)
 			yield return item.WithRoomOption();
 
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
+		{
+			// Skip self — already yielded above
+			if (item.Object().DBRef == obj.Object().DBRef) continue;
 			yield return item.WithRoomOption();
+		}
 	}
 
 	#endregion
