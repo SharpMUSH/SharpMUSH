@@ -48,8 +48,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(123,456\) :$"),
-						str => Regex.IsMatch(str, @"^#\d+! +add\(123,456\) :$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(123,456\)\] :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[add\(123,456\)\] :$"))), null, INotifyService.NotificationType.Announce);
 
 		// Assert - Verify debug output contains the specific result
 		await NotifyService
@@ -57,8 +57,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(123,456\) => 579$"),
-						str => Regex.IsMatch(str, @"^#\d+! +add\(123,456\) => 579$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(123,456\)\] => 579$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[add\(123,456\)\] => 579$"))), null, INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugEvalObj"));
@@ -86,8 +86,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +mul\(add\(11,22\),3\) :$"),
-						str => Regex.IsMatch(str, @"^#\d+! +mul\(add\(11,22\),3\) :$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[mul\(add\(11,22\),3\)\] :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[mul\(add\(11,22\),3\)\] :$"))), null, INotifyService.NotificationType.Announce);
 
 		// Assert - Inner function (has extra space for nesting indentation, matching PennMUSH)
 		await NotifyService
@@ -104,8 +104,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +mul\(add\(11,22\),3\) => 99$"),
-						str => Regex.IsMatch(str, @"^#\d+! +mul\(add\(11,22\),3\) => 99$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[mul\(add\(11,22\),3\)\] => 99$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[mul\(add\(11,22\),3\)\] => 99$"))), null, INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugNestObj"));
@@ -385,8 +385,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(7,8\) :$"),
-						str => Regex.IsMatch(str, @"^#\d+! +add\(7,8\) :$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(7,8\)\] :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[add\(7,8\)\] :$"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugFmtPre"));
 	}
@@ -408,8 +408,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(7,8\) => 15$"),
-						str => Regex.IsMatch(str, @"^#\d+! +add\(7,8\) => 15$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(7,8\)\] => 15$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[add\(7,8\)\] => 15$"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugFmtPost"));
 	}
@@ -431,8 +431,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(add\(2,3\)\) :$"),
-						str => Regex.IsMatch(str, @"^#\d+! +strlen\(add\(2,3\)\) :$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[strlen\(add\(2,3\)\)\] :$"),
+							str => Regex.IsMatch(str, @"^#\d+! +\[strlen\(add\(2,3\)\)\] :$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
@@ -455,8 +455,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(add\(2,3\)\) => 1$"),
-						str => Regex.IsMatch(str, @"^#\d+! +strlen\(add\(2,3\)\) => 1$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[strlen\(add\(2,3\)\)\] => 1$"),
+							str => Regex.IsMatch(str, @"^#\d+! +\[strlen\(add\(2,3\)\)\] => 1$"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugNestFmt"));
 	}
@@ -564,16 +564,16 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(%qa\) :$"),
-						str => Regex.IsMatch(str, @"^#\d+! +strlen\(%qa\) :$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[strlen\(%qa\)\] :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[strlen\(%qa\)\] :$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(%qa\) => \d+$"),
-						str => Regex.IsMatch(str, @"^#\d+! +strlen\(%qa\) => \d+$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[strlen\(%qa\)\] => \d+$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[strlen\(%qa\)\] => \d+$"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugPctQ"));
 	}
@@ -596,16 +596,16 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(%0\) :$"),
-						str => Regex.IsMatch(str, @"^#\d+! +strlen\(%0\) :$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[strlen\(%0\)\] :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[strlen\(%0\)\] :$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(%0\) => 5$"),
-						str => Regex.IsMatch(str, @"^#\d+! +strlen\(%0\) => 5$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[strlen\(%0\)\] => 5$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[strlen\(%0\)\] => 5$"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugPct0"));
 	}
@@ -628,8 +628,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +iter\(Hello,strlen\(##\)\) :$"),
-						str => Regex.IsMatch(str, @"^#\d+! +iter\(Hello,strlen\(##\)\) :$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[iter\(Hello,strlen\(##\)\)\] :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[iter\(Hello,strlen\(##\)\)\] :$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
@@ -668,16 +668,16 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +setq\(a,TestVal123\) :$"),
-						str => Regex.IsMatch(str, @"^#\d+! +setq\(a,TestVal123\) :$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[setq\(a,TestVal123\)\] :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[setq\(a,TestVal123\)\] :$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +setq\(a,TestVal123\) => $"),
-						str => Regex.IsMatch(str, @"^#\d+! +setq\(a,TestVal123\) => $"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[setq\(a,TestVal123\)\] => $"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[setq\(a,TestVal123\)\] => $"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugSetq"));
 	}

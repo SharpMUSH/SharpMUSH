@@ -355,7 +355,12 @@ public class SharpMUSHParserVisitor(
 
 		if (shouldDebug && executorObj != null && indent != null)
 		{
-			await SendDebugOrVerboseOutput(executorObj, $"#{dbrefNumber}! {indent}{context.GetText()} :");
+			// PennMUSH wraps the function expression in [...] when the function was invoked
+			// inside bracket evaluation (e.g. think [add(1,2)]), but not for nested calls
+			// within function arguments (e.g. iter(a b, strlen(##)) — strlen is bare).
+			var isBracketed = context.Parent?.Parent is BracketPatternContext;
+			var debugExpr = isBracketed ? $"[{context.GetText()}]" : context.GetText();
+			await SendDebugOrVerboseOutput(executorObj, $"#{dbrefNumber}! {indent}{debugExpr} :");
 		}
 
 		if (shouldDebug) _debugNestDepth++;
@@ -369,8 +374,10 @@ public class SharpMUSHParserVisitor(
 			return result;
 		}
 
+		var isBracketedPost = context.Parent?.Parent is BracketPatternContext;
+		var debugExprPost = isBracketedPost ? $"[{context.GetText()}]" : context.GetText();
 		await SendDebugOrVerboseOutput(executorObj,
-			$"#{dbrefNumber}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}");
+			$"#{dbrefNumber}! {indent}{debugExprPost} => {result.Message?.ToPlainText() ?? ""}");
 
 		return result;
 	}
