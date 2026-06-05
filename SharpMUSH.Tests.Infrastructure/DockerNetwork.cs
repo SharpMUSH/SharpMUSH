@@ -15,5 +15,16 @@ public class DockerNetwork : IAsyncInitializer, IAsyncDisposable
 		.Build();
 
 	public async Task InitializeAsync() => await Instance.CreateAsync();
-	public async ValueTask DisposeAsync() => await Instance.DisposeAsync();
+
+	public async ValueTask DisposeAsync()
+	{
+		try
+		{
+			await Instance.DisposeAsync();
+		}
+		catch
+		{
+			// May fail if containers referencing this network are still being cleaned up
+		}
+	}
 }

@@ -38,7 +38,23 @@ public class ArangoDbTestServer : IAsyncInitializer, IAsyncDisposable
 	{
 		if (_instance is not null)
 		{
-			await _instance.DisposeAsync();
+			try
+			{
+				await _instance.StopAsync();
+			}
+			catch
+			{
+				// Podman may fail if the network was already removed
+			}
+
+			try
+			{
+				await _instance.DisposeAsync();
+			}
+			catch
+			{
+				// Podman may fail if the network was already removed
+			}
 		}
 	}
 }
