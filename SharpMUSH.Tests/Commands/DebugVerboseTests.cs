@@ -702,4 +702,30 @@ public class DebugVerboseTests
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerbosePctObj"));
 	}
+
+	[Test]
+	public async Task Debug_SubstitutionOnly_ShowsSingleLineFormat()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugSubst"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugSubst=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugSubst=!no_command"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("&subst_cmd DebugSubst=$substcmd:@pemit me=%# and %#"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugSubst=substcmd"));
+
+		// PennMUSH substitution-only debug format: "#dbref! %# and %# => #<dbref> and #<dbref>"
+		// Single line, no colon — fires when argument has substitutions but no function calls.
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! %# and %# => #\d+ and #\d+$"),
+						str => Regex.IsMatch(str, @"^#\d+! %# and %# => #\d+ and #\d+$"))), null, INotifyService.NotificationType.Announce);
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugSubst"));
+	}
 }

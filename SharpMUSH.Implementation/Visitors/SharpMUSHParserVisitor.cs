@@ -60,6 +60,8 @@ public class SharpMUSHParserVisitor(
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
 	private int _debugNestDepth;
+	private bool _didEmitFunctionDebug;
+	internal bool DidEmitFunctionDebug => _didEmitFunctionDebug;
 	private int _braceDepthCounter;
 	private int _suppressFunctionEval;
 
@@ -361,6 +363,7 @@ public class SharpMUSHParserVisitor(
 			var isBracketed = context.Parent?.Parent is BracketPatternContext;
 			var debugExpr = isBracketed ? $"[{context.GetText()}]" : context.GetText();
 			await SendDebugOrVerboseOutput(executorObj, $"#{dbrefNumber}! {indent}{debugExpr} :");
+			_didEmitFunctionDebug = true;
 		}
 
 		if (shouldDebug) _debugNestDepth++;
@@ -1860,10 +1863,10 @@ public class SharpMUSHParserVisitor(
 			else
 			{
 				arguments.AddRange(await argCallState.Arguments.Skip(1)
-					.ToAsyncEnumerable()
-					.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument))
-					.Select(cs => cs!)
-					.ToListAsync());
+						.ToAsyncEnumerable()
+						.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument, true))
+						.Select(cs => cs!)
+						.ToListAsync());
 			}
 		}
 		else
@@ -1877,7 +1880,7 @@ public class SharpMUSHParserVisitor(
 			{
 				arguments.AddRange(await (argCallState.Arguments ?? [])
 					.ToAsyncEnumerable()
-					.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument))
+					.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument, true))
 					.Select(cs => cs!)
 					.ToListAsync());
 			}
