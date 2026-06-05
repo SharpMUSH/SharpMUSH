@@ -293,8 +293,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(88,77\) => 165$"),
-						str => Regex.IsMatch(str, @"^#\d+! +add\(88,77\) => 165$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(88,77\)\] => 165$"),
+						str => Regex.IsMatch(str, @"^#\d+! +\[add\(88,77\)\] => 165$"))), null, INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy AttrDebugForceTest"));
@@ -537,7 +537,7 @@ public class DebugVerboseTests
 				var args = c.GetArguments();
 				if (args.Length < 2) return false;
 				return args[1] is OneOf<MString, string> msg &&
-					msg.Match(m => m.ToString().Contains("! add(1,1)"), s => s.Contains("! add(1,1)"));
+					msg.Match(m => m.ToString().Contains("! [add(1,1)]"), s => s.Contains("! [add(1,1)]"));
 			})
 			.ToList();
 
@@ -645,16 +645,16 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! {2,}strlen\(##\) :$"),
-						str => Regex.IsMatch(str, @"^#\d+! {2,}strlen\(##\) :$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(%iL\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +strlen\(%iL\) :$"))), null, INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! {2,}strlen\(Hello\) => 5$"),
-						str => Regex.IsMatch(str, @"^#\d+! {2,}strlen\(Hello\) => 5$"))), null, INotifyService.NotificationType.Announce);
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(%iL\) => 5$"),
+						str => Regex.IsMatch(str, @"^#\d+! +strlen\(%iL\) => 5$"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugPctIter"));
 	}
