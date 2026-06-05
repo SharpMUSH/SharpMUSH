@@ -638,6 +638,139 @@ needs. When needed, they extend (not replace) the hierarchy.
 
 ---
 
+## Area 11: URL Strategy
+
+### 11.1 Wiki URLs
+
+**Decision:** `/wiki/Page_Name` — underscores replace spaces, case-insensitive
+lookup, display preserves original case. Namespace preserved in URL
+(`/wiki/Help:Getting_Started`). Character profiles get alias `/character/Name`.
+
+### 11.2 Scene URLs
+
+**Decision:** `/scenes/42` — numeric ID permalink. Title not in URL (can change).
+Active scenes at `/scenes/active`. Live participation at `/scenes/42/live`.
+
+### 11.3 Deep Linking
+
+**Decision:** All pages direct-linkable. No hash routing. Server returns
+`index.html` for all non-API routes (standard Blazor WASM hosting fallback).
+
+### 11.4 SEO Pre-rendering
+
+**Decision:** Public pages pre-rendered for bots. Detect user-agent, serve
+static HTML with OpenGraph meta tags. Cached 1 hour, invalidated on edit.
+Authenticated content returns 403 to bots.
+
+---
+
+## Area 12: Admin Panel
+
+### 12.1 Scope
+
+**Decision:** Blazor panel at `/admin`. Royalty sees players + moderation.
+Wizard sees everything. God sees server settings. No duplication of in-game
+@-commands — admin panel is for web-native operations only.
+
+### 12.2 Configuration UI
+
+**Decision:** Form-based config editor (not raw text). Sections for general,
+limits, feature toggles. Writes to config store, hot-reload where possible.
+
+### 12.3 Audit Trail
+
+**Decision:** Every staff action logged: who, what, target, when. Viewable
+at `/admin/moderation/audit`. Searchable, filterable. No silent changes.
+
+### 12.4 Layout Editor Location
+
+**Decision:** Lives at `/admin/layout`. Wizard+ only. Drag-and-drop widget
+placement. Preview before publish. Not inline site editing.
+
+---
+
+## Area 13: Widget System
+
+### 13.1 Widget Definition
+
+**Decision:** Widgets are Blazor components implementing `IPortalWidget`.
+Each declares: Name, DefaultSize, AllowedZones, optional ConfigSchema.
+Registered in DI. Admin places and configures instances.
+
+### 13.2 Zone Model
+
+**Decision:** Five zones: TopBar, LeftSidebar, RightSidebar, MainContent,
+Footer. Empty sidebars auto-hide (content goes full-width). Responsive
+collapse: sidebars become drawers on tablet, stacked sections on mobile.
+
+### 13.3 Layout Storage
+
+**Decision:** Layout stored as JSON in site config. Per-zone ordered list of
+widget instances with per-instance config. One layout for entire site (no
+per-page layouts in v1). Cached, invalidated on admin save.
+
+### 13.4 Built-in Widget Set
+
+**Decision:** Ships with: Active Scenes, Recent Wiki Edits, Online Characters,
+Quick Links, Welcome Text, Upcoming Events, System Status, Character Switcher.
+Custom widgets deferred to Area 18.
+
+---
+
+## Area 14: Search Infrastructure
+
+### 14.1 Search Backend
+
+**Decision:** Graph DB native FTS (ArangoSearch or SurrealDB full-text index).
+No external search engine for v1. Sufficient for expected scale (hundreds to
+low thousands of documents).
+
+### 14.2 Indexing Pipeline
+
+**Decision:** Index on write. Plain text extracted (Markdig strip or
+MString.ToPlainText()) and stored in dedicated field. No background reindex
+jobs for normal operation.
+
+### 14.3 Omnisearch UX
+
+**Decision:** Single search bar in TopBar. Debounced 300ms. Instant dropdown
+with 2-3 results per type. Enter goes to full results page grouped by type
+with snippet context and highlight. Filter by content type available.
+
+### 14.4 Permission Filtering
+
+**Decision:** Filter in query (not post-filter). Users never see content they
+can't access. Role and character ID passed as bind parameters. Result counts
+and pagination are always accurate.
+
+---
+
+## Area 15: Caching Strategy
+
+### 15.1 Event-Driven Invalidation
+
+**Decision:** NATS events trigger cache invalidation. No TTL on critical
+content (wiki, profiles, layout). Edit → event → cache clear → next request
+gets fresh. Search results use 60s TTL (approximate is acceptable).
+
+### 15.2 Cache Location
+
+**Decision:** Server-side IDistributedCache (in-memory for single-instance,
+Redis for multi-instance). Client-side localStorage for preferences only.
+No content cached client-side (SignalR keeps it fresh).
+
+### 15.3 Pre-render Cache
+
+**Decision:** Bot pages rendered lazily on first request, cached 1 hour,
+invalidated on content edit. Not pre-generated for all pages.
+
+### 15.4 Cache Warming
+
+**Decision:** On server start: layout config + front page widgets only.
+Everything else lazy-populated. No bulk warm-up.
+
+---
+
 ## Design Documents Index
 
 | Document                          | Status    | Covers                              |
@@ -652,4 +785,8 @@ needs. When needed, they extend (not replace) the hierarchy.
 | content-rendering-pipeline.md     | Complete  | MString shared lib, Markdig, sanitization|
 | mail-messaging.md                 | Complete  | Flat @mail on web, notifications     |
 | permission-visibility.md          | Complete  | Hierarchical roles, per-system tables|
-| url-strategy.md                   | Pending   | Routes, deep links, SEO              |
+| url-strategy.md                   | Complete  | Routes, deep links, SEO              |
+| admin-panel.md                    | Complete  | Admin sections, config UI, audit     |
+| widget-system.md                  | Complete  | Zones, IPortalWidget, layout JSON    |
+| search-infrastructure.md          | Complete  | FTS, omnisearch, permission filtering|
+| caching-strategy.md               | Complete  | Event invalidation, cache layers     |
