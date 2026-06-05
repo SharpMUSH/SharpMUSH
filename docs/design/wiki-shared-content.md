@@ -418,13 +418,27 @@ wikirevisions(<slug>, <rev>, editor) → editor at a specific revision
 ### Minimal Hardcode Command (default backstop)
 
 ```
-wiki <slug>                     — displays the ANSI-rendered page
-wiki                            — shows a brief usage message and top categories
+@wiki <slug>                    — displays the ANSI-rendered page
+@wiki                           — shows brief usage and top categories
+@wiki/list [category|prefix/*]  — lists pages (all, by category, by prefix)
+@wiki/search <terms>            — full-text search, shows matching slugs + snippets
+@wiki/set <slug>/<field>=<value>
+                                — set a field on a page (permission-gated)
+                                   fields: title, body, category, tags,
+                                   locked, published, sortorder
+@wiki/create <slug>=<title>     — create a new page (opens for body input or
+                                   accepts @wiki/set <slug>/body=<content> after)
+@wiki/delete <slug>             — delete a page (admin only, confirms)
+@wiki/history <slug>            — show revision history
+@wiki/revert <slug>=<rev>       — revert to a specific revision (admin only)
+@wiki/categories                — list all categories with page counts
 ```
 
-This is intentionally minimal. Games customize the player-facing wiki UX via
-softcode. The hardcode command exists so there's always SOME way to read a page
-even without any softcode installed.
+These mirror the function primitives but in an interactive admin-friendly form.
+The `@` prefix signals a built-in engine command (like `@create`, `@set`, `@dig`).
+
+Softcode commands built on the function layer (e.g., `+lore`, `+rules`) are the
+player-facing UX. `@wiki` is the admin/builder tool for direct wiki management.
 
 ### Example Softcode Patterns
 

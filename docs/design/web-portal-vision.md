@@ -172,11 +172,20 @@ Functions (hardcode primitives):
   wikirender(<slug>)        — Returns ANSI-rendered MString
   wikicategories()          — All category keys
 
-Minimal hardcode command (backstop):
-  wiki <slug>               — Displays ANSI-rendered page
+Hardcode commands (@wiki family):
+  @wiki <slug>              — Display ANSI-rendered page
+  @wiki/list [category]     — List pages
+  @wiki/search <terms>      — Full-text search
+  @wiki/set <slug>/<field>=<value> — Set a field
+  @wiki/create <slug>=<title>     — Create a page
+  @wiki/delete <slug>       — Delete a page (admin only)
+  @wiki/history <slug>      — Revision history
+  @wiki/revert <slug>=<rev> — Revert (admin only)
+  @wiki/categories          — List categories
 ```
 
-Games build their own UX via softcode $commands calling these primitives.
+Games build their own player-facing UX via softcode $commands calling the
+function primitives. The `@wiki` family is the built-in admin/builder tool.
 Example: `+lore <topic>` → `wikirender(lore/<topic>)`
 
 #### Synchronization
