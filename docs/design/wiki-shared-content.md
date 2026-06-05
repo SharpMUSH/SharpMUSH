@@ -2,8 +2,9 @@
 
 ## Core Principle
 
-A wiki page is a single source of truth. It is authored in Markdown, stored in the
-database, and rendered to two output formats:
+A wiki page is a single source of truth. It is authored in Markdown, stored in a
+**dedicated wiki collection** (separate from game objects), and rendered to two
+output formats:
 
 1. **HTML** — for the web portal (via Markdig)
 2. **ANSI text** — for the in-game terminal (via a custom Markdown-to-MString renderer)
@@ -12,51 +13,139 @@ Both outputs come from the same source document. Edits from either interface upd
 the same record. Changes propagate in real-time via NATS → SignalR (web) and
 NATS → game notify (in-game).
 
+The wiki is NOT embedded in the game object graph. Wiki pages live in their own
+collection/table with their own schema. They can *reference* game objects via DBRef
+fields (e.g., author, last editor), but they are not SharpObjects and do not
+participate in the object namespace, containment hierarchy, or flag system.
+
+### Why Separate?
+
+- Wiki pages have fundamentally different access patterns (full-text search,
+  category browsing, revision history, bulk listing)
+- They don't need flags, locks, attributes, or containment
+- Keeping them out of the object graph means wiki queries are fast and isolated
+- Game object queries don't slow down as wiki content grows
+- Cleaner schema — wiki-specific fields (slug, category, revision, published)
+  don't pollute the SharpObject model
+
 ## Data Model
 
-### WikiPage (graph node)
+### Storage (Per-Database Backend)
+
+| Backend   | Wiki Pages             | Wiki Revisions          | Indexes                    |
+|-----------|------------------------|-------------------------|----------------------------|
+| ArangoDB  | `wiki_pages` collection| `wiki_revisions` coll.  | ArangoSearch view on body  |
+| SurrealDB | `wiki_page` table      | `wiki_revision` table   | Native FTS on body         |
+| Memgraph  | `:WikiPage` nodes      | `:WikiRevision` nodes   | In-memory text index       |
+
+Note: Even in Memgraph (a graph DB), wiki pages are their own labeled nodes with
+no edges into the game object graph. They reference game objects by storing DBRef
+values as properties, not via graph edges.
+
+### WikiPage Schema
 
 ```csharp
+/// <summary>
+/// A wiki page. Stored in a dedicated collection, separate from game objects.
+/// </summary>
 public record WikiPage
 {
-    public required string Slug { get; init; }         // URL/command identifier
-    public required string Title { get; init; }        // Display name
-    public required string Body { get; init; }         // Markdown source
-    public string? Category { get; init; }             // Grouping key
-    public string[] Tags { get; init; } = [];          // Searchable metadata
-    public DBRef Author { get; init; }                 // Creator
-    public DBRef LastEditor { get; init; }             // Most recent editor
+    /// URL-friendly identifier. Unique. Used in commands and URLs.
+    /// Format: [a-z0-9-/]+ (allows path-like slugs: "rules/combat")
+    public required string Slug { get; init; }
+    
+    /// Human-readable display title.
+    public required string Title { get; init; }
+    
+    /// Markdown content — the single source of truth.
+    public required string Body { get; init; }
+    
+    /// Top-level grouping (e.g., "rules", "lore", "systems", "staff").
+    /// Slugs can use path prefixes as sub-categories: "lore/places/tavern"
+    public string? Category { get; init; }
+    
+    /// Searchable tags for cross-cutting concerns.
+    public string[] Tags { get; init; } = [];
+    
+    /// DBRef of the player who created this page.
+    public DBRef Author { get; init; }
+    
+    /// DBRef of the player who last edited this page.
+    public DBRef LastEditor { get; init; }
+    
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
-    public bool Locked { get; init; }                  // Admin-only editing
-    public bool Published { get; init; } = true;       // Visible to non-admins
-    public int SortOrder { get; init; }                // Within category
-    public int Revision { get; init; }                 // Monotonic version counter
+    
+    /// Only admins can edit when locked.
+    public bool Locked { get; init; }
+    
+    /// Hidden from non-admin users when false (draft state).
+    public bool Published { get; init; } = true;
+    
+    /// Ordering within category listings.
+    public int SortOrder { get; init; }
+    
+    /// Monotonically increasing version counter.
+    public int Revision { get; init; }
+    
+    /// Optional: parent slug for hierarchical wiki structures.
+    /// e.g., "rules/combat" has parent "rules"
+    public string? ParentSlug { get; init; }
 }
 ```
 
-### WikiRevision (for history/diff)
+### WikiRevision Schema
 
 ```csharp
+/// <summary>
+/// A historical snapshot of a wiki page at a specific revision.
+/// Used for diff/history/revert.
+/// </summary>
 public record WikiRevision
 {
     public required string Slug { get; init; }
     public int Revision { get; init; }
-    public required string Body { get; init; }         // Full snapshot
+    public required string Body { get; init; }       // Full body at this revision
+    public required string Title { get; init; }      // Title at this revision
     public DBRef Editor { get; init; }
     public DateTime Timestamp { get; init; }
-    public string? EditSummary { get; init; }
+    public string? EditSummary { get; init; }        // "Fixed typo in combat rules"
 }
 ```
 
-### Graph Relationships
+### WikiCategory Schema (optional, for rich category metadata)
+
+```csharp
+/// <summary>
+/// Optional category metadata — allows categories to have descriptions,
+/// icons, and sort orders in listings.
+/// </summary>
+public record WikiCategory
+{
+    public required string Key { get; init; }         // "rules", "lore", etc.
+    public required string DisplayName { get; init; } // "Game Rules"
+    public string? Description { get; init; }
+    public string? Icon { get; init; }                // MudBlazor icon name for web
+    public int SortOrder { get; init; }
+}
+```
+
+### Slug Conventions
+
+Slugs support path-like hierarchies without requiring graph edges:
 
 ```
-(WikiPage)-[:LINKS_TO]->(WikiPage)       // Inter-page links
-(WikiPage)-[:REFERENCES]->(SharpObject)  // Links to game objects
-(WikiPage)-[:AUTHORED_BY]->(Player)
-(WikiPage)-[:CATEGORIZED_IN]->(WikiCategory)
+rules                     → top-level page
+rules/combat              → child of "rules" (ParentSlug = "rules")
+rules/combat/melee        → grandchild (ParentSlug = "rules/combat")
+lore/places/tavern        → nested lore page
 ```
+
+The slash in the slug is purely organizational. It enables:
+- Breadcrumb navigation on the web (`Rules > Combat > Melee`)
+- Category-like filtering (`wikilist(rules/*)` returns all pages under "rules")
+- Tree-view rendering in the wiki index
+- In-game: `wiki rules/combat` reads that specific page
 
 ## Markdown Extensions (SharpMUSH-specific)
 
@@ -70,7 +159,10 @@ Beyond standard CommonMark + GFM, these custom extensions are recognized:
 [[other-page#section]]              → cross-page anchor link
 ```
 
-### Dynamic Includes
+### Dynamic Includes (DEFERRED — Future Phase)
+
+These are planned but will NOT be in the initial implementation:
+
 ```markdown
 {{online-players}}                  → live count of connected players
 {{recent-scenes:5}}                 → 5 most recent scene summaries
@@ -79,6 +171,12 @@ Beyond standard CommonMark + GFM, these custom extensions are recognized:
 {{toc}}                             → auto-generated table of contents
 {{category:rules}}                  → lists all pages in 'rules' category
 ```
+
+Rationale for deferral: Dynamic includes create render-time DB queries. They
+complicate caching, create potential performance issues for popular pages, and
+add complexity to the ANSI renderer. Ship static Markdown + wiki links first;
+add dynamic includes once the base system is proven and performance characteristics
+are understood.
 
 ### Game Integration Blocks
 ```markdown
@@ -254,90 +352,119 @@ public class WikiAnsiRenderer
 }
 ```
 
-## In-Game Commands
+## In-Game Interface: Functions as Primitives
 
-### +wiki <slug>
+### Design Philosophy
 
-Displays a wiki page rendered to ANSI. Pagination for long pages (like `help`).
+The wiki system is exposed primarily as **hardcode functions** — not as a monolithic
+`+wiki` command. This follows the `textentries()` pattern: the engine provides the
+primitives, and softcode authors build player-facing commands on top.
 
-```
-> +wiki character-creation
+This means:
+- A game focused on lore might create `+lore <topic>` → calls `wiki(lore/<topic>)`
+- A game with detailed rules might create `+rules [section]` → calls `wikilist(rules/*)`
+- A combat-focused game might wire `+help combat` → calls `wiki(help/combat)`
+- Different games can present wiki content however they want via softcode
 
-═══════════════════════════════════════════════════════════
-CHARACTER CREATION
-═══════════════════════════════════════════════════════════
+A minimal hardcode `wiki <slug>` command may exist as a default "I can always read
+a wiki page" backstop, but the real power is in the function layer.
 
-Welcome to character creation! This guide walks you through the
-process of building your character for the game.
-
-STEP 1: CONCEPT
-──────────────────────────────────────────────────────────
-
-Think about who your character is...
-
-  • What is their name?
-  • Where are they from?
-  • What drives them?
-
-  [!] NOTE: All characters must be approved by staff before play.
-
-See also: wiki backgrounds, wiki attributes
-═══════════════════════════════════════════════════════════
-```
-
-### +wiki/list [category]
+### Hardcode Functions
 
 ```
-> +wiki/list rules
+wiki(<slug>)                    → returns raw Markdown body of the page
+wiki(<slug>, title)             → returns the page title
+wiki(<slug>, category)          → returns the category string
+wiki(<slug>, author)            → returns author DBRef
+wiki(<slug>, lasteditor)        → returns last editor DBRef
+wiki(<slug>, updated)           → returns last update timestamp (secs)
+wiki(<slug>, created)           → returns creation timestamp (secs)
+wiki(<slug>, revision)          → returns current revision number
+wiki(<slug>, tags)              → returns space-separated tags
+wiki(<slug>, exists)            → returns 1 if page exists, 0 otherwise
+wiki(<slug>, locked)            → returns 1 if locked, 0 otherwise
+wiki(<slug>, published)         → returns 1 if published, 0 otherwise
 
-WIKI PAGES — RULES (7 pages)
-──────────────────────────────────────────────────────────
-  character-creation    Character Creation         (updated 2d ago)
-  combat-rules         Combat System              (updated 1w ago)
-  magic-system         Magic & Spellcasting       (updated 3d ago)
-  ooc-policies         OOC Policies               (updated 2w ago)
-  ...
+wikilist()                      → all published slugs, space-separated
+wikilist(<category>)            → slugs in category, space-separated
+wikilist(<prefix>/*)            → slugs matching prefix (wildcard)
+
+wikisearch(<terms>)             → matching slugs (FTS), space-separated
+wikisearch(<terms>, <limit>)    → with result limit
+
+wikiset(<slug>, <field>, <value>)
+                                → set a wiki field (permission-gated)
+                                   fields: title, body, category, tags,
+                                   locked, published, sortorder
+                                → returns 1 on success, #-1 ERROR on failure
+
+wikicreate(<slug>, <title>, <body>[, <category>])
+                                → create a new wiki page
+                                → returns slug on success, #-1 ERROR on failure
+
+wikidelete(<slug>)              → delete a wiki page (admin only)
+                                → returns 1 on success, #-1 ERROR on failure
+
+wikirender(<slug>)              → returns ANSI-rendered content as MString
+                                   (for embedding in descs, softcode output)
+
+wikicategories()                → all category keys, space-separated
+
+wikirevisions(<slug>)           → space-separated revision numbers
+wikirevisions(<slug>, <rev>, body)  → body at a specific revision
+wikirevisions(<slug>, <rev>, editor) → editor at a specific revision
 ```
 
-### +wiki/search <terms>
+### Minimal Hardcode Command (default backstop)
 
 ```
-> +wiki/search magic spell
-
-WIKI SEARCH: "magic spell" (3 results)
-──────────────────────────────────────────────────────────
-  magic-system         Magic & Spellcasting
-    ...learn a new spell, the character must...
-  
-  character-creation   Character Creation
-    ...magic users should select their spell list during...
-  
-  faq                  Frequently Asked Questions
-    ...Q: How do I cast a spell? A: Use +cast...
+wiki <slug>                     — displays the ANSI-rendered page
+wiki                            — shows a brief usage message and top categories
 ```
 
-### +wiki/edit <slug>=<body>
+This is intentionally minimal. Games customize the player-facing wiki UX via
+softcode. The hardcode command exists so there's always SOME way to read a page
+even without any softcode installed.
 
-Permission-gated. Opens the page for editing. For long content, a two-step flow:
-1. `+wiki/edit combat-rules` — shows current content + "use +wiki/replace to set"
-2. `+wiki/replace combat-rules=<full new markdown body>`
+### Example Softcode Patterns
 
-Or for small edits, a `+wiki/append` command.
+A game might install these as $commands on a master room object:
 
-### Softcode Functions
+```mushcode
+@@ +lore <topic> — reads from the lore/ category
+&CMD_LORE Master=$+lore *:@assert haswiki(lore/%0)=
+  {@pemit %#=No lore entry found for '%0'. Try: +lore/list};
+  @pemit %#=wikirender(lore/%0)
 
+@@ +lore/list — lists all lore pages
+&CMD_LORE_LIST Master=$+lore/list:@pemit %#=
+  [center(--- LORE ENTRIES ---,78,-)][iter(wikilist(lore),
+  %r  [wiki(##,title)] %([ansi(c,##)]%),,%r)]
+
+@@ +rules [section] — shows rules, or lists available sections
+&CMD_RULES Master=$+rules *:@assert haswiki(rules/%0)=
+  {@pemit %#=No rules section '%0'. Available: [wikilist(rules)]};
+  @pemit %#=wikirender(rules/%0)
+
+@@ +help <topic> — hybrid: tries wiki first, falls back to built-in help
+&CMD_HELP Master=$+help *:@switch wiki(%0,exists)=
+  1,{@pemit %#=wikirender(%0)},
+  0,{@pemit %#=[textentries(help,%0)]}
 ```
-wiki(slug)                → returns full markdown body
-wiki(slug, title)         → returns page title
-wiki(slug, category)      → returns category name
-wiki(slug, author)        → returns author dbref
-wiki(slug, updated)       → returns last update timestamp
-wiki(slug, exists)        → returns 1/0
-wikilist()                → all slugs, space-separated
-wikilist(category)        → slugs in category
-wikisearch(terms)         → matching slugs
-wikirender(slug)          → returns ANSI-rendered content (for embedding in descs)
-```
+
+### Permission Model for Functions
+
+| Function        | Who can call it                                    |
+|-----------------|----------------------------------------------------|
+| wiki()          | Anyone (reads published pages; unpublished = admin)|
+| wikilist()      | Anyone (returns only published unless admin)       |
+| wikisearch()    | Anyone (searches only published unless admin)      |
+| wikirender()    | Anyone (renders only published unless admin)       |
+| wikiset()       | Builder+ for unlocked pages; Admin for locked      |
+| wikicreate()    | Builder+ (or Player if wiki.player_edit_enabled)   |
+| wikidelete()    | Admin only                                         |
+| wikirevisions() | Any authenticated player                           |
+| wikicategories()| Anyone                                             |
 
 ## Real-Time Sync
 
@@ -374,9 +501,20 @@ Simple last-write-wins with warning:
 
 ## Relationship to Help Files
 
-### Migration Path
+### No Automatic Redirect
 
-PennMUSH-style help files (`help.txt`, `news.txt`, `rules.txt`) can be imported:
+The `help` command does NOT automatically redirect to wiki. They are separate systems:
+- `help` → traditional help file entries (textentries-style)
+- `wiki` → wiki pages (new system)
+
+A game can choose to wire them together via softcode (see the `+help` example above),
+but the engine does not assume this. The `wiki.help_redirect_to_wiki` config option
+controls whether the minimal `wiki` hardcode command mentions help topics.
+
+### Migration Path (Optional)
+
+PennMUSH-style help files (`help.txt`, `news.txt`, `rules.txt`) can be imported
+as a one-time migration. This is a tool, not an automatic behavior:
 
 ```csharp
 public class HelpFileImporter
@@ -406,13 +544,15 @@ public class HelpFileImporter
 
 ### Backward Compatibility
 
-The existing `help` command can be wired to the wiki:
+The existing `help` command remains unchanged. Games that want wiki-as-help can
+implement it in softcode. The two systems coexist peacefully:
+
 ```
-help <topic>  →  equivalent to  +wiki <topic>
+help combat             → reads from help.txt entries (textentries)
+wiki rules/combat       → reads from wiki collection (new system)
 ```
 
-Or the game can maintain both systems (traditional help + wiki) with the wiki being
-the "modern" path and help files being a read-only fallback for topics not yet migrated.
+Games have full freedom to unify, keep separate, or create hybrid approaches.
 
 ## Search
 
@@ -487,8 +627,8 @@ public record WikiOptions(
         Category = "Content", Group = "Wiki", Min = 0, Max = 1000)]
     int MaxRevisions = 50,
     
-    [property: SharpConfig("Help Redirect", "Redirect 'help <topic>' to wiki if page exists",
+    [property: SharpConfig("Wiki Enabled", "Enable the wiki subsystem (functions + web endpoints)",
         Category = "Content", Group = "Wiki")]
-    bool HelpRedirectToWiki = false
+    bool Enabled = true
 );
 ```

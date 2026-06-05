@@ -156,25 +156,28 @@ For MXP-enabled clients, links become clickable `<send>` tags:
 
 #### Softcode Interface
 
-New functions and commands for in-game wiki access:
+The wiki is exposed as hardcode **functions** (not commands). Softcode authors
+build game-specific commands on top. See `wiki-shared-content.md` for the full
+function list. Key functions:
 
 ```
-Commands:
-  +wiki <slug>              — Display a wiki page (ANSI-rendered)
-  +wiki/list [category]     — List pages, optionally filtered
-  +wiki/search <terms>      — Full-text search
-  +wiki/edit <slug>=<body>  — Edit a page (permission-gated)
-  +wiki/create <slug>/<title>=<body>
-  +wiki/categories          — List all categories
-  +wiki/recent [N]          — Show N most recently edited pages
-
-Functions:
+Functions (hardcode primitives):
   wiki(<slug>)              — Returns raw Markdown content of a page
   wiki(<slug>, field)       — Returns a specific field (title, author, etc.)
   wikilist([category])      — Returns space-separated list of slugs
   wikisearch(<terms>)       — Returns matching slugs
-  haswiki(<slug>)           — Returns 1 if page exists, 0 otherwise
+  wikiset(<slug>, field, value) — Set a field (permission-gated)
+  wikicreate(<slug>, <title>, <body>[, <category>])
+  wikidelete(<slug>)        — Admin only
+  wikirender(<slug>)        — Returns ANSI-rendered MString
+  wikicategories()          — All category keys
+
+Minimal hardcode command (backstop):
+  wiki <slug>               — Displays ANSI-rendered page
 ```
+
+Games build their own UX via softcode $commands calling these primitives.
+Example: `+lore <topic>` → `wikirender(lore/<topic>)`
 
 #### Synchronization
 
@@ -316,14 +319,30 @@ A visual editor page (`/admin/layout`) using MudDropZone:
 - Save → writes layout JSON to DB
 - Preview button opens a new tab with the layout applied
 
-### Per-User Layout (optional, admin-controlled)
+### Per-User Customization (colors only)
 
-If the admin enables "user customization":
-- Players see a "Customize" button in their account settings
-- They get a simplified version of the layout editor
-- Their preferences override the game default for their session
-- Stored per-account in the DB
-- Reset button to return to game default
+Layout customization is **admin-only**. Players cannot rearrange widgets or
+sidebars. However, players CAN customize their visual theme:
+
+- Dark/light mode toggle
+- Color palette overrides (primary, secondary, background tints)
+- Font size preference (small/medium/large)
+- Terminal font family choice (from a curated list)
+
+Stored per-account in the DB. These are CSS variable overrides layered on top of
+the admin's chosen theme — they don't affect layout or widget placement.
+
+```csharp
+public record PlayerThemePreferences
+{
+    public bool? DarkMode { get; init; }              // null = follow admin default
+    public string? PrimaryColor { get; init; }        // "#hex" or null for default
+    public string? SecondaryColor { get; init; }
+    public string? AccentColor { get; init; }
+    public string? FontSize { get; init; }            // "small", "medium", "large"
+    public string? TerminalFontFamily { get; init; }  // from allowed list
+}
+```
 
 ---
 
@@ -443,25 +462,48 @@ public class ThemeService
 
 ---
 
-## Open Questions
+## Design Decisions (Resolved)
 
-1. **Wiki storage**: Graph nodes (like other game objects) vs. a separate document
-   collection? Graph nodes allow linking to game objects naturally; separate
-   collection is simpler to query and doesn't pollute the object namespace.
+1. **Wiki storage**: Separate document collection — NOT graph nodes mixed with
+   game objects. Wiki pages have their own schema and query patterns. They can
+   reference game objects via DBRef fields, but they don't live in the object
+   graph. This keeps the object namespace clean and wiki queries fast.
 
-2. **SignalR vs. extending the existing WS protocol**: The terminal already uses
+2. **Multi-character model**: Each browser tab is its own Blazor WASM instance,
+   connected as one character. No multi-tab terminal within a single WASM app.
+   If a player wants to play two characters simultaneously, they open two browser
+   tabs. Each tab has its own WebSocket connection, its own session state, its own
+   terminal. This is simpler architecturally and matches how browser sessions work.
+
+3. **Wiki commands**: NOT `+wiki` (that implies softcode/addon). The wiki is
+   exposed as backing functions and hardcode infrastructure — similar to how
+   `textentries()` works. Softcode authors build their own commands on top.
+   Examples: a game might create `+lore <topic>` that calls `wiki(lore/<topic>)`
+   or `+rules` that calls `wikilist(rules)`. The system provides the primitives;
+   softcode provides the player-facing UX. A basic `wiki <slug>` or `@wiki <slug>`
+   hardcode command may exist as a minimal default, but the real power is in the
+   function layer.
+
+4. **Dynamic includes** (`{{character:Name:attr}}`, `{{online-players}}`):
+   Deferred to a future phase. The wiki system ships with static Markdown +
+   wiki-links first. Dynamic content blocks are a later enhancement once the
+   base system is proven.
+
+5. **Layout customization**: Admin-only. Players do NOT rearrange widgets or
+   sidebars. However, players CAN customize their theme colors (palette choices,
+   dark/light mode, font size) — stored per-account.
+
+## Open Questions (Remaining)
+
+1. **SignalR vs. extending the existing WS protocol**: The terminal already uses
    WebSocket with a custom protocol. Should SignalR be a separate connection, or
    should structured messages ride on the same socket? Separate is cleaner for
    the web portal; same socket is more efficient for resource-constrained clients.
 
-3. **Wiki editing permissions model**: Open wiki (any player can edit any unlocked
+2. **Wiki editing permissions model**: Open wiki (any player can edit any unlocked
    page) vs. tiered (builders+ create, players suggest edits)? Should this be
    configurable per-game?
 
-4. **Markdown flavor**: Which extensions to support? Tables, task lists, footnotes,
+3. **Markdown flavor**: Which extensions to support? Tables, task lists, footnotes,
    definition lists, emoji shortcodes? Markdig supports all of these via extension
    pipeline — which are worth the complexity of ANSI-rendering them in-game?
-
-5. **Multi-tab terminal**: Should the bottom terminal support multiple tabs (one
-   per character), or one terminal that switches context? Multi-tab is more
-   powerful but more complex UI-wise.
