@@ -740,4 +740,168 @@ public class DebugVerboseTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugSubst"));
 	}
+
+	[Test]
+	public async Task DebugForwardList_SendsDebugToSpecifiedPlayer()
+	{
+		// Arrange - Two players: owner and forward target
+		var ownerPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgFwdOwner");
+		var forwardPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgFwdTarget");
+
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@create DbgFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgFwdObj=DEBUG"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgFwdObj=!no_command"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
+			MModule.single("&test_fwd DbgFwdObj=$dbgfwdcmd:@pemit me=[add(10,20)]"));
+
+		// Set DEBUGFORWARDLIST to the forward target's dbref
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
+			MModule.single($"&DEBUGFORWARDLIST DbgFwdObj=#{forwardPlayer.DbRef.Number}"));
+
+		// Act
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgFwdObj=dbgfwdcmd"));
+
+		// Assert - Forward target receives debug output
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(forwardPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! [add(10,20)]"),
+						str => str.Contains("! [add(10,20)]"))), null, INotifyService.NotificationType.Announce);
+
+		// Assert - Owner also still receives debug output
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(ownerPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! [add(10,20)]"),
+						str => str.Contains("! [add(10,20)]"))), null, INotifyService.NotificationType.Announce);
+
+		// Cleanup
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgFwdObj"));
+	}
+
+	[Test]
+	public async Task DebugForwardList_MultipleTargets_SendsToAll()
+	{
+		// Arrange - Owner plus two forward targets
+		var ownerPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgMFwdOwn");
+		var target1 = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgMFwdT1");
+		var target2 = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgMFwdT2");
+
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@create DbgMFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgMFwdObj=DEBUG"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgMFwdObj=!no_command"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
+			MModule.single("&test_mfwd DbgMFwdObj=$dbgmfwdcmd:@pemit me=[mul(3,7)]"));
+
+		// Set DEBUGFORWARDLIST with two space-separated dbrefs
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
+			MModule.single($"&DEBUGFORWARDLIST DbgMFwdObj=#{target1.DbRef.Number} #{target2.DbRef.Number}"));
+
+		// Act
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgMFwdObj=dbgmfwdcmd"));
+
+		// Assert - Both targets receive debug
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(target1.DbRef),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! [mul(3,7)]"),
+						str => str.Contains("! [mul(3,7)]"))), null, INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(target2.DbRef),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! [mul(3,7)]"),
+						str => str.Contains("! [mul(3,7)]"))), null, INotifyService.NotificationType.Announce);
+
+		// Cleanup
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgMFwdObj"));
+	}
+
+	[Test]
+	public async Task DebugForwardList_NoAttribute_OnlySendsToOwner()
+	{
+		// Arrange - No DEBUGFORWARDLIST set
+		var ownerPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgNoFwdOwn");
+		var otherPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgNoFwdOth");
+
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@create DbgNoFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgNoFwdObj=DEBUG"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgNoFwdObj=!no_command"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
+			MModule.single("&test_nofwd DbgNoFwdObj=$dbgnofwdcmd:@pemit me=[sub(9,4)]"));
+
+		// No DEBUGFORWARDLIST set
+
+		// Act
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgNoFwdObj=dbgnofwdcmd"));
+
+		// Assert - Owner receives debug
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(ownerPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! [sub(9,4)]"),
+						str => str.Contains("! [sub(9,4)]"))), null, INotifyService.NotificationType.Announce);
+
+		// Assert - Other player does NOT receive debug
+		await NotifyService
+			.DidNotReceive()
+			.Notify(TestHelpers.MatchingObject(otherPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! [sub(9,4)]"),
+						str => str.Contains("! [sub(9,4)]"))), null, INotifyService.NotificationType.Announce);
+
+		// Cleanup
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgNoFwdObj"));
+	}
+
+	[Test]
+	public async Task DebugForwardList_InvalidTarget_DoesNotCrash()
+	{
+		// Arrange - DEBUGFORWARDLIST contains an invalid dbref
+		var ownerPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgBadFwdOwn");
+
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@create DbgBadFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgBadFwdObj=DEBUG"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgBadFwdObj=!no_command"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
+			MModule.single("&test_badfwd DbgBadFwdObj=$dbgbadfwdcmd:@pemit me=[add(5,5)]"));
+
+		// Set DEBUGFORWARDLIST to a nonexistent dbref
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
+			MModule.single("&DEBUGFORWARDLIST DbgBadFwdObj=#99999"));
+
+		// Act - Should not throw
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgBadFwdObj=dbgbadfwdcmd"));
+
+		// Assert - Owner still gets debug output (forwarding failure doesn't break normal flow)
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(ownerPlayer.DbRef),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! [add(5,5)]"),
+						str => str.Contains("! [add(5,5)]"))), null, INotifyService.NotificationType.Announce);
+
+		// Cleanup
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgBadFwdObj"));
+	}
 }
