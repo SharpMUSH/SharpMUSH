@@ -489,13 +489,18 @@ stream). However, the web CAN submit poses directly to a specific scene.
   The pose targets the SCENE first, gets emitted to the room.
 
 Both paths produce the same result (pose appears in room AND in scene log), but
-the routing is different. The web path targets a scene_id, not a room. This is
-the architectural seam that enables future virtual scenes (Phase 2+) where there
-IS no room.
+the routing is different. The web path targets a scene_id, not a room.
 
-**For Phase 1:** Web scene poses still require the character to be in the scene's
-room (validated server-side). The difference is routing only — the character must
-be physically present.
+**Every scene has a room.** Web-created scenes auto-create a temporary room. MUSH
+players can `+scene/join <scene#>` to teleport into that temp room and participate
+at the same level as web players. No "virtual scene" concept — just rooms that are
+temporary vs permanent.
+
+**Temporary room lifecycle:**
+- Created on web "New Scene" or `+scene/create/temp`
+- No grid exits (access via `+scene/join` only)
+- Recycled on scene end (grace period, then @destroy)
+- Characters returned to previous location on leave/end
 
 ### 7.3 Scene Storage: Separate Collections
 
@@ -532,18 +537,17 @@ being marked private by a participant).
 **Veto rule:** Any participant can veto publication at any time. Once vetoed,
 only that participant can un-veto. This protects player consent.
 
-### 7.6 Scene Discovery: Simple List + Hybrid Future
+### 7.6 Scene Discovery: Simple List
 
-**Decision (Phase 1):** Simple list of active scenes. Title, location, participant
-count, last activity time. No multi-scene web participation — character has one
-location (PennMUSH model).
+**Decision:** Simple list of active scenes. Title, location, participant
+count, last activity time. MUSH players can `+scene/join <scene#>` to teleport
+into any listed scene (including web-created temp rooms).
 
-**Future (Phase 2+):** Virtual scenes allow multi-scene participation from web.
-Physical scenes remain strict (must be in room). Data model includes nullable
-`location_dbref` to support this later without migration.
+**No multi-scene participation:** A character is in one room at a time. Period.
+To switch scenes, leave the current one first. This is PennMUSH-native behavior.
 
-**Key constraint:** A character cannot be in two physical scenes simultaneously.
-Physical presence is singular. Virtual scenes (when implemented) bypass this.
+**Web "Join" button:** Equivalent to `+scene/join` — teleports character to the
+scene's room (temp or grid). MUSH players and web players end up in the same room.
 
 ---
 

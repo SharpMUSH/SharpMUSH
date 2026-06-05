@@ -13,21 +13,45 @@ graph DB, WebSocket architecture, and PennMUSH conventions.
 
 ## Core Concepts
 
-### Scene ≠ Room (but usually correlates)
+### Every Scene Has a Room (Always)
 
-A scene is a discrete RP session. By default, it's tied to a room (the
-location where RP happens). The character must physically be in that room
-to participate — PennMUSH convention.
+A scene is a discrete RP session tied to a room. The character must physically
+be in that room to participate — PennMUSH convention, no exceptions.
 
-**Future consideration (Phase 2+): Virtual Scenes**
+**Two kinds of scene rooms:**
 
-Virtual scenes have no room (web-only, for flashbacks, split-location RP,
-collaborative writing). The data model accommodates this via a nullable
-`location_dbref` — but Phase 1 ships with strict room-tied scenes only.
+1. **Grid rooms** — Pre-existing rooms on the game grid. Scene created in-place
+   via `+scene/create` while standing in the room. Room persists after scene ends.
 
-The presence/location question (can a character be in a web scene while
-physically somewhere else on the grid?) is deferred. Phase 1 maintains
-PennMUSH parity: your character is where they are. Period.
+2. **Temporary rooms** — Auto-created when a scene is initiated from the web
+   portal (or via `+scene/create/temp`). Not connected to the grid (no exits).
+   Characters arrive/leave via `+scene/join` and `+scene/leave`. Room is
+   recycled when the scene ends.
+
+This eliminates the need for a "virtual scene" concept. ALL scenes are room-backed.
+The PennMUSH invariant holds: character location is always a room. Web-created
+scenes simply create a room to match.
+
+**Temporary room lifecycle:**
+
+```
+Web player clicks "New Scene"
+  → Server creates temp room (no exits, owned by system, named after scene)
+  → Scene record created with location_dbref = temp room
+  → Creator's character is teleported to temp room
+  → Other players join via +scene/join <scene#> or web "Join" button
+  → Both methods teleport character to the temp room
+  → Scene ends → grace period (configurable, default 5 min)
+  → Room recycled (@destroy), characters returned to previous location
+```
+
+**Temporary room properties:**
+- Named: `Scene Room: <scene title>` (or admin-configurable pattern)
+- UNFINDABLE flag (doesn't show on +where unless scene is public)
+- No exits (access only via +scene/join)
+- Zone: scene staging zone (admin-configurable parent room)
+- @desc: scene pitch/description (if provided)
+- Owned by system object (not the creator's character)
 
 ### Scene Lifecycle
 
@@ -72,8 +96,9 @@ One player can portray multiple characters/NPCs in a scene:
   outcome: string | null,         // Summary after completion
   scene_type: string,             // "social", "action", "vignette", "event"
   status: enum,                   // scheduled, active, completed, published, private
-  location_dbref: string | null,  // Room DBRef (null = virtual scene, Phase 2+)
+  location_dbref: string,         // Room DBRef (always present — grid or temp)
   location_name: string,          // Snapshot of room name at scene start
+  is_temp_room: bool,             // True if room was auto-created for this scene
   content_warnings: string[],     // ["violence", "mature themes"]
   
   created_at: datetime,
@@ -105,6 +130,9 @@ One player can portray multiple characters/NPCs in a scene:
   
   joined_at: datetime,
   left_at: datetime | null,
+  
+  // Return location (for temp room scenes — where to send them back)
+  previous_location_dbref: string | null,
   
   // Per-participant stats
   pose_count: int,
@@ -277,17 +305,23 @@ Features:
 ### Scene Management
 
 ```
-+scene/create [title]           — Start a scene in current room
++scene/create [title]           — Start a scene in current room (grid room)
 +scene/create <title>=<pitch>   — Start with description/hook
++scene/create/temp <title>      — Create a temp room + start scene in it
 +scene/end                      — End the current scene
 +scene/title <title>            — Change scene title
 +scene/type <type>              — Set scene type (social/action/vignette)
 +scene/warn <warning>           — Add content warning
 
-+scene/join                     — Join the scene in your current room
-+scene/leave                    — Leave the scene (stay in room)
++scene/join [scene#]            — Teleport to scene's room and join as participant
+                                  (saves previous location for return)
++scene/leave                    — Leave scene, return to previous location
+                                  (for temp rooms — teleports back to saved location)
+                                  (for grid rooms — just removes from participant list,
+                                   character stays in the room)
 +scene/invite <player>          — Invite someone to join
 +scene/boot <player>            — Remove someone from scene (runner only)
+                                  (if temp room, teleports them out)
 ```
 
 ### Scene Viewing
@@ -475,6 +509,14 @@ scenes:
     - dark themes
   pose_order_tracking: true       # Enable +pot pose-order tracker
   auto_join_on_pose: true         # Auto-add to participants when someone poses
-  virtual_scenes_enabled: false   # Phase 2+: scenes without room attachment
   long_disconnect_threshold_seconds: 300  # 5 minutes (configurable)
+
+  # Temporary room settings
+  temp_room:
+    name_pattern: "Scene Room: {title}"   # Room name template
+    zone_parent: null             # DBRef of parent room/zone (null = default zone)
+    flags: ["UNFINDABLE"]         # Flags set on temp rooms
+    grace_period_minutes: 5       # Time after scene end before room is recycled
+    return_on_end: true           # Auto-return characters to previous location
+    max_active_temp_rooms: 50     # Safety cap to prevent runaway creation
 ```
