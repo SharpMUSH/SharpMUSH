@@ -15,6 +15,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddMudServices();
+builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddLogging();
 builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
 builder.Services.AddSingleton<WikiService>();
@@ -39,6 +40,18 @@ builder.Services.AddScoped<CredentialService>();
 builder.Services.AddSingleton<OttAuthService>();
 builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
+builder.Services.AddSingleton<PortalHubService>();
+
+builder.Services.AddHttpClient("theme", c =>
+{
+	c.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+});
+builder.Services.AddSingleton<ThemeService>(sp =>
+{
+	var factory = sp.GetRequiredService<IHttpClientFactory>();
+	var localStorage = sp.GetRequiredService<Blazored.LocalStorage.ILocalStorageService>();
+	return new ThemeService(factory.CreateClient("theme"), localStorage);
+});
 
 builder.Services.AddHttpClient("api", sp =>
 {

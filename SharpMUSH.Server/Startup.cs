@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -260,6 +261,10 @@ public class Startup(
 				x.AddConsumer<Consumers.PuebloNegotiatedConsumer>();
 				x.AddConsumer<Consumers.MxpNegotiatedConsumer>();
 			});
+
+// Configure SignalR for real-time portal updates
+		services.AddSignalR();
+		services.AddHostedService<NatsSignalRBridge>();
 
 		services.AddFusionCache().TryWithAutoSetup();
 

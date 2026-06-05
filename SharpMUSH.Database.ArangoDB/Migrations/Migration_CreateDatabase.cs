@@ -930,6 +930,17 @@ public class Migration_CreateDatabase : IArangoMigration
 		});
 		var roomTwoRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Rooms, new { });
 
+		/* Create PM Wizard Thing */
+		var pmWizardObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
+		{
+			_key = 3.ToString(),
+			Name = "Package Manager",
+			Type = DatabaseConstants.TypeThing,
+			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+			ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		});
+		var pmWizardThing = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Things, new { });
+
 		var playerOnePlayer = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Players, new
 		{
 			Aliases = Array.Empty<string>(),
@@ -942,16 +953,23 @@ public class Migration_CreateDatabase : IArangoMigration
 		var powers = await CreateInitialPowers(migrator, handle);
 		var attributeEntries = await CreateInitialSharpAttributeEntries(migrator, handle);
 		var wizard = flags[0];
+		var safe = flags[20];
+		var halt = flags[32];
 
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = roomZeroRoom.Id, To = roomZeroObj.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = pmWizardThing.Id, To = pmWizardObj.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = roomTwoObj.Id, To = playerOnePlayer.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = roomZeroObj.Id, To = playerOnePlayer.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = playerOneObj.Id, To = playerOnePlayer.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = pmWizardObj.Id, To = playerOnePlayer.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = playerOneObj.Id, To = wizard.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = pmWizardObj.Id, To = wizard.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = pmWizardObj.Id, To = safe.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = pmWizardObj.Id, To = halt.Id });
 	}
 
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialSharpAttributeEntries(

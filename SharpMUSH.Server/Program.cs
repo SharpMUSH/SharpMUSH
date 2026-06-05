@@ -110,6 +110,9 @@ public class Program
 		app.UseAuthorization();
 		app.MapControllers();
 		app.MapRazorPages();
+		
+// Map SignalR hub for real-time portal updates
+		app.MapHub<SharpMUSH.Server.Hubs.PortalHub>("/hubs/portal");
 
 		// Health and readiness endpoints for deployment checks
 		app.MapGet("/health", () => "healthy");

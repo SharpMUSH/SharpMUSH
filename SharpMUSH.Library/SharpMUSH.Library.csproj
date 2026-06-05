@@ -34,7 +34,8 @@
     <PackageReference Include="TelnetNegotiationCore" Version="2.5.0" />
     <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.5.0" />
 		<PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
-  </ItemGroup>
+		<PackageReference Include="YamlDotNet" Version="18.0.0" />
+		</ItemGroup>
 
   <ItemGroup>
 	  <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />

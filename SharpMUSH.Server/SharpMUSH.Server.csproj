@@ -44,14 +44,15 @@
 	</ItemGroup>
 	
   <ItemGroup>
-    <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Database.ArangoDB\SharpMUSH.Database.ArangoDB.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Implementation\SharpMUSH.Implementation.csproj" />
-    <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
+    <ProjectReference Include="..\\SharpMUSH.Client.Shared\\SharpMUSH.Client.Shared.csproj" />
+    <ProjectReference Include="..\\SharpMUSH.Configuration\\SharpMUSH.Configuration.csproj" />
+    <ProjectReference Include="..\\SharpMUSH.Database.ArangoDB\\SharpMUSH.Database.ArangoDB.csproj" />
+    <ProjectReference Include="..\\SharpMUSH.Database\\SharpMUSH.Database.csproj" />
+    <ProjectReference Include="..\\SharpMUSH.Implementation\\SharpMUSH.Implementation.csproj" />
+    <ProjectReference Include="..\\SharpMUSH.MarkupString\\SharpMUSH.MarkupString.csproj" />
+    <ProjectReference Include="..\\SharpMUSH.Messaging\\SharpMUSH.Messaging.csproj" />
+    <ProjectReference Include="..\\SharpMUSH.Database.Memgraph\\SharpMUSH.Database.Memgraph.csproj" />
+    <ProjectReference Include="..\\SharpMUSH.Database.SurrealDB\\SharpMUSH.Database.SurrealDB.csproj" />
   </ItemGroup>
 	
   <ItemGroup>

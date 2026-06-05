@@ -1,0 +1,248 @@
+@page "/admin/themes"
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@using System.Net.Http.Json
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject HttpClient HttpClient
+@inject MudBlazor.ISnackbar Snackbar
+
+<PageTitle>Theme Editor</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+	<MudStack>
+		<MudPaper Elevation="0" Class="pa-4">
+			<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+				<MudText Typo="Typo.h5">Theme Editor</MudText>
+				<MudSpacer />
+				<MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateNewThemeAsync">
+					<MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />
+					New Theme
+				</MudButton>
+			</MudStack>
+		</MudPaper>
+
+		@if (_loading)
+		{
+			<MudPaper Elevation="0" Class="pa-4 text-center">
+				<MudProgressCircular Indeterminate="true" />
+				<MudText>Loading themes...</MudText>
+			</MudPaper>
+		}
+		else if (_themes == null || _themes.Count == 0)
+		{
+			<MudPaper Elevation="1" Class="pa-4 text-center">
+				<MudText Color="Color.Warning">No themes found. Create one to get started.</MudText>
+			</MudPaper>
+		}
+		else
+		{
+			<MudDataGrid Items="@_themes" Striped="true" Hover="true">
+				<Columns>
+					<PropertyColumn Property="x => x.Name" Title="Name" Sortable="true" />
+					<PropertyColumn Property="x => x.IsDark ? 'Dark' : 'Light'" Title="Mode" Sortable="false" />
+					<PropertyColumn Property="x => x.IsDefault" Title="Default">
+						<CellTemplate>
+							@if (context.Item.IsDefault)
+							{
+								<MudChip Label="true" Color="Color.Success" Size="Size.Small">Default</MudChip>
+							}
+						</CellTemplate>
+					</PropertyColumn>
+					<TemplateColumn CellClass="d-flex gap-2" Title="Actions">
+						<CellTemplate>
+							<MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => EditThemeAsync(context.Item)">
+								<MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-1" Size="Size.Small" />
+								Edit
+							</MudButton>
+							@if (!context.Item.IsDefault)
+							{
+								<MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="() => DeleteThemeAsync(context.Item.Name)">
+									<MudIcon Icon="@Icons.Material.Filled.Delete" Class="mr-1" Size="Size.Small" />
+									Delete
+								</MudButton>
+							}
+						</CellTemplate>
+					</TemplateColumn>
+				</Columns>
+			</MudDataGrid>
+		}
+	</MudStack>
+</MudContainer>
+
+@if (_editingTheme != null)
+{
+	<MudDialog @bind-IsVisible="@_showEditDialog" Options="@_dialogOptions">
+		<DialogContent>
+			<MudStack Spacing="3">
+				<MudText Typo="Typo.h6">@(_editingTheme.Name ?? "New Theme")</MudText>
+
+				<MudTextField @bind-Value="@_editingTheme.Name" Label="Theme Name" Variant="Variant.Outlined" />
+
+				<MudCheckBox @bind-Checked="@_editingTheme.IsDark" Label="Dark Mode" />
+				<MudCheckBox @bind-Checked="@_editingTheme.IsDefault" Label="Set as Default" />
+
+				<MudDivider />
+				<MudText Typo="Typo.subtitle2">Colors</MudText>
+
+				<MudColorPicker @bind-Value="@_editingTheme.Primary" Label="Primary Color" />
+				<MudColorPicker @bind-Value="@_editingTheme.Secondary" Label="Secondary Color" />
+				<MudColorPicker @bind-Value="@_editingTheme.Tertiary" Label="Tertiary Color" />
+
+				<MudDivider />
+				<MudText Typo="Typo.subtitle2">Semantic Colors</MudText>
+
+				<MudColorPicker @bind-Value="@_editingTheme.Success" Label="Success Color" />
+				<MudColorPicker @bind-Value="@_editingTheme.Warning" Label="Warning Color" />
+				<MudColorPicker @bind-Value="@_editingTheme.Error" Label="Error Color" />
+				<MudColorPicker @bind-Value="@_editingTheme.Info" Label="Info Color" />
+
+				<MudDivider />
+				<MudText Typo="Typo.subtitle2">Surface Colors</MudText>
+
+				<MudColorPicker @bind-Value="@_editingTheme.Background" Label="Background Color" />
+				<MudColorPicker @bind-Value="@_editingTheme.Surface" Label="Surface Color" />
+				<MudColorPicker @bind-Value="@_editingTheme.AppbarBackground" Label="Appbar Background" />
+				<MudColorPicker @bind-Value="@_editingTheme.DrawerBackground" Label="Drawer Background" />
+			</MudStack>
+		</DialogContent>
+		<DialogActions>
+			<MudButton OnClick="CancelEditAsync">Cancel</MudButton>
+			<MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveThemeAsync">Save</MudButton>
+		</DialogActions>
+	</MudDialog>
+}
+
+@code {
+	private List<ThemePreset>? _themes;
+	private ThemePreset? _editingTheme;
+	private ThemePreset? _originalTheme;
+	private bool _loading = true;
+	private bool _showEditDialog = false;
+	private DialogOptions _dialogOptions = new() { FullWidth = true, MaxWidth = MaxWidth.Small };
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadThemesAsync();
+	}
+
+	private async Task LoadThemesAsync()
+	{
+		try
+		{
+			_loading = true;
+			_themes = await HttpClient.GetFromJsonAsync<List<ThemePreset>>("api/admin/themes");
+			_themes ??= new List<ThemePreset>();
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Error loading themes: {ex.Message}", Severity.Error);
+			_themes = new List<ThemePreset>();
+		}
+		finally
+		{
+			_loading = false;
+		}
+	}
+
+	private async Task EditThemeAsync(ThemePreset theme)
+	{
+		_originalTheme = theme;
+		_editingTheme = theme with { }; // Shallow copy for editing
+		_showEditDialog = true;
+	}
+
+	private async Task CreateNewThemeAsync()
+	{
+		_originalTheme = null;
+		_editingTheme = new ThemePreset(
+			Name: "New Theme",
+			IsDark: true,
+			IsDefault: false,
+			Primary: "#00f5b7",
+			Secondary: "#00f5b7",
+			Tertiary: "#00f5b7",
+			Info: "#0071ff",
+			Success: "#4caf50",
+			Warning: "#ff9800",
+			Error: "#f44336",
+			Dark: "#424242",
+			TextPrimary: "rgba(255, 255, 255, 0.87)",
+			TextSecondary: "rgba(255, 255, 255, 0.60)",
+			TextDisabled: "rgba(255, 255, 255, 0.38)",
+			Surface: "#242424",
+			Background: "#1a1a1a",
+			AppbarBackground: "#1a1a1a",
+			DrawerBackground: "#242424",
+			ActionDefault: "rgba(255, 255, 255, 0.54)",
+			ActionDisabled: "rgba(255, 255, 255, 0.26)",
+			Dividers: "rgba(255, 255, 255, 0.12)",
+			OverlayDark: "rgba(0, 0, 0, 0.50)"
+		);
+		_showEditDialog = true;
+	}
+
+	private async Task SaveThemeAsync()
+	{
+		if (_editingTheme == null)
+			return;
+
+		try
+		{
+			HttpResponseMessage response;
+			if (_originalTheme == null)
+			{
+				// Create new
+				response = await HttpClient.PostAsJsonAsync("api/admin/themes", _editingTheme);
+			}
+			else
+			{
+				// Update existing
+				response = await HttpClient.PutAsJsonAsync($"api/admin/themes/{_originalTheme.Name}", _editingTheme);
+			}
+
+			if (response.IsSuccessStatusCode)
+			{
+				Snackbar.Add("Theme saved successfully", Severity.Success);
+				await LoadThemesAsync();
+				_showEditDialog = false;
+				_editingTheme = null;
+			}
+			else
+			{
+				Snackbar.Add($"Error saving theme: {response.StatusCode}", Severity.Error);
+			}
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Error saving theme: {ex.Message}", Severity.Error);
+		}
+	}
+
+	private async Task DeleteThemeAsync(string themeName)
+	{
+		try
+		{
+			var response = await HttpClient.DeleteAsync($"api/admin/themes/{themeName}");
+			if (response.IsSuccessStatusCode)
+			{
+				Snackbar.Add("Theme deleted successfully", Severity.Success);
+				await LoadThemesAsync();
+			}
+			else
+			{
+				Snackbar.Add($"Error deleting theme: {response.StatusCode}", Severity.Error);
+			}
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Error deleting theme: {ex.Message}", Severity.Error);
+		}
+	}
+
+	private async Task CancelEditAsync()
+	{
+		_showEditDialog = false;
+		_editingTheme = null;
+		_originalTheme = null;
+	}
+}

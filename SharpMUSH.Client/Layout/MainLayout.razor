@@ -8,8 +8,9 @@
 @inject ITerminalService Terminal
 @inject AccountAuthService AccountAuth
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ThemeService ThemeService
 
-<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
+<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="@ThemeService.CurrentTheme" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -74,6 +75,8 @@
                         <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small" Class="mr-2" />
                         Account Settings
                     </MudMenuItem>
+                    <MudDivider />
+                    <ThemePicker />
                     @if (!_isDebugAuth)
                     {
                         <MudMenuItem OnClick="AccountLogoutAsync">
@@ -148,20 +151,6 @@
 </MudLayout>
 
 @code {
-    private readonly MudTheme _theme = new()
-    {
-        PaletteDark = new PaletteDark
-        {
-            Primary = MudColor.Parse("#00f5b7"),
-            Secondary = MudColor.Parse("#00f5b7"),
-            AppbarText = MudColor.Parse("#00f5b7"),
-            TextPrimary = "rgba(255, 255, 255, 0.87)",
-            TextSecondary = "rgba(255, 255, 255, 0.60)",
-            Surface = MudColor.Parse("#242424"),
-            Background = MudColor.Parse("#1a1a1a")
-        }
-    };
-    
     private bool _isDarkMode = true;
     private bool _drawerOpen = false;
     private bool _isConfigRoute = false;
@@ -171,6 +160,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Initialize themes before render
+        await ThemeService.InitializeAsync();
+        
         NavigationManager.LocationChanged += OnLocationChanged;
         UpdateConfigRouteState();
         await AccountAuth.InitAsync();

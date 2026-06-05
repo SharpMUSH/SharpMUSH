@@ -1,0 +1,38 @@
+@using SharpMUSH.Client.Services
+@inject ThemeService ThemeService
+
+@if (ThemeService.AvailableThemes.Count > 0)
+{
+	<MudMenuItem OnClick="@OpenThemeMenu">
+		<MudIcon Icon="@Icons.Material.Filled.Palette" Size="Size.Small" Class="mr-2" />
+		Theme: @(ThemeService.SelectedThemeName ?? "Default")
+		<MudIcon Icon="@Icons.Material.Filled.ArrowRight" Size="Size.Small" Class="ml-2" />
+	</MudMenuItem>
+	
+	@foreach (var theme in ThemeService.AvailableThemes)
+	{
+		<MudMenuItem OnClick="@(async () => await SelectThemeAsync(theme.Name))">
+			@if (theme.Name == ThemeService.SelectedThemeName)
+			{
+				<MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-2" Style="color: var(--mud-palette-primary);" />
+			}
+			else
+			{
+				<span Style="width: 24px;" />
+			}
+			@theme.Name
+		</MudMenuItem>
+	}
+}
+
+@code {
+	private async Task SelectThemeAsync(string themeName)
+	{
+		await ThemeService.SelectThemeAsync(themeName);
+	}
+
+	private void OpenThemeMenu()
+	{
+		// Menu opens automatically when clicked
+	}
+}
