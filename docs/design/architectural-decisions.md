@@ -874,6 +874,70 @@ and the widget interface.
 
 ---
 
+## Area 20: Softcode Package Manager
+
+### 20.1 Package Format
+
+**Decision:** Declarative YAML manifest (desired state, not command scripts).
+No dbrefs stored — only abstract `~refs` resolved at install time. Convention
+prefix advisory, not enforced.
+
+### 20.2 Storage: In-Game Objects
+
+**Decision:** Dedicated PM wizard player owns all package-managed objects.
+Objects are normal game objects with no special attrs. PM wizard is the
+`@search owner=` mechanism for "list all managed objects."
+
+### 20.3 Storage: System Database
+
+**Decision:** System collections in the game DB (not on disk). Collections:
+sys_packages, sys_package_objects, sys_package_depends (edges),
+sys_managed_attributes, sys_remotes. Travels with backups. Not visible to
+softcode. Tracks per-attribute ownership across packages.
+
+### 20.4 Git Integration
+
+**Decision:** Repos cloned to temp/cache on browse. Per-package commit
+tracking (not per-repo). Update detection via `git diff --name-only
+<installed_commit>..HEAD -- <path>`. Branch pinning per remote.
+
+### 20.5 Repo Structure
+
+**Decision:** Package = directory. Repo holds one or more packages.
+`index.yaml` for fast discovery, fallback to scanning for `package.yaml`.
+Monorepos, single-package repos, and curated collections all supported.
+
+### 20.6 Dependencies
+
+**Decision:** Version-constrained dependency declarations. Checked at plan
+time. Uninstall blocked if dependents exist. Circular deps are an error.
+
+### 20.7 Three-Way Merge
+
+**Decision:** Base (baseline hash at install) vs. Live (current value) vs.
+New (package version). Four outcomes: no-change, auto-upgrade, keep-local,
+conflict. Conflicts require admin resolution.
+
+### 20.8 Security Model
+
+**Decision:** Wizard-only. No auto-apply ever. Dangerous pattern scanner
+(@force, @toad, etc.) with visual callouts. Trust levels on remotes
+(official/community/unknown) with badges.
+
+### 20.9 Admin UX
+
+**Decision:** Web admin panel only, no in-game commands. Consumer flows
+(browse, install, upgrade, status, uninstall) and authoring flows (object
+picker, dbref resolution, export) all in Blazor.
+
+### 20.10 Default Packages
+
+**Decision:** SharpMUSH official repo ships scene-system, bboard, events,
+who-where, finger, http-hooks. These are THE default softcode experience.
+The http-hooks package wires up the game→web bridge.
+
+---
+
 ## Design Documents Index
 
 | Document                          | Status    | Covers                              |
@@ -897,3 +961,5 @@ and the widget interface.
 | events-calendar.md                | Complete  | Events = scheduled scenes, RSVP      |
 | theme-editor.md                   | Complete  | MudTheme palette, player presets, CSS|
 | custom-widgets.md                 | Complete  | RCL plugins, IPortalWidget, loading  |
+| softcode-package-manager.md       | Complete  | Package format, git, storage, merge  |
+| softcode-package-manager-ux.md    | Complete  | Admin panel UX, authoring, review    |
