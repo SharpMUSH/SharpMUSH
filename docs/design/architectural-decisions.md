@@ -551,6 +551,93 @@ scene's room (temp or grid). MUSH players and web players end up in the same roo
 
 ---
 
+## Area 8: Content Rendering Pipeline
+
+### 8.1 MString Is the Shared Library
+
+**Decision:** MString already has `.ToAnsi()`, `.ToHtml()`, `.ToPlainText()`.
+Web portal references the same shared library. No separate ANSI-to-HTML parser
+needed — MString handles it natively.
+
+### 8.2 Markdown Uses Markdig Everywhere
+
+**Decision:** Single Markdig pipeline configuration used by both server and
+client. `DisableHtml()` always on for user content. Custom wiki-link extension
+resolves `[[links]]` at render time.
+
+### 8.3 Markdown → MString for In-Game Wiki
+
+**Decision:** Custom Markdig renderer that walks the AST and emits MString
+segments. `# Header` → bold + colored MString, `[link]` → MXP clickable, etc.
+Same library, different renderer backend.
+
+### 8.4 Poses Are MString Only
+
+**Decision:** Poses are never Markdown. They are MString in, MString out.
+Web renders via `.ToHtml()`. No Markdown processing path for poses.
+
+### 8.5 Wiki Rendering Is Cached
+
+**Decision:** Rendered HTML stored alongside Markdown source. Invalidated on
+edit. Scene poses rendered client-side (WASM). Scene archives rendered
+server-side (SSR/SEO), cached after first render.
+
+---
+
+## Area 9: Mail & Messaging
+
+### 9.1 Flat List (No Threading)
+
+**Decision:** @mail is a flat list on both web and in-game. No conversation
+threading, no grouping. Sorted by date, newest first. Pagination matches
+the in-game `@mail` page model.
+
+### 9.2 Same Data, Different View
+
+**Decision:** Web portal reads from the same @mail storage the game uses.
+HTTP handler serves mail. No separate mail collection. Portal is a read/write
+view into existing game data.
+
+### 9.3 Pages Are Ephemeral
+
+**Decision:** Pages (whispers) appear in the terminal panel as real-time game
+output. They are NOT stored, NOT shown in the mail UI, and NOT persisted.
+Same semantics as telnet.
+
+### 9.4 Mail Notifications via NATS → SignalR
+
+**Decision:** `portal.mail` NATS event on new mail → SignalR push → badge
+count + toast notification. Unread count fetched on page load.
+
+---
+
+## Area 10: Permission & Visibility
+
+### 10.1 Hierarchical Roles
+
+**Decision:** Guest < Player < Royalty < Wizard < God. Higher inherits all
+lower permissions. Simple integer comparison. No RBAC framework — just an enum.
+
+### 10.2 Role Derived from Game Flags
+
+**Decision:** Portal role mapped from character flags (WIZARD, ROYALTY, #1).
+Set in JWT at login. Changes take effect on token refresh (not instant).
+Account-level role = highest among linked characters.
+
+### 10.3 Layout Editing is Wizard+
+
+**Decision:** Players choose color theme only. Layout, nav links, custom CSS
+are Wizard+ territory. This keeps the site consistent for all users while
+allowing admin customization.
+
+### 10.4 Future Expansion Explicitly Deferred
+
+**Decision:** @powers integration, custom @locks via API, group-based
+permissions, per-widget visibility — all deferred. Hierarchy covers current
+needs. When needed, they extend (not replace) the hierarchy.
+
+---
+
 ## Design Documents Index
 
 | Document                          | Status    | Covers                              |
@@ -562,6 +649,7 @@ scene's room (temp or grid). MUSH players and web players end up in the same roo
 | architectural-decisions.md        | Complete  | This document                       |
 | scene-system.md                   | Complete  | Scene lifecycle, UI, real-time       |
 | character-profiles.md             | Complete  | Profile pages, sheets, gallery       |
-| content-rendering-pipeline.md     | Pending   | Full rendering pipeline details      |
-| mail-messaging.md                 | Pending   | In-game mail on web                  |
+| content-rendering-pipeline.md     | Complete  | MString shared lib, Markdig, sanitization|
+| mail-messaging.md                 | Complete  | Flat @mail on web, notifications     |
+| permission-visibility.md          | Complete  | Hierarchical roles, per-system tables|
 | url-strategy.md                   | Pending   | Routes, deep links, SEO              |
