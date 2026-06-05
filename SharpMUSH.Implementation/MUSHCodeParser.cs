@@ -7,8 +7,10 @@ using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Implementation.Visitors;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -142,7 +144,22 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <param name="parser">Optional parser instance to use. When null, defaults to 'this'.
 	/// Pass a different parser when you need custom parser state (e.g., CommandParse with handle info).</param>
 	/// <returns>The result of visiting the parse tree</returns>
-	private ValueTask<CallState?> ParseInternal<TContext>(
+	private async ValueTask<CallState?> ParseInternal<TContext>(
+		MString text,
+		Func<SharpMUSHParser, TContext> entryPoint,
+		string methodName,
+		IMUSHCodeParser? parser = null,
+		bool lenient = false)
+		where TContext : ParserRuleContext
+	{
+		var (result, _) = await ParseInternalCore(text, entryPoint, methodName, parser, lenient);
+		return result;
+	}
+
+	/// <summary>
+	/// Core parse implementation that returns both the result and visitor metadata.
+	/// </summary>
+	private async ValueTask<(CallState? Result, bool DidEmitFunctionDebug)> ParseInternalCore<TContext>(
 		MString text,
 		Func<SharpMUSHParser, TContext> entryPoint,
 		string methodName,
@@ -196,8 +213,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// error-recovery tree so the best-effort split is returned to the caller.
 		if (errorListener.HasErrors && !lenient)
 		{
-			return ValueTask.FromResult<CallState?>(
-				new CallState(MModule.single(errorListener.Errors[0].ToMushFailureString())));
+			return (new CallState(MModule.single(errorListener.Errors[0].ToMushFailureString())), false);
 		}
 
 		SharpMUSHParserVisitor visitor = new(Logger, parser,
@@ -211,7 +227,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			_hookService,
 			text);
 
-		return visitor.Visit(context);
+		var result = await visitor.Visit(context);
+		return (result, visitor.DidEmitFunctionDebug);
 	}
 
 	public async ValueTask<CallState?> FunctionParse(MString text)
@@ -252,7 +269,84 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				LimitExceeded: new LimitExceededFlag()))
 			: this;
 
-		var result = await ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+		var (result, _) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+
+		return result;
+	}
+
+	public async ValueTask<CallState?> FunctionParse(MString text, bool emitSubstDebug)
+	{
+		if (!emitSubstDebug)
+			return await FunctionParse(text);
+
+		if (string.IsNullOrEmpty(MModule.plainText(text).ToString()))
+			return CallState.Empty;
+
+		// Replicate the tracking logic from FunctionParse
+		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
+		var parser = needsTracking
+			? Push(new ParserState(
+				Registers: new([[]]),
+				IterationRegisters: [],
+				RegexRegisters: [],
+				SwitchStack: [],
+				EnvironmentRegisters: [],
+				CurrentEvaluation: null,
+				ExecutionStack: [],
+				ParserFunctionDepth: 0,
+				Function: null,
+				Command: null,
+				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
+				Switches: [],
+				Arguments: [],
+				Executor: CurrentState.Executor,
+				Enactor: CurrentState.Enactor,
+				Caller: CurrentState.Caller,
+				Handle: null,
+				ParseMode: ParseMode.Default,
+				HttpResponse: null,
+				CallDepth: new InvocationCounter(),
+				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+				TotalInvocations: new InvocationCounter(),
+				LimitExceeded: new LimitExceededFlag()))
+			: this;
+
+		// Capture raw text BEFORE evaluation for substitution-only debug
+		var rawText = MModule.plainText(text).ToString();
+		var (result, didEmitFunctionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+
+		// PennMUSH substitution-only debug: when the argument contains only substitutions
+		// (no function calls), emit a single-line debug trace: "#dbref! raw => evaluated"
+		// Only fires when function-level debug did NOT already emit for this parse.
+		if (!didEmitFunctionDebug && result?.Message is not null)
+		{
+			var evaluatedText = result.Message.ToPlainText();
+			if (rawText != evaluatedText)
+			{
+				var shouldDebug = false;
+				AnySharpObject? executorObj = null;
+
+				var executor = await CurrentState.ExecutorObject(_mediator);
+				if (!executor.IsNone)
+				{
+					executorObj = executor.Known;
+					var stateFlags = CurrentState.Flags;
+					if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
+						shouldDebug = false;
+					else if (stateFlags.HasFlag(ParserStateFlags.Debug))
+						shouldDebug = true;
+					else
+						shouldDebug = await executorObj.HasFlag("DEBUG");
+				}
+
+				if (shouldDebug && executorObj is not null)
+				{
+					var dbrefNumber = executorObj.Object().DBRef.Number;
+					var owner = await executorObj.Object().Owner.WithCancellation(CancellationToken.None);
+					await _notifyService.Notify(owner, MModule.single($"#{dbrefNumber}! {rawText} => {evaluatedText}"));
+				}
+			}
+		}
 
 		return result;
 	}

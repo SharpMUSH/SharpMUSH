@@ -299,7 +299,11 @@ public partial class SurrealDatabase
 			yield return item.WithRoomOption();
 
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
+		{
+			// Skip self — already yielded above
+			if (item.Object().DBRef == obj) continue;
 			yield return item.WithRoomOption();
+		}
 	}
 
 	public async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(AnySharpObject obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -312,7 +316,11 @@ public partial class SurrealDatabase
 			yield return item.WithRoomOption();
 
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
+		{
+			// Skip self — already yielded above
+			if (item.Object().DBRef == obj.Object().DBRef) continue;
 			yield return item.WithRoomOption();
+		}
 	}
 
 	public IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, string type, CancellationToken cancellationToken = default)

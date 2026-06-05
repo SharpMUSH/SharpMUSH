@@ -142,6 +142,8 @@ public partial class ArangoDatabase
 
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, ct))
 		{
+			// Skip self — already yielded above
+			if (item.Object().DBRef == obj) continue;
 			yield return item.WithRoomOption();
 		}
 	}
@@ -160,6 +162,8 @@ public partial class ArangoDatabase
 
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, ct))
 		{
+			// Skip self — already yielded above
+			if (item.Object().DBRef == obj.Object().DBRef) continue;
 			yield return item.WithRoomOption();
 		}
 	}

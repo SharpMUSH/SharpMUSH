@@ -23,6 +23,7 @@ public interface IMUSHCodeParser
 	ValueTask<CallState> CommandParse(MString text);
 	ValueTask<CallState?> CommandSingleArgParse(MString text);
 	ValueTask<CallState?> FunctionParse(MString text);
+	ValueTask<CallState?> FunctionParse(MString text, bool emitSubstDebug);
 	IMUSHCodeParser Empty();
 	IMUSHCodeParser Push(ParserState state);
 	IMUSHCodeParser FromState(ParserState state);

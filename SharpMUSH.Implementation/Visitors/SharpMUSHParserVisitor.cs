@@ -60,6 +60,8 @@ public class SharpMUSHParserVisitor(
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
 	private int _debugNestDepth;
+	private bool _didEmitFunctionDebug;
+	internal bool DidEmitFunctionDebug => _didEmitFunctionDebug;
 	private int _braceDepthCounter;
 	private int _suppressFunctionEval;
 
@@ -355,7 +357,13 @@ public class SharpMUSHParserVisitor(
 
 		if (shouldDebug && executorObj != null && indent != null)
 		{
-			await SendDebugOrVerboseOutput(executorObj, $"#{dbrefNumber}! {indent}{context.GetText()} :");
+			// PennMUSH wraps the function expression in [...] when the function was invoked
+			// inside bracket evaluation (e.g. think [add(1,2)]), but not for nested calls
+			// within function arguments (e.g. iter(a b, strlen(##)) — strlen is bare).
+			var isBracketed = context.Parent?.Parent is BracketPatternContext;
+			var debugExpr = isBracketed ? $"[{context.GetText()}]" : context.GetText();
+			await SendDebugOrVerboseOutput(executorObj, $"#{dbrefNumber}! {indent}{debugExpr} :");
+			_didEmitFunctionDebug = true;
 		}
 
 		if (shouldDebug) _debugNestDepth++;
@@ -369,8 +377,10 @@ public class SharpMUSHParserVisitor(
 			return result;
 		}
 
+		var isBracketedPost = context.Parent?.Parent is BracketPatternContext;
+		var debugExprPost = isBracketedPost ? $"[{context.GetText()}]" : context.GetText();
 		await SendDebugOrVerboseOutput(executorObj,
-			$"#{dbrefNumber}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}");
+			$"#{dbrefNumber}! {indent}{debugExprPost} => {result.Message?.ToPlainText() ?? ""}");
 
 		return result;
 	}
@@ -1853,10 +1863,10 @@ public class SharpMUSHParserVisitor(
 			else
 			{
 				arguments.AddRange(await argCallState.Arguments.Skip(1)
-					.ToAsyncEnumerable()
-					.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument))
-					.Select(cs => cs!)
-					.ToListAsync());
+						.ToAsyncEnumerable()
+						.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument, true))
+						.Select(cs => cs!)
+						.ToListAsync());
 			}
 		}
 		else
@@ -1870,7 +1880,7 @@ public class SharpMUSHParserVisitor(
 			{
 				arguments.AddRange(await (argCallState.Arguments ?? [])
 					.ToAsyncEnumerable()
-					.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument))
+					.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument, true))
 					.Select(cs => cs!)
 					.ToListAsync());
 			}
