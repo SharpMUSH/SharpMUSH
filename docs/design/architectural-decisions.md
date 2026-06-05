@@ -771,6 +771,104 @@ Everything else lazy-populated. No bulk warm-up.
 
 ---
 
+## Area 16: Forums / BBS
+
+### 16.1 Softcoded, On-MUSH Storage
+
+**Decision:** BBS is entirely softcoded. Storage lives on-MUSH (game object DB).
+Admin customizes commands, display, board structure in-game. Engine doesn't
+need to know BBS exists.
+
+### 16.2 HTTP Handler for Read
+
+**Decision:** HTTP handler exposes boards/posts for web display (read-only).
+Same pattern as profiles. Respects board read locks per character.
+
+### 16.3 Terminal for Write
+
+**Decision:** No separate web write API. Posting from web goes through the
+terminal panel (`+bbs/post` command). Softcode handles all validation and
+formatting. Web "New Post" button is a UX shortcut that pre-fills the command.
+
+### 16.4 Post Format
+
+**Decision:** MString (same as mail). Posts can contain ANSI formatting from
+in-game. Rendered via `.ToHtml()` on web. Not Markdown.
+
+---
+
+## Area 17: Events & Calendar
+
+### 17.1 Events Are Scheduled Scenes
+
+**Decision:** No separate event system. A scene with `scheduled_start` set is
+an event. Same collection, same lifecycle, same commands (with aliases). When
+started, becomes a normal active scene.
+
+### 17.2 RSVP
+
+**Decision:** `rsvp_list` field on scene. Statuses: "interested" or "attending".
+RSVP via command or HTTP handler (simple toggle, doesn't need terminal routing).
+Notifications on scene start to RSVP'd characters.
+
+### 17.3 No Auto-Start
+
+**Decision:** Organizer manually starts the scheduled scene. Scheduled time is
+advisory (tells people when to show up). Games are social; strict auto-start
+is antisocial.
+
+### 17.4 Calendar Widget
+
+**Decision:** Just a query filter: scenes where `scheduled_start > now()` and
+`state = "scheduled"`, ordered by start time. Compact list view. No full
+month-grid calendar in v1.
+
+---
+
+## Area 18: Theme Editor
+
+### 18.1 MudBlazor Palette Editor
+
+**Decision:** Admin edits MudTheme palette properties directly (Primary,
+Secondary, Surface, Background, Text, etc.) via color pickers with live
+preview. Maps 1:1 to MudBlazor's theme system. No custom CSS needed for 90%.
+
+### 18.2 Player Theme Presets
+
+**Decision:** Admin defines named themes (Dark, Light, High Contrast, Custom).
+Players pick from the list. Stored in localStorage. Applied before render (no
+flash). Colors/typography only — not layout.
+
+### 18.3 CSS Escape Hatch
+
+**Decision:** Wizard+ can add custom CSS block in admin panel. Injected after
+MudBlazor theme CSS. Validated (must parse, no script injection). Warning that
+it may break on upgrades. Applied site-wide (not per-player).
+
+---
+
+## Area 19: Custom Widgets
+
+### 19.1 Razor Class Library Plugins
+
+**Decision:** Custom widgets ship as .NET RCL DLLs. Same `IPortalWidget`
+interface as built-in widgets. Dropped into plugins/ folder, loaded on startup.
+Appear in admin widget palette alongside built-ins.
+
+### 19.2 Trusted Code
+
+**Decision:** No sandboxing. Plugin DLLs are trusted (same as NuGet deps).
+Only server operators install them. Same trust model as WordPress/Discourse
+plugins.
+
+### 19.3 Distribution
+
+**Decision:** No marketplace. Shared via GitHub repos or NuGet packages.
+Template repo provided for authoring. Documentation on available services
+and the widget interface.
+
+---
+
 ## Design Documents Index
 
 | Document                          | Status    | Covers                              |
@@ -790,3 +888,7 @@ Everything else lazy-populated. No bulk warm-up.
 | widget-system.md                  | Complete  | Zones, IPortalWidget, layout JSON    |
 | search-infrastructure.md          | Complete  | FTS, omnisearch, permission filtering|
 | caching-strategy.md               | Complete  | Event invalidation, cache layers     |
+| forums-bbs.md                     | Complete  | Softcoded BBS, HTTP read, terminal write|
+| events-calendar.md                | Complete  | Events = scheduled scenes, RSVP      |
+| theme-editor.md                   | Complete  | MudTheme palette, player presets, CSS|
+| custom-widgets.md                 | Complete  | RCL plugins, IPortalWidget, loading  |
