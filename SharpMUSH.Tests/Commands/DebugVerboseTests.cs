@@ -25,7 +25,7 @@ public class DebugVerboseTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	[Test, Skip("Failing debug output - it's showing up twice")]
+	[Test]
 	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()
 	{
 		// Create a unique player as executor: the owned object's debug output goes to its owner.
@@ -64,7 +64,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugEvalObj"));
 	}
 
-	[Test, Skip("Failing debug output - it's showing up twice")]
+	[Test]
 	public async Task DebugFlag_ShowsNesting_WithIndentation()
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -368,7 +368,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugNoRegObj"));
 	}
 
-	[Test, Skip("Failing debug output - it's showing up twice")]
+	[Test]
 	public async Task Debug_ExactPennMUSHFormat_PreEvalColon()
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -391,7 +391,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugFmtPre"));
 	}
 
-	[Test, Skip("Failing debug output - it's showing up twice")]
+	[Test]
 	public async Task Debug_ExactPennMUSHFormat_PostEvalArrow()
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -414,7 +414,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugFmtPost"));
 	}
 
-	[Test, Skip("Failing debug output - it's showing up twice")]
+	[Test]
 	public async Task Debug_NestingUsesSpaceIndentation_MatchesPennMUSH()
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -546,7 +546,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugOwnerObj"));
 	}
 
-	[Test, Skip("Failing debug output - it's showing up twice")]
+	[Test]
 	public async Task Debug_ShowsPercentQRegister_InExpressionText()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
@@ -578,7 +578,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugPctQ"));
 	}
 
-	[Test, Skip("Failing debug output - it's showing up twice")]
+	[Test]
 	public async Task Debug_ShowsPercentZeroArg_InExpressionText()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
@@ -610,7 +610,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugPct0"));
 	}
 
-	[Test, Skip("Failing debug output - it's showing up twice")]
+	[Test]
 	public async Task Debug_ShowsIterTokens_InExpressionText()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
@@ -650,7 +650,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugPctIter"));
 	}
 
-	[Test, Skip("Failing debug output - it's showing up twice")]
+	[Test]
 	public async Task Debug_SetqShowsRegisterName_InExpressionText()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
