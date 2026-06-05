@@ -413,6 +413,140 @@ surface is limited to admin-authored HTML pages (which are trusted by definition
 
 ---
 
+## 6. Character Profiles
+
+### 6.1 Data Source: Hybrid (HTTP Handler + Portal Caching)
+
+**Decision:** The game's HTTP handler is the sole authority for structured profile
+data. The portal caches responses and invalidates on NATS events. Direct DB reads
+are not used for profile data.
+
+**Flow:** Portal → HTTP handler → game reads attributes → returns JSON → portal caches.
+Invalidation via NATS event when attributes change in-game or via web form POST.
+
+**Bootstrap:** SharpMUSH creates a default HTTP handler object on first run with
+stock profile endpoints. Admin customizes via MUSHcode editing.
+
+### 6.2 Schema Ownership: Portal Convention (PROFILE`* attributes)
+
+**Decision:** Game publishes a profile schema via HTTP endpoint. Schema defines
+field names, types, visibility rules, editability. Portal renders accordingly.
+
+**Format policy:** Fields are plain text by default (ANSI stripped). Schema can
+opt individual fields into `format: "mstring"` (raw ANSI preserved) or
+`format: "markdown"` (rendered as Markdown). The HTTP handler decides per-field.
+
+### 6.3 Profile Gallery: Both (Upload + URL)
+
+**Decision:** Players can upload images (stored via IFileStorage) AND reference
+external URLs. Gallery metadata lives in portal DB with ordering and captions.
+One image can be designated "profile icon" for use in scene panels, character
+directory thumbnails, etc.
+
+### 6.4 Profile Identity: Wiki Page in Character: Namespace
+
+**Decision:** A character profile IS a wiki page at `Character:<name>`. The
+portal compositor injects the structured section (from HTTP handler) above the
+freeform wiki body. This gives profiles full wiki features: revision history,
+search indexing, wiki-links, templates, categories.
+
+**Editing:** Structured fields edited via web form (POST to HTTP handler) or
+in-game attributes. Freeform content edited via wiki editor. Two edit modes
+on one page.
+
+### 6.5 Profile Edit: Web Form → HTTP Handler (with permission schema)
+
+**Decision:** The HTTP handler schema includes `editable_by` and `visible_to`
+per field. Portal renders form accordingly. POST to handler validates permissions
+server-side. Handler returns only fields the viewer is authorized to see.
+
+---
+
+## 7. Scene System
+
+### 7.1 Scene Tracking: Explicit (Opt-In)
+
+**Decision:** Scenes are explicitly started (`+scene/create`) and ended
+(`+scene/end`). No passive room logging. Rooms without an active scene
+produce no archived log.
+
+**Rationale:** Privacy by default. Players consent to logging by starting a scene.
+OOC conversations in rooms are never recorded unless someone explicitly opts in.
+
+### 7.2 Web Participation: Watch + Direct Scene Pose
+
+**Decision:** Web scene panel is primarily for reading (watching the clean pose
+stream). However, the web CAN submit poses directly to a specific scene.
+
+**Key distinction between MUSH and Web pose paths:**
+
+- **MUSH path:** Player types a pose command in their terminal → game processes it
+  in their current room → room emit → scene logger captures it (because there's
+  an active scene in that room). The pose goes to the ROOM first, scene captures it.
+
+- **Web scene path:** Player submits a pose via the scene panel UI → server routes
+  it to the specific scene → scene emits to the scene's room → scene logger records it.
+  The pose targets the SCENE first, gets emitted to the room.
+
+Both paths produce the same result (pose appears in room AND in scene log), but
+the routing is different. The web path targets a scene_id, not a room. This is
+the architectural seam that enables future virtual scenes (Phase 2+) where there
+IS no room.
+
+**For Phase 1:** Web scene poses still require the character to be in the scene's
+room (validated server-side). The difference is routing only — the character must
+be physically present.
+
+### 7.3 Scene Storage: Separate Collections
+
+**Decision:** Multiple collections: Scenes, Poses, Participants, ActorRoles, Plots.
+Not stored as game objects or attributes. Scene data lives in the portal/content DB,
+separate from the game object DB.
+
+**Rationale:** Scene data is inherently relational (many poses per scene, many
+participants per scene, many scenes per plot). Graph DB collections with indexes
+are ideal. Game objects are for game state, not content archives.
+
+### 7.4 Pose Format: MString / ANSI Only
+
+**Decision:** Poses are stored as raw MString (ANSI markup). No Markdown in poses.
+Plain text extraction (ANSI-stripped) is stored alongside for search indexing.
+
+**Rendering:**
+- In-game: MString rendered natively (ANSI codes interpreted by client)
+- Web scene panel: MString → HTML conversion (existing client-side pipeline)
+- Scene archive (published log): MString → HTML
+
+**Rationale:** MUSH players format poses with ANSI (bold names, colored speech).
+This is the native format. Markdown would be foreign to the MUSH tradition.
+
+### 7.5 Scene Privacy: Granular with Public Default
+
+**Decision:** Scenes can be: public (default), watchers-allowed (can watch but not
+search/browse), participants-only, private (hidden from all non-participants).
+
+**Admin default:** `public` out of the box. Any participant can downgrade
+visibility (mark private). Only runner can upgrade (make public again after
+being marked private by a participant).
+
+**Veto rule:** Any participant can veto publication at any time. Once vetoed,
+only that participant can un-veto. This protects player consent.
+
+### 7.6 Scene Discovery: Simple List + Hybrid Future
+
+**Decision (Phase 1):** Simple list of active scenes. Title, location, participant
+count, last activity time. No multi-scene web participation — character has one
+location (PennMUSH model).
+
+**Future (Phase 2+):** Virtual scenes allow multi-scene participation from web.
+Physical scenes remain strict (must be in room). Data model includes nullable
+`location_dbref` to support this later without migration.
+
+**Key constraint:** A character cannot be in two physical scenes simultaneously.
+Physical presence is singular. Virtual scenes (when implemented) bypass this.
+
+---
+
 ## Design Documents Index
 
 | Document                          | Status    | Covers                              |
@@ -422,8 +556,8 @@ surface is limited to admin-authored HTML pages (which are trusted by definition
 | front-page-and-navigation.md      | Complete  | Front page, omnisearch, help, onboard|
 | ui-patterns.md                    | Complete  | 17 UX patterns + anti-patterns      |
 | architectural-decisions.md        | Complete  | This document                       |
-| scene-system.md                   | Pending   | Scene lifecycle, UI, real-time       |
-| character-profiles.md             | Pending   | Profile pages, sheets, gallery       |
+| scene-system.md                   | Complete  | Scene lifecycle, UI, real-time       |
+| character-profiles.md             | Complete  | Profile pages, sheets, gallery       |
 | content-rendering-pipeline.md     | Pending   | Full rendering pipeline details      |
 | mail-messaging.md                 | Pending   | In-game mail on web                  |
 | url-strategy.md                   | Pending   | Routes, deep links, SEO              |
