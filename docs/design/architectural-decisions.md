@@ -4,6 +4,11 @@ Resolved design decisions for the SharpMUSH web portal. Each entry documents
 the chosen approach, rationale, and constraints. Reference these when
 implementing — they are binding unless explicitly superseded by a later decision.
 
+**IMPLEMENTATION GATE:** Before implementing ANY area, review its decisions with
+the project owner and confirm agreement. Designs will be refined iteratively —
+treat these as the current best understanding, not final specifications. Each
+area's TODO list includes a "Review & Confirm Decisions" step as item #1.
+
 ---
 
 ## 1. Authentication & Sessions
