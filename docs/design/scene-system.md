@@ -47,11 +47,13 @@ Web player clicks "New Scene"
 
 **Temporary room properties:**
 - Named: `Scene Room: <scene title>` (or admin-configurable pattern)
-- UNFINDABLE flag (doesn't show on +where unless scene is public)
+- SCENE_ROOM flag (engine-level flag — softcoders can check `hasflag(%l,SCENE_ROOM)`
+  to customize +who, +where, room formatters, etc.)
 - No exits (access only via +scene/join)
 - Zone: scene staging zone (admin-configurable parent room)
 - @desc: scene pitch/description (if provided)
 - Owned by system object (not the creator's character)
+- Limit: configurable max per player (default 3)
 
 ### Scene Lifecycle
 
@@ -405,7 +407,41 @@ The scene list shows a "Go" link for physical scenes — clicking it
 indicates interest. The player must actually move their character to
 the room to participate (no auto-teleport by default; admin can configure).
 
-## NATS Event Schema
+## SCENE_ROOM Flag
+
+A new engine-level flag on room objects. Set automatically on temp scene rooms.
+Can also be set manually by staff on grid rooms that are designated scene spaces.
+
+**Purpose:** Give softcoders a clean way to detect scene rooms without hardcoding
+DBRefs or zone checks. Enables customization of:
+
+- `+who` / `+where` — show "In Scene: <title>" instead of room name, or hide entirely
+- Room formatters — display scene info in the room header
+- Idle sweepers — exempt scene rooms from idle sweeping
+- Navigation — `+scenes` could list rooms with this flag that have active scenes
+
+**Engine behavior:**
+- `hasflag(<room>, SCENE_ROOM)` → 1 if set
+- Auto-set on temp rooms at creation, cleared is unnecessary (room is destroyed)
+- Staff can `@set <room>=SCENE_ROOM` on grid rooms to mark them as designated RP spaces
+- Flag is informational only — no engine-enforced behavior beyond being queryable
+
+**Softcode examples:**
+```
+# In a custom +where, show scene title instead of room name:
+[if(hasflag(loc(%0),SCENE_ROOM),
+  Scene: [get(loc(%0)/SCENE_TITLE)],
+  [name(loc(%0))]
+)]
+
+# In an idle sweeper, skip scene rooms:
+[if(hasflag(loc(%0),SCENE_ROOM),
+  {Don't sweep - in active scene},
+  {Sweep normally}
+)]
+```
+
+
 
 Scene events published to `portal.scene.live`:
 
@@ -515,8 +551,8 @@ scenes:
   temp_room:
     name_pattern: "Scene Room: {title}"   # Room name template
     zone_parent: null             # DBRef of parent room/zone (null = default zone)
-    flags: ["UNFINDABLE"]         # Flags set on temp rooms
+    flags: ["SCENE_ROOM"]         # Flags set on temp rooms (SCENE_ROOM is engine flag)
     grace_period_minutes: 5       # Time after scene end before room is recycled
     return_on_end: true           # Auto-return characters to previous location
-    max_active_temp_rooms: 50     # Safety cap to prevent runaway creation
+    max_per_player: 3             # Max active temp rooms per player (prevents abuse)
 ```
