@@ -204,6 +204,81 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(text).DoesNotContain("#");
 	}
 
+	// ── WikiLinkExtension — named contract tests ───────────────────────────────
+
+	/// <summary>
+	/// [[My Page]] → &lt;a href="/wiki/my_page"&gt;My Page&lt;/a&gt;
+	/// </summary>
+	[Test]
+	public async Task WikiLinkExtension_ValidPage_EmitsAnchorTag()
+	{
+		var html = Pipeline().RenderToHtml("[[My Page]]");
+
+		await Assert.That(html).Contains("<a href=\"/wiki/my_page\">");
+		await Assert.That(html).Contains("My Page");
+	}
+
+	/// <summary>
+	/// A <see cref="WikiLinkInline"/> node constructed with <c>IsRedLink = true</c>
+	/// must render with <c>class="wiki-redlink"</c>.
+	/// The parser always sets IsRedLink=false (deferred until DB integration), so
+	/// we exercise the renderer directly using an injected node.
+	/// </summary>
+	[Test]
+	public async Task WikiLinkExtension_MissingPage_EmitsRedlinkClass()
+	{
+		// Build a minimal Markdig pipeline with the WikiLinkExtension registered.
+		var pipeline = WikiMarkdigPipeline.CreatePipeline();
+
+		// Build an AST manually: a document containing a paragraph with one WikiLinkInline.
+		var doc = new Markdig.Syntax.MarkdownDocument();
+		var para = new Markdig.Syntax.ParagraphBlock();
+		var inline = new Markdig.Syntax.Inlines.ContainerInline();
+		var node = new WikiLinkInline
+		{
+			Slug = "missing_page",
+			Title = "Missing Page",
+			IsRedLink = true,
+		};
+		inline.AppendChild(node);
+		para.Inline = inline;
+		doc.Add(para);
+
+		// Render the pre-built AST through Markdig's HTML renderer.
+		var writer = new System.IO.StringWriter();
+		var renderer = new Markdig.Renderers.HtmlRenderer(writer);
+		pipeline.Setup(renderer);
+		renderer.Render(doc);
+		var html = writer.ToString();
+
+		await Assert.That(html).Contains("wiki-redlink");
+		await Assert.That(html).Contains("href=\"/wiki/missing_page\"");
+	}
+
+	/// <summary>
+	/// [[Help:Topic]] → href="/wiki/help/topic"
+	/// </summary>
+	[Test]
+	public async Task WikiLinkExtension_NamespacedPage_ResolvesCorrectly()
+	{
+		var html = Pipeline().RenderToHtml("[[Help:Getting Started]]");
+
+		await Assert.That(html).Contains("href=\"/wiki/help/getting_started\"");
+	}
+
+	/// <summary>
+	/// [[Click Here|My Page]] → anchor text is "Click Here", not the slug.
+	/// </summary>
+	[Test]
+	public async Task WikiLinkExtension_DisplayText_UsesDisplayNotSlug()
+	{
+		var html = Pipeline().RenderToHtml("[[Click Here|my_page]]");
+
+		await Assert.That(html).Contains("href=\"/wiki/my_page\"");
+		await Assert.That(html).Contains("Click Here");
+		await Assert.That(html).DoesNotContain("my_page</"); // slug must not appear as link text
+	}
+
 	// ── Thread safety ─────────────────────────────────────────────────────────
 
 	[Test]

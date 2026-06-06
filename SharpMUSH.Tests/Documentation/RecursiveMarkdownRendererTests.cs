@@ -673,10 +673,84 @@ public class RecursiveMarkdownRendererTests
 		// Assert - plain text is preserved, no bold/underline for H4+
 		await Assert.That(result.ToPlainText()).IsEqualTo("heading four");
 	}
+
+	// ── MarkdownToMString — named contract tests ───────────────────────────────
+
+	/// <summary>
+	/// A level-1 heading must render with bold AND a colour (white foreground),
+	/// matching <c>_headingStyle = Ansi.Create(foreground: RGB(White), underlined: true, bold: true)</c>.
+	/// </summary>
+	[Test]
+	public async Task MarkdownToMString_Header_BoldColored()
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("# Section Title");
+
+		var fullString = result.ToString();
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("Section Title");
+		// Heading style includes bold
+		await Assert.That(fullString.Contains(Bold)).IsTrue();
+		// Heading style includes a foreground colour (white: 255,255,255)
+		await Assert.That(fullString.Contains(Foreground(255, 255, 255))).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>**bold**</c> and <c>_italic_</c> must both produce ANSI equivalents —
+	/// both map to the bold-white style in this renderer.
+	/// </summary>
+	[Test]
+	public async Task MarkdownToMString_BoldItalic_AnsiEquivalents()
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("**bold** _italic_");
+
+		var fullString = result.ToString();
+		var plainText = result.ToPlainText();
+
+		// Plain text contains both words without Markdown syntax
+		await Assert.That(plainText.Contains("bold")).IsTrue();
+		await Assert.That(plainText.Contains("italic")).IsTrue();
+		await Assert.That(fullString.Contains("**")).IsFalse();
+		await Assert.That(fullString.Contains("_italic_")).IsFalse();
+
+		// Both emphases are backed by ANSI codes
+		await Assert.That(fullString.Contains(Bold)).IsTrue();
+	}
+
+	/// <summary>
+	/// A Markdown table must render as fixed-width aligned text:
+	/// each line must stay within <c>maxWidth</c> and all cell values must appear.
+	/// </summary>
+	[Test]
+	public async Task MarkdownToMString_Table_FixedWidthAligned()
+	{
+		var markdown = @"| Name    | Role   | Level |
+| ---     | ---    | ---   |
+| Arthas  | Paladin | 60   |
+| Jaina   | Mage    | 58   |";
+
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown(markdown, maxWidth: 60);
+
+		var plainText = result.ToPlainText();
+		var lines = plainText.Split('\n', System.StringSplitOptions.RemoveEmptyEntries);
+
+		// Every line must fit within the requested maxWidth
+		foreach (var line in lines)
+			await Assert.That(line.Length).IsLessThanOrEqualTo(60);
+
+		// All cell values must appear in the output
+		await Assert.That(plainText.Contains("Name")).IsTrue();
+		await Assert.That(plainText.Contains("Arthas")).IsTrue();
+		await Assert.That(plainText.Contains("Jaina")).IsTrue();
+
+		// Table uses faint ANSI for borders
+		await Assert.That(result.ToString().Contains(Faint)).IsTrue();
+	}
 }
 
 /// <summary>
-/// Tests for <c>sharp</c> fenced code block syntax highlighting using a real MUSH parser.
 /// These tests require the full server DI stack to produce a <see cref="IMUSHCodeParser"/>.
 /// </summary>
 public class RecursiveMarkdownRendererWithParserTests

@@ -377,4 +377,31 @@ public class InMemoryWikiServiceTests
 
 		await Assert.That(recent.Count).IsEqualTo(3);
 	}
+
+	// ── WikiCache — render invalidation ───────────────────────────────────────
+
+	/// <summary>
+	/// After editing a page via <see cref="IWikiService.UpdateAsync"/>, the next
+	/// call to <see cref="IWikiService.GetBySlugAsync"/> must return HTML that
+	/// reflects the new content, not the old render.
+	/// </summary>
+	[Test]
+	public async Task WikiCache_EditPage_NextReadGetsFreshRender()
+	{
+		var svc = BuildService();
+		var created = await CreatePageAsync(svc, markdown: "**original**");
+
+		// Confirm the initial render contains the original content
+		var before = (await svc.GetBySlugAsync(created.Slug)).AsT0;
+		await Assert.That(before.RenderedHtml).Contains("original");
+
+		// Edit the page
+		var updateResult = await svc.UpdateAsync(created.Id, "**updated**", "#1", "edit");
+		await Assert.That(updateResult.IsT0).IsTrue();
+
+		// Next slug read must return the fresh HTML
+		var after = (await svc.GetBySlugAsync(created.Slug)).AsT0;
+		await Assert.That(after.RenderedHtml).Contains("updated");
+		await Assert.That(after.RenderedHtml).DoesNotContain("original");
+	}
 }

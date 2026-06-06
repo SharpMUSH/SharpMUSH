@@ -215,3 +215,72 @@ body {
     margin: 0 0 8px;
 }
 .mush-help-md strong { color: #dcdcaa; }
+
+/* ── Scene log ── */
+
+/* Scrollable transcript container */
+.scene-log {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    background: #111;
+    color: #d4d4d4;
+    padding: 8px 12px;
+    border-radius: 4px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Live variant: fills available height and scrolls to bottom */
+.scene-log--live {
+    border: 1px solid #333;
+}
+
+/* Single transcript line */
+.scene-line {
+    padding: 2px 0;
+    word-break: break-word;
+}
+
+/* ── Per-type scene line colours ── */
+
+.scene-line--pose {
+    color: #c8c8c8;
+    font-style: italic;
+}
+
+.scene-line--say {
+    color: #9cdcfe;
+}
+
+.scene-line--whisper {
+    color: #888;
+    font-style: italic;
+}
+
+.scene-line--ooc {
+    color: #a3be8c;
+}
+
+.scene-line--system {
+    color: #d7ba7d;
+    font-size: 11px;
+    opacity: 0.75;
+}
+
+.scene-line--normal {
+    color: #d4d4d4;
+}
+
+/* Archived lines (visible in live view once scene closes) */
+.scene-line--archived {
+    opacity: 0.65;
+}
+
+/* Lines actively arriving in a live scene */
+.scene-line--live {
+    color: #d4d4d4;
+}
