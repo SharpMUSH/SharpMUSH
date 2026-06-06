@@ -7,6 +7,8 @@ using MudBlazor.Services;
 using SharpMUSH.Client;
 using SharpMUSH.Client.Authentication;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Client.Widgets;
+using SharpMUSH.Library.Services.Interfaces;
 using Slugify;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -39,6 +41,20 @@ builder.Services.AddScoped<CredentialService>();
 builder.Services.AddSingleton<OttAuthService>();
 builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
+builder.Services.AddSingleton<IThemeService, ThemeService>();
+
+// Widget system
+var registry = new WidgetRegistry();
+registry.Register(new QuickLinksWidgetDescriptor());
+registry.Register(new WelcomeTextWidgetDescriptor());
+builder.Services.AddSingleton<IWidgetRegistry>(registry);
+builder.Services.AddSingleton<ILayoutService, LayoutService>();
+builder.Services.AddSingleton<ICharacterStateService, CharacterStateService>();
+builder.Services.AddSingleton<INotificationService, NotificationService>();
+builder.Services.AddSingleton<IGameHubConnectionFactory>(_ =>
+	new GameHubConnectionFactory(
+		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/game"));
+builder.Services.AddSingleton<IConnectionStateService, ConnectionStateService>();
 
 builder.Services.AddHttpClient("api", sp =>
 {
