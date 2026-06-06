@@ -7,16 +7,16 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Integration.Wiki;
 
 /// <summary>
-/// Integration tests for wiki persistence via the real ArangoDB backend.
-/// Relies on <see cref="ServerWebAppFactory"/> which spins up ArangoDB in a container
-/// (via Testcontainers.ArangoDb) and boots the full application stack.
+/// Integration tests for wiki persistence against the configured DB backend.
+/// Relies on <see cref="ServerWebAppFactory"/> which spins up the appropriate container
+/// (via Testcontainers) and boots the full application stack. The backend is selected
+/// by the <c>SHARPMUSH_DATABASE_PROVIDER</c> environment variable (arangodb / memgraph / surrealdb).
 ///
-/// IWikiService is exposed through the ISharpDatabase singleton which ArangoDatabase
-/// implements; all tests retrieve it from the DI container and call the same interface
-/// that InMemoryWikiServiceTests covers, verifying identical semantics against a real DB.
+/// IWikiService is exposed through the ISharpDatabase singleton; all tests retrieve it
+/// from the DI container and verify identical semantics across all three DB providers.
 /// </summary>
 [NotInParallel]
-public class ArangoWikiServiceIntegrationTests
+public class WikiServiceIntegrationTests
 {
     [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
     public required ServerWebAppFactory WebAppFactory { get; init; }
