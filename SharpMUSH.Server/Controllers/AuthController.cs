@@ -2,9 +2,11 @@ using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Authentication;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -20,6 +22,8 @@ public class AuthController(
 	IOttStore ottStore,
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
+	IRoleDerivationService roleDerivation,
+	IJwtService? jwtService,
 	ILogger<AuthController> logger) : ControllerBase
 {
 	/// <summary>Request body for OTT issuance via MUSH character credentials.</summary>
@@ -197,6 +201,127 @@ public class AuthController(
 
 		return Ok(new DebugOttResponse(token, ttl, player.Object.Name,
 			account?.Id, account?.Username, accountSessionToken, account?.MustChangePassword ?? false));
+	}
+
+	// -----------------------------------------------------------------------
+	// JWT endpoints
+	// -----------------------------------------------------------------------
+
+	/// <summary>Request body for JWT login.</summary>
+	public record JwtLoginRequest(string UsernameOrEmail, string Password, int CharacterKey, long CharacterCreationTime);
+
+	/// <summary>Response body for JWT login / switch / refresh.</summary>
+	public record JwtTokenResponse(string AccessToken, string RefreshToken, int ExpiresIn, string Role);
+
+	/// <summary>
+	/// Authenticate with account credentials and a specific character, returning a JWT token pair.
+	/// Requires JWT auth to be configured (Jwt:SigningKey in appsettings).
+	/// </summary>
+	[HttpPost("jwt-login")]
+	[AllowAnonymous]
+	public async Task<IActionResult> JwtLogin([FromBody] JwtLoginRequest request)
+	{
+		if (jwtService is null)
+			return StatusCode(501, "JWT authentication is not configured on this server.");
+
+		var account = await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password);
+		if (account is null)
+		{
+			logger.LogInformation("JWT login failed for {Identifier}", request.UsernameOrEmail);
+			return Unauthorized("Invalid account credentials.");
+		}
+
+		var characters = await accountService.GetCharactersAsync(account.Id!);
+		var character = characters.FirstOrDefault(c =>
+			c.Object.Key == request.CharacterKey
+			&& c.Object.CreationTime == request.CharacterCreationTime);
+
+		if (character is null)
+		{
+			logger.LogInformation("JWT login: character #{Key} not linked to account {AccountId}",
+				request.CharacterKey, account.Id);
+			return Unauthorized("Character is not linked to this account.");
+		}
+
+		var flags = await character.Object.Flags.Value.ToListAsync();
+		var role = roleDerivation.DeriveRole(character.Object.Key, flags);
+		var result = await jwtService.IssueTokensAsync(account, character, role);
+
+		logger.LogInformation("JWT issued for {Username} ({AccountId}), character #{Key}, role {Role}",
+			account.Username, account.Id, character.Object.Key, role);
+		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
+	}
+
+	/// <summary>Request body for switching the active character (JWT).</summary>
+	public record JwtSwitchCharacterRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
+
+	/// <summary>
+	/// Switch to a different character under the same account and return a new JWT pair.
+	/// Accepts the account-session token issued by <see cref="AccountLogin"/> (not a JWT).
+	/// </summary>
+	[HttpPost("jwt-switch-character")]
+	[AllowAnonymous]
+	public async Task<IActionResult> JwtSwitchCharacter([FromBody] JwtSwitchCharacterRequest request)
+	{
+		if (jwtService is null)
+			return StatusCode(501, "JWT authentication is not configured on this server.");
+
+		var accountId = await accountSessionStore.ValidateAsync(request.AccountSessionToken);
+		if (accountId is null)
+		{
+			logger.LogInformation("JWT switch-character: invalid or expired session token");
+			return Unauthorized("Invalid or expired account session.");
+		}
+
+		var account = await accountService.GetByIdAsync(accountId);
+		if (account is null || account.IsDisabled)
+			return Unauthorized("Account not found or disabled.");
+
+		var characters = await accountService.GetCharactersAsync(accountId);
+		var character = characters.FirstOrDefault(c =>
+			c.Object.Key == request.CharacterKey
+			&& c.Object.CreationTime == request.CharacterCreationTime);
+
+		if (character is null)
+		{
+			logger.LogInformation("JWT switch-character: character #{Key} not linked to account {AccountId}",
+				request.CharacterKey, accountId);
+			return Unauthorized("Character is not linked to this account.");
+		}
+
+		var flags = await character.Object.Flags.Value.ToListAsync();
+		var role = roleDerivation.DeriveRole(character.Object.Key, flags);
+		var result = await jwtService.IssueTokensAsync(account, character, role);
+
+		logger.LogInformation("JWT switch-character: issued for {AccountId}, character #{Key}, role {Role}",
+			accountId, character.Object.Key, role);
+		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
+	}
+
+	/// <summary>Request body for JWT refresh.</summary>
+	public record JwtRefreshRequest(string RefreshToken);
+
+	/// <summary>
+	/// Exchange a refresh token for a new JWT access/refresh token pair (single-use).
+	/// </summary>
+	[HttpPost("jwt-refresh")]
+	[AllowAnonymous]
+	public async Task<IActionResult> JwtRefresh([FromBody] JwtRefreshRequest request)
+	{
+		if (jwtService is null)
+			return StatusCode(501, "JWT authentication is not configured on this server.");
+
+		if (string.IsNullOrWhiteSpace(request.RefreshToken))
+			return BadRequest("RefreshToken is required.");
+
+		var result = await jwtService.RefreshAsync(request.RefreshToken);
+		if (result is null)
+		{
+			logger.LogInformation("JWT refresh rejected: invalid or expired refresh token");
+			return Unauthorized("Invalid or expired refresh token.");
+		}
+
+		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
 	}
 
 	private static async Task<IReadOnlyList<CharacterSummary>> BuildCharacterSummariesAsync(IReadOnlyList<SharpPlayer> characters)

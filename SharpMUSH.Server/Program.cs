@@ -8,6 +8,7 @@ using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Messaging.NATS.Strategy;
+using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Strategy.ArangoDB;
 
 namespace SharpMUSH.Server;
@@ -110,6 +111,7 @@ public class Program
 		app.UseAuthorization();
 		app.MapControllers();
 		app.MapRazorPages();
+		app.MapHub<GameHub>("/hubs/game");
 
 		// Health and readiness endpoints for deployment checks
 		app.MapGet("/health", () => "healthy");
