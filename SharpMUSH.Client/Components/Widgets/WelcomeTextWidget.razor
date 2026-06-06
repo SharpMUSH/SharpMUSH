@@ -27,10 +27,9 @@
             var cfg = Config.Value.Deserialize<WelcomeTextConfig>(
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 
-            if (cfg is not null && !string.IsNullOrWhiteSpace(cfg.Markdown))
-                _html = Markdown.ToHtml(cfg.Markdown);
-            else
-                _html = string.Empty;
+            _html = cfg is not null && !string.IsNullOrWhiteSpace(cfg.Markdown)
+                ? Markdown.ToHtml(cfg.Markdown)
+                : string.Empty;
         }
         catch
         {

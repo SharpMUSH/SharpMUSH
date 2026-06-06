@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -37,18 +39,19 @@ public sealed class InMemoryWikiService : IWikiService
 
 	// ── IWikiService: Read ────────────────────────────────────────────────────
 
-	public Task<WikiPage?> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main)
+	public Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main)
 	{
 		var key = SlugKey(ns, slug);
 		if (_slugIndex.TryGetValue(key, out var id) && _pagesById.TryGetValue(id, out var page))
-			return Task.FromResult<WikiPage?>(page);
-		return Task.FromResult<WikiPage?>(null);
+			return Task.FromResult<OneOf<WikiPage, NotFound>>(page);
+		return Task.FromResult<OneOf<WikiPage, NotFound>>(new NotFound());
 	}
 
-	public Task<WikiPage?> GetByIdAsync(string id)
+	public Task<OneOf<WikiPage, NotFound>> GetByIdAsync(string id)
 	{
-		_pagesById.TryGetValue(id, out var page);
-		return Task.FromResult<WikiPage?>(page);
+		if (_pagesById.TryGetValue(id, out var page))
+			return Task.FromResult<OneOf<WikiPage, NotFound>>(page);
+		return Task.FromResult<OneOf<WikiPage, NotFound>>(new NotFound());
 	}
 
 	public Task<IReadOnlyList<WikiPage>> GetRecentChangesAsync(int count = 20)
@@ -74,7 +77,7 @@ public sealed class InMemoryWikiService : IWikiService
 
 	// ── IWikiService: Write ───────────────────────────────────────────────────
 
-	public Task<WikiPage> CreateAsync(
+	public Task<OneOf<WikiPage, Error<string>>> CreateAsync(
 		string title,
 		string markdown,
 		string authorDbref,
@@ -85,8 +88,8 @@ public sealed class InMemoryWikiService : IWikiService
 
 		// Enforce slug uniqueness within namespace
 		if (_slugIndex.ContainsKey(slugKey))
-			throw new InvalidOperationException(
-				$"A wiki page with slug '{slug}' already exists in namespace '{ns}'.");
+			return Task.FromResult<OneOf<WikiPage, Error<string>>>(
+				new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{ns}'."));
 
 		var id = NextId();
 		var now = DateTimeOffset.UtcNow;
@@ -116,17 +119,17 @@ public sealed class InMemoryWikiService : IWikiService
 		// Save initial revision snapshot
 		SaveRevisionSnapshot(page, authorDbref, editSummary: null);
 
-		return Task.FromResult(page);
+		return Task.FromResult<OneOf<WikiPage, Error<string>>>(page);
 	}
 
-	public Task<WikiPage> UpdateAsync(
+	public Task<OneOf<WikiPage, NotFound>> UpdateAsync(
 		string id,
 		string markdown,
 		string editorDbref,
 		string? editSummary = null)
 	{
 		if (!_pagesById.TryGetValue(id, out var existing))
-			throw new KeyNotFoundException($"Wiki page with id '{id}' not found.");
+			return Task.FromResult<OneOf<WikiPage, NotFound>>(new NotFound());
 
 		var now = DateTimeOffset.UtcNow;
 		var html = _renderer.RenderToHtml(markdown);
@@ -145,28 +148,28 @@ public sealed class InMemoryWikiService : IWikiService
 		_pagesById[id] = updated;
 		SaveRevisionSnapshot(updated, editorDbref, editSummary);
 
-		return Task.FromResult(updated);
+		return Task.FromResult<OneOf<WikiPage, NotFound>>(updated);
 	}
 
-	public Task<bool> DeleteAsync(string id, string editorDbref)
+	public Task<OneOf<None, NotFound>> DeleteAsync(string id, string editorDbref)
 	{
 		if (!_pagesById.TryRemove(id, out var page))
-			return Task.FromResult(false);
+			return Task.FromResult<OneOf<None, NotFound>>(new NotFound());
 
 		var slugKey = SlugKey(page.Namespace, page.Slug);
 		_slugIndex.TryRemove(slugKey, out _);
 		_revisions.TryRemove(id, out _);
 
-		return Task.FromResult(true);
+		return Task.FromResult<OneOf<None, NotFound>>(new None());
 	}
 
-	public Task SetProtectionAsync(string id, bool isProtected)
+	public Task<OneOf<None, NotFound>> SetProtectionAsync(string id, bool isProtected)
 	{
 		if (!_pagesById.TryGetValue(id, out var existing))
-			throw new KeyNotFoundException($"Wiki page with id '{id}' not found.");
+			return Task.FromResult<OneOf<None, NotFound>>(new NotFound());
 
 		_pagesById[id] = existing with { IsProtected = isProtected };
-		return Task.CompletedTask;
+		return Task.FromResult<OneOf<None, NotFound>>(new None());
 	}
 
 	// ── IWikiService: Revisions ───────────────────────────────────────────────
@@ -188,17 +191,21 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult(result);
 	}
 
-	public Task<WikiRevision?> GetRevisionAsync(string pageId, int revisionNumber)
+	public Task<OneOf<WikiRevision, NotFound>> GetRevisionAsync(string pageId, int revisionNumber)
 	{
 		if (!_revisions.TryGetValue(pageId, out var list))
-			return Task.FromResult<WikiRevision?>(null);
+			return Task.FromResult<OneOf<WikiRevision, NotFound>>(new NotFound());
 
 		WikiRevision? result;
 		lock (list)
 		{
 			result = list.FirstOrDefault(r => r.RevisionNumber == revisionNumber);
 		}
-		return Task.FromResult<WikiRevision?>(result);
+
+		if (result is null)
+			return Task.FromResult<OneOf<WikiRevision, NotFound>>(new NotFound());
+
+		return Task.FromResult<OneOf<WikiRevision, NotFound>>(result);
 	}
 
 	// ── Internals ─────────────────────────────────────────────────────────────

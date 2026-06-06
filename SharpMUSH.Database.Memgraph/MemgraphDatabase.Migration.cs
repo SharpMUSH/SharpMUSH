@@ -95,6 +95,22 @@ public partial class MemgraphDatabase
 				catch { /* Index may already exist */ }
 			}
 
+			// Wiki indexes
+			var wikiIndexQueries = new[]
+			{
+"CREATE INDEX ON :WikiPage(namespace)",
+"CREATE INDEX ON :WikiPage(slug)",
+"CREATE INDEX ON :WikiPage(updatedAt)",
+"CREATE INDEX ON :WikiRevision(pageId)",
+"CREATE INDEX ON :WikiRevision(revisionNumber)"
+};
+
+			foreach (var wq in wikiIndexQueries)
+			{
+				try { await ExecuteWithRetryAsync(wq, ct: cancellationToken); }
+				catch { /* Index may already exist */ }
+			}
+
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
 			// Create Counter for auto-increment object keys

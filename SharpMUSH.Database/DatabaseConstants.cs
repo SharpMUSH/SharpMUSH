@@ -21,6 +21,8 @@ public static class DatabaseConstants
 	public const string Mails = "node_mails";
 	public const string Logs = "logs";
 	public const string Accounts = "node_accounts";
+	public const string WikiPages = "node_wiki_pages";
+	public const string WikiRevisions = "node_wiki_revisions";
 
 	public static readonly string[] verticesContainer = [Rooms, Players, Things];
 	public static readonly string[] verticesContent = [Players, Exits, Things];

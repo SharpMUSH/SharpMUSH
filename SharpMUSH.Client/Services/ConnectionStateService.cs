@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
@@ -92,9 +93,21 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 			await _hub.StartAsync();
 			SetState(SignalRState.Connected);
 		}
+		catch (InvalidOperationException ex)
+		{
+			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (hub state)");
+			SetState(SignalRState.Disconnected);
+			await DisposeHubAsync();
+		}
+		catch (HubException ex)
+		{
+			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (hub error)");
+			SetState(SignalRState.Disconnected);
+			await DisposeHubAsync();
+		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed");
+			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (unexpected)");
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
 		}
@@ -109,9 +122,13 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 		{
 			await _hub.StopAsync();
 		}
-		catch (Exception ex)
+		catch (InvalidOperationException ex)
 		{
-			_logger.LogWarning(ex, "[ConnectionStateService] StopAsync threw during disconnect");
+			_logger.LogWarning(ex, "[ConnectionStateService] StopAsync threw during disconnect (hub state)");
+		}
+		catch (HubException ex)
+		{
+			_logger.LogWarning(ex, "[ConnectionStateService] StopAsync threw during disconnect (hub error)");
 		}
 
 		SetState(SignalRState.Disconnected);

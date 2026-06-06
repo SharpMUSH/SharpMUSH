@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -336,5 +337,14 @@ public class AuthController(
 		}
 		return summaries;
 	}
+
+	/// <summary>
+	/// Strip newlines and control characters from user-supplied strings before logging
+	/// to prevent log injection (CodeQL cs/log-injection).
+	/// </summary>
+	private static string Sanitize(string? value) =>
+		string.IsNullOrEmpty(value)
+			? "(empty)"
+			: new string(value.Where(c => !char.IsControl(c)).ToArray());
 }
 

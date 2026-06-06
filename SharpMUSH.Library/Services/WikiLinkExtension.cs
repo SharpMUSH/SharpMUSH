@@ -123,7 +123,7 @@ internal sealed class WikiLinkParser : InlineParser
 			DisplayText = displayText,
 		};
 
-		int start = processor.GetSourcePosition(slice.Start, out _, out _);
+		processor.GetSourcePosition(slice.Start, out _, out _);
 		processor.Inline = node;
 		slice = current;
 		return true;

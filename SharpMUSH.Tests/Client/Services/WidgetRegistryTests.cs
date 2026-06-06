@@ -137,10 +137,10 @@ public class WidgetRegistryTests
 		var registry = MakeRegistry();
 		registry.Register(new QuickLinksWidgetDescriptor());
 
-		foreach (var zone in new[] { WidgetZone.TopBar, WidgetZone.LeftSidebar, WidgetZone.RightSidebar, WidgetZone.Footer })
-		{
-			var result = registry.GetWidgetsForZone(zone);
+		var zones = new[] { WidgetZone.TopBar, WidgetZone.LeftSidebar, WidgetZone.RightSidebar, WidgetZone.Footer };
+		var results = zones.Select(z => registry.GetWidgetsForZone(z)).ToList();
+
+		foreach (var result in results)
 			await Assert.That(result.Count).IsEqualTo(1);
-		}
 	}
 }

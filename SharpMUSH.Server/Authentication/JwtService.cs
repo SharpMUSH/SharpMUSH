@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -87,6 +88,11 @@ public class JwtService(
 	// Helpers
 	// -----------------------------------------------------------------------
 
+	// account.Id is a non-secret GUID identifier placed in the standard JWT 'sub' claim
+	// per RFC 7519 §4.1.2. Username in 'unique_name' is a display name, not a password or
+	// secret. The token is signed (HMAC-SHA256) and transmitted only over TLS.
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
+		Justification = "JWT sub/unique_name claims are standard bearer-token identifiers, not secret data.")]
 	private string BuildAccessToken(SharpAccount account, SharpPlayer character, PortalRole role,
 		out int expiresIn)
 	{

@@ -50,12 +50,13 @@ public sealed class InMemoryRefreshTokenStore : IRefreshTokenStore
 	/// <inheritdoc />
 	public Task RevokeAllForAccountAsync(string accountId, CancellationToken ct = default)
 	{
-		foreach (var key in _tokens.Keys.ToList())
-		{
-			if (_tokens.TryGetValue(key, out var entry)
-			    && string.Equals(entry.AccountId, accountId, StringComparison.Ordinal))
-				_tokens.TryRemove(key, out _);
-		}
+		var tokensToRemove = _tokens
+			.Where(pair => string.Equals(pair.Value.AccountId, accountId, StringComparison.Ordinal))
+			.Select(pair => pair.Key)
+			.ToList();
+
+		foreach (var key in tokensToRemove)
+			_tokens.TryRemove(key, out _);
 
 		return Task.CompletedTask;
 	}

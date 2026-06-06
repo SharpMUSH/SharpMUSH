@@ -41,9 +41,17 @@ public sealed class LayoutService : ILayoutService
 				}
 			}
 		}
-		catch
+		catch (JSException)
 		{
-			// localStorage unavailable or JSON malformed — fall through to default
+			// localStorage unavailable — fall through to default
+		}
+		catch (JSDisconnectedException)
+		{
+			// Circuit disconnected — fall through to default
+		}
+		catch (JsonException)
+		{
+			// Malformed JSON in localStorage — fall through to default
 		}
 
 		_cached = GetDefaultLayout();
@@ -61,9 +69,13 @@ public sealed class LayoutService : ILayoutService
 			var json = JsonSerializer.Serialize(layout, JsonOptions);
 			await _js.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, json);
 		}
-		catch
+		catch (JSException)
 		{
 			// localStorage unavailable — in-memory only
+		}
+		catch (JSDisconnectedException)
+		{
+			// Circuit disconnected — in-memory only
 		}
 
 		OnLayoutChanged?.Invoke();

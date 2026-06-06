@@ -46,9 +46,13 @@ public sealed class CharacterStateService : ICharacterStateService
 			// Persist as "dbref|name" for simplicity (no JSON dependency in client services)
 			await _js.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, $"{dbref}|{name}");
 		}
-		catch
+		catch (JSException)
 		{
 			// localStorage unavailable in some environments — ignore
+		}
+		catch (JSDisconnectedException)
+		{
+			// Circuit disconnected — ignore
 		}
 
 		OnCharacterChanged?.Invoke();
@@ -78,9 +82,13 @@ public sealed class CharacterStateService : ICharacterStateService
 				}
 			}
 		}
-		catch
+		catch (JSException)
 		{
 			// localStorage unavailable — use defaults
+		}
+		catch (JSDisconnectedException)
+		{
+			// Circuit disconnected — use defaults
 		}
 	}
 }

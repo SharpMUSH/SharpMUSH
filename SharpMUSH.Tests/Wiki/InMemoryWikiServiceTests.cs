@@ -1,3 +1,4 @@
+using OneOf.Types;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -16,13 +17,20 @@ public class InMemoryWikiServiceTests
 	private static IWikiService BuildService() =>
 		new InMemoryWikiService(new WikiMarkdigPipeline());
 
-	private static Task<WikiPage> CreatePageAsync(
+	/// <summary>
+	/// Creates a page and asserts it succeeded, returning the <see cref="WikiPage"/>.
+	/// </summary>
+	private static async Task<WikiPage> CreatePageAsync(
 		IWikiService svc,
 		string title = "Test Page",
 		WikiNamespace ns = WikiNamespace.Main,
 		string markdown = "Hello **world**.",
 		string editor = "#1")
-		=> svc.CreateAsync(title, markdown, editor, ns);
+	{
+		var result = await svc.CreateAsync(title, markdown, editor, ns);
+		await Assert.That(result.IsT0).IsTrue();
+		return result.AsT0;
+	}
 
 	// ── CreateAsync ──────────────────────────────────────────────────────────
 
@@ -87,13 +95,15 @@ public class InMemoryWikiServiceTests
 	}
 
 	[Test]
-	public async Task CreateAsync_SameTitleSameNamespace_ThrowsInvalidOperation()
+	public async Task CreateAsync_SameTitleSameNamespace_ReturnsError()
 	{
 		var svc = BuildService();
 		await CreatePageAsync(svc, title: "Duplicate");
 
-		await Assert.That(async () => await CreatePageAsync(svc, title: "Duplicate"))
-			.Throws<InvalidOperationException>();
+		var result = await svc.CreateAsync("Duplicate", "content", "#1", WikiNamespace.Main);
+
+		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.AsT1).IsTypeOf<Error<string>>();
 	}
 
 	[Test]
@@ -115,31 +125,31 @@ public class InMemoryWikiServiceTests
 		var created = await CreatePageAsync(svc, title: "Find Me");
 
 		// Slug generated from title: "find_me"
-		var found = await svc.GetBySlugAsync("find_me", WikiNamespace.Main);
+		var result = await svc.GetBySlugAsync("find_me", WikiNamespace.Main);
 
-		await Assert.That(found).IsNotNull();
-		await Assert.That(found!.Id).IsEqualTo(created.Id);
+		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
 	}
 
 	[Test]
-	public async Task GetBySlugAsync_MissingSlug_ReturnsNull()
+	public async Task GetBySlugAsync_MissingSlug_ReturnsNotFound()
 	{
 		var svc = BuildService();
-		var found = await svc.GetBySlugAsync("nonexistent", WikiNamespace.Main);
+		var result = await svc.GetBySlugAsync("nonexistent", WikiNamespace.Main);
 
-		await Assert.That(found).IsNull();
+		await Assert.That(result.IsT1).IsTrue();
 	}
 
 	[Test]
-	public async Task GetBySlugAsync_WrongNamespace_ReturnsNull()
+	public async Task GetBySlugAsync_WrongNamespace_ReturnsNotFound()
 	{
 		var svc = BuildService();
 		await CreatePageAsync(svc, title: "Ns Test", ns: WikiNamespace.Main);
 
 		// "ns_test" exists in Main but not in Help
-		var found = await svc.GetBySlugAsync("ns_test", WikiNamespace.Help);
+		var result = await svc.GetBySlugAsync("ns_test", WikiNamespace.Help);
 
-		await Assert.That(found).IsNull();
+		await Assert.That(result.IsT1).IsTrue();
 	}
 
 	// ── GetByIdAsync ──────────────────────────────────────────────────────────
@@ -150,19 +160,19 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc);
 
-		var found = await svc.GetByIdAsync(created.Id);
+		var result = await svc.GetByIdAsync(created.Id);
 
-		await Assert.That(found).IsNotNull();
-		await Assert.That(found!.Id).IsEqualTo(created.Id);
+		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
 	}
 
 	[Test]
-	public async Task GetByIdAsync_MissingId_ReturnsNull()
+	public async Task GetByIdAsync_MissingId_ReturnsNotFound()
 	{
 		var svc = BuildService();
-		var found = await svc.GetByIdAsync("id_that_does_not_exist");
+		var result = await svc.GetByIdAsync("id_that_does_not_exist");
 
-		await Assert.That(found).IsNull();
+		await Assert.That(result.IsT1).IsTrue();
 	}
 
 	// ── UpdateAsync ───────────────────────────────────────────────────────────
@@ -173,8 +183,10 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, markdown: "Original content.");
 
-		var updated = await svc.UpdateAsync(created.Id, "Updated content.", "#2", "v2");
+		var updateResult = await svc.UpdateAsync(created.Id, "Updated content.", "#2", "v2");
 
+		await Assert.That(updateResult.IsT0).IsTrue();
+		var updated = updateResult.AsT0;
 		await Assert.That(updated.RevisionNumber).IsEqualTo(2);
 		await Assert.That(updated.MarkdownSource).IsEqualTo("Updated content.");
 		await Assert.That(updated.LastEditorDbref).IsEqualTo("#2");
@@ -186,33 +198,35 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, markdown: "# Old");
 
-		var updated = await svc.UpdateAsync(created.Id, "# New Heading", "#1", "rework");
+		var updateResult = await svc.UpdateAsync(created.Id, "# New Heading", "#1", "rework");
 
-		await Assert.That(updated.RenderedHtml).Contains("New Heading");
+		await Assert.That(updateResult.IsT0).IsTrue();
+		await Assert.That(updateResult.AsT0.RenderedHtml).Contains("New Heading");
 	}
 
 	[Test]
-	public async Task UpdateAsync_MissingId_ThrowsKeyNotFound()
+	public async Task UpdateAsync_MissingId_ReturnsNotFound()
 	{
 		var svc = BuildService();
 
-		await Assert.That(async () => await svc.UpdateAsync("ghost_id", "content", "#1"))
-			.Throws<KeyNotFoundException>();
+		var result = await svc.UpdateAsync("ghost_id", "content", "#1");
+
+		await Assert.That(result.IsT1).IsTrue();
 	}
 
 	// ── DeleteAsync ───────────────────────────────────────────────────────────
 
 	[Test]
-	public async Task DeleteAsync_ExistingPage_ReturnsTrueAndRemovesPage()
+	public async Task DeleteAsync_ExistingPage_ReturnsNoneAndRemovesPage()
 	{
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, title: "To Delete");
 
-		var result = await svc.DeleteAsync(created.Id, "#1");
+		var deleteResult = await svc.DeleteAsync(created.Id, "#1");
 
-		await Assert.That(result).IsTrue();
-		var found = await svc.GetByIdAsync(created.Id);
-		await Assert.That(found).IsNull();
+		await Assert.That(deleteResult.IsT0).IsTrue();
+		var getResult = await svc.GetByIdAsync(created.Id);
+		await Assert.That(getResult.IsT1).IsTrue();
 	}
 
 	[Test]
@@ -222,18 +236,18 @@ public class InMemoryWikiServiceTests
 		var created = await CreatePageAsync(svc, title: "Reusable Slug");
 		await svc.DeleteAsync(created.Id, "#1");
 
-		// Should not throw — slug freed
+		// Should not return error — slug freed
 		var recreated = await CreatePageAsync(svc, title: "Reusable Slug");
 		await Assert.That(recreated.Slug).IsEqualTo("reusable_slug");
 	}
 
 	[Test]
-	public async Task DeleteAsync_MissingId_ReturnsFalse()
+	public async Task DeleteAsync_MissingId_ReturnsNotFound()
 	{
 		var svc = BuildService();
 		var result = await svc.DeleteAsync("ghost_id", "#1");
 
-		await Assert.That(result).IsFalse();
+		await Assert.That(result.IsT1).IsTrue();
 	}
 
 	// ── GetRevisionsAsync ─────────────────────────────────────────────────────
@@ -272,22 +286,23 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, markdown: "First edition.");
 
-		var rev = await svc.GetRevisionAsync(created.Id, 1);
+		var revResult = await svc.GetRevisionAsync(created.Id, 1);
 
-		await Assert.That(rev).IsNotNull();
-		await Assert.That(rev!.RevisionNumber).IsEqualTo(1);
+		await Assert.That(revResult.IsT0).IsTrue();
+		var rev = revResult.AsT0;
+		await Assert.That(rev.RevisionNumber).IsEqualTo(1);
 		await Assert.That(rev.MarkdownSource).IsEqualTo("First edition.");
 	}
 
 	[Test]
-	public async Task GetRevisionAsync_MissingRevisionNumber_ReturnsNull()
+	public async Task GetRevisionAsync_MissingRevisionNumber_ReturnsNotFound()
 	{
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc);
 
-		var rev = await svc.GetRevisionAsync(created.Id, 99);
+		var result = await svc.GetRevisionAsync(created.Id, 99);
 
-		await Assert.That(rev).IsNull();
+		await Assert.That(result.IsT1).IsTrue();
 	}
 
 	// ── SetProtectionAsync ────────────────────────────────────────────────────
@@ -299,19 +314,22 @@ public class InMemoryWikiServiceTests
 		var created = await CreatePageAsync(svc);
 		await Assert.That(created.IsProtected).IsFalse();
 
-		await svc.SetProtectionAsync(created.Id, true);
+		var protResult = await svc.SetProtectionAsync(created.Id, true);
 
-		var fetched = await svc.GetByIdAsync(created.Id);
-		await Assert.That(fetched!.IsProtected).IsTrue();
+		await Assert.That(protResult.IsT0).IsTrue();
+		var fetchResult = await svc.GetByIdAsync(created.Id);
+		await Assert.That(fetchResult.IsT0).IsTrue();
+		await Assert.That(fetchResult.AsT0.IsProtected).IsTrue();
 	}
 
 	[Test]
-	public async Task SetProtectionAsync_MissingId_ThrowsKeyNotFound()
+	public async Task SetProtectionAsync_MissingId_ReturnsNotFound()
 	{
 		var svc = BuildService();
 
-		await Assert.That(async () => await svc.SetProtectionAsync("ghost_id", true))
-			.Throws<KeyNotFoundException>();
+		var result = await svc.SetProtectionAsync("ghost_id", true);
+
+		await Assert.That(result.IsT1).IsTrue();
 	}
 
 	// ── GetByNamespaceAsync ───────────────────────────────────────────────────

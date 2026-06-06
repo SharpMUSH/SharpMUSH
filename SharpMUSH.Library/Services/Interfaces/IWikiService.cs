@@ -1,3 +1,5 @@
+using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.Models.Wiki;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -5,23 +7,28 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <summary>
 /// CRUD service for wiki pages and their revision history.
 /// The in-memory implementation is for testing and development;
-/// an ArangoDB implementation will follow in a later phase.
+/// database implementations follow in a later phase.
 /// </summary>
+/// <remarks>
+/// All methods that might not find a resource return <c>OneOf&lt;T, NotFound&gt;</c> rather
+/// than <c>null</c>.  Methods that can fail due to a conflict (e.g. duplicate slug) return
+/// <c>OneOf&lt;T, Error&lt;string&gt;&gt;</c> where <c>Error.Value</c> is a human-readable message.
+/// </remarks>
 public interface IWikiService
 {
 	// ── Read operations ──────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Retrieves a wiki page by its slug and namespace.
-	/// Returns <c>null</c> if no matching page exists.
+	/// Returns <c>NotFound</c> if no matching page exists.
 	/// </summary>
-	Task<WikiPage?> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main);
+	Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main);
 
 	/// <summary>
 	/// Retrieves a wiki page by its storage ID.
-	/// Returns <c>null</c> if no matching page exists.
+	/// Returns <c>NotFound</c> if no matching page exists.
 	/// </summary>
-	Task<WikiPage?> GetByIdAsync(string id);
+	Task<OneOf<WikiPage, NotFound>> GetByIdAsync(string id);
 
 	/// <summary>
 	/// Returns the most recently updated pages, ordered by <c>UpdatedAt</c> descending.
@@ -38,11 +45,9 @@ public interface IWikiService
 	/// <summary>
 	/// Creates a new wiki page.  The slug must be unique within the namespace.
 	/// Renders the Markdown to HTML and extracts plain text at creation time.
+	/// Returns <c>Error&lt;string&gt;</c> when a page with the same slug already exists in the given namespace.
 	/// </summary>
-	/// <exception cref="InvalidOperationException">
-	/// Thrown when a page with the same slug already exists in the given namespace.
-	/// </exception>
-	Task<WikiPage> CreateAsync(
+	Task<OneOf<WikiPage, Error<string>>> CreateAsync(
 		string title,
 		string markdown,
 		string authorDbref,
@@ -51,9 +56,9 @@ public interface IWikiService
 	/// <summary>
 	/// Updates an existing page's Markdown content.  Increments the revision counter,
 	/// saves a revision snapshot, and re-renders HTML / plain text.
+	/// Returns <c>NotFound</c> when no page with <paramref name="id"/> exists.
 	/// </summary>
-	/// <exception cref="KeyNotFoundException">Thrown when no page with <paramref name="id"/> exists.</exception>
-	Task<WikiPage> UpdateAsync(
+	Task<OneOf<WikiPage, NotFound>> UpdateAsync(
 		string id,
 		string markdown,
 		string editorDbref,
@@ -61,16 +66,16 @@ public interface IWikiService
 
 	/// <summary>
 	/// Deletes a wiki page and all its revisions.
-	/// Returns <c>true</c> if a page was found and deleted; <c>false</c> if not found.
+	/// Returns <c>None</c> if a page was found and deleted; <c>NotFound</c> if not found.
 	/// </summary>
-	Task<bool> DeleteAsync(string id, string editorDbref);
+	Task<OneOf<None, NotFound>> DeleteAsync(string id, string editorDbref);
 
 	/// <summary>
 	/// Sets the protection flag on a page.
 	/// Protected pages can only be edited by admin-level users.
+	/// Returns <c>NotFound</c> when no page with <paramref name="id"/> exists.
 	/// </summary>
-	/// <exception cref="KeyNotFoundException">Thrown when no page with <paramref name="id"/> exists.</exception>
-	Task SetProtectionAsync(string id, bool isProtected);
+	Task<OneOf<None, NotFound>> SetProtectionAsync(string id, bool isProtected);
 
 	// ── Revision operations ───────────────────────────────────────────────────
 
@@ -82,7 +87,7 @@ public interface IWikiService
 
 	/// <summary>
 	/// Returns a specific revision snapshot for a page.
-	/// Returns <c>null</c> if no matching revision exists.
+	/// Returns <c>NotFound</c> if no matching revision exists.
 	/// </summary>
-	Task<WikiRevision?> GetRevisionAsync(string pageId, int revisionNumber);
+	Task<OneOf<WikiRevision, NotFound>> GetRevisionAsync(string pageId, int revisionNumber);
 }
