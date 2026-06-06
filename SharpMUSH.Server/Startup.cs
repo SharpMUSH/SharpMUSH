@@ -1,7 +1,11 @@
+using Asp.Versioning;
 using Core.Arango;
 using Mediator;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -10,11 +14,13 @@ using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
+using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using SurrealDb.Net;
 using SurrealDb.Embedded.InMemory;
+using System.Threading.RateLimiting;
 using OpenTelemetry.ResourceDetectors.Container;
 using Quartz;
 using Serilog;
@@ -196,6 +202,10 @@ public class Startup(
 		services.AddSingleton<WikiMarkdigPipeline>();
 		services.AddSingleton<IWikiService, InMemoryWikiService>();
 
+// Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
+		services.AddMemoryCache();
+		services.AddSingleton<Server.Services.IPrerenderCacheService, Server.Services.PrerenderCacheService>();
+
 // Initialize TextFileService
 		services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
 		services.AddSingleton<ILocalizedTextFileService, Implementation.Services.LocalizedTextFileService>();
@@ -340,6 +350,40 @@ public class Startup(
 		services.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
 
 		services.AddSignalR();
+
+		// ── API Versioning ────────────────────────────────────────────────────
+		// URL-segment strategy: /api/v1/... and /api/v2/...
+		// Default version: 1.0 so existing unversioned controllers keep working.
+		// Deprecated versions are announced via the api-deprecated-versions response header.
+		services.AddApiVersioning(options =>
+		{
+			options.DefaultApiVersion = new ApiVersion(1, 0);
+			options.AssumeDefaultVersionWhenUnspecified = true;
+			options.ReportApiVersions = true;
+			options.ApiVersionReader = ApiVersionReader.Combine(
+				new UrlSegmentApiVersionReader(),
+				new HeaderApiVersionReader("x-api-version"));
+		}).AddMvc();
+
+		// ── Rate Limiting ─────────────────────────────────────────────────────
+		// Named "public-api" policy: fixed window, 30 req/min per client IP,
+		// queue depth 5.  Auth endpoints opt in via [EnableRateLimiting("public-api")].
+		services.AddRateLimiter(opts =>
+		{
+			opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+			opts.AddFixedWindowLimiter("public-api", limiterOpts =>
+			{
+				limiterOpts.PermitLimit = 30;
+				limiterOpts.Window = TimeSpan.FromMinutes(1);
+				limiterOpts.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+				limiterOpts.QueueLimit = 5;
+			});
+		});
+
+		// ── RFC 7807 Problem Details ──────────────────────────────────────────
+		services.AddProblemDetails();
+		services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
+
 		services.AddAuthorization();
 		services.AddRazorPages();
 		services.AddControllers();

@@ -1,0 +1,13 @@
+@page "/character/{Name}"
+@using SharpMUSH.Client.Components
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Name</PageTitle>
+
+@* Character alias: resolves to Character:Name wiki page *@
+<WikiView Slug="@Name" Mode="WikiView.WikiMode.View" />
+
+@code {
+    [Parameter]
+    public required string Name { get; set; }
+}

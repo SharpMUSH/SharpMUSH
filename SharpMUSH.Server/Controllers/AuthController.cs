@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
@@ -40,6 +41,7 @@ public class AuthController(
 	/// - Account session: <c>{ AccountSessionToken, CharacterKey, CharacterCreationTime }</c>
 	/// </summary>
 	[HttpPost("mush-token")]
+	[EnableRateLimiting("public-api")]
 	// accountId is the account's internal GUID identifier, not a secret — it is derived from the
 	// opaque session token for the purpose of fetching characters, not stored as cleartext sensitive data.
 	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
@@ -127,6 +129,7 @@ public class AuthController(
 	/// Returns an account session token valid for 15 minutes (sliding window).
 	/// </summary>
 	[HttpPost("account-login")]
+	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> AccountLogin([FromBody] AccountLoginRequest request)
 	{
 		if (string.IsNullOrWhiteSpace(request.UsernameOrEmail) || string.IsNullOrWhiteSpace(request.Password))
@@ -154,6 +157,7 @@ public class AuthController(
 	/// Create a new account and return an account session. Email is optional.
 	/// </summary>
 	[HttpPost("account-register")]
+	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> AccountRegister([FromBody] AccountRegisterRequest request)
 	{
 		if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
@@ -224,6 +228,7 @@ public class AuthController(
 	/// </summary>
 	[HttpPost("jwt-login")]
 	[AllowAnonymous]
+	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> JwtLogin([FromBody] JwtLoginRequest request)
 	{
 		if (jwtService is null)
@@ -266,6 +271,7 @@ public class AuthController(
 	/// </summary>
 	[HttpPost("jwt-switch-character")]
 	[AllowAnonymous]
+	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> JwtSwitchCharacter([FromBody] JwtSwitchCharacterRequest request)
 	{
 		if (jwtService is null)
@@ -311,6 +317,7 @@ public class AuthController(
 	/// </summary>
 	[HttpPost("jwt-refresh")]
 	[AllowAnonymous]
+	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> JwtRefresh([FromBody] JwtRefreshRequest request)
 	{
 		if (jwtService is null)

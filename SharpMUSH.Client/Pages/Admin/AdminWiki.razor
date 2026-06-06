@@ -1,0 +1,8 @@
+@page "/admin/wiki"
+@attribute [Authorize(Roles = "Wizard")]
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>Wiki Admin — Admin — SharpMUSH</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Wiki Admin</MudText>
+<MudText Color="Color.Secondary">Protected pages and bulk wiki operations coming soon.</MudText>

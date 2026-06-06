@@ -15,25 +15,25 @@ internal class WikiPageDbRecord : Record
 	[JsonPropertyName("slug")] public string Slug { get; set; } = "";
 	[JsonPropertyName("title")] public string Title { get; set; } = "";
 	[JsonPropertyName("namespace")] public string Namespace { get; set; } = "main";
-	[JsonPropertyName("markdownSource")] public string MarkdownSource { get; set; } = "";
-	[JsonPropertyName("renderedHtml")] public string RenderedHtml { get; set; } = "";
-	[JsonPropertyName("plainText")] public string PlainText { get; set; } = "";
-	[JsonPropertyName("authorDbref")] public string AuthorDbref { get; set; } = "";
-	[JsonPropertyName("lastEditorDbref")] public string LastEditorDbref { get; set; } = "";
-	[JsonPropertyName("createdAt")] public string CreatedAt { get; set; } = "";
-	[JsonPropertyName("updatedAt")] public string UpdatedAt { get; set; } = "";
-	[JsonPropertyName("isProtected")] public bool IsProtected { get; set; }
-	[JsonPropertyName("revisionNumber")] public int RevisionNumber { get; set; } = 1;
+	[JsonPropertyName("markdown_source")] public string MarkdownSource { get; set; } = "";
+	[JsonPropertyName("rendered_html")] public string RenderedHtml { get; set; } = "";
+	[JsonPropertyName("plain_text")] public string PlainText { get; set; } = "";
+	[JsonPropertyName("author_dbref")] public string AuthorDbref { get; set; } = "";
+	[JsonPropertyName("last_editor_dbref")] public string LastEditorDbref { get; set; } = "";
+	[JsonPropertyName("created_at")] public string CreatedAt { get; set; } = "";
+	[JsonPropertyName("updated_at")] public string UpdatedAt { get; set; } = "";
+	[JsonPropertyName("is_protected")] public bool IsProtected { get; set; }
+	[JsonPropertyName("revision_number")] public int RevisionNumber { get; set; } = 1;
 }
 
 internal class WikiRevisionDbRecord : Record
 {
-	[JsonPropertyName("pageId")] public string PageId { get; set; } = "";
-	[JsonPropertyName("revisionNumber")] public int RevisionNumber { get; set; }
-	[JsonPropertyName("markdownSource")] public string MarkdownSource { get; set; } = "";
-	[JsonPropertyName("editorDbref")] public string EditorDbref { get; set; } = "";
+	[JsonPropertyName("page_id")] public string PageId { get; set; } = "";
+	[JsonPropertyName("revision_number")] public int RevisionNumber { get; set; }
+	[JsonPropertyName("markdown_source")] public string MarkdownSource { get; set; } = "";
+	[JsonPropertyName("editor_dbref")] public string EditorDbref { get; set; } = "";
 	[JsonPropertyName("timestamp")] public string Timestamp { get; set; } = "";
-	[JsonPropertyName("editSummary")] public string? EditSummary { get; set; }
+	[JsonPropertyName("edit_summary")] public string? EditSummary { get; set; }
 }
 
 public partial class SurrealDatabase : IWikiService
@@ -43,11 +43,11 @@ public partial class SurrealDatabase : IWikiService
 	private static readonly WikiMarkdigPipeline _wikiRenderer = new();
 
 	private const string WikiPageFields =
-		"id, slug, title, namespace, markdownSource, renderedHtml, plainText, " +
-		"authorDbref, lastEditorDbref, createdAt, updatedAt, isProtected, revisionNumber";
+		"id, slug, title, namespace, markdown_source, rendered_html, plain_text, " +
+		"author_dbref, last_editor_dbref, created_at, updated_at, is_protected, revision_number";
 
 	private const string WikiRevisionFields =
-		"id, pageId, revisionNumber, markdownSource, editorDbref, timestamp, editSummary";
+		"id, page_id, revision_number, markdown_source, editor_dbref, timestamp, edit_summary";
 
 	// ── Read ──────────────────────────────────────────────────────────────────
 
@@ -81,7 +81,7 @@ public partial class SurrealDatabase : IWikiService
 	{
 		var parameters = new Dictionary<string, object?> { ["count"] = count };
 		var response = await ExecuteAsync(
-			$"SELECT {WikiPageFields} FROM wiki_page ORDER BY updatedAt DESC LIMIT $count",
+			$"SELECT {WikiPageFields} FROM wiki_page ORDER BY updated_at DESC LIMIT $count",
 			parameters);
 		var results = response.GetValue<List<WikiPageDbRecord>>(0);
 		return (results?.Select(MapToWikiPage).ToList() ?? []).AsReadOnly();
@@ -137,15 +137,15 @@ public partial class SurrealDatabase : IWikiService
 				slug: $slug,
 				title: $title,
 				namespace: $ns,
-				markdownSource: $markdown,
-				renderedHtml: $html,
-				plainText: $plain,
-				authorDbref: $authorDbref,
-				lastEditorDbref: $authorDbref,
-				createdAt: $now,
-				updatedAt: $now,
-				isProtected: false,
-				revisionNumber: 1
+				markdown_source: $markdown,
+				rendered_html: $html,
+				plain_text: $plain,
+				author_dbref: $authorDbref,
+				last_editor_dbref: $authorDbref,
+				created_at: $now,
+				updated_at: $now,
+				is_protected: false,
+				revision_number: 1
 			}
 			""",
 			parameters);
@@ -186,8 +186,8 @@ public partial class SurrealDatabase : IWikiService
 		};
 
 		var response = await ExecuteAsync(
-			$"UPDATE $id MERGE {{ markdownSource: $markdown, renderedHtml: $html, plainText: $plain, " +
-			$"lastEditorDbref: $editorDbref, updatedAt: $now, revisionNumber: $rev }}",
+			$"UPDATE $id MERGE {{ markdown_source: $markdown, rendered_html: $html, plain_text: $plain, " +
+			$"last_editor_dbref: $editorDbref, updated_at: $now, revision_number: $rev }}",
 			parameters);
 
 		var results = response.GetValue<List<WikiPageDbRecord>>(0);
@@ -206,7 +206,7 @@ public partial class SurrealDatabase : IWikiService
 		var parameters = new Dictionary<string, object?> { ["id"] = id };
 
 		// Delete revisions
-		await ExecuteAsync("DELETE wiki_revision WHERE pageId = $id", parameters);
+		await ExecuteAsync("DELETE wiki_revision WHERE page_id = $id", parameters);
 
 		var key = NormalizeSurrealId(id, "wiki_page");
 		var delParams = new Dictionary<string, object?> { ["id"] = new StringRecordId(key) };
@@ -227,7 +227,7 @@ public partial class SurrealDatabase : IWikiService
 			["id"] = new StringRecordId(key),
 			["isProtected"] = protect
 		};
-		await ExecuteAsync("UPDATE $id MERGE { isProtected: $isProtected }", parameters);
+		await ExecuteAsync("UPDATE $id MERGE { is_protected: $isProtected }", parameters);
 
 		return new OkNone();
 	}
@@ -241,8 +241,8 @@ public partial class SurrealDatabase : IWikiService
 			["pageId"] = pageId, ["skip"] = skip, ["take"] = take
 		};
 		var response = await ExecuteAsync(
-			$"SELECT {WikiRevisionFields} FROM wiki_revision WHERE pageId = $pageId " +
-			$"ORDER BY revisionNumber DESC LIMIT $skip, $take",
+			$"SELECT {WikiRevisionFields} FROM wiki_revision WHERE page_id = $pageId " +
+			$"ORDER BY revision_number DESC LIMIT $skip, $take",
 			parameters);
 		var results = response.GetValue<List<WikiRevisionDbRecord>>(0);
 		return (results?.Select(MapToWikiRevision).ToList() ?? []).AsReadOnly();
@@ -255,7 +255,7 @@ public partial class SurrealDatabase : IWikiService
 			["pageId"] = pageId, ["rev"] = revisionNumber
 		};
 		var response = await ExecuteAsync(
-			$"SELECT {WikiRevisionFields} FROM wiki_revision WHERE pageId = $pageId AND revisionNumber = $rev",
+			$"SELECT {WikiRevisionFields} FROM wiki_revision WHERE page_id = $pageId AND revision_number = $rev",
 			parameters);
 		var results = response.GetValue<List<WikiRevisionDbRecord>>(0);
 		if (results?.Count > 0)
@@ -283,12 +283,12 @@ public partial class SurrealDatabase : IWikiService
 
 		await ExecuteAsync("""
 			CREATE wiki_revision CONTENT {
-				pageId: $pageId,
-				revisionNumber: $rev,
-				markdownSource: $markdown,
-				editorDbref: $editorDbref,
+				page_id: $pageId,
+				revision_number: $rev,
+				markdown_source: $markdown,
+				editor_dbref: $editorDbref,
 				timestamp: $timestamp,
-				editSummary: $editSummary
+				edit_summary: $editSummary
 			}
 			""",
 			parameters);

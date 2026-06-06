@@ -1,0 +1,13 @@
+@page "/scenes/{Id:int}/live"
+@attribute [Authorize]
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["LiveScene"] #@Id</PageTitle>
+
+<MudText Typo="Typo.h4">@Loc["LiveScene"] #@Id</MudText>
+<MudText>@Loc["LiveSceneComingSoon"]</MudText>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+}

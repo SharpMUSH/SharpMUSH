@@ -1,0 +1,18 @@
+@page "/settings"
+@attribute [Authorize]
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>Settings — SharpMUSH</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="pa-4">
+    <MudText Typo="Typo.h4" Class="mb-4">Settings</MudText>
+    <MudList T="string">
+        <MudListItem Text="Account" Icon="@Icons.Material.Filled.ManageAccounts"
+                     OnClick='() => Nav.NavigateTo("/account")' />
+        <MudListItem Text="Characters" Icon="@Icons.Material.Filled.People"
+                     OnClick='() => Nav.NavigateTo("/settings/characters")' />
+        <MudListItem Text="Theme" Icon="@Icons.Material.Filled.Palette"
+                     OnClick='() => Nav.NavigateTo("/settings/theme")' />
+    </MudList>
+</MudContainer>

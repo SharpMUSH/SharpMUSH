@@ -8,7 +8,7 @@
     <IsTestProject>true</IsTestProject>
     <LangVersion>default</LangVersion>
 		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-		<NoWarn>TUnit0038;TUnitAssertions0002</NoWarn>
+		<NoWarn>TUnit0038;TUnitAssertions0002;ASPDEPR004;ASPDEPR008</NoWarn>
 	</PropertyGroup>
 
   <ItemGroup>

@@ -8,6 +8,7 @@ using SharpMUSH.Client;
 using SharpMUSH.Client.Authentication;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using Slugify;
 
@@ -19,6 +20,8 @@ builder.Services.AddLocalization(options => options.ResourcesPath = "Resources")
 builder.Services.AddMudServices();
 builder.Services.AddLogging();
 builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
+builder.Services.AddSingleton<WikiMarkdigPipeline>();
+builder.Services.AddSingleton<IWikiService, InMemoryWikiService>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();

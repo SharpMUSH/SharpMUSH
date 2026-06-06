@@ -1,0 +1,16 @@
+@page "/login"
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>Log In — SharpMUSH</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="pa-4">
+    <MudText Typo="Typo.h4" Class="mb-4">Log In</MudText>
+    <MudText Color="Color.Secondary" Class="mb-4">
+        Use the connection panel to log in with your character credentials.
+        Account login is available from the <MudLink Href="/account">account page</MudLink>.
+    </MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick='() => Nav.NavigateTo("/")'>
+        Go to Home
+    </MudButton>
+</MudContainer>

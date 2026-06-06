@@ -1,0 +1,57 @@
+@page "/admin"
+@attribute [Authorize(Roles = "Wizard")]
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>Admin Dashboard — SharpMUSH</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Admin Dashboard</MudText>
+<MudGrid>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard>
+            <MudCardHeader><MudText Typo="Typo.h6">Players</MudText></MudCardHeader>
+            <MudCardActions>
+                <MudButton Href="/admin/players" Variant="Variant.Text" Color="Color.Primary">View Players</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard>
+            <MudCardHeader><MudText Typo="Typo.h6">Characters</MudText></MudCardHeader>
+            <MudCardActions>
+                <MudButton Href="/admin/characters" Variant="Variant.Text" Color="Color.Primary">View Characters</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard>
+            <MudCardHeader><MudText Typo="Typo.h6">Configuration</MudText></MudCardHeader>
+            <MudCardActions>
+                <MudButton Href="/admin/config" Variant="Variant.Text" Color="Color.Primary">Site Config</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard>
+            <MudCardHeader><MudText Typo="Typo.h6">Moderation</MudText></MudCardHeader>
+            <MudCardActions>
+                <MudButton Href="/admin/moderation" Variant="Variant.Text" Color="Color.Primary">Reports &amp; Bans</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard>
+            <MudCardHeader><MudText Typo="Typo.h6">Wiki Admin</MudText></MudCardHeader>
+            <MudCardActions>
+                <MudButton Href="/admin/wiki" Variant="Variant.Text" Color="Color.Primary">Wiki Admin</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard>
+            <MudCardHeader><MudText Typo="Typo.h6">Layout</MudText></MudCardHeader>
+            <MudCardActions>
+                <MudButton Href="/admin/layout" Variant="Variant.Text" Color="Color.Primary">Layout Editor</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+</MudGrid>

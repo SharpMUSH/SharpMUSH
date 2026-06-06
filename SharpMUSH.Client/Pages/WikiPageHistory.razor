@@ -1,0 +1,13 @@
+@page "/wiki/{Slug}/history"
+@using SharpMUSH.Client.Components
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["WikiHistory"]: @Slug</PageTitle>
+
+<MudText Typo="Typo.h4">@Loc["WikiHistory"]: @Slug</MudText>
+<MudText>@Loc["WikiHistoryComingSoon"]</MudText>
+
+@code {
+    [Parameter]
+    public required string Slug { get; set; }
+}

@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Models;
-using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Client.Components;
 
@@ -22,8 +22,8 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiService required by component
-		ctx.Services.AddSingleton<WikiService>();
+		// Add WikiMarkdigPipeline required by component
+		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 
 		var article = new WikiArticle("Test Article", "This is test content", null);
 
@@ -48,8 +48,8 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiService required by component
-		ctx.Services.AddSingleton<WikiService>();
+		// Add WikiMarkdigPipeline required by component
+		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 
 		var article = new WikiArticle("Test Article", "This is **bold** content", null);
 
@@ -75,8 +75,8 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiService required by component
-		ctx.Services.AddSingleton<WikiService>();
+		// Add WikiMarkdigPipeline required by component
+		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 
 		// Act
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
@@ -100,8 +100,8 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiService required by component
-		ctx.Services.AddSingleton<WikiService>();
+		// Add WikiMarkdigPipeline required by component
+		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 
 		// Act
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
@@ -126,8 +126,8 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiService required by component
-		ctx.Services.AddSingleton<WikiService>();
+		// Add WikiMarkdigPipeline required by component
+		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 
 		var article = new WikiArticle("Test Article", "Content", null);
 
@@ -153,8 +153,8 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiService required by component
-		ctx.Services.AddSingleton<WikiService>();
+		// Add WikiMarkdigPipeline required by component
+		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 
 		var article = new WikiArticle("Test Article", "Content", null);
 
@@ -179,8 +179,8 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiService required by component
-		ctx.Services.AddSingleton<WikiService>();
+		// Add WikiMarkdigPipeline required by component
+		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
 
 		var article = new WikiArticle("Home", "Welcome", null);
 

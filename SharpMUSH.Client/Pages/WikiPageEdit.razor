@@ -1,0 +1,13 @@
+@page "/wiki/{Slug}/edit"
+@using SharpMUSH.Client.Components
+@attribute [Authorize]
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["WikiEdit"]: @Slug</PageTitle>
+
+<WikiView Slug="@Slug" Mode="WikiView.WikiMode.Edit" />
+
+@code {
+    [Parameter]
+    public required string Slug { get; set; }
+}
