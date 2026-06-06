@@ -84,34 +84,46 @@ public partial class MemgraphDatabase : IWikiService
 		var plain = _wikiRenderer.ExtractPlainText(markdown);
 
 		await using var session = driver.AsyncSession();
-		var result = await session.RunAsync("""
-			CREATE (p:WikiPage {
-				pageId: $pageId,
-				slug: $slug,
-				title: $title,
-				namespace: $ns,
-				markdownSource: $markdown,
-				renderedHtml: $html,
-				plainText: $plain,
-				authorDbref: $authorDbref,
-				lastEditorDbref: $authorDbref,
-				createdAt: $now,
-				updatedAt: $now,
-				isProtected: false,
-				revisionNumber: 1
-			}) RETURN p
-			""",
-			new
-			{
-				pageId, slug, title, ns = nsStr, markdown, html, plain,
-				authorDbref, now = now.ToString("O")
-			});
+		// W-7: Wrap the multi-step node + revision write in a transaction so the
+		// two Cypher queries succeed or fail atomically.
+		var tx = await session.BeginTransactionAsync();
+		try
+		{
+			var result = await tx.RunAsync("""
+				CREATE (p:WikiPage {
+					pageId: $pageId,
+					slug: $slug,
+					title: $title,
+					namespace: $ns,
+					markdownSource: $markdown,
+					renderedHtml: $html,
+					plainText: $plain,
+					authorDbref: $authorDbref,
+					lastEditorDbref: $authorDbref,
+					createdAt: $now,
+					updatedAt: $now,
+					isProtected: false,
+					revisionNumber: 1
+				}) RETURN p
+				""",
+				new
+				{
+					pageId, slug, title, ns = nsStr, markdown, html, plain,
+					authorDbref, now = now.ToString("O")
+				});
 
-		var records = await result.ToListAsync();
-		var page = NodeToWikiPage(records[0]["p"].As<INode>());
+			var records = await result.ToListAsync();
+			var page = NodeToWikiPage(records[0]["p"].As<INode>());
 
-		await SaveMemgraphRevisionAsync(session, page, authorDbref, null, now);
-		return page;
+			await SaveMemgraphRevisionAsync(tx, page, authorDbref, null, now);
+			await tx.CommitAsync();
+			return page;
+		}
+		catch
+		{
+			await tx.RollbackAsync();
+			throw;
+		}
 	}
 
 	public async Task<OneOf<WikiPage, NotFound>> UpdateAsync(
@@ -131,27 +143,37 @@ public partial class MemgraphDatabase : IWikiService
 		var plain = _wikiRenderer.ExtractPlainText(markdown);
 
 		await using var session = driver.AsyncSession();
-		var result = await session.RunAsync("""
-			MATCH (p:WikiPage {pageId: $id})
-			SET p.markdownSource = $markdown,
-			    p.renderedHtml = $html,
-			    p.plainText = $plain,
-			    p.lastEditorDbref = $editorDbref,
-			    p.updatedAt = $now,
-			    p.revisionNumber = $rev
-			RETURN p
-			""",
-			new
-			{
-				id, markdown, html, plain, editorDbref,
-				now = now.ToString("O"), rev = newRevision
-			});
+		var txUpdate = await session.BeginTransactionAsync();
+		try
+		{
+			var result = await txUpdate.RunAsync("""
+				MATCH (p:WikiPage {pageId: $id})
+				SET p.markdownSource = $markdown,
+				    p.renderedHtml = $html,
+				    p.plainText = $plain,
+				    p.lastEditorDbref = $editorDbref,
+				    p.updatedAt = $now,
+				    p.revisionNumber = $rev
+				RETURN p
+				""",
+				new
+				{
+					id, markdown, html, plain, editorDbref,
+					now = now.ToString("O"), rev = newRevision
+				});
 
-		var records = await result.ToListAsync();
-		var updated = NodeToWikiPage(records[0]["p"].As<INode>());
+			var records = await result.ToListAsync();
+			var updated = NodeToWikiPage(records[0]["p"].As<INode>());
 
-		await SaveMemgraphRevisionAsync(session, updated, editorDbref, editSummary, now);
-		return updated;
+			await SaveMemgraphRevisionAsync(txUpdate, updated, editorDbref, editSummary, now);
+			await txUpdate.CommitAsync();
+			return updated;
+		}
+		catch
+		{
+			await txUpdate.RollbackAsync();
+			throw;
+		}
 	}
 
 	public async Task<OneOf<None, NotFound>> DeleteAsync(string id, string editorDbref)
@@ -161,14 +183,25 @@ public partial class MemgraphDatabase : IWikiService
 			return new NotFound();
 
 		await using var session = driver.AsyncSession();
-		// Delete revisions first
-		await session.RunAsync(
-			"MATCH (r:WikiRevision {pageId: $id}) DELETE r",
-			new { id });
+		// W-7: Delete revisions + page node atomically in a transaction.
+		var txDelete = await session.BeginTransactionAsync();
+		try
+		{
+			await txDelete.RunAsync(
+				"MATCH (r:WikiRevision {pageId: $id}) DELETE r",
+				new { id });
 
-		await session.RunAsync(
-			"MATCH (p:WikiPage {pageId: $id}) DELETE p",
-			new { id });
+			await txDelete.RunAsync(
+				"MATCH (p:WikiPage {pageId: $id}) DELETE p",
+				new { id });
+
+			await txDelete.CommitAsync();
+		}
+		catch
+		{
+			await txDelete.RollbackAsync();
+			throw;
+		}
 
 		return new None();
 	}
@@ -215,13 +248,13 @@ public partial class MemgraphDatabase : IWikiService
 	// ── Internals ─────────────────────────────────────────────────────────────
 
 	private static async Task SaveMemgraphRevisionAsync(
-		IAsyncSession session,
+		IAsyncQueryRunner runner,
 		WikiPage page,
 		string editorDbref,
 		string? editSummary,
 		DateTimeOffset timestamp)
 	{
-		await session.RunAsync("""
+		await runner.RunAsync("""
 			CREATE (r:WikiRevision {
 				revisionId: $revisionId,
 				pageId: $pageId,
@@ -285,7 +318,7 @@ public partial class MemgraphDatabase : IWikiService
 	}
 
 	private static string Slugify(string title) =>
-		title.ToLowerInvariant().Replace(' ', '_');
+		WikiHelpers.Slugify(title);
 
 	#endregion
 }

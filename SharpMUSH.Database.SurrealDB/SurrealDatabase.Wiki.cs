@@ -152,8 +152,11 @@ public partial class SurrealDatabase : IWikiService
             """,
             parameters);
 
-        var created = response.GetValue<List<WikiPageDbRecord>>(0)!.First();
-        var page = MapToWikiPage(created);
+        // C-8: Guard against empty DB result set to avoid InvalidOperationException.
+        var createList = response.GetValue<List<WikiPageDbRecord>>(0);
+        if (createList is null or { Count: 0 })
+            return new Error<string>("Database returned empty result after insert.");
+        var page = MapToWikiPage(createList[0]);
 
         await SaveSurrealRevisionAsync(page, authorDbref, null, now);
         return page;
@@ -193,7 +196,10 @@ public partial class SurrealDatabase : IWikiService
             parameters);
 
         var results = response.GetValue<List<WikiPageDbRecord>>(0);
-        var updated = MapToWikiPage(results!.First());
+        // C-8: Guard against empty DB result set to avoid InvalidOperationException.
+        if (results is null or { Count: 0 })
+            return new NotFound();
+        var updated = MapToWikiPage(results[0]);
 
         await SaveSurrealRevisionAsync(updated, editorDbref, editSummary, now);
         return updated;
@@ -217,7 +223,8 @@ public partial class SurrealDatabase : IWikiService
         return new OkNone();
     }
 
-    public async Task<OneOf<OkNone, NotFound>> SetProtectionAsync(string id, bool protect)
+    // C-7: Rename parameter to match interface contract (bool isProtected).
+    public async Task<OneOf<OkNone, NotFound>> SetProtectionAsync(string id, bool isProtected)
     {
         var lookupResult = await GetByIdAsync(id);
         if (lookupResult.IsT1)
@@ -227,7 +234,7 @@ public partial class SurrealDatabase : IWikiService
         var parameters = new Dictionary<string, object?>
         {
             ["id"] = new StringRecordId(key),
-            ["isProtected"] = protect
+            ["isProtected"] = isProtected
         };
         await ExecuteAsync("UPDATE $id MERGE { isProtected: $isProtected }", parameters);
 
@@ -358,7 +365,7 @@ public partial class SurrealDatabase : IWikiService
     }
 
     private static string Slugify(string title) =>
-        title.ToLowerInvariant().Replace(' ', '_');
+        WikiHelpers.Slugify(title);
 
     #endregion
 }

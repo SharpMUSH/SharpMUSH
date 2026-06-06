@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Middleware;
@@ -111,6 +113,7 @@ public class WikiController(
 	/// Called by the wiki edit handler after a page is saved.
 	/// </summary>
 	[HttpPost("invalidate-cache")]
+	[Authorize(Roles = nameof(PortalRole.Wizard))]
 	public IActionResult InvalidateCache([FromBody] InvalidateCacheRequest request)
 	{
 		if (!string.IsNullOrWhiteSpace(request.Path))

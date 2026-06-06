@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
@@ -17,10 +18,15 @@ namespace SharpMUSH.Server.Middleware;
 ///   3. Include canonical link + OpenGraph meta tags.
 ///
 /// For anything else (or if the page doesn't exist): fall through to the SPA.
+///
+/// W-4: IWikiService may be registered Scoped. This middleware is registered as a
+/// singleton-lifetime middleware in the pipeline.  Constructor-injecting a Scoped
+/// service would create a captive dependency (the Scoped object lives forever).
+/// Fix: inject IServiceScopeFactory and resolve IWikiService per-request.
 /// </summary>
 public sealed class BotPrerenderMiddleware(
 	RequestDelegate next,
-	IWikiService wikiService,
+	IServiceScopeFactory scopeFactory,
 	IPrerenderCacheService prerenderCache,
 	ILogger<BotPrerenderMiddleware> logger)
 {
@@ -47,6 +53,11 @@ public sealed class BotPrerenderMiddleware(
 			await WriteHtmlResponse(context, cached);
 			return;
 		}
+
+		// W-4: Resolve IWikiService inside a per-request scope to avoid captive
+		// dependency if IWikiService is registered as Scoped.
+		await using var scope = scopeFactory.CreateAsyncScope();
+		var wikiService = scope.ServiceProvider.GetRequiredService<IWikiService>();
 
 		string? html = null;
 

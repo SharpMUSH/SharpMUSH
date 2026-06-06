@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Net.Mime;
 using System.Text.Json;
 
 namespace SharpMUSH.Server.Middleware;
@@ -17,6 +16,8 @@ public sealed class ProblemDetailsExceptionHandler(
     ILogger<ProblemDetailsExceptionHandler> logger,
     IHostEnvironment env) : IExceptionHandler
 {
+    // RFC 7807 §3 mandates "application/problem+json" for Problem Details responses.
+    private const string ProblemJsonContentType = "application/problem+json";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public async ValueTask<bool> TryHandleAsync(
@@ -24,6 +25,16 @@ public sealed class ProblemDetailsExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
+        // W-2: Client disconnects are not server errors. Respond with 499 Client Closed
+        // Request (nginx convention) and log at Debug — not Error.
+        if (exception is OperationCanceledException && httpContext.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogDebug("Request cancelled by client on {Method} {Path}",
+                httpContext.Request.Method, httpContext.Request.Path);
+            httpContext.Response.StatusCode = 499;
+            return true;
+        }
+
         logger.LogError(exception, "Unhandled exception on {Method} {Path}",
             httpContext.Request.Method, httpContext.Request.Path);
 
@@ -33,7 +44,6 @@ public sealed class ProblemDetailsExceptionHandler(
             KeyNotFoundException         => (StatusCodes.Status404NotFound, "Not Found"),
             ArgumentException           => (StatusCodes.Status400BadRequest, "Bad Request"),
             InvalidOperationException   => (StatusCodes.Status422UnprocessableEntity, "Unprocessable Entity"),
-            OperationCanceledException  => (StatusCodes.Status408RequestTimeout, "Request Timeout"),
             _                           => (StatusCodes.Status500InternalServerError, "Internal Server Error"),
         };
 
@@ -47,7 +57,8 @@ public sealed class ProblemDetailsExceptionHandler(
         };
 
         httpContext.Response.StatusCode = status;
-        httpContext.Response.ContentType = MediaTypeNames.Application.Json;
+        // C-2: RFC 7807 §3 requires application/problem+json, not application/json.
+        httpContext.Response.ContentType = ProblemJsonContentType;
         await httpContext.Response.WriteAsync(
             JsonSerializer.Serialize(problem, JsonOptions),
             cancellationToken);

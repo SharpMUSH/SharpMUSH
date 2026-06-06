@@ -322,7 +322,7 @@ public partial class ArangoDatabase : IWikiService
 	}
 
 	private static string Slugify(string title) =>
-		title.ToLowerInvariant().Replace(' ', '_');
+		WikiHelpers.Slugify(title);
 
 	#endregion
 }

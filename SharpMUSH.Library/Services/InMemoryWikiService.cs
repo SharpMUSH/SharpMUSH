@@ -85,12 +85,6 @@ public sealed class InMemoryWikiService : IWikiService
 	{
 		var slug = Slugify(title);
 		var slugKey = SlugKey(ns, slug);
-
-		// Enforce slug uniqueness within namespace
-		if (_slugIndex.ContainsKey(slugKey))
-			return Task.FromResult<OneOf<WikiPage, Error<string>>>(
-				new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{ns}'."));
-
 		var id = NextId();
 		var now = DateTimeOffset.UtcNow;
 		var html = _renderer.RenderToHtml(markdown);
@@ -112,8 +106,14 @@ public sealed class InMemoryWikiService : IWikiService
 			IsProtected: false,
 			RevisionNumber: 1);
 
+		// C-6: Atomic TryAdd eliminates the TOCTOU race between ContainsKey and write.
+		// Two concurrent CreateAsync calls with the same (ns, slug) now correctly reject
+		// the second caller instead of silently clobbering the first.
+		if (!_slugIndex.TryAdd(slugKey, id))
+			return Task.FromResult<OneOf<WikiPage, Error<string>>>(
+				new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{ns}'."));
+
 		_pagesById[id] = page;
-		_slugIndex[slugKey] = id;
 		_revisions[id] = [];
 
 		// Save initial revision snapshot
@@ -210,9 +210,9 @@ public sealed class InMemoryWikiService : IWikiService
 
 	// ── Internals ─────────────────────────────────────────────────────────────
 
-	/// <summary>Generates a string slug from a title.</summary>
+	/// <summary>Generates a URL-safe slug from a title.</summary>
 	private static string Slugify(string title) =>
-		title.ToLowerInvariant().Replace(' ', '_');
+		WikiHelpers.Slugify(title);
 
 	/// <summary>Composite dict key for the slug index.</summary>
 	private static string SlugKey(WikiNamespace ns, string slug) =>

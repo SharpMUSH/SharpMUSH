@@ -47,10 +47,30 @@ public sealed class PrerenderCacheService(IMemoryCache memoryCache, ILogger<Prer
 	public void Set(string path, string html)
 	{
 		var key = CacheKey(path);
-		memoryCache.Set(key, html, new MemoryCacheEntryOptions
+		var options = new MemoryCacheEntryOptions
 		{
 			AbsoluteExpirationRelativeToNow = Ttl,
+		};
+
+		// W-1: Register a post-eviction callback so that TTL-expired entries are
+		// pruned from _keys automatically.  Without this the HashSet grows without
+		// bound because IMemoryCache evictions do not call our Invalidate() method.
+		options.PostEvictionCallbacks.Add(new PostEvictionCallbackRegistration
+		{
+			EvictionCallback = (evictedKey, _, reason, _) =>
+			{
+				if (reason != EvictionReason.Replaced)
+				{
+					var evictedPath = ((string)evictedKey).Length > "prerender:".Length
+						? ((string)evictedKey)["prerender:".Length..]
+						: (string)evictedKey;
+					lock (_keyLock)
+						_keys.Remove(evictedPath);
+				}
+			},
 		});
+
+		memoryCache.Set(key, html, options);
 
 		lock (_keyLock)
 			_keys.Add(path);

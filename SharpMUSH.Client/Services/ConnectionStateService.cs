@@ -123,6 +123,13 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
 		}
+		catch (Exception ex)
+		{
+			// Catch-all: any other transient or unexpected error during connect.
+			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed with unexpected exception");
+			SetState(SignalRState.Disconnected);
+			await DisposeHubAsync();
+		}
 	}
 
 	/// <inheritdoc/>

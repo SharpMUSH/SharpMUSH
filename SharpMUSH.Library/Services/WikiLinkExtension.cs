@@ -146,7 +146,7 @@ internal sealed class WikiLinkParser : InlineParser
 	}
 
 	private static string Slugify(string text) =>
-		text.ToLowerInvariant().Replace(' ', '_');
+		WikiHelpers.Slugify(text);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -166,8 +166,13 @@ internal sealed class WikiLinkHtmlRenderer : HtmlObjectRenderer<WikiLinkInline>
 		var href = $"/wiki/{obj.Slug}";
 		var cssClass = obj.IsRedLink ? " class=\"wiki-redlink\"" : string.Empty;
 		var text = obj.DisplayText ?? obj.Title;
-
-		renderer.Write($"<a href=\"{href}\"{cssClass}>");
+		// C-5: Use WriteEscapeUrl for the href so slug characters like '"' and '>'
+		// cannot break out of the attribute and create an XSS vector.
+		renderer.Write("<a href=\"");
+		renderer.WriteEscapeUrl(href);
+		renderer.Write("\"");
+		renderer.Write(cssClass);
+		renderer.Write(">");
 		renderer.WriteEscape(text);
 		renderer.Write("</a>");
 	}

@@ -45,7 +45,9 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.NATS;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
@@ -81,12 +83,37 @@ public class Startup(
 
 		services.AddCors(options =>
 		{
-			options.AddDefaultPolicy(builder => builder
-				.SetIsOriginAllowed(o => true)
-// .WithOrigins("https://localhost:7102")
-				.AllowAnyMethod()
-				.AllowAnyHeader()
-				.AllowCredentials());  // required for SignalR WebSocket handshake
+			// C-4: Read allowed origins from Cors:AllowedOrigins config array.
+			// Falls back to dev-only wildcard (no AllowCredentials) when no origins are configured.
+			// AllowCredentials() is required for SignalR WebSocket handshake, so it is only
+			// enabled when specific origins are listed (or unconditionally in development, where
+			// localhost is the only practical origin).
+			var allowedOrigins = configuration
+				.GetSection("Cors:AllowedOrigins")
+				.Get<string[]>();
+
+			options.AddDefaultPolicy(builder =>
+			{
+				if (allowedOrigins is { Length: > 0 })
+				{
+					builder.WithOrigins(allowedOrigins)
+						.AllowAnyMethod()
+						.AllowAnyHeader()
+						.AllowCredentials();
+				}
+				else if (environment.IsDevelopment())
+				{
+					builder.SetIsOriginAllowed(_ => true)
+						.AllowAnyMethod()
+						.AllowAnyHeader()
+						.AllowCredentials();
+				}
+				else
+				{
+					// Production with no origins configured: deny all cross-origin requests.
+					builder.WithOrigins(Array.Empty<string>());
+				}
+			});
 		});
 
 		if (databaseProvider == DatabaseProvider.Memgraph)
@@ -336,7 +363,26 @@ public class Startup(
 					ValidAudience = jwtSection["Audience"],
 					ValidateLifetime = true,
 					ClockSkew = TimeSpan.FromSeconds(30),
+					// W-3: Explicitly map sub→NameIdentifier and role→ClaimTypes.Role instead of
+					// relying on JwtSecurityTokenHandler.DefaultInboundClaimTypeMap silently doing it.
+					NameClaimType = JwtRegisteredClaimNames.Sub,
+					RoleClaimType = ClaimTypes.Role,
 				};
+
+				// W-5: Warn when issuer/audience validation is disabled (common misconfiguration).
+				var validateIssuer   = !string.IsNullOrWhiteSpace(jwtSection["Issuer"]);
+				var validateAudience = !string.IsNullOrWhiteSpace(jwtSection["Audience"]);
+				if (!validateIssuer || !validateAudience)
+				{
+					using var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
+					var startupLogger = loggerFactory.CreateLogger<Startup>();
+					startupLogger.LogWarning(
+						"W-5: JWT {Missing} validation is DISABLED — set Jwt:{Missing} in config for production.",
+						!validateIssuer && !validateAudience ? "Issuer+Audience"
+						: !validateIssuer ? "Issuer" : "Audience",
+						!validateIssuer && !validateAudience ? "Issuer and Jwt:Audience"
+						: !validateIssuer ? "Issuer" : "Audience");
+				}
 			});
 		}
 		else if (environment.IsDevelopment())

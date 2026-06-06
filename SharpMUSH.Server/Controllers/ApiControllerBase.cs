@@ -29,6 +29,9 @@ public abstract class ApiControllerBase : ControllerBase
     /// <summary>The <c>character_key</c> claim parsed as <see cref="int"/>, or <see langword="null"/> if absent or non-numeric.</summary>
     protected int? CurrentCharacterKey =>
         int.TryParse(User.FindFirstValue("character_key"), out var k) ? k : null;
+    /// <summary>The <c>character_creation_time</c> claim parsed as <see cref="long"/>, or <see langword="null"/> if absent or non-numeric.</summary>
+    protected long? CurrentCharacterCreationTime =>
+        long.TryParse(User.FindFirstValue("character_creation_time"), out var t) ? t : null;
 
     // ── Envelope helpers ───────────────────────────────────────────────────
 
