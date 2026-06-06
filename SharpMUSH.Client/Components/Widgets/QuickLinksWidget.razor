@@ -1,0 +1,71 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Models.Widgets
+
+@if (_links.Count > 0)
+{
+    @if (_isSidebar)
+    {
+        <MudNavMenu>
+            @foreach (var link in _links)
+            {
+                <MudNavLink Href="@link.Url"
+                            Target="@(link.NewTab ? "_blank" : "_self")"
+                            Icon="@(link.Icon ?? Icons.Material.Filled.Link)">
+                    @link.Label
+                </MudNavLink>
+            }
+        </MudNavMenu>
+    }
+    else
+    {
+        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+            @foreach (var link in _links)
+            {
+                <MudChip T="string"
+                         Href="@link.Url"
+                         Target="@(link.NewTab ? "_blank" : "_self")"
+                         Icon="@(link.Icon ?? Icons.Material.Filled.Link)"
+                         Color="Color.Default"
+                         Size="Size.Small"
+                         Variant="Variant.Outlined">
+                    @link.Label
+                </MudChip>
+            }
+        </MudStack>
+    }
+}
+
+@code {
+    [Parameter] public JsonElement? Config { get; set; }
+
+    /// <summary>
+    /// Injected by ZoneRenderer to tell the widget which zone it is in.
+    /// Used to pick sidebar vs TopBar/Footer rendering style.
+    /// </summary>
+    [Parameter] public string Zone { get; set; } = string.Empty;
+
+    private IReadOnlyList<QuickLink> _links = [];
+    private bool _isSidebar;
+
+    protected override void OnParametersSet()
+    {
+        _isSidebar = Zone is "LeftSidebar" or "RightSidebar";
+
+        if (Config is null)
+        {
+            _links = [];
+            return;
+        }
+
+        try
+        {
+            var cfg = Config.Value.Deserialize<QuickLinksConfig>(
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            _links = cfg?.Links ?? (IReadOnlyList<QuickLink>)[];
+        }
+        catch
+        {
+            _links = [];
+        }
+    }
+}

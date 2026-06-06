@@ -1,0 +1,40 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Models.Widgets
+@using Markdig
+
+@if (!string.IsNullOrWhiteSpace(_html))
+{
+    <div class="welcome-text-widget">
+        @((MarkupString)_html)
+    </div>
+}
+
+@code {
+    [Parameter] public JsonElement? Config { get; set; }
+
+    private string _html = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        if (Config is null)
+        {
+            _html = string.Empty;
+            return;
+        }
+
+        try
+        {
+            var cfg = Config.Value.Deserialize<WelcomeTextConfig>(
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+            if (cfg is not null && !string.IsNullOrWhiteSpace(cfg.Markdown))
+                _html = Markdown.ToHtml(cfg.Markdown);
+            else
+                _html = string.Empty;
+        }
+        catch
+        {
+            _html = string.Empty;
+        }
+    }
+}

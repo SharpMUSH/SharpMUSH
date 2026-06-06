@@ -2,12 +2,14 @@
 @using SharpMUSH.Client.Components
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
+@using SharpMUSH.Library.Models.Portal.Widgets
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
 @inject ITerminalService Terminal
 @inject AccountAuthService AccountAuth
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ILayoutService LayoutService
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
 <MudPopoverProvider />
@@ -24,6 +26,13 @@
         {
             <MudText Typo="Typo.h6" Color="Color.Secondary">@Loc["Configuration"]</MudText>
         }
+
+        @* TopBar widget zone *@
+        @if (_layout is not null)
+        {
+            <ZoneRenderer Zone="WidgetZone.TopBar" Layout="_layout" />
+        }
+
         <MudSpacer />
         <LanguagePicker />
 
@@ -101,6 +110,11 @@
                Variant="@(_isConfigRoute ? DrawerVariant.Mini : DrawerVariant.Responsive)"
                OpenMiniOnHover="true">
         <NavMenu IsCollapsed="@_isConfigRoute" />
+        @* LeftSidebar widget zone placed inside the primary drawer *@
+        @if (_layout is not null && _layout.Settings.LeftSidebarEnabled)
+        {
+            <ZoneRenderer Zone="WidgetZone.LeftSidebar" Layout="_layout" />
+        }
     </MudDrawer>
     
     @* Config Drawer - Shows when on config route *@
@@ -117,13 +131,39 @@
             <ConfigNavDrawer />
         </MudDrawer>
     }
+
+    @* Right Sidebar widget zone — only when enabled and on a non-config route *@
+    @if (_layout is not null && _layout.Settings.RightSidebarEnabled && !_isConfigRoute)
+    {
+        <MudDrawer Open="true"
+                   Anchor="Anchor.Right"
+                   ClipMode="DrawerClipMode.Always"
+                   Variant="DrawerVariant.Persistent"
+                   Width="@_layout.Settings.RightSidebarWidth"
+                   Elevation="2">
+            <ZoneRenderer Zone="WidgetZone.RightSidebar" Layout="_layout" />
+        </MudDrawer>
+    }
     
     <MudMainContent Class="@(_isConfigRoute ? "config-main-content" : "")"
                     Style="@(_terminalOpen ? "padding-bottom: 320px;" : "")">
         <MudContainer MaxWidth="MaxWidth.False" Class="@(_isConfigRoute ? "pa-0" : "")">
             @Body
+            @* MainContent widget zone renders below the page body *@
+            @if (_layout is not null)
+            {
+                <ZoneRenderer Zone="WidgetZone.MainContent" Layout="_layout" />
+            }
         </MudContainer>
     </MudMainContent>
+
+    @* Footer widget zone *@
+    @if (_layout is not null)
+    {
+        <MudPaper Elevation="1" Class="pa-2 widget-footer">
+            <ZoneRenderer Zone="WidgetZone.Footer" Layout="_layout" />
+        </MudPaper>
+    }
 
     @* Global bottom terminal drawer *@
     <MudDrawer @bind-Open="_terminalOpen"
@@ -168,6 +208,7 @@
     private bool _terminalOpen = false;
     private string? _terminalPlayerName;
     private bool _isDebugAuth;
+    private LayoutConfiguration? _layout;
 
     protected override async Task OnInitializedAsync()
     {
@@ -187,7 +228,18 @@
 
         _isDebugAuth = authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         await EnsureAccountRoutingAsync();
+
+        // Load widget layout
+        LayoutService.OnLayoutChanged += HandleLayoutChanged;
+        _layout = await LayoutService.GetLayoutAsync();
     }
+
+    private void HandleLayoutChanged()
+        => InvokeAsync(async () =>
+        {
+            _layout = await LayoutService.GetLayoutAsync();
+            StateHasChanged();
+        });
 
     private async Task SwitchCharacterAsync(AccountAuthService.CharacterSummary character)
     {
@@ -260,6 +312,7 @@
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
+        LayoutService.OnLayoutChanged -= HandleLayoutChanged;
     }
 }
 
