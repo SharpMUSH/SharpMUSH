@@ -76,7 +76,7 @@ public sealed class ThemeService : IThemeService
 		{
 			await _js.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, presetName);
 		}
-		catch
+		catch (JSException)
 		{
 			// localStorage unavailable in some test environments — ignore
 		}
@@ -100,7 +100,7 @@ public sealed class ThemeService : IThemeService
 					_current = match;
 			}
 		}
-		catch
+		catch (JSException)
 		{
 			// ignore — use default
 		}

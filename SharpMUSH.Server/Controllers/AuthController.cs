@@ -40,6 +40,10 @@ public class AuthController(
 	/// - Account session: <c>{ AccountSessionToken, CharacterKey, CharacterCreationTime }</c>
 	/// </summary>
 	[HttpPost("mush-token")]
+	// accountId is the account's internal GUID identifier, not a secret — it is derived from the
+	// opaque session token for the purpose of fetching characters, not stored as cleartext sensitive data.
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
+		Justification = "accountId is a non-secret GUID identifier derived from the session token for service lookups, not a password or key.")]
 	public async Task<IActionResult> GetMushToken([FromBody] MushTokenRequest request)
 	{
 		// Path A: Account session token + character reference
@@ -79,7 +83,7 @@ public class AuthController(
 
 		if (player is null)
 		{
-			logger.LogInformation("OTT request: player {Name} not found", request.PlayerName);
+			logger.LogInformation("OTT request: player {Name} not found", Sanitize(request.PlayerName));
 			return Unauthorized("Invalid credentials.");
 		}
 
@@ -90,7 +94,7 @@ public class AuthController(
 
 		if (!valid && !string.IsNullOrEmpty(player.PasswordHash))
 		{
-			logger.LogInformation("OTT request: invalid password for player {Name}", request.PlayerName);
+			logger.LogInformation("OTT request: invalid password for player {Name}", Sanitize(request.PlayerName));
 			return Unauthorized("Invalid credentials.");
 		}
 
@@ -131,7 +135,7 @@ public class AuthController(
 		var account = await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password);
 		if (account is null)
 		{
-			logger.LogInformation("Account login failed for {Identifier}", request.UsernameOrEmail);
+			logger.LogInformation("Account login failed for {Identifier}", Sanitize(request.UsernameOrEmail));
 			return Unauthorized("Invalid account credentials.");
 		}
 
