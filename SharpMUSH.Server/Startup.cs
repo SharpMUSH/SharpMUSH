@@ -202,6 +202,9 @@ public class Startup(
 		services.AddSingleton<WikiMarkdigPipeline>();
 		services.AddSingleton<IWikiService, InMemoryWikiService>();
 
+// Scene subsystem — InMemorySceneService for dev/test; swap for a persistent implementation later.
+		services.AddSingleton<ISceneService, InMemorySceneService>();
+
 // Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
 		services.AddMemoryCache();
 		services.AddSingleton<Server.Services.IPrerenderCacheService, Server.Services.PrerenderCacheService>();

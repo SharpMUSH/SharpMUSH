@@ -1,7 +1,58 @@
 @page "/scenes"
 @inject IStringLocalizer<SharedResource> Loc
+@inject ISceneService SceneService
 
-<PageTitle>@Loc["SceneArchive"]</PageTitle>
+<PageTitle>@Loc["SceneArchive"] — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4">@Loc["SceneArchive"]</MudText>
-<MudText>@Loc["SceneArchiveComingSoon"]</MudText>
+<MudText Typo="Typo.h4" Class="mb-4">@Loc["SceneArchive"]</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_scenes.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">@Loc["NoScenesArchived"]</MudAlert>
+}
+else
+{
+    <MudTable Items="_scenes" Hover="true" Breakpoint="Breakpoint.Sm" Loading="_loading">
+        <HeaderContent>
+            <MudTh>@Loc["SceneTitle"]</MudTh>
+            <MudTh>@Loc["Room"]</MudTh>
+            <MudTh>@Loc["Participants"]</MudTh>
+            <MudTh>@Loc["Closed"]</MudTh>
+            <MudTh></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="@Loc["SceneTitle"]">
+                @(string.IsNullOrWhiteSpace(context.Title) ? Loc["Untitled"] : context.Title)
+            </MudTd>
+            <MudTd DataLabel="@Loc["Room"]">@context.RoomName</MudTd>
+            <MudTd DataLabel="@Loc["Participants"]">@context.ParticipantDbrefs.Count</MudTd>
+            <MudTd DataLabel="@Loc["Closed"]">
+                @(context.ClosedAt.HasValue
+                    ? context.ClosedAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                    : "—")
+            </MudTd>
+            <MudTd>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Primary"
+                           Href="@($"/scenes/{context.Id}")">
+                    @Loc["Read"]
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private List<SceneArchive> _scenes = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _scenes = [..await SceneService.GetRecentScenesAsync(50)];
+        _loading = false;
+    }
+}

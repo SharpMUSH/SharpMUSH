@@ -23,6 +23,7 @@ builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
 builder.Services.AddSingleton<WikiMarkdigPipeline>();
 builder.Services.AddSingleton<IWikiService, InMemoryWikiService>();
 builder.Services.AddSingleton<WikiService>();
+builder.Services.AddSingleton<ISceneService, InMemorySceneService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();

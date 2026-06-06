@@ -1,12 +1,112 @@
-@page "/scenes/{Id:int}"
+@page "/scenes/{Id}"
 @inject IStringLocalizer<SharedResource> Loc
+@inject ISceneService SceneService
 
-<PageTitle>@Loc["Scene"] #@Id</PageTitle>
+@if (_loading)
+{
+    <PageTitle>@Loc["Scene"] — SharpMUSH</PageTitle>
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_notFound)
+{
+    <PageTitle>@Loc["Scene"] @Id — @Loc["NotFound"]</PageTitle>
+    <MudAlert Severity="Severity.Warning">@Loc["SceneNotFound"]</MudAlert>
+    <MudButton Href="/scenes" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
+        @Loc["BackToArchive"]
+    </MudButton>
+}
+else
+{
+    <PageTitle>@_scene!.Title — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4">@Loc["Scene"] #@Id</MudText>
-<MudText>@Loc["SceneDetailComingSoon"]</MudText>
+    <MudText Typo="Typo.h4" Class="mb-1">
+        @(string.IsNullOrWhiteSpace(_scene!.Title) ? Loc["Untitled"] : _scene!.Title)
+    </MudText>
+    <MudText Typo="Typo.subtitle1" Color="Color.Secondary" Class="mb-1">
+        @_scene!.RoomName
+    </MudText>
+    @if (!string.IsNullOrWhiteSpace(_scene!.Description))
+    {
+        <MudText Typo="Typo.body1" Class="mb-2">@_scene!.Description</MudText>
+    }
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
+        @Loc["StartedAt"]: @_scene.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+        @if (_scene.ClosedAt.HasValue)
+        {
+            <span> · @Loc["ClosedAt"]: @_scene.ClosedAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+        }
+        else
+        {
+            <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="ml-2">@Loc["Active"]</MudChip>
+        }
+    </MudText>
+
+    <MudDivider Class="mb-4" />
+
+    @if (_messages.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">@Loc["NoMessagesInScene"]</MudAlert>
+    }
+    else
+    {
+        <div class="scene-log">
+            @foreach (var msg in _messages)
+            {
+                <div class="scene-line scene-line--@msg.MessageType.ToString().ToLowerInvariant()">
+                    @((MarkupString)msg.RenderedHtml)
+                </div>
+            }
+        </div>
+    }
+
+    @if (!_scene.ClosedAt.HasValue)
+    {
+        <MudButton Href="@($"/scenes/{Id}/live")"
+                   Color="Color.Secondary"
+                   Variant="Variant.Outlined"
+                   Class="mt-4">
+            @Loc["WatchLive"]
+        </MudButton>
+    }
+
+    <MudButton Href="/scenes"
+               Color="Color.Default"
+               Variant="Variant.Text"
+               Class="mt-4 ml-2">
+        @Loc["BackToArchive"]
+    </MudButton>
+}
 
 @code {
     [Parameter]
-    public int Id { get; set; }
+    public required string Id { get; set; }
+
+    private SceneArchive? _scene;
+    private List<SceneMessage> _messages = [];
+    private bool _loading = true;
+    private bool _notFound;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _notFound = false;
+        _messages = [];
+        _scene = null;
+
+        var sceneResult = await SceneService.GetSceneAsync(Id);
+        if (sceneResult.IsT1)
+        {
+            _notFound = true;
+            _loading = false;
+            return;
+        }
+
+        _scene = sceneResult.AsT0;
+
+        var msgResult = await SceneService.GetMessagesAsync(Id);
+        if (msgResult.IsT0)
+            _messages = [..msgResult.AsT0];
+
+        _loading = false;
+    }
 }
