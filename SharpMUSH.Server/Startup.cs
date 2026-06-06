@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -27,6 +28,7 @@ using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -35,7 +37,10 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.NATS;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
@@ -74,7 +79,8 @@ public class Startup(
 				.SetIsOriginAllowed(o => true)
 // .WithOrigins("https://localhost:7102")
 				.AllowAnyMethod()
-				.AllowAnyHeader());
+				.AllowAnyHeader()
+				.AllowCredentials());  // required for SignalR WebSocket handshake
 		});
 
 		if (databaseProvider == DatabaseProvider.Memgraph)
@@ -186,6 +192,10 @@ public class Startup(
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
 
+// Wiki subsystem — InMemoryWikiService for dev/test; swap for ArangoWikiService when backend is ready.
+		services.AddSingleton<WikiMarkdigPipeline>();
+		services.AddSingleton<IWikiService, InMemoryWikiService>();
+
 // Initialize TextFileService
 		services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
 		services.AddSingleton<ILocalizedTextFileService, Implementation.Services.LocalizedTextFileService>();
@@ -280,18 +290,62 @@ public class Startup(
 // where the command queue processes one entry at a time.
 			x.UseDefaultThreadPool(tp => tp.MaxConcurrency = 1);
 		});
-		if (environment.IsDevelopment())
+		// Authentication setup — three cases:
+		// 1) Dev + no JWT key: DebugAuth only (original behaviour)
+		// 2) Dev + JWT key: DebugAuth default, JWT bearer as additional scheme
+		// 3) Prod + JWT key: JWT bearer only
+		var jwtSection = configuration.GetSection(JwtOptions.Section);
+		var jwtKey = jwtSection["SigningKey"];
+
+		if (!string.IsNullOrWhiteSpace(jwtKey))
 		{
+			services.Configure<JwtOptions>(jwtSection);
+			services.AddSingleton<IJwtService, JwtService>();
+
+			// In dev: DebugAuth remains the default scheme so existing dev tooling still works.
+			// JWT bearer is registered as an additional scheme for portal endpoints.
+			// In prod: JWT bearer is the sole default scheme.
+			var authBuilder = environment.IsDevelopment()
+				? services.AddAuthentication(DebugAuthenticationHandler.SchemeName)
+					.AddScheme<AuthenticationSchemeOptions, DebugAuthenticationHandler>(
+						DebugAuthenticationHandler.SchemeName, _ => { })
+				: services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
+
+			authBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opts =>
+			{
+				opts.TokenValidationParameters = new TokenValidationParameters
+				{
+					ValidateIssuerSigningKey = true,
+					IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+					ValidateIssuer = !string.IsNullOrWhiteSpace(jwtSection["Issuer"]),
+					ValidIssuer = jwtSection["Issuer"],
+					ValidateAudience = !string.IsNullOrWhiteSpace(jwtSection["Audience"]),
+					ValidAudience = jwtSection["Audience"],
+					ValidateLifetime = true,
+					ClockSkew = TimeSpan.FromSeconds(30),
+				};
+			});
+		}
+		else if (environment.IsDevelopment())
+		{
+			// No JWT configured: dev-only DebugAuth handler (original behaviour).
 			services.AddAuthentication(DebugAuthenticationHandler.SchemeName)
 				.AddScheme<AuthenticationSchemeOptions, DebugAuthenticationHandler>(
 					DebugAuthenticationHandler.SchemeName, _ => { });
 		}
 
+		// JWT infrastructure (role derivation + refresh tokens) is always registered
+		// so that the services are available even before a signing key is configured.
+		services.AddSingleton<IRoleDerivationService, RoleDerivationService>();
+		services.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
+
+		services.AddSignalR();
 		services.AddAuthorization();
 		services.AddRazorPages();
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
+		services.AddHostedService<NatsBridgeService>();
 		services.AddHostedService<Services.ConnectionReconciliationService>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
 		services.AddHostedService<Services.HealthMonitoringService>();
