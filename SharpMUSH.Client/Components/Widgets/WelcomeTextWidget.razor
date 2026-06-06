@@ -31,8 +31,17 @@
                 ? Markdown.ToHtml(cfg.Markdown)
                 : string.Empty;
         }
-        catch
+        catch (JsonException)
         {
+            _html = string.Empty;
+        }
+        catch (NotSupportedException)
+        {
+            _html = string.Empty;
+        }
+        catch (ArgumentException)
+        {
+            // Invalid markdown input — fall back to empty
             _html = string.Empty;
         }
     }

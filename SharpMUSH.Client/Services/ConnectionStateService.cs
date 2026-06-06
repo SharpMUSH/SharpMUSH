@@ -105,9 +105,21 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
 		}
-		catch (Exception ex)
+		catch (HttpRequestException ex)
 		{
-			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (unexpected)");
+			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (network)");
+			SetState(SignalRState.Disconnected);
+			await DisposeHubAsync();
+		}
+		catch (TaskCanceledException ex)
+		{
+			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (cancelled)");
+			SetState(SignalRState.Disconnected);
+			await DisposeHubAsync();
+		}
+		catch (OperationCanceledException ex)
+		{
+			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed (operation cancelled)");
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
 		}

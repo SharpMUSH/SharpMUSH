@@ -229,6 +229,9 @@ public class AuthController(
 	[HttpPost("jwt-login")]
 	[AllowAnonymous]
 	[EnableRateLimiting("public-api")]
+	// account.Id is a non-secret GUID identifier used for service lookups, not a password or secret value.
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
+		Justification = "account.Id is a non-secret GUID identifier used for service lookups, not a password or secret value.")]
 	public async Task<IActionResult> JwtLogin([FromBody] JwtLoginRequest request)
 	{
 		if (jwtService is null)
@@ -237,7 +240,7 @@ public class AuthController(
 		var account = await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password);
 		if (account is null)
 		{
-			logger.LogInformation("JWT login failed for {Identifier}", request.UsernameOrEmail);
+			logger.LogInformation("JWT login failed for {Identifier}", Sanitize(request.UsernameOrEmail));
 			return Unauthorized("Invalid account credentials.");
 		}
 
@@ -272,6 +275,9 @@ public class AuthController(
 	[HttpPost("jwt-switch-character")]
 	[AllowAnonymous]
 	[EnableRateLimiting("public-api")]
+	// accountId is a non-secret GUID identifier derived from the session token for service lookups, not a password or secret value.
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
+		Justification = "accountId is a non-secret GUID identifier derived from the session token for service lookups, not a password or secret value.")]
 	public async Task<IActionResult> JwtSwitchCharacter([FromBody] JwtSwitchCharacterRequest request)
 	{
 		if (jwtService is null)

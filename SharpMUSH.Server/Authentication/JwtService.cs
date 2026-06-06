@@ -28,6 +28,9 @@ public class JwtService(
 	private readonly JwtOptions _opts = options.Value;
 
 	/// <inheritdoc />
+	// account.Id is a non-secret GUID identifier placed in log messages for service observability, not a password or secret.
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
+		Justification = "account.Id is a non-secret GUID identifier used for observability, not a password or secret value.")]
 	public async Task<JwtTokenResult> IssueTokensAsync(
 		SharpAccount account,
 		SharpPlayer character,
@@ -48,6 +51,9 @@ public class JwtService(
 	}
 
 	/// <inheritdoc />
+	// accountId is a non-secret GUID identifier derived from the refresh token payload for service lookups, not a password or secret.
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
+		Justification = "accountId is a non-secret GUID identifier derived from the refresh token payload for service lookups, not a password or secret value.")]
 	public async Task<JwtTokenResult?> RefreshAsync(string refreshToken, CancellationToken ct = default)
 	{
 		var payload = await refreshTokenStore.ValidateAsync(refreshToken, ct);

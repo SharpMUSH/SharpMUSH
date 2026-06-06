@@ -63,7 +63,11 @@
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
             _links = cfg?.Links ?? (IReadOnlyList<QuickLink>)[];
         }
-        catch
+        catch (JsonException)
+        {
+            _links = [];
+        }
+        catch (NotSupportedException)
         {
             _links = [];
         }

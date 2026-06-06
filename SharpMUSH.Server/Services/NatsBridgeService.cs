@@ -44,31 +44,52 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		NatsConnection? nats = null;
-		try
-		{
-			_logger.LogInformation("[NatsBridge] Connecting to NATS at {Url}", _natsOptions.Url);
-			nats = new NatsConnection(new NatsOpts { Url = _natsOptions.Url });
-			await nats.ConnectAsync();
-			_logger.LogInformation("[NatsBridge] Connected. Subscribing to game.output.* and game.room.*");
+		// W-6: Wrap the connect+subscribe loop in an exponential-backoff retry
+		// so the service recovers from transient NATS connection drops without
+		// requiring a full process restart.
+		var delay = 2;
 
-			var outputTask = SubscribeOutputAsync(nats, stoppingToken);
-			var roomTask = SubscribeRoomAsync(nats, stoppingToken);
+		while (!stoppingToken.IsCancellationRequested)
+		{
+			NatsConnection? nats = null;
+			try
+			{
+				_logger.LogInformation("[NatsBridge] Connecting to NATS at {Url}", _natsOptions.Url);
+				nats = new NatsConnection(new NatsOpts { Url = _natsOptions.Url });
+				await nats.ConnectAsync();
+				_logger.LogInformation("[NatsBridge] Connected. Subscribing to game.output.* and game.room.*");
+				delay = 2; // reset backoff on successful connect
 
-			await Task.WhenAll(outputTask, roomTask);
-		}
-		catch (OperationCanceledException)
-		{
-			_logger.LogInformation("[NatsBridge] Bridge service shutting down (cancelled).");
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "[NatsBridge] Bridge service encountered a fatal error.");
-		}
-		finally
-		{
-			if (nats is not null)
-				await nats.DisposeAsync();
+				var outputTask = SubscribeOutputAsync(nats, stoppingToken);
+				var roomTask   = SubscribeRoomAsync(nats, stoppingToken);
+
+				await Task.WhenAll(outputTask, roomTask);
+				// Both subscription loops exited cleanly (cancellation token triggered).
+				break;
+			}
+			catch (OperationCanceledException)
+			{
+				_logger.LogInformation("[NatsBridge] Bridge service shutting down (cancelled).");
+				break;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[NatsBridge] Bridge error; retrying in {Delay}s", delay);
+				try
+				{
+					await Task.Delay(TimeSpan.FromSeconds(delay), stoppingToken);
+				}
+				catch (OperationCanceledException)
+				{
+					break;
+				}
+				delay = Math.Min(delay * 2, 30);
+			}
+			finally
+			{
+				if (nats is not null)
+					await nats.DisposeAsync();
+			}
 		}
 	}
 

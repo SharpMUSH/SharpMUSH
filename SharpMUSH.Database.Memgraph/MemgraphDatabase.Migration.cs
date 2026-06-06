@@ -92,7 +92,8 @@ public partial class MemgraphDatabase
 			foreach (var q in indexQueries)
 			{
 				try { await ExecuteWithRetryAsync(q, ct: cancellationToken); }
-				catch { /* Index may already exist */ }
+				catch (ClientException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+				{ /* Index already exists — safe to ignore */ }
 			}
 
 			// Wiki indexes
@@ -108,7 +109,8 @@ public partial class MemgraphDatabase
 			foreach (var wq in wikiIndexQueries)
 			{
 				try { await ExecuteWithRetryAsync(wq, ct: cancellationToken); }
-				catch { /* Index may already exist */ }
+				catch (ClientException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+				{ /* Index already exists — safe to ignore */ }
 			}
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
