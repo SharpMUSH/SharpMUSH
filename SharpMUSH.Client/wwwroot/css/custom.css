@@ -284,3 +284,36 @@ body {
 .scene-line--live {
     color: #d4d4d4;
 }
+
+/* Wiki images — lazy loading, constrained width, lightbox-ready */
+.wiki-img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0.5rem 0;
+    cursor: zoom-in;
+}
+
+/* Lightbox overlay: activated by JS adding data-lightbox-open to <body> */
+.wiki-img-lightbox-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    cursor: zoom-out;
+}
+
+.wiki-img-lightbox-overlay.is-open {
+    display: flex;
+}
+
+.wiki-img-lightbox-overlay img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}

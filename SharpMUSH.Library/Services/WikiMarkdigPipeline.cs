@@ -38,6 +38,7 @@ public sealed class WikiMarkdigPipeline
 		new MarkdownPipelineBuilder()
 			.UseAdvancedExtensions()
 			.Use<WikiLinkExtension>()
+			.Use<WikiImageExtension>()
 			.DisableHtml()
 			.Build();
 

@@ -60,6 +60,12 @@ public partial class RecursiveMarkdownRenderer
 
 	protected virtual MString RenderLink(LinkInline link, MString content)
 	{
+		// Images have no meaningful textual representation in a terminal context.
+		// Render as "[image: <alt>]" using the alt text extracted from the inline
+		// content, falling back to "[image]" when no alt text is provided.
+		if (link.IsImage)
+			return RenderImage(link, content);
+
 		// Create hyperlink using ANSI OSC 8 escape sequence
 		var url = link.Url ?? string.Empty;
 		var contentText = content.ToPlainText().Trim();
@@ -79,6 +85,20 @@ public partial class RecursiveMarkdownRenderer
 		// Create hyperlink markup with linkUrl parameter
 		var linkMarkup = Ansi.Create(linkUrl: url);
 		return MModule.MarkupSingle(linkMarkup, contentText);
+	}
+
+	/// <summary>
+	/// Renders an image reference as a plain-text placeholder suitable for
+	/// terminal/MUSH display: <c>[image: alt text]</c> or <c>[image]</c> when
+	/// no alt text is available.
+	/// </summary>
+	protected virtual MString RenderImage(LinkInline link, MString content)
+	{
+		var alt = content.ToPlainText().Trim();
+		var placeholder = string.IsNullOrWhiteSpace(alt)
+			? "[image]"
+			: $"[image: {alt}]";
+		return MModule.MarkupSingle(_dimStyle, placeholder);
 	}
 
 	protected virtual MString RenderAutolink(AutolinkInline autolink)

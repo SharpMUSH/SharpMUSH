@@ -748,6 +748,34 @@ public class RecursiveMarkdownRendererTests
 		// Table uses faint ANSI for borders
 		await Assert.That(result.ToString().Contains(Faint)).IsTrue();
 	}
+
+	/// <summary>
+	/// Images in Markdown are not renderable as ANSI graphics in a terminal/MUSH
+	/// context.  The renderer should emit a faint <c>[image: alt text]</c>
+	/// placeholder so the reader at least knows an image was here.
+	/// </summary>
+	[Test]
+	public async Task MarkdownToMString_Image_FallsBackToAltTextPlaceholder()
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("![A cute cat](https://example.com/cat.jpg)", maxWidth: 78);
+
+		var plainText = result.ToPlainText();
+		await Assert.That(plainText).Contains("[image: A cute cat]");
+	}
+
+	/// <summary>
+	/// An image with no alt text should still produce a sensible placeholder.
+	/// </summary>
+	[Test]
+	public async Task MarkdownToMString_ImageNoAlt_FallsBackToImagePlaceholder()
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown("![](https://example.com/bg.png)", maxWidth: 78);
+
+		var plainText = result.ToPlainText();
+		await Assert.That(plainText).Contains("[image]");
+	}
 }
 
 /// <summary>

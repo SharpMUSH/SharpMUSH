@@ -294,4 +294,34 @@ public class WikiMarkdigPipelineTests
 		foreach (var html in results)
 			await Assert.That(html).Contains("<a href=");
 	}
+
+	// ── Image handling ────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Standard Markdown image syntax should produce an &lt;img&gt; with
+	/// <c>loading="lazy"</c> and <c>class="wiki-img"</c> for CSS-driven lightbox.
+	/// </summary>
+	[Test]
+	public async Task RenderToHtml_Image_EmitsLazyLoadAndWikiImgClass()
+	{
+		var html = Pipeline().RenderToHtml("![A cat sitting](https://example.com/cat.jpg)");
+
+		await Assert.That(html).Contains("src=\"https://example.com/cat.jpg\"");
+		await Assert.That(html).Contains("alt=\"A cat sitting\"");
+		await Assert.That(html).Contains("loading=\"lazy\"");
+		await Assert.That(html).Contains("class=\"wiki-img\"");
+	}
+
+	/// <summary>
+	/// Image with empty alt text still renders with lazy loading and wiki-img class.
+	/// </summary>
+	[Test]
+	public async Task RenderToHtml_ImageNoAlt_EmitsLazyLoadAndWikiImgClass()
+	{
+		var html = Pipeline().RenderToHtml("![](https://example.com/bg.png)");
+
+		await Assert.That(html).Contains("src=\"https://example.com/bg.png\"");
+		await Assert.That(html).Contains("loading=\"lazy\"");
+		await Assert.That(html).Contains("class=\"wiki-img\"");
+	}
 }
