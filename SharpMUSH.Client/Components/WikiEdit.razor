@@ -4,16 +4,19 @@
 
 <br/>
 <MudPaper>
+    @if (Article is not null)
+    {
     <MarkdownEditor @bind-Value="@Article.Content"
-                    ValueHTMLChanged="@OnMarkdownValueHTMLChanged"
-                    MaxHeight="75vh"    
-    Theme="material">
+                        ValueHTMLChanged="@OnMarkdownValueHTMLChanged"
+                        MaxHeight="75vh"
+                        Theme="material">
     </MarkdownEditor>
+    }
 </MudPaper>
 
 @code {
     [Parameter]
-    public required WikiArticle Article { get; set; }
+    public required WikiArticle? Article { get; set; }
     MarkupString markdownHtml;
 
     Task OnMarkdownValueHTMLChanged(string value)

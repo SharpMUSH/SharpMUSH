@@ -35,10 +35,10 @@
             : (IReadOnlyList<WidgetPlacement>)[];
     }
 
-    private Dictionary<string, object?> BuildParams(WidgetPlacement placement)
+    private Dictionary<string, object> BuildParams(WidgetPlacement placement)
         => new()
         {
-            ["Config"] = placement.Config,
+            ["Config"] = placement.Config!,
             ["Zone"] = Zone.ToString()
         };
 }
