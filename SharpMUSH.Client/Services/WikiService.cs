@@ -88,11 +88,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	}
 
 	/// <summary>
-	/// Saves updated markdown for an existing page identified by its server-side ID.
+	/// Saves updated markdown for an existing page, identified by its URL slug.
+	/// Slug is used (not the internal DB ID) because ArangoDB IDs contain a '/'
+	/// that cannot safely survive URL-encoding through ASP.NET Core routing.
 	/// Returns the updated <see cref="WikiArticle"/> or a string error message.
 	/// </summary>
 	public async ValueTask<OneOf<WikiArticle, string>> UpdatePageAsync(
-		string id,
+		string slug,
 		string markdown,
 		string? editSummary = null)
 	{
@@ -100,7 +102,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var response = await http.PutAsJsonAsync(
-				$"api/wiki/{Uri.EscapeDataString(id)}",
+				$"api/wiki/{Uri.EscapeDataString(slug)}",
 				new UpdatePageRequest(markdown, editSummary));
 
 			if (response.IsSuccessStatusCode)
@@ -116,7 +118,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "UpdatePageAsync failed for id={Id}", id);
+			logger.LogError(ex, "UpdatePageAsync failed for slug={Slug}", slug);
 			return ex.Message;
 		}
 	}
@@ -132,5 +134,6 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		)
 		{
 			Id = dto.Id,
+			Slug = dto.Slug,
 		};
 }

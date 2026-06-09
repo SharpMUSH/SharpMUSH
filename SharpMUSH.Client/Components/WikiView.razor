@@ -40,7 +40,7 @@ else
     {
         // Build a draft from the current article (or a blank new one if the page doesn't exist yet).
         _editDraft = _article is not null
-            ? new WikiArticle(_article.Title, _article.Content, _article.Image, _article.RenderedHtml) { Id = _article.Id }
+            ? new WikiArticle(_article.Title, _article.Content, _article.Image, _article.RenderedHtml) { Id = _article.Id, Slug = _article.Slug }
             : new WikiArticle(Slug, string.Empty, null);
 
         _saveError = null;
@@ -53,14 +53,14 @@ else
         _saveError = null;
         OneOf.OneOf<WikiArticle, string> result;
 
-        if (string.IsNullOrEmpty(draft.Id))
+        if (string.IsNullOrEmpty(draft.Slug))
         {
             // New page — title comes from the slug (display-ified) or whatever the editor set.
             result = await Wiki.CreatePageAsync(draft.Title, draft.Content);
         }
         else
         {
-            result = await Wiki.UpdatePageAsync(draft.Id, draft.Content);
+            result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content);
         }
 
         await result.Match<Task>(

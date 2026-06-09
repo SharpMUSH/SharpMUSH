@@ -22,9 +22,9 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET    /api/wiki/character/{name}  — character namespace alias
 ///   GET    /api/wiki/recent           — recently updated pages
 ///   POST   /api/wiki                  — create page (authenticated)
-///   PUT    /api/wiki/{id}             — update page (authenticated)
-///   DELETE /api/wiki/{id}             — delete page (Wizard+)
-///   PUT    /api/wiki/{id}/protection  — set protection flag (Wizard+)
+///   PUT    /api/wiki/{slug}            — update page (authenticated)
+///   DELETE /api/wiki/{slug}             — delete page (Wizard+)
+///   PUT    /api/wiki/{slug}/protection  — set protection flag (Wizard+)
 ///   POST   /api/wiki/invalidate-cache — evict pre-render cache entries after an edit
 /// </summary>
 [ApiController]
@@ -143,19 +143,25 @@ public class WikiController(
 	}
 
 	/// <summary>
-	/// PUT /api/wiki/{id}
-	/// Updates an existing wiki page's markdown content.
+	/// PUT /api/wiki/{slug}
+	/// Updates an existing wiki page's markdown content, identified by its slug.
+	/// Using slug (not the internal DB ID) avoids encoded-slash routing issues with
+	/// ArangoDB-style IDs (e.g. "node_wiki_pages/1532") which contain a literal '/'.
 	/// </summary>
-	[HttpPut("{id}")]
+	[HttpPut("{slug}")]
 	[Authorize]
-	public async Task<IActionResult> UpdatePage(string id, [FromBody] UpdatePageRequest request)
+	public async Task<IActionResult> UpdatePage(string slug, [FromBody] UpdatePageRequest request)
 	{
 		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var lookup = await wikiService.GetBySlugAsync(slug);
+		if (lookup.IsT1) return NotFound();
+
+		var id = lookup.AsT0.Id;
 		var result = await wikiService.UpdateAsync(id, request.Markdown, editorDbref, request.EditSummary);
 		return result.Match<IActionResult>(
 			page =>
 			{
-				logger.LogInformation("Wiki page updated: id={Id} rev={Rev} by={Editor}", id, page.RevisionNumber, editorDbref);
+				logger.LogInformation("Wiki page updated: slug={Slug} rev={Rev} by={Editor}", slug, page.RevisionNumber, editorDbref);
 				prerenderCache.InvalidatePrefix($"/wiki/");
 				return Ok(ToDto(page));
 			},
@@ -163,19 +169,23 @@ public class WikiController(
 	}
 
 	/// <summary>
-	/// DELETE /api/wiki/{id}
-	/// Deletes a wiki page and all its revisions.
+	/// DELETE /api/wiki/{slug}
+	/// Deletes a wiki page and all its revisions, identified by slug.
 	/// </summary>
-	[HttpDelete("{id}")]
+	[HttpDelete("{slug}")]
 	[Authorize(Roles = nameof(PortalRole.Wizard))]
-	public async Task<IActionResult> DeletePage(string id)
+	public async Task<IActionResult> DeletePage(string slug)
 	{
 		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var lookup = await wikiService.GetBySlugAsync(slug);
+		if (lookup.IsT1) return NotFound();
+
+		var id = lookup.AsT0.Id;
 		var result = await wikiService.DeleteAsync(id, editorDbref);
 		return result.Match<IActionResult>(
 			_ =>
 			{
-				logger.LogInformation("Wiki page deleted: id={Id} by={Editor}", id, editorDbref);
+				logger.LogInformation("Wiki page deleted: slug={Slug} by={Editor}", slug, editorDbref);
 				prerenderCache.InvalidatePrefix($"/wiki/");
 				return NoContent();
 			},
@@ -183,13 +193,17 @@ public class WikiController(
 	}
 
 	/// <summary>
-	/// PUT /api/wiki/{id}/protection
-	/// Sets or clears the protection flag on a wiki page.
+	/// PUT /api/wiki/{slug}/protection
+	/// Sets or clears the protection flag on a wiki page, identified by slug.
 	/// </summary>
-	[HttpPut("{id}/protection")]
+	[HttpPut("{slug}/protection")]
 	[Authorize(Roles = nameof(PortalRole.Wizard))]
-	public async Task<IActionResult> SetProtection(string id, [FromBody] SetProtectionRequest request)
+	public async Task<IActionResult> SetProtection(string slug, [FromBody] SetProtectionRequest request)
 	{
+		var lookup = await wikiService.GetBySlugAsync(slug);
+		if (lookup.IsT1) return NotFound();
+
+		var id = lookup.AsT0.Id;
 		var result = await wikiService.SetProtectionAsync(id, request.IsProtected);
 		return result.Match<IActionResult>(
 			_ => Ok(),
