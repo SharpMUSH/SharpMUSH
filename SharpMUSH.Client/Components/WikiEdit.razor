@@ -1,27 +1,63 @@
 ﻿@using SharpMUSH.Client.Models
 @inject IJSRuntime JsRuntime
 
-
-<br/>
 <MudPaper>
     @if (Article is not null)
     {
-    <MarkdownEditor @bind-Value="@Article.Content"
+        <MarkdownEditor @bind-Value="@Article.Content"
                         ValueHTMLChanged="@OnMarkdownValueHTMLChanged"
                         MaxHeight="75vh"
-                        Theme="material">
-    </MarkdownEditor>
+                        Theme="material" />
     }
 </MudPaper>
+<MudStack Row="true" Class="mt-2">
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Save"
+               Style="text-transform: none;"
+               Disabled="@_saving"
+               OnClick="@HandleSave">
+        @(_saving ? "Saving…" : "Save")
+    </MudButton>
+    <MudButton Variant="Variant.Text"
+               Color="Color.Default"
+               Style="text-transform: none;"
+               Disabled="@_saving"
+               OnClick="@OnCancel">
+        Cancel
+    </MudButton>
+    @if (_errorMessage is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="ml-2">@_errorMessage</MudAlert>
+    }
+</MudStack>
 
 @code {
-    [Parameter]
-    public required WikiArticle? Article { get; set; }
-    MarkupString markdownHtml;
+    [Parameter] public required WikiArticle? Article { get; set; }
 
-    Task OnMarkdownValueHTMLChanged(string value)
+    /// <summary>Invoked after a successful save with the updated article.</summary>
+    [Parameter] public EventCallback<WikiArticle> OnSaved { get; set; }
+
+    /// <summary>Invoked when the user clicks Cancel.</summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool _saving;
+    private string? _errorMessage;
+
+    private MarkupString _markdownHtml;
+
+    private Task OnMarkdownValueHTMLChanged(string value)
     {
-        markdownHtml = (MarkupString)value;
+        _markdownHtml = (MarkupString)value;
         return Task.CompletedTask;
+    }
+
+    private async Task HandleSave()
+    {
+        if (Article is null) return;
+        _saving = true;
+        _errorMessage = null;
+        await OnSaved.InvokeAsync(Article);
+        _saving = false;
     }
 }

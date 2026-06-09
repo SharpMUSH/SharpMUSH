@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
+using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
@@ -13,6 +15,7 @@ public class StartupHandler(
 	ILogger<StartupHandler> logger,
 	IExpandedObjectDataService data,
 	IOptionsWrapper<SharpMUSHOptions> options,
+	IWikiService wikiService,
 	IMessageBus messageBus)
 	: IHostedService
 {
@@ -41,6 +44,34 @@ public class StartupHandler(
 		{
 			logger.LogDebug("Default MOTD data already present; skipping seeding.");
 		}
+
+		// Seed the "home" wiki page. CreateAsync is a no-op if the slug already exists, so
+		// this is safe on every restart.
+		var homeResult = await wikiService.CreateAsync(
+			title: "Home",
+			markdown: """
+				# Welcome to SharpMUSH!
+
+				This is your MUSH's home page. It's stored as a wiki article and can be edited
+				by any authorised user.
+
+				## Getting started
+
+				- Connect with a MU* client on port **4201**
+				- Or use the terminal panel below
+				- Create a character with `create <name> <password>`
+				- Then log in with `connect <name> <password>`
+
+				## About SharpMUSH
+
+				SharpMUSH is a modern, open-source MUSH server written in .NET, targeting
+				PennMUSH compatibility. See the [wiki](/wiki/wiki-index) for more information.
+				""",
+			authorDbref: "#1",
+			ns: WikiNamespace.Main);
+		homeResult.Switch(
+			page => logger.LogInformation("Home wiki page seeded (id={Id}).", page.Id),
+			err => logger.LogDebug("Home wiki page already exists; skipping seed. ({Msg})", err.Value));
 
 		logger.LogInformation("Initializing configurable aliases and restrictions from database.");
 		var currentOptions = options.CurrentValue;

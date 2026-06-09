@@ -1,45 +1,92 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject WikiService Wiki
-
+@inject NavigationManager Nav
 
 @if (Mode == WikiMode.View)
 {
-    <WikiDisplay Slug=@Slug Article=@_article ActivateEditMode="ActivateEditMode" />
+    <WikiDisplay Slug="@Slug" Article="@_article" ActivateEditMode="ActivateEditMode" />
 }
 else
 {
-    <br/>
-    <WikiEdit Article=@_article/>
+    <br />
+    <WikiEdit Article="@_editDraft"
+              OnSaved="@HandleSave"
+              OnCancel="@HandleCancel" />
+    @if (_saveError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-2">@_saveError</MudAlert>
+    }
 }
 
 @code {
-    public enum WikiMode
-    {
-        View,
-        Edit
-    }
+    public enum WikiMode { View, Edit }
 
-    [Parameter]
-    public required string Slug { get; init; }
-
-    [Parameter]
-    public required WikiMode Mode { get; set; } = WikiMode.View;
-
-    public async Task ActivateEditMode()
-    {
-        await ValueTask.CompletedTask;
-        Mode = WikiMode.Edit;
-    }
+    [Parameter] public required string Slug { get; init; }
+    [Parameter] public required WikiMode Mode { get; set; } = WikiMode.View;
 
     private WikiArticle? _article;
 
+    // A shallow copy of _article used while editing so the view copy is not mutated live.
+    private WikiArticle? _editDraft;
+    private string? _saveError;
+
+    public async Task ActivateEditMode()
+    {
+        // Build a draft from the current article (or a blank new one if the page doesn't exist yet).
+        _editDraft = _article is not null
+            ? new WikiArticle(_article.Title, _article.Content, _article.Image, _article.RenderedHtml) { Id = _article.Id }
+            : new WikiArticle(Slug, string.Empty, null);
+
+        _saveError = null;
+        Mode = WikiMode.Edit;
+        StateHasChanged();
+    }
+
+    private async Task HandleSave(WikiArticle draft)
+    {
+        _saveError = null;
+        OneOf.OneOf<WikiArticle, string> result;
+
+        if (string.IsNullOrEmpty(draft.Id))
+        {
+            // New page — title comes from the slug (display-ified) or whatever the editor set.
+            result = await Wiki.CreatePageAsync(draft.Title, draft.Content);
+        }
+        else
+        {
+            result = await Wiki.UpdatePageAsync(draft.Id, draft.Content);
+        }
+
+        await result.Match<Task>(
+            updated =>
+            {
+                _article = updated;
+                _editDraft = null;
+                Mode = WikiMode.View;
+                StateHasChanged();
+                return Task.CompletedTask;
+            },
+            err =>
+            {
+                _saveError = err;
+                StateHasChanged();
+                return Task.CompletedTask;
+            });
+    }
+
+    private void HandleCancel()
+    {
+        _editDraft = null;
+        _saveError = null;
+        Mode = WikiMode.View;
+        StateHasChanged();
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        var article = await Wiki.GetWikiArticle(Slug);
-        
-        _article = article.IsT0 ? article.AsT0 : null;
-
+        var result = await Wiki.GetWikiArticle(Slug);
+        _article = result.IsT0 ? result.AsT0 : null;
         await base.OnInitializedAsync();
     }
 }

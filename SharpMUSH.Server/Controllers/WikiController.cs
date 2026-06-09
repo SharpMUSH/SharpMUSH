@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Services;
 using System.Net;
+using System.Security.Claims;
 using System.Text;
 using System.Web;
 
@@ -15,10 +17,15 @@ namespace SharpMUSH.Server.Controllers;
 /// <summary>
 /// REST API for wiki page data and bot-facing pre-rendered HTML.
 /// Routes:
-///   GET /api/wiki/{slug}            — JSON page data (all clients)
-///   GET /api/wiki/{slug}/exists     — existence check (case-insensitive)
-///   GET /api/wiki/{ns}/{slug}       — page in a specific namespace
-///   POST /api/wiki/invalidate-cache — evict pre-render cache entries after an edit
+///   GET    /api/wiki/{slug}            — JSON page data (all clients)
+///   GET    /api/wiki/ns/{ns}/{slug}    — namespaced page
+///   GET    /api/wiki/character/{name}  — character namespace alias
+///   GET    /api/wiki/recent           — recently updated pages
+///   POST   /api/wiki                  — create page (authenticated)
+///   PUT    /api/wiki/{id}             — update page (authenticated)
+///   DELETE /api/wiki/{id}             — delete page (Wizard+)
+///   PUT    /api/wiki/{id}/protection  — set protection flag (Wizard+)
+///   POST   /api/wiki/invalidate-cache — evict pre-render cache entries after an edit
 /// </summary>
 [ApiController]
 [Route("api/wiki")]
@@ -29,12 +36,13 @@ public class WikiController(
 {
 	// ── DTO record types ─────────────────────────────────────────────────────
 
-	/// <summary>Lightweight page summary returned by the API.</summary>
+	/// <summary>Page data returned by the API. Includes MarkdownSource so the editor can round-trip.</summary>
 	public record WikiPageDto(
 		string Id,
 		string Slug,
 		string Title,
 		string Namespace,
+		string MarkdownSource,
 		string RenderedHtml,
 		string PlainText,
 		DateTimeOffset CreatedAt,
@@ -45,7 +53,7 @@ public class WikiController(
 	// ── Helpers ──────────────────────────────────────────────────────────────
 
 	private static WikiPageDto ToDto(WikiPage p) => new(
-		p.Id, p.Slug, p.Title, p.Namespace, p.RenderedHtml, p.PlainText,
+		p.Id, p.Slug, p.Title, p.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
 		p.CreatedAt, p.UpdatedAt, p.IsProtected, p.RevisionNumber);
 
 	private static WikiNamespace ParseNamespace(string? ns) =>
@@ -101,6 +109,91 @@ public class WikiController(
 	{
 		var pages = await wikiService.GetRecentChangesAsync(count);
 		return Ok(pages.Select(ToDto));
+	}
+
+	// ── Write endpoints ───────────────────────────────────────────────────────
+
+	/// <summary>Request body for creating a new wiki page.</summary>
+	public record CreatePageRequest(string Title, string Markdown, string? Namespace);
+
+	/// <summary>Request body for updating an existing wiki page.</summary>
+	public record UpdatePageRequest(string Markdown, string? EditSummary);
+
+	/// <summary>Request body for setting page protection.</summary>
+	public record SetProtectionRequest(bool IsProtected);
+
+	/// <summary>
+	/// POST /api/wiki
+	/// Creates a new wiki page. The slug is derived from the title.
+	/// </summary>
+	[HttpPost]
+	[Authorize]
+	public async Task<IActionResult> CreatePage([FromBody] CreatePageRequest request)
+	{
+		var authorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var ns = ParseNamespace(request.Namespace);
+		var result = await wikiService.CreateAsync(request.Title, request.Markdown, authorDbref, ns);
+		return result.Match<IActionResult>(
+			page =>
+			{
+				logger.LogInformation("Wiki page created: slug={Slug} ns={Ns} by={Author}", page.Slug, ns, authorDbref);
+				return CreatedAtAction(nameof(GetPage), new { slug = page.Slug }, ToDto(page));
+			},
+			err => Conflict(new { error = err.Value }));
+	}
+
+	/// <summary>
+	/// PUT /api/wiki/{id}
+	/// Updates an existing wiki page's markdown content.
+	/// </summary>
+	[HttpPut("{id}")]
+	[Authorize]
+	public async Task<IActionResult> UpdatePage(string id, [FromBody] UpdatePageRequest request)
+	{
+		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var result = await wikiService.UpdateAsync(id, request.Markdown, editorDbref, request.EditSummary);
+		return result.Match<IActionResult>(
+			page =>
+			{
+				logger.LogInformation("Wiki page updated: id={Id} rev={Rev} by={Editor}", id, page.RevisionNumber, editorDbref);
+				prerenderCache.InvalidatePrefix($"/wiki/");
+				return Ok(ToDto(page));
+			},
+			_ => NotFound());
+	}
+
+	/// <summary>
+	/// DELETE /api/wiki/{id}
+	/// Deletes a wiki page and all its revisions.
+	/// </summary>
+	[HttpDelete("{id}")]
+	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	public async Task<IActionResult> DeletePage(string id)
+	{
+		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var result = await wikiService.DeleteAsync(id, editorDbref);
+		return result.Match<IActionResult>(
+			_ =>
+			{
+				logger.LogInformation("Wiki page deleted: id={Id} by={Editor}", id, editorDbref);
+				prerenderCache.InvalidatePrefix($"/wiki/");
+				return NoContent();
+			},
+			_ => NotFound());
+	}
+
+	/// <summary>
+	/// PUT /api/wiki/{id}/protection
+	/// Sets or clears the protection flag on a wiki page.
+	/// </summary>
+	[HttpPut("{id}/protection")]
+	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	public async Task<IActionResult> SetProtection(string id, [FromBody] SetProtectionRequest request)
+	{
+		var result = await wikiService.SetProtectionAsync(id, request.IsProtected);
+		return result.Match<IActionResult>(
+			_ => Ok(),
+			_ => NotFound());
 	}
 
 	// ── Cache invalidation ────────────────────────────────────────────────────

@@ -10,6 +10,9 @@ public class WikiArticle
 		RenderedHtml = renderedHtml;
 	}
 
+	/// <summary>Server-side storage ID. Empty for locally-created (unsaved) pages.</summary>
+	public string Id { get; set; } = string.Empty;
+
 	public string Title { get; set; }
 
 	/// <summary>Raw Markdown source (used as edit content and fallback render input).</summary>

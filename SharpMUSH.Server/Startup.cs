@@ -226,9 +226,9 @@ public class Startup(
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
 
-// Wiki subsystem — InMemoryWikiService for dev/test; swap for ArangoWikiService when backend is ready.
+// Wiki subsystem — backed by whichever ISharpDatabase is active (all three DB backends implement IWikiService).
 		services.AddSingleton<WikiMarkdigPipeline>();
-		services.AddSingleton<IWikiService, InMemoryWikiService>();
+		services.AddSingleton<IWikiService>(sp => (IWikiService)sp.GetRequiredService<ISharpDatabase>());
 
 // Scene subsystem — InMemorySceneService for dev/test; swap for a persistent implementation later.
 		services.AddSingleton<ISceneService, InMemorySceneService>();
