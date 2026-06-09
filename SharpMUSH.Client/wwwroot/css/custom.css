@@ -215,3 +215,105 @@ body {
     margin: 0 0 8px;
 }
 .mush-help-md strong { color: #dcdcaa; }
+
+/* ── Scene log ── */
+
+/* Scrollable transcript container */
+.scene-log {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    background: #111;
+    color: #d4d4d4;
+    padding: 8px 12px;
+    border-radius: 4px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Live variant: fills available height and scrolls to bottom */
+.scene-log--live {
+    border: 1px solid #333;
+}
+
+/* Single transcript line */
+.scene-line {
+    padding: 2px 0;
+    word-break: break-word;
+}
+
+/* ── Per-type scene line colours ── */
+
+.scene-line--pose {
+    color: #c8c8c8;
+    font-style: italic;
+}
+
+.scene-line--say {
+    color: #9cdcfe;
+}
+
+.scene-line--whisper {
+    color: #888;
+    font-style: italic;
+}
+
+.scene-line--ooc {
+    color: #a3be8c;
+}
+
+.scene-line--system {
+    color: #d7ba7d;
+    font-size: 11px;
+    opacity: 0.75;
+}
+
+.scene-line--normal {
+    color: #d4d4d4;
+}
+
+/* Archived lines (visible in live view once scene closes) */
+.scene-line--archived {
+    opacity: 0.65;
+}
+
+/* Lines actively arriving in a live scene */
+.scene-line--live {
+    color: #d4d4d4;
+}
+
+/* Wiki images — lazy loading, constrained width, lightbox-ready */
+.wiki-img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0.5rem 0;
+    cursor: zoom-in;
+}
+
+/* Lightbox overlay: activated by JS adding data-lightbox-open to <body> */
+.wiki-img-lightbox-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    cursor: zoom-out;
+}
+
+.wiki-img-lightbox-overlay.is-open {
+    display: flex;
+}
+
+.wiki-img-lightbox-overlay img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}

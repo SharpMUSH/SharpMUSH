@@ -1,7 +1,11 @@
+using Asp.Versioning;
 using Core.Arango;
 using Mediator;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,11 +13,14 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Hubs;
+using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using SurrealDb.Net;
 using SurrealDb.Embedded.InMemory;
+using System.Threading.RateLimiting;
 using OpenTelemetry.ResourceDetectors.Container;
 using Quartz;
 using Serilog;
@@ -27,6 +34,7 @@ using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -35,7 +43,12 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.NATS;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using System.Text;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
@@ -70,11 +83,37 @@ public class Startup(
 
 		services.AddCors(options =>
 		{
-			options.AddDefaultPolicy(builder => builder
-				.SetIsOriginAllowed(o => true)
-// .WithOrigins("https://localhost:7102")
-				.AllowAnyMethod()
-				.AllowAnyHeader());
+			// C-4: Read allowed origins from Cors:AllowedOrigins config array.
+			// Falls back to dev-only wildcard (no AllowCredentials) when no origins are configured.
+			// AllowCredentials() is required for SignalR WebSocket handshake, so it is only
+			// enabled when specific origins are listed (or unconditionally in development, where
+			// localhost is the only practical origin).
+			var allowedOrigins = configuration
+				.GetSection("Cors:AllowedOrigins")
+				.Get<string[]>();
+
+			options.AddDefaultPolicy(builder =>
+			{
+				if (allowedOrigins is { Length: > 0 })
+				{
+					builder.WithOrigins(allowedOrigins)
+						.AllowAnyMethod()
+						.AllowAnyHeader()
+						.AllowCredentials();
+				}
+				else if (environment.IsDevelopment())
+				{
+					builder.SetIsOriginAllowed(_ => true)
+						.AllowAnyMethod()
+						.AllowAnyHeader()
+						.AllowCredentials();
+				}
+				else
+				{
+					// Production with no origins configured: deny all cross-origin requests.
+					builder.WithOrigins(Array.Empty<string>());
+				}
+			});
 		});
 
 		if (databaseProvider == DatabaseProvider.Memgraph)
@@ -186,6 +225,17 @@ public class Startup(
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
 
+// Wiki subsystem — InMemoryWikiService for dev/test; swap for ArangoWikiService when backend is ready.
+		services.AddSingleton<WikiMarkdigPipeline>();
+		services.AddSingleton<IWikiService, InMemoryWikiService>();
+
+// Scene subsystem — InMemorySceneService for dev/test; swap for a persistent implementation later.
+		services.AddSingleton<ISceneService, InMemorySceneService>();
+
+// Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
+		services.AddMemoryCache();
+		services.AddSingleton<Server.Services.IPrerenderCacheService, Server.Services.PrerenderCacheService>();
+
 // Initialize TextFileService
 		services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
 		services.AddSingleton<ILocalizedTextFileService, Implementation.Services.LocalizedTextFileService>();
@@ -280,18 +330,115 @@ public class Startup(
 // where the command queue processes one entry at a time.
 			x.UseDefaultThreadPool(tp => tp.MaxConcurrency = 1);
 		});
-		if (environment.IsDevelopment())
+		// Authentication setup — three cases:
+		// 1) Dev + no JWT key: DebugAuth only (original behaviour)
+		// 2) Dev + JWT key: DebugAuth default, JWT bearer as additional scheme
+		// 3) Prod + JWT key: JWT bearer only
+		var jwtSection = configuration.GetSection(JwtOptions.Section);
+		var jwtKey = jwtSection["SigningKey"];
+
+		if (!string.IsNullOrWhiteSpace(jwtKey))
 		{
+			services.Configure<JwtOptions>(jwtSection);
+			services.AddSingleton<IJwtService, JwtService>();
+
+			// In dev: DebugAuth remains the default scheme so existing dev tooling still works.
+			// JWT bearer is registered as an additional scheme for portal endpoints.
+			// In prod: JWT bearer is the sole default scheme.
+			var authBuilder = environment.IsDevelopment()
+				? services.AddAuthentication(DebugAuthenticationHandler.SchemeName)
+					.AddScheme<AuthenticationSchemeOptions, DebugAuthenticationHandler>(
+						DebugAuthenticationHandler.SchemeName, _ => { })
+				: services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
+
+			authBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opts =>
+			{
+				opts.TokenValidationParameters = new TokenValidationParameters
+				{
+					ValidateIssuerSigningKey = true,
+					IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+					ValidateIssuer = !string.IsNullOrWhiteSpace(jwtSection["Issuer"]),
+					ValidIssuer = jwtSection["Issuer"],
+					ValidateAudience = !string.IsNullOrWhiteSpace(jwtSection["Audience"]),
+					ValidAudience = jwtSection["Audience"],
+					ValidateLifetime = true,
+					ClockSkew = TimeSpan.FromSeconds(30),
+					// W-3: Explicitly map sub→NameIdentifier and role→ClaimTypes.Role instead of
+					// relying on JwtSecurityTokenHandler.DefaultInboundClaimTypeMap silently doing it.
+					NameClaimType = JwtRegisteredClaimNames.Sub,
+					RoleClaimType = ClaimTypes.Role,
+				};
+
+				// W-5: Warn when issuer/audience validation is disabled (common misconfiguration).
+				var validateIssuer   = !string.IsNullOrWhiteSpace(jwtSection["Issuer"]);
+				var validateAudience = !string.IsNullOrWhiteSpace(jwtSection["Audience"]);
+				if (!validateIssuer || !validateAudience)
+				{
+					using var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
+					var startupLogger = loggerFactory.CreateLogger<Startup>();
+					startupLogger.LogWarning(
+						"W-5: JWT {Missing} validation is DISABLED — set Jwt:{Missing} in config for production.",
+						!validateIssuer && !validateAudience ? "Issuer+Audience"
+						: !validateIssuer ? "Issuer" : "Audience",
+						!validateIssuer && !validateAudience ? "Issuer and Jwt:Audience"
+						: !validateIssuer ? "Issuer" : "Audience");
+				}
+			});
+		}
+		else if (environment.IsDevelopment())
+		{
+			// No JWT configured: dev-only DebugAuth handler (original behaviour).
 			services.AddAuthentication(DebugAuthenticationHandler.SchemeName)
 				.AddScheme<AuthenticationSchemeOptions, DebugAuthenticationHandler>(
 					DebugAuthenticationHandler.SchemeName, _ => { });
 		}
+
+		// JWT infrastructure (role derivation + refresh tokens) is always registered
+		// so that the services are available even before a signing key is configured.
+		services.AddSingleton<IRoleDerivationService, RoleDerivationService>();
+		services.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
+
+		services.AddSignalR();
+
+		// ── API Versioning ────────────────────────────────────────────────────
+		// URL-segment strategy: /api/v1/... and /api/v2/...
+		// Default version: 1.0 so existing unversioned controllers keep working.
+		// Deprecated versions are announced via the api-deprecated-versions response header.
+		services.AddApiVersioning(options =>
+		{
+			options.DefaultApiVersion = new ApiVersion(1, 0);
+			options.AssumeDefaultVersionWhenUnspecified = true;
+			options.ReportApiVersions = true;
+			options.ApiVersionReader = ApiVersionReader.Combine(
+				new UrlSegmentApiVersionReader(),
+				new HeaderApiVersionReader("x-api-version"));
+		}).AddMvc();
+
+		// ── Rate Limiting ─────────────────────────────────────────────────────
+		// Named "public-api" policy: fixed window, 30 req/min per client IP,
+		// queue depth 5.  Auth endpoints opt in via [EnableRateLimiting("public-api")].
+		services.AddRateLimiter(opts =>
+		{
+			opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+			opts.AddFixedWindowLimiter("public-api", limiterOpts =>
+			{
+				limiterOpts.PermitLimit = 30;
+				limiterOpts.Window = TimeSpan.FromMinutes(1);
+				limiterOpts.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+				limiterOpts.QueueLimit = 5;
+			});
+		});
+
+		// ── RFC 7807 Problem Details ──────────────────────────────────────────
+		services.AddProblemDetails();
+		services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 
 		services.AddAuthorization();
 		services.AddRazorPages();
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
+		services.AddHostedService<NatsBridgeService>();
 		services.AddHostedService<Services.ConnectionReconciliationService>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
 		services.AddHostedService<Services.HealthMonitoringService>();

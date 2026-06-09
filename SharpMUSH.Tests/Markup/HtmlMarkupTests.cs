@@ -418,3 +418,193 @@ public class HtmlMarkupTests
 		await Assert.That(result.ToString()).IsEqualTo("<div class=\"test\">test_tagwrap_attrs_unique</div>");
 	}
 }
+
+/// <summary>
+/// Tests verifying that all ANSI attribute types are rendered to correct HTML spans
+/// via HtmlStrategy, and that HTML special characters in plain text are properly
+/// entity-encoded to prevent XSS injection.
+/// </summary>
+public class MStringHtmlRenderTests
+{
+	// ── All ANSI attribute → span/CSS mapping ─────────────────────────────────
+
+	[Test]
+	public async Task MStringToHtml_RgbForeground_ProducesColorSpan()
+	{
+		var markup = M.Create(foreground: new AnsiColor.RGB(Color.FromArgb(255, 128, 0)));
+		var ams = A.MarkupSingle(markup, "text");
+
+		var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+		await Assert.That(result).Contains("<span");
+		await Assert.That(result).Contains("color: #ff8000");
+		await Assert.That(result).Contains("text");
+		await Assert.That(result).Contains("</span>");
+	}
+
+	[Test]
+	public async Task MStringToHtml_RgbBackground_ProducesBackgroundColorSpan()
+	{
+		var markup = M.Create(background: new AnsiColor.RGB(Color.FromArgb(0, 255, 64)));
+		var ams = A.MarkupSingle(markup, "bg");
+
+		var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+		await Assert.That(result).Contains("background-color: #00ff40");
+		await Assert.That(result).Contains("bg");
+	}
+
+	[Test]
+	public async Task MStringToHtml_Bold_ProducesBoldCssClass()
+	{
+		var markup = M.Create(bold: true);
+		var ams = A.MarkupSingle(markup, "bold text");
+
+		var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+		await Assert.That(result).Contains("ms-bold");
+		await Assert.That(result).Contains("bold text");
+	}
+
+	[Test]
+	public async Task MStringToHtml_Italic_ProducesItalicCssClass()
+	{
+		var markup = M.Create(italic: true);
+		var ams = A.MarkupSingle(markup, "italic text");
+
+		var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+		await Assert.That(result).Contains("ms-italic");
+		await Assert.That(result).Contains("italic text");
+	}
+
+	[Test]
+	public async Task MStringToHtml_Underline_ProducesUnderlineCssClass()
+	{
+		var markup = M.Create(underlined: true);
+		var ams = A.MarkupSingle(markup, "underlined text");
+
+		var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+		await Assert.That(result).Contains("ms-underline");
+		await Assert.That(result).Contains("underlined text");
+	}
+
+	[Test]
+	public async Task MStringToHtml_StrikeThrough_ProducesStrikeCssClass()
+	{
+		var markup = M.Create(strikeThrough: true);
+		var ams = A.MarkupSingle(markup, "struck text");
+
+		var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+		await Assert.That(result).Contains("ms-strike");
+		await Assert.That(result).Contains("struck text");
+	}
+
+	[Test]
+	public async Task MStringToHtml_AllAnsiCodes_ProduceCorrectSpans()
+	{
+		// Verify all six commonly-tested ANSI attributes produce distinct, non-empty HTML output
+		var cases = new (string label, M markup, string expectedHint)[]
+		{
+			("bold",         M.Create(bold: true),                                         "ms-bold"),
+			("italic",       M.Create(italic: true),                                       "ms-italic"),
+			("underline",    M.Create(underlined: true),                                   "ms-underline"),
+			("strikethrough",M.Create(strikeThrough: true),                                "ms-strike"),
+			("fg-color",     M.Create(foreground: new AnsiColor.RGB(Color.Red)),            "color:"),
+			("bg-color",     M.Create(background: new AnsiColor.RGB(Color.Blue)),           "background-color:"),
+		};
+
+		foreach (var (label, markup, expectedHint) in cases)
+		{
+			var ams = A.MarkupSingle(markup, $"test_{label}");
+			var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+			// Each attribute must produce a <span> wrapping the text
+			await Assert.That(result).Contains("<span").Because($"{label} should produce a span");
+			await Assert.That(result).Contains($"test_{label}").Because($"{label} text must be preserved");
+			// The specific CSS hint must appear somewhere in the output
+			await Assert.That(result.Replace(" ", "")).Contains(expectedHint.Replace(" ", ""))
+				.Because($"{label} should render {expectedHint}");
+		}
+	}
+
+	[Test]
+	public async Task MStringToHtml_CombinedAttributes_AllCssPresent()
+	{
+		// Bold + italic + foreground color in one span
+		var markup = M.Create(
+			foreground: new AnsiColor.RGB(Color.FromArgb(200, 100, 50)),
+			bold: true,
+			italic: true);
+		var ams = A.MarkupSingle(markup, "combo");
+
+		var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+		await Assert.That(result).Contains("ms-bold");
+		await Assert.That(result).Contains("ms-italic");
+		await Assert.That(result).Contains("color: #c86432");
+		await Assert.That(result).Contains("combo");
+	}
+
+	// ── XSS / HTML injection prevention ──────────────────────────────────────
+
+	[Test]
+	public async Task MStringToHtml_MaliciousInput_NoXss()
+	{
+		// Plain text run — no markup at all
+		var ams = A.single("<script>alert('xss')</script>");
+
+		var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+		await Assert.That(result).DoesNotContain("<script>");
+		await Assert.That(result).DoesNotContain("</script>");
+		await Assert.That(result).Contains("&lt;script&gt;");
+	}
+
+	[Test]
+	public async Task MStringToHtml_MaliciousInput_InMarkupRun_NoXss()
+	{
+		// Dangerous text inside an ANSI-coloured run — entity-encoding must still apply
+		var markup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
+		var ams = A.MarkupSingle(markup, "<img src=x onerror=alert(1)>");
+
+		var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+		await Assert.That(result).DoesNotContain("<img");
+		await Assert.That(result).Contains("&lt;img");
+	}
+
+	[Test]
+	public async Task MStringToHtml_AmpersandInText_EntityEncoded()
+	{
+		var ams = A.single("cats & dogs");
+
+		var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+		// Plain text with no markup — string passes through unmodified if no WrapAs is called,
+		// but HtmlStrategy.EncodeText must still HTML-encode it when text is processed.
+		// Verify "&" is replaced with "&amp;" in the final output.
+		await Assert.That(result).Contains("cats");
+		await Assert.That(result).Contains("dogs");
+		// EncodeText is only called on segments that are wrapped; plain segments go through too.
+		// We assert the full chain works correctly end-to-end.
+		await Assert.That(result).DoesNotContain("cats & dogs");
+		await Assert.That(result).Contains("cats &amp; dogs");
+	}
+
+	[Test]
+	public async Task MStringToHtml_QuotesAndAngles_EntityEncoded()
+	{
+		var markup = M.Create(bold: true);
+		var ams = A.MarkupSingle(markup, "say \"hello\" <world>");
+
+		var result = ams.RenderWith(A.RenderStrategies.HtmlStrategy);
+
+		await Assert.That(result).DoesNotContain("\"hello\"");
+		await Assert.That(result).DoesNotContain("<world>");
+		await Assert.That(result).Contains("&quot;hello&quot;");
+		await Assert.That(result).Contains("&lt;world&gt;");
+	}
+}

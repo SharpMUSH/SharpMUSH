@@ -1,0 +1,13 @@
+@page "/admin/players/{Id:int}"
+@attribute [Authorize(Roles = "Wizard")]
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>Player #@Id — Admin — SharpMUSH</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Player #@Id</MudText>
+<MudText Color="Color.Secondary">Player detail coming soon.</MudText>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+}

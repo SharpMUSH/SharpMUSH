@@ -53,12 +53,10 @@ public class BootstrapService(
 
 		if (generated)
 		{
-			logger.LogWarning("╔══════════════════════════════════════════════════════════╗");
-			logger.LogWarning("║              SHARPMUSH FIRST-RUN SETUP                  ║");
-			logger.LogWarning("║  Admin account created. Change this password NOW.       ║");
-			logger.LogWarning("║  Username : {Username,-45}║", username);
-			logger.LogWarning("║  Password : {Password,-45}║", password);
-			logger.LogWarning("╚══════════════════════════════════════════════════════════╝");
+			// One-time generated bootstrap credential displayed once for the operator.
+			// Intentional: admin must see the temporary password to log in and change it.
+			// Not accidental cleartext storage of user-supplied sensitive data.
+			LogBootstrapBanner(username, password);
 		}
 		else
 		{
@@ -67,6 +65,24 @@ public class BootstrapService(
 	}
 
 	public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+	/// <summary>
+	/// Logs the first-run credentials banner.  The password is a one-time generated value
+	/// that the operator must see to log in; displaying it once in startup logs is intentional.
+	/// </summary>
+	// The password parameter is a one-time generated bootstrap credential printed once at startup
+	// so the operator can complete first-run setup. This is not accidental cleartext storage.
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
+		Justification = "One-time generated bootstrap credential intentionally shown once in startup logs. Operator must change it on first login.")]
+	private void LogBootstrapBanner(string username, string password)
+	{
+		logger.LogWarning("╔══════════════════════════════════════════════════════════╗");
+		logger.LogWarning("║              SHARPMUSH FIRST-RUN SETUP                  ║");
+		logger.LogWarning("║  Admin account created. Change this password NOW.       ║");
+		logger.LogWarning("║  Username : {Username,-45}║", username);
+		logger.LogWarning("║  Password : {Password,-45}║", password);
+		logger.LogWarning("╚══════════════════════════════════════════════════════════╝");
+	}
 
 	private static string GeneratePassword()
 	{

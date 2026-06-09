@@ -7,6 +7,9 @@ using MudBlazor.Services;
 using SharpMUSH.Client;
 using SharpMUSH.Client.Authentication;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Client.Widgets;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using Slugify;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -17,7 +20,10 @@ builder.Services.AddLocalization(options => options.ResourcesPath = "Resources")
 builder.Services.AddMudServices();
 builder.Services.AddLogging();
 builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
+builder.Services.AddSingleton<WikiMarkdigPipeline>();
+builder.Services.AddSingleton<IWikiService, InMemoryWikiService>();
 builder.Services.AddSingleton<WikiService>();
+builder.Services.AddSingleton<ISceneService, InMemorySceneService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();
@@ -39,6 +45,20 @@ builder.Services.AddScoped<CredentialService>();
 builder.Services.AddSingleton<OttAuthService>();
 builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
+builder.Services.AddSingleton<IThemeService, ThemeService>();
+
+// Widget system
+var registry = new WidgetRegistry();
+registry.Register(new QuickLinksWidgetDescriptor());
+registry.Register(new WelcomeTextWidgetDescriptor());
+builder.Services.AddSingleton<IWidgetRegistry>(registry);
+builder.Services.AddSingleton<ILayoutService, LayoutService>();
+builder.Services.AddSingleton<ICharacterStateService, CharacterStateService>();
+builder.Services.AddSingleton<INotificationService, NotificationService>();
+builder.Services.AddSingleton<IGameHubConnectionFactory>(_ =>
+	new GameHubConnectionFactory(
+		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/game"));
+builder.Services.AddSingleton<IConnectionStateService, ConnectionStateService>();
 
 builder.Services.AddHttpClient("api", sp =>
 {

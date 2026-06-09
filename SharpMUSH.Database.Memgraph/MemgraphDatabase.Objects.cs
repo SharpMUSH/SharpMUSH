@@ -119,11 +119,11 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 	{
 		var exitKey = ExtractKey(exit.Id!);
 		var destKey = ExtractKey(location.Id);
+		var destLabel = ExtractTypedLabel(location.Id);
 		await ExecuteWithRetryAsync("""
-MATCH (e:Exit {key: $exitKey}), (dest {key: $destKey})
-WHERE dest:Room OR dest:Player OR dest:Thing
+MATCH (e:Exit {key: $exitKey}), (dest:%DEST_LABEL% {key: $destKey})
 CREATE (e)-[:HAS_HOME]->(dest)
-""", new { exitKey, destKey }, cancellationToken);
+""".Replace("%DEST_LABEL%", destLabel), new { exitKey, destKey }, cancellationToken);
 		return true;
 	}
 
@@ -145,17 +145,18 @@ RETURN count(r) AS cnt
 		await UnlinkRoomAsync(room, cancellationToken);
 
 		var roomKey = ExtractKey(room.Id!);
-		var destKey = location.Match(
-		player => ExtractKey(player.Id!),
-		rm => ExtractKey(rm.Id!),
-		thing => ExtractKey(thing.Id!),
+		var destinationId = location.Match(
+		player => player.Id!,
+		rm => rm.Id!,
+		thing => thing.Id!,
 		_ => throw new InvalidOperationException());
+		var destKey = ExtractKey(destinationId);
+		var destLabel = ExtractTypedLabel(destinationId);
 
 		await ExecuteWithRetryAsync("""
-MATCH (r:Room {key: $roomKey}), (dest {key: $destKey})
-WHERE dest:Room OR dest:Player OR dest:Thing
+MATCH (r:Room {key: $roomKey}), (dest:%DEST_LABEL% {key: $destKey})
 CREATE (r)-[:HAS_HOME]->(dest)
-""", new { roomKey, destKey }, cancellationToken);
+""".Replace("%DEST_LABEL%", destLabel), new { roomKey, destKey }, cancellationToken);
 		return true;
 	}
 
@@ -400,28 +401,30 @@ RETURN o, e
 	{
 		var objKey = ExtractKey(obj.Id);
 		var homeKey = ExtractKey(home.Id);
+		var objLabel = ExtractTypedLabel(obj.Id);
+		var homeLabel = ExtractTypedLabel(home.Id);
 		await ExecuteWithRetryAsync("""
-MATCH (src {key: $objKey})-[r:HAS_HOME]->()
+MATCH (src:%SRC_LABEL% {key: $objKey})-[r:HAS_HOME]->()
 DELETE r
 WITH src
-MATCH (dest {key: $homeKey})
-WHERE dest:Room OR dest:Player OR dest:Thing
+MATCH (dest:%DEST_LABEL% {key: $homeKey})
 CREATE (src)-[:HAS_HOME]->(dest)
-""", new { objKey, homeKey }, cancellationToken);
+""".Replace("%SRC_LABEL%", objLabel).Replace("%DEST_LABEL%", homeLabel), new { objKey, homeKey }, cancellationToken);
 	}
 
 	public async ValueTask SetContentLocation(AnySharpContent obj, AnySharpContainer location, CancellationToken cancellationToken = default)
 	{
 		var objKey = ExtractKey(obj.Id);
 		var locKey = ExtractKey(location.Id);
+		var objLabel = ExtractTypedLabel(obj.Id);
+		var locationLabel = ExtractTypedLabel(location.Id);
 		await ExecuteWithRetryAsync("""
-MATCH (src {key: $objKey})-[r:AT_LOCATION]->()
+MATCH (src:%SRC_LABEL% {key: $objKey})-[r:AT_LOCATION]->()
 DELETE r
 WITH src
-MATCH (dest {key: $locKey})
-WHERE dest:Room OR dest:Player OR dest:Thing
+MATCH (dest:%DEST_LABEL% {key: $locKey})
 CREATE (src)-[:AT_LOCATION]->(dest)
-""", new { objKey, locKey }, cancellationToken);
+""".Replace("%SRC_LABEL%", objLabel).Replace("%DEST_LABEL%", locationLabel), new { objKey, locKey }, cancellationToken);
 	}
 
 	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken cancellationToken = default)

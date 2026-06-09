@@ -1,8 +1,7 @@
-@using Markdig
-@using Markdown.ColorCode
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
-@inject WikiService Wiki
+@using SharpMUSH.Library.Services
+@inject WikiMarkdigPipeline Pipeline
 @inject IStringLocalizer<SharedResource> Loc
 
 <MudCard Class="WikiContent" Style=@Style Elevation="0">
@@ -30,7 +29,6 @@
         @if (Article is not null)
         {
             @MarkdownHtml
-            // <MudMarkdown Value="@Article?.Content" />
         }
         else
         {
@@ -54,21 +52,23 @@
     public required string Slug { get; init; }
 
     [Parameter]
-    public WikiArticle? Article {get; init;}
+    public WikiArticle? Article { get; init; }
 
     [Parameter]
     public required Func<Task> ActivateEditMode { get; init; }
 
     MarkupString MarkdownHtml;
 
-    protected override void OnInitialized()
+    protected override void OnParametersSet()
     {
-        var pipeline = new MarkdownPipelineBuilder()
-            .UseAdvancedExtensions()
-            .UseColorCode()
-            .Build();
-        MarkdownHtml = (MarkupString)Markdown.ToHtml(Article?.Content ?? string.Empty, pipeline);
-        base.OnInitialized();
+        // Prefer the pre-rendered HTML cached on the article (produced at write time by
+        // IWikiService).  Fall back to rendering the raw markdown source via the shared
+        // pipeline when the article was created without a cached copy (e.g. stub data).
+        var html = Article?.RenderedHtml
+                   ?? (Article is not null ? Pipeline.RenderToHtml(Article.Content) : string.Empty);
+
+        MarkdownHtml = (MarkupString)html;
+        base.OnParametersSet();
     }
 
     private bool DisplayAsHero => Slug.Equals("home", StringComparison.InvariantCultureIgnoreCase);

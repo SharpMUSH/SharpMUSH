@@ -164,7 +164,7 @@
         StateHasChanged();
     }
 
-    private Task<IEnumerable<HelpEntry>> SearchEntries(string text, CancellationToken ct)
+    private Task<IEnumerable<HelpEntry>> SearchEntries(string? text, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(text))
             return Task.FromResult(Help.AllEntries.Take(30));

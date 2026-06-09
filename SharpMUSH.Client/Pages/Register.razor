@@ -1,0 +1,16 @@
+@page "/register"
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>Register — SharpMUSH</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="pa-4">
+    <MudText Typo="Typo.h4" Class="mb-4">Register</MudText>
+    <MudText Color="Color.Secondary" Class="mb-4">
+        Registration is handled through the game connection. Connect to the MU* and
+        follow the in-game prompts to create a character and link it to an account.
+    </MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick='() => Nav.NavigateTo("/play")'>
+        Connect and Play
+    </MudButton>
+</MudContainer>

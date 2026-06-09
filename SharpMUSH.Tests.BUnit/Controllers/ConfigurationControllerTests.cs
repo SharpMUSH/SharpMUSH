@@ -218,7 +218,7 @@ public class ConfigurationControllerTests
 
 		var ok = (OkObjectResult)result.Result!;
 		var response = (ConfigurationResponse)ok.Value!;
-		await Assert.That(response.Configuration.Net.UseWebsockets).IsEqualTo(false);
+		await Assert.That(response.Configuration.Net.UseWebsockets).IsFalse();
 	}
 
 	[TUnit.Core.Test]
@@ -273,7 +273,7 @@ public class ConfigurationControllerTests
 		var ok = (OkObjectResult)result.Result!;
 		var response = (ConfigurationResponse)ok.Value!;
 		await Assert.That((int)response.Configuration.Net.Port).IsEqualTo(7777);
-		await Assert.That(response.Configuration.Log.LogCommands).IsEqualTo(true);
+		await Assert.That(response.Configuration.Log.LogCommands).IsTrue();
 	}
 
 	[TUnit.Core.Test]

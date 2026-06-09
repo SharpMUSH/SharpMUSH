@@ -1,0 +1,41 @@
+@inject IThemeService ThemeService
+@implements IDisposable
+
+<MudThemeProvider Theme="_theme" IsDarkMode="_isDarkMode" />
+@ChildContent
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private MudTheme _theme = SharpMUSH.Client.Services.ThemeService.GetDefaultPreset().ToMudTheme();
+    private bool _isDarkMode = SharpMUSH.Client.Services.ThemeService.GetDefaultPreset().IsDarkMode;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ThemeService.OnThemeChanged += HandleThemeChanged;
+
+        // Restore persisted preset (reads localStorage)
+        if (ThemeService is SharpMUSH.Client.Services.ThemeService concrete)
+            await concrete.InitializeAsync();
+
+        await RefreshThemeAsync();
+    }
+
+    private void HandleThemeChanged()
+        => InvokeAsync(async () =>
+        {
+            await RefreshThemeAsync();
+            StateHasChanged();
+        });
+
+    private async Task RefreshThemeAsync()
+    {
+        var preset = await ThemeService.GetCurrentThemeAsync();
+        _theme = preset.ToMudTheme();
+        _isDarkMode = preset.IsDarkMode;
+    }
+
+    public void Dispose()
+        => ThemeService.OnThemeChanged -= HandleThemeChanged;
+}

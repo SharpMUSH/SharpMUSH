@@ -1,0 +1,7 @@
+@page "/wiki"
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["WikiIndex"]</PageTitle>
+
+<MudText Typo="Typo.h4">@Loc["WikiIndex"]</MudText>
+<WikiView Slug="wiki-index" Mode="WikiView.WikiMode.View" />

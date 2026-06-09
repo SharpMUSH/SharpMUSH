@@ -8,6 +8,8 @@ using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Messaging.NATS.Strategy;
+using SharpMUSH.Server.Hubs;
+using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Strategy.ArangoDB;
 
 namespace SharpMUSH.Server;
@@ -100,16 +102,34 @@ public class Program
 		app.UseRouting();
 		app.UseCors();
 
+		// RFC 7807 exception handler covers all environments (dev too);
+		// DeveloperExceptionPage is left in as an additional dev aid for HTML views.
+		app.UseExceptionHandler();
+
 		if (env.EnvironmentName == "Development")
 		{
 			app.UseDeveloperExceptionPage();
 		}
 
 		app.UseHttpsRedirection();
+
+		// ── URL canonicalisation: must run before static files so redirects fire first
+		app.UseMiddleware<CanonicalUrlMiddleware>();
+
+		app.UseStaticFiles();
+
+		// ── Bot detection: sets IsBot flag, blocks bots on auth routes
+		app.UseMiddleware<BotDetectionMiddleware>();
+
+		// ── Bot pre-rendering: serves static HTML to search crawlers
+		app.UseMiddleware<BotPrerenderMiddleware>();
+
 		app.UseAuthentication();
 		app.UseAuthorization();
+		app.UseRateLimiter();
 		app.MapControllers();
 		app.MapRazorPages();
+		app.MapHub<GameHub>("/hubs/game");
 
 		// Health and readiness endpoints for deployment checks
 		app.MapGet("/health", () => "healthy");
@@ -117,6 +137,10 @@ public class Program
 
 		// Prometheus metrics endpoint (for scraping, not for logging to console)
 		app.MapPrometheusScrapingEndpoint();
+
+		// SPA fallback: all non-API, non-static routes serve index.html so that
+		// Blazor WASM handles client-side routing (deep links, browser refresh).
+		app.MapFallbackToFile("index.html");
 
 		return app;
 	}

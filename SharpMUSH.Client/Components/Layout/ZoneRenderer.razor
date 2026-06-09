@@ -1,0 +1,44 @@
+@using SharpMUSH.Library.Models.Portal.Widgets
+
+@if (_placements.Count > 0)
+{
+    @foreach (var placement in _placements)
+    {
+        var descriptor = Registry?.GetWidget(placement.WidgetName);
+        @if (descriptor is not null)
+        {
+            <WidgetErrorBoundary WidgetName="@placement.WidgetName">
+                <DynamicComponent Type="@descriptor.ComponentType"
+                                  Parameters="@BuildParams(placement)" />
+            </WidgetErrorBoundary>
+        }
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public WidgetZone Zone { get; set; }
+    [Parameter, EditorRequired] public LayoutConfiguration? Layout { get; set; }
+    [Inject] private IWidgetRegistry? Registry { get; set; }
+
+    private IReadOnlyList<WidgetPlacement> _placements = [];
+
+    protected override void OnParametersSet()
+    {
+        if (Layout is null)
+        {
+            _placements = [];
+            return;
+        }
+
+        _placements = Layout.Zones.TryGetValue(Zone, out var list)
+            ? list.OrderBy(p => p.Order).ToList().AsReadOnly()
+            : (IReadOnlyList<WidgetPlacement>)[];
+    }
+
+    private Dictionary<string, object> BuildParams(WidgetPlacement placement)
+        => new()
+        {
+            ["Config"] = placement.Config!,
+            ["Zone"] = Zone.ToString()
+        };
+}

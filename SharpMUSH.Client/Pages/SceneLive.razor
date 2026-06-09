@@ -1,0 +1,139 @@
+@page "/scenes/{Id}/live"
+@attribute [Authorize]
+@implements IDisposable
+@using SharpMUSH.Library.Models.Portal
+@inject IStringLocalizer<SharedResource> Loc
+@inject ISceneService SceneService
+@inject IConnectionStateService Hub
+
+<PageTitle>@Loc["LiveScene"] @Id — SharpMUSH</PageTitle>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_notFound)
+{
+    <MudAlert Severity="Severity.Warning">@Loc["SceneNotFound"]</MudAlert>
+    <MudButton Href="/scenes/active" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
+        @Loc["BackToActiveScenes"]
+    </MudButton>
+}
+else
+{
+    <MudText Typo="Typo.h5" Class="mb-1">
+        @(string.IsNullOrWhiteSpace(_scene!.Title) ? Loc["LiveScene"] : _scene.Title)
+        <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="ml-2">Live</MudChip>
+    </MudText>
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
+        @_scene!.RoomName · @_scene!.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+    </MudText>
+
+    @if (!Hub.IsConnected)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-3">
+            @Loc["HubNotConnected"]
+        </MudAlert>
+    }
+
+    <div class="scene-log scene-log--live" @ref="_logContainer">
+        @if (_messages.Count == 0 && _liveLines.Count == 0)
+        {
+            <MudText Color="Color.Secondary" Typo="Typo.body2">@Loc["WaitingForActivity"]</MudText>
+        }
+
+        @* Archived lines loaded on open *@
+        @foreach (var msg in _messages)
+        {
+            <div class="scene-line scene-line--@msg.MessageType.ToString().ToLowerInvariant() scene-line--archived">
+                @((MarkupString)msg.RenderedHtml)
+            </div>
+        }
+
+        @* New lines received via SignalR *@
+        @foreach (var line in _liveLines)
+        {
+            <div class="scene-line scene-line--live">
+                @((MarkupString)line)
+            </div>
+        }
+    </div>
+
+    <MudButton Href="@($"/scenes/{Id}")"
+               Color="Color.Default"
+               Variant="Variant.Text"
+               Class="mt-3">
+        @Loc["ViewArchive"]
+    </MudButton>
+}
+
+@code {
+    [Parameter]
+    public required string Id { get; set; }
+
+    private SceneArchive? _scene;
+    private List<SceneMessage> _messages = [];
+
+    /// <summary>Lines that arrived via SignalR after the page opened, pre-rendered as HTML.</summary>
+    private readonly List<string> _liveLines = [];
+
+    private bool _loading = true;
+    private bool _notFound;
+    private ElementReference _logContainer;
+
+    // ── Lifecycle ────────────────────────────────────────────────────────────
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _notFound = false;
+        _messages = [];
+        _liveLines.Clear();
+        _scene = null;
+
+        var sceneResult = await SceneService.GetSceneAsync(Id);
+        if (sceneResult.IsT1)
+        {
+            _notFound = true;
+            _loading = false;
+            return;
+        }
+
+        _scene = sceneResult.AsT0;
+
+        // Load the last 50 messages as context
+        var msgResult = await SceneService.GetRecentMessagesAsync(Id, count: 50);
+        if (msgResult.IsT0)
+            _messages = [..msgResult.AsT0];
+
+        _loading = false;
+    }
+
+    protected override void OnInitialized()
+    {
+        Hub.OnRoomEventReceived += HandleRoomEvent;
+    }
+
+    public void Dispose()
+    {
+        Hub.OnRoomEventReceived -= HandleRoomEvent;
+    }
+
+    // ── SignalR handler ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Called when a <see cref="RoomEventMessage"/> arrives on the hub.
+    /// The <c>Content</c> field already carries pre-rendered HTML produced
+    /// by the game server's HtmlStrategy pipeline.
+    /// We only show events for the room this scene is taking place in.
+    /// </summary>
+    private void HandleRoomEvent(RoomEventMessage msg)
+    {
+        if (_scene is null) return;
+        if (!string.Equals(msg.RoomDbref, _scene.RoomDbref, StringComparison.Ordinal)) return;
+
+        // Content from the server is already HTML-rendered via HtmlStrategy
+        _liveLines.Add(msg.Content);
+        InvokeAsync(StateHasChanged);
+    }
+}

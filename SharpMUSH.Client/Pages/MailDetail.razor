@@ -1,0 +1,13 @@
+@page "/mail/{Id:int}"
+@attribute [Authorize]
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>Mail #@Id — SharpMUSH</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Mail #@Id</MudText>
+<MudText Color="Color.Secondary">Mail message detail coming soon.</MudText>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+}

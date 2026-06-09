@@ -1,0 +1,11 @@
+@page "/help/{Slug}"
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Slug — Help — SharpMUSH</PageTitle>
+
+<WikiView Slug="@Slug" Mode="WikiView.WikiMode.View" />
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+}

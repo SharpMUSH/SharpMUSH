@@ -69,9 +69,10 @@ LIMIT 1
 
 		var typedId = baseObject.Id()!;
 		var key = ExtractKey(typedId);
+		var typedLabel = ExtractTypedLabel(typedId);
 
 		var maxHops = depth == -1 ? 999 : depth;
-		var cypher = "MATCH path = (start {key: $key})-[:AT_LOCATION*0.." + maxHops + "]->(dest) " +
+		var cypher = "MATCH path = (start:" + typedLabel + " {key: $key})-[:AT_LOCATION*0.." + maxHops + "]->(dest) " +
 		"WITH dest, size(path) AS pathLen ORDER BY pathLen DESC LIMIT 1 " +
 		"MATCH (dest)-[:IS_OBJECT]->(destObj:Object) RETURN destObj";
 		var result = await ExecuteWithRetryAsync(cypher, new { key }, cancellationToken);
@@ -94,8 +95,9 @@ LIMIT 1
 	public async ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default)
 	{
 		var key = ExtractKey(id);
+		var typedLabel = ExtractTypedLabel(id);
 		var maxHops = depth == -1 ? 999 : depth;
-		var cypher2 = "MATCH path = (start {key: $key})-[:AT_LOCATION*0.." + maxHops + "]->(dest) " +
+		var cypher2 = "MATCH path = (start:" + typedLabel + " {key: $key})-[:AT_LOCATION*0.." + maxHops + "]->(dest) " +
 		"WITH dest, size(path) AS pathLen ORDER BY pathLen DESC LIMIT 1 " +
 		"MATCH (dest)-[:IS_OBJECT]->(destObj:Object) RETURN destObj";
 		var result = await ExecuteWithRetryAsync(cypher2, new { key }, cancellationToken);
@@ -200,14 +202,15 @@ RETURN o, e
 	{
 		var srcKey = ExtractKey(enactorObj.Id);
 		var destKey = ExtractKey(destination.Id);
+		var srcLabel = ExtractTypedLabel(enactorObj.Id);
+		var destLabel = ExtractTypedLabel(destination.Id);
 		await ExecuteWithRetryAsync("""
-MATCH (src {key: $srcKey})-[r:AT_LOCATION]->()
+MATCH (src:%SRC_LABEL% {key: $srcKey})-[r:AT_LOCATION]->()
 DELETE r
 WITH src
-MATCH (dest {key: $destKey})
-WHERE dest:Room OR dest:Player OR dest:Thing
+MATCH (dest:%DEST_LABEL% {key: $destKey})
 CREATE (src)-[:AT_LOCATION]->(dest)
-""", new { srcKey, destKey }, cancellationToken);
+""".Replace("%SRC_LABEL%", srcLabel).Replace("%DEST_LABEL%", destLabel), new { srcKey, destKey }, cancellationToken);
 	}
 
 	public async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)

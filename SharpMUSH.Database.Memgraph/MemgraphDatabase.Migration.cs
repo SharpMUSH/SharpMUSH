@@ -89,11 +89,36 @@ public partial class MemgraphDatabase
 "CREATE INDEX ON :Counter(name)"
 };
 
-			foreach (var q in indexQueries)
-			{
-				try { await ExecuteWithRetryAsync(q, ct: cancellationToken); }
-				catch { /* Index may already exist */ }
-			}
+			// DDL (CREATE INDEX) must run as auto-commit in Memgraph — explicit/managed
+				// transactions are not allowed for index manipulation. Use session.RunAsync() directly.
+				await using var indexSession = driver.AsyncSession();
+				foreach (var q in indexQueries)
+				{
+					try { await indexSession.RunAsync(q); }
+					catch (ClientException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+					{ /* Index already exists — safe to ignore */ }
+					catch (DatabaseException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+					{ /* Index already exists — safe to ignore */ }
+				}
+
+				// Wiki indexes — same auto-commit requirement
+				var wikiIndexQueries = new[]
+				{
+					"CREATE INDEX ON :WikiPage(namespace)",
+					"CREATE INDEX ON :WikiPage(slug)",
+					"CREATE INDEX ON :WikiPage(updatedAt)",
+					"CREATE INDEX ON :WikiRevision(pageId)",
+					"CREATE INDEX ON :WikiRevision(revisionNumber)"
+				};
+
+				foreach (var wq in wikiIndexQueries)
+				{
+					try { await indexSession.RunAsync(wq); }
+					catch (ClientException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+					{ /* Index already exists — safe to ignore */ }
+					catch (DatabaseException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+					{ /* Index already exists — safe to ignore */ }
+				}
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
