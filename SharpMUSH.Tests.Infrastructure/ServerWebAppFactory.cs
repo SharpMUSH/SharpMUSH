@@ -44,6 +44,12 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
 	public new IServiceProvider Services => _server!.Services;
+
+	/// <summary>
+	/// Returns an <see cref="HttpClient"/> that targets the in-process test server directly,
+	/// bypassing real network I/O. Use this for controller-level HTTP integration tests.
+	/// </summary>
+	public HttpClient CreateHttpClient() => _server!.CreateClient();
 	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
 
