@@ -3,6 +3,7 @@
 @using SharpMUSH.Library.Services
 @inject WikiMarkdigPipeline Pipeline
 @inject IStringLocalizer<SharedResource> Loc
+@inject NavigationManager Nav
 
 <MudCard Class="WikiContent" Style=@Style Elevation="0">
     @if (Article is not null)
@@ -36,7 +37,9 @@
                 <AuthorizeView>
                     <Authorized>
                         <MudText>@Loc["WikiPageNotExist"]</MudText>
-                        <MudButton EndIcon="@Icons.Material.Filled.Create" Color=Color.Secondary Ripple=true>@Loc["CreateThisPage"]</MudButton>
+                        <MudButton EndIcon="@Icons.Material.Filled.Create" Color=Color.Secondary Ripple=true
+                                   Style="text-transform: none;"
+                                   OnClick="@(() => Nav.NavigateTo($"/wiki/{Slug}/edit"))">@Loc["CreateThisPage"]</MudButton>
                     </Authorized>
                     <NotAuthorized>
                         <MudText>@Loc["NothingToSeeHere"]</MudText>

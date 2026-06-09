@@ -201,6 +201,9 @@
   <data name="NothingToSeeHere" xml:space="preserve">
     <value>Nothing to see here.</value>
   </data>
+  <data name="WikiEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
 
   <!-- ======================== -->
   <!-- Counter.razor            -->
