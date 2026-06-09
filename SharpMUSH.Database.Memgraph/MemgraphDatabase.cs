@@ -69,6 +69,22 @@ IPasswordService passwordService
 		return key;
 	}
 
+	private static string ExtractTypedLabel(string id)
+	{
+		var parts = id.Split('/');
+		if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[0]))
+			throw new ArgumentException($"Invalid ID format: '{id}'. Expected 'Label/numericKey'.", nameof(id));
+		return parts[0] switch
+		{
+			"Player" => "Player",
+			"Room" => "Room",
+			"Thing" => "Thing",
+			"Exit" => "Exit",
+			"Object" => "Object",
+			_ => throw new ArgumentException($"Unsupported object label: '{parts[0]}'", nameof(id))
+		};
+	}
+
 	private static string ExtractKeyString(string id) => id.Split('/')[1];
 
 	/// <summary>
@@ -307,11 +323,12 @@ RETURN c.value AS nextKey
 	private async ValueTask<AnySharpContainer> GetLocationForTypedAsync(string typedId, CancellationToken ct)
 	{
 		var key = ExtractKey(typedId);
+		var typedLabel = ExtractTypedLabel(typedId);
 		var result = await ExecuteWithRetryAsync("""
-MATCH (src {key: $key})-[:AT_LOCATION]->(dest)
+MATCH (src:%LABEL% {key: $key})-[:AT_LOCATION]->(dest)
 MATCH (dest)-[:IS_OBJECT]->(destObj:Object)
 RETURN destObj
-""", new { key }, ct);
+""".Replace("%LABEL%", typedLabel), new { key }, ct);
 
 		if (result.Result.Count == 0)
 			throw new InvalidOperationException($"No location found for {typedId}");
@@ -329,11 +346,12 @@ RETURN destObj
 	private async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct)
 	{
 		var key = ExtractKey(typedId);
+		var typedLabel = ExtractTypedLabel(typedId);
 		var result = await ExecuteWithRetryAsync("""
-MATCH (src {key: $key})-[:HAS_HOME]->(dest)
+MATCH (src:%LABEL% {key: $key})-[:HAS_HOME]->(dest)
 MATCH (dest)-[:IS_OBJECT]->(destObj:Object)
 RETURN destObj
-""", new { key }, ct);
+""".Replace("%LABEL%", typedLabel), new { key }, ct);
 
 		if (result.Result.Count == 0)
 			throw new InvalidOperationException($"No home found for {typedId}");
