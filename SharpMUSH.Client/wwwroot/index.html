@@ -33,6 +33,14 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
+
+    <!-- Third-party JS that Blazor components invoke via JSInterop must be loaded
+         BEFORE blazor.webassembly.js.  Blazor WASM boots asynchronously (WASM
+         fetch + compile), but OnAfterRenderAsync can fire before scripts placed
+         after the Blazor boot script are evaluated, causing ReferenceErrors. -->
+    <script src="/_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js"></script>
+    <script src="/_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
     <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
     <!-- Monaco Editor (BlazorMonaco) — must come before blazor.webassembly.js -->
     <script src="_content/BlazorMonaco/jsInterop.js"></script>
@@ -41,10 +49,7 @@
     <!-- SharpMUSH MUSH language definition for Monaco -->
     <script src="js/mush-monaco.js"></script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
-    <script src="_content/MudBlazor/MudBlazor.min.js"></script>   
-    <script src="/_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js"></script>
-    <script src="/_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 
 </body>
 
