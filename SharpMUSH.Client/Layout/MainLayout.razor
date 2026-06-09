@@ -217,9 +217,11 @@
         await AccountAuth.InitAsync();
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
 
-        // In debug mode, auto-fetch an account session for the account linked to #1
-        // so IsLoggedIn becomes true before we compute _isDebugAuth
-        if (authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn)
+        // DebugAuthStateProvider sets AuthenticationType = "Server authentication".
+        // In debug mode, always refresh the session so server restarts (which clear the
+        // in-memory AccountSessionStore) don't leave the client with a stale token.
+        var isDebugMode = authState.User.Identity?.AuthenticationType == "Server authentication";
+        if (isDebugMode || (authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn))
             await AccountAuth.GetDebugOttAsync();
 
         // Load characters if logged in and not yet populated

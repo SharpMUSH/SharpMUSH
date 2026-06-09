@@ -263,11 +263,12 @@
             }
         }
 
-        // DebugAdmin path: authenticated via Blazor but no account session
-        if (!_connected && !AccountAuth.IsLoggedIn)
+        // DebugAdmin path: fires whenever DebugAuth is active and the terminal is still
+        // disconnected — covers (a) no account session and (b) stale session after server restart.
+        if (!Terminal.IsConnected)
         {
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            if (authState.User.Identity?.IsAuthenticated == true)
+            if (authState.User.Identity?.AuthenticationType == "Server authentication")
             {
                 var debugOtt = await AccountAuth.GetDebugOttAsync();
                 if (debugOtt is not null)
