@@ -3,7 +3,11 @@
 @inject WikiService Wiki
 @inject NavigationManager Nav
 
-@if (Mode == WikiMode.View)
+@if (_loading)
+{
+    <WikiPageSkeleton />
+}
+else if (Mode == WikiMode.View)
 {
     <WikiDisplay Slug="@Slug" Article="@_article" ActivateEditMode="ActivateEditMode" />
 }
@@ -30,6 +34,7 @@ else
     // A shallow copy of _article used while editing so the view copy is not mutated live.
     private WikiArticle? _editDraft;
     private string? _saveError;
+    private bool _loading = true;
 
     public async Task ActivateEditMode()
     {
@@ -85,8 +90,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        _loading = true;
         var result = await Wiki.GetWikiArticle(Slug);
         _article = result.IsT0 ? result.AsT0 : null;
+        _loading = false;
         await base.OnInitializedAsync();
     }
 }

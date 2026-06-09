@@ -1,0 +1,28 @@
+@using SharpMUSH.Client.Models
+
+@* History dialog content — rendered inside a MudDialog opened from WikiDisplay. *@
+@* Full revision list + diff view is a future implementation; *@
+@* this stub shows the slug and a coming-soon notice without a dedicated @page route. *@
+
+@if (Slug is not null)
+{
+    <MudText Typo="Typo.subtitle1" Class="mb-2">
+        Revision history for <strong>@Slug</strong>
+    </MudText>
+}
+
+<MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.HistoryEdu" Dense="true" Class="mb-3">
+    Revision history and diff view are coming soon.
+</MudAlert>
+
+<MudStack Row="true" Justify="Justify.FlexEnd">
+    <MudButton Variant="Variant.Text" OnClick="@(() => MudDialog!.Cancel())">Close</MudButton>
+</MudStack>
+
+@code {
+    [CascadingParameter]
+    public IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public string? Slug { get; set; }
+}

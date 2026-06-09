@@ -3,7 +3,7 @@
 @using SharpMUSH.Library.Services
 @inject WikiMarkdigPipeline Pipeline
 @inject IStringLocalizer<SharedResource> Loc
-@inject NavigationManager Nav
+@inject IDialogService DialogService
 
 <MudCard Class="WikiContent" Style=@Style Elevation="0">
     @if (Article is not null)
@@ -17,7 +17,7 @@
                 <Authorized>
                     <MudSpacer />
                     <MudIconButton Edge="Edge.End" OnClick="@ActivateEditMode" Icon="@Icons.Material.Filled.Edit" Color=Color.Secondary Ripple=true />
-                    <MudIconButton Edge="Edge.End" Icon="@Icons.Material.Filled.History" Color=Color.Secondary Ripple=true />
+                    <MudIconButton Edge="Edge.End" OnClick="@OpenHistoryDialog" Icon="@Icons.Material.Filled.History" Color=Color.Secondary Ripple=true />
                 </Authorized>
             </AuthorizeView>
         </MudCardHeader>
@@ -39,7 +39,7 @@
                         <MudText>@Loc["WikiPageNotExist"]</MudText>
                         <MudButton EndIcon="@Icons.Material.Filled.Create" Color=Color.Secondary Ripple=true
                                    Style="text-transform: none;"
-                                   OnClick="@(() => Nav.NavigateTo($"/wiki/{Slug}/edit"))">@Loc["CreateThisPage"]</MudButton>
+                                   OnClick="@ActivateEditMode">@Loc["CreateThisPage"]</MudButton>
                     </Authorized>
                     <NotAuthorized>
                         <MudText>@Loc["NothingToSeeHere"]</MudText>
@@ -77,4 +77,20 @@
     private bool DisplayAsHero => Slug.Equals("home", StringComparison.InvariantCultureIgnoreCase);
 
     private string Style => $"min-height: calc(100vh - var(--mud-appbar-height)); {(DisplayAsHero ? "background:inherit; text-align:center;" : string.Empty)}";
+
+    private Task OpenHistoryDialog()
+    {
+        var parameters = new DialogParameters<WikiHistoryDialog>
+        {
+            { x => x.Slug, Slug }
+        };
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true,
+            BackdropClick = true
+        };
+        return DialogService.ShowAsync<WikiHistoryDialog>($"History: {Slug}", parameters, options);
+    }
 }

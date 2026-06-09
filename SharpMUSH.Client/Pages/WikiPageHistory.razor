@@ -1,13 +1,16 @@
 @page "/wiki/{Slug}/history"
-@using SharpMUSH.Client.Components
-@inject IStringLocalizer<SharedResource> Loc
-
-<PageTitle>@Loc["WikiHistory"]: @Slug</PageTitle>
-
-<MudText Typo="Typo.h4">@Loc["WikiHistory"]: @Slug</MudText>
-<MudText>@Loc["WikiHistoryComingSoon"]</MudText>
+@* History is shown as a dialog from the wiki page view, not a separate route. *@
+@* Redirect to the wiki page so any direct links or bookmarks still work. *@
 
 @code {
     [Parameter]
     public required string Slug { get; set; }
+
+    [Inject]
+    public required NavigationManager Nav { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Nav.NavigateTo($"/wiki/{Slug}", replace: true);
+    }
 }
