@@ -48,6 +48,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
@@ -387,16 +388,47 @@ public class Startup(
 		}
 		else if (environment.IsDevelopment())
 		{
-			// No JWT configured: dev-only DebugAuth handler (original behaviour).
+			// No JWT key in config: generate an ephemeral key so IJwtService is always
+			// available in dev (OTT issuance, debug-ott endpoint, jwt-login etc. all work
+			// without any extra config).  Tokens are only valid for the lifetime of this
+			// process — fine for local dev.
+			var ephemeralKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
+			services.Configure<JwtOptions>(opts =>
+			{
+				opts.SigningKey = ephemeralKey;
+			});
+			services.AddSingleton<IJwtService, JwtService>();
+
 			services.AddAuthentication(DebugAuthenticationHandler.SchemeName)
 				.AddScheme<AuthenticationSchemeOptions, DebugAuthenticationHandler>(
-					DebugAuthenticationHandler.SchemeName, _ => { });
+					DebugAuthenticationHandler.SchemeName, _ => { })
+				.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opts =>
+				{
+					opts.TokenValidationParameters = new TokenValidationParameters
+					{
+						ValidateIssuerSigningKey = true,
+						IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ephemeralKey)),
+						ValidateIssuer = false,
+						ValidateAudience = false,
+						ValidateLifetime = true,
+						ClockSkew = TimeSpan.FromSeconds(30),
+						NameClaimType = JwtRegisteredClaimNames.Sub,
+						RoleClaimType = ClaimTypes.Role,
+					};
+				});
 		}
 
 		// JWT infrastructure (role derivation + refresh tokens) is always registered
 		// so that the services are available even before a signing key is configured.
 		services.AddSingleton<IRoleDerivationService, RoleDerivationService>();
 		services.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
+
+		// IJwtService is registered in every code path above:
+		//   - prod with key  → JwtService backed by appsettings Jwt:SigningKey
+		//   - dev with key   → same
+		//   - dev no key     → JwtService backed by ephemeral process-lifetime key
+		// AuthController exposes it via lazy RequestServices.GetService<IJwtService>() so
+		// it still returns 501 gracefully in any hypothetical future prod-no-key scenario.
 
 		services.AddSignalR();
 

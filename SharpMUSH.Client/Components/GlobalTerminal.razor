@@ -1,12 +1,13 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
 @inject ITerminalService Terminal
 @inject IJSRuntime JsRuntime
 @inject CredentialService Credentials
 @inject OttAuthService OttAuth
 @inject AccountAuthService AccountAuth
-@inject AuthenticationStateProvider AuthStateProvider
+@inject IWebAssemblyHostEnvironment HostEnv
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="background:#111;color:#ccc;font-family:monospace;font-size:13px;">
@@ -238,46 +239,55 @@
         if (_connected && _playerName is null && AccountAuth.Characters.Count > 0)
             _playerName = AccountAuth.Characters[0].Name;
 
-        // If logged in to an account and terminal is not yet connected: auto-connect
-        if (!_connected && AccountAuth.IsLoggedIn)
-        {
-            var chars = AccountAuth.Characters.Count > 0
-                ? AccountAuth.Characters
-                : await AccountAuth.GetCharactersAsync();
+        AddLocalLine($"[DBG] init: connected={_connected} isLoggedIn={AccountAuth.IsLoggedIn}", TerminalLineSource.System);
 
-            if (chars.Count == 1)
-            {
-                // Single character — auto-connect silently
-                var ott = await AccountAuth.GetOttForCharacterAsync(chars[0]);
-                if (ott is not null)
-                {
-                    SetPlayerName(chars[0].Name);
-                    await Terminal.ConnectWithOttAsync(_serverUri, ott);
-                }
-            }
-            else if (chars.Count > 1)
-            {
-                // Multiple characters — show picker
-                _showLoginPanel = true;
-                _showCharacterPicker = true;
-            }
-        }
-
-        // DebugAdmin path: fires whenever DebugAuth is active and the terminal is still
-        // disconnected — covers (a) no account session and (b) stale session after server restart.
-        if (!Terminal.IsConnected)
+        if (!_connected)
         {
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            if (authState.User.Identity?.AuthenticationType == "Server authentication")
+            if (HostEnv.IsDevelopment() && !AccountAuth.IsLoggedIn)
             {
+                // In dev, the Blazor AuthStateProvider hasn't necessarily run yet, so
+                // AccountAuth.IsLoggedIn may still be false.  Call GetDebugOttAsync()
+                // directly — it both populates AccountSessionToken and returns the OTT
+                // in one round-trip, avoiding any ordering dependency.
+                AddLocalLine("[DBG] dev path: fetching debug OTT", TerminalLineSource.System);
                 var debugOtt = await AccountAuth.GetDebugOttAsync();
-                if (debugOtt is not null)
+                AddLocalLine($"[DBG] dev path: ott={(debugOtt?.Token is null ? "NULL" : "OK")} account={(debugOtt?.AccountId is null ? "NULL" : "OK")}", TerminalLineSource.System);
+                if (debugOtt?.Token is not null)
                 {
                     SetPlayerName(debugOtt.PlayerName);
                     await Terminal.ConnectWithOttAsync(_serverUri, debugOtt.Token);
                 }
             }
+            else if (AccountAuth.IsLoggedIn)
+            {
+                // Normal account path (production, or dev after a real login)
+                AddLocalLine("[DBG] account path entered", TerminalLineSource.System);
+                var chars = AccountAuth.Characters.Count > 0
+                    ? AccountAuth.Characters
+                    : await AccountAuth.GetCharactersAsync();
+
+                AddLocalLine($"[DBG] account path: chars={chars.Count}", TerminalLineSource.System);
+                if (chars.Count == 1)
+                {
+                    // Single character — auto-connect silently
+                    var ott = await AccountAuth.GetOttForCharacterAsync(chars[0]);
+                    AddLocalLine($"[DBG] account path: ott={(ott is null ? "NULL" : "OK")}", TerminalLineSource.System);
+                    if (ott is not null)
+                    {
+                        SetPlayerName(chars[0].Name);
+                        await Terminal.ConnectWithOttAsync(_serverUri, ott);
+                    }
+                }
+                else if (chars.Count > 1)
+                {
+                    // Multiple characters — show picker
+                    _showLoginPanel = true;
+                    _showCharacterPicker = true;
+                }
+            }
         }
+
+        AddLocalLine($"[DBG] init done: connected={Terminal.IsConnected} isLoggedIn={AccountAuth.IsLoggedIn}", TerminalLineSource.System);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

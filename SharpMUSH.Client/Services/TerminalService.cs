@@ -66,6 +66,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		await ConnectAsync(serverUri);
 		await Task.Delay(300);
 		_logger.LogInformation("Using pre-fetched OTT for account character login");
+		AddSystemLine($"[DBG] sending connect token (ott prefix: {ott?[..Math.Min(8, ott?.Length ?? 0)]}…)");
 		await wsService.SendAsync($"connect token {ott}");
 		AddSystemLine("[OTT] Authenticating…");
 		_ = WaitForLoginThenInitializeAsync();

@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
@@ -25,9 +26,15 @@ public class AuthController(
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
 	IRoleDerivationService roleDerivation,
-	IJwtService? jwtService,
 	ILogger<AuthController> logger) : ControllerBase
 {
+	/// <summary>
+	/// IJwtService is optional — only registered when Jwt:SigningKey is present in config.
+	/// Resolved lazily via RequestServices so the MVC controller factory lambda
+	/// (compiled at startup) never tries to inject it from the DI container.
+	/// </summary>
+	private IJwtService? JwtService => HttpContext.RequestServices.GetService<IJwtService>();
+
 	/// <summary>Request body for OTT issuance via MUSH character credentials.</summary>
 	public record MushTokenRequest(string? PlayerName, string? Password, string? AccountSessionToken, int? CharacterKey, long? CharacterCreationTime);
 
@@ -234,7 +241,7 @@ public class AuthController(
 		Justification = "account.Id is a non-secret GUID identifier used for service lookups, not a password or secret value.")]
 	public async Task<IActionResult> JwtLogin([FromBody] JwtLoginRequest request)
 	{
-		if (jwtService is null)
+		if (JwtService is null)
 			return StatusCode(501, "JWT authentication is not configured on this server.");
 
 		var account = await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password);
@@ -258,7 +265,7 @@ public class AuthController(
 
 		var flags = await character.Object.Flags.Value.ToListAsync();
 		var role = roleDerivation.DeriveRole(character.Object.Key, flags);
-		var result = await jwtService.IssueTokensAsync(account, character, role);
+		var result = await JwtService.IssueTokensAsync(account, character, role);
 
 		logger.LogInformation("JWT issued for {Username} ({AccountId}), character #{Key}, role {Role}",
 			account.Username, account.Id, character.Object.Key, role);
@@ -280,7 +287,7 @@ public class AuthController(
 		Justification = "accountId is a non-secret GUID identifier derived from the session token for service lookups, not a password or secret value.")]
 	public async Task<IActionResult> JwtSwitchCharacter([FromBody] JwtSwitchCharacterRequest request)
 	{
-		if (jwtService is null)
+		if (JwtService is null)
 			return StatusCode(501, "JWT authentication is not configured on this server.");
 
 		var accountId = await accountSessionStore.ValidateAsync(request.AccountSessionToken);
@@ -308,7 +315,7 @@ public class AuthController(
 
 		var flags = await character.Object.Flags.Value.ToListAsync();
 		var role = roleDerivation.DeriveRole(character.Object.Key, flags);
-		var result = await jwtService.IssueTokensAsync(account, character, role);
+		var result = await JwtService.IssueTokensAsync(account, character, role);
 
 		logger.LogInformation("JWT switch-character: issued for {AccountId}, character #{Key}, role {Role}",
 			accountId, character.Object.Key, role);
@@ -326,13 +333,13 @@ public class AuthController(
 	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> JwtRefresh([FromBody] JwtRefreshRequest request)
 	{
-		if (jwtService is null)
+		if (JwtService is null)
 			return StatusCode(501, "JWT authentication is not configured on this server.");
 
 		if (string.IsNullOrWhiteSpace(request.RefreshToken))
 			return BadRequest("RefreshToken is required.");
 
-		var result = await jwtService.RefreshAsync(request.RefreshToken);
+		var result = await JwtService.RefreshAsync(request.RefreshToken);
 		if (result is null)
 		{
 			logger.LogInformation("JWT refresh rejected: invalid or expired refresh token");
