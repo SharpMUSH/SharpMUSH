@@ -60,16 +60,20 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// <inheritdoc/>
 	public async Task ConnectWithOttAsync(string serverUri, string ott)
 	{
+		// Discard any buffered commands from a previous (possibly interrupted) session so they
+		// are not flushed to the server before the new connect token is authenticated.
+		wsService.ClearSendBuffer();
 		await ConnectAsync(serverUri);
 		await Task.Delay(300);
 		_logger.LogInformation("Using pre-fetched OTT for account character login");
 		await wsService.SendAsync($"connect token {ott}");
 		AddSystemLine("[OTT] Authenticating…");
-		_ = Task.Delay(1500).ContinueWith(_ => InitializePortAsync(), TaskScheduler.Default);
+		_ = WaitForLoginThenInitializeAsync();
 	}
 
 	public async Task ConnectAndLoginAsync(string serverUri, string playerName, string password, OttAuthService ottAuth)
 	{
+		wsService.ClearSendBuffer();
 		await ConnectAsync(serverUri);
 
 		// Give the server a moment to send the connection banner
@@ -90,8 +94,37 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 			AddSystemLine("[Login] Connecting with credentials…");
 		}
 
-		// Capture the port descriptor once login has settled
-		_ = Task.Delay(1500).ContinueWith(_ => InitializePortAsync(), TaskScheduler.Default);
+		_ = WaitForLoginThenInitializeAsync();
+	}
+
+	/// <summary>
+	/// Waits for the first server-originated message after login is sent (indicating the server
+	/// has processed the connect command and sent MOTD/look), then captures the port descriptor.
+	/// Falls back after 10 s to avoid blocking indefinitely on failed logins.
+	/// </summary>
+	private async Task WaitForLoginThenInitializeAsync()
+	{
+		var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		void OnLine(TerminalLine line)
+		{
+			if (line.Source == TerminalLineSource.Server)
+				tcs.TrySetResult();
+		}
+
+		LineReceived += OnLine;
+		try
+		{
+			await Task.WhenAny(tcs.Task, Task.Delay(10_000));
+		}
+		finally
+		{
+			LineReceived -= OnLine;
+		}
+
+		// Small buffer to let the login response fully settle before querying ports
+		await Task.Delay(300);
+		await InitializePortAsync();
 	}
 
 	public async Task DisconnectAsync()

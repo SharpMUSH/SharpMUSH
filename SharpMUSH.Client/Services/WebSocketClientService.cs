@@ -162,6 +162,16 @@ public class WebSocketClientService : IWebSocketClientService
 		_cancellationTokenSource?.Dispose();
 		_webSocket = null;
 		_cancellationTokenSource = null;
+		ClearSendBuffer();
+	}
+
+	/// <inheritdoc/>
+	public void ClearSendBuffer()
+	{
+		var count = _sendBuffer.Count;
+		_sendBuffer.Clear();
+		if (count > 0)
+			_logger.LogDebug("Send buffer cleared ({Count} stale messages discarded)", count);
 	}
 
 	private async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
