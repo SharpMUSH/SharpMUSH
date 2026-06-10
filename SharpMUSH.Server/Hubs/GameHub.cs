@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Messaging.Abstractions;
 using System.Security.Claims;
 
 namespace SharpMUSH.Server.Hubs;
@@ -30,9 +31,11 @@ public interface IGameHubClient
 ///   SendCommand  — forwards a player command to the game engine via NATS
 ///   JoinRoom     — adds the client to group "room:{roomDbref}"
 ///   LeaveRoom    — removes the client from group "room:{roomDbref}"
+///   JoinScene    — adds the client to group "scene:{sceneId}"
+///   LeaveScene   — removes the client from group "scene:{sceneId}"
 /// </summary>
 [Authorize]
-public class GameHub(ILogger<GameHub> logger) : Hub<IGameHubClient>
+public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGameHubClient>
 {
 	/// <summary>Claim name that carries the authenticated character's dbref.</summary>
 	public const string CharacterDbrefClaim = "character_dbref";
@@ -46,6 +49,11 @@ public class GameHub(ILogger<GameHub> logger) : Hub<IGameHubClient>
 	/// Formats a SignalR group name for a room.
 	/// </summary>
 	public static string RoomGroupName(string dbref) => $"room:{dbref}";
+
+	/// <summary>
+	/// Formats a SignalR group name for a scene.
+	/// </summary>
+	public static string SceneGroupName(string sceneId) => $"scene:{sceneId}";
 
 	/// <inheritdoc/>
 	public override async Task OnConnectedAsync()
@@ -75,22 +83,20 @@ public class GameHub(ILogger<GameHub> logger) : Hub<IGameHubClient>
 
 	/// <summary>
 	/// Client invokes this to send a command string to the game engine.
-	/// Currently creates a <see cref="GameCommandMessage"/> for downstream processing.
+	/// Publishes a <see cref="GameCommandMessage"/> to NATS (subject
+	/// <c>{prefix}.game-command</c>) for the engine to consume.
 	/// </summary>
 	/// <param name="command">The raw command string typed by the player.</param>
-	public Task SendCommand(string command)
+	public async Task SendCommand(string command)
 	{
 		var dbref = Context.User?.FindFirst(CharacterDbrefClaim)?.Value ?? string.Empty;
 		logger.LogDebug("[GameHub] Connection {ConnectionId} (char:{Dbref}) sent command: {Command}",
 			Context.ConnectionId, dbref, command);
 
-		// The game command message is created here and will be consumed downstream.
-		// Future task: publish to NATS so the engine picks it up.
 		var message = new GameCommandMessage(dbref, command, DateTimeOffset.UtcNow);
-		logger.LogDebug("[GameHub] Created GameCommandMessage for char:{Dbref} at {Timestamp}",
+		await messageBus.Publish(message);
+		logger.LogDebug("[GameHub] Published GameCommandMessage for char:{Dbref} at {Timestamp}",
 			message.CharacterDbref, message.Timestamp);
-
-		return Task.CompletedTask;
 	}
 
 	/// <summary>
@@ -115,6 +121,30 @@ public class GameHub(ILogger<GameHub> logger) : Hub<IGameHubClient>
 		await Groups.RemoveFromGroupAsync(Context.ConnectionId, RoomGroupName(roomDbref));
 		logger.LogDebug("[GameHub] Connection {ConnectionId} left room group {Group}",
 			Context.ConnectionId, RoomGroupName(roomDbref));
+	}
+
+	/// <summary>
+	/// Adds the calling connection to the SignalR group for the specified scene.
+	/// The client calls this when opening a live scene view.
+	/// </summary>
+	/// <param name="sceneId">The id of the scene to subscribe to.</param>
+	public async Task JoinScene(string sceneId)
+	{
+		await Groups.AddToGroupAsync(Context.ConnectionId, SceneGroupName(sceneId));
+		logger.LogDebug("[GameHub] Connection {ConnectionId} joined scene group {Group}",
+			Context.ConnectionId, SceneGroupName(sceneId));
+	}
+
+	/// <summary>
+	/// Removes the calling connection from the SignalR group for the specified scene.
+	/// The client calls this when leaving a live scene view.
+	/// </summary>
+	/// <param name="sceneId">The id of the scene to unsubscribe from.</param>
+	public async Task LeaveScene(string sceneId)
+	{
+		await Groups.RemoveFromGroupAsync(Context.ConnectionId, SceneGroupName(sceneId));
+		logger.LogDebug("[GameHub] Connection {ConnectionId} left scene group {Group}",
+			Context.ConnectionId, SceneGroupName(sceneId));
 	}
 
 	// ── Server-side write operations ────────────────────────────────────────
