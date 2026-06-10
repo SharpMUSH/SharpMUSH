@@ -1,4 +1,6 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
@@ -69,6 +71,86 @@ public class ZoneRendererNullLayoutTests : ZoneRendererTestBase
 			.Add(c => c.Layout, (LayoutConfiguration?)null));
 
 		await Assert.That(cut.Markup.Trim()).IsEqualTo(string.Empty);
+	}
+}
+
+/// <summary>Widget component that always throws during initialization.</summary>
+file sealed class ThrowingWidget : ComponentBase
+{
+	[Parameter] public object? Config { get; set; }
+	[Parameter] public string? Zone { get; set; }
+
+	protected override void OnInitialized() =>
+		throw new InvalidOperationException("ThrowingWidget always crashes.");
+}
+
+/// <summary>Widget component that renders a recognizable marker.</summary>
+file sealed class HealthyWidget : ComponentBase
+{
+	[Parameter] public object? Config { get; set; }
+	[Parameter] public string? Zone { get; set; }
+
+	protected override void BuildRenderTree(RenderTreeBuilder builder) =>
+		builder.AddMarkupContent(0, "<div class=\"healthy-widget\">healthy-widget-content</div>");
+}
+
+public class ZoneRendererErrorBoundaryTests : ZoneRendererTestBase
+{
+	private static IWidgetRegistry RegistryWith(params (string Name, Type ComponentType)[] widgets)
+	{
+		var reg = Substitute.For<IWidgetRegistry>();
+		reg.GetWidget(Arg.Any<string>()).Returns((IPortalWidget?)null);
+		foreach (var (name, componentType) in widgets)
+		{
+			var widget = Substitute.For<IPortalWidget>();
+			widget.Name.Returns(name);
+			widget.ComponentType.Returns(componentType);
+			reg.GetWidget(name).Returns(widget);
+		}
+		return reg;
+	}
+
+	private static LayoutConfiguration LayoutWith(params string[] widgetNames) =>
+		new(
+			Zones: new Dictionary<WidgetZone, List<WidgetPlacement>>
+			{
+				[WidgetZone.TopBar] = widgetNames.Select((n, i) => new WidgetPlacement(n, i, null)).ToList(),
+				[WidgetZone.LeftSidebar] = [],
+				[WidgetZone.RightSidebar] = [],
+				[WidgetZone.MainContent] = [],
+				[WidgetZone.Footer] = []
+			},
+			Settings: new LayoutSettings(false, false));
+
+	[TUnit.Core.Test]
+	public async Task ZoneRenderer_ThrowingWidget_DoesNotKillHealthyWidgetInSameZone()
+	{
+		Services.AddSingleton(RegistryWith(
+			("Thrower", typeof(ThrowingWidget)),
+			("Healthy", typeof(HealthyWidget))));
+
+		var cut = Render<ZoneRenderer>(p => p
+			.Add(c => c.Zone, WidgetZone.TopBar)
+			.Add(c => c.Layout, LayoutWith("Thrower", "Healthy")));
+
+		// The healthy widget still rendered despite its sibling crashing …
+		await Assert.That(cut.Markup).Contains("healthy-widget-content");
+		// … and the crash surfaced as the per-widget error alert, naming the widget.
+		await Assert.That(cut.Markup).Contains("failed to render");
+		await Assert.That(cut.Markup).Contains("Thrower");
+	}
+
+	[TUnit.Core.Test]
+	public async Task ZoneRenderer_ThrowingWidget_ShowsErrorAlertInsteadOfPropagating()
+	{
+		Services.AddSingleton(RegistryWith(("Thrower", typeof(ThrowingWidget))));
+
+		// Rendering must not throw — the ErrorBoundary contains the failure.
+		var cut = Render<ZoneRenderer>(p => p
+			.Add(c => c.Zone, WidgetZone.TopBar)
+			.Add(c => c.Layout, LayoutWith("Thrower")));
+
+		await Assert.That(cut.Markup).Contains("failed to render");
 	}
 }
 
