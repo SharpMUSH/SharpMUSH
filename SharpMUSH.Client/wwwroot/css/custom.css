@@ -285,13 +285,245 @@ body {
     color: #d4d4d4;
 }
 
+/* ── Wiki rendered content ── */
+/* Applied to the MudCard wrapping rendered wiki HTML (WikiDisplay.razor).      */
+/* Colors lean on MudBlazor palette variables so they follow the active theme. */
+
+.WikiContent {
+    line-height: 1.65;
+}
+
+/* Links inside wiki content — themed color, underline on hover */
+.WikiContent .mud-card-content a {
+    color: var(--mud-palette-secondary, #80cbc4);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 120ms ease, color 120ms ease;
+}
+
+.WikiContent .mud-card-content a:hover,
+.WikiContent .mud-card-content a:focus-visible {
+    color: var(--mud-palette-secondary-lighten, #b2dfdb);
+    border-bottom-color: currentColor;
+}
+
+/* External links (absolute URLs) get a subtle visual distinction */
+.WikiContent .mud-card-content a[href^="http"] {
+    font-style: italic;
+}
+
+/* Redlinks — wiki links to pages that don't exist yet */
+.WikiContent .mud-card-content a.wiki-redlink {
+    color: var(--mud-palette-error, #f44336);
+    border-bottom: 1px dashed currentColor;
+}
+
+.WikiContent .mud-card-content a.wiki-redlink:hover {
+    color: var(--mud-palette-error-lighten, #e57373);
+}
+
+/* Headings */
+.WikiContent .mud-card-content h1,
+.WikiContent .mud-card-content h2,
+.WikiContent .mud-card-content h3,
+.WikiContent .mud-card-content h4,
+.WikiContent .mud-card-content h5,
+.WikiContent .mud-card-content h6 {
+    color: var(--mud-palette-text-primary, rgba(255,255,255,0.87));
+    margin: 1.2em 0 0.4em;
+    line-height: 1.25;
+}
+
+.WikiContent .mud-card-content h1,
+.WikiContent .mud-card-content h2 {
+    border-bottom: 1px solid var(--mud-palette-lines-default, #333);
+    padding-bottom: 0.2em;
+}
+
+/* Paragraphs and lists */
+.WikiContent .mud-card-content p {
+    margin: 0 0 0.9em;
+}
+
+.WikiContent .mud-card-content ul,
+.WikiContent .mud-card-content ol {
+    padding-left: 1.6em;
+    margin: 0 0 0.9em;
+}
+
+.WikiContent .mud-card-content li {
+    margin: 0.2em 0;
+}
+
+/* Inline code and code blocks */
+.WikiContent .mud-card-content code {
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.WikiContent .mud-card-content pre {
+    background: #0d0d0d;
+    border: 1px solid var(--mud-palette-lines-default, #333);
+    border-radius: 4px;
+    padding: 10px 14px;
+    overflow-x: auto;
+    margin: 0 0 1em;
+}
+
+.WikiContent .mud-card-content pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Blockquotes */
+.WikiContent .mud-card-content blockquote {
+    border-left: 3px solid var(--mud-palette-secondary, #80cbc4);
+    margin: 0 0 1em;
+    padding: 0.2em 0 0.2em 1em;
+    color: var(--mud-palette-text-secondary, rgba(255,255,255,0.6));
+}
+
+/* Tables (Markdig pipe tables) */
+.WikiContent .mud-card-content table {
+    border-collapse: collapse;
+    margin: 0 0 1em;
+    width: 100%;
+}
+
+.WikiContent .mud-card-content th,
+.WikiContent .mud-card-content td {
+    border: 1px solid var(--mud-palette-lines-default, #333);
+    padding: 6px 12px;
+    text-align: left;
+}
+
+.WikiContent .mud-card-content th {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.WikiContent .mud-card-content tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* Horizontal rules */
+.WikiContent .mud-card-content hr {
+    border: none;
+    border-top: 1px solid var(--mud-palette-lines-default, #333);
+    margin: 1.5em 0;
+}
+
+/* ── Hero mode (home page) ── */
+/* The hero card uses text-align:center; these rules make block-level content
+   follow suit instead of pinning to the left edge. */
+
+/* Images are display:block, so text-align can't center them — auto margins do. */
+.WikiContent--hero .wiki-img {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Lists: shrink-wrap the list box so it centers as a unit, keeping bullets
+   adjacent to their (left-aligned) items instead of at the page edge. */
+.WikiContent--hero .mud-card-content ul,
+.WikiContent--hero .mud-card-content ol {
+    display: inline-block;
+    text-align: left;
+}
+
+/* ── Wiki directive blocks (dynamic listings: category / tag / pagelist / recent) ── */
+
+.wiki-directive-block {
+    border-left: 3px solid var(--mud-palette-secondary, #80cbc4);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0 4px 4px 0;
+    padding: 0.6em 1.1em;
+    margin: 0 0 1em;
+}
+
+.wiki-directive-block .wiki-directive-header {
+    color: var(--mud-palette-text-primary, rgba(255, 255, 255, 0.87));
+    font-weight: 600;
+    margin-bottom: 0.35em;
+}
+
+.wiki-directive-block .wiki-directive-empty,
+.wiki-directive-block .wiki-directive-loading {
+    color: var(--mud-palette-text-secondary, rgba(255, 255, 255, 0.6));
+    margin: 0;
+}
+
+.WikiContent .mud-card-content .wiki-directive-list,
+.wiki-directive-list {
+    list-style: none;
+    padding-left: 0.2em;
+    margin: 0.3em 0 0;
+}
+
+.wiki-directive-list li {
+    margin: 0.3em 0;
+}
+
+.wiki-directive-list .wiki-directive-date {
+    color: var(--mud-palette-text-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.85em;
+}
+
+/* ── Wiki revision history dialog ── */
+
+.wiki-revision-item {
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.wiki-revision-item--selected {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* Line diff: revision → current */
+.wiki-diff {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    background: #0d0d0d;
+    border: 1px solid var(--mud-palette-lines-default, #333);
+    border-radius: 4px;
+    padding: 8px 12px;
+    max-height: 320px;
+    overflow: auto;
+}
+
+.wiki-diff-line {
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding: 0 4px;
+}
+
+.wiki-diff-line--added {
+    background: rgba(80, 200, 120, 0.12);
+    color: #a3e8a0;
+}
+
+.wiki-diff-line--removed {
+    background: rgba(244, 67, 54, 0.12);
+    color: #e57373;
+    text-decoration: line-through;
+}
+
 /* Wiki images — lazy loading, constrained width, lightbox-ready */
 .wiki-img {
     max-width: 100%;
-    height: auto;
     display: block;
     margin: 0.5rem 0;
     cursor: zoom-in;
+}
+
+/* Only auto-size images that don't carry an explicit height attribute
+   (authors can size via ![alt](src){width=200 height=100}) */
+.wiki-img:not([height]) {
+    height: auto;
 }
 
 /* Lightbox overlay: activated by JS adding data-lightbox-open to <body> */

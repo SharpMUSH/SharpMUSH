@@ -30,4 +30,13 @@ public class WikiArticle
 	/// <see cref="Content"/> via the injected pipeline.
 	/// </summary>
 	public string? RenderedHtml { get; set; }
+
+	/// <summary>Optional category grouping (lower-case), or null when uncategorised.</summary>
+	public string? Category { get; set; }
+
+	/// <summary>Searchable tags (lower-case, de-duplicated).</summary>
+	public List<string> Tags { get; set; } = [];
+
+	/// <summary>When false, the page is a draft hidden from anonymous visitors.</summary>
+	public bool Published { get; set; } = true;
 }

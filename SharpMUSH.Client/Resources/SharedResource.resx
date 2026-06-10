@@ -204,6 +204,18 @@
   <data name="WikiEdit" xml:space="preserve">
     <value>Edit</value>
   </data>
+  <data name="WikiRecentChanges" xml:space="preserve">
+    <value>Recent Changes</value>
+  </data>
+  <data name="WikiNoRecentChanges" xml:space="preserve">
+    <value>No pages have been edited yet.</value>
+  </data>
+  <data name="WikiBrowseByNamespace" xml:space="preserve">
+    <value>Browse by Namespace</value>
+  </data>
+  <data name="WikiNamespaceEmpty" xml:space="preserve">
+    <value>No pages in this namespace yet.</value>
+  </data>
 
   <!-- ======================== -->
   <!-- Counter.razor            -->
@@ -918,5 +930,84 @@
 
   <data name="Terminal" xml:space="preserve">
     <value>Terminal</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- Wiki Admin               -->
+  <!-- ======================== -->
+  <data name="Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="WikiAdmin" xml:space="preserve">
+    <value>Wiki Admin</value>
+  </data>
+  <data name="WikiAdminDescription" xml:space="preserve">
+    <value>Manage wiki pages: metadata, protection, publication state and bulk operations.</value>
+  </data>
+  <data name="WikiTitle" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="WikiNamespace" xml:space="preserve">
+    <value>Namespace</value>
+  </data>
+  <data name="WikiCategory" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="WikiTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="WikiPublished" xml:space="preserve">
+    <value>Published</value>
+  </data>
+  <data name="WikiProtected" xml:space="preserve">
+    <value>Protected</value>
+  </data>
+  <data name="WikiUpdated" xml:space="preserve">
+    <value>Updated</value>
+  </data>
+  <data name="WikiRevision" xml:space="preserve">
+    <value>Revision</value>
+  </data>
+  <data name="WikiProtect" xml:space="preserve">
+    <value>Protect</value>
+  </data>
+  <data name="WikiUnprotect" xml:space="preserve">
+    <value>Unprotect</value>
+  </data>
+  <data name="WikiDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="WikiEditMetadata" xml:space="preserve">
+    <value>Edit Metadata</value>
+  </data>
+  <data name="WikiDeleteConfirmTitle" xml:space="preserve">
+    <value>Delete Pages</value>
+  </data>
+  <data name="WikiDeleteConfirmText" xml:space="preserve">
+    <value>Delete {0} page(s) and all their revisions? This cannot be undone.</value>
+  </data>
+  <data name="WikiBatchSucceeded" xml:space="preserve">
+    <value>{0} page(s) updated</value>
+  </data>
+  <data name="WikiBatchFailed" xml:space="preserve">
+    <value>{0} page(s) failed</value>
+  </data>
+  <data name="WikiNoPages" xml:space="preserve">
+    <value>No wiki pages found.</value>
+  </data>
+  <data name="WikiMetadataSaved" xml:space="preserve">
+    <value>Metadata saved for {0}</value>
+  </data>
+  <data name="WikiMetadataSaveFailed" xml:space="preserve">
+    <value>Metadata save failed: {0}</value>
+  </data>
+  <data name="WikiTagsHelper" xml:space="preserve">
+    <value>Press Enter or the + to add a tag</value>
+  </data>
+  <data name="WikiNamespaceFilter" xml:space="preserve">
+    <value>Namespace filter</value>
+  </data>
+  <data name="WikiAllNamespaces" xml:space="preserve">
+    <value>All namespaces</value>
   </data>
 </root>

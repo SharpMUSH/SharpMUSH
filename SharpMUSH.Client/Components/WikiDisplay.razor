@@ -1,11 +1,13 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services
+@using System.Net
+@using System.Text.RegularExpressions
 @inject WikiMarkdigPipeline Pipeline
 @inject IStringLocalizer<SharedResource> Loc
 @inject IDialogService DialogService
 
-<MudCard Class="WikiContent" Style=@Style Elevation="0">
+<MudCard Class="@CssClass" Style=@Style Elevation="0">
     @if (Article is not null)
     {
         <MudCardHeader>
@@ -29,7 +31,17 @@
         }
         @if (Article is not null)
         {
-            @MarkdownHtml
+            @foreach (var segment in _segments)
+            {
+                @if (segment.Directive is not null)
+                {
+                    <WikiDirectiveBlock Directive="@segment.Directive" Arg="@segment.Arg" />
+                }
+                else
+                {
+                    @((MarkupString)segment.Html)
+                }
+            }
         }
         else
         {
@@ -54,13 +66,31 @@
     [Parameter]
     public required string Slug { get; init; }
 
+    /// <summary>Wiki namespace (e.g. "help"); null means the Main namespace.</summary>
+    [Parameter]
+    public string? Namespace { get; init; }
+
     [Parameter]
     public WikiArticle? Article { get; init; }
 
     [Parameter]
     public required Func<Task> ActivateEditMode { get; init; }
 
-    MarkupString MarkdownHtml;
+    /// <summary>
+    /// One renderable chunk of the article body: either raw HTML, or a dynamic
+    /// directive placeholder (when <c>Directive</c> is non-null).
+    /// </summary>
+    private sealed record BodySegment(string Html, string? Directive = null, string Arg = "");
+
+    /// <summary>
+    /// Matches the placeholder divs emitted by WikiDirectiveExtension at render time:
+    /// &lt;div class="wiki-directive" data-directive="…" data-arg="…"&gt;&lt;/div&gt;
+    /// </summary>
+    private static readonly Regex DirectivePlaceholder = new(
+        "<div class=\"wiki-directive\" data-directive=\"([a-z]+)\" data-arg=\"([^\"]*)\"></div>",
+        RegexOptions.Compiled);
+
+    private List<BodySegment> _segments = [];
 
     protected override void OnParametersSet()
     {
@@ -70,11 +100,45 @@
         var html = Article?.RenderedHtml
                    ?? (Article is not null ? Pipeline.RenderToHtml(Article.Content) : string.Empty);
 
-        MarkdownHtml = (MarkupString)html;
+        _segments = SplitOnDirectives(html);
         base.OnParametersSet();
     }
 
+    /// <summary>
+    /// Splits rendered article HTML on wiki-directive placeholders so the static
+    /// chunks render as raw markup while each directive becomes a live component.
+    /// </summary>
+    private static List<BodySegment> SplitOnDirectives(string html)
+    {
+        var segments = new List<BodySegment>();
+        var position = 0;
+
+        foreach (Match match in DirectivePlaceholder.Matches(html))
+        {
+            if (match.Index > position)
+            {
+                segments.Add(new BodySegment(html[position..match.Index]));
+            }
+
+            segments.Add(new BodySegment(
+                Html: string.Empty,
+                Directive: match.Groups[1].Value,
+                Arg: WebUtility.HtmlDecode(match.Groups[2].Value)));
+
+            position = match.Index + match.Length;
+        }
+
+        if (position < html.Length)
+        {
+            segments.Add(new BodySegment(html[position..]));
+        }
+
+        return segments;
+    }
+
     private bool DisplayAsHero => Slug.Equals("home", StringComparison.InvariantCultureIgnoreCase);
+
+    private string CssClass => DisplayAsHero ? "WikiContent WikiContent--hero" : "WikiContent";
 
     private string Style => $"min-height: calc(100vh - var(--mud-appbar-height)); {(DisplayAsHero ? "background:inherit; text-align:center;" : string.Empty)}";
 
@@ -82,7 +146,9 @@
     {
         var parameters = new DialogParameters<WikiHistoryDialog>
         {
-            { x => x.Slug, Slug }
+            { x => x.Slug, Slug },
+            { x => x.Namespace, Namespace },
+            { x => x.CurrentMarkdown, Article?.Content }
         };
         var options = new DialogOptions
         {

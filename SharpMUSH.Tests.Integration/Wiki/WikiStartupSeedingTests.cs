@@ -58,6 +58,19 @@ public class WikiStartupSeedingTests
 	}
 
 	[Test]
+	public async Task MarkdownGuideIsSeeded_InHelpNamespace()
+	{
+		var result = await Wiki.GetBySlugAsync("markdown_guide", WikiNamespace.Help);
+
+		await Assert.That(result.IsT0)
+			.IsTrue()
+			.Because("StartupHandler seeds the Help:Markdown Guide page on startup");
+		await Assert.That(result.AsT0.Title).IsEqualTo("Markdown Guide");
+		// The rendered copy must carry the live recent-changes directive placeholder.
+		await Assert.That(result.AsT0.RenderedHtml).Contains("data-directive=\"recent\"");
+	}
+
+	[Test]
 	public async Task HomePageIsSeeded_NamespaceIsMain()
 	{
 		var result = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);

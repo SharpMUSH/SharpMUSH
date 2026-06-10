@@ -75,6 +75,58 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult(result);
 	}
 
+	public Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null)
+	{
+		var query = _pagesById.Values.AsEnumerable();
+		if (ns is not null)
+		{
+			var nsStr = ns.Value.ToString().ToLowerInvariant();
+			query = query.Where(p => p.Namespace.Equals(nsStr, StringComparison.OrdinalIgnoreCase));
+		}
+
+		IReadOnlyList<WikiPage> result = query
+			.OrderBy(p => p.Namespace)
+			.ThenBy(p => p.Slug)
+			.Skip(skip)
+			.Take(take)
+			.ToList();
+		return Task.FromResult(result);
+	}
+
+	public Task<int> CountPagesAsync(WikiNamespace? ns = null)
+	{
+		if (ns is null)
+			return Task.FromResult(_pagesById.Count);
+
+		var nsStr = ns.Value.ToString().ToLowerInvariant();
+		return Task.FromResult(_pagesById.Values
+			.Count(p => p.Namespace.Equals(nsStr, StringComparison.OrdinalIgnoreCase)));
+	}
+
+	public Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50)
+	{
+		var normalized = WikiHelpers.NormalizeCategory(category);
+		IReadOnlyList<WikiPage> result = _pagesById.Values
+			.Where(p => p.Category is not null && p.Category.Equals(normalized, StringComparison.OrdinalIgnoreCase))
+			.OrderBy(p => p.Title)
+			.Skip(skip)
+			.Take(take)
+			.ToList();
+		return Task.FromResult(result);
+	}
+
+	public Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50)
+	{
+		var normalized = tag.Trim().ToLowerInvariant();
+		IReadOnlyList<WikiPage> result = _pagesById.Values
+			.Where(p => p.Tags.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+			.OrderBy(p => p.Title)
+			.Skip(skip)
+			.Take(take)
+			.ToList();
+		return Task.FromResult(result);
+	}
+
 	// ── IWikiService: Write ───────────────────────────────────────────────────
 
 	public Task<OneOf<WikiPage, Error<string>>> CreateAsync(
@@ -170,6 +222,25 @@ public sealed class InMemoryWikiService : IWikiService
 
 		_pagesById[id] = existing with { IsProtected = isProtected };
 		return Task.FromResult<OneOf<None, NotFound>>(new None());
+	}
+
+	public Task<OneOf<WikiPage, NotFound>> SetMetadataAsync(
+		string id,
+		string? category,
+		IReadOnlyList<string> tags,
+		bool published)
+	{
+		if (!_pagesById.TryGetValue(id, out var existing))
+			return Task.FromResult<OneOf<WikiPage, NotFound>>(new NotFound());
+
+		var updated = existing with
+		{
+			Category = WikiHelpers.NormalizeCategory(category),
+			Tags = WikiHelpers.NormalizeTags(tags),
+			Published = published,
+		};
+		_pagesById[id] = updated;
+		return Task.FromResult<OneOf<WikiPage, NotFound>>(updated);
 	}
 
 	// ── IWikiService: Revisions ───────────────────────────────────────────────

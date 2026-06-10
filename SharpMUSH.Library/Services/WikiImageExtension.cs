@@ -3,6 +3,7 @@ using Markdig.Renderers;
 using Markdig.Renderers.Html;
 using Markdig.Renderers.Html.Inlines;
 using Markdig.Syntax.Inlines;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services;
 
@@ -42,11 +43,26 @@ public sealed class WikiImageExtension : IMarkdownExtension
 /// Replaces the default Markdig <see cref="LinkInlineRenderer"/> so that image
 /// nodes get <c>loading="lazy"</c> and <c>class="wiki-img"</c> attributes added.
 /// All other link rendering (anchors, etc.) is delegated to the base class.
+///
+/// Image sizing: the Generic Attributes extension (part of UseAdvancedExtensions)
+/// parses <c>![alt](src){width=200 height=100}</c> onto the AST node; this renderer
+/// emits a WHITELISTED subset of those attributes — width, height, and extra CSS
+/// classes — with strict value validation. Everything else (style, onerror, id, …)
+/// is dropped so the attribute block cannot reopen the XSS door that DisableHtml
+/// closed.
 /// </summary>
-internal sealed class WikiLinkInlineRenderer : HtmlObjectRenderer<LinkInline>
+internal sealed partial class WikiLinkInlineRenderer : HtmlObjectRenderer<LinkInline>
 {
 	/// <summary>CSS class applied to every wiki-rendered image.</summary>
 	public const string ImageCssClass = "wiki-img";
+
+	/// <summary>Dimension values: plain integers ("200") or percentages ("50%").</summary>
+	[GeneratedRegex(@"^\d{1,5}%?$")]
+	private static partial Regex DimensionPattern();
+
+	/// <summary>Author-supplied CSS class names: conservative identifier charset.</summary>
+	[GeneratedRegex(@"^[a-zA-Z][a-zA-Z0-9_-]*$")]
+	private static partial Regex CssClassPattern();
 
 	protected override void Write(HtmlRenderer renderer, LinkInline link)
 	{
@@ -60,6 +76,7 @@ internal sealed class WikiLinkInlineRenderer : HtmlObjectRenderer<LinkInline>
 		// Image — emit with lazy loading and wiki-img class.
 		var src = link.Url ?? string.Empty;
 		var alt = ExtractPlainText(link);
+		var attributes = link.TryGetAttributes();
 
 		renderer.Write("<img");
 		renderer.Write($" src=\"");
@@ -68,9 +85,40 @@ internal sealed class WikiLinkInlineRenderer : HtmlObjectRenderer<LinkInline>
 		renderer.Write($" alt=\"");
 		renderer.WriteEscape(alt);
 		renderer.Write("\"");
-		renderer.Write($" class=\"{ImageCssClass}\"");
+		renderer.Write($" class=\"{BuildCssClasses(attributes)}\"");
 		renderer.Write(" loading=\"lazy\"");
+		WriteDimension(renderer, attributes, "width");
+		WriteDimension(renderer, attributes, "height");
 		renderer.Write(" />");
+	}
+
+	/// <summary>
+	/// Emits <c>width</c>/<c>height</c> from the generic-attributes block when present
+	/// and the value passes the dimension whitelist. Invalid values are dropped silently.
+	/// </summary>
+	private static void WriteDimension(HtmlRenderer renderer, HtmlAttributes? attributes, string name)
+	{
+		var value = attributes?.Properties?
+			.FirstOrDefault(p => string.Equals(p.Key, name, StringComparison.OrdinalIgnoreCase))
+			.Value;
+
+		if (value is not null && DimensionPattern().IsMatch(value))
+			renderer.Write($" {name}=\"{value}\"");
+	}
+
+	/// <summary>
+	/// Combines the mandatory <see cref="ImageCssClass"/> with any valid author-supplied
+	/// classes from the generic-attributes block (<c>{.logo}</c>).
+	/// </summary>
+	private static string BuildCssClasses(HtmlAttributes? attributes)
+	{
+		if (attributes?.Classes is not { Count: > 0 } classes)
+			return ImageCssClass;
+
+		var extra = classes.Where(c => CssClassPattern().IsMatch(c)).ToList();
+		return extra.Count == 0
+			? ImageCssClass
+			: $"{ImageCssClass} {string.Join(' ', extra)}";
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────────────────

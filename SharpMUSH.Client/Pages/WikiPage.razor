@@ -1,12 +1,18 @@
 @page "/wiki/{Slug}"
+@page "/wiki/{Ns}/{Slug}"
 @using SharpMUSH.Client.Components
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Slug</PageTitle>
 
-<WikiView Slug="@Slug" Mode="WikiView.WikiMode.View" />
+@* Key forces a fresh WikiView (and page load) when navigating wiki-link to wiki-link. *@
+<WikiView @key="@($"{Ns}:{Slug}")" Slug="@Slug" Namespace="@Ns" Mode="WikiView.WikiMode.View" />
 
 @code {
     [Parameter]
     public required string Slug { get; set; }
+
+    /// <summary>Optional namespace segment: /wiki/help/getting_started. Null for Main pages.</summary>
+    [Parameter]
+    public string? Ns { get; set; }
 }

@@ -40,6 +40,28 @@ public interface IWikiService
 	/// </summary>
 	Task<IReadOnlyList<WikiPage>> GetByNamespaceAsync(WikiNamespace ns, int skip = 0, int take = 50);
 
+	/// <summary>
+	/// Lists ALL pages (optionally restricted to one namespace), ordered by
+	/// namespace then slug, with skip/take pagination. Includes unpublished pages —
+	/// callers are responsible for visibility filtering.
+	/// </summary>
+	Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null);
+
+	/// <summary>
+	/// Returns the total page count (optionally restricted to one namespace).
+	/// </summary>
+	Task<int> CountPagesAsync(WikiNamespace? ns = null);
+
+	/// <summary>
+	/// Lists pages with the given category (case-insensitive), ordered by title.
+	/// </summary>
+	Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50);
+
+	/// <summary>
+	/// Lists pages carrying the given tag (case-insensitive), ordered by title.
+	/// </summary>
+	Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50);
+
 	// ── Write operations ──────────────────────────────────────────────────────
 
 	/// <summary>
@@ -76,6 +98,18 @@ public interface IWikiService
 	/// Returns <c>NotFound</c> when no page with <paramref name="id"/> exists.
 	/// </summary>
 	Task<OneOf<None, NotFound>> SetProtectionAsync(string id, bool isProtected);
+
+	/// <summary>
+	/// Sets the metadata fields (category, tags, published flag) on a page.
+	/// Does NOT create a revision — metadata changes are not content edits.
+	/// Category and tags are normalised to lower-case; tags are de-duplicated.
+	/// Returns the updated page, or <c>NotFound</c> when no page with <paramref name="id"/> exists.
+	/// </summary>
+	Task<OneOf<WikiPage, NotFound>> SetMetadataAsync(
+		string id,
+		string? category,
+		IReadOnlyList<string> tags,
+		bool published);
 
 	// ── Revision operations ───────────────────────────────────────────────────
 

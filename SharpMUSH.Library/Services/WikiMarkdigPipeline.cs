@@ -31,6 +31,9 @@ public sealed class WikiMarkdigPipeline
 	/// <list type="bullet">
 	///   <item>Advanced extensions (tables, task lists, auto-links, pipe tables, emphasis extras)</item>
 	///   <item><see cref="WikiLinkExtension"/> for <c>[[page]]</c> links</item>
+	///   <item><see cref="WikiImageExtension"/> for lazy-loading, lightbox-ready images</item>
+	///   <item><see cref="WikiDirectiveExtension"/> for dynamic-listing directives
+	///     (<c>::: category …</c>, <c>::: tag …</c>, <c>::: pagelist …</c>, <c>::: recent N</c>)</item>
 	///   <item>DisableHtml — raw HTML in wiki source is blocked for security</item>
 	/// </list>
 	/// </summary>
@@ -39,6 +42,7 @@ public sealed class WikiMarkdigPipeline
 			.UseAdvancedExtensions()
 			.Use<WikiLinkExtension>()
 			.Use<WikiImageExtension>()
+			.Use<WikiDirectiveExtension>()
 			.DisableHtml()
 			.Build();
 

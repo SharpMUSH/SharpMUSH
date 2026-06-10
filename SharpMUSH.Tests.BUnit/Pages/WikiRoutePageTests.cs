@@ -87,7 +87,8 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 
     private static WikiController.WikiPageDto ToDto(WikiPage p) => new(
         p.Id, p.Slug, p.Title, p.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
-        p.CreatedAt, p.UpdatedAt, p.IsProtected, p.RevisionNumber);
+        p.CreatedAt, p.UpdatedAt, p.IsProtected, p.RevisionNumber,
+        p.Category, p.Tags, p.Published);
 
     private static WikiNamespace ParseNs(string? ns) =>
         Enum.TryParse<WikiNamespace>(ns, ignoreCase: true, out var r) ? r : WikiNamespace.Main;

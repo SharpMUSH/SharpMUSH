@@ -31,4 +31,18 @@ public record WikiPage(
 	DateTimeOffset CreatedAt,
 	DateTimeOffset UpdatedAt,
 	bool IsProtected,
-	int RevisionNumber);
+	int RevisionNumber)
+{
+	// Metadata fields are init-only properties (not positional parameters) so that
+	// existing construction sites and stored documents missing these fields keep
+	// working — they simply get the defaults below.
+
+	/// <summary>Optional top-level category grouping (e.g. "lore", "rules"). Lower-case.</summary>
+	public string? Category { get; init; }
+
+	/// <summary>Searchable tags for cross-cutting concerns. Lower-case, de-duplicated.</summary>
+	public IReadOnlyList<string> Tags { get; init; } = [];
+
+	/// <summary>When false, the page is a draft hidden from non-admin listings and views.</summary>
+	public bool Published { get; init; } = true;
+}

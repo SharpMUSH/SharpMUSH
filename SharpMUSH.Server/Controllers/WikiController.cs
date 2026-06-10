@@ -10,6 +10,7 @@ using SharpMUSH.Server.Services;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using System.Web;
 
 namespace SharpMUSH.Server.Controllers;
@@ -21,10 +22,19 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET    /api/wiki/ns/{ns}/{slug}    — namespaced page
 ///   GET    /api/wiki/character/{name}  — character namespace alias
 ///   GET    /api/wiki/recent           — recently updated pages
+///   GET    /api/wiki/ns/{ns}           — list pages in a namespace
+///   GET    /api/wiki/{slug}/revisions — revision history (newest first)
+///   GET    /api/wiki/{slug}/revisions/{n} — single revision snapshot
 ///   POST   /api/wiki                  — create page (authenticated)
 ///   PUT    /api/wiki/{slug}            — update page (authenticated)
 ///   DELETE /api/wiki/{slug}             — delete page (Wizard+)
 ///   PUT    /api/wiki/{slug}/protection  — set protection flag (Wizard+)
+///   GET    /api/wiki/pages            — paginated listing of all pages (X-Total-Count header)
+///   GET    /api/wiki/category/{cat}   — pages in a category
+///   GET    /api/wiki/tag/{tag}        — pages carrying a tag
+///   PUT    /api/wiki/{slug}/metadata  — set category/tags/published (authenticated)
+///   POST   /api/wiki/batch/protect    — batch protection change (Wizard+)
+///   POST   /api/wiki/batch/delete     — batch deletion (Wizard+)
 ///   POST   /api/wiki/invalidate-cache — evict pre-render cache entries after an edit
 /// </summary>
 [ApiController]
@@ -48,16 +58,43 @@ public class WikiController(
 		DateTimeOffset CreatedAt,
 		DateTimeOffset UpdatedAt,
 		bool IsProtected,
-		int RevisionNumber);
+		int RevisionNumber,
+		string? Category,
+		IReadOnlyList<string> Tags,
+		bool Published);
+
+	/// <summary>A single revision snapshot. MarkdownSource is the full page body at that revision.</summary>
+	public record WikiRevisionDto(
+		int RevisionNumber,
+		string EditorDbref,
+		DateTimeOffset Timestamp,
+		string? EditSummary,
+		string MarkdownSource);
 
 	// ── Helpers ──────────────────────────────────────────────────────────────
 
 	private static WikiPageDto ToDto(WikiPage p) => new(
 		p.Id, p.Slug, p.Title, p.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
-		p.CreatedAt, p.UpdatedAt, p.IsProtected, p.RevisionNumber);
+		p.CreatedAt, p.UpdatedAt, p.IsProtected, p.RevisionNumber,
+		p.Category, p.Tags, p.Published);
+
+	private static WikiRevisionDto ToDto(WikiRevision r) => new(
+		r.RevisionNumber, r.EditorDbref, r.Timestamp, r.EditSummary, r.MarkdownSource);
 
 	private static WikiNamespace ParseNamespace(string? ns) =>
 		Enum.TryParse<WikiNamespace>(ns, ignoreCase: true, out var result) ? result : WikiNamespace.Main;
+
+	private static WikiNamespace? ParseOptionalNamespace(string? ns) =>
+		string.IsNullOrWhiteSpace(ns) ? null
+		: Enum.TryParse<WikiNamespace>(ns, ignoreCase: true, out var result) ? result : WikiNamespace.Main;
+
+	/// <summary>True when the caller carries an authenticated identity. Anonymous
+	/// callers only see Published pages; drafts are reserved for logged-in users.</summary>
+	private bool IsAuthenticatedCaller => User.Identity?.IsAuthenticated == true;
+
+	/// <summary>Filters out unpublished (draft) pages for anonymous callers.</summary>
+	private IEnumerable<WikiPage> FilterVisible(IEnumerable<WikiPage> pages) =>
+		IsAuthenticatedCaller ? pages : pages.Where(p => p.Published);
 
 	// ── Read endpoints ───────────────────────────────────────────────────────
 
@@ -70,7 +107,7 @@ public class WikiController(
 	{
 		var result = await wikiService.GetBySlugAsync(slug);
 		return result.Match<IActionResult>(
-			page => Ok(ToDto(page)),
+			page => page.Published || IsAuthenticatedCaller ? Ok(ToDto(page)) : NotFound(),
 			_ => NotFound());
 	}
 
@@ -83,7 +120,7 @@ public class WikiController(
 	{
 		var result = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
 		return result.Match<IActionResult>(
-			page => Ok(ToDto(page)),
+			page => page.Published || IsAuthenticatedCaller ? Ok(ToDto(page)) : NotFound(),
 			_ => NotFound());
 	}
 
@@ -96,7 +133,7 @@ public class WikiController(
 	{
 		var result = await wikiService.GetBySlugAsync(name, WikiNamespace.Character);
 		return result.Match<IActionResult>(
-			page => Ok(ToDto(page)),
+			page => page.Published || IsAuthenticatedCaller ? Ok(ToDto(page)) : NotFound(),
 			_ => NotFound());
 	}
 
@@ -108,7 +145,86 @@ public class WikiController(
 	public async Task<IActionResult> GetRecentChanges([FromQuery] int count = 20)
 	{
 		var pages = await wikiService.GetRecentChangesAsync(count);
-		return Ok(pages.Select(ToDto));
+		return Ok(FilterVisible(pages).Select(ToDto));
+	}
+
+	/// <summary>
+	/// GET /api/wiki/ns/{namespace}?skip=0&amp;take=50
+	/// Lists pages within a namespace, ordered by title, with pagination.
+	/// </summary>
+	[HttpGet("ns/{ns}")]
+	public async Task<IActionResult> ListNamespacePages(string ns, [FromQuery] int skip = 0, [FromQuery] int take = 50)
+	{
+		var pages = await wikiService.GetByNamespaceAsync(ParseNamespace(ns), skip, take);
+		return Ok(FilterVisible(pages).Select(ToDto));
+	}
+
+	/// <summary>
+	/// GET /api/wiki/pages?skip=0&amp;take=50&amp;ns=
+	/// Paginated listing of all pages (optionally restricted to a namespace).
+	/// The X-Total-Count response header carries the unpaginated page count.
+	/// Anonymous callers only see published pages.
+	/// </summary>
+	[HttpGet("pages")]
+	public async Task<IActionResult> ListAllPages([FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? ns = null)
+	{
+		var nsFilter = ParseOptionalNamespace(ns);
+		var pages = await wikiService.GetAllPagesAsync(skip, take, nsFilter);
+		var total = await wikiService.CountPagesAsync(nsFilter);
+		Response.Headers["X-Total-Count"] = total.ToString();
+		return Ok(FilterVisible(pages).Select(ToDto));
+	}
+
+	/// <summary>
+	/// GET /api/wiki/category/{category}?skip=0&amp;take=50
+	/// Lists pages in a category. Anonymous callers only see published pages.
+	/// </summary>
+	[HttpGet("category/{category}")]
+	public async Task<IActionResult> ListCategoryPages(string category, [FromQuery] int skip = 0, [FromQuery] int take = 50)
+	{
+		var pages = await wikiService.GetByCategoryAsync(category, skip, take);
+		return Ok(FilterVisible(pages).Select(ToDto));
+	}
+
+	/// <summary>
+	/// GET /api/wiki/tag/{tag}?skip=0&amp;take=50
+	/// Lists pages carrying a tag. Anonymous callers only see published pages.
+	/// </summary>
+	[HttpGet("tag/{tag}")]
+	public async Task<IActionResult> ListTagPages(string tag, [FromQuery] int skip = 0, [FromQuery] int take = 50)
+	{
+		var pages = await wikiService.GetByTagAsync(tag, skip, take);
+		return Ok(FilterVisible(pages).Select(ToDto));
+	}
+
+	/// <summary>
+	/// GET /api/wiki/{slug}/revisions?skip=0&amp;take=20
+	/// Returns the revision history for a page, newest first.
+	/// </summary>
+	[HttpGet("{slug}/revisions")]
+	public async Task<IActionResult> GetRevisions(string slug, [FromQuery] int skip = 0, [FromQuery] int take = 20, [FromQuery] string? ns = null)
+	{
+		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		if (lookup.IsT1) return NotFound();
+
+		var revisions = await wikiService.GetRevisionsAsync(lookup.AsT0.Id, skip, take);
+		return Ok(revisions.Select(ToDto));
+	}
+
+	/// <summary>
+	/// GET /api/wiki/{slug}/revisions/{number}
+	/// Returns a single revision snapshot, including its full markdown body.
+	/// </summary>
+	[HttpGet("{slug}/revisions/{number:int}")]
+	public async Task<IActionResult> GetRevision(string slug, int number, [FromQuery] string? ns = null)
+	{
+		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		if (lookup.IsT1) return NotFound();
+
+		var result = await wikiService.GetRevisionAsync(lookup.AsT0.Id, number);
+		return result.Match<IActionResult>(
+			revision => Ok(ToDto(revision)),
+			_ => NotFound());
 	}
 
 	// ── Write endpoints ───────────────────────────────────────────────────────
@@ -150,11 +266,15 @@ public class WikiController(
 	/// </summary>
 	[HttpPut("{slug}")]
 	[Authorize]
-	public async Task<IActionResult> UpdatePage(string slug, [FromBody] UpdatePageRequest request)
+	public async Task<IActionResult> UpdatePage(string slug, [FromBody] UpdatePageRequest request, [FromQuery] string? ns = null)
 	{
 		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
-		var lookup = await wikiService.GetBySlugAsync(slug);
+		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
+
+		// Protected pages may only be edited by Wizard-level users.
+		if (lookup.AsT0.IsProtected && !User.IsInRole(nameof(PortalRole.Wizard)))
+			return Forbid();
 
 		var id = lookup.AsT0.Id;
 		var result = await wikiService.UpdateAsync(id, request.Markdown, editorDbref, request.EditSummary);
@@ -174,10 +294,10 @@ public class WikiController(
 	/// </summary>
 	[HttpDelete("{slug}")]
 	[Authorize(Roles = nameof(PortalRole.Wizard))]
-	public async Task<IActionResult> DeletePage(string slug)
+	public async Task<IActionResult> DeletePage(string slug, [FromQuery] string? ns = null)
 	{
 		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
-		var lookup = await wikiService.GetBySlugAsync(slug);
+		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 
 		var id = lookup.AsT0.Id;
@@ -198,9 +318,9 @@ public class WikiController(
 	/// </summary>
 	[HttpPut("{slug}/protection")]
 	[Authorize(Roles = nameof(PortalRole.Wizard))]
-	public async Task<IActionResult> SetProtection(string slug, [FromBody] SetProtectionRequest request)
+	public async Task<IActionResult> SetProtection(string slug, [FromBody] SetProtectionRequest request, [FromQuery] string? ns = null)
 	{
-		var lookup = await wikiService.GetBySlugAsync(slug);
+		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 
 		var id = lookup.AsT0.Id;
@@ -208,6 +328,107 @@ public class WikiController(
 		return result.Match<IActionResult>(
 			_ => Ok(),
 			_ => NotFound());
+	}
+
+	/// <summary>Request body for setting page metadata.</summary>
+	public record SetMetadataRequest(string? Category, string[] Tags, bool Published);
+
+	/// <summary>
+	/// PUT /api/wiki/{slug}/metadata
+	/// Sets the category, tags and published flag on a page, identified by slug.
+	/// Does not create a content revision.
+	/// </summary>
+	[HttpPut("{slug}/metadata")]
+	[Authorize]
+	public async Task<IActionResult> SetMetadata(string slug, [FromBody] SetMetadataRequest request, [FromQuery] string? ns = null)
+	{
+		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		if (lookup.IsT1) return NotFound();
+
+		var result = await wikiService.SetMetadataAsync(
+			lookup.AsT0.Id, request.Category, request.Tags ?? [], request.Published);
+		return result.Match<IActionResult>(
+			page =>
+			{
+				logger.LogInformation("Wiki page metadata updated: slug={Slug} category={Category} published={Published}",
+					slug, page.Category, page.Published);
+				prerenderCache.InvalidatePrefix("/wiki/");
+				return Ok(ToDto(page));
+			},
+			_ => NotFound());
+	}
+
+	// ── Batch operations ──────────────────────────────────────────────────────
+
+	/// <summary>Request body for batch protection changes.</summary>
+	public record BatchProtectRequest(string[] Slugs, string? Ns, bool IsProtected);
+
+	/// <summary>Request body for batch deletion.</summary>
+	public record BatchDeleteRequest(string[] Slugs, string? Ns);
+
+	/// <summary>Per-slug outcome of a batch operation.</summary>
+	public record BatchResult(IReadOnlyList<string> Succeeded, IReadOnlyList<string> Failed);
+
+	/// <summary>
+	/// POST /api/wiki/batch/protect
+	/// Sets or clears the protection flag on multiple pages at once.
+	/// </summary>
+	[HttpPost("batch/protect")]
+	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	public async Task<IActionResult> BatchProtect([FromBody] BatchProtectRequest request)
+	{
+		var ns = ParseNamespace(request.Ns);
+		var succeeded = new List<string>();
+		var failed = new List<string>();
+
+		foreach (var slug in request.Slugs ?? [])
+		{
+			var lookup = await wikiService.GetBySlugAsync(slug, ns);
+			if (lookup.IsT1)
+			{
+				failed.Add(slug);
+				continue;
+			}
+
+			var result = await wikiService.SetProtectionAsync(lookup.AsT0.Id, request.IsProtected);
+			(result.IsT0 ? succeeded : failed).Add(slug);
+		}
+
+		logger.LogInformation("Wiki batch protect: protected={Protected} ok={Ok} failed={Failed}",
+			request.IsProtected, succeeded.Count, failed.Count);
+		return Ok(new BatchResult(succeeded, failed));
+	}
+
+	/// <summary>
+	/// POST /api/wiki/batch/delete
+	/// Deletes multiple pages (and their revisions) at once.
+	/// </summary>
+	[HttpPost("batch/delete")]
+	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	public async Task<IActionResult> BatchDelete([FromBody] BatchDeleteRequest request)
+	{
+		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var ns = ParseNamespace(request.Ns);
+		var succeeded = new List<string>();
+		var failed = new List<string>();
+
+		foreach (var slug in request.Slugs ?? [])
+		{
+			var lookup = await wikiService.GetBySlugAsync(slug, ns);
+			if (lookup.IsT1)
+			{
+				failed.Add(slug);
+				continue;
+			}
+
+			var result = await wikiService.DeleteAsync(lookup.AsT0.Id, editorDbref);
+			(result.IsT0 ? succeeded : failed).Add(slug);
+		}
+
+		prerenderCache.InvalidatePrefix("/wiki/");
+		logger.LogInformation("Wiki batch delete: by={Editor} ok={Ok} failed={Failed}",
+			editorDbref, succeeded.Count, failed.Count);
+		return Ok(new BatchResult(succeeded, failed));
 	}
 
 	// ── Cache invalidation ────────────────────────────────────────────────────
@@ -261,6 +482,7 @@ public class WikiController(
 		sb.AppendLine($"  <meta property=\"og:description\" content=\"{ogDesc}\" />");
 		sb.AppendLine($"  <meta property=\"og:type\" content=\"article\" />");
 		sb.AppendLine($"  <meta property=\"og:url\" content=\"{ogUrl}\" />");
+		sb.AppendLine($"  <script type=\"application/ld+json\">{BuildArticleJsonLd(page, canonicalUrl)}</script>");
 		sb.AppendLine("</head>");
 		sb.AppendLine("<body>");
 		sb.AppendLine($"  <h1>{HttpUtility.HtmlEncode(page.Title)}</h1>");
@@ -268,6 +490,25 @@ public class WikiController(
 		sb.AppendLine("</body>");
 		sb.AppendLine("</html>");
 		return sb.ToString();
+	}
+
+	/// <summary>
+	/// Builds a schema.org Article JSON-LD block for the pre-rendered page.
+	/// Serializing the whole object via System.Text.Json guarantees safe escaping
+	/// of titles/URLs containing quotes or angle brackets.
+	/// </summary>
+	private static string BuildArticleJsonLd(WikiPage page, string canonicalUrl)
+	{
+		var jsonLd = new Dictionary<string, object>
+		{
+			["@context"] = "https://schema.org",
+			["@type"] = "Article",
+			["headline"] = page.Title,
+			["datePublished"] = page.CreatedAt.ToString("O"),
+			["dateModified"] = page.UpdatedAt.ToString("O"),
+			["url"] = canonicalUrl,
+		};
+		return JsonSerializer.Serialize(jsonLd);
 	}
 
 	/// <summary>

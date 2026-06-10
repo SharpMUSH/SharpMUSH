@@ -31,6 +31,13 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 		string RenderedHtml,
 		int RevisionNumber);
 
+	private record WikiRevisionDto(
+		int RevisionNumber,
+		string EditorDbref,
+		DateTimeOffset Timestamp,
+		string? EditSummary,
+		string MarkdownSource);
+
 	private record CreatePageRequest(string Title, string Markdown, string? Namespace);
 	private record UpdatePageRequest(string Markdown, string? EditSummary);
 
@@ -159,5 +166,112 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(fetched).IsNotNull();
 		await Assert.That(fetched!.MarkdownSource).IsEqualTo(updatedMarkdown);
 		await Assert.That(fetched.RevisionNumber).IsGreaterThan(createdDto.RevisionNumber);
+	}
+
+	// ── Revisions ─────────────────────────────────────────────────────────────
+
+	[Test]
+	public async Task GetRevisions_AfterEdit_ReturnsHistoryNewestFirst()
+	{
+		var http = factory.CreateHttpClient();
+		var title = $"History {Guid.NewGuid():N}";
+
+		var created = await http.PostAsJsonAsync(
+			"api/wiki",
+			new CreatePageRequest(title, "# v1", null));
+		await Assert.That(created.StatusCode).IsEqualTo(HttpStatusCode.Created);
+		var slug = (await created.Content.ReadFromJsonAsync<WikiPageDto>())!.Slug;
+
+		await http.PutAsJsonAsync(
+			$"api/wiki/{Uri.EscapeDataString(slug)}",
+			new UpdatePageRequest("# v2", "second edit"));
+
+		var revisions = await http.GetFromJsonAsync<List<WikiRevisionDto>>(
+			$"api/wiki/{Uri.EscapeDataString(slug)}/revisions");
+
+		await Assert.That(revisions).IsNotNull();
+		await Assert.That(revisions!.Count).IsGreaterThanOrEqualTo(1);
+		// Newest first; the snapshot saved on update captures the post-edit body.
+		await Assert.That(revisions[0].MarkdownSource).IsEqualTo("# v2");
+	}
+
+	[Test]
+	public async Task GetRevisions_UnknownSlug_Returns404()
+	{
+		var http = factory.CreateHttpClient();
+
+		var response = await http.GetAsync("api/wiki/does-not-exist-xyzzy/revisions");
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+	}
+
+	[Test]
+	public async Task GetRevision_SpecificNumber_ReturnsSnapshot()
+	{
+		var http = factory.CreateHttpClient();
+		var title = $"Snapshot {Guid.NewGuid():N}";
+
+		var created = await http.PostAsJsonAsync(
+			"api/wiki",
+			new CreatePageRequest(title, "# original", null));
+		var slug = (await created.Content.ReadFromJsonAsync<WikiPageDto>())!.Slug;
+
+		await http.PutAsJsonAsync(
+			$"api/wiki/{Uri.EscapeDataString(slug)}",
+			new UpdatePageRequest("# changed", null));
+
+		var listed = await http.GetFromJsonAsync<List<WikiRevisionDto>>(
+			$"api/wiki/{Uri.EscapeDataString(slug)}/revisions");
+		await Assert.That(listed!.Count).IsGreaterThanOrEqualTo(1);
+
+		var number = listed[0].RevisionNumber;
+		var single = await http.GetFromJsonAsync<WikiRevisionDto>(
+			$"api/wiki/{Uri.EscapeDataString(slug)}/revisions/{number}");
+
+		await Assert.That(single).IsNotNull();
+		await Assert.That(single!.RevisionNumber).IsEqualTo(number);
+		await Assert.That(single.MarkdownSource).IsEqualTo(listed[0].MarkdownSource);
+	}
+
+	[Test]
+	public async Task GetRevision_UnknownNumber_Returns404()
+	{
+		var http = factory.CreateHttpClient();
+
+		var response = await http.GetAsync("api/wiki/home/revisions/99999");
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+	}
+
+	// ── Namespace listing ─────────────────────────────────────────────────────
+
+	[Test]
+	public async Task ListNamespacePages_MainNamespace_IncludesCreatedPage()
+	{
+		var http = factory.CreateHttpClient();
+		var title = $"NsList {Guid.NewGuid():N}";
+
+		var created = await http.PostAsJsonAsync(
+			"api/wiki",
+			new CreatePageRequest(title, "# ns listing test", null));
+		await Assert.That(created.StatusCode).IsEqualTo(HttpStatusCode.Created);
+		var slug = (await created.Content.ReadFromJsonAsync<WikiPageDto>())!.Slug;
+
+		var pages = await http.GetFromJsonAsync<List<WikiPageDto>>("api/wiki/ns/main?take=500");
+
+		await Assert.That(pages).IsNotNull();
+		await Assert.That(pages!.Any(p => p.Slug == slug)).IsTrue();
+	}
+
+	[Test]
+	public async Task ListNamespacePages_EmptyNamespace_ReturnsEmptyList()
+	{
+		var http = factory.CreateHttpClient();
+
+		var pages = await http.GetFromJsonAsync<List<WikiPageDto>>("api/wiki/ns/character");
+
+		await Assert.That(pages).IsNotNull();
+		await Assert.That(pages!.All(p =>
+			p.Namespace.Equals("Character", StringComparison.OrdinalIgnoreCase))).IsTrue();
 	}
 }

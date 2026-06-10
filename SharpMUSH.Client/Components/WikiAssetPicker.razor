@@ -1,0 +1,60 @@
+@using SharpMUSH.Client.Services
+@inject WikiAssetService AssetService
+
+@*
+    Thumbnail grid of uploaded wiki assets. Clicking a thumbnail invokes
+    OnAssetSelected with a ready-to-insert markdown image snippet.
+*@
+
+@if (_isLoading)
+{
+    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+}
+else if (_assets.Count == 0)
+{
+    <MudText Typo="Typo.body2" Color="Color.Secondary">No assets uploaded yet.</MudText>
+}
+else
+{
+    <MudGrid Spacing="2">
+        @foreach (var asset in _assets)
+        {
+            <MudItem xs="4" sm="3" md="2">
+                <MudPaper Outlined="true"
+                          Class="pa-2 d-flex flex-column align-center cursor-pointer"
+                          @onclick="@(() => SelectAsset(asset))">
+                    <img src="@asset.Url"
+                         alt="@asset.FileName"
+                         style="max-width: 96px; max-height: 96px; object-fit: contain;" />
+                    <MudText Typo="Typo.caption"
+                             Style="max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        @asset.FileName
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    /// <summary>
+    /// Invoked with a markdown image snippet (<c>![alt](url)</c>) when an asset is clicked.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnAssetSelected { get; set; }
+
+    private IReadOnlyList<WikiAssetInfo> _assets = [];
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _assets = await AssetService.ListAsync();
+        _isLoading = false;
+    }
+
+    private async Task SelectAsset(WikiAssetInfo asset)
+    {
+        var alt = Path.GetFileNameWithoutExtension(asset.FileName);
+        await OnAssetSelected.InvokeAsync($"![{alt}]({asset.Url})");
+    }
+}

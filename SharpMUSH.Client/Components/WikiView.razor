@@ -9,7 +9,7 @@
 }
 else if (Mode == WikiMode.View)
 {
-    <WikiDisplay Slug="@Slug" Article="@_article" ActivateEditMode="ActivateEditMode" />
+    <WikiDisplay Slug="@Slug" Namespace="@Namespace" Article="@_article" ActivateEditMode="ActivateEditMode" />
 }
 else
 {
@@ -29,6 +29,9 @@ else
     [Parameter] public required string Slug { get; init; }
     [Parameter] public required WikiMode Mode { get; set; } = WikiMode.View;
 
+    /// <summary>Wiki namespace (e.g. "help"); null means the Main namespace.</summary>
+    [Parameter] public string? Namespace { get; init; }
+
     private WikiArticle? _article;
 
     // A shallow copy of _article used while editing so the view copy is not mutated live.
@@ -40,7 +43,14 @@ else
     {
         // Build a draft from the current article (or a blank new one if the page doesn't exist yet).
         _editDraft = _article is not null
-            ? new WikiArticle(_article.Title, _article.Content, _article.Image, _article.RenderedHtml) { Id = _article.Id, Slug = _article.Slug }
+            ? new WikiArticle(_article.Title, _article.Content, _article.Image, _article.RenderedHtml)
+            {
+                Id = _article.Id,
+                Slug = _article.Slug,
+                Category = _article.Category,
+                Tags = [.. _article.Tags],
+                Published = _article.Published,
+            }
             : new WikiArticle(Slug, string.Empty, null);
 
         _saveError = null;
@@ -56,11 +66,19 @@ else
         if (string.IsNullOrEmpty(draft.Slug))
         {
             // New page — title comes from the slug (display-ified) or whatever the editor set.
-            result = await Wiki.CreatePageAsync(draft.Title, draft.Content);
+            result = await Wiki.CreatePageAsync(draft.Title, draft.Content, Namespace);
         }
         else
         {
-            result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content);
+            result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content, ns: Namespace);
+        }
+
+        if (result.IsT0 && MetadataChanged(result.AsT0, draft))
+        {
+            // Content save succeeded; push the metadata separately. The created/updated
+            // article carries the server's current metadata, so this only fires on change.
+            result = await Wiki.SetMetadataAsync(
+                result.AsT0.Slug, draft.Category, draft.Tags, draft.Published, Namespace);
         }
 
         await result.Match<Task>(
@@ -80,6 +98,12 @@ else
             });
     }
 
+    /// <summary>True when the draft's metadata differs from the just-saved server copy.</summary>
+    private static bool MetadataChanged(WikiArticle saved, WikiArticle draft) =>
+        !string.Equals(saved.Category ?? string.Empty, draft.Category ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+        || saved.Published != draft.Published
+        || !saved.Tags.SequenceEqual(draft.Tags);
+
     private void HandleCancel()
     {
         _editDraft = null;
@@ -91,7 +115,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
-        var result = await Wiki.GetWikiArticle(Slug);
+        var result = await Wiki.GetWikiArticle(Slug, Namespace);
         _article = result.IsT0 ? result.AsT0 : null;
         _loading = false;
         await base.OnInitializedAsync();

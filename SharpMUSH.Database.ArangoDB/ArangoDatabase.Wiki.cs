@@ -87,6 +87,88 @@ public partial class ArangoDatabase : IWikiService
 			.AsReadOnly();
 	}
 
+	public async Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null)
+	{
+		var bindVars = new Dictionary<string, object>
+		{
+			{ "@c", DatabaseConstants.WikiPages },
+			{ "skip", skip },
+			{ "take", take }
+		};
+		var filter = string.Empty;
+		if (ns is not null)
+		{
+			filter = "FILTER p.Namespace == @ns ";
+			bindVars["ns"] = ns.Value.ToString().ToLowerInvariant();
+		}
+
+		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			$"FOR p IN @@c {filter}SORT p.Namespace ASC, p.Slug ASC LIMIT @skip, @take RETURN p",
+			bindVars: bindVars);
+
+		return result
+			.Where(e => e.ValueKind != JsonValueKind.Undefined)
+			.Select(WikiPageFromJson)
+			.ToList()
+			.AsReadOnly();
+	}
+
+	public async Task<int> CountPagesAsync(WikiNamespace? ns = null)
+	{
+		var bindVars = new Dictionary<string, object> { { "@c", DatabaseConstants.WikiPages } };
+		var filter = string.Empty;
+		if (ns is not null)
+		{
+			filter = "FILTER p.Namespace == @ns ";
+			bindVars["ns"] = ns.Value.ToString().ToLowerInvariant();
+		}
+
+		var result = await arangoDb.Query.ExecuteAsync<int>(handle,
+			$"FOR p IN @@c {filter}COLLECT WITH COUNT INTO cnt RETURN cnt",
+			bindVars: bindVars);
+
+		return result.FirstOrDefault();
+	}
+
+	public async Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			"FOR p IN @@c FILTER p.Category == @cat SORT p.Title ASC LIMIT @skip, @take RETURN p",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiPages },
+				{ "cat", WikiHelpers.NormalizeCategory(category) ?? string.Empty },
+				{ "skip", skip },
+				{ "take", take }
+			});
+
+		return result
+			.Where(e => e.ValueKind != JsonValueKind.Undefined)
+			.Select(WikiPageFromJson)
+			.ToList()
+			.AsReadOnly();
+	}
+
+	public async Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50)
+	{
+		// NOT_NULL guards documents created before the Tags field existed.
+		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			"FOR p IN @@c FILTER @tag IN NOT_NULL(p.Tags, []) SORT p.Title ASC LIMIT @skip, @take RETURN p",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.WikiPages },
+				{ "tag", tag.Trim().ToLowerInvariant() },
+				{ "skip", skip },
+				{ "take", take }
+			});
+
+		return result
+			.Where(e => e.ValueKind != JsonValueKind.Undefined)
+			.Select(WikiPageFromJson)
+			.ToList()
+			.AsReadOnly();
+	}
+
 	// ── Write ─────────────────────────────────────────────────────────────────
 
 	public async Task<OneOf<WikiPage, Error<string>>> CreateAsync(
@@ -120,7 +202,10 @@ public partial class ArangoDatabase : IWikiService
 			CreatedAt = now,
 			UpdatedAt = now,
 			IsProtected = false,
-			RevisionNumber = 1
+			RevisionNumber = 1,
+			Category = (string?)null,
+			Tags = Array.Empty<string>(),
+			Published = true
 		};
 
 		var created = await arangoDb.Document.CreateAsync<object, JsonElement>(
@@ -215,6 +300,38 @@ public partial class ArangoDatabase : IWikiService
 		return new None();
 	}
 
+	public async Task<OneOf<WikiPage, NotFound>> SetMetadataAsync(
+		string id,
+		string? category,
+		IReadOnlyList<string> tags,
+		bool published)
+	{
+		var lookupResult = await GetByIdAsync(id);
+		if (lookupResult.IsT1)
+			return new NotFound();
+
+		var normalizedCategory = WikiHelpers.NormalizeCategory(category);
+		var normalizedTags = WikiHelpers.NormalizeTags(tags);
+
+		var key = ExtractKey(id);
+		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.WikiPages,
+			new
+			{
+				_key = key,
+				Category = normalizedCategory,
+				Tags = normalizedTags,
+				Published = published
+			},
+			mergeObjects: true);
+
+		return lookupResult.AsT0 with
+		{
+			Category = normalizedCategory,
+			Tags = normalizedTags,
+			Published = published
+		};
+	}
+
 	// ── Revisions ─────────────────────────────────────────────────────────────
 
 	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
@@ -282,6 +399,19 @@ public partial class ArangoDatabase : IWikiService
 		if (elem.TryGetProperty("UpdatedAt", out var uaProp))
 			DateTimeOffset.TryParse(uaProp.GetString(), out updatedAt);
 
+		// Metadata fields are optional — documents created before they existed get defaults.
+		var category = elem.TryGetProperty("Category", out var catProp) && catProp.ValueKind == JsonValueKind.String
+			? catProp.GetString()
+			: null;
+		var tags = elem.TryGetProperty("Tags", out var tagsProp) && tagsProp.ValueKind == JsonValueKind.Array
+			? tagsProp.EnumerateArray()
+				.Where(t => t.ValueKind == JsonValueKind.String)
+				.Select(t => t.GetString()!)
+				.ToList()
+			: (IReadOnlyList<string>)[];
+		var published = !elem.TryGetProperty("Published", out var pubProp)
+			|| pubProp.ValueKind != JsonValueKind.False;
+
 		return new WikiPage(
 			Id: id,
 			Slug: elem.TryGetProperty("Slug", out var slugProp) ? slugProp.GetString() ?? "" : "",
@@ -296,7 +426,12 @@ public partial class ArangoDatabase : IWikiService
 			UpdatedAt: updatedAt,
 			IsProtected: elem.TryGetProperty("IsProtected", out var protProp) && protProp.GetBoolean(),
 			RevisionNumber: elem.TryGetProperty("RevisionNumber", out var revProp) ? revProp.GetInt32() : 1
-		);
+		)
+		{
+			Category = category,
+			Tags = tags,
+			Published = published,
+		};
 	}
 
 	private static WikiRevision WikiRevisionFromJson(JsonElement elem)

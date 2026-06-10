@@ -1,0 +1,152 @@
+@page "/admin/wiki/assets"
+@attribute [Authorize(Roles = "Wizard")]
+@using SharpMUSH.Client.Services
+@inject WikiAssetService AssetService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Wiki Assets — Admin — SharpMUSH</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Wiki Assets</MudText>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudStack Row="true" Spacing="3" Style="align-items: center;">
+        <MudFileUpload T="IBrowserFile"
+                       Accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+                       FilesChanged="OnFileSelected"
+                       MaximumFileCount="1"
+                       MaxFileSize="10485760" />
+        @if (_isUploading)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            <MudText Typo="Typo.body2">Uploading…</MudText>
+        }
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            PNG, JPEG, GIF, WebP or SVG — 10 MB max.
+        </MudText>
+    </MudStack>
+</MudPaper>
+
+<MudTable Items="_assets" Loading="_isLoading" Hover="true" Dense="true">
+    <HeaderContent>
+        <MudTh>Preview</MudTh>
+        <MudTh>File Name</MudTh>
+        <MudTh>Size</MudTh>
+        <MudTh>Content Type</MudTh>
+        <MudTh>Uploaded</MudTh>
+        <MudTh>Uploader</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Preview">
+            <img src="@context.Url" alt="@context.FileName" style="max-width: 64px; max-height: 64px;" />
+        </MudTd>
+        <MudTd DataLabel="File Name">@context.FileName</MudTd>
+        <MudTd DataLabel="Size">@FormatSize(context.SizeBytes)</MudTd>
+        <MudTd DataLabel="Content Type">@context.ContentType</MudTd>
+        <MudTd DataLabel="Uploaded">@context.UploadedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
+        <MudTd DataLabel="Uploader">@context.UploaderDbref</MudTd>
+        <MudTd DataLabel="Actions">
+            <MudStack Row="true" Spacing="1">
+                <MudButton Size="Size.Small"
+                           Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.ContentCopy"
+                           OnClick="@(() => CopyMarkdown(context))">
+                    Copy Markdown
+                </MudButton>
+                <MudIconButton Size="Size.Small"
+                               Color="Color.Error"
+                               Icon="@Icons.Material.Filled.Delete"
+                               OnClick="@(() => DeleteAsset(context))" />
+            </MudStack>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No assets uploaded yet.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private const long MaxUploadBytes = 10_485_760;
+
+    private IReadOnlyList<WikiAssetInfo> _assets = [];
+    private bool _isLoading = true;
+    private bool _isUploading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _isLoading = true;
+        _assets = await AssetService.ListAsync();
+        _isLoading = false;
+    }
+
+    private async Task OnFileSelected(IBrowserFile? file)
+    {
+        if (file is null)
+        {
+            return;
+        }
+
+        if (file.Size > MaxUploadBytes)
+        {
+            Snackbar.Add("File exceeds the 10 MB limit.", Severity.Error);
+            return;
+        }
+
+        _isUploading = true;
+        try
+        {
+            await using var stream = file.OpenReadStream(maxAllowedSize: MaxUploadBytes);
+            var result = await AssetService.UploadAsync(stream, file.Name, file.ContentType);
+            result.Switch(
+                uploaded => Snackbar.Add($"Uploaded {uploaded.FileName}.", Severity.Success),
+                error => Snackbar.Add(error, Severity.Error));
+        }
+        finally
+        {
+            _isUploading = false;
+        }
+
+        await RefreshAsync();
+    }
+
+    private async Task CopyMarkdown(WikiAssetInfo asset)
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", $"![]({asset.Url})");
+        Snackbar.Add("Markdown copied to clipboard.", Severity.Info);
+    }
+
+    private async Task DeleteAsset(WikiAssetInfo asset)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>(
+            "confirm",
+            $"Delete '{asset.FileName}'? Pages embedding it will show a broken image.");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        if (await AssetService.DeleteAsync(asset.Id))
+        {
+            Snackbar.Add($"Deleted {asset.FileName}.", Severity.Success);
+            await RefreshAsync();
+        }
+        else
+        {
+            Snackbar.Add("Delete failed.", Severity.Error);
+        }
+    }
+
+    private static string FormatSize(long bytes) => bytes switch
+    {
+        >= 1_048_576 => $"{bytes / 1_048_576.0:F1} MB",
+        >= 1_024 => $"{bytes / 1_024.0:F1} KB",
+        _ => $"{bytes} B",
+    };
+}

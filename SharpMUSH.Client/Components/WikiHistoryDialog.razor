@@ -1,8 +1,10 @@
 @using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject WikiService Wiki
 
 @* History dialog content — rendered inside a MudDialog opened from WikiDisplay. *@
-@* Full revision list + diff view is a future implementation; *@
-@* this stub shows the slug and a coming-soon notice without a dedicated @page route. *@
+@* Lists revision snapshots newest-first; selecting one shows a line diff of   *@
+@* that revision against the current page markdown.                            *@
 
 @if (Slug is not null)
 {
@@ -11,9 +13,52 @@
     </MudText>
 }
 
-<MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.HistoryEdu" Dense="true" Class="mb-3">
-    Revision history and diff view are coming soon.
-</MudAlert>
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-3" />
+}
+else if (_revisions.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.HistoryEdu" Dense="true" Class="mb-3">
+        No revision history yet. Revisions are recorded each time the page is edited.
+    </MudAlert>
+}
+else
+{
+    <MudList T="WikiRevisionInfo" Dense="true" Class="wiki-revision-list mb-3">
+        @foreach (var revision in _revisions)
+        {
+            <MudListItem T="WikiRevisionInfo"
+                         OnClick="@(() => ToggleDiff(revision))"
+                         Class="@(revision == _selected ? "wiki-revision-item wiki-revision-item--selected" : "wiki-revision-item")">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary">r@(revision.RevisionNumber)</MudChip>
+                    <MudText Typo="Typo.body2">@revision.Timestamp.LocalDateTime.ToString("g")</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">@revision.EditorDbref</MudText>
+                    @if (!string.IsNullOrWhiteSpace(revision.EditSummary))
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary" Style="font-style: italic;">
+                            @revision.EditSummary
+                        </MudText>
+                    }
+                </MudStack>
+            </MudListItem>
+        }
+    </MudList>
+
+    @if (_selected is not null && _diff is not null)
+    {
+        <MudText Typo="Typo.subtitle2" Class="mb-1">
+            Changes from r@(_selected.RevisionNumber) to current
+        </MudText>
+        <div class="wiki-diff mb-3">
+            @foreach (var line in _diff)
+            {
+                <div class="@DiffLineClass(line.Kind)">@DiffLinePrefix(line.Kind)@line.Text</div>
+            }
+        </div>
+    }
+}
 
 <MudStack Row="true" Justify="Justify.FlexEnd">
     <MudButton Variant="Variant.Text" OnClick="@(() => MudDialog!.Cancel())">Close</MudButton>
@@ -25,4 +70,54 @@
 
     [Parameter]
     public string? Slug { get; set; }
+
+    /// <summary>Wiki namespace (e.g. "help"); null means the Main namespace.</summary>
+    [Parameter]
+    public string? Namespace { get; set; }
+
+    /// <summary>Current page markdown — diff target. Provided by the opener so the dialog
+    /// doesn't have to re-fetch the page it was opened from.</summary>
+    [Parameter]
+    public string? CurrentMarkdown { get; set; }
+
+    private bool _loading = true;
+    private IReadOnlyList<WikiRevisionInfo> _revisions = [];
+    private WikiRevisionInfo? _selected;
+    private IReadOnlyList<LineDiff.DiffLine>? _diff;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Slug is not null)
+        {
+            _revisions = await Wiki.GetRevisionsAsync(Slug, ns: Namespace);
+        }
+        _loading = false;
+    }
+
+    private void ToggleDiff(WikiRevisionInfo revision)
+    {
+        if (_selected == revision)
+        {
+            _selected = null;
+            _diff = null;
+            return;
+        }
+
+        _selected = revision;
+        _diff = LineDiff.Compute(revision.MarkdownSource, CurrentMarkdown ?? string.Empty);
+    }
+
+    private static string DiffLineClass(LineDiff.LineKind kind) => kind switch
+    {
+        LineDiff.LineKind.Added => "wiki-diff-line wiki-diff-line--added",
+        LineDiff.LineKind.Removed => "wiki-diff-line wiki-diff-line--removed",
+        _ => "wiki-diff-line"
+    };
+
+    private static string DiffLinePrefix(LineDiff.LineKind kind) => kind switch
+    {
+        LineDiff.LineKind.Added => "+ ",
+        LineDiff.LineKind.Removed => "- ",
+        _ => "  "
+    };
 }

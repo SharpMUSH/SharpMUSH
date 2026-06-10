@@ -10,6 +10,47 @@
                         Theme="material" />
     }
 </MudPaper>
+@if (Article is not null)
+{
+    <MudPaper Class="pa-3 mt-2">
+        <MudStack Spacing="2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudTextField @bind-Value="Article.Category"
+                              Label="Category"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              HelperText="Optional grouping, e.g. lore or rules" />
+                <MudTextField Value="@_tagEntry"
+                              ValueChanged="@((string v) => _tagEntry = v)"
+                              Label="Tags"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              HelperText="Press Enter or the + to add a tag"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Filled.Add"
+                              OnAdornmentClick="@AddTag"
+                              OnKeyDown="@OnTagKeyDown"
+                              Immediate="true" />
+                <MudSwitch T="bool" @bind-Value="Article.Published"
+                           Color="Color.Success"
+                           Label="Published" />
+            </MudStack>
+            @if (Article.Tags.Count > 0)
+            {
+                <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap;">
+                    @foreach (var tag in Article.Tags)
+                    {
+                        <MudChip T="string" Text="@tag"
+                                 Size="Size.Small"
+                                 Color="Color.Info"
+                                 Variant="Variant.Outlined"
+                                 OnClose="@(() => RemoveTag(tag))" />
+                    }
+                </MudStack>
+            }
+        </MudStack>
+    </MudPaper>
+}
 <MudStack Row="true" Class="mt-2">
     <MudButton Variant="Variant.Filled"
                Color="Color.Primary"
@@ -18,6 +59,14 @@
                Disabled="@_saving"
                OnClick="@HandleSave">
         @(_saving ? "Saving…" : "Save")
+    </MudButton>
+    <MudButton Variant="Variant.Outlined"
+               Color="Color.Secondary"
+               StartIcon="@Icons.Material.Filled.Image"
+               Style="text-transform: none;"
+               Disabled="@_saving"
+               OnClick="@(() => _showAssetPicker = !_showAssetPicker)">
+        Insert image
     </MudButton>
     <MudButton Variant="Variant.Text"
                Color="Color.Default"
@@ -30,7 +79,22 @@
     {
         <MudAlert Severity="Severity.Error" Class="ml-2">@_errorMessage</MudAlert>
     }
+    <MudSpacer />
+    <MudLink Href="/wiki/help/markdown_guide"
+             Target="_blank"
+             Class="align-self-center"
+             Typo="Typo.body2">
+        <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small" Class="mr-1" Style="vertical-align: text-bottom;" />
+        Formatting help
+    </MudLink>
 </MudStack>
+@if (_showAssetPicker)
+{
+    <MudPaper Class="pa-3 mt-2">
+        <MudText Typo="Typo.subtitle2" Class="mb-2">Pick an uploaded image to insert</MudText>
+        <WikiAssetPicker OnAssetSelected="@InsertAssetMarkdown" />
+    </MudPaper>
+}
 
 @code {
     [Parameter] public required WikiArticle? Article { get; set; }
@@ -42,9 +106,44 @@
     [Parameter] public EventCallback OnCancel { get; set; }
 
     private bool _saving;
+    private bool _showAssetPicker;
     private string? _errorMessage;
+    private string _tagEntry = string.Empty;
 
     private MarkupString _markdownHtml;
+
+    private void AddTag()
+    {
+        if (Article is null) return;
+        var tag = _tagEntry.Trim().ToLowerInvariant();
+        if (tag.Length > 0 && !Article.Tags.Contains(tag))
+        {
+            Article.Tags.Add(tag);
+        }
+        _tagEntry = string.Empty;
+    }
+
+    private void RemoveTag(string tag) => Article?.Tags.Remove(tag);
+
+    private void OnTagKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            AddTag();
+        }
+    }
+
+    /// <summary>
+    /// Appends the picked asset's markdown snippet to the document. The editor binds
+    /// Value two-way, so updating Content re-renders it with the new image line.
+    /// </summary>
+    private void InsertAssetMarkdown(string snippet)
+    {
+        if (Article is null) return;
+        var separator = Article.Content.Length == 0 || Article.Content.EndsWith('\n') ? "\n" : "\n\n";
+        Article.Content += $"{separator}{snippet}\n";
+        _showAssetPicker = false;
+    }
 
     private Task OnMarkdownValueHTMLChanged(string value)
     {

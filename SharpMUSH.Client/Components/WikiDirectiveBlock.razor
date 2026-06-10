@@ -1,0 +1,95 @@
+@inject IHttpClientFactory HttpClientFactory
+
+<div class="wiki-directive-block">
+    @if (!_loaded)
+    {
+        <p class="wiki-directive-loading"><em>Loading…</em></p>
+    }
+    else
+    {
+        @if (Header is { Length: > 0 } header)
+        {
+            <div class="wiki-directive-header">@header</div>
+        }
+        @if (_pages.Count == 0)
+        {
+            <p class="wiki-directive-empty"><em>No pages yet.</em></p>
+        }
+        else
+        {
+            <ul class="wiki-directive-list">
+                @foreach (var entry in _pages)
+                {
+                    <li @key="@($"{entry.Namespace}/{entry.Slug}")">
+                        <a href="@LinkFor(entry)">@entry.Title</a>
+                        @if (Directive == "recent")
+                        {
+                            <span class="wiki-directive-date"> — @entry.UpdatedAt.LocalDateTime.ToString("g")</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>Directive name: category, tag, pagelist, or recent.</summary>
+    [Parameter]
+    public string Directive { get; set; } = string.Empty;
+
+    /// <summary>Directive argument (category/tag/namespace name, or count for recent).</summary>
+    [Parameter]
+    public string Arg { get; set; } = string.Empty;
+
+    private List<PageDto> _pages = [];
+    private bool _loaded;
+
+    /// <summary>Minimal projection of the wiki page listing endpoints' JSON shape.</summary>
+    private sealed record PageDto(string Slug, string Title, string Namespace, DateTimeOffset UpdatedAt);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var url = BuildUrl();
+        if (url is null)
+        {
+            _loaded = true;
+            return;
+        }
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("api");
+            _pages = await client.GetFromJsonAsync<List<PageDto>>(url) ?? [];
+        }
+        catch
+        {
+            // Endpoint missing, network error, or bad payload — show the empty state.
+            _pages = [];
+        }
+
+        _loaded = true;
+    }
+
+    private string? BuildUrl() => Directive switch
+    {
+        "category" when Arg.Length > 0 => $"api/wiki/category/{Uri.EscapeDataString(Arg)}",
+        "tag" when Arg.Length > 0 => $"api/wiki/tag/{Uri.EscapeDataString(Arg)}",
+        "pagelist" when Arg.Length > 0 => $"api/wiki/ns/{Uri.EscapeDataString(Arg)}",
+        "recent" => $"api/wiki/recent?count={Uri.EscapeDataString(Arg.Length > 0 ? Arg : "10")}",
+        _ => null
+    };
+
+    private string? Header => Directive switch
+    {
+        "category" => $"Category: {Arg}",
+        "tag" => $"Tag: {Arg}",
+        "recent" => "Recent changes",
+        _ => null
+    };
+
+    private static string LinkFor(PageDto page) =>
+        string.Equals(page.Namespace, "main", StringComparison.OrdinalIgnoreCase)
+            ? $"/wiki/{page.Slug}"
+            : $"/wiki/{page.Namespace.ToLowerInvariant()}/{page.Slug}";
+}

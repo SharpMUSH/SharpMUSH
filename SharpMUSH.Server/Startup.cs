@@ -229,6 +229,7 @@ public class Startup(
 // Wiki subsystem — backed by whichever ISharpDatabase is active (all three DB backends implement IWikiService).
 		services.AddSingleton<WikiMarkdigPipeline>();
 		services.AddSingleton<IWikiService>(sp => (IWikiService)sp.GetRequiredService<ISharpDatabase>());
+		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
 // Scene subsystem — InMemorySceneService for dev/test; swap for a persistent implementation later.
 		services.AddSingleton<ISceneService, InMemorySceneService>();
