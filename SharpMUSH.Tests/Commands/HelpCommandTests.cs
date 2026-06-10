@@ -8,11 +8,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-// These tests assert Received(1) on the session-shared INotifyService substitute. Other
-// classes (e.g. WikiCommandTests) call ClearReceivedCalls() on that same mock; running in
-// parallel lets such a wipe drop this test's recorded calls mid-assertion. Join the same
-// non-parallel group so the shared substitute is never mutated underneath these checks.
-[NotInParallel]
 public class HelpCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -47,12 +42,17 @@ public class HelpCommandTests
 		// Test help with the "newbie" topic
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help newbie"));
 
-		// Verify that NotifyService was called with content about newbie help
+		// The 'newbie' entry renders to exactly this body; assert the full opening
+		// paragraph verbatim rather than just the substring "MUSH", so the test fails
+		// if the wrong entry, a truncated body, or unrelated content is delivered.
+		const string expected =
+			"If you are new to MUSHing, the help files may seem confusing. Most of them are written in a specific style, however, and once you understand it the files are extremely helpful.";
+
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("MUSH")) ||
-				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				(msg.IsT0 && msg.AsT0.ToString().Contains(expected)) ||
+				(msg.IsT1 && msg.AsT1.Contains(expected))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
