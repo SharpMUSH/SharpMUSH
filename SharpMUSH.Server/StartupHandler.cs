@@ -170,7 +170,7 @@ public class StartupHandler(
 			title: "Home",
 			markdown: """
 				![SharpMUSH logo](/assets/Logo.svg){width=20%}
- 
+				
 				This is your MUSH's home page. It's stored as a wiki article and can be edited
 				by any authorised user.
 
