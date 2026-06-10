@@ -8,6 +8,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+// These tests assert Received(1) on the session-shared INotifyService substitute. Other
+// classes (e.g. WikiCommandTests) call ClearReceivedCalls() on that same mock; running in
+// parallel lets such a wipe drop this test's recorded calls mid-assertion. Join the same
+// non-parallel group so the shared substitute is never mutated underneath these checks.
+[NotInParallel]
 public class HelpCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
