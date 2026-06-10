@@ -180,8 +180,11 @@ public class WikiController(
 	{
 		var nsFilter = ParseOptionalNamespace(ns);
 		var pages = await wikiService.GetAllPagesAsync(skip, take, nsFilter);
-		var total = await wikiService.CountPagesAsync(nsFilter);
-		Response.Headers["X-Total-Count"] = total.ToString();
+		// CountPagesAsync includes drafts, so only expose the total to authenticated callers.
+		// Emitting it for anonymous users would leak how many unpublished pages exist and
+		// would not match the published-only collection they receive.
+		if (IsAuthenticatedCaller)
+			Response.Headers["X-Total-Count"] = (await wikiService.CountPagesAsync(nsFilter)).ToString();
 		return Ok(FilterVisible(pages).Select(ToDto));
 	}
 
@@ -216,6 +219,8 @@ public class WikiController(
 	{
 		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
+		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
+		if (!lookup.AsT0.Published && !IsAuthenticatedCaller) return NotFound();
 
 		var revisions = await wikiService.GetRevisionsAsync(lookup.AsT0.Id, skip, take);
 		return Ok(revisions.Select(ToDto));
@@ -230,6 +235,8 @@ public class WikiController(
 	{
 		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
+		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
+		if (!lookup.AsT0.Published && !IsAuthenticatedCaller) return NotFound();
 
 		var result = await wikiService.GetRevisionAsync(lookup.AsT0.Id, number);
 		return result.Match<IActionResult>(

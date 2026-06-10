@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -105,7 +107,8 @@ public class GalleryController(
 			Order: entries.Count == 0 ? 0 : entries.Max(e => e.Order) + 1,
 			IsIcon: entries.Count == 0)); // first image becomes the icon by default
 
-		await WriteGalleryAsync(character, entries);
+		var write = await WriteGalleryAsync(character, entries);
+		if (write.IsT1) return StatusCode(StatusCodes.Status500InternalServerError, write.AsT1.Value);
 		logger.LogInformation("Gallery image added to {Character}: asset={Asset} by={Uploader}", LogSanitizer.Sanitize(name), asset.Id, LogSanitizer.Sanitize(uploaderDbref));
 		return Ok(entries.OrderBy(e => e.Order).ToList());
 	}
@@ -133,7 +136,8 @@ public class GalleryController(
 			else if (sanitized[i].IsIcon) { sanitized[i] = sanitized[i] with { IsIcon = false }; }
 		}
 
-		await WriteGalleryAsync(character, sanitized);
+		var write = await WriteGalleryAsync(character, sanitized);
+		if (write.IsT1) return StatusCode(StatusCodes.Status500InternalServerError, write.AsT1.Value);
 		return Ok(sanitized);
 	}
 
@@ -159,7 +163,8 @@ public class GalleryController(
 			entries[entries.IndexOf(first)] = first with { IsIcon = true };
 		}
 
-		await WriteGalleryAsync(character, entries);
+		var write = await WriteGalleryAsync(character, entries);
+		if (write.IsT1) return StatusCode(StatusCodes.Status500InternalServerError, write.AsT1.Value);
 		await assetService.DeleteAsync(assetId);
 		return Ok(entries.OrderBy(e => e.Order).ToList());
 	}
@@ -226,9 +231,9 @@ public class GalleryController(
 		}
 	}
 
-	private async Task WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries)
+	private async Task<OneOf<Success, Error<string>>> WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries)
 	{
 		var json = JsonSerializer.Serialize(entries);
-		await attributeService.SetAttributeAsync(character, character, GalleryAttribute, MModule.single(json));
+		return await attributeService.SetAttributeAsync(character, character, GalleryAttribute, MModule.single(json));
 	}
 }

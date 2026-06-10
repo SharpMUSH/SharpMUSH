@@ -44,8 +44,10 @@
 
     protected override void OnParametersSet()
     {
-        if (!string.IsNullOrWhiteSpace(ToQuery)) _to = ToQuery!;
-        if (!string.IsNullOrWhiteSpace(SubjectQuery)) _subject = SubjectQuery!;
+        // Mirror the query params each navigation so a prior reply's recipient/subject
+        // never persists when the user opens a blank compose form.
+        _to = string.IsNullOrWhiteSpace(ToQuery) ? string.Empty : ToQuery!;
+        _subject = string.IsNullOrWhiteSpace(SubjectQuery) ? string.Empty : SubjectQuery!;
     }
 
     private async Task SendAsync()

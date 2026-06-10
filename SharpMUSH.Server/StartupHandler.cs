@@ -188,7 +188,7 @@ public class StartupHandler(
 			ns: WikiNamespace.Main);
 		homeResult.Switch(
 			page => logger.LogInformation("Home wiki page seeded (id={Id}).", page.Id),
-			err => logger.LogDebug("Home wiki page already exists; skipping seed. ({Msg})", err.Value));
+			err => LogSeedSkip("Home", err.Value));
 
 		// Seed the Markdown formatting guide in the Help namespace. Like the home page,
 		// CreateAsync rejects duplicate slugs, so re-seeding on restart is a no-op and
@@ -200,7 +200,7 @@ public class StartupHandler(
 			ns: WikiNamespace.Help);
 		guideResult.Switch(
 			page => logger.LogInformation("Markdown Guide wiki page seeded (id={Id}).", page.Id),
-			err => logger.LogDebug("Markdown Guide wiki page already exists; skipping seed. ({Msg})", err.Value));
+			err => LogSeedSkip("Markdown Guide", err.Value));
 
 		logger.LogInformation("Initializing configurable aliases and restrictions from database.");
 		var currentOptions = options.CurrentValue;
@@ -210,6 +210,19 @@ public class StartupHandler(
 		// Notify ConnectionServer that the main process is ready
 		logger.LogInformation("Publishing MainProcessReadyMessage to ConnectionServer.");
 		await messageBus.Publish(new MainProcessReadyMessage(DateTimeOffset.UtcNow, ServerVersion), cancellationToken);
+	}
+
+	/// <summary>
+	/// Logs a wiki-seed skip. A duplicate slug (the expected no-op when re-seeding on
+	/// restart) is logged at Debug; any other failure is surfaced at Warning so genuine
+	/// seeding problems are not silently masked as "already exists".
+	/// </summary>
+	private void LogSeedSkip(string page, string error)
+	{
+		if (error.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+			logger.LogDebug("{Page} wiki page already exists; skipping seed.", page);
+		else
+			logger.LogWarning("{Page} wiki page could not be seeded: {Msg}", page, error);
 	}
 
 	public async Task StopAsync(CancellationToken cancellationToken)

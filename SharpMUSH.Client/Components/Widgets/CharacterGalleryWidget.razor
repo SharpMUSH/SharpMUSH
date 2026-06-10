@@ -119,8 +119,9 @@
     {
         if (file is null || _resolvedName is null) return;
         _busy = true;
-        var updated = await Gallery.UploadAsync(_resolvedName, file);
-        _busy = false;
+        IReadOnlyList<GalleryService.GalleryItem>? updated;
+        try { updated = await Gallery.UploadAsync(_resolvedName, file); }
+        finally { _busy = false; }
         if (updated is null)
         {
             Snackbar.Add(Loc["GalleryUploadFailed"], Severity.Error);
@@ -133,8 +134,9 @@
     {
         if (_resolvedName is null) return;
         _busy = true;
-        var updated = await Gallery.DeleteAsync(_resolvedName, item.AssetId);
-        _busy = false;
+        IReadOnlyList<GalleryService.GalleryItem>? updated;
+        try { updated = await Gallery.DeleteAsync(_resolvedName, item.AssetId); }
+        finally { _busy = false; }
         if (updated is not null) { _items = updated; }
     }
 
@@ -143,8 +145,9 @@
         if (_resolvedName is null) return;
         var reordered = _items.Select(i => i with { IsIcon = i.AssetId == item.AssetId }).ToList();
         _busy = true;
-        var updated = await Gallery.ReplaceAsync(_resolvedName, reordered);
-        _busy = false;
+        IReadOnlyList<GalleryService.GalleryItem>? updated;
+        try { updated = await Gallery.ReplaceAsync(_resolvedName, reordered); }
+        finally { _busy = false; }
         if (updated is not null) { _items = updated; }
     }
 }

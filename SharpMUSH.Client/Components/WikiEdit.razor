@@ -156,7 +156,18 @@
         if (Article is null) return;
         _saving = true;
         _errorMessage = null;
-        await OnSaved.InvokeAsync(Article);
-        _saving = false;
+        try
+        {
+            await OnSaved.InvokeAsync(Article);
+        }
+        catch (Exception ex)
+        {
+            // Surface the failure instead of leaving the editor stuck with disabled buttons.
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 }
