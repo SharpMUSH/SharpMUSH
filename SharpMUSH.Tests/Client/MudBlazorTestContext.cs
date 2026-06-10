@@ -1,6 +1,8 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
+using NSubstitute;
+using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.Client;
 
@@ -16,5 +18,8 @@ public abstract class MudBlazorTestContext : BunitContext
 		Services.AddMudServices();
 		// Add localization services required for IStringLocalizer<SharedResource>
 		Services.AddLocalization();
+		// NavMenu (and other chrome) inject ITerminalService to gate character-scoped
+		// links on connection state; a disconnected stub is enough for rendering tests.
+		Services.AddSingleton(Substitute.For<ITerminalService>());
 	}
 }

@@ -143,6 +143,14 @@ file static class WikiServiceSetup
             .AddSingleton(sp => new WikiService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 NullLogger<WikiService>.Instance))
+            // CharacterProfile composes the profile/gallery widgets, which inject these.
+            // Their reads hit the in-memory handler's 404 fallback and degrade gracefully.
+            .AddSingleton(sp => new ProfileService(
+                sp.GetRequiredService<IHttpClientFactory>(),
+                NullLogger<ProfileService>.Instance))
+            .AddSingleton(sp => new GalleryService(
+                sp.GetRequiredService<IHttpClientFactory>(),
+                NullLogger<GalleryService>.Instance))
             .AddSingleton<IStringLocalizer<SharedResource>, StubLocalizer<SharedResource>>();
 
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
