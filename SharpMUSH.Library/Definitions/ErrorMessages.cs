@@ -185,6 +185,7 @@ public static class ErrorMessages
 		public const string NoSuchLock = "#-1 NO SUCH LOCK";
 		public const string NoSuchMail = "#-1 NO SUCH MAIL";
 		public const string NoSuchOption = "#-1 NO SUCH OPTION";
+		public const string NoSuchWikiPage = "#-1 NO SUCH WIKI PAGE";
 		public const string NoSuchPid = "#-1 NO SUCH PID";
 		public const string NoSuchPlayer = "#-1 NO SUCH PLAYER";
 		public const string NoSuchType = "#-1 NO SUCH TYPE";
@@ -223,6 +224,7 @@ public static class ErrorMessages
 		public const string AlreadyConnected = "#-1 ALREADY CONNECTED";
 		public const string BadArgumentFormatToSet = "#-1 BAD ARGUMENT FORMAT TO @SET";
 		public const string BadArgumentsToMailCommand = "#-1 BAD ARGUMENTS TO MAIL COMMAND";
+		public const string BadArgumentsToWikiCommand = "#-1 BAD ARGUMENTS TO WIKI COMMAND";
 		public const string CannotSetContentLengthHeader = "#-1 CANNOT SET CONTENT-LENGTH HEADER";
 		public const string CommandNotFound = "#-1 COMMAND NOT FOUND";
 		public const string ContentTypeCannotBeEmpty = "#-1 CONTENT-TYPE CANNOT BE EMPTY";

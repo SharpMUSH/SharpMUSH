@@ -1,4 +1,6 @@
+using Markdig.Extensions.TaskLists;
 using Markdig.Syntax.Inlines;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -100,6 +102,26 @@ public partial class RecursiveMarkdownRenderer
 			: $"[image: {alt}]";
 		return MModule.MarkupSingle(_dimStyle, placeholder);
 	}
+
+	/// <summary>
+	/// Renders a <c>[[Page Name]]</c> wiki link as underlined display text.
+	/// Wiki pages live on the web portal; a terminal session cannot navigate to
+	/// them, so the link reads as emphasised prose rather than a hyperlink.
+	/// </summary>
+	protected virtual MString RenderWikiLink(WikiLinkInline wikiLink)
+	{
+		var text = wikiLink.DisplayText ?? wikiLink.Title;
+		return string.IsNullOrWhiteSpace(text)
+			? MModule.empty()
+			: RenderUnderline(MModule.single(text));
+	}
+
+	/// <summary>
+	/// Renders a task-list marker (<c>- [ ]</c> / <c>- [x]</c>) as literal
+	/// bracket notation, which reads naturally in a terminal.
+	/// </summary>
+	protected virtual MString RenderTaskList(TaskList task)
+		=> MModule.single(task.Checked ? "[x]" : "[ ]");
 
 	protected virtual MString RenderAutolink(AutolinkInline autolink)
 	{

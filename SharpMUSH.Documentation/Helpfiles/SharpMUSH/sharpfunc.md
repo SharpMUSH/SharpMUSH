@@ -47,6 +47,7 @@ You say, "is"
   [String functions]: string manipulation (ESCAPE, FLIP) <br>
   [Time functions]: formatting and display of time (TIME, CONVSECS) <br>
   [Utility functions]: general utilities (ISINT, COMP) <br>
+  [Wiki functions]: read the shared wiki (WIKI, WIKILIST) <br>
 
   The command "@list/functions" lists all functions on the game.<br>
   The command "@function" lists only the game's custom global functions defined via the @function command.
@@ -306,6 +307,16 @@ You say, "is"
 | [tagwrap()]      | [tel()]          | [testlock()]     | [textentries()]  |
 | [textfile()]     | [unsetq()]       | [uptime()]       | [valid()]        |
 | [wipe()]         |                  |                  |                  |
+
+# Wiki functions
+  Wiki functions read the shared wiki — the same pages the web portal serves.
+
+|                  |                  |                  |                  |
+|------------------|------------------|------------------|------------------|
+| [wiki()]         | [wikilist()]     | [wikirecent()]   | [wikisearch()]   |
+
+**See Also:**
+- [@wiki]
 
 # @@()
 # NULL()
