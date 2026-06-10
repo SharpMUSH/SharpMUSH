@@ -1,11 +1,28 @@
 @page "/character/{Name}"
 @using SharpMUSH.Client.Components
+@using SharpMUSH.Client.Components.Widgets
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Name</PageTitle>
 
-@* Character alias: resolves to Character:Name wiki page *@
-<WikiView Slug="@Name" Mode="WikiView.WikiMode.View" />
+@* Composed from registered portal widgets (CharacterHeader / CharacterGallery) plus the wiki
+   body for the Character:Name page. Each widget is an IPortalWidget and can also be placed in
+   a zone via the layout editor. *@
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="8">
+            <CharacterHeaderWidget CharacterName="@Name" />
+
+            @* Freeform wiki body lives at the Character:Name wiki page. *@
+            <MudPaper Outlined="true" Class="pa-4 mt-4">
+                <WikiView Slug="@Name" Mode="WikiView.WikiMode.View" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <CharacterGalleryWidget CharacterName="@Name" />
+        </MudItem>
+    </MudGrid>
+</MudContainer>
 
 @code {
     [Parameter]

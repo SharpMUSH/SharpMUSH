@@ -122,8 +122,8 @@ public partial class MemgraphDatabase
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-			// Create Counter for auto-increment object keys
-			await ExecuteWithRetryAsync("MERGE (c:Counter {name: 'object_key'}) ON CREATE SET c.value = 2", ct: cancellationToken);
+			// Create Counter for auto-increment object keys (migration seeds keys 0-5)
+			await ExecuteWithRetryAsync("MERGE (c:Counter {name: 'object_key'}) ON CREATE SET c.value = 5", ct: cancellationToken);
 
 			// Create Room Zero (key=0)
 			await ExecuteWithRetryAsync("""
@@ -152,6 +152,45 @@ ON CREATE SET r.aliases = []
 MERGE (r)-[:IS_OBJECT]->(o)
 """, new { now }, cancellationToken);
 
+			// Create Player Three - Package Manager (config package_manager) at Room Zero
+			await ExecuteWithRetryAsync("""
+MERGE (o:Object {key: 3})
+ON CREATE SET o.name = 'Package Manager', o.type = 'PLAYER', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
+MERGE (p:Player {key: 3})
+ON CREATE SET p.passwordHash = '', p.passwordSalt = '', p.aliases = [], p.quota = 999999
+MERGE (p)-[:IS_OBJECT]->(o)
+WITH p
+MATCH (r:Room {key: 0})
+MERGE (p)-[:AT_LOCATION]->(r)
+MERGE (p)-[:HAS_HOME]->(r)
+""", new { now }, cancellationToken);
+
+			// Create Thing Four - HTTP Handler (config http_handler) in Master Room
+			await ExecuteWithRetryAsync("""
+MERGE (o:Object {key: 4})
+ON CREATE SET o.name = 'HTTP Handler', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
+MERGE (t:Thing {key: 4})
+ON CREATE SET t.aliases = []
+MERGE (t)-[:IS_OBJECT]->(o)
+WITH t
+MATCH (r:Room {key: 2})
+MERGE (t)-[:AT_LOCATION]->(r)
+MERGE (t)-[:HAS_HOME]->(r)
+""", new { now }, cancellationToken);
+
+			// Create Thing Five - Event Handler (config event_handler) in Master Room
+			await ExecuteWithRetryAsync("""
+MERGE (o:Object {key: 5})
+ON CREATE SET o.name = 'Event Handler', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
+MERGE (t:Thing {key: 5})
+ON CREATE SET t.aliases = []
+MERGE (t)-[:IS_OBJECT]->(o)
+WITH t
+MATCH (r:Room {key: 2})
+MERGE (t)-[:AT_LOCATION]->(r)
+MERGE (t)-[:HAS_HOME]->(r)
+""", new { now }, cancellationToken);
+
 			// Player One at Room Zero
 			await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: 1}), (r:Room {key: 0})
@@ -164,11 +203,15 @@ MATCH (p:Player {key: 1}), (r:Room {key: 0})
 MERGE (p)-[:HAS_HOME]->(r)
 """, ct: cancellationToken);
 
-			// Ownership: Object nodes -> Player typed node
+			// Ownership: God owns the core objects and the handler things; PM owns itself
 			await ExecuteWithRetryAsync("""
 MATCH (ownerPlayer:Player {key: 1})
-MATCH (o:Object) WHERE o.key IN [0, 1, 2]
+MATCH (o:Object) WHERE o.key IN [0, 1, 2, 4, 5]
 MERGE (o)-[:HAS_OWNER]->(ownerPlayer)
+""", ct: cancellationToken);
+			await ExecuteWithRetryAsync("""
+MATCH (pm:Player {key: 3}), (o:Object {key: 3})
+MERGE (o)-[:HAS_OWNER]->(pm)
 """, ct: cancellationToken);
 
 			// Create initial flags
@@ -186,6 +229,12 @@ MERGE (o)-[:HAS_OWNER]->(ownerPlayer)
 			// Give Player One the WIZARD flag
 			await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: 1}), (f:ObjectFlag {name: 'WIZARD'})
+MERGE (o)-[:HAS_FLAG]->(f)
+""", ct: cancellationToken);
+
+			// Give the Package Manager (#3) the WIZARD flag
+			await ExecuteWithRetryAsync("""
+MATCH (o:Object {key: 3}), (f:ObjectFlag {name: 'WIZARD'})
 MERGE (o)-[:HAS_FLAG]->(f)
 """, ct: cancellationToken);
 

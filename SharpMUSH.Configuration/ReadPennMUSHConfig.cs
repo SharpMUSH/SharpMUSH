@@ -125,6 +125,7 @@ public static partial class ReadPennMushConfig
 				DatabaseReference(Get(nameof(DatabaseOptions.AncestorPlayer)), null),
 				DatabaseReference(Get(nameof(DatabaseOptions.EventHandler)), null),
 				DatabaseReference(Get(nameof(DatabaseOptions.HttpHandler)), null),
+				DatabaseReference(Get(nameof(DatabaseOptions.PackageManager)), null),
 				UnsignedInteger(Get(nameof(DatabaseOptions.HttpRequestsPerSecond)), 30)
 			),
 			Dump = new DumpOptions(

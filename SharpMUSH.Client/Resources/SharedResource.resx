@@ -1010,4 +1010,43 @@
   <data name="WikiAllNamespaces" xml:space="preserve">
     <value>All namespaces</value>
   </data>
+  <data name="SearchCharacters" xml:space="preserve">
+    <value>Search characters…</value>
+  </data>
+  <data name="NoCharactersFound" xml:space="preserve">
+    <value>No characters found.</value>
+  </data>
+  <data name="ProfileUnavailable" xml:space="preserve">
+    <value>This character's profile is not available.</value>
+  </data>
+  <data name="Gallery" xml:space="preserve">
+    <value>Gallery</value>
+  </data>
+  <data name="GalleryEmpty" xml:space="preserve">
+    <value>No images yet.</value>
+  </data>
+  <data name="Characters" xml:space="preserve">
+    <value>Characters</value>
+  </data>
+  <data name="Wiki" xml:space="preserve">
+    <value>Wiki</value>
+  </data>
+  <data name="RecentChanges" xml:space="preserve">
+    <value>Recent Changes</value>
+  </data>
+  <data name="SceneArchive" xml:space="preserve">
+    <value>Scenes</value>
+  </data>
+  <data name="Mail" xml:space="preserve">
+    <value>Mail</value>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="Help" xml:space="preserve">
+    <value>Help</value>
+  </data>
+  <data name="MyAccount" xml:space="preserve">
+    <value>My Account</value>
+  </data>
 </root>

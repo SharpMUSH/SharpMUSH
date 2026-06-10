@@ -1,7 +1,11 @@
 @page "/characters"
+@using SharpMUSH.Client.Components.Widgets
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["Characters"]</PageTitle>
 
-<MudText Typo="Typo.h4">@Loc["Characters"]</MudText>
-<MudText>@Loc["CharactersComingSoon"]</MudText>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    @* The directory is a registered portal widget (CharacterDirectory), so it can also be
+       dropped into any content zone via the layout editor. *@
+    <CharacterDirectoryWidget />
+</MudContainer>

@@ -219,6 +219,7 @@ public class Startup(
 		services.AddSingleton<ISortService, SortService>();
 		services.AddSingleton<IHookService, HookService>();
 		services.AddSingleton<IEventService, EventService>();
+		services.AddSingleton<IHttpHandlerDispatcher, HttpHandlerDispatcher>();
 		services.AddSingleton<IWarningService, WarningService>();
 		services.AddSingleton<IChannelBufferService, InMemoryChannelBufferService>();
 		services.AddSingleton<IListenPatternMatcher, ListenPatternMatcher>();
@@ -471,6 +472,7 @@ public class Startup(
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
+		services.AddHostedService<Services.DefaultHttpHandlerBootstrapService>();
 		services.AddHostedService<NatsBridgeService>();
 		services.AddHostedService<Services.ConnectionReconciliationService>();
 		services.AddHostedService<Services.ConnectionLoggingService>();

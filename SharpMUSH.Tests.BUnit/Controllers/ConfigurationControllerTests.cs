@@ -47,7 +47,8 @@ public class ConfigurationControllerTests
 		Database = new DatabaseOptions(
 			AncestorExit: null, AncestorPlayer: null, AncestorRoom: null,
 			AncestorThing: null, BaseRoom: 0, DefaultHome: 0, EventHandler: null,
-			ExitsConnectRooms: true, HttpHandler: null, HttpRequestsPerSecond: 10,
+			ExitsConnectRooms: true, HttpHandler: null, PackageManager: null,
+			HttpRequestsPerSecond: 10,
 			MasterRoom: 2, PlayerStart: 0, ZoneControlZmpOnly: true),
 		Debug = new DebugOptions(DebugSharpParser: false),
 		Dump = new DumpOptions(PurgeInterval: "10m1s"),
