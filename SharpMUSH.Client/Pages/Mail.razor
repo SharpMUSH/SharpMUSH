@@ -1,8 +1,131 @@
 @page "/mail"
 @attribute [Authorize]
+@using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
+@inject ITerminalService Terminal
+@inject MailService MailApi
+@inject NavigationManager Nav
+@implements IDisposable
 
 <PageTitle>Mail — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Mail</MudText>
-<MudText Color="Color.Secondary">Mail inbox coming soon.</MudText>
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+    <MudText Typo="Typo.h4">@Loc["Mail"]</MudText>
+    <MudSpacer />
+    @if (_characterActive)
+    {
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Edit" Href="/mail/compose">
+            @Loc["Compose"]
+        </MudButton>
+    }
+</MudStack>
+
+@if (!_characterActive)
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="my-4">
+        <MudText>@Loc["MailNeedsCharacter"]</MudText>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/characters" Class="mt-2">
+            @Loc["Characters"]
+        </MudButton>
+    </MudAlert>
+}
+else
+{
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3" Spacing="2">
+        <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Secondary" />
+        <MudSelect T="string" Value="_folder" ValueChanged="OnFolderChanged"
+                   Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width:220px;">
+            @foreach (var f in _folders)
+            {
+                <MudSelectItem Value="@f">@f</MudSelectItem>
+            }
+        </MudSelect>
+    </MudStack>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_messages.Count == 0)
+    {
+        <MudAlert Severity="Severity.Normal" Variant="Variant.Outlined">@Loc["MailEmpty"]</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="_messages" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm"
+                  OnRowClick="@((TableRowClickEventArgs<MailService.MailSummary> e) => { if (e.Item is not null) Open(e.Item); })"
+                  RowStyle="cursor:pointer;">
+            <HeaderContent>
+                <MudTh Style="width:40px;"></MudTh>
+                <MudTh>@Loc["From"]</MudTh>
+                <MudTh>@Loc["Subject"]</MudTh>
+                <MudTh>@Loc["Date"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    @if (context.Urgent)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Color="Color.Error" Size="Size.Small" />
+                    }
+                    else if (!context.Read)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Primary" Size="Size.Small" />
+                    }
+                </MudTd>
+                <MudTd DataLabel="From" Style="@RowStyle(context)">@context.From</MudTd>
+                <MudTd DataLabel="Subject" Style="@RowStyle(context)">@context.Subject</MudTd>
+                <MudTd DataLabel="Date">@context.DateSent.LocalDateTime.ToString("g")</MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+}
+
+@code {
+    private bool _characterActive;
+    private string _folder = "INBOX";
+    private IReadOnlyList<string> _folders = ["INBOX"];
+    private IReadOnlyList<MailService.MailSummary> _messages = [];
+    private bool _loading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _characterActive = Terminal.IsConnected;
+        Terminal.ConnectionStateChanged += OnConnectionChanged;
+        if (_characterActive)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _folders = await MailApi.FoldersAsync();
+        _messages = await MailApi.ListAsync(_folder);
+        _loading = false;
+    }
+
+    private async Task OnFolderChanged(string folder)
+    {
+        _folder = folder;
+        _loading = true;
+        _messages = await MailApi.ListAsync(_folder);
+        _loading = false;
+    }
+
+    private void Open(MailService.MailSummary mail)
+        => Nav.NavigateTo($"/mail/{mail.Number}?folder={Uri.EscapeDataString(mail.Folder)}");
+
+    private static string RowStyle(MailService.MailSummary m) => m.Read ? string.Empty : "font-weight:600;";
+
+    private void OnConnectionChanged(bool connected)
+        => InvokeAsync(async () =>
+        {
+            _characterActive = connected;
+            if (connected) { await LoadAsync(); }
+            StateHasChanged();
+        });
+
+    public void Dispose() => Terminal.ConnectionStateChanged -= OnConnectionChanged;
+}

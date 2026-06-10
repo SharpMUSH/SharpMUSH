@@ -2,7 +2,7 @@
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Hosting
-@inject ITerminalService Terminal
+@inject ITerminalService DefaultTerminal
 @inject IJSRuntime JsRuntime
 @inject CredentialService Credentials
 @inject OttAuthService OttAuth
@@ -183,6 +183,15 @@
 
 @code {
     [Parameter] public string DefaultServerUri { get; set; } = "ws://localhost:4202/ws";
+
+    /// <summary>
+    /// Optional terminal service to drive this instance. When null, the injected command terminal
+    /// (<c>ITerminalService</c>) is used. The /play page passes its own <c>IPlayTerminalService</c>
+    /// so the player session is a separate connection from the command/softcode terminal.
+    /// </summary>
+    [Parameter] public ITerminalService? TerminalOverride { get; set; }
+
+    private ITerminalService Terminal => TerminalOverride ?? DefaultTerminal;
 
     // Unique IDs per instance so multiple terminals on the same page don't conflict
     private readonly string _outputId = $"sharp-terminal-output-{Guid.NewGuid():N}";

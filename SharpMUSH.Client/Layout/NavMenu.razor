@@ -1,5 +1,8 @@
 @* NavMenu with support for collapsed (icon-only) mode *@
+@using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
+@inject ITerminalService Terminal
+@implements IDisposable
 
 <MudPaper Width="@(IsCollapsed ? "60px" : "250px")" Class="py-3" Elevation="0">
     <MudNavMenu>
@@ -30,13 +33,18 @@
             @if (!IsCollapsed) { <text>@Loc["SceneArchive"]</text> }
         </MudNavLink>
 
-        <MudNavLink Href="/mail" Icon="@Icons.Material.Filled.Mail" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["Mail"]</text> }
-        </MudNavLink>
+        @* Play and Mail are character-scoped: only meaningful once a character is active
+           (selected/connected), so they are hidden at the account level. *@
+        @if (_characterActive)
+        {
+            <MudNavLink Href="/mail" Icon="@Icons.Material.Filled.Mail" IconColor="Color.Secondary">
+                @if (!IsCollapsed) { <text>@Loc["Mail"]</text> }
+            </MudNavLink>
 
-        <MudNavLink Href="/play" Icon="@Icons.Material.Filled.SportsEsports" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["Play"]</text> }
-        </MudNavLink>
+            <MudNavLink Href="/play" Icon="@Icons.Material.Filled.SportsEsports" IconColor="Color.Secondary">
+                @if (!IsCollapsed) { <text>@Loc["Play"]</text> }
+            </MudNavLink>
+        }
 
         <MudNavLink Href="/softcode" Icon="@Icons.Material.Filled.Code" IconColor="Color.Secondary">
             @if (!IsCollapsed) { <text>@Loc["SoftcodeEditor"]</text> }
@@ -60,6 +68,7 @@
         {
             <MudNavGroup Title="@Loc["AdminPanel"].Value" Icon="@Icons.Material.Filled.AdminPanelSettings" IconColor="Color.Secondary" Expanded="false">
                 <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Tune">@Loc["Config"]</MudNavLink>
+                <MudNavLink Href="/admin/profiles" Icon="@Icons.Material.Filled.Badge">@Loc["ProfileHandler"]</MudNavLink>
                 <MudNavLink Href="/admin/suggestions" Icon="@Icons.Material.Filled.Lightbulb">@Loc["Suggestions"]</MudNavLink>
                 <MudNavLink Href="/security" Icon="@Icons.Material.Filled.Security">@Loc["Security"]</MudNavLink>
             </MudNavGroup>
@@ -74,4 +83,23 @@
 @code {
     [Parameter]
     public bool IsCollapsed { get; set; } = true;
+
+    // A character is "active" once the game terminal is connected (i.e. the user has selected /
+    // logged in as a character). Account-level visitors have no character, so Play/Mail stay hidden.
+    private bool _characterActive;
+
+    protected override void OnInitialized()
+    {
+        _characterActive = Terminal.IsConnected;
+        Terminal.ConnectionStateChanged += OnConnectionChanged;
+    }
+
+    private void OnConnectionChanged(bool connected)
+        => InvokeAsync(() =>
+        {
+            _characterActive = connected;
+            StateHasChanged();
+        });
+
+    public void Dispose() => Terminal.ConnectionStateChanged -= OnConnectionChanged;
 }

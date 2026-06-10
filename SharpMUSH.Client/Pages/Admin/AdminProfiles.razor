@@ -1,0 +1,131 @@
+@page "/admin/profiles"
+@attribute [Authorize(Roles = "Wizard")]
+@using System.Net.Http.Json
+@inject IHttpClientFactory HttpClientFactory
+@inject ISnackbar Snackbar
+
+<PageTitle>Profile Handler — Admin — SharpMUSH</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Profile Handler</MudText>
+
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+    Character profiles are served by the in-game <code>http_handler</code> object via its
+    <code>HTTP`PROFILE`*</code> softcode. Customize it in-game with <code>&amp;HTTP`PROFILE`GET …</code>,
+    or reinstall the stock handler below.
+</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_status is null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Could not load handler status.</MudAlert>
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4">
+        <MudStack Spacing="1">
+            <MudStack Row="true" Spacing="2">
+                <MudText Typo="Typo.subtitle2">Configured:</MudText>
+                <MudText>@(_status.Configured ? "Yes" : "No (http_handler unset)")</MudText>
+            </MudStack>
+            @if (_status.Configured)
+            {
+                <MudStack Row="true" Spacing="2">
+                    <MudText Typo="Typo.subtitle2">Handler:</MudText>
+                    <MudText>
+                        @(_status.HandlerExists
+                            ? $"{_status.HandlerName} (#{_status.HandlerDbref})"
+                            : $"#{_status.HandlerDbref} — NOT FOUND")
+                    </MudText>
+                </MudStack>
+            }
+        </MudStack>
+    </MudPaper>
+
+    @if (_status.HandlerExists)
+    {
+        <MudTable Items="_status.Attributes" Hover="true" Dense="true" Class="mb-4">
+            <HeaderContent>
+                <MudTh>Attribute</MudTh>
+                <MudTh>Status</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Attribute"><code>@context.Attribute</code></MudTd>
+                <MudTd DataLabel="Status">
+                    @if (context.Present)
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Outlined">Present</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">Missing</MudChip>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.RestartAlt"
+                   OnClick="ResetAsync" Disabled="_resetting">
+            @(_resetting ? "Resetting…" : "Reset to Defaults")
+        </MudButton>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mt-2">
+            Overwrites the stock <code>HTTP`PROFILE`*</code> and <code>FN`*</code> attributes with the
+            built-in defaults. Custom attributes you added are left untouched.
+        </MudText>
+    }
+}
+
+@code {
+    private record AttributeStatus(string Attribute, bool Present);
+    private record HandlerStatus(bool Configured, int? HandlerDbref, string? HandlerName, bool HandlerExists, List<AttributeStatus> Attributes);
+    private record ResetResult(int Written, List<string> Failed);
+
+    private HandlerStatus? _status;
+    private bool _loading = true;
+    private bool _resetting;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var http = HttpClientFactory.CreateClient("api");
+            _status = await http.GetFromJsonAsync<HandlerStatus>("api/admin/profile-handler");
+        }
+        catch (HttpRequestException)
+        {
+            _status = null;
+        }
+        _loading = false;
+    }
+
+    private async Task ResetAsync()
+    {
+        _resetting = true;
+        try
+        {
+            var http = HttpClientFactory.CreateClient("api");
+            var response = await http.PostAsync("api/admin/profile-handler/reset", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ResetResult>();
+                Snackbar.Add($"Reset complete: {result?.Written ?? 0} attributes written.", Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add($"Reset failed ({(int)response.StatusCode}).", Severity.Error);
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Snackbar.Add($"Reset failed: {ex.Message}", Severity.Error);
+        }
+        _resetting = false;
+    }
+}

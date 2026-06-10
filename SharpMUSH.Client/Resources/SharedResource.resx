@@ -1049,4 +1049,73 @@
   <data name="MyAccount" xml:space="preserve">
     <value>My Account</value>
   </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="EditProfile" xml:space="preserve">
+    <value>Edit Profile</value>
+  </data>
+  <data name="StaffOnlyField" xml:space="preserve">
+    <value>Staff-only — changes apply only if you are staff.</value>
+  </data>
+  <data name="ProfileUpdateFailed" xml:space="preserve">
+    <value>Could not save profile changes.</value>
+  </data>
+  <data name="ProfileUpdated" xml:space="preserve">
+    <value>Profile updated ({0} field(s)).</value>
+  </data>
+  <data name="SetAsIcon" xml:space="preserve">
+    <value>Set as profile icon</value>
+  </data>
+  <data name="GalleryUploadFailed" xml:space="preserve">
+    <value>Image upload failed.</value>
+  </data>
+  <data name="ProfileHandler" xml:space="preserve">
+    <value>Profile Handler</value>
+  </data>
+  <data name="Compose" xml:space="preserve">
+    <value>Compose</value>
+  </data>
+  <data name="Mailbox" xml:space="preserve">
+    <value>Mailbox</value>
+  </data>
+  <data name="MailNeedsCharacter" xml:space="preserve">
+    <value>Select or connect a character to read your mail.</value>
+  </data>
+  <data name="From" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="Subject" xml:space="preserve">
+    <value>Subject</value>
+  </data>
+  <data name="MailEmpty" xml:space="preserve">
+    <value>No messages in this folder.</value>
+  </data>
+  <data name="MailNotFound" xml:space="preserve">
+    <value>Message not found.</value>
+  </data>
+  <data name="Urgent" xml:space="preserve">
+    <value>Urgent</value>
+  </data>
+  <data name="Reply" xml:space="preserve">
+    <value>Reply</value>
+  </data>
+  <data name="MailDeleted" xml:space="preserve">
+    <value>Message deleted.</value>
+  </data>
+  <data name="MailDeleteFailed" xml:space="preserve">
+    <value>Could not delete message.</value>
+  </data>
+  <data name="ComposeMail" xml:space="preserve">
+    <value>Compose Mail</value>
+  </data>
+  <data name="To" xml:space="preserve">
+    <value>To</value>
+  </data>
+  <data name="MailSent" xml:space="preserve">
+    <value>Mail sent.</value>
+  </data>
+  <data name="MailSendFailed" xml:space="preserve">
+    <value>Could not send mail. Check the recipient name.</value>
+  </data>
 </root>

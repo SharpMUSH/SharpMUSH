@@ -25,6 +25,8 @@ builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<WikiAssetService>();
 builder.Services.AddSingleton<CharacterDirectoryService>();
 builder.Services.AddSingleton<ProfileService>();
+builder.Services.AddSingleton<GalleryService>();
+builder.Services.AddSingleton<MailService>();
 builder.Services.AddSingleton<ISceneService, InMemorySceneService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
@@ -33,6 +35,10 @@ builder.Services.AddSingleton<BannedNamesService>();
 builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<IWebSocketClientService, WebSocketClientService>();
 builder.Services.AddSingleton<ITerminalService, TerminalService>();
+// Second, independent connection for the /play page (player interactions), separate from the
+// command/softcode terminal above. Both are singletons so each survives navigation.
+builder.Services.AddSingleton<IPlayWebSocketClientService, PlayWebSocketClientService>();
+builder.Services.AddSingleton<IPlayTerminalService, PlayTerminalService>();
 builder.Services.AddSingleton<MushQueryService>();
 builder.Services.AddHttpClient("help", c =>
 {

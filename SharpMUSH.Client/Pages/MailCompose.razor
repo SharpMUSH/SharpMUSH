@@ -1,8 +1,67 @@
 @page "/mail/compose"
 @attribute [Authorize]
+@using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
+@inject MailService Mail
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
 
 <PageTitle>Compose Mail — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Compose Mail</MudText>
-<MudText Color="Color.Secondary">Mail compose coming soon.</MudText>
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Href="/mail" />
+    <MudText Typo="Typo.h5">@Loc["ComposeMail"]</MudText>
+</MudStack>
+
+<MudPaper Outlined="true" Class="pa-4" Style="max-width:720px;">
+    <MudTextField @bind-Value="_to" Label="@Loc["To"]" Variant="Variant.Outlined"
+                  Margin="Margin.Dense" Class="mb-3" Required="true" />
+    <MudTextField @bind-Value="_subject" Label="@Loc["Subject"]" Variant="Variant.Outlined"
+                  Margin="Margin.Dense" Class="mb-3" />
+    <MudTextField @bind-Value="_body" Label="@Loc["Message"]" Variant="Variant.Outlined"
+                  Lines="10" Margin="Margin.Dense" Class="mb-3" />
+    <MudCheckBox @bind-Value="_urgent" Label="@Loc["Urgent"]" Color="Color.Error" Class="mb-3" />
+
+    <MudStack Row="true" Spacing="2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Send"
+                   OnClick="SendAsync" Disabled="_sending || string.IsNullOrWhiteSpace(_to)">
+            @Loc["Send"]
+        </MudButton>
+        <MudButton Variant="Variant.Text" Href="/mail" Disabled="_sending">@Loc["Cancel"]</MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [SupplyParameterFromQuery(Name = "to")] public string? ToQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "subject")] public string? SubjectQuery { get; set; }
+
+    private string _to = string.Empty;
+    private string _subject = string.Empty;
+    private string _body = string.Empty;
+    private bool _urgent;
+    private bool _sending;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ToQuery)) _to = ToQuery!;
+        if (!string.IsNullOrWhiteSpace(SubjectQuery)) _subject = SubjectQuery!;
+    }
+
+    private async Task SendAsync()
+    {
+        _sending = true;
+        var ok = await Mail.SendAsync(_to.Trim(), _subject, _body, _urgent);
+        _sending = false;
+
+        if (ok)
+        {
+            Snackbar.Add(Loc["MailSent"], Severity.Success);
+            Nav.NavigateTo("/mail");
+        }
+        else
+        {
+            Snackbar.Add(Loc["MailSendFailed"], Severity.Error);
+        }
+    }
+}

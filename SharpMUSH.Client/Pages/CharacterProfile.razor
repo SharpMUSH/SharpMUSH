@@ -1,6 +1,8 @@
 @page "/character/{Name}"
+@using Microsoft.AspNetCore.Components.Authorization
 @using SharpMUSH.Client.Components
 @using SharpMUSH.Client.Components.Widgets
+@inject AuthenticationStateProvider AuthStateProvider
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Name</PageTitle>
@@ -11,7 +13,26 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <MudGrid Spacing="4">
         <MudItem xs="12" md="8">
-            <CharacterHeaderWidget CharacterName="@Name" />
+            @if (_editing)
+            {
+                <ProfileEditor CharacterName="@Name"
+                               OnSaved="OnEditorSaved"
+                               OnCancel="@(() => _editing = false)" />
+            }
+            else
+            {
+                @if (_canEdit)
+                {
+                    <MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-2">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Edit"
+                                   OnClick="@(() => _editing = true)">
+                            @Loc["EditProfile"]
+                        </MudButton>
+                    </MudStack>
+                }
+                <CharacterHeaderWidget @key="_version" CharacterName="@Name" />
+            }
 
             @* Freeform wiki body lives at the Character:Name wiki page. *@
             <MudPaper Outlined="true" Class="pa-4 mt-4">
@@ -19,7 +40,7 @@
             </MudPaper>
         </MudItem>
         <MudItem xs="12" md="4">
-            <CharacterGalleryWidget CharacterName="@Name" />
+            <CharacterGalleryWidget CharacterName="@Name" CanEdit="_canEdit" />
         </MudItem>
     </MudGrid>
 </MudContainer>
@@ -27,4 +48,21 @@
 @code {
     [Parameter]
     public required string Name { get; set; }
+
+    private bool _editing;
+    private bool _canEdit;
+    private int _version;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Show edit affordances to any authenticated user; the server enforces owner/staff rights.
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _canEdit = authState.User.Identity?.IsAuthenticated == true;
+    }
+
+    private void OnEditorSaved()
+    {
+        _editing = false;
+        _version++; // re-key the header widget so it re-fetches the updated values
+    }
 }

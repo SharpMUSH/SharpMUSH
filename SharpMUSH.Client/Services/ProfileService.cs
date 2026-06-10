@@ -69,4 +69,32 @@ public class ProfileService(IHttpClientFactory httpClientFactory, ILogger<Profil
 			return null;
 		}
 	}
+
+	/// <summary>The handler's response to an edit: which fields it actually applied.</summary>
+	public record UpdateResult(int Status, string? Updated, string? Error);
+
+	/// <summary>
+	/// Submits changed fields to the handler (<c>POST /api/profile/{name}</c>). The handler enforces
+	/// editability per viewer and returns the space-separated list of fields it applied.
+	/// Returns <c>null</c> when the request fails or is rejected (e.g. not authorized).
+	/// </summary>
+	public async Task<UpdateResult?> UpdateAsync(string name, IReadOnlyDictionary<string, string> fields)
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var response = await http.PostAsJsonAsync($"api/profile/{Uri.EscapeDataString(name)}", fields);
+			if (!response.IsSuccessStatusCode)
+			{
+				logger.LogWarning("Profile update for {Name} returned {Status}.", name, response.StatusCode);
+				return null;
+			}
+			return await response.Content.ReadFromJsonAsync<UpdateResult>();
+		}
+		catch (HttpRequestException ex)
+		{
+			logger.LogWarning(ex, "Failed to update profile for {Name}.", name);
+			return null;
+		}
+	}
 }
