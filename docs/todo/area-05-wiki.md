@@ -7,7 +7,7 @@
 ## Implementation Tasks
 - [x] Define wiki page schema (collection: title, namespace, markdown, rendered_html, text_plain, metadata) — `SharpMUSH.Library/Models/Wiki/WikiPage.cs`, `node_wiki_pages` / `node_wiki_revisions` collections
 - [x] Implement Markdig pipeline (extensions, DisableHtml, wiki-link resolver) — `WikiMarkdigPipeline.cs`
-- [x] Implement wiki-link extension (`[[Page Name]]` → resolved links, redlink CSS) — `WikiLinkExtension.cs`; `.wiki-redlink` styled in `custom.css` (redlink *detection* still always false — needs existence check at render time)
+- [x] Implement wiki-link extension (`[[Page Name]]` → resolved links, redlink CSS) — `WikiLinkExtension.cs`; redlink detection resolved at VIEW time: `WikiDisplay` batch-checks link targets via `POST /api/wiki/exists` and tags missing ones with `.wiki-redlink` (always fresh; no stale-cache invalidation needed)
 - [x] Wiki CRUD: create, read, update (with revision history) — `IWikiService` + ArangoDB/Memgraph/SurrealDB/in-memory implementations
 - [x] Revision history storage (full snapshots) — `WikiRevision.cs`
 - [x] Page protection/locking (Royalty+ can protect pages) — `IsProtected` flag + `PUT /api/wiki/{slug}/protection` (Wizard role)
@@ -21,7 +21,7 @@
 ## Web UI
 - [x] Wiki page view component (`/wiki/Page_Name`, `/wiki/{ns}/Page_Name`) — `WikiPage.razor`, `WikiView.razor`, `WikiDisplay.razor`
 - [x] Wiki editor component (Markdown textarea + preview) — `WikiEdit.razor`, `/wiki/{slug}/edit`
-- [x] Wiki history/diff view — `WikiHistoryDialog.razor` (revision list + line diff vs current via `LineDiff.cs`); rollback not yet implemented
+- [x] Wiki history/diff view — `WikiHistoryDialog.razor` (revision list + line diff vs current via `LineDiff.cs`); per-revision Restore button → `POST /api/wiki/{slug}/rollback` (restore is a new revision; history preserved); also `@wiki/rollback <page>=<rev>` in-game
 - [x] Recent changes list — `/wiki` index (`WikiIndex.razor`) via `GET /api/wiki/recent`
 - [x] Namespace browsing (all Character: pages, all Help: pages) — `/wiki` index tabs via `GET /api/wiki/ns/{ns}`
 - [x] Wiki content CSS — links, redlinks, headings, tables, code, blockquotes in `wwwroot/css/custom.css`
@@ -38,7 +38,7 @@
 ## Testing
 - [x] Markdig pipeline: all extensions render correctly — `WikiMarkdigPipelineTests.cs`
 - [x] Wiki-link resolution: existing pages, broken links (redlinks) — `WikiMarkdigPipelineTests.cs`
-- [x] Revision history: create, view diff — `InMemoryWikiServiceTests.cs`, `WikiHttpControllerTests.cs` (revisions endpoints), `LineDiffTests.cs`; rollback untested (no rollback feature yet)
+- [x] Revision history: create, view diff, rollback — `InMemoryWikiServiceTests.cs`, `WikiHttpControllerTests.cs`, `LineDiffTests.cs`, `WikiRollbackAndRedlinkApiTests.cs` (rollback + exists endpoints), `WikiRedlinkRenderingTests` (bUnit), `WikiCommandTests` (@wiki/rollback)
 - [x] Permission checks: wizard delete, protected-page edit enforcement — DELETE/protection require Wizard role; protected pages reject non-Wizard edits (`WikiControllerProtectionTests.cs`). Finer-grained owner/royalty edit semantics remain a follow-up
 - [x] Metadata/listing/batch/visibility: `WikiMetadataServiceTests.cs`, `WikiControllerVisibilityTests.cs`, `WikiAdminApiTests.cs` (integration)
 - [x] Assets: `FileSystemWikiAssetServiceTests.cs`, `WikiAssetControllerTests.cs` (whitelist, SVG script rejection, cache headers)
@@ -48,6 +48,4 @@
 
 ## Remaining (out of portal scope or follow-up)
 - NATS `portal.wiki.changes` event on edit
-- Redlink existence detection in the wiki-link renderer
-- Revision rollback action in the history dialog
 - Owner-edit / royalty-edit-any permission tiers (currently: any authenticated user edits unprotected pages, Wizard edits everything)

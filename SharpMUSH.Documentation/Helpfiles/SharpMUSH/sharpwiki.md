@@ -23,6 +23,7 @@ Authoring:
 * `@wiki/create <title>=<markdown>` - create a page
 * `@wiki/edit <page>=<markdown>` - replace a page's content
 * `@wiki/append <page>=<markdown>` - add a paragraph to a page
+* `@wiki/rollback <page>=<revision #>` - restore an earlier revision
 
 Administration:
 * `@wiki/delete <page>` - delete a page (wizard)
@@ -48,10 +49,12 @@ appear in-game as a placeholder.
 # @WIKI/CREATE
 # @WIKI/EDIT
 # @WIKI/APPEND
+# @WIKI/ROLLBACK
 
 - `@wiki/create <title>=<markdown>`
 - `@wiki/edit <page>=<markdown>`
 - `@wiki/append <page>=<markdown>`
+- `@wiki/rollback <page>=<revision #>`
 
 @wiki/create makes a new wiki page. The title may carry a namespace prefix
 (`@wiki/create Help:House Rules=# House Rules`); the page's URL slug is
@@ -61,6 +64,12 @@ derived from the title (lower-case, spaces become underscores).
 Markdown as a new paragraph at the end — handy for building up a page from a
 telnet client one block at a time. Every edit records a revision; see
 [@wiki/history].
+
+@wiki/rollback restores the page body from an earlier revision (find the
+number with [@wiki/history]). The restore is a normal edit: it creates a NEW
+revision rather than rewriting history, so a rollback can itself be rolled
+back. The web portal offers the same action via the Restore button in each
+page's history dialog.
 
 Protected pages can only be edited by wizards. Each page records its author
 and last editor by dbref.

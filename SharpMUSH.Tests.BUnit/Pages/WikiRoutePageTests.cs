@@ -36,6 +36,7 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 {
     private record CreateReq(string Title, string Markdown, string? Namespace);
     private record UpdateReq(string Markdown, string? EditSummary);
+    private record ExistsReq(string[] Refs);
 
     private static readonly Regex _slugRoute = new(@"^api/wiki/([^/]+)$", RegexOptions.Compiled);
 
@@ -53,6 +54,27 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
             return result.Match(
                 page => Json(ToDto(page)),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+
+        // POST api/wiki/exists — batch existence map for redlink rendering.
+        // Refs use URL-path form: "slug" or "ns/slug".
+        if (request.Method == HttpMethod.Post && path == "api/wiki/exists")
+        {
+            var req = await request.Content!.ReadFromJsonAsync<ExistsReq>(cancellationToken: cancellationToken);
+            if (req is null) return new HttpResponseMessage(HttpStatusCode.BadRequest);
+
+            var map = new Dictionary<string, bool>();
+            foreach (var reference in req.Refs)
+            {
+                var slashIdx = reference.IndexOf('/');
+                var (ns, slug) = slashIdx > 0
+                    ? (ParseNs(reference[..slashIdx]), reference[(slashIdx + 1)..])
+                    : (WikiNamespace.Main, reference);
+                var lookup = await wikiService.GetBySlugAsync(slug, ns);
+                map[reference] = lookup.IsT0;
+            }
+
+            return Json(map);
         }
 
         // POST api/wiki
@@ -175,6 +197,42 @@ public class WikiPageRouteTests : BunitContext
         await Assert.That(wikiView).IsNotNull();
         await Assert.That(wikiView.Instance.Slug).IsEqualTo("magic_system");
         await Assert.That(wikiView.Instance.Mode).IsEqualTo(WikiView.WikiMode.Edit);
+    }
+}
+
+/// <summary>
+/// Verifies view-time redlink resolution in WikiDisplay: wiki links to missing
+/// pages gain class="wiki-redlink"; links to existing pages stay unmarked.
+/// </summary>
+public class WikiRedlinkRenderingTests : BunitContext
+{
+    public WikiRedlinkRenderingTests()
+    {
+        this.AddWikiTestServices();
+    }
+
+    [TUnit.Core.Test]
+    public async Task WikiPage_MarksMissingLinksRed_LeavesExistingLinksAlone()
+    {
+        var wikiSvc = Services.GetRequiredService<IWikiService>();
+        await wikiSvc.CreateAsync("Real Target", "I exist.", "#1", WikiNamespace.Main);
+        await wikiSvc.CreateAsync("Linking Page",
+            "See [[Real Target]] and [[Ghost Page]].", "#1", WikiNamespace.Main);
+
+        var cut = Render<SharpMUSH.Client.Pages.WikiPage>(p => p
+            .Add(c => c.Slug, "linking_page"));
+
+        // The exists round-trip completes asynchronously after first render.
+        cut.WaitForAssertion(() =>
+        {
+            if (!cut.Markup.Contains("href=\"/wiki/ghost_page\" class=\"wiki-redlink\""))
+                throw new InvalidOperationException("redlink not applied yet");
+        }, TimeSpan.FromSeconds(5));
+
+        await Assert.That(cut.Markup).Contains("href=\"/wiki/ghost_page\" class=\"wiki-redlink\"");
+        // The existing page's link stays a plain anchor.
+        await Assert.That(cut.Markup).Contains("href=\"/wiki/real_target\"");
+        await Assert.That(cut.Markup).DoesNotContain("href=\"/wiki/real_target\" class=\"wiki-redlink\"");
     }
 }
 

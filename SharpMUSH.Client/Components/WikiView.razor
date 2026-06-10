@@ -9,7 +9,8 @@
 }
 else if (Mode == WikiMode.View)
 {
-    <WikiDisplay Slug="@Slug" Namespace="@Namespace" Article="@_article" ActivateEditMode="ActivateEditMode" />
+    <WikiDisplay Slug="@Slug" Namespace="@Namespace" Article="@_article" ActivateEditMode="ActivateEditMode"
+                 OnArticleRestored="HandleArticleRestored" />
 }
 else
 {
@@ -103,6 +104,13 @@ else
         !string.Equals(saved.Category ?? string.Empty, draft.Category ?? string.Empty, StringComparison.OrdinalIgnoreCase)
         || saved.Published != draft.Published
         || !saved.Tags.SequenceEqual(draft.Tags);
+
+    /// <summary>Swaps in the article returned by a successful history-dialog rollback.</summary>
+    private void HandleArticleRestored(WikiArticle restored)
+    {
+        _article = restored;
+        StateHasChanged();
+    }
 
     private void HandleCancel()
     {

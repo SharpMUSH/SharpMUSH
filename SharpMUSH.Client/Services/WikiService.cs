@@ -42,6 +42,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	private record CreatePageRequest(string Title, string Markdown, string? Namespace);
 	private record UpdatePageRequest(string Markdown, string? EditSummary);
 	private record SetMetadataRequest(string? Category, string[] Tags, bool Published);
+	private record RollbackRequest(int RevisionNumber);
+	private record ExistsRequest(string[] Refs);
 	private record BatchProtectRequest(string[] Slugs, string? Ns, bool IsProtected);
 	private record BatchDeleteRequest(string[] Slugs, string? Ns);
 
@@ -327,6 +329,69 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		{
 			logger.LogError(ex, "SetMetadataAsync failed for slug={Slug}", slug);
 			return ex.Message;
+		}
+	}
+
+	/// <summary>
+	/// Restores the page body from an earlier revision. The restore is a normal
+	/// edit (new revision), so rollbacks are themselves recorded in history.
+	/// Returns the updated <see cref="WikiArticle"/> or a string error message.
+	/// </summary>
+	public async ValueTask<OneOf<WikiArticle, string>> RollbackAsync(
+		string slug,
+		int revisionNumber,
+		string? ns = null)
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var response = await http.PostAsJsonAsync(
+				$"api/wiki/{Uri.EscapeDataString(slug)}/rollback{NsQuery(ns)}",
+				new RollbackRequest(revisionNumber));
+
+			if (response.IsSuccessStatusCode)
+			{
+				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
+				return dto is null
+					? OneOf<WikiArticle, string>.FromT1("Server returned an empty response.")
+					: OneOf<WikiArticle, string>.FromT0(ToArticle(dto));
+			}
+
+			var body = await response.Content.ReadAsStringAsync();
+			return $"Rollback failed ({(int)response.StatusCode}): {body}";
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "RollbackAsync failed for slug={Slug} rev={Rev}", slug, revisionNumber);
+			return ex.Message;
+		}
+	}
+
+	/// <summary>
+	/// Batch page-existence check used for redlink rendering. Refs use URL-path
+	/// form: "slug" for main-namespace pages, "ns/slug" otherwise. Failures return
+	/// an empty map — links simply stay unmarked rather than breaking the page.
+	/// </summary>
+	public async ValueTask<IReadOnlyDictionary<string, bool>> CheckExistsAsync(IEnumerable<string> refs)
+	{
+		var refArray = refs.Distinct(StringComparer.Ordinal).ToArray();
+		if (refArray.Length == 0)
+			return new Dictionary<string, bool>();
+
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var response = await http.PostAsJsonAsync("api/wiki/exists", new ExistsRequest(refArray));
+			if (!response.IsSuccessStatusCode)
+				return new Dictionary<string, bool>();
+
+			var map = await response.Content.ReadFromJsonAsync<Dictionary<string, bool>>();
+			return map ?? new Dictionary<string, bool>();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "CheckExistsAsync failed for {Count} refs", refArray.Length);
+			return new Dictionary<string, bool>();
 		}
 	}
 

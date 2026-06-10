@@ -29,6 +29,8 @@ namespace SharpMUSH.Server.Controllers;
 ///   PUT    /api/wiki/{slug}            — update page (authenticated)
 ///   DELETE /api/wiki/{slug}             — delete page (Wizard+)
 ///   PUT    /api/wiki/{slug}/protection  — set protection flag (Wizard+)
+///   POST   /api/wiki/{slug}/rollback    — restore an earlier revision (authenticated)
+///   POST   /api/wiki/exists             — batch page-existence check (redlinks)
 ///   GET    /api/wiki/pages            — paginated listing of all pages (X-Total-Count header)
 ///   GET    /api/wiki/category/{cat}   — pages in a category
 ///   GET    /api/wiki/tag/{tag}        — pages carrying a tag
@@ -286,6 +288,75 @@ public class WikiController(
 				return Ok(ToDto(page));
 			},
 			_ => NotFound());
+	}
+
+	/// <summary>Request body for rolling a page back to an earlier revision.</summary>
+	public record RollbackRequest(int RevisionNumber);
+
+	/// <summary>
+	/// POST /api/wiki/{slug}/rollback
+	/// Restores the page body from an earlier revision snapshot. The restore is a
+	/// normal edit — it creates a NEW revision rather than rewriting history, so
+	/// a rollback can itself be rolled back.
+	/// </summary>
+	[HttpPost("{slug}/rollback")]
+	[Authorize]
+	public async Task<IActionResult> RollbackPage(string slug, [FromBody] RollbackRequest request, [FromQuery] string? ns = null)
+	{
+		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		if (lookup.IsT1) return NotFound();
+
+		var page = lookup.AsT0;
+		if (page.IsProtected && !User.IsInRole(nameof(PortalRole.Wizard)))
+			return Forbid();
+
+		var revisionLookup = await wikiService.GetRevisionAsync(page.Id, request.RevisionNumber);
+		if (revisionLookup.IsT1) return NotFound();
+
+		var result = await wikiService.UpdateAsync(
+			page.Id, revisionLookup.AsT0.MarkdownSource, editorDbref,
+			$"rollback to r{request.RevisionNumber}");
+		return result.Match<IActionResult>(
+			updated =>
+			{
+				logger.LogInformation("Wiki page rolled back: slug={Slug} to r{Target} (now r{Rev}) by={Editor}",
+					slug, request.RevisionNumber, updated.RevisionNumber, editorDbref);
+				prerenderCache.InvalidatePrefix($"/wiki/");
+				return Ok(ToDto(updated));
+			},
+			_ => NotFound());
+	}
+
+	/// <summary>Request body for the batch existence check. Refs use URL-path form:
+	/// "slug" for the main namespace, "ns/slug" otherwise.</summary>
+	public record ExistsRequest(string[] Refs);
+
+	/// <summary>
+	/// POST /api/wiki/exists
+	/// Batch existence check used by the client to mark redlinks at view time.
+	/// Returns a map of each requested ref to whether the page exists (and is
+	/// visible to the caller — drafts count as missing for anonymous callers).
+	/// </summary>
+	[HttpPost("exists")]
+	[AllowAnonymous]
+	public async Task<IActionResult> CheckExists([FromBody] ExistsRequest request)
+	{
+		const int maxRefs = 200;
+		var result = new Dictionary<string, bool>(StringComparer.Ordinal);
+
+		foreach (var reference in request.Refs.Distinct(StringComparer.Ordinal).Take(maxRefs))
+		{
+			var slashIdx = reference.IndexOf('/');
+			var (ns, slug) = slashIdx > 0
+				? (ParseNamespace(reference[..slashIdx]), reference[(slashIdx + 1)..])
+				: (WikiNamespace.Main, reference);
+
+			var lookup = await wikiService.GetBySlugAsync(slug, ns);
+			result[reference] = lookup.IsT0 && (lookup.AsT0.Published || IsAuthenticatedCaller);
+		}
+
+		return Ok(result);
 	}
 
 	/// <summary>

@@ -147,6 +147,44 @@ public class WikiCommandTests
 	}
 
 	[Test]
+	public async ValueTask WikiRollback_RestoresEarlierRevision()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRoller");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/create Rollback Target=original body"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/edit rollback_target=changed body"));
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/rollback rollback_target=1"));
+		await ExpectNotify(player.DbRef, "Restored 'Rollback Target' to r1 (now rev 3)");
+
+		// The restored body is served on view again.
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki rollback_target"));
+		await ExpectNotify(player.DbRef, "original body");
+	}
+
+	[Test]
+	public async ValueTask WikiRollback_UnknownRevision_Notifies()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRollMiss");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/create Rollback Missing=body"));
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MModule.single("@wiki/rollback rollback_missing=42"));
+		await ExpectNotify(player.DbRef, "has no revision r42");
+	}
+
+	[Test]
 	public async ValueTask HelpAtWiki_LoadsSharpwikiHelpfile()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(

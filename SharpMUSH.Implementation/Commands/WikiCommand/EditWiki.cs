@@ -56,6 +56,64 @@ public static class EditWiki
 			});
 	}
 
+	public static async ValueTask<MString> Rollback(
+		IMUSHCodeParser parser,
+		IMediator mediator,
+		IWikiService wikiService,
+		INotifyService notifyService,
+		MString targetArg,
+		MString revisionArg)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		var (ns, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
+
+		if (!int.TryParse(revisionArg.ToPlainText().Trim(), out var revisionNumber) || revisionNumber < 1)
+		{
+			await notifyService.Notify(executor, "WIKI: Rollback needs a revision number (see @wiki/history).", executor);
+			return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+		}
+
+		var lookup = await wikiService.GetBySlugAsync(slug, ns);
+		if (lookup.IsT1)
+		{
+			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
+			return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
+		var page = lookup.AsT0;
+		if (!await WikiCommandHelper.CanEdit(executor, page))
+		{
+			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
+			return MModule.single(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var revisionLookup = await wikiService.GetRevisionAsync(page.Id, revisionNumber);
+		if (revisionLookup.IsT1)
+		{
+			await notifyService.Notify(executor, $"WIKI: '{page.Title}' has no revision r{revisionNumber}.", executor);
+			return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
+		// A rollback is a normal edit — it creates a NEW revision, so history
+		// is preserved and the rollback itself can be rolled back.
+		var result = await wikiService.UpdateAsync(
+			page.Id, revisionLookup.AsT0.MarkdownSource, WikiCommandHelper.EditorDbref(executor),
+			$"rollback to r{revisionNumber} via @wiki/rollback");
+
+		return await result.Match(
+			async updated =>
+			{
+				await notifyService.Notify(executor,
+					$"WIKI: Restored '{updated.Title}' to r{revisionNumber} (now rev {updated.RevisionNumber}).", executor);
+				return MModule.single(updated.Slug);
+			},
+			async _ =>
+			{
+				await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
+				return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+			});
+	}
+
 	public static async ValueTask<MString> Edit(
 		IMUSHCodeParser parser,
 		IMediator mediator,

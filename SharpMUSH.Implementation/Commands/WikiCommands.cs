@@ -19,8 +19,8 @@ public partial class Commands
 	[SharpCommand(Name = "@WIKI",
 		Switches =
 		[
-			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "DELETE",
-			"PROTECT", "UNPROTECT", "CATEGORY", "TAG", "PUBLISH", "UNPUBLISH", "NOEVAL"
+			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
+			"DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "TAG", "PUBLISH", "UNPUBLISH", "NOEVAL"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["page", "content"])]
@@ -72,6 +72,8 @@ public partial class Commands
 				=> await EditWiki.Edit(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1!, append: false),
 			"APPEND" when hasArg0 && hasArg1
 				=> await EditWiki.Edit(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1!, append: true),
+			"ROLLBACK" when hasArg0 && hasArg1
+				=> await EditWiki.Rollback(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1!),
 			"DELETE" when hasArg0 && !hasArg1
 				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Delete),
 			"PROTECT" when hasArg0 && !hasArg1

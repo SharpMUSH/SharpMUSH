@@ -1,6 +1,7 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject WikiService Wiki
+@inject ISnackbar Snackbar
 
 @* History dialog content — rendered inside a MudDialog opened from WikiDisplay. *@
 @* Lists revision snapshots newest-first; selecting one shows a line diff of   *@
@@ -41,6 +42,16 @@ else
                             @revision.EditSummary
                         </MudText>
                     }
+                    <MudSpacer />
+                    <MudButton Size="Size.Small"
+                               Variant="Variant.Outlined"
+                               Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.Restore"
+                               Disabled="@_restoring"
+                               OnClick="@(() => Restore(revision))"
+                               Style="text-transform: none;">
+                        Restore
+                    </MudButton>
                 </MudStack>
             </MudListItem>
         }
@@ -81,9 +92,32 @@ else
     public string? CurrentMarkdown { get; set; }
 
     private bool _loading = true;
+    private bool _restoring;
     private IReadOnlyList<WikiRevisionInfo> _revisions = [];
     private WikiRevisionInfo? _selected;
     private IReadOnlyList<LineDiff.DiffLine>? _diff;
+
+    /// <summary>
+    /// Restores the page to the given revision. On success the dialog closes,
+    /// handing the restored article back to the opener (WikiDisplay) so the view
+    /// refreshes without a page reload.
+    /// </summary>
+    private async Task Restore(WikiRevisionInfo revision)
+    {
+        if (Slug is null) return;
+        _restoring = true;
+
+        var result = await Wiki.RollbackAsync(Slug, revision.RevisionNumber, Namespace);
+        _restoring = false;
+
+        result.Switch(
+            restored =>
+            {
+                Snackbar.Add($"Restored '{restored.Title}' to revision {revision.RevisionNumber}.", Severity.Success);
+                MudDialog?.Close(DialogResult.Ok(restored));
+            },
+            error => Snackbar.Add(error, Severity.Error));
+    }
 
     protected override async Task OnInitializedAsync()
     {
