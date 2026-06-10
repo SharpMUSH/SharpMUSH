@@ -128,14 +128,17 @@ file static class WikiServiceSetup
         // (the HTTP client wrapper) read them back through the same data store.
         var wikiSvc = new InMemoryWikiService(new WikiMarkdigPipeline());
 
+        var apiClient = new HttpClient(new InMemoryWikiHandler(wikiSvc))
+        {
+            BaseAddress = new Uri("https://localhost:8081/")
+        };
+
         var factory = Substitute.For<IHttpClientFactory>();
-        factory.CreateClient("api").Returns(
-            new HttpClient(new InMemoryWikiHandler(wikiSvc))
-            {
-                BaseAddress = new Uri("https://localhost:8081/")
-            });
+        factory.CreateClient("api").Returns(apiClient);
 
         ctx.Services
+            // Register the client so the DI container owns and disposes it at teardown.
+            .AddSingleton(apiClient)
             .AddMudServices()
             .AddSingleton<WikiMarkdigPipeline>()
             .AddSingleton<IWikiService>(wikiSvc)

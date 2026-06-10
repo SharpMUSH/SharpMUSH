@@ -8,6 +8,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Helpers;
 using MarkupString;
 using System.Security.Claims;
 using System.Text.Json;
@@ -82,7 +83,11 @@ public class GalleryController(
 				new { error = $"Content type '{file.ContentType}' is not allowed. Allowed: {string.Join(", ", AllowedContentTypes)}" });
 		}
 
-		var uploaderDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		// Never default a missing identity to God (#1): reject so uploads cannot be
+		// misattributed or bypass identity-based controls downstream.
+		var uploaderDbref = User.FindFirstValue(ClaimTypes.NameIdentifier);
+		if (string.IsNullOrEmpty(uploaderDbref))
+			return Unauthorized("Missing character identity.");
 		await using var content = file.OpenReadStream();
 		var saved = await assetService.SaveAsync(file.FileName, file.ContentType, content, uploaderDbref, ct);
 		if (saved.IsT1)
@@ -101,7 +106,7 @@ public class GalleryController(
 			IsIcon: entries.Count == 0)); // first image becomes the icon by default
 
 		await WriteGalleryAsync(character, entries);
-		logger.LogInformation("Gallery image added to {Character}: asset={Asset} by={Uploader}", name, asset.Id, uploaderDbref);
+		logger.LogInformation("Gallery image added to {Character}: asset={Asset} by={Uploader}", LogSanitizer.Sanitize(name), asset.Id, LogSanitizer.Sanitize(uploaderDbref));
 		return Ok(entries.OrderBy(e => e.Order).ToList());
 	}
 

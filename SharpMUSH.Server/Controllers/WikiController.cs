@@ -5,6 +5,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Helpers;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Services;
 using System.Net;
@@ -93,6 +94,13 @@ public class WikiController(
 	/// <summary>True when the caller carries an authenticated identity. Anonymous
 	/// callers only see Published pages; drafts are reserved for logged-in users.</summary>
 	private bool IsAuthenticatedCaller => User.Identity?.IsAuthenticated == true;
+
+	/// <summary>
+	/// The caller's character dbref from the JWT NameIdentifier claim. Never defaults to a
+	/// privileged dbref: a missing claim means we cannot attribute the action, so callers
+	/// must reject the request rather than silently acting as God (#1).
+	/// </summary>
+	private string? CallerDbref => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
 	/// <summary>Filters out unpublished (draft) pages for anonymous callers.</summary>
 	private IEnumerable<WikiPage> FilterVisible(IEnumerable<WikiPage> pages) =>
@@ -248,13 +256,15 @@ public class WikiController(
 	[Authorize]
 	public async Task<IActionResult> CreatePage([FromBody] CreatePageRequest request)
 	{
-		var authorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var authorDbref = CallerDbref;
+		if (string.IsNullOrEmpty(authorDbref))
+			return Unauthorized("Missing character identity.");
 		var ns = ParseNamespace(request.Namespace);
 		var result = await wikiService.CreateAsync(request.Title, request.Markdown, authorDbref, ns);
 		return result.Match<IActionResult>(
 			page =>
 			{
-				logger.LogInformation("Wiki page created: slug={Slug} ns={Ns} by={Author}", page.Slug, ns, authorDbref);
+				logger.LogInformation("Wiki page created: slug={Slug} ns={Ns} by={Author}", LogSanitizer.Sanitize(page.Slug), ns, LogSanitizer.Sanitize(authorDbref));
 				return CreatedAtAction(nameof(GetPage), new { slug = page.Slug }, ToDto(page));
 			},
 			err => Conflict(new { error = err.Value }));
@@ -270,7 +280,9 @@ public class WikiController(
 	[Authorize]
 	public async Task<IActionResult> UpdatePage(string slug, [FromBody] UpdatePageRequest request, [FromQuery] string? ns = null)
 	{
-		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var editorDbref = CallerDbref;
+		if (string.IsNullOrEmpty(editorDbref))
+			return Unauthorized("Missing character identity.");
 		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 
@@ -283,7 +295,7 @@ public class WikiController(
 		return result.Match<IActionResult>(
 			page =>
 			{
-				logger.LogInformation("Wiki page updated: slug={Slug} rev={Rev} by={Editor}", slug, page.RevisionNumber, editorDbref);
+				logger.LogInformation("Wiki page updated: slug={Slug} rev={Rev} by={Editor}", LogSanitizer.Sanitize(slug), page.RevisionNumber, LogSanitizer.Sanitize(editorDbref));
 				prerenderCache.InvalidatePrefix($"/wiki/");
 				return Ok(ToDto(page));
 			},
@@ -303,7 +315,9 @@ public class WikiController(
 	[Authorize]
 	public async Task<IActionResult> RollbackPage(string slug, [FromBody] RollbackRequest request, [FromQuery] string? ns = null)
 	{
-		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var editorDbref = CallerDbref;
+		if (string.IsNullOrEmpty(editorDbref))
+			return Unauthorized("Missing character identity.");
 		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 
@@ -321,7 +335,7 @@ public class WikiController(
 			updated =>
 			{
 				logger.LogInformation("Wiki page rolled back: slug={Slug} to r{Target} (now r{Rev}) by={Editor}",
-					slug, request.RevisionNumber, updated.RevisionNumber, editorDbref);
+					LogSanitizer.Sanitize(slug), request.RevisionNumber, updated.RevisionNumber, LogSanitizer.Sanitize(editorDbref));
 				prerenderCache.InvalidatePrefix($"/wiki/");
 				return Ok(ToDto(updated));
 			},
@@ -367,7 +381,9 @@ public class WikiController(
 	[Authorize(Roles = nameof(PortalRole.Wizard))]
 	public async Task<IActionResult> DeletePage(string slug, [FromQuery] string? ns = null)
 	{
-		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var editorDbref = CallerDbref;
+		if (string.IsNullOrEmpty(editorDbref))
+			return Unauthorized("Missing character identity.");
 		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 
@@ -376,7 +392,7 @@ public class WikiController(
 		return result.Match<IActionResult>(
 			_ =>
 			{
-				logger.LogInformation("Wiki page deleted: slug={Slug} by={Editor}", slug, editorDbref);
+				logger.LogInformation("Wiki page deleted: slug={Slug} by={Editor}", LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(editorDbref));
 				prerenderCache.InvalidatePrefix($"/wiki/");
 				return NoContent();
 			},
@@ -416,13 +432,18 @@ public class WikiController(
 		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 
+		// Protected pages may only be retagged/(un)published by Wizard-level users,
+		// mirroring the edit restriction in UpdatePage.
+		if (lookup.AsT0.IsProtected && !User.IsInRole(nameof(PortalRole.Wizard)))
+			return Forbid();
+
 		var result = await wikiService.SetMetadataAsync(
 			lookup.AsT0.Id, request.Category, request.Tags ?? [], request.Published);
 		return result.Match<IActionResult>(
 			page =>
 			{
 				logger.LogInformation("Wiki page metadata updated: slug={Slug} category={Category} published={Published}",
-					slug, page.Category, page.Published);
+					LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(page.Category), page.Published);
 				prerenderCache.InvalidatePrefix("/wiki/");
 				return Ok(ToDto(page));
 			},
@@ -478,7 +499,9 @@ public class WikiController(
 	[Authorize(Roles = nameof(PortalRole.Wizard))]
 	public async Task<IActionResult> BatchDelete([FromBody] BatchDeleteRequest request)
 	{
-		var editorDbref = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "#1";
+		var editorDbref = CallerDbref;
+		if (string.IsNullOrEmpty(editorDbref))
+			return Unauthorized("Missing character identity.");
 		var ns = ParseNamespace(request.Ns);
 		var succeeded = new List<string>();
 		var failed = new List<string>();
@@ -498,7 +521,7 @@ public class WikiController(
 
 		prerenderCache.InvalidatePrefix("/wiki/");
 		logger.LogInformation("Wiki batch delete: by={Editor} ok={Ok} failed={Failed}",
-			editorDbref, succeeded.Count, failed.Count);
+			LogSanitizer.Sanitize(editorDbref), succeeded.Count, failed.Count);
 		return Ok(new BatchResult(succeeded, failed));
 	}
 
@@ -522,7 +545,7 @@ public class WikiController(
 			prerenderCache.InvalidatePrefix(request.Prefix);
 
 		logger.LogInformation("Pre-render cache invalidated: path={Path} prefix={Prefix}",
-			request.Path, request.Prefix);
+			LogSanitizer.Sanitize(request.Path), LogSanitizer.Sanitize(request.Prefix));
 
 		return Ok();
 	}

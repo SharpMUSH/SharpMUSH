@@ -109,11 +109,11 @@ public static class StatsMail
 		var receivedSize = allReceivedMail.Sum(x => x.Content.Length);
 		var receivedUnread = allReceivedMail.Sum(x => x.Read ? 0 : 1);
 		var receivedCleared = allReceivedMail.Sum(x => x.Cleared ? 1 : 0);
-		var lastDate = allReceivedMail.Max(x => x.DateSent);
 
 		await notifyService.Notify(executor,
 			$"{allReceivedMail.Length} messages received, {receivedUnread} unread, {receivedCleared} cleared, totalling {receivedSize} characters.", executor);
-		await notifyService.Notify(executor, $"Last is dated {lastDate}", executor);
+		if (allReceivedMail.Length > 0)
+			await notifyService.Notify(executor, $"Last is dated {allReceivedMail.Max(x => x.DateSent)}", executor);
 
 		return MModule.empty();
 	}
@@ -132,11 +132,11 @@ public static class StatsMail
 		var allReceivedMail = await allReceivedMailIe.ToArrayAsync();
 		var receivedUnread = allReceivedMail.Sum(x => x.Read ? 0 : 1);
 		var receivedCleared = allReceivedMail.Sum(x => x.Cleared ? 1 : 0);
-		var lastDate = allReceivedMail.Max(x => x.DateSent);
 
 		await notifyService.Notify(executor,
 			$"{allReceivedMail.Length} messages received, {receivedUnread} unread, {receivedCleared} cleared.", executor);
-		await notifyService.Notify(executor, $"Last is dated {lastDate}", executor);
+		if (allReceivedMail.Length > 0)
+			await notifyService.Notify(executor, $"Last is dated {allReceivedMail.Max(x => x.DateSent)}", executor);
 
 		return MModule.empty();
 	}

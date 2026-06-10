@@ -102,7 +102,7 @@ public class AuthController(
 			var character = characters.FirstOrDefault(c => c.Object.Key == request.CharacterKey.Value);
 			if (character is null)
 			{
-				logger.LogInformation("OTT via account session: character #{Key} not linked to account {AccountId}", request.CharacterKey.Value, accountId);
+				logger.LogInformation("OTT via account session: character #{Key} not linked to account {AccountId}", request.CharacterKey.Value, Sanitize(accountId));
 				return Unauthorized("Character is not linked to this account.");
 			}
 
@@ -185,7 +185,7 @@ public class AuthController(
 		var charSummaries = await BuildCharacterSummariesAsync(characters);
 
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
-		logger.LogInformation("Account login success for {Username} ({Id})", account.Username, account.Id);
+		logger.LogInformation("Account login success for {Username} ({Id})", Sanitize(account.Username), Sanitize(account.Id));
 		return Ok(new AccountLoginResponse(account.Id!, account.Username, charSummaries, sessionToken, account.MustChangePassword));
 	}
 
@@ -209,7 +209,7 @@ public class AuthController(
 		var account = result.AsT0;
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
 
-		logger.LogInformation("Account registered: {Username} ({Id})", account.Username, account.Id);
+		logger.LogInformation("Account registered: {Username} ({Id})", Sanitize(account.Username), Sanitize(account.Id));
 		return Ok(new AccountLoginResponse(account.Id!, account.Username, [], sessionToken, account.MustChangePassword));
 	}
 
@@ -245,7 +245,7 @@ public class AuthController(
 			accountSessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
 
 		logger.LogInformation("Debug OTT issued for {Name} (#{Key}), account: {AccountId}",
-			player.Object.Name, player.Object.Key, account?.Id ?? "none");
+			Sanitize(player.Object.Name), player.Object.Key, Sanitize(account?.Id ?? "none"));
 
 		return Ok(new DebugOttResponse(token, ttl, player.Object.Name,
 			account?.Id, account?.Username, accountSessionToken, account?.MustChangePassword ?? false));
@@ -291,7 +291,7 @@ public class AuthController(
 		if (character is null)
 		{
 			logger.LogInformation("JWT login: character #{Key} not linked to account {AccountId}",
-				request.CharacterKey, account.Id);
+				request.CharacterKey, Sanitize(account.Id));
 			return Unauthorized("Character is not linked to this account.");
 		}
 
@@ -300,7 +300,7 @@ public class AuthController(
 		var result = await JwtService.IssueTokensAsync(account, character, role);
 
 		logger.LogInformation("JWT issued for {Username} ({AccountId}), character #{Key}, role {Role}",
-			account.Username, account.Id, character.Object.Key, role);
+			Sanitize(account.Username), Sanitize(account.Id), character.Object.Key, role);
 		SetRefreshCookie(result.RefreshToken);
 		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
 	}
@@ -342,7 +342,7 @@ public class AuthController(
 		if (character is null)
 		{
 			logger.LogInformation("JWT switch-character: character #{Key} not linked to account {AccountId}",
-				request.CharacterKey, accountId);
+				request.CharacterKey, Sanitize(accountId));
 			return Unauthorized("Character is not linked to this account.");
 		}
 
@@ -351,7 +351,7 @@ public class AuthController(
 		var result = await JwtService.IssueTokensAsync(account, character, role);
 
 		logger.LogInformation("JWT switch-character: issued for {AccountId}, character #{Key}, role {Role}",
-			accountId, character.Object.Key, role);
+			Sanitize(accountId), character.Object.Key, role);
 		SetRefreshCookie(result.RefreshToken);
 		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
 	}

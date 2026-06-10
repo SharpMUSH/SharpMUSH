@@ -8,6 +8,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Server.Helpers;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -74,12 +75,12 @@ public class AccountController(
 
 			await accountService.LinkCharacterAsync(accountId, playerRef);
 
-			logger.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via API", accountId, request.Name, playerRef.Number);
+			logger.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via API", LogSanitizer.Sanitize(accountId), LogSanitizer.Sanitize(request.Name), playerRef.Number);
 			return Ok(new { DbrefNumber = playerRef.Number, CreationTime = playerRef.CreationMilliseconds });
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Character creation failed for account {AccountId}", accountId);
+			logger.LogError(ex, "Character creation failed for account {AccountId}", LogSanitizer.Sanitize(accountId));
 			return BadRequest(ex.Message);
 		}
 	}
@@ -106,7 +107,7 @@ public class AccountController(
 
 		if (player is null)
 		{
-			logger.LogInformation("Account {AccountId}: link-character failed — character not found", accountId);
+			logger.LogInformation("Account {AccountId}: link-character failed — character not found", LogSanitizer.Sanitize(accountId));
 			return Unauthorized("Invalid character credentials.");
 		}
 
@@ -120,7 +121,7 @@ public class AccountController(
 		if (!valid && !string.IsNullOrEmpty(player.PasswordHash))
 		{
 			logger.LogInformation("Account {AccountId}: link-character failed — bad password for #{Key}",
-				accountId, player.Object.Key);
+				LogSanitizer.Sanitize(accountId), player.Object.Key);
 			return Unauthorized("Invalid character credentials.");
 		}
 
@@ -138,7 +139,7 @@ public class AccountController(
 
 		await accountService.LinkCharacterAsync(accountId, charRef);
 
-		logger.LogInformation("Account {AccountId}: linked existing character #{Key}", accountId, player.Object.Key);
+		logger.LogInformation("Account {AccountId}: linked existing character #{Key}", LogSanitizer.Sanitize(accountId), player.Object.Key);
 		return Ok(new { DbrefNumber = player.Object.Key, CreationTime = player.Object.CreationTime, player.Object.Name });
 	}
 
@@ -150,7 +151,7 @@ public class AccountController(
 		if (accountId is null) return Unauthorized("Invalid or expired account session.");
 
 		await accountService.UnlinkCharacterAsync(accountId, new DBRef(dbrefNumber));
-		logger.LogInformation("Account {AccountId}: unlinked character #{Key}", accountId, dbrefNumber);
+		logger.LogInformation("Account {AccountId}: unlinked character #{Key}", LogSanitizer.Sanitize(accountId), dbrefNumber);
 		return NoContent();
 	}
 

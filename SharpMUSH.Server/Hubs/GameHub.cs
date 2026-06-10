@@ -89,7 +89,16 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGam
 	/// <param name="command">The raw command string typed by the player.</param>
 	public async Task SendCommand(string command)
 	{
-		var dbref = Context.User?.FindFirst(CharacterDbrefClaim)?.Value ?? string.Empty;
+		var dbref = Context.User?.FindFirst(CharacterDbrefClaim)?.Value;
+		if (string.IsNullOrEmpty(dbref))
+		{
+			// No character identity → the command is unroutable; fail at the auth boundary
+			// rather than publishing an empty-dbref message onto the bus.
+			logger.LogWarning("[GameHub] Connection {ConnectionId} sent a command without a {Claim} claim; rejecting",
+				Context.ConnectionId, CharacterDbrefClaim);
+			throw new HubException("No character identity on this connection.");
+		}
+
 		logger.LogDebug("[GameHub] Connection {ConnectionId} (char:{Dbref}) sent command: {Command}",
 			Context.ConnectionId, dbref, command);
 

@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Server.Helpers;
 
 namespace SharpMUSH.Server.Middleware;
 
@@ -57,7 +58,7 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 		{
 			var qs = req.QueryString.Value ?? string.Empty;
 			var target = canonical + qs;
-			logger.LogDebug("Canonical redirect {From} → {To}", path, target);
+			logger.LogDebug("Canonical redirect {From} → {To}", LogSanitizer.Sanitize(path), LogSanitizer.Sanitize(target));
 			context.Response.StatusCode = StatusCodes.Status301MovedPermanently;
 			context.Response.Headers.Location = target;
 			return;

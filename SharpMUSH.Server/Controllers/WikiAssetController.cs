@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Helpers;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 
@@ -94,7 +95,7 @@ public partial class WikiAssetController(
 			asset =>
 			{
 				logger.LogInformation("Wiki asset uploaded: id={Id} name={Name} size={Size} by={Uploader}",
-					asset.Id, asset.FileName, asset.SizeBytes, uploaderDbref);
+					asset.Id, LogSanitizer.Sanitize(asset.FileName), asset.SizeBytes, LogSanitizer.Sanitize(uploaderDbref));
 				var url = AssetUrl(asset.Id, asset.FileName);
 				return Created(url, new UploadedAssetDto(asset.Id, asset.FileName, url, asset.SizeBytes, asset.ContentType));
 			},
@@ -147,7 +148,7 @@ public partial class WikiAssetController(
 		return result.Match<IActionResult>(
 			_ =>
 			{
-				logger.LogInformation("Wiki asset deleted: id={Id}", id);
+				logger.LogInformation("Wiki asset deleted: id={Id}", LogSanitizer.Sanitize(id));
 				return NoContent();
 			},
 			_ => NotFound());

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Server.Helpers;
 using System.Text.Json;
 
 namespace SharpMUSH.Server.Middleware;
@@ -30,13 +31,13 @@ public sealed class ProblemDetailsExceptionHandler(
         if (exception is OperationCanceledException && httpContext.RequestAborted.IsCancellationRequested)
         {
             logger.LogDebug("Request cancelled by client on {Method} {Path}",
-                httpContext.Request.Method, httpContext.Request.Path);
+                LogSanitizer.Sanitize(httpContext.Request.Method), LogSanitizer.Sanitize(httpContext.Request.Path));
             httpContext.Response.StatusCode = 499;
             return true;
         }
 
         logger.LogError(exception, "Unhandled exception on {Method} {Path}",
-            httpContext.Request.Method, httpContext.Request.Path);
+            LogSanitizer.Sanitize(httpContext.Request.Method), LogSanitizer.Sanitize(httpContext.Request.Path));
 
         var (status, title) = exception switch
         {
