@@ -83,7 +83,12 @@ public static class ManageWiki
 			case Operation.Publish or Operation.Unpublish:
 			{
 				var publish = op == Operation.Publish;
-				await wikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, publish);
+				var publishResult = await wikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, publish);
+				if (publishResult.IsT1)
+				{
+					await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
+					return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+				}
 				await notifyService.Notify(executor,
 					$"WIKI: '{page.Title}' is now {(publish ? "published" : "an unpublished draft")}.", executor);
 				return MModule.single(page.Slug);
@@ -92,7 +97,12 @@ public static class ManageWiki
 			case Operation.Category:
 			{
 				var category = valueArg?.ToPlainText().Trim();
-				await wikiService.SetMetadataAsync(page.Id, category, page.Tags, page.Published);
+				var categoryResult = await wikiService.SetMetadataAsync(page.Id, category, page.Tags, page.Published);
+				if (categoryResult.IsT1)
+				{
+					await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
+					return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+				}
 				await notifyService.Notify(executor,
 					string.IsNullOrWhiteSpace(category)
 						? $"WIKI: Cleared the category on '{page.Title}'."
@@ -106,7 +116,12 @@ public static class ManageWiki
 				var tags = (valueArg?.ToPlainText() ?? string.Empty)
 					.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 				var result = await wikiService.SetMetadataAsync(page.Id, page.Category, tags, page.Published);
-				var stored = result.IsT0 && result.AsT0.Tags.Count > 0
+				if (result.IsT1)
+				{
+					await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
+					return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+				}
+				var stored = result.AsT0.Tags.Count > 0
 					? string.Join(", ", result.AsT0.Tags)
 					: "(none)";
 				await notifyService.Notify(executor, $"WIKI: Tags on '{page.Title}' set to: {stored}.", executor);
