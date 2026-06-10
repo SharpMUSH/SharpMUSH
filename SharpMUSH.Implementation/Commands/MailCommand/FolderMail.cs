@@ -142,7 +142,7 @@ public static class FolderMail
 		await notifyService!.Notify(executor,
 			$"MAIL: {totalMail} messages in folder {currentFolder} ({unread} unread, {cleared} cleared).");
 		await notifyService.Notify(executor,
-			$"MAIL: Current folder is {currentFolder}.");
+			$"MAIL: Current folder is {currentFolder}.", executor);
 		return MModule.single(unread.ToString());
 	}
 }

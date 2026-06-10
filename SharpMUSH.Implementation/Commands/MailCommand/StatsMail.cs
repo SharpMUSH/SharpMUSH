@@ -86,7 +86,7 @@ public static class StatsMail
 		var cleared = stats.Sum(x => x.Cleared ? 1 : 0);
 
 		await notifyService.Notify(executor,
-			$"MAIL: {stats.Length} messages in folder [{currentFolder}] ({unread} unread, {cleared} cleared).");
+			$"MAIL: {stats.Length} messages in folder [{currentFolder}] ({unread} unread, {cleared} cleared).", executor);
 
 		return MModule.empty();
 	}
@@ -95,7 +95,7 @@ public static class StatsMail
 		INotifyService notifyService, AnySharpObject executor, string targetName,
 		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
 	{
-		await notifyService.Notify(executor, $"Mail statistics for {targetName}:");
+		await notifyService.Notify(executor, $"Mail statistics for {targetName}:", executor);
 
 		var allSentMail = await allSentMailIe.ToArrayAsync();
 		var sentSize = allSentMail.Sum(x => x.Content.Length);
@@ -103,7 +103,7 @@ public static class StatsMail
 		var sentCleared = allSentMail.Sum(x => x.Cleared ? 1 : 0);
 
 		await notifyService.Notify(executor,
-			$"{allSentMail.Length} messages sent, {sentUnread} unread, {sentCleared} cleared, totalling {sentSize} characters.");
+			$"{allSentMail.Length} messages sent, {sentUnread} unread, {sentCleared} cleared, totalling {sentSize} characters.", executor);
 
 		var allReceivedMail = await allReceivedMailIe.ToArrayAsync();
 		var receivedSize = allReceivedMail.Sum(x => x.Content.Length);
@@ -112,8 +112,8 @@ public static class StatsMail
 		var lastDate = allReceivedMail.Max(x => x.DateSent);
 
 		await notifyService.Notify(executor,
-			$"{allReceivedMail.Length} messages received, {receivedUnread} unread, {receivedCleared} cleared, totalling {receivedSize} characters.");
-		await notifyService.Notify(executor, $"Last is dated {lastDate}");
+			$"{allReceivedMail.Length} messages received, {receivedUnread} unread, {receivedCleared} cleared, totalling {receivedSize} characters.", executor);
+		await notifyService.Notify(executor, $"Last is dated {lastDate}", executor);
 
 		return MModule.empty();
 	}
@@ -125,9 +125,9 @@ public static class StatsMail
 		var allSentMail = await allSentMailIe.ToArrayAsync();
 		var sentUnread = allSentMail.Sum(x => x.Read ? 0 : 1);
 		var sentCleared = allSentMail.Sum(x => x.Cleared ? 1 : 0);
-		await notifyService.Notify(executor, $"Mail statistics for {targetName}:");
+		await notifyService.Notify(executor, $"Mail statistics for {targetName}:", executor);
 		await notifyService.Notify(executor,
-			$"{allSentMail.Length} messages sent, {sentUnread} unread, {sentCleared} cleared.");
+			$"{allSentMail.Length} messages sent, {sentUnread} unread, {sentCleared} cleared.", executor);
 
 		var allReceivedMail = await allReceivedMailIe.ToArrayAsync();
 		var receivedUnread = allReceivedMail.Sum(x => x.Read ? 0 : 1);
@@ -135,8 +135,8 @@ public static class StatsMail
 		var lastDate = allReceivedMail.Max(x => x.DateSent);
 
 		await notifyService.Notify(executor,
-			$"{allReceivedMail.Length} messages received, {receivedUnread} unread, {receivedCleared} cleared.");
-		await notifyService.Notify(executor, $"Last is dated {lastDate}");
+			$"{allReceivedMail.Length} messages received, {receivedUnread} unread, {receivedCleared} cleared.", executor);
+		await notifyService.Notify(executor, $"Last is dated {lastDate}", executor);
 
 		return MModule.empty();
 	}
@@ -145,8 +145,8 @@ public static class StatsMail
 		INotifyService notifyService, AnySharpObject executor, string targetName,
 		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
 	{
-		await notifyService.Notify(executor, $"{targetName} sent {await allSentMailIe.CountAsync()} messages.");
-		await notifyService.Notify(executor, $"{targetName} received {await allReceivedMailIe.CountAsync()} messages.");
+		await notifyService.Notify(executor, $"{targetName} sent {await allSentMailIe.CountAsync()} messages.", executor);
+		await notifyService.Notify(executor, $"{targetName} received {await allReceivedMailIe.CountAsync()} messages.", executor);
 
 		return MModule.empty();
 	}

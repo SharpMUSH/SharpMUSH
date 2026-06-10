@@ -28,7 +28,7 @@ public static class ReviewMail
 
 			if (!actualPlayer.IsPlayer)
 			{
-				await notifyService.Notify(executor, $"MAIL: {name} not found.");
+				await notifyService.Notify(executor, $"MAIL: {name} not found.", executor);
 				return MModule.single(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
@@ -69,7 +69,7 @@ public static class ReviewMail
 			};
 
 			var output = MModule.multipleWithDelimiter(MModule.single("\n"), messageBuilder);
-			await notifyService.Notify(executor, output);
+			await notifyService.Notify(executor, output, executor);
 		}
 
 		return MModule.empty();
