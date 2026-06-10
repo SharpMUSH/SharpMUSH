@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +35,37 @@ public class AuthController(
 	/// (compiled at startup) never tries to inject it from the DI container.
 	/// </summary>
 	private IJwtService? JwtService => HttpContext.RequestServices.GetService<IJwtService>();
+
+	/// <summary>
+	/// Name of the httpOnly cookie that carries the refresh token. The cookie is scoped to
+	/// /api/auth so it is only sent on auth endpoints (refresh), never on regular API calls.
+	/// </summary>
+	public const string RefreshCookieName = "sharpmush_refresh";
+
+	/// <summary>
+	/// Stores the refresh token in an httpOnly cookie so the WASM client never has to hold
+	/// it in JavaScript-accessible memory (per the architectural decision: JWT in WASM
+	/// memory only, refresh via httpOnly cookie). The token is also returned in the JSON
+	/// body for non-browser clients.
+	/// </summary>
+	private void SetRefreshCookie(string refreshToken)
+	{
+		var lifetimeDays = HttpContext.RequestServices
+			.GetService<Microsoft.Extensions.Options.IOptions<JwtOptions>>()?.Value.RefreshTokenLifetimeDays ?? 7;
+
+		Response.Cookies.Append(RefreshCookieName, refreshToken, new CookieOptions
+		{
+			HttpOnly = true,
+			Secure = true,
+			SameSite = SameSiteMode.Strict,
+			Path = "/api/auth",
+			MaxAge = TimeSpan.FromDays(lifetimeDays),
+		});
+	}
+
+	/// <summary>Removes the refresh cookie (logout / invalid refresh).</summary>
+	private void ClearRefreshCookie() =>
+		Response.Cookies.Delete(RefreshCookieName, new CookieOptions { Path = "/api/auth" });
 
 	/// <summary>Request body for OTT issuance via MUSH character credentials.</summary>
 	public record MushTokenRequest(string? PlayerName, string? Password, string? AccountSessionToken, int? CharacterKey, long? CharacterCreationTime);
@@ -269,6 +301,7 @@ public class AuthController(
 
 		logger.LogInformation("JWT issued for {Username} ({AccountId}), character #{Key}, role {Role}",
 			account.Username, account.Id, character.Object.Key, role);
+		SetRefreshCookie(result.RefreshToken);
 		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
 	}
 
@@ -319,33 +352,44 @@ public class AuthController(
 
 		logger.LogInformation("JWT switch-character: issued for {AccountId}, character #{Key}, role {Role}",
 			accountId, character.Object.Key, role);
+		SetRefreshCookie(result.RefreshToken);
 		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
 	}
 
-	/// <summary>Request body for JWT refresh.</summary>
-	public record JwtRefreshRequest(string RefreshToken);
+	/// <summary>Request body for JWT refresh. RefreshToken may be omitted when the
+	/// httpOnly refresh cookie set at login is present.</summary>
+	public record JwtRefreshRequest(string? RefreshToken);
 
 	/// <summary>
 	/// Exchange a refresh token for a new JWT access/refresh token pair (single-use).
+	/// The token is taken from the request body when supplied, otherwise from the
+	/// httpOnly refresh cookie set by the login/switch endpoints — browser clients
+	/// can refresh silently without ever holding the refresh token in script.
 	/// </summary>
 	[HttpPost("jwt-refresh")]
 	[AllowAnonymous]
 	[EnableRateLimiting("public-api")]
-	public async Task<IActionResult> JwtRefresh([FromBody] JwtRefreshRequest request)
+	public async Task<IActionResult> JwtRefresh([FromBody] JwtRefreshRequest? request = null)
 	{
 		if (JwtService is null)
 			return StatusCode(501, "JWT authentication is not configured on this server.");
 
-		if (string.IsNullOrWhiteSpace(request.RefreshToken))
-			return BadRequest("RefreshToken is required.");
+		var refreshToken = !string.IsNullOrWhiteSpace(request?.RefreshToken)
+			? request.RefreshToken
+			: Request.Cookies[RefreshCookieName];
 
-		var result = await JwtService.RefreshAsync(request.RefreshToken);
+		if (string.IsNullOrWhiteSpace(refreshToken))
+			return BadRequest("RefreshToken is required (body or refresh cookie).");
+
+		var result = await JwtService.RefreshAsync(refreshToken);
 		if (result is null)
 		{
 			logger.LogInformation("JWT refresh rejected: invalid or expired refresh token");
+			ClearRefreshCookie();
 			return Unauthorized("Invalid or expired refresh token.");
 		}
 
+		SetRefreshCookie(result.RefreshToken);
 		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
 	}
 

@@ -35,6 +35,10 @@ public class DebugAuthenticationHandler(
 		var claims = new List<Claim>
 		{
 			new(ClaimTypes.Role, "Admin"),
+			// JwtService issues PortalRole names as role claims; mirror the highest
+			// portal role here so Wizard-gated endpoints (wiki delete/protection,
+			// admin APIs) work under debug auth too.
+			new(ClaimTypes.Role, nameof(Library.Authorization.PortalRole.Wizard)),
 		};
 
 		try
