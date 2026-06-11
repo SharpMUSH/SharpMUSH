@@ -117,6 +117,30 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
+	// after() returns everything after the delimiter, NOT including it (PennMUSH semantics).
+	[Arguments("after(abcXYdef,XY)", "def")]
+	[Arguments("after(/profile/God,profile/)", "God")]
+	[Arguments("after(hello world,lo)", " world")]
+	[Arguments("after(abc,XY)", "")] // delimiter absent -> empty
+	[Arguments("after(abcdef,abc)", "def")] // delimiter at the start
+	public async Task After(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
+	// before() returns everything before the delimiter, NOT including it; whole string if absent.
+	[Arguments("before(abcXYdef,XY)", "abc")]
+	[Arguments("before(/profile/God,/God)", "/profile")]
+	[Arguments("before(abc,XY)", "abc")] // delimiter absent -> whole string
+	public async Task Before(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
 	[Arguments("strlen(hello)", "5")]
 	[Arguments("strlen(a b c)", "5")]
 	public async Task Strlen(string str, string expectedText)

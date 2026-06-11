@@ -136,19 +136,24 @@ public partial class LocateService(
 		return new Error<string>(ErrorMessages.Returns.CantSeeThat);
 	}
 
+	// A player-name match is GLOBAL in PennMUSH: pmatch()/player lookup resolves any player by name
+	// regardless of where they stand or whether the looker can "see" them. NoVisibilityCheck keeps
+	// Locate()'s post-match dark/can-examine gate from rejecting a perfectly valid player just because
+	// an unprivileged looker (e.g. the profile http_handler #4) is neither near nor a controller —
+	// which 404'd GET /api/profile/<name> for every character.
+	private const LocateFlags PlayerMatchFlags =
+		LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
+		LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.NoVisibilityCheck;
+
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(IMUSHCodeParser parser,
 		AnySharpObject looker, AnySharpObject executor,
 		string name) =>
-		LocateAndNotifyIfInvalid(parser, looker, executor, name,
-			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
-			LocateFlags.MatchOptionalWildCardForPlayerName);
+		LocateAndNotifyIfInvalid(parser, looker, executor, name, PlayerMatchFlags);
 
 	public ValueTask<AnySharpObjectOrErrorCallState> LocatePlayerAndNotifyIfInvalidWithCallState(IMUSHCodeParser parser,
 		AnySharpObject looker, AnySharpObject executor,
 		string name) =>
-		LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name,
-			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
-			LocateFlags.MatchOptionalWildCardForPlayerName);
+		LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, PlayerMatchFlags);
 
 	public async ValueTask<CallState> LocatePlayerAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
 		AnySharpObject looker,
@@ -163,9 +168,7 @@ public partial class LocateService(
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(IMUSHCodeParser parser, AnySharpObject looker,
 		AnySharpObject executor, string name)
 		=>
-			Locate(parser, looker, executor, name,
-				LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
-				LocateFlags.MatchOptionalWildCardForPlayerName);
+			Locate(parser, looker, executor, name, PlayerMatchFlags);
 
 	private async ValueTask<AnyOptionalSharpObjectOrError> LocateMatch(
 		IMUSHCodeParser parser,

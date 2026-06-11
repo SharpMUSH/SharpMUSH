@@ -43,7 +43,9 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(string.Empty));
 		}
 
-		var result = MModule.substring(idx, MModule.getLength(fullString) - idx, args["0"].Message);
+		// after() returns everything *after* the match, excluding the delimiter itself, so start past it.
+		var start = idx + MModule.plainText(search).Length;
+		var result = MModule.substring(start, MModule.getLength(fullString) - start, args["0"].Message);
 
 		return ValueTask.FromResult(new CallState(result));
 	}
