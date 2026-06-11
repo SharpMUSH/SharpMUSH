@@ -12,6 +12,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 using MarkupString;
+using System.Security.Claims;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -30,10 +31,17 @@ namespace SharpMUSH.Server.Controllers;
 public class ProfileAdminController(
 	IMediator mediator,
 	IAttributeService attributeService,
+	IHttpHandlerDispatcher dispatcher,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<ProfileAdminController> logger) : ControllerBase
 {
-	public record AttributeStatusDto(string Attribute, bool Present);
+	private const string SchemaAttribute = "HTTP`PROFILE`SCHEMA";
+
+	/// <param name="Present">Whether the attribute exists on the handler.</param>
+	/// <param name="ValidJson">For dry-run routes: whether the attribute evaluates to valid JSON (null = not dry-run).</param>
+	/// <param name="Error">The validation error (empty / parse message) when <c>ValidJson</c> is false.</param>
+	/// <param name="Preview">A truncated preview of the attribute's evaluated output.</param>
+	public record AttributeStatusDto(string Attribute, bool Present, bool? ValidJson = null, string? Error = null, string? Preview = null);
 
 	public record HandlerStatusDto(
 		bool Configured,
@@ -60,15 +68,63 @@ public class ProfileAdminController(
 		}
 
 		var handler = handlerResult.Known;
+		var viewer = Viewer();
 		var statuses = new List<AttributeStatusDto>();
 		foreach (var (attribute, _) in DefaultProfileHandlerSoftcode.Attributes)
 		{
 			var existing = await attributeService.GetAttributeAsync(
 				handler, handler, attribute, IAttributeService.AttributeMode.Execute, parent: false);
-			statuses.Add(new AttributeStatusDto(attribute, existing.IsAttribute));
+			var present = existing.IsAttribute;
+
+			// Dry-run the schema route (read-only and viewer-independent) so admins can see whether
+			// it actually evaluates to valid JSON — the exact failure that crashes the portal when
+			// the handler softcode returns empty or a "#-1 ..." error.
+			if (present && attribute == SchemaAttribute)
+			{
+				var dispatch = await dispatcher.DispatchAsync(
+					attribute, "GET", "/profile-schema", string.Empty, string.Empty, viewer, ct);
+				var (valid, error, preview) = dispatch.Match<(bool?, string?, string?)>(
+					body => string.IsNullOrWhiteSpace(body)
+						? (false, "Handler returned an empty response.", string.Empty)
+						: ValidateJson(body),
+					_ => ((bool?)false, "Handler route not available (404).", null));
+				statuses.Add(new AttributeStatusDto(attribute, present, valid, error, preview));
+			}
+			else
+			{
+				statuses.Add(new AttributeStatusDto(attribute, present));
+			}
 		}
 
 		return new HandlerStatusDto(true, (int)handlerDbRef.Value, handler.Object().Name, true, statuses);
+	}
+
+	/// <summary>Parses <paramref name="body"/> as JSON, returning validity, any error, and a truncated preview.</summary>
+	private static (bool? Valid, string? Error, string? Preview) ValidateJson(string body)
+	{
+		var preview = body.Length > 300 ? body[..300] + "…" : body;
+		try
+		{
+			using var _ = System.Text.Json.JsonDocument.Parse(body);
+			return (true, null, preview);
+		}
+		catch (System.Text.Json.JsonException ex)
+		{
+			return (false, ex.Message, preview);
+		}
+	}
+
+	/// <summary>The requesting admin's character dbref from the JWT; <c>#-1</c> when absent.</summary>
+	private DBRef Viewer()
+	{
+		var raw = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+		if (string.IsNullOrWhiteSpace(raw))
+		{
+			return new DBRef(-1, null);
+		}
+
+		var numberPart = raw.TrimStart('#').Split(':', 2)[0];
+		return int.TryParse(numberPart, out var number) ? new DBRef(number, null) : new DBRef(-1, null);
 	}
 
 	[HttpPost("reset")]

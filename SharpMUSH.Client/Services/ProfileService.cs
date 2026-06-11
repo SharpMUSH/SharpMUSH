@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Client.Services;
@@ -50,7 +51,15 @@ public class ProfileService(IHttpClientFactory httpClientFactory, ILogger<Profil
 		}
 		catch (HttpRequestException ex)
 		{
-			logger.LogWarning(ex, "Failed to load profile schema.");
+			// 404 = no handler configured; 502 = handler returned invalid output (see ProfileController).
+			logger.LogWarning(ex, "Failed to load profile schema (status {Status}).", ex.StatusCode);
+			return null;
+		}
+		catch (Exception ex) when (ex is JsonException or NotSupportedException)
+		{
+			// Defensive: a misconfigured handler that still returns a 200 with a non-JSON body
+			// must degrade to "no schema" rather than crash the character page.
+			logger.LogWarning(ex, "Profile schema response was not valid JSON.");
 			return null;
 		}
 	}
@@ -65,7 +74,12 @@ public class ProfileService(IHttpClientFactory httpClientFactory, ILogger<Profil
 		}
 		catch (HttpRequestException ex)
 		{
-			logger.LogWarning(ex, "Failed to load profile for {Name}.", name);
+			logger.LogWarning(ex, "Failed to load profile for {Name} (status {Status}).", name, ex.StatusCode);
+			return null;
+		}
+		catch (Exception ex) when (ex is JsonException or NotSupportedException)
+		{
+			logger.LogWarning(ex, "Profile response for {Name} was not valid JSON.", name);
 			return null;
 		}
 	}

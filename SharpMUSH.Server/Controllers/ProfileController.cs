@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Helpers;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -35,7 +37,7 @@ public class ProfileController(
 	{
 		var result = await dispatcher.DispatchAsync(
 			SchemaAttribute, "GET", "/profile-schema", QueryString(), string.Empty, Viewer(), ct);
-		return result.Match(Json, _ => HandlerUnavailable());
+		return result.Match(JsonOrHandlerError, _ => HandlerUnavailable());
 	}
 
 	[HttpGet("profile/{name}")]
@@ -44,7 +46,7 @@ public class ProfileController(
 	{
 		var result = await dispatcher.DispatchAsync(
 			GetAttribute, "GET", $"/profile/{name}", QueryString(), string.Empty, Viewer(), ct);
-		return result.Match(Json, _ => HandlerUnavailable());
+		return result.Match(JsonOrHandlerError, _ => HandlerUnavailable());
 	}
 
 	[HttpPost("profile/{name}")]
@@ -59,7 +61,7 @@ public class ProfileController(
 
 		// TODO(area-06): publish portal.profile.edit on the message bus and invalidate the
 		// profile cache once the profile cache layer exists.
-		return result.Match(Json, _ => HandlerUnavailable());
+		return result.Match(JsonOrHandlerError, _ => HandlerUnavailable());
 	}
 
 	/// <summary>Resolves the requesting character's dbref from the JWT; <c>#-1</c> when anonymous.</summary>
@@ -79,7 +81,39 @@ public class ProfileController(
 
 	private string QueryString() => Request.QueryString.HasValue ? Request.QueryString.Value!.TrimStart('?') : string.Empty;
 
-	private ContentResult Json(string body) => Content(body, "application/json");
+	private const int MaxDetailLength = 500;
+
+	/// <summary>
+	/// Returns the handler's JSON body, or a <c>502</c> error envelope when the handler produced
+	/// empty or non-JSON output (e.g. a MUSHcode <c>#-1 ...</c> error). This stops a misconfigured
+	/// handler from crashing the portal with an unparseable <c>200</c>, and surfaces the raw output
+	/// (in <c>detail</c> and the server log) so an admin can fix the softcode. Staff can also use
+	/// <c>GET /api/admin/profile-handler</c> to dry-run each route.
+	/// </summary>
+	private IActionResult JsonOrHandlerError(string body)
+	{
+		if (string.IsNullOrWhiteSpace(body))
+			return HandlerError("The profile handler returned an empty response.", body);
+
+		try
+		{
+			using var _ = JsonDocument.Parse(body);
+		}
+		catch (JsonException ex)
+		{
+			return HandlerError($"The profile handler returned invalid JSON: {ex.Message}", body);
+		}
+
+		return Content(body, "application/json");
+	}
+
+	private IActionResult HandlerError(string message, string rawBody)
+	{
+		var detail = rawBody.Length > MaxDetailLength ? rawBody[..MaxDetailLength] + "…" : rawBody;
+		logger.LogWarning("Profile handler produced invalid output: {Message} Raw: {Detail}",
+			message, LogSanitizer.Sanitize(detail));
+		return StatusCode(502, new { status = 502, error = message, detail });
+	}
 
 	private IActionResult HandlerUnavailable()
 	{
