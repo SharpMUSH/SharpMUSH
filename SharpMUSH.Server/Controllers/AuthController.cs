@@ -102,7 +102,7 @@ public class AuthController(
 			var character = characters.FirstOrDefault(c => c.Object.Key == request.CharacterKey.Value);
 			if (character is null)
 			{
-				logger.LogInformation("OTT via account session: character #{Key} not linked to account {AccountId}", request.CharacterKey.Value, Sanitize(accountId));
+				logger.LogInformation("OTT via account session: character #{Key} not linked to the requesting account", request.CharacterKey.Value);
 				return Unauthorized("Character is not linked to this account.");
 			}
 
@@ -342,7 +342,7 @@ public class AuthController(
 		if (character is null)
 		{
 			logger.LogInformation("JWT switch-character: character #{Key} not linked to account {AccountId}",
-				request.CharacterKey, Sanitize(accountId));
+				request.CharacterKey, Sanitize(account.Id));
 			return Unauthorized("Character is not linked to this account.");
 		}
 
@@ -351,7 +351,7 @@ public class AuthController(
 		var result = await JwtService.IssueTokensAsync(account, character, role);
 
 		logger.LogInformation("JWT switch-character: issued for {AccountId}, character #{Key}, role {Role}",
-			Sanitize(accountId), character.Object.Key, role);
+			Sanitize(account.Id), character.Object.Key, role);
 		SetRefreshCookie(result.RefreshToken);
 		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
 	}

@@ -124,7 +124,7 @@ public class WikiControllerVisibilityTests
 	}
 
 	[Test]
-	public async Task ListAllPages_Anonymous_ExcludesUnpublishedAndSetsTotalHeader()
+	public async Task ListAllPages_Anonymous_ExcludesUnpublishedAndOmitsTotalHeader()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var controller = MakeController(wiki, authenticated: false);
@@ -136,12 +136,14 @@ public class WikiControllerVisibilityTests
 		var pages = ((IEnumerable<WikiController.WikiPageDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsFalse();
 
+		// The total count includes drafts, so it is withheld from anonymous callers to
+		// avoid leaking how many unpublished pages exist.
 		var header = controller.Response.Headers["X-Total-Count"].ToString();
-		await Assert.That(header).IsEqualTo("1");
+		await Assert.That(header).IsEqualTo("");
 	}
 
 	[Test]
-	public async Task ListAllPages_Authenticated_IncludesUnpublished()
+	public async Task ListAllPages_Authenticated_IncludesUnpublishedAndSetsTotalHeader()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var controller = MakeController(wiki, authenticated: true);
@@ -152,5 +154,8 @@ public class WikiControllerVisibilityTests
 		await Assert.That(ok).IsNotNull();
 		var pages = ((IEnumerable<WikiController.WikiPageDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsTrue();
+
+		var header = controller.Response.Headers["X-Total-Count"].ToString();
+		await Assert.That(header).IsEqualTo("1");
 	}
 }
