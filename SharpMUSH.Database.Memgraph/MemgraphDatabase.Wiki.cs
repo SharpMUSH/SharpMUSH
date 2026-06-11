@@ -15,13 +15,14 @@ public partial class MemgraphDatabase : IWikiService
 
 	// ── Read ──────────────────────────────────────────────────────────────────
 
-	public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main)
+	public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
+		var cat = WikiHelpers.NormalizeCategory(category);
 		await using var session = driver.AsyncSession();
 		var result = await session.RunAsync(
-			"MATCH (p:WikiPage {namespace: $ns, slug: $slug}) RETURN p",
-			new { ns = nsStr, slug });
+			"MATCH (p:WikiPage {namespace: $ns, category: $cat, slug: $slug}) RETURN p",
+			new { ns = nsStr, cat, slug });
 
 		var records = await result.ToListAsync();
 		if (records.Count == 0) return new NotFound();
@@ -126,14 +127,16 @@ public partial class MemgraphDatabase : IWikiService
 		string title,
 		string markdown,
 		string authorDbref,
-		WikiNamespace ns = WikiNamespace.Main)
+		WikiNamespace ns = WikiNamespace.Main,
+		string? category = null)
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var slug = Slugify(title);
+		var cat = WikiHelpers.NormalizeCategory(category);
 
-		var existing = await GetBySlugAsync(slug, ns);
+		var existing = await GetBySlugAsync(slug, cat, ns);
 		if (existing.IsT0)
-			return new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{nsStr}'.");
+			return new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{nsStr}' category '{cat}'.");
 
 		var now = DateTimeOffset.UtcNow;
 		var pageId = Guid.NewGuid().ToString("N");
@@ -161,14 +164,14 @@ public partial class MemgraphDatabase : IWikiService
 					updatedAt: $now,
 					isProtected: false,
 					revisionNumber: 1,
-					category: null,
+					category: $cat,
 					tags: [],
 					published: true
 				}) RETURN p
 				""",
 				new
 				{
-					pageId, slug, title, ns = nsStr, markdown, html, plain,
+					pageId, slug, title, ns = nsStr, cat, markdown, html, plain,
 					authorDbref, now = now.ToString("O")
 				});
 
@@ -269,8 +272,17 @@ public partial class MemgraphDatabase : IWikiService
 		if (lookupResult.IsT1)
 			return new NotFound();
 
+		var existingPage = lookupResult.AsT0;
 		var normalizedCategory = WikiHelpers.NormalizeCategory(category);
 		var normalizedTags = WikiHelpers.NormalizeTags(tags);
+
+		// Category is part of page identity; reject a recategorization that would collide.
+		if (!string.Equals(normalizedCategory, existingPage.Category, StringComparison.OrdinalIgnoreCase)
+			&& Enum.TryParse<WikiNamespace>(existingPage.Namespace, ignoreCase: true, out var nsEnum)
+			&& (await GetBySlugAsync(existingPage.Slug, normalizedCategory, nsEnum)).IsT0)
+		{
+			return new NotFound();
+		}
 
 		await using var session = driver.AsyncSession();
 		var result = await session.RunAsync(

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
@@ -61,27 +62,31 @@ public sealed class BotPrerenderMiddleware(
 
 		string? html = null;
 
-		// /wiki/{slug} — wiki page
+		// /wiki/{ns}/{category}/{slug} — canonical wiki page
 		if (path.StartsWith("/wiki/", StringComparison.OrdinalIgnoreCase))
 		{
-			var slug = path["/wiki/".Length..].Trim('/');
-			if (!string.IsNullOrEmpty(slug))
+			var segments = path["/wiki/".Length..].Trim('/').Split('/');
+			if (segments.Length >= 3)
 			{
-				var result = await wikiService.GetBySlugAsync(slug);
+				var ns = ParseNamespace(segments[0]);
+				var category = segments[1];
+				var slug = string.Join('/', segments[2..]);
+				var result = await wikiService.GetBySlugAsync(slug, category, ns);
 				if (result.IsT0)
 				{
 					var page = result.AsT0;
-					html = WikiController.GeneratePrerenderHtml(page, $"{canonicalBase}/wiki/{page.Slug}");
+					html = WikiController.GeneratePrerenderHtml(page,
+						$"{canonicalBase}/wiki/{page.Namespace}/{page.Category}/{page.Slug}");
 				}
 			}
 		}
-		// /character/{name} — character profile alias → Character namespace
+		// /character/{name} — character profile alias → Character namespace (default category)
 		else if (path.StartsWith("/character/", StringComparison.OrdinalIgnoreCase))
 		{
 			var name = path["/character/".Length..].Trim('/');
 			if (!string.IsNullOrEmpty(name))
 			{
-				var result = await wikiService.GetBySlugAsync(name, WikiNamespace.Character);
+				var result = await wikiService.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character);
 				if (result.IsT0)
 				{
 					var page = result.AsT0;
@@ -89,13 +94,13 @@ public sealed class BotPrerenderMiddleware(
 				}
 			}
 		}
-		// /help/{topic} — help pages live in the Help namespace
+		// /help/{topic} — help pages live in the Help namespace (default category)
 		else if (path.StartsWith("/help/", StringComparison.OrdinalIgnoreCase))
 		{
 			var topic = path["/help/".Length..].Trim('/');
 			if (!string.IsNullOrEmpty(topic))
 			{
-				var result = await wikiService.GetBySlugAsync(topic, WikiNamespace.Help);
+				var result = await wikiService.GetBySlugAsync(topic, WikiHelpers.DefaultCategory, WikiNamespace.Help);
 				if (result.IsT0)
 				{
 					var page = result.AsT0;
@@ -115,6 +120,9 @@ public sealed class BotPrerenderMiddleware(
 		// No pre-rendered content available — fall through to normal pipeline
 		await next(context);
 	}
+
+	private static WikiNamespace ParseNamespace(string? ns) =>
+		Enum.TryParse<WikiNamespace>(ns, ignoreCase: true, out var result) ? result : WikiNamespace.Main;
 
 	private static Task WriteHtmlResponse(HttpContext context, string html)
 	{

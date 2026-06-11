@@ -23,9 +23,9 @@ public static class ViewWiki
 		MString target)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var (ns, slug) = WikiCommandHelper.ResolveTarget(target.ToPlainText());
+		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(target.ToPlainText());
 
-		var lookup = await wikiService.GetBySlugAsync(slug, ns);
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
 		if (lookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {target.ToPlainText().Trim()}", executor);
@@ -61,9 +61,9 @@ public static class ViewWiki
 		MString target)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var (ns, slug) = WikiCommandHelper.ResolveTarget(target.ToPlainText());
+		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(target.ToPlainText());
 
-		var lookup = await wikiService.GetBySlugAsync(slug, ns);
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
 		if (lookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {target.ToPlainText().Trim()}", executor);

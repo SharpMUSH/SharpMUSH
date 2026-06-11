@@ -14,32 +14,44 @@ namespace SharpMUSH.Implementation.Commands.WikiCommand;
 public static class WikiCommandHelper
 {
 	/// <summary>
-	/// Resolves a user-supplied page target into a namespace and slug.
-	/// Accepts the same forms as <c>[[wiki links]]</c>: a bare title
-	/// ("Getting Started") or a namespace-prefixed one ("Help:Getting Started").
-	/// Unknown prefixes are treated as part of a Main-namespace title.
+	/// Resolves a user-supplied page target into a (namespace, category, slug) identity.
+	/// Accepts the same forms as <c>[[wiki links]]</c>: a bare title ("Getting Started"),
+	/// a namespace-prefixed one ("Help:Getting Started" → category general), or a fully
+	/// qualified one ("Help:Guides:Getting Started"). Unknown namespace prefixes are treated
+	/// as part of a Main-namespace title.
 	/// </summary>
-	public static (WikiNamespace Namespace, string Slug) ResolveTarget(string target)
+	public static (WikiNamespace Namespace, string Category, string Slug) ResolveTarget(string target)
 	{
 		var trimmed = target.Trim();
-		var colonIdx = trimmed.IndexOf(':');
-		if (colonIdx > 0
-			&& Enum.TryParse<WikiNamespace>(trimmed[..colonIdx].Trim(), ignoreCase: true, out var ns))
+		var parts = trimmed.Split(':', 3);
+
+		if (parts.Length == 3
+			&& Enum.TryParse<WikiNamespace>(parts[0].Trim(), ignoreCase: true, out var ns3))
 		{
-			return (ns, WikiHelpers.Slugify(trimmed[(colonIdx + 1)..].Trim()));
+			return (ns3, WikiHelpers.NormalizeCategory(parts[1]), WikiHelpers.Slugify(parts[2].Trim()));
 		}
 
-		return (WikiNamespace.Main, WikiHelpers.Slugify(trimmed));
+		if (parts.Length == 2
+			&& Enum.TryParse<WikiNamespace>(parts[0].Trim(), ignoreCase: true, out var ns2))
+		{
+			return (ns2, WikiHelpers.DefaultCategory, WikiHelpers.Slugify(parts[1].Trim()));
+		}
+
+		return (WikiNamespace.Main, WikiHelpers.DefaultCategory, WikiHelpers.Slugify(trimmed));
 	}
 
 	/// <summary>
-	/// The display form of a page reference: "slug" for Main, "ns:slug" otherwise.
-	/// This round-trips through <see cref="ResolveTarget"/>.
+	/// The display form of a page reference: "slug" for a Main/general page, "ns:category:slug"
+	/// otherwise. This round-trips through <see cref="ResolveTarget"/>.
 	/// </summary>
-	public static string DisplayReference(WikiPage page) =>
-		page.Namespace.Equals("main", StringComparison.OrdinalIgnoreCase)
-			? page.Slug
-			: $"{page.Namespace}:{page.Slug}";
+	public static string DisplayReference(WikiPage page)
+	{
+		var cat = page.Category ?? WikiHelpers.DefaultCategory;
+		return page.Namespace.Equals("main", StringComparison.OrdinalIgnoreCase)
+			&& cat.Equals(WikiHelpers.DefaultCategory, StringComparison.OrdinalIgnoreCase)
+				? page.Slug
+				: $"{page.Namespace}:{cat}:{page.Slug}";
+	}
 
 	/// <summary>
 	/// Edit permission mirrors the web rule: protected pages are Wizard-only;

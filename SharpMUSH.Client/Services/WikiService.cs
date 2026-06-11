@@ -39,13 +39,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 
 	// ── Request bodies (mirrors WikiController request records) ───────────────
 
-	private record CreatePageRequest(string Title, string Markdown, string? Namespace);
+	private record CreatePageRequest(string Title, string Markdown, string? Namespace, string? Category);
 	private record UpdatePageRequest(string Markdown, string? EditSummary);
 	private record SetMetadataRequest(string? Category, string[] Tags, bool Published);
 	private record RollbackRequest(int RevisionNumber);
 	private record ExistsRequest(string[] Refs);
-	private record BatchProtectRequest(string[] Slugs, string? Ns, bool IsProtected);
-	private record BatchDeleteRequest(string[] Slugs, string? Ns);
+	private record BatchProtectRequest(string[] Refs, bool IsProtected);
+	private record BatchDeleteRequest(string[] Refs);
 
 	/// <summary>Per-slug outcome of a batch operation (mirrors WikiController.BatchResult).</summary>
 	public record WikiBatchResult(IReadOnlyList<string> Succeeded, IReadOnlyList<string> Failed);

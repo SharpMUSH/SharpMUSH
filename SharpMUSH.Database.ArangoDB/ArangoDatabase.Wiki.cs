@@ -17,15 +17,17 @@ public partial class ArangoDatabase : IWikiService
 
 	// ── Read ──────────────────────────────────────────────────────────────────
 
-	public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main)
+	public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
+		var cat = WikiHelpers.NormalizeCategory(category);
 		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
-			"FOR p IN @@c FILTER p.Namespace == @ns AND p.Slug == @slug RETURN p",
+			"FOR p IN @@c FILTER p.Namespace == @ns AND p.Category == @cat AND p.Slug == @slug RETURN p",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "@c", DatabaseConstants.WikiPages },
 				{ "ns", nsStr },
+				{ "cat", cat },
 				{ "slug", slug }
 			});
 
@@ -175,15 +177,17 @@ public partial class ArangoDatabase : IWikiService
 		string title,
 		string markdown,
 		string authorDbref,
-		WikiNamespace ns = WikiNamespace.Main)
+		WikiNamespace ns = WikiNamespace.Main,
+		string? category = null)
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var slug = Slugify(title);
+		var cat = WikiHelpers.NormalizeCategory(category);
 
-		// Enforce slug uniqueness within namespace
-		var existing = await GetBySlugAsync(slug, ns);
+		// Enforce (namespace, category, slug) uniqueness
+		var existing = await GetBySlugAsync(slug, cat, ns);
 		if (existing.IsT0)
-			return new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{nsStr}'.");
+			return new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{nsStr}' category '{cat}'.");
 
 		var now = DateTimeOffset.UtcNow;
 		var html = _wikiRenderer.RenderToHtml(markdown);
@@ -203,7 +207,7 @@ public partial class ArangoDatabase : IWikiService
 			UpdatedAt = now,
 			IsProtected = false,
 			RevisionNumber = 1,
-			Category = (string?)null,
+			Category = cat,
 			Tags = Array.Empty<string>(),
 			Published = true
 		};
@@ -310,8 +314,18 @@ public partial class ArangoDatabase : IWikiService
 		if (lookupResult.IsT1)
 			return new NotFound();
 
+		var existingPage = lookupResult.AsT0;
 		var normalizedCategory = WikiHelpers.NormalizeCategory(category);
 		var normalizedTags = WikiHelpers.NormalizeTags(tags);
+
+		// Category is part of page identity; changing it re-keys the page. Reject a move that
+		// would collide with an existing (namespace, category, slug).
+		if (!string.Equals(normalizedCategory, existingPage.Category, StringComparison.OrdinalIgnoreCase)
+			&& Enum.TryParse<WikiNamespace>(existingPage.Namespace, ignoreCase: true, out var nsEnum)
+			&& (await GetBySlugAsync(existingPage.Slug, normalizedCategory, nsEnum)).IsT0)
+		{
+			return new NotFound();
+		}
 
 		var key = ExtractKey(id);
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.WikiPages,

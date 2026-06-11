@@ -85,9 +85,12 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS channel_name ON channel FIELDS name UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS counter_name ON counter FIELDS name UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS mail_key ON mail FIELDS key UNIQUE",
-				"DEFINE INDEX IF NOT EXISTS wiki_page_slug ON wiki_page FIELDS namespace, slug UNIQUE",
+				// Category is part of page identity: backfill legacy null categories, then key on all three.
+				"UPDATE wiki_page SET category = 'general' WHERE category = NONE",
+				"DEFINE INDEX IF NOT EXISTS wiki_page_slug ON wiki_page FIELDS namespace, category, slug UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS wiki_page_updated ON wiki_page FIELDS updatedAt",
 				"DEFINE INDEX IF NOT EXISTS wiki_page_ns ON wiki_page FIELDS namespace",
+				"DEFINE INDEX IF NOT EXISTS wiki_page_category ON wiki_page FIELDS category",
 				"DEFINE INDEX IF NOT EXISTS wiki_revision_page ON wiki_revision FIELDS pageId",
 				"DEFINE INDEX IF NOT EXISTS wiki_revision_page_rev ON wiki_revision FIELDS pageId, revisionNumber UNIQUE",
 				// Indexes on edge/relation tables for fast traversal

@@ -47,8 +47,8 @@ public static class ManageWiki
 			return MModule.single(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var (ns, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
-		var lookup = await wikiService.GetBySlugAsync(slug, ns);
+		var (ns, lookupCategory, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
+		var lookup = await wikiService.GetBySlugAsync(slug, lookupCategory, ns);
 		if (lookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);

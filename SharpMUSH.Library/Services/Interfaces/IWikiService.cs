@@ -19,10 +19,11 @@ public interface IWikiService
 	// ── Read operations ──────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Retrieves a wiki page by its slug and namespace.
+	/// Retrieves a wiki page by its (namespace, category, slug) identity.
+	/// <paramref name="category"/> is normalised (null/blank → <c>general</c>).
 	/// Returns <c>NotFound</c> if no matching page exists.
 	/// </summary>
-	Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main);
+	Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main);
 
 	/// <summary>
 	/// Retrieves a wiki page by its storage ID.
@@ -65,15 +66,18 @@ public interface IWikiService
 	// ── Write operations ──────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Creates a new wiki page.  The slug must be unique within the namespace.
-	/// Renders the Markdown to HTML and extracts plain text at creation time.
-	/// Returns <c>Error&lt;string&gt;</c> when a page with the same slug already exists in the given namespace.
+	/// Creates a new wiki page. The (namespace, category, slug) identity must be unique.
+	/// <paramref name="category"/> is normalised (null/blank → <c>general</c>) and is part of
+	/// the page's identity, so it is fixed at creation. Renders the Markdown to HTML and extracts
+	/// plain text at creation time.
+	/// Returns <c>Error&lt;string&gt;</c> when a page with the same (namespace, category, slug) already exists.
 	/// </summary>
 	Task<OneOf<WikiPage, Error<string>>> CreateAsync(
 		string title,
 		string markdown,
 		string authorDbref,
-		WikiNamespace ns = WikiNamespace.Main);
+		WikiNamespace ns = WikiNamespace.Main,
+		string? category = null);
 
 	/// <summary>
 	/// Updates an existing page's Markdown content.  Increments the revision counter,

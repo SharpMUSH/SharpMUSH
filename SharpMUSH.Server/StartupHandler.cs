@@ -182,10 +182,11 @@ public class StartupHandler(
 
 				## About SharpMUSH
 				SharpMUSH is a modern, open-source MUSH server written in .NET, targeting
-				PennMUSH compatibility. See the [wiki](/wiki/wiki-index) for more information.
+				PennMUSH compatibility. See the [[Help:Markdown Guide]] for formatting help.
 				""",
 			authorDbref: "#1",
-			ns: WikiNamespace.Main);
+			ns: WikiNamespace.Main,
+			category: "general");
 		homeResult.Switch(
 			page => logger.LogInformation("Home wiki page seeded (id={Id}).", page.Id),
 			err => LogSeedSkip("Home", err.Value));
@@ -197,7 +198,8 @@ public class StartupHandler(
 			title: "Markdown Guide",
 			markdown: MarkdownGuideContent,
 			authorDbref: "#1",
-			ns: WikiNamespace.Help);
+			ns: WikiNamespace.Help,
+			category: "general");
 		guideResult.Switch(
 			page => logger.LogInformation("Markdown Guide wiki page seeded (id={Id}).", page.Id),
 			err => LogSeedSkip("Markdown Guide", err.Value));

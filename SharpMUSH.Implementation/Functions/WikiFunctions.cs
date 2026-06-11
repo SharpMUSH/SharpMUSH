@@ -28,8 +28,8 @@ public partial class Functions
 			: "text";
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
-		var (ns, slug) = WikiCommandHelper.ResolveTarget(target);
-		var lookup = await wikiService.GetBySlugAsync(slug, ns);
+		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(target);
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
 		if (lookup.IsT1)
 		{
 			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);

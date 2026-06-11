@@ -101,12 +101,17 @@ public partial class MemgraphDatabase
 					{ /* Index already exists — safe to ignore */ }
 				}
 
-				// Wiki indexes — same auto-commit requirement
+				// Wiki indexes — same auto-commit requirement.
+				// Category is part of page identity: backfill legacy null categories first, then enforce
+				// uniqueness on (namespace, category, slug) so the same slug may live in different categories.
 				var wikiIndexQueries = new[]
 				{
+					"MATCH (p:WikiPage) WHERE p.category IS NULL SET p.category = 'general'",
 					"CREATE INDEX ON :WikiPage(namespace)",
 					"CREATE INDEX ON :WikiPage(slug)",
+					"CREATE INDEX ON :WikiPage(category)",
 					"CREATE INDEX ON :WikiPage(updatedAt)",
+					"CREATE CONSTRAINT ON (p:WikiPage) ASSERT p.namespace, p.category, p.slug IS UNIQUE",
 					"CREATE INDEX ON :WikiRevision(pageId)",
 					"CREATE INDEX ON :WikiRevision(revisionNumber)"
 				};

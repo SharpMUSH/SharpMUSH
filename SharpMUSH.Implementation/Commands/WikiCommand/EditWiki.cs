@@ -23,15 +23,18 @@ public static class EditWiki
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		// The title may carry a namespace prefix ("Help:Some Topic"); the remainder
-		// is the human title (the slug is derived from it by the service).
+		// The title may carry namespace/category prefixes ("Help:Guides:Some Topic" or
+		// "Help:Some Topic"); the remainder is the human title (the slug is derived from it).
 		var rawTitle = titleArg.ToPlainText().Trim();
-		var (ns, _) = WikiCommandHelper.ResolveTarget(rawTitle);
-		var colonIdx = rawTitle.IndexOf(':');
-		var title = colonIdx > 0 && Enum.TryParse<SharpMUSH.Library.Models.Wiki.WikiNamespace>(
-			rawTitle[..colonIdx].Trim(), ignoreCase: true, out _)
-			? rawTitle[(colonIdx + 1)..].Trim()
-			: rawTitle;
+		var (ns, category, _) = WikiCommandHelper.ResolveTarget(rawTitle);
+		var parts = rawTitle.Split(':', 3);
+		var title = parts.Length == 3
+				&& Enum.TryParse<SharpMUSH.Library.Models.Wiki.WikiNamespace>(parts[0].Trim(), ignoreCase: true, out _)
+			? parts[2].Trim()
+			: parts.Length == 2
+				&& Enum.TryParse<SharpMUSH.Library.Models.Wiki.WikiNamespace>(parts[0].Trim(), ignoreCase: true, out _)
+				? parts[1].Trim()
+				: rawTitle;
 
 		if (title.Length == 0)
 		{
@@ -40,7 +43,7 @@ public static class EditWiki
 		}
 
 		var result = await wikiService.CreateAsync(
-			title, contentArg.ToPlainText(), WikiCommandHelper.EditorDbref(executor), ns);
+			title, contentArg.ToPlainText(), WikiCommandHelper.EditorDbref(executor), ns, category);
 
 		return await result.Match(
 			async page =>
@@ -65,7 +68,7 @@ public static class EditWiki
 		MString revisionArg)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var (ns, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
+		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
 
 		if (!int.TryParse(revisionArg.ToPlainText().Trim(), out var revisionNumber) || revisionNumber < 1)
 		{
@@ -73,7 +76,7 @@ public static class EditWiki
 			return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
-		var lookup = await wikiService.GetBySlugAsync(slug, ns);
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
 		if (lookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
@@ -124,9 +127,9 @@ public static class EditWiki
 		bool append)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var (ns, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
+		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
 
-		var lookup = await wikiService.GetBySlugAsync(slug, ns);
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
 		if (lookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);

@@ -91,6 +91,22 @@ public class WikiController(
 		string.IsNullOrWhiteSpace(ns) ? null
 		: Enum.TryParse<WikiNamespace>(ns, ignoreCase: true, out var result) ? result : WikiNamespace.Main;
 
+	/// <summary>
+	/// Parses a wiki page reference into its (namespace, category, slug) identity. Accepts
+	/// "ns/category/slug" (canonical), "ns/slug" (category defaults to general), or "slug"
+	/// (main namespace, general category).
+	/// </summary>
+	private static (WikiNamespace Ns, string Category, string Slug) ParseRef(string reference)
+	{
+		var parts = reference.Split('/');
+		return parts.Length switch
+		{
+			>= 3 => (ParseNamespace(parts[0]), parts[1], string.Join('/', parts[2..])),
+			2 => (ParseNamespace(parts[0]), WikiHelpers.DefaultCategory, parts[1]),
+			_ => (WikiNamespace.Main, WikiHelpers.DefaultCategory, reference)
+		};
+	}
+
 	/// <summary>True when the caller carries an authenticated identity. Anonymous
 	/// callers only see Published pages; drafts are reserved for logged-in users.</summary>
 	private bool IsAuthenticatedCaller => User.Identity?.IsAuthenticated == true;
@@ -109,26 +125,14 @@ public class WikiController(
 	// ── Read endpoints ───────────────────────────────────────────────────────
 
 	/// <summary>
-	/// GET /api/wiki/{slug}
-	/// Returns JSON page data, or 404 when the page doesn't exist.
+	/// GET /api/wiki/ns/{namespace}/{category}/{slug}
+	/// Returns JSON page data for a page identified by (namespace, category, slug),
+	/// or 404 when the page doesn't exist. This is the canonical page route.
 	/// </summary>
-	[HttpGet("{slug}")]
-	public async Task<IActionResult> GetPage(string slug)
+	[HttpGet("ns/{ns}/{category}/{slug}")]
+	public async Task<IActionResult> GetPage(string ns, string category, string slug)
 	{
-		var result = await wikiService.GetBySlugAsync(slug);
-		return result.Match<IActionResult>(
-			page => page.Published || IsAuthenticatedCaller ? Ok(ToDto(page)) : NotFound(),
-			_ => NotFound());
-	}
-
-	/// <summary>
-	/// GET /api/wiki/ns/{namespace}/{slug}
-	/// Returns JSON page data for a namespaced page.
-	/// </summary>
-	[HttpGet("ns/{ns}/{slug}")]
-	public async Task<IActionResult> GetNamespacedPage(string ns, string slug)
-	{
-		var result = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		var result = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		return result.Match<IActionResult>(
 			page => page.Published || IsAuthenticatedCaller ? Ok(ToDto(page)) : NotFound(),
 			_ => NotFound());
@@ -136,12 +140,12 @@ public class WikiController(
 
 	/// <summary>
 	/// GET /api/wiki/character/{name}
-	/// Resolves the /character/{name} alias to the Character namespace wiki page.
+	/// Resolves the /character/{name} alias to the Character namespace wiki page (default category).
 	/// </summary>
 	[HttpGet("character/{name}")]
 	public async Task<IActionResult> GetCharacterPage(string name)
 	{
-		var result = await wikiService.GetBySlugAsync(name, WikiNamespace.Character);
+		var result = await wikiService.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character);
 		return result.Match<IActionResult>(
 			page => page.Published || IsAuthenticatedCaller ? Ok(ToDto(page)) : NotFound(),
 			_ => NotFound());
@@ -215,9 +219,9 @@ public class WikiController(
 	/// Returns the revision history for a page, newest first.
 	/// </summary>
 	[HttpGet("{slug}/revisions")]
-	public async Task<IActionResult> GetRevisions(string slug, [FromQuery] int skip = 0, [FromQuery] int take = 20, [FromQuery] string? ns = null)
+	public async Task<IActionResult> GetRevisions(string slug, [FromQuery] int skip = 0, [FromQuery] int take = 20, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
-		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
 		if (!lookup.AsT0.Published && !IsAuthenticatedCaller) return NotFound();
@@ -231,9 +235,9 @@ public class WikiController(
 	/// Returns a single revision snapshot, including its full markdown body.
 	/// </summary>
 	[HttpGet("{slug}/revisions/{number:int}")]
-	public async Task<IActionResult> GetRevision(string slug, int number, [FromQuery] string? ns = null)
+	public async Task<IActionResult> GetRevision(string slug, int number, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
-		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
 		if (!lookup.AsT0.Published && !IsAuthenticatedCaller) return NotFound();
@@ -246,8 +250,8 @@ public class WikiController(
 
 	// ── Write endpoints ───────────────────────────────────────────────────────
 
-	/// <summary>Request body for creating a new wiki page.</summary>
-	public record CreatePageRequest(string Title, string Markdown, string? Namespace);
+	/// <summary>Request body for creating a new wiki page. Category is part of identity and is fixed at create.</summary>
+	public record CreatePageRequest(string Title, string Markdown, string? Namespace, string? Category);
 
 	/// <summary>Request body for updating an existing wiki page.</summary>
 	public record UpdatePageRequest(string Markdown, string? EditSummary);
@@ -267,12 +271,14 @@ public class WikiController(
 		if (string.IsNullOrEmpty(authorDbref))
 			return Unauthorized("Missing character identity.");
 		var ns = ParseNamespace(request.Namespace);
-		var result = await wikiService.CreateAsync(request.Title, request.Markdown, authorDbref, ns);
+		var result = await wikiService.CreateAsync(request.Title, request.Markdown, authorDbref, ns, request.Category);
 		return result.Match<IActionResult>(
 			page =>
 			{
-				logger.LogInformation("Wiki page created: slug={Slug} ns={Ns} by={Author}", LogSanitizer.Sanitize(page.Slug), ns, LogSanitizer.Sanitize(authorDbref));
-				return CreatedAtAction(nameof(GetPage), new { slug = page.Slug }, ToDto(page));
+				logger.LogInformation("Wiki page created: slug={Slug} ns={Ns} category={Category} by={Author}",
+					LogSanitizer.Sanitize(page.Slug), ns, LogSanitizer.Sanitize(page.Category), LogSanitizer.Sanitize(authorDbref));
+				return CreatedAtAction(nameof(GetPage),
+					new { ns = page.Namespace, category = page.Category, slug = page.Slug }, ToDto(page));
 			},
 			err => Conflict(new { error = err.Value }));
 	}
@@ -285,12 +291,12 @@ public class WikiController(
 	/// </summary>
 	[HttpPut("{slug}")]
 	[Authorize]
-	public async Task<IActionResult> UpdatePage(string slug, [FromBody] UpdatePageRequest request, [FromQuery] string? ns = null)
+	public async Task<IActionResult> UpdatePage(string slug, [FromBody] UpdatePageRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
-		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 
 		// Protected pages may only be edited by Wizard-level users.
@@ -320,12 +326,12 @@ public class WikiController(
 	/// </summary>
 	[HttpPost("{slug}/rollback")]
 	[Authorize]
-	public async Task<IActionResult> RollbackPage(string slug, [FromBody] RollbackRequest request, [FromQuery] string? ns = null)
+	public async Task<IActionResult> RollbackPage(string slug, [FromBody] RollbackRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
-		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 
 		var page = lookup.AsT0;
@@ -350,7 +356,7 @@ public class WikiController(
 	}
 
 	/// <summary>Request body for the batch existence check. Refs use URL-path form:
-	/// "slug" for the main namespace, "ns/slug" otherwise.</summary>
+	/// "ns/category/slug" (canonical), "ns/slug" (general category), or "slug" (main/general).</summary>
 	public record ExistsRequest(string[] Refs);
 
 	/// <summary>
@@ -368,12 +374,8 @@ public class WikiController(
 
 		foreach (var reference in request.Refs.Distinct(StringComparer.Ordinal).Take(maxRefs))
 		{
-			var slashIdx = reference.IndexOf('/');
-			var (ns, slug) = slashIdx > 0
-				? (ParseNamespace(reference[..slashIdx]), reference[(slashIdx + 1)..])
-				: (WikiNamespace.Main, reference);
-
-			var lookup = await wikiService.GetBySlugAsync(slug, ns);
+			var (ns, category, slug) = ParseRef(reference);
+			var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
 			result[reference] = lookup.IsT0 && (lookup.AsT0.Published || IsAuthenticatedCaller);
 		}
 
@@ -386,12 +388,12 @@ public class WikiController(
 	/// </summary>
 	[HttpDelete("{slug}")]
 	[Authorize(Roles = nameof(PortalRole.Wizard))]
-	public async Task<IActionResult> DeletePage(string slug, [FromQuery] string? ns = null)
+	public async Task<IActionResult> DeletePage(string slug, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
-		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 
 		var id = lookup.AsT0.Id;
@@ -412,9 +414,9 @@ public class WikiController(
 	/// </summary>
 	[HttpPut("{slug}/protection")]
 	[Authorize(Roles = nameof(PortalRole.Wizard))]
-	public async Task<IActionResult> SetProtection(string slug, [FromBody] SetProtectionRequest request, [FromQuery] string? ns = null)
+	public async Task<IActionResult> SetProtection(string slug, [FromBody] SetProtectionRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
-		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 
 		var id = lookup.AsT0.Id;
@@ -434,9 +436,9 @@ public class WikiController(
 	/// </summary>
 	[HttpPut("{slug}/metadata")]
 	[Authorize]
-	public async Task<IActionResult> SetMetadata(string slug, [FromBody] SetMetadataRequest request, [FromQuery] string? ns = null)
+	public async Task<IActionResult> SetMetadata(string slug, [FromBody] SetMetadataRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
-		var lookup = await wikiService.GetBySlugAsync(slug, ParseNamespace(ns));
+		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 
 		// Protected pages may only be retagged/(un)published by Wizard-level users,
@@ -459,11 +461,11 @@ public class WikiController(
 
 	// ── Batch operations ──────────────────────────────────────────────────────
 
-	/// <summary>Request body for batch protection changes.</summary>
-	public record BatchProtectRequest(string[] Slugs, string? Ns, bool IsProtected);
+	/// <summary>Request body for batch protection changes. Refs use "ns/category/slug" form.</summary>
+	public record BatchProtectRequest(string[] Refs, bool IsProtected);
 
-	/// <summary>Request body for batch deletion.</summary>
-	public record BatchDeleteRequest(string[] Slugs, string? Ns);
+	/// <summary>Request body for batch deletion. Refs use "ns/category/slug" form.</summary>
+	public record BatchDeleteRequest(string[] Refs);
 
 	/// <summary>Per-slug outcome of a batch operation.</summary>
 	public record BatchResult(IReadOnlyList<string> Succeeded, IReadOnlyList<string> Failed);
@@ -476,21 +478,21 @@ public class WikiController(
 	[Authorize(Roles = nameof(PortalRole.Wizard))]
 	public async Task<IActionResult> BatchProtect([FromBody] BatchProtectRequest request)
 	{
-		var ns = ParseNamespace(request.Ns);
 		var succeeded = new List<string>();
 		var failed = new List<string>();
 
-		foreach (var slug in request.Slugs ?? [])
+		foreach (var reference in request.Refs ?? [])
 		{
-			var lookup = await wikiService.GetBySlugAsync(slug, ns);
+			var (ns, category, slug) = ParseRef(reference);
+			var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
 			if (lookup.IsT1)
 			{
-				failed.Add(slug);
+				failed.Add(reference);
 				continue;
 			}
 
 			var result = await wikiService.SetProtectionAsync(lookup.AsT0.Id, request.IsProtected);
-			(result.IsT0 ? succeeded : failed).Add(slug);
+			(result.IsT0 ? succeeded : failed).Add(reference);
 		}
 
 		logger.LogInformation("Wiki batch protect: protected={Protected} ok={Ok} failed={Failed}",
@@ -509,21 +511,21 @@ public class WikiController(
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
-		var ns = ParseNamespace(request.Ns);
 		var succeeded = new List<string>();
 		var failed = new List<string>();
 
-		foreach (var slug in request.Slugs ?? [])
+		foreach (var reference in request.Refs ?? [])
 		{
-			var lookup = await wikiService.GetBySlugAsync(slug, ns);
+			var (ns, category, slug) = ParseRef(reference);
+			var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
 			if (lookup.IsT1)
 			{
-				failed.Add(slug);
+				failed.Add(reference);
 				continue;
 			}
 
 			var result = await wikiService.DeleteAsync(lookup.AsT0.Id, editorDbref);
-			(result.IsT0 ? succeeded : failed).Add(slug);
+			(result.IsT0 ? succeeded : failed).Add(reference);
 		}
 
 		prerenderCache.InvalidatePrefix("/wiki/");

@@ -34,6 +34,7 @@ public class Migration_AddWiki : IArangoMigration
 							Slug = new { type = DatabaseConstants.TypeString },
 							Title = new { type = DatabaseConstants.TypeString },
 							Namespace = new { type = DatabaseConstants.TypeString },
+							Category = new { type = DatabaseConstants.TypeString },
 							MarkdownSource = new { type = DatabaseConstants.TypeString },
 							RenderedHtml = new { type = DatabaseConstants.TypeString },
 							PlainText = new { type = DatabaseConstants.TypeString },
@@ -48,10 +49,11 @@ public class Migration_AddWiki : IArangoMigration
 				}
 			});
 
-			// Unique slug-per-namespace index (compound)
+			// Unique slug-per-(namespace, category) index (compound). Category is part of page
+			// identity, so the same slug may exist in different categories within a namespace.
 			await migrator.Context.Index.CreateAsync(handle, DatabaseConstants.WikiPages, new ArangoIndex
 			{
-				Fields = ["Namespace", "Slug"],
+				Fields = ["Namespace", "Category", "Slug"],
 				Unique = true,
 				Type = ArangoIndexType.Persistent
 			});

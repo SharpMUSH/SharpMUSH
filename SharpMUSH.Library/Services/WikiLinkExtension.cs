@@ -108,17 +108,17 @@ internal sealed class WikiLinkParser : InlineParser
 			target = raw[(pipeIdx + 1)..].Trim();
 		}
 
-		// Resolve namespace + slug
-		var (ns, slug) = ResolveNamespaceAndSlug(target);
+		// Resolve namespace + category + slug
+		var (ns, category, slug) = ResolveTarget(target);
 
-		// Derive title from target (last path segment, spaces for underscores)
-		var lastSegment = slug.Contains('/') ? slug[(slug.LastIndexOf('/') + 1)..] : slug;
+		// Derive title from the bare slug (spaces for underscores)
 		var title = System.Globalization.CultureInfo.CurrentCulture.TextInfo
-			.ToTitleCase(lastSegment.Replace('_', ' '));
+			.ToTitleCase(slug.Replace('_', ' '));
 
 		var node = new WikiLinkInline
 		{
-			Slug = ns is null ? slug : $"{ns}/{slug}",
+			// Canonical path identity: namespace/category/slug.
+			Slug = $"{ns}/{category}/{slug}",
 			Title = title,
 			DisplayText = displayText,
 		};
@@ -130,19 +130,26 @@ internal sealed class WikiLinkParser : InlineParser
 	}
 
 	/// <summary>
-	/// Splits <c>Help:Getting Started</c> into namespace <c>help</c> and slug
-	/// <c>getting_started</c>.  Returns <c>(null, slug)</c> when no colon prefix.
+	/// Resolves a wiki-link target into its (namespace, category, slug) identity. Forms:
+	/// <list type="bullet">
+	///   <item><c>Page Name</c> → (main, general, page_name)</item>
+	///   <item><c>Help:Page Name</c> → (help, general, page_name)</item>
+	///   <item><c>Help:Guides:Page Name</c> → (help, guides, page_name)</item>
+	/// </list>
 	/// </summary>
-	private static (string? Namespace, string Slug) ResolveNamespaceAndSlug(string target)
+	private static (string Namespace, string Category, string Slug) ResolveTarget(string target)
 	{
-		var colonIdx = target.IndexOf(':');
-		if (colonIdx > 0)
+		var parts = target.Split(':', 3);
+		return parts.Length switch
 		{
-			var ns = target[..colonIdx].Trim().ToLowerInvariant();
-			var rest = target[(colonIdx + 1)..].Trim();
-			return (ns, Slugify(rest));
-		}
-		return (null, Slugify(target));
+			3 => (parts[0].Trim().ToLowerInvariant(),
+				WikiHelpers.NormalizeCategory(parts[1]),
+				Slugify(parts[2].Trim())),
+			2 => (parts[0].Trim().ToLowerInvariant(),
+				WikiHelpers.DefaultCategory,
+				Slugify(parts[1].Trim())),
+			_ => ("main", WikiHelpers.DefaultCategory, Slugify(target.Trim()))
+		};
 	}
 
 	private static string Slugify(string text) =>
