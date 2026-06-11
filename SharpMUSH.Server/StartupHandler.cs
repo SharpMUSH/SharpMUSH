@@ -164,6 +164,31 @@ public class StartupHandler(
 			logger.LogDebug("Default MOTD data already present; skipping seeding.");
 		}
 
+		// Wiki seeding must never abort startup: a seeding failure (e.g. a stale DB whose data
+		// predates the current schema) must not prevent MainProcessReadyMessage, which the
+		// ConnectionServer waits on before accepting logins. Failures are logged and skipped.
+		try
+		{
+			await SeedWikiPagesAsync();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Wiki page seeding failed; continuing startup without it.");
+		}
+
+		logger.LogInformation("Initializing configurable aliases and restrictions from database.");
+		var currentOptions = options.CurrentValue;
+		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
+		Configurable.FloatPrecision = (int)currentOptions.Cosmetic.FloatPrecision;
+
+		// Notify ConnectionServer that the main process is ready
+		logger.LogInformation("Publishing MainProcessReadyMessage to ConnectionServer.");
+		await messageBus.Publish(new MainProcessReadyMessage(DateTimeOffset.UtcNow, ServerVersion), cancellationToken);
+	}
+
+	/// <summary>Seeds the default Home and Markdown Guide wiki pages (idempotent — no-op if present).</summary>
+	private async Task SeedWikiPagesAsync()
+	{
 		// Seed the "home" wiki page. CreateAsync is a no-op if the slug already exists, so
 		// this is safe on every restart.
 		var homeResult = await wikiService.CreateAsync(
@@ -203,15 +228,6 @@ public class StartupHandler(
 		guideResult.Switch(
 			page => logger.LogInformation("Markdown Guide wiki page seeded (id={Id}).", page.Id),
 			err => LogSeedSkip("Markdown Guide", err.Value));
-
-		logger.LogInformation("Initializing configurable aliases and restrictions from database.");
-		var currentOptions = options.CurrentValue;
-		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
-		Configurable.FloatPrecision = (int)currentOptions.Cosmetic.FloatPrecision;
-
-		// Notify ConnectionServer that the main process is ready
-		logger.LogInformation("Publishing MainProcessReadyMessage to ConnectionServer.");
-		await messageBus.Publish(new MainProcessReadyMessage(DateTimeOffset.UtcNow, ServerVersion), cancellationToken);
 	}
 
 	/// <summary>
