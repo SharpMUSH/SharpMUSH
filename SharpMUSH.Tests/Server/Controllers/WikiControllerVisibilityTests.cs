@@ -53,7 +53,7 @@ public class WikiControllerVisibilityTests
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var controller = MakeController(wiki, authenticated: false);
 
-		var result = await controller.GetPage(slug);
+		var result = await controller.GetPage("main", "general", slug);
 
 		await Assert.That(result).IsTypeOf<NotFoundResult>();
 	}
@@ -64,7 +64,7 @@ public class WikiControllerVisibilityTests
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var controller = MakeController(wiki, authenticated: true);
 
-		var result = await controller.GetPage(slug);
+		var result = await controller.GetPage("main", "general", slug);
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}
@@ -76,7 +76,7 @@ public class WikiControllerVisibilityTests
 		var created = await wiki.CreateAsync("Public Page", "# public", "#1");
 		var controller = MakeController(wiki, authenticated: false);
 
-		var result = await controller.GetPage(created.AsT0.Slug);
+		var result = await controller.GetPage("main", "general", created.AsT0.Slug);
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}

@@ -95,9 +95,8 @@ public class SeoController(
 	private static string PathFor(WikiPage page) =>
 		page.Namespace.ToLowerInvariant() switch
 		{
-			"main" => $"/wiki/{page.Slug}",
 			"character" => $"/character/{page.Slug}",
-			var ns => $"/wiki/{ns}/{page.Slug}",
+			var ns => $"/wiki/{ns}/{page.Category ?? "general"}/{page.Slug}",
 		};
 
 	private static void AppendUrl(StringBuilder sb, string loc, string lastmod)

@@ -33,8 +33,8 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 
 	private record CreatePageRequest(string Title, string Markdown, string? Namespace);
 	private record SetMetadataRequest(string? Category, string[] Tags, bool Published);
-	private record BatchProtectRequest(string[] Slugs, string? Ns, bool IsProtected);
-	private record BatchDeleteRequest(string[] Slugs, string? Ns);
+	private record BatchProtectRequest(string[] Refs, bool IsProtected);
+	private record BatchDeleteRequest(string[] Refs);
 	private record BatchResult(List<string> Succeeded, List<string> Failed);
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
@@ -121,9 +121,9 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		await Assert.That(updated.Tags!.Contains("magic")).IsTrue();
 		await Assert.That(updated.Published).IsFalse();
 
-		// GET reflects the change (authenticated callers see unpublished pages).
+		// GET reflects the change — the page has re-keyed into the new "lore" category.
 		var fetched = await http.GetFromJsonAsync<WikiPageDto>(
-			$"api/wiki/{Uri.EscapeDataString(created.Slug)}");
+			$"api/wiki/ns/main/lore/{Uri.EscapeDataString(created.Slug)}");
 		await Assert.That(fetched!.Category).IsEqualTo("lore");
 		await Assert.That(fetched.Published).IsFalse();
 	}
@@ -189,16 +189,17 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 
 		var response = await http.PostAsJsonAsync(
 			"api/wiki/batch/protect",
-			new BatchProtectRequest([first.Slug, second.Slug, "does-not-exist-xyzzy"], null, true));
+			new BatchProtectRequest(
+				[$"main/general/{first.Slug}", $"main/general/{second.Slug}", "main/general/does-not-exist-xyzzy"], true));
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var result = await response.Content.ReadFromJsonAsync<BatchResult>();
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Succeeded.Count).IsEqualTo(2);
-		await Assert.That(result.Failed).Contains("does-not-exist-xyzzy");
+		await Assert.That(result.Failed).Contains("main/general/does-not-exist-xyzzy");
 
 		var fetched = await http.GetFromJsonAsync<WikiPageDto>(
-			$"api/wiki/{Uri.EscapeDataString(first.Slug)}");
+			$"api/wiki/ns/main/general/{Uri.EscapeDataString(first.Slug)}");
 		await Assert.That(fetched!.IsProtected).IsTrue();
 	}
 
@@ -211,7 +212,8 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 
 		var response = await http.PostAsJsonAsync(
 			"api/wiki/batch/delete",
-			new BatchDeleteRequest([first.Slug, second.Slug, "does-not-exist-xyzzy"], null));
+			new BatchDeleteRequest(
+				[$"main/general/{first.Slug}", $"main/general/{second.Slug}", "main/general/does-not-exist-xyzzy"]));
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var result = await response.Content.ReadFromJsonAsync<BatchResult>();
@@ -219,7 +221,7 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		await Assert.That(result!.Succeeded.Count).IsEqualTo(2);
 		await Assert.That(result.Failed.Count).IsEqualTo(1);
 
-		var gone = await http.GetAsync($"api/wiki/{Uri.EscapeDataString(first.Slug)}");
+		var gone = await http.GetAsync($"api/wiki/ns/main/general/{Uri.EscapeDataString(first.Slug)}");
 		await Assert.That(gone.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
 }

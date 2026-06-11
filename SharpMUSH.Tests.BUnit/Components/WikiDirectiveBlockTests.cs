@@ -82,10 +82,10 @@ public class WikiDirectiveBlockTests : BunitContext
 		await Assert.That(cut.Markup).Contains("Category: lore");
 		await Assert.That(cut.Markup).Contains("wiki-directive-list");
 
-		// Main-namespace page → /wiki/{slug}; other namespace → /wiki/{ns}/{slug}
-		await Assert.That(cut.Markup).Contains("href=\"/wiki/dragon_lore\"");
+		// Canonical link form: /wiki/{ns}/{category}/{slug} (category defaults to general).
+		await Assert.That(cut.Markup).Contains("href=\"/wiki/main/general/dragon_lore\"");
 		await Assert.That(cut.Markup).Contains("Dragon Lore");
-		await Assert.That(cut.Markup).Contains("href=\"/wiki/lore/old_gods\"");
+		await Assert.That(cut.Markup).Contains("href=\"/wiki/lore/general/old_gods\"");
 		await Assert.That(cut.Markup).Contains("Old Gods");
 	}
 

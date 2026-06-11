@@ -48,7 +48,7 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = factory.CreateHttpClient();
 
-		var response = await http.GetAsync("api/wiki/home");
+		var response = await http.GetAsync("api/wiki/ns/main/general/home");
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
@@ -61,7 +61,7 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = factory.CreateHttpClient();
 
-		var response = await http.GetAsync("api/wiki/does-not-exist-xyzzy");
+		var response = await http.GetAsync("api/wiki/ns/main/general/does-not-exist-xyzzy");
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
@@ -162,7 +162,7 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(updated.StatusCode).IsEqualTo(HttpStatusCode.OK);
 
 		// GET
-		var fetched = await http.GetFromJsonAsync<WikiPageDto>($"api/wiki/{Uri.EscapeDataString(slug)}");
+		var fetched = await http.GetFromJsonAsync<WikiPageDto>($"api/wiki/ns/main/general/{Uri.EscapeDataString(slug)}");
 		await Assert.That(fetched).IsNotNull();
 		await Assert.That(fetched!.MarkdownSource).IsEqualTo(updatedMarkdown);
 		await Assert.That(fetched.RevisionNumber).IsGreaterThan(createdDto.RevisionNumber);

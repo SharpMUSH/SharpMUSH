@@ -52,14 +52,12 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 
 	// ── Read ─────────────────────────────────────────────────────────────────
 
-	public async ValueTask<OneOf<WikiArticle, None>> GetWikiArticle(string slug, string? ns = null)
+	public async ValueTask<OneOf<WikiArticle, None>> GetWikiArticle(string slug, string? category = null, string? ns = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var url = ns is null
-				? $"api/wiki/{Uri.EscapeDataString(slug)}"
-				: $"api/wiki/ns/{Uri.EscapeDataString(ns)}/{Uri.EscapeDataString(slug)}";
+			var url = $"api/wiki/ns/{Uri.EscapeDataString(ns ?? "main")}/{Uri.EscapeDataString(category ?? "general")}/{Uri.EscapeDataString(slug)}";
 			var dto = await http.GetFromJsonAsync<WikiPageDto>(url);
 			return dto is null ? new None() : ToArticle(dto);
 		}
@@ -186,13 +184,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Returns the revision history for a page, newest first. Failures return an empty list.
 	/// </summary>
 	public async ValueTask<IReadOnlyList<WikiRevisionInfo>> GetRevisionsAsync(
-		string slug, int skip = 0, int take = 20, string? ns = null)
+		string slug, int skip = 0, int take = 20, string? ns = null, string? category = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var dtos = await http.GetFromJsonAsync<List<WikiRevisionDto>>(
-				$"api/wiki/{Uri.EscapeDataString(slug)}/revisions?skip={skip}&take={take}{NsQuery(ns, first: false)}");
+				$"api/wiki/{Uri.EscapeDataString(slug)}/revisions?skip={skip}&take={take}&ns={Uri.EscapeDataString(ns ?? "main")}&category={Uri.EscapeDataString(category ?? "general")}");
 			return dtos?.Select(ToRevision).ToList() ?? [];
 		}
 		catch (Exception ex)
@@ -205,13 +203,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// <summary>
 	/// Returns a single revision snapshot (with full markdown) or None when missing.
 	/// </summary>
-	public async ValueTask<OneOf<WikiRevisionInfo, None>> GetRevisionAsync(string slug, int revisionNumber, string? ns = null)
+	public async ValueTask<OneOf<WikiRevisionInfo, None>> GetRevisionAsync(string slug, int revisionNumber, string? ns = null, string? category = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var dto = await http.GetFromJsonAsync<WikiRevisionDto>(
-				$"api/wiki/{Uri.EscapeDataString(slug)}/revisions/{revisionNumber}{NsQuery(ns)}");
+				$"api/wiki/{Uri.EscapeDataString(slug)}/revisions/{revisionNumber}{KeyQuery(ns, category)}");
 			return dto is null ? new None() : ToRevision(dto);
 		}
 		catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -234,12 +232,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	public async ValueTask<OneOf<WikiArticle, string>> CreatePageAsync(
 		string title,
 		string markdown,
-		string? ns = null)
+		string? ns = null,
+		string? category = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/wiki", new CreatePageRequest(title, markdown, ns));
+			var response = await http.PostAsJsonAsync("api/wiki", new CreatePageRequest(title, markdown, ns, category));
 
 			if (response.IsSuccessStatusCode)
 			{
@@ -269,13 +268,14 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		string slug,
 		string markdown,
 		string? editSummary = null,
-		string? ns = null)
+		string? ns = null,
+		string? category = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var response = await http.PutAsJsonAsync(
-				$"api/wiki/{Uri.EscapeDataString(slug)}{NsQuery(ns)}",
+				$"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns, category)}",
 				new UpdatePageRequest(markdown, editSummary));
 
 			if (response.IsSuccessStatusCode)
@@ -305,13 +305,15 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		string? category,
 		IEnumerable<string> tags,
 		bool published,
-		string? ns = null)
+		string? ns = null,
+		string? currentCategory = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
+			// The page is identified by its CURRENT category; `category` is the (possibly new) value to set.
 			var response = await http.PutAsJsonAsync(
-				$"api/wiki/{Uri.EscapeDataString(slug)}/metadata{NsQuery(ns)}",
+				$"api/wiki/{Uri.EscapeDataString(slug)}/metadata{KeyQuery(ns, currentCategory ?? category)}",
 				new SetMetadataRequest(category, tags.ToArray(), published));
 
 			if (response.IsSuccessStatusCode)
@@ -340,13 +342,14 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	public async ValueTask<OneOf<WikiArticle, string>> RollbackAsync(
 		string slug,
 		int revisionNumber,
-		string? ns = null)
+		string? ns = null,
+		string? category = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var response = await http.PostAsJsonAsync(
-				$"api/wiki/{Uri.EscapeDataString(slug)}/rollback{NsQuery(ns)}",
+				$"api/wiki/{Uri.EscapeDataString(slug)}/rollback{KeyQuery(ns, category)}",
 				new RollbackRequest(revisionNumber));
 
 			if (response.IsSuccessStatusCode)
@@ -400,14 +403,14 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Returns the per-slug outcome, or a string error message on transport failure.
 	/// </summary>
 	public async ValueTask<OneOf<WikiBatchResult, string>> BatchProtectAsync(
-		IEnumerable<string> slugs, bool isProtected, string? ns = null)
+		IEnumerable<string> refs, bool isProtected)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var response = await http.PostAsJsonAsync(
 				"api/wiki/batch/protect",
-				new BatchProtectRequest(slugs.ToArray(), ns, isProtected));
+				new BatchProtectRequest(refs.ToArray(), isProtected));
 
 			if (response.IsSuccessStatusCode)
 			{
@@ -432,14 +435,14 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Returns the per-slug outcome, or a string error message on transport failure.
 	/// </summary>
 	public async ValueTask<OneOf<WikiBatchResult, string>> BatchDeleteAsync(
-		IEnumerable<string> slugs, string? ns = null)
+		IEnumerable<string> refs)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var response = await http.PostAsJsonAsync(
 				"api/wiki/batch/delete",
-				new BatchDeleteRequest(slugs.ToArray(), ns));
+				new BatchDeleteRequest(refs.ToArray()));
 
 			if (response.IsSuccessStatusCode)
 			{
@@ -463,12 +466,12 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Deletes a single page identified by slug (Wizard only).
 	/// Returns None on success or a string error message.
 	/// </summary>
-	public async ValueTask<OneOf<None, string>> DeletePageAsync(string slug, string? ns = null)
+	public async ValueTask<OneOf<None, string>> DeletePageAsync(string slug, string? ns = null, string? category = null)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.DeleteAsync($"api/wiki/{Uri.EscapeDataString(slug)}{NsQuery(ns)}");
+			var response = await http.DeleteAsync($"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns, category)}");
 
 			if (response.IsSuccessStatusCode)
 				return new None();
@@ -503,6 +506,14 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// <summary>Builds the optional <c>?ns=</c> / <c>&amp;ns=</c> query suffix for namespaced requests.</summary>
 	private static string NsQuery(string? ns, bool first = true) =>
 		ns is null ? string.Empty : $"{(first ? '?' : '&')}ns={Uri.EscapeDataString(ns)}";
+
+	/// <summary>
+	/// Builds the <c>ns</c> + <c>category</c> query suffix that identifies a page for slug-keyed
+	/// mutation/revision routes. Category is part of identity, so it is always sent (defaulting to
+	/// <c>general</c>) alongside the namespace.
+	/// </summary>
+	private static string KeyQuery(string? ns, string? category) =>
+		$"?ns={Uri.EscapeDataString(ns ?? "main")}&category={Uri.EscapeDataString(category ?? "general")}";
 
 	private static WikiPageSummary ToSummary(WikiPageDto dto) =>
 		new(dto.Slug, dto.Title, dto.Namespace, dto.UpdatedAt, dto.RevisionNumber)

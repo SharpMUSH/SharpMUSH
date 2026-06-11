@@ -19,8 +19,7 @@ namespace SharpMUSH.Server.Controllers;
 /// <summary>
 /// REST API for wiki page data and bot-facing pre-rendered HTML.
 /// Routes:
-///   GET    /api/wiki/{slug}            — JSON page data (all clients)
-///   GET    /api/wiki/ns/{ns}/{slug}    — namespaced page
+///   GET    /api/wiki/ns/{ns}/{category}/{slug} — JSON page data (canonical, all clients)
 ///   GET    /api/wiki/character/{name}  — character namespace alias
 ///   GET    /api/wiki/recent           — recently updated pages
 ///   GET    /api/wiki/ns/{ns}           — list pages in a namespace

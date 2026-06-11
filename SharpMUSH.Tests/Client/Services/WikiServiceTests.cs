@@ -229,7 +229,7 @@ public class WikiServiceTests
 
 		await Assert.That(handler!.CapturedRequest!.Method).IsEqualTo(HttpMethod.Get);
 		await Assert.That(handler.CapturedRequest.RequestUri!.ToString())
-			.Contains("api/wiki/home");
+			.Contains("api/wiki/ns/main/general/home");
 	}
 
 	// ── CreatePageAsync ────────────────────────────────────────────────────

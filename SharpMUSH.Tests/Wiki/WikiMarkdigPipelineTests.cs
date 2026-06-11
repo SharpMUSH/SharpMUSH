@@ -65,7 +65,7 @@ public class WikiMarkdigPipelineTests
 		var html = Pipeline().RenderToHtml("See [[Getting Started]] for details.");
 
 		// Slug derived: "getting_started"
-		await Assert.That(html).Contains("href=\"/wiki/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/getting_started\"");
 		await Assert.That(html).Contains("Getting Started");
 	}
 
@@ -74,17 +74,17 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("See [[Click here|getting_started]] for details.");
 
-		await Assert.That(html).Contains("href=\"/wiki/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/getting_started\"");
 		await Assert.That(html).Contains("Click here");
 	}
 
 	[Test]
 	public async Task RenderToHtml_WikiLinkWithNamespacePrefix_IncludesPrefixInHref()
 	{
-		// [[Help:Getting Started]] → href="/wiki/help/getting_started"
+		// [[Help:Getting Started]] → href="/wiki/help/general/getting_started"
 		var html = Pipeline().RenderToHtml("[[Help:Getting Started]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/help/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/help/general/getting_started\"");
 	}
 
 	[Test]
@@ -92,7 +92,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[my_page]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/my_page\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/my_page\"");
 	}
 
 	[Test]
@@ -100,8 +100,8 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[Page A]] and [[Page B]].");
 
-		await Assert.That(html).Contains("href=\"/wiki/page_a\"");
-		await Assert.That(html).Contains("href=\"/wiki/page_b\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/page_a\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/page_b\"");
 	}
 
 	// ── RenderToHtml — security (DisableHtml) ────────────────────────────────
@@ -207,14 +207,14 @@ public class WikiMarkdigPipelineTests
 	// ── WikiLinkExtension — named contract tests ───────────────────────────────
 
 	/// <summary>
-	/// [[My Page]] → &lt;a href="/wiki/my_page"&gt;My Page&lt;/a&gt;
+	/// [[My Page]] → &lt;a href="/wiki/main/general/my_page"&gt;My Page&lt;/a&gt;
 	/// </summary>
 	[Test]
 	public async Task WikiLinkExtension_ValidPage_EmitsAnchorTag()
 	{
 		var html = Pipeline().RenderToHtml("[[My Page]]");
 
-		await Assert.That(html).Contains("<a href=\"/wiki/my_page\">");
+		await Assert.That(html).Contains("<a href=\"/wiki/main/general/my_page\">");
 		await Assert.That(html).Contains("My Page");
 	}
 
@@ -263,7 +263,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[Help:Getting Started]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/help/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/help/general/getting_started\"");
 	}
 
 	/// <summary>
@@ -274,7 +274,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[Click Here|my_page]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/my_page\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/my_page\"");
 		await Assert.That(html).Contains("Click Here");
 		await Assert.That(html).DoesNotContain("my_page</"); // slug must not appear as link text
 	}

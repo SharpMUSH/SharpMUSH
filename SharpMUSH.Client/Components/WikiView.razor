@@ -9,7 +9,7 @@
 }
 else if (Mode == WikiMode.View)
 {
-    <WikiDisplay Slug="@Slug" Namespace="@Namespace" Article="@_article" ActivateEditMode="ActivateEditMode"
+    <WikiDisplay Slug="@Slug" Namespace="@Namespace" Category="@Category" Article="@_article" ActivateEditMode="ActivateEditMode"
                  OnArticleRestored="HandleArticleRestored" />
 }
 else
@@ -33,6 +33,9 @@ else
     /// <summary>Wiki namespace (e.g. "help"); null means the Main namespace.</summary>
     [Parameter] public string? Namespace { get; init; }
 
+    /// <summary>Category segment — part of the page's identity. Null defaults to "general".</summary>
+    [Parameter] public string? Category { get; init; }
+
     private WikiArticle? _article;
 
     // A shallow copy of _article used while editing so the view copy is not mutated live.
@@ -52,7 +55,7 @@ else
                 Tags = [.. _article.Tags],
                 Published = _article.Published,
             }
-            : new WikiArticle(Slug, string.Empty, null);
+            : new WikiArticle(Slug, string.Empty, null) { Category = Category };
 
         _saveError = null;
         Mode = WikiMode.Edit;
@@ -66,20 +69,23 @@ else
 
         if (string.IsNullOrEmpty(draft.Slug))
         {
-            // New page — title comes from the slug (display-ified) or whatever the editor set.
-            result = await Wiki.CreatePageAsync(draft.Title, draft.Content, Namespace);
+            // New page — category is part of identity, so it's fixed at create from the draft.
+            result = await Wiki.CreatePageAsync(draft.Title, draft.Content, Namespace, draft.Category);
         }
         else
         {
-            result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content, ns: Namespace);
+            // The page is identified by its current (route) category.
+            result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content, ns: Namespace, category: Category);
         }
 
         if (result.IsT0 && MetadataChanged(result.AsT0, draft))
         {
-            // Content save succeeded; push the metadata separately. The created/updated
-            // article carries the server's current metadata, so this only fires on change.
+            // Content save succeeded; push the metadata separately. The created/updated article
+            // carries the server's current category, used as the lookup key in case the category
+            // itself is changing (a re-key/move).
             result = await Wiki.SetMetadataAsync(
-                result.AsT0.Slug, draft.Category, draft.Tags, draft.Published, Namespace);
+                result.AsT0.Slug, draft.Category, draft.Tags, draft.Published, Namespace,
+                currentCategory: result.AsT0.Category);
         }
 
         await result.Match<Task>(
@@ -123,7 +129,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
-        var result = await Wiki.GetWikiArticle(Slug, Namespace);
+        var result = await Wiki.GetWikiArticle(Slug, Category, Namespace);
         _article = result.IsT0 ? result.AsT0 : null;
         _loading = false;
         await base.OnInitializedAsync();

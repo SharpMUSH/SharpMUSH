@@ -70,7 +70,7 @@ public class WikiCommandTests
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/list help"));
-		await ExpectNotify(player.DbRef, "help:markdown_guide");
+		await ExpectNotify(player.DbRef, "help:general:markdown_guide");
 	}
 
 	[Test]

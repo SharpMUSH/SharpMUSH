@@ -32,7 +32,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task HomePageIsSeeded_GetBySlugReturnsFound()
 	{
-		var result = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
 
 		await Assert.That(result.IsT0)
 			.IsTrue()
@@ -42,7 +42,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task HomePageIsSeeded_SlugIsHome()
 	{
-		var result = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
 
 		await Assert.That(result.IsT0).IsTrue();
 		await Assert.That(result.AsT0.Slug).IsEqualTo("home");
@@ -51,7 +51,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task HomePageIsSeeded_TitleIsHome()
 	{
-		var result = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
 
 		await Assert.That(result.IsT0).IsTrue();
 		await Assert.That(result.AsT0.Title).IsEqualTo("Home");
@@ -60,7 +60,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task MarkdownGuideIsSeeded_InHelpNamespace()
 	{
-		var result = await Wiki.GetBySlugAsync("markdown_guide", WikiNamespace.Help);
+		var result = await Wiki.GetBySlugAsync("markdown_guide", "general", WikiNamespace.Help);
 
 		await Assert.That(result.IsT0)
 			.IsTrue()
@@ -73,7 +73,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task HomePageIsSeeded_NamespaceIsMain()
 	{
-		var result = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
+		var result = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
 
 		await Assert.That(result.IsT0).IsTrue();
 		await Assert.That(result.AsT0.Namespace).IsEqualTo("main");
@@ -84,7 +84,7 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task HomePageIsSeeded_GetByIdRoundTrip()
 	{
-		var bySlug = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
+		var bySlug = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
 		await Assert.That(bySlug.IsT0).IsTrue();
 
 		var id = bySlug.AsT0.Id;
@@ -113,7 +113,7 @@ public class WikiStartupSeedingTests
 	public async Task PutControllerPath_SlugLookupThenUpdateById_Succeeds()
 	{
 		// ── step 1: slug lookup (same as WikiController.Put) ──────────────────
-		var lookup = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
+		var lookup = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
 		await Assert.That(lookup.IsT0).IsTrue();
 
 		var pageId = lookup.AsT0.Id;
@@ -131,7 +131,7 @@ public class WikiStartupSeedingTests
 			.Because("UpdateAsync must increment the revision counter");
 
 		// ── step 3: verify the edit is visible via slug lookup ────────────────
-		var afterUpdate = await Wiki.GetBySlugAsync("home", WikiNamespace.Main);
+		var afterUpdate = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
 		await Assert.That(afterUpdate.IsT0).IsTrue();
 		await Assert.That(afterUpdate.AsT0.MarkdownSource)
 			.Contains("<!-- PUT path test -->")

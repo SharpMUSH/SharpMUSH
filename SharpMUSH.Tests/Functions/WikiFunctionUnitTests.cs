@@ -69,7 +69,7 @@ public class WikiFunctionUnitTests
 	{
 		var result = await Eval("wikilist(help)");
 
-		await Assert.That(result).Contains("help:markdown_guide");
+		await Assert.That(result).Contains("help:general:markdown_guide");
 	}
 
 	[Test]

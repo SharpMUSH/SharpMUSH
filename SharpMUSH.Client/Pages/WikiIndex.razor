@@ -108,7 +108,5 @@
     }
 
     private static string PageHref(WikiPageSummary page) =>
-        page.Namespace.Equals("Main", StringComparison.OrdinalIgnoreCase)
-            ? $"/wiki/{page.Slug}"
-            : $"/wiki/{page.Namespace.ToLowerInvariant()}/{page.Slug}";
+        $"/wiki/{page.Namespace.ToLowerInvariant()}/{(page.Category ?? "general")}/{page.Slug}";
 }

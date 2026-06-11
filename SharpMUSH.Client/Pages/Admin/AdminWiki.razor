@@ -213,9 +213,11 @@
     }
 
     private static string PageHref(WikiPageSummary page) =>
-        page.Namespace.Equals("main", StringComparison.OrdinalIgnoreCase)
-            ? $"/wiki/{page.Slug}"
-            : $"/wiki/{page.Namespace.ToLowerInvariant()}/{page.Slug}";
+        $"/wiki/{page.Namespace.ToLowerInvariant()}/{(page.Category ?? "general")}/{page.Slug}";
+
+    /// <summary>The "ns/category/slug" reference used by batch and existence endpoints.</summary>
+    private static string RefFor(WikiPageSummary page) =>
+        $"{page.Namespace.ToLowerInvariant()}/{page.Category ?? "general"}/{page.Slug}";
 
     private async Task OnNamespaceFilterChanged(string value)
     {
@@ -240,12 +242,9 @@
         _busy = true;
         try
         {
-            // Batch endpoints resolve slugs within one namespace, so group by namespace.
-            foreach (var group in _selected.GroupBy(p => p.Namespace, StringComparer.OrdinalIgnoreCase))
-            {
-                var result = await Wiki.BatchProtectAsync(group.Select(p => p.Slug), isProtected, group.Key);
-                ReportBatchResult(result);
-            }
+            // Batch endpoints identify pages by full "ns/category/slug" refs.
+            var result = await Wiki.BatchProtectAsync(_selected.Select(RefFor), isProtected);
+            ReportBatchResult(result);
             await ReloadAsync();
         }
         finally
@@ -260,11 +259,8 @@
         _busy = true;
         try
         {
-            foreach (var group in _selected.GroupBy(p => p.Namespace, StringComparer.OrdinalIgnoreCase))
-            {
-                var result = await Wiki.BatchDeleteAsync(group.Select(p => p.Slug), group.Key);
-                ReportBatchResult(result);
-            }
+            var result = await Wiki.BatchDeleteAsync(_selected.Select(RefFor));
+            ReportBatchResult(result);
             _showDeleteConfirm = false;
             await ReloadAsync();
         }
@@ -322,7 +318,8 @@
         try
         {
             var result = await Wiki.SetMetadataAsync(
-                _metadataTarget.Slug, _metaCategory, _metaTags, _metaPublished, _metadataTarget.Namespace);
+                _metadataTarget.Slug, _metaCategory, _metaTags, _metaPublished, _metadataTarget.Namespace,
+                currentCategory: _metadataTarget.Category);
             result.Switch(
                 _ => Snackbar.Add(string.Format(Loc["WikiMetadataSaved"], _metadataTarget.Title), Severity.Success),
                 err => Snackbar.Add(string.Format(Loc["WikiMetadataSaveFailed"], err), Severity.Error));

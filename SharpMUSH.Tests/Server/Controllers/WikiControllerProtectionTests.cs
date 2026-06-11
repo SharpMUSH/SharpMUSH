@@ -60,7 +60,7 @@ public class WikiControllerProtectionTests
 		await Assert.That(result).IsTypeOf<ForbidResult>();
 
 		// Content must be untouched.
-		var page = await wiki.GetBySlugAsync(slug);
+		var page = await wiki.GetBySlugAsync(slug, "general");
 		await Assert.That(page.AsT0.MarkdownSource).IsEqualTo("# original");
 	}
 

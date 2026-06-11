@@ -34,30 +34,33 @@ file sealed class StubLocalizer<T> : IStringLocalizer<T>
 /// </summary>
 file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHandler
 {
-    private record CreateReq(string Title, string Markdown, string? Namespace);
+    private record CreateReq(string Title, string Markdown, string? Namespace, string? Category);
     private record UpdateReq(string Markdown, string? EditSummary);
     private record ExistsReq(string[] Refs);
 
     private static readonly Regex _slugRoute = new(@"^api/wiki/([^/]+)$", RegexOptions.Compiled);
+    private static readonly Regex _nsRoute = new(@"^api/wiki/ns/([^/]+)/([^/]+)/([^/]+)$", RegexOptions.Compiled);
 
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var path = request.RequestUri!.AbsolutePath.TrimStart('/');
 
-        // GET api/wiki/{slug}
+        // GET api/wiki/ns/{ns}/{category}/{slug}
         if (request.Method == HttpMethod.Get &&
-            _slugRoute.Match(path) is { Success: true } getMatch)
+            _nsRoute.Match(path) is { Success: true } getMatch)
         {
-            var slug = Uri.UnescapeDataString(getMatch.Groups[1].Value);
-            var result = await wikiService.GetBySlugAsync(slug);
+            var ns = ParseNs(Uri.UnescapeDataString(getMatch.Groups[1].Value));
+            var category = Uri.UnescapeDataString(getMatch.Groups[2].Value);
+            var slug = Uri.UnescapeDataString(getMatch.Groups[3].Value);
+            var result = await wikiService.GetBySlugAsync(slug, category, ns);
             return result.Match(
                 page => Json(ToDto(page)),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound));
         }
 
         // POST api/wiki/exists — batch existence map for redlink rendering.
-        // Refs use URL-path form: "slug" or "ns/slug".
+        // Refs use URL-path form: "ns/category/slug".
         if (request.Method == HttpMethod.Post && path == "api/wiki/exists")
         {
             var req = await request.Content!.ReadFromJsonAsync<ExistsReq>(cancellationToken: cancellationToken);
@@ -66,11 +69,8 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
             var map = new Dictionary<string, bool>();
             foreach (var reference in req.Refs)
             {
-                var slashIdx = reference.IndexOf('/');
-                var (ns, slug) = slashIdx > 0
-                    ? (ParseNs(reference[..slashIdx]), reference[(slashIdx + 1)..])
-                    : (WikiNamespace.Main, reference);
-                var lookup = await wikiService.GetBySlugAsync(slug, ns);
+                var (ns, category, slug) = ParseRef(reference);
+                var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
                 map[reference] = lookup.IsT0;
             }
 
@@ -82,7 +82,7 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
         {
             var req = await request.Content!.ReadFromJsonAsync<CreateReq>(cancellationToken: cancellationToken);
             if (req is null) return new HttpResponseMessage(HttpStatusCode.BadRequest);
-            var result = await wikiService.CreateAsync(req.Title, req.Markdown, "#1", ParseNs(req.Namespace));
+            var result = await wikiService.CreateAsync(req.Title, req.Markdown, "#1", ParseNs(req.Namespace), req.Category);
             return result.Match(
                 page => Json(ToDto(page), HttpStatusCode.Created),
                 _ => new HttpResponseMessage(HttpStatusCode.Conflict));
@@ -114,6 +114,17 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 
     private static WikiNamespace ParseNs(string? ns) =>
         Enum.TryParse<WikiNamespace>(ns, ignoreCase: true, out var r) ? r : WikiNamespace.Main;
+
+    private static (WikiNamespace Ns, string Category, string Slug) ParseRef(string reference)
+    {
+        var parts = reference.Split('/');
+        return parts.Length switch
+        {
+            >= 3 => (ParseNs(parts[0]), parts[1], string.Join('/', parts[2..])),
+            2 => (ParseNs(parts[0]), "general", parts[1]),
+            _ => (WikiNamespace.Main, "general", reference)
+        };
+    }
 }
 
 /// <summary>Helper to register the full wiki service stack needed for client component tests.</summary>
@@ -185,7 +196,9 @@ public class WikiPageRouteTests : BunitContext
     public async Task WikiPage_RendersWikiViewWithParameterSlug()
     {
         var cut = Render<SharpMUSH.Client.Pages.WikiPage>(p => p
-            .Add(c => c.Slug, "Magic_System"));
+            .Add(c => c.Slug, "Magic_System")
+            .Add(c => c.Ns, "main")
+            .Add(c => c.Category, "general"));
 
         var wikiView = cut.FindComponent<WikiView>();
         await Assert.That(wikiView).IsNotNull();
@@ -202,7 +215,9 @@ public class WikiPageRouteTests : BunitContext
         await wikiSvc.CreateAsync("Magic System", "Content here.", authorDbref: "#1", WikiNamespace.Main);
 
         var cut = Render<SharpMUSH.Client.Pages.WikiPageEdit>(p => p
-            .Add(c => c.Slug, "magic_system"));
+            .Add(c => c.Slug, "magic_system")
+            .Add(c => c.Ns, "main")
+            .Add(c => c.Category, "general"));
 
         var wikiView = cut.FindComponent<WikiView>();
         await Assert.That(wikiView).IsNotNull();
@@ -231,19 +246,21 @@ public class WikiRedlinkRenderingTests : BunitContext
             "See [[Real Target]] and [[Ghost Page]].", "#1", WikiNamespace.Main);
 
         var cut = Render<SharpMUSH.Client.Pages.WikiPage>(p => p
-            .Add(c => c.Slug, "linking_page"));
+            .Add(c => c.Slug, "linking_page")
+            .Add(c => c.Ns, "main")
+            .Add(c => c.Category, "general"));
 
         // The exists round-trip completes asynchronously after first render.
         cut.WaitForAssertion(() =>
         {
-            if (!cut.Markup.Contains("href=\"/wiki/ghost_page\" class=\"wiki-redlink\""))
+            if (!cut.Markup.Contains("href=\"/wiki/main/general/ghost_page\" class=\"wiki-redlink\""))
                 throw new InvalidOperationException("redlink not applied yet");
         }, TimeSpan.FromSeconds(5));
 
-        await Assert.That(cut.Markup).Contains("href=\"/wiki/ghost_page\" class=\"wiki-redlink\"");
+        await Assert.That(cut.Markup).Contains("href=\"/wiki/main/general/ghost_page\" class=\"wiki-redlink\"");
         // The existing page's link stays a plain anchor.
-        await Assert.That(cut.Markup).Contains("href=\"/wiki/real_target\"");
-        await Assert.That(cut.Markup).DoesNotContain("href=\"/wiki/real_target\" class=\"wiki-redlink\"");
+        await Assert.That(cut.Markup).Contains("href=\"/wiki/main/general/real_target\"");
+        await Assert.That(cut.Markup).DoesNotContain("href=\"/wiki/main/general/real_target\" class=\"wiki-redlink\"");
     }
 }
 

@@ -47,7 +47,7 @@ public class SeoControllerTests
 		var xml = await GetSitemapXml(MakeController(wiki));
 
 		await Assert.That(xml).Contains("<?xml");
-		await Assert.That(xml).Contains($"https://example.com/wiki/{page.Slug}");
+		await Assert.That(xml).Contains($"https://example.com/wiki/main/general/{page.Slug}");
 	}
 
 	[Test]
@@ -60,7 +60,7 @@ public class SeoControllerTests
 
 		var xml = await GetSitemapXml(MakeController(wiki));
 
-		await Assert.That(xml).Contains($"https://example.com/wiki/{published.Slug}");
+		await Assert.That(xml).Contains($"https://example.com/wiki/main/general/{published.Slug}");
 		await Assert.That(xml).DoesNotContain(draft.Slug);
 	}
 

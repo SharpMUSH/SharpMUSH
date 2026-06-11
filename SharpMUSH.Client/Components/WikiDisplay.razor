@@ -71,6 +71,10 @@
     [Parameter]
     public string? Namespace { get; init; }
 
+    /// <summary>Category segment — part of the page's identity.</summary>
+    [Parameter]
+    public string? Category { get; init; }
+
     [Parameter]
     public WikiArticle? Article { get; init; }
 
@@ -196,6 +200,7 @@
         {
             { x => x.Slug, Slug },
             { x => x.Namespace, Namespace },
+            { x => x.Category, Category },
             { x => x.CurrentMarkdown, Article?.Content }
         };
         var options = new DialogOptions

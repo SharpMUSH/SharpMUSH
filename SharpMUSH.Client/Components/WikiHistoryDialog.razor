@@ -86,6 +86,10 @@ else
     [Parameter]
     public string? Namespace { get; set; }
 
+    /// <summary>Category segment — part of the page's identity.</summary>
+    [Parameter]
+    public string? Category { get; set; }
+
     /// <summary>Current page markdown — diff target. Provided by the opener so the dialog
     /// doesn't have to re-fetch the page it was opened from.</summary>
     [Parameter]
@@ -107,7 +111,7 @@ else
         if (Slug is null) return;
         _restoring = true;
 
-        var result = await Wiki.RollbackAsync(Slug, revision.RevisionNumber, Namespace);
+        var result = await Wiki.RollbackAsync(Slug, revision.RevisionNumber, Namespace, Category);
         _restoring = false;
 
         result.Switch(
@@ -123,7 +127,7 @@ else
     {
         if (Slug is not null)
         {
-            _revisions = await Wiki.GetRevisionsAsync(Slug, ns: Namespace);
+            _revisions = await Wiki.GetRevisionsAsync(Slug, ns: Namespace, category: Category);
         }
         _loading = false;
     }

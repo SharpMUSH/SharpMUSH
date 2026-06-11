@@ -46,7 +46,7 @@
     private bool _loaded;
 
     /// <summary>Minimal projection of the wiki page listing endpoints' JSON shape.</summary>
-    private sealed record PageDto(string Slug, string Title, string Namespace, DateTimeOffset UpdatedAt);
+    private sealed record PageDto(string Slug, string Title, string Namespace, DateTimeOffset UpdatedAt, string? Category = null);
 
     protected override async Task OnInitializedAsync()
     {
@@ -89,7 +89,5 @@
     };
 
     private static string LinkFor(PageDto page) =>
-        string.Equals(page.Namespace, "main", StringComparison.OrdinalIgnoreCase)
-            ? $"/wiki/{page.Slug}"
-            : $"/wiki/{page.Namespace.ToLowerInvariant()}/{page.Slug}";
+        $"/wiki/{page.Namespace.ToLowerInvariant()}/{(page.Category ?? "general")}/{page.Slug}";
 }

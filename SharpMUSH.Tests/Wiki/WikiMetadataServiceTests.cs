@@ -98,14 +98,15 @@ public class WikiMetadataServiceTests
 	}
 
 	[Test]
-	public async Task SetMetadata_BlankCategory_StoresNull()
+	public async Task SetMetadata_BlankCategory_StoresDefault()
 	{
+		// Category is part of page identity, so a blank value normalizes to the default "general".
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Untagged");
 
 		var result = await svc.SetMetadataAsync(page.Id, "   ", [], published: true);
 
-		await Assert.That(result.AsT0.Category).IsNull();
+		await Assert.That(result.AsT0.Category).IsEqualTo("general");
 	}
 
 	[Test]
@@ -141,7 +142,7 @@ public class WikiMetadataServiceTests
 		var page = await CreatePageAsync(svc, "Defaults");
 
 		await Assert.That(page.Published).IsTrue();
-		await Assert.That(page.Category).IsNull();
+		await Assert.That(page.Category).IsEqualTo("general");
 		await Assert.That(page.Tags.Count).IsEqualTo(0);
 	}
 
