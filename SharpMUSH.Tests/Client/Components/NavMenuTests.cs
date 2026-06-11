@@ -32,18 +32,23 @@ public class NavMenuTests : MudBlazorTestContext
 	}
 
 	[Test]
-	public async Task NavMenu_Default_IsCollapsed_ShowsConfigShortcutWithoutSettingsGroup()
+	public async Task NavMenu_Default_IsCollapsed_ShowsAdminLinksAsIconsWithoutGroup()
 	{
 		// Arrange & Act
 		var cut = Render<NavMenu>();
 
-		// Assert - Collapsed mode replaces the Settings group with an icon shortcut
+		// Assert - Collapsed mode renders the admin destinations as icon-only links
+		// (feature-equivalent with the expanded group) but without text labels.
 		var configLink = cut.Find("a[href='/admin/config']");
 		await Assert.That(configLink.TextContent.Trim()).IsEmpty();
 
-		// Group-only links (security, suggestions) are not rendered when collapsed
-		await Assert.That(cut.FindAll("a[href='/security']").Count).IsEqualTo(0);
-		await Assert.That(cut.FindAll("a[href='/admin/suggestions']").Count).IsEqualTo(0);
+		// Every admin destination remains reachable when collapsed (the default mode).
+		await Assert.That(cut.FindAll("a[href='/admin/profiles']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/admin/suggestions']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/security']").Count).IsEqualTo(1);
+
+		// The expandable group header (h6 AdminPanel title) is not rendered when collapsed.
+		await Assert.That(cut.FindAll("h6").Count).IsEqualTo(0);
 	}
 
 	[Test]

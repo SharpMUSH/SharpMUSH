@@ -25,6 +25,10 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	private (string ReqId, TaskCompletionSource<string[]> Tcs, List<string> Buffer)? _pending;
 	private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
 
+	// Scopes the post-login port-initialization waiter to the current connection so a
+	// stale waiter from a previous/interrupted login cannot initialize the wrong socket.
+	private CancellationTokenSource? _loginCts;
+
 	public event Action<TerminalLine>? LineReceived;
 	public event Action<bool>? ConnectionStateChanged;
 
@@ -72,7 +76,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		AddSystemLine("[OTT] Sending login token…");
 		await wsService.SendAsync($"connect token {ott}");
 		AddSystemLine("[OTT] Authenticating…");
-		_ = WaitForLoginThenInitializeAsync();
+		_ = WaitForLoginThenInitializeAsync(BeginLoginWait());
 	}
 
 	public async Task ConnectAndLoginAsync(string serverUri, string playerName, string password, OttAuthService ottAuth)
@@ -98,7 +102,19 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 			AddSystemLine("[Login] Connecting with credentials…");
 		}
 
-		_ = WaitForLoginThenInitializeAsync();
+		_ = WaitForLoginThenInitializeAsync(BeginLoginWait());
+	}
+
+	/// <summary>
+	/// Cancels any in-flight login waiter and starts a fresh cancellation scope for the new
+	/// login attempt. Returns the token the new waiter must observe.
+	/// </summary>
+	private CancellationToken BeginLoginWait()
+	{
+		_loginCts?.Cancel();
+		_loginCts?.Dispose();
+		_loginCts = new CancellationTokenSource();
+		return _loginCts.Token;
 	}
 
 	/// <summary>
@@ -106,7 +122,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// has processed the connect command and sent MOTD/look), then captures the port descriptor.
 	/// Falls back after 10 s to avoid blocking indefinitely on failed logins.
 	/// </summary>
-	private async Task WaitForLoginThenInitializeAsync()
+	private async Task WaitForLoginThenInitializeAsync(CancellationToken ct)
 	{
 		var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -119,20 +135,32 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		LineReceived += OnLine;
 		try
 		{
-			await Task.WhenAny(tcs.Task, Task.Delay(10_000));
+			// Cancellation (disconnect or a newer login) ends the wait immediately.
+			await Task.WhenAny(tcs.Task, Task.Delay(10_000, ct));
+
+			// If this waiter was superseded/cancelled, do not touch the (possibly new or
+			// closed) socket — that would re-queue think [ports(me)] on the wrong connection.
+			if (ct.IsCancellationRequested) return;
+
+			// Small buffer to let the login response fully settle before querying ports.
+			await Task.Delay(300, ct);
+			await InitializePortAsync();
+		}
+		catch (OperationCanceledException)
+		{
+			// Expected when the connection is torn down or replaced mid-wait.
 		}
 		finally
 		{
 			LineReceived -= OnLine;
 		}
-
-		// Small buffer to let the login response fully settle before querying ports
-		await Task.Delay(300);
-		await InitializePortAsync();
 	}
 
 	public async Task DisconnectAsync()
 	{
+		// Cancel any pending post-login port initialization so it cannot run against the
+		// socket we are about to close (or a later reconnect).
+		_loginCts?.Cancel();
 		ConnectedPlayerName = null;
 		await wsService.DisconnectAsync();
 		wsService.MessageReceived -= HandleMessage;

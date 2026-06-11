@@ -191,7 +191,22 @@
     /// </summary>
     [Parameter] public ITerminalService? TerminalOverride { get; set; }
 
+    /// <summary>
+    /// Whether this terminal shows the connection/auto-login <c>[DBG]</c> diagnostic lines.
+    /// These are useful on the command terminal while developing the auto-connect flow but
+    /// are noise on the player-facing /play terminal, so it opts out. Diagnostics are
+    /// additionally gated to the Development environment so production stays clean.
+    /// </summary>
+    [Parameter] public bool ShowDiagnostics { get; set; } = true;
+
     private ITerminalService Terminal => TerminalOverride ?? DefaultTerminal;
+
+    /// <summary>Writes a diagnostic line only when this terminal opted in and we are in dev.</summary>
+    private void DebugLine(string text)
+    {
+        if (ShowDiagnostics && HostEnv.IsDevelopment())
+            AddLocalLine(text, TerminalLineSource.System);
+    }
 
     // Unique IDs per instance so multiple terminals on the same page don't conflict
     private readonly string _outputId = $"sharp-terminal-output-{Guid.NewGuid():N}";
@@ -248,7 +263,7 @@
         if (_connected && _playerName is null && AccountAuth.Characters.Count > 0)
             _playerName = AccountAuth.Characters[0].Name;
 
-        AddLocalLine($"[DBG] init: connected={_connected} isLoggedIn={AccountAuth.IsLoggedIn}", TerminalLineSource.System);
+        DebugLine($"[DBG] init: connected={_connected} isLoggedIn={AccountAuth.IsLoggedIn}");
 
         if (!_connected)
         {
@@ -258,9 +273,9 @@
                 // AccountAuth.IsLoggedIn may still be false.  Call GetDebugOttAsync()
                 // directly — it both populates AccountSessionToken and returns the OTT
                 // in one round-trip, avoiding any ordering dependency.
-                AddLocalLine("[DBG] dev path: fetching debug OTT", TerminalLineSource.System);
+                DebugLine("[DBG] dev path: fetching debug OTT");
                 var debugOtt = await AccountAuth.GetDebugOttAsync();
-                AddLocalLine($"[DBG] dev path: ott={(debugOtt?.Token is null ? "NULL" : "OK")} account={(debugOtt?.AccountId is null ? "NULL" : "OK")}", TerminalLineSource.System);
+                DebugLine($"[DBG] dev path: ott={(debugOtt?.Token is null ? "NULL" : "OK")} account={(debugOtt?.AccountId is null ? "NULL" : "OK")}");
                 if (debugOtt?.Token is not null)
                 {
                     SetPlayerName(debugOtt.PlayerName);
@@ -270,17 +285,17 @@
             else if (AccountAuth.IsLoggedIn)
             {
                 // Normal account path (production, or dev after a real login)
-                AddLocalLine("[DBG] account path entered", TerminalLineSource.System);
+                DebugLine("[DBG] account path entered");
                 var chars = AccountAuth.Characters.Count > 0
                     ? AccountAuth.Characters
                     : await AccountAuth.GetCharactersAsync();
 
-                AddLocalLine($"[DBG] account path: chars={chars.Count}", TerminalLineSource.System);
+                DebugLine($"[DBG] account path: chars={chars.Count}");
                 if (chars.Count == 1)
                 {
                     // Single character — auto-connect silently
                     var ott = await AccountAuth.GetOttForCharacterAsync(chars[0]);
-                    AddLocalLine($"[DBG] account path: ott={(ott is null ? "NULL" : "OK")}", TerminalLineSource.System);
+                    DebugLine($"[DBG] account path: ott={(ott is null ? "NULL" : "OK")}");
                     if (ott is not null)
                     {
                         SetPlayerName(chars[0].Name);
@@ -296,7 +311,7 @@
             }
         }
 
-        AddLocalLine($"[DBG] init done: connected={Terminal.IsConnected} isLoggedIn={AccountAuth.IsLoggedIn}", TerminalLineSource.System);
+        DebugLine($"[DBG] init done: connected={Terminal.IsConnected} isLoggedIn={AccountAuth.IsLoggedIn}");
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -75,7 +75,12 @@
         }
         else
         {
-            <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.AdminPanelSettings" IconColor="Color.Secondary" />
+            @* Collapsed mode is the default, so it must stay feature-equivalent with the
+               expanded admin group: every destination remains reachable as an icon. *@
+            <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Tune" IconColor="Color.Secondary" />
+            <MudNavLink Href="/admin/profiles" Icon="@Icons.Material.Filled.Badge" IconColor="Color.Secondary" />
+            <MudNavLink Href="/admin/suggestions" Icon="@Icons.Material.Filled.Lightbulb" IconColor="Color.Secondary" />
+            <MudNavLink Href="/security" Icon="@Icons.Material.Filled.Security" IconColor="Color.Secondary" />
         }
     </MudNavMenu>
 </MudPaper>
