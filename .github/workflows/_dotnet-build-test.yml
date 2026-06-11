@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        database: [arangodb, memgraph, surrealdb]
+        database: [arangodb, memgraph, surrealdb, loradb]
 
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        database: [arangodb, memgraph, surrealdb]
+        database: [arangodb, memgraph, surrealdb, loradb]
 
     steps:
       - uses: actions/checkout@v4

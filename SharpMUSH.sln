@@ -59,6 +59,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Database.SurrealD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Tests.BUnit", "SharpMUSH.Tests.BUnit\SharpMUSH.Tests.BUnit.csproj", "{017C71FE-76A4-4BF7-ABBB-54EC27AF3426}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Database.LoraDB", "SharpMUSH.Database.LoraDB\SharpMUSH.Database.LoraDB.csproj", "{01E23D2E-BAA7-4D6C-AF41-8B360398727E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -333,6 +335,18 @@ Global
 		{017C71FE-76A4-4BF7-ABBB-54EC27AF3426}.Release|x64.Build.0 = Release|Any CPU
 		{017C71FE-76A4-4BF7-ABBB-54EC27AF3426}.Release|x86.ActiveCfg = Release|Any CPU
 		{017C71FE-76A4-4BF7-ABBB-54EC27AF3426}.Release|x86.Build.0 = Release|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Debug|x64.Build.0 = Debug|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Debug|x86.Build.0 = Debug|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Release|x64.ActiveCfg = Release|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Release|x64.Build.0 = Release|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Release|x86.ActiveCfg = Release|Any CPU
+		{01E23D2E-BAA7-4D6C-AF41-8B360398727E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

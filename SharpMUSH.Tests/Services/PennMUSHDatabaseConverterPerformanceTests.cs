@@ -71,10 +71,11 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			Console.WriteLine($"===========================");
 
 			// Performance assertions - should complete in reasonable time
-			// SurrealDB embedded in-memory is slower for bulk inserts than ArangoDB/Memgraph
+			// Embedded in-memory providers are slower for bulk inserts than ArangoDB/Memgraph
 			var dbProvider = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER") ?? "";
-			var isSurrealDb = dbProvider.Equals("surrealdb", StringComparison.OrdinalIgnoreCase);
-			var timeoutSeconds = isSurrealDb ? 120.0 : 60.0;
+			var isEmbeddedProvider = dbProvider.Equals("surrealdb", StringComparison.OrdinalIgnoreCase)
+			                         || dbProvider.Equals("loradb", StringComparison.OrdinalIgnoreCase);
+			var timeoutSeconds = isEmbeddedProvider ? 120.0 : 60.0;
 
 			// For a 10MB database, we expect parsing + conversion to complete within the timeout
 			var totalTime = parseStopwatch.Elapsed + convertStopwatch.Elapsed;

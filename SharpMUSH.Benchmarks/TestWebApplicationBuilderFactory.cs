@@ -42,6 +42,14 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 			if (!string.IsNullOrEmpty(memgraphUri))
 				Environment.SetEnvironmentVariable("MEMGRAPH_URI", memgraphUri);
 		}
+		else if (databaseProvider == DatabaseProvider.SurrealDB)
+		{
+			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "surrealdb");
+		}
+		else if (databaseProvider == DatabaseProvider.LoraDB)
+		{
+			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "loradb");
+		}
 		else
 		{
 			if (acnf is null)

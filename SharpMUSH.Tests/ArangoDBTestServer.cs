@@ -1,4 +1,5 @@
 using Testcontainers.ArangoDb;
+using SharpMUSH.Library.Definitions;
 using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests;
@@ -17,10 +18,10 @@ public class ArangoDbTestServer : IAsyncInitializer, IAsyncDisposable
 		.Build();
 
 	private static bool IsArangoEnabled =>
-		!string.Equals(
-			Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"),
-			"memgraph",
-			StringComparison.OrdinalIgnoreCase);
+		!DatabaseProviderSelector.TryResolve(
+			Environment.GetEnvironmentVariable(DatabaseProviderSelector.EnvironmentVariableName),
+			out var provider)
+		|| provider == DatabaseProvider.ArangoDB;
 
 	public async Task InitializeAsync()
 	{
