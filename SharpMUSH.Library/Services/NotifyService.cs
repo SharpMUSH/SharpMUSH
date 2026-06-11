@@ -268,8 +268,22 @@ public class NotifyService(
 		return new CallState(errorReturn);
 	}
 
+	/// <summary>
+	/// HTTP output capture for localized notifications: these resolve per-connection (locale),
+	/// so without this check a localized message to a connectionless http_handler would silently
+	/// vanish instead of joining the response body (e.g. @include's "No such attribute: …").
+	/// Captured text uses the neutral locale.
+	/// </summary>
+	private bool TryCaptureLocalized(DBRef who, string key, object[] args)
+		=> httpOutputCapture?.TryCapture(who.Number, localizationService.Format(key, null, args)) == true;
+
 	public async ValueTask NotifyLocalized(DBRef who, string key, params object[] args)
 	{
+		if (TryCaptureLocalized(who, key, args))
+		{
+			return;
+		}
+
 		await foreach (var conn in connections.Get(who))
 		{
 			conn.Metadata.TryGetValue("Locale", out var locale);
@@ -291,6 +305,11 @@ public class NotifyService(
 
 	public async ValueTask NotifyLocalized(DBRef who, string key, AnySharpObject? sender, params object[] args)
 	{
+		if (TryCaptureLocalized(who, key, args))
+		{
+			return;
+		}
+
 		await foreach (var conn in connections.Get(who))
 		{
 			conn.Metadata.TryGetValue("Locale", out var locale);
@@ -312,6 +331,15 @@ public class NotifyService(
 
 	public async ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args)
 	{
+		if (httpOutputCapture is not null)
+		{
+			var neutral = MarkupTemplateFormatter.Format(localizationService.Get(key, null), args);
+			if (httpOutputCapture.TryCapture(who.Number, MModule.plainText(neutral)))
+			{
+				return;
+			}
+		}
+
 		await foreach (var conn in connections.Get(who))
 		{
 			conn.Metadata.TryGetValue("Locale", out var locale);

@@ -53,7 +53,11 @@ public class DefaultHttpHandlerBootstrapService(
 		var god = godResult.Known;
 		var seeded = 0;
 
-		foreach (var (attribute, code) in DefaultProfileHandlerSoftcode.Attributes)
+		// Default HTTP verb routers (GET/POST/… — path→sub-attribute dispatch, see help sharphttp)
+		// plus the stock profile softcode.
+		var defaults = DefaultHttpVerbSoftcode.Attributes.Concat(DefaultProfileHandlerSoftcode.Attributes);
+
+		foreach (var (attribute, code) in defaults)
 		{
 			var existing = await attributeService.GetAttributeAsync(
 				god, handler, attribute, IAttributeService.AttributeMode.Execute, parent: false);
@@ -76,7 +80,7 @@ public class DefaultHttpHandlerBootstrapService(
 
 		if (seeded > 0)
 		{
-			logger.LogInformation("Seeded {Count} default HTTP`PROFILE`* attributes on #{HandlerDbRef}.", seeded, handlerDbRef.Value);
+			logger.LogInformation("Seeded {Count} default http_handler attributes on #{HandlerDbRef}.", seeded, handlerDbRef.Value);
 		}
 	}
 

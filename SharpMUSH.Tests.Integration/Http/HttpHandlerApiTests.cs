@@ -111,14 +111,58 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 		await Assert.That(body).Contains("\"ok\":true");
 	}
 
+	// NOTE on verb allocation: the bootstrap seeds default routers for GET/POST/PUT/DELETE/PATCH/
+	// HEAD at startup, the factory is shared per session, and TUnit runs tests in parallel — so
+	// each test owns a distinct verb attribute to avoid clobbering a concurrent test's seeding.
+
 	[Test]
 	public async Task UnseededMethod_Returns404()
 	{
-		// No DELETE attribute on the handler: SharpMUSH answers 404 (deliberate deviation from
-		// Penn's 200-empty; see help sharphttp HTTP2).
+		// TRACE is not among the seeded default verbs: SharpMUSH answers 404 for a missing
+		// <METHOD> attribute (deliberate deviation from Penn's 200-empty; see help sharphttp).
 		var http = factory.CreateHttpClient();
-		var response = await http.DeleteAsync("http/anything");
+		using var request = new HttpRequestMessage(HttpMethod.Trace, "http/anything");
+		var response = await http.SendAsync(request);
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+	}
+
+	[Test]
+	public async Task DefaultVerbHandler_RoutesPathToSubAttribute_WithFormRegisters()
+	{
+		// The stock router template works for ANY method name (REPORT keeps this test's verb
+		// private): REPORT /api/users?name=Joe+Smith ⇒ @include me/REPORT`API`USERS with
+		// %0 = query string, %1 = body, and formq()-decoded %q<form.*> registers ambient.
+		await SeedHandlerAttribute("REPORT", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("REPORT"));
+		await SeedHandlerAttribute("REPORT`API`USERS",
+			"think hello=[%q<form.name>] q=[%0] fields=[%q<fields>] path=[%q<path>]; @respond 200 Routed");
+
+		var http = factory.CreateHttpClient();
+		using var request = new HttpRequestMessage(new HttpMethod("REPORT"), "http/api/users?name=Joe+Smith&like=a&like=b");
+		var response = await http.SendAsync(request);
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		await Assert.That(response.ReasonPhrase ?? string.Empty).Contains("Routed");
+		await Assert.That(body).Contains("hello=Joe Smith");
+		await Assert.That(body).Contains("q=name=Joe+Smith&like=a&like=b");
+		await Assert.That(body).Contains("fields=NAME LIKE");
+		await Assert.That(body).Contains("path=api/users");
+	}
+
+	[Test]
+	public async Task DefaultVerbHandler_MissingRoute_IsPennRaw()
+	{
+		// Penn-raw by design: no existence guard, so an unrouted path returns 200 with @include's
+		// "No such attribute" error text in the body (what naive PennMUSH softcode would do).
+		await SeedHandlerAttribute("DELETE", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("DELETE"));
+
+		var http = factory.CreateHttpClient();
+		var response = await http.DeleteAsync("http/no/such/route");
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		// The engine reports a nonexistent attribute via @include's empty-attribute branch.
+		await Assert.That(body).Contains("Attribute DELETE`no`such`route is empty.");
 	}
 }

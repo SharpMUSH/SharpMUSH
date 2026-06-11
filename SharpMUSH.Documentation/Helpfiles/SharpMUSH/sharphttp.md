@@ -161,6 +161,65 @@ You say, "potato^cheese"
 You say, "name,hobby,like,like"
 ```
 
+**See Also:**
+- [formq()]
+
+# FORMQ()
+`formq(<string>[, <prefix>])`
+
+formq() decodes form-encoded data — an HTTP query string or a form-urlencoded body — and sets one **Q-register per parameter**, so HTTP handler softcode can read named parameters directly instead of calling [formdecode()] per field. This is a SharpMUSH extension; there is no PennMUSH equivalent.
+
+Each parameter becomes the register *<prefix><NAME>* (default prefix `FORM.`), so `?name=Joe` is readable as *%q<form.name>*. Names are normalized the same way HTTP header registers are (uppercased; anything outside `A-Z 0-9 _ . -` becomes `_`).
+
+Array parameters collapse into one %r-separated register, whichever way the client spells them: repeated names (`like=a&like=b`) and bracket arrays (`like[]=a&like[]=b`) both produce *%q<form.like>* containing `a%rb` — the same convention as duplicate HTTP headers in *%q<hdr.*>*. Bare tokens (`?debug` with no `=`) become registers with an empty value.
+
+formq() returns the space-separated list of normalized parameter names (without the prefix), mirroring *%q<headers>*.
+
+### Examples
+
+```sharp
+> think [setq(n,formq(name=Joe+Smith&like=a&like=b))]%q<n> / %q<form.name> / %q<form.like>
+NAME LIKE / Joe Smith / a
+b
+
+> think [null(formq(a=1,arg.))]%q<arg.a>
+1
+```
+
+The default HTTP verb handlers (see [http examples]) call formq() on the query string for you, so route sub-attributes can read *%q<form.*>* immediately.
+
+**See Also:**
+- [formdecode()]
+- [setq()]
+
+# HTTP ROUTING
+SharpMUSH seeds default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&PATCH`, `&HEAD`) onto the http_handler (#4) at first startup. They are seeded once and **never overwritten** — edit them freely.
+
+Each default verb attribute routes by URL path to a backtick-namespaced sub-attribute:
+
+```sharp
+GET /api/users?name=Joe+Smith   =>   @include me/GET`API`USERS=name=Joe+Smith,<body>
+```
+
+Before dispatching, the router sets:
+- *%q<path>* — the path with the leading slash, query string, and trailing slashes stripped (`api/users`)
+- *%q<params>* — the raw query string (`name=Joe+Smith`)
+- *%q<fields>* — the [formq()]-decoded parameter name list; each parameter is readable as *%q<form.*>*
+
+The sub-attribute receives *%0* = the raw query string and *%1* = the raw request body. The body is left raw on purpose — check *%q<hdr.content-type>* and use [formq()] or [json_query()] on *%1* as appropriate.
+
+To serve `GET /api/users`:
+
+```sharp
+> &GET`API`USERS #4=@respond/type application/json ; think json(object,hello,json(string,%q<form.name>))
+```
+
+There is deliberately no existence guard: a request whose path has no matching sub-attribute returns 200 with @include's error text as the body, exactly as naive PennMUSH softcode would behave. Add your own guard (e.g. `hasattr()` + `@respond 404 Not Found`) by editing the verb attributes if you want clean 404s.
+
+**See Also:**
+- [http]
+- [formq()]
+
 # HTTP EXAMPLES
 There are a number of HTTP Examples.
 

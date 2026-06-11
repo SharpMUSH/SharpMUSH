@@ -83,6 +83,7 @@ public static class TestHelpers
 	public static INotifyService CreateNotifyServiceSubstitute()
 	{
 		var capture = new SharpMUSH.Library.Services.HttpOutputCapture();
+		var localization = new SharpMUSH.Library.Services.LocalizationService();
 		var notifier = Substitute.For<INotifyService>();
 
 		notifier
@@ -100,6 +101,32 @@ public static class TestHelpers
 			.Do(call => capture.TryCapture(
 				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
 				PlainText(call.ArgAt<OneOf<MString, string>>(1))));
+
+		// Localized notifications (e.g. @include's "No such attribute: …") must also reach the
+		// HTTP capture, mirroring the real NotifyService — formatted with the neutral locale.
+		notifier
+			.When(x => x.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<object[]>()))
+			.Do(call => capture.TryCapture(
+				call.ArgAt<DBRef>(0).Number,
+				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
+
+		notifier
+			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<object[]>()))
+			.Do(call => capture.TryCapture(
+				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
+				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
+
+		notifier
+			.When(x => x.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
+			.Do(call => capture.TryCapture(
+				call.ArgAt<DBRef>(0).Number,
+				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
+
+		notifier
+			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
+			.Do(call => capture.TryCapture(
+				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
+				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
 
 		return notifier;
 	}

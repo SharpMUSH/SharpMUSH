@@ -260,16 +260,17 @@ You say, "is"
 | [condall()]      | [decode64()]     | [decompose()]    | [decrypt()]      |
 | [digest()]       | [edit()]         | [encode64()]     | [encrypt()]      |
 | [escape()]       | [flip()]         | [foreach()]      | [formdecode()]   |
-| [hmac()]         | [if()]           | [ifelse()]       | [lcstr()]        |
-| [left()]         | [lit()]          | [ljust()]        | [lpos()]         |
-| [merge()]        | [mid()]          | [ord()]          | [ordinal()]      |
-| [pos()]          | [regedit()]      | [regmatch()]     | [repeat()]       |
-| [right()]        | [rjust()]        | [scramble()]     | [secure()]       |
-| [space()]        | [spellnum()]     | [squish()]       | [strallof()]     |
-| [strcat()]       | [strdelete()]    | [strfirstof()]   | [strinsert()]    |
-| [stripaccents()] | [stripansi()]    | [strlen()]       | [strmatch()]     |
-| [strreplace()]   | [switch()]       | [tr()]           | [trim()]         |
-| [ucstr()]        | [urldecode()]    | [urlencode()]    | [wrap()]         |
+| [formq()]        | [hmac()]         | [if()]           | [ifelse()]       |
+| [lcstr()]        | [left()]         | [lit()]          | [ljust()]        |
+| [lpos()]         | [merge()]        | [mid()]          | [ord()]          |
+| [ordinal()]      | [pos()]          | [regedit()]      | [regmatch()]     |
+| [repeat()]       | [right()]        | [rjust()]        | [scramble()]     |
+| [secure()]       | [space()]        | [spellnum()]     | [squish()]       |
+| [strallof()]     | [strcat()]       | [strdelete()]    | [strfirstof()]   |
+| [strinsert()]    | [stripaccents()] | [stripansi()]    | [strlen()]       |
+| [strmatch()]     | [strreplace()]   | [switch()]       | [tr()]           |
+| [trim()]         | [ucstr()]        | [urldecode()]    | [urlencode()]    |
+| [wrap()]         |                  |                  |                  |
 
 **See Also:**
 - [STRINGS]

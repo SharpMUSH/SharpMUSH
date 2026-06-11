@@ -125,7 +125,7 @@ public class HttpHandlerCommandService(
 
 		foreach (var (name, value) in headers)
 		{
-			var normalized = NormalizeHeaderKey(name);
+			var normalized = Utilities.RegisterNames.NormalizeSegment(name);
 			if (normalized.Length == 0)
 			{
 				continue;
@@ -145,21 +145,6 @@ public class HttpHandlerCommandService(
 
 		registers["HEADERS"] = MModule.single(string.Join(' ', names));
 		return registers;
-	}
-
-	/// <summary>
-	/// Normalizes a header name into a q-register-acceptable key (Penn's <c>pi_regs_normalize_key</c>):
-	/// uppercased, with anything outside [A-Z0-9_.-] replaced by an underscore.
-	/// </summary>
-	private static string NormalizeHeaderKey(string name)
-	{
-		var builder = new StringBuilder(name.Length);
-		foreach (var c in name.ToUpperInvariant())
-		{
-			builder.Append(c is (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '_' or '.' or '-' ? c : '_');
-		}
-
-		return builder.ToString();
 	}
 
 	/// <summary>
