@@ -240,7 +240,12 @@ public partial class LocateService(
 			match = maybeMatch is null
 				? new None()
 				: maybeMatch;
-			if (maybeMatch is not null && flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
+			// A player-name match is GLOBAL — pmatch(name) resolves any player by name, regardless of
+			// whether they are near the looker. Returning the found player must NOT require
+			// MatchObjectsInLookerInventory (which pmatch does not set); gating on it dropped the match
+			// and fell through to location matching, so pmatch failed for any player not co-located with
+			// the looker (e.g. the profile http_handler #4 matching God).
+			if (maybeMatch is not null)
 			{
 				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
 						|| await looker.HasLongFingers()
@@ -257,7 +262,10 @@ public partial class LocateService(
 					return new Error<string>(ErrorMessages.Returns.PermissionDenied);
 				}
 
-				bestMatch = match;
+				// Location-restricted and not nearby: keep as a fallback only when inventory matching
+				// was requested, preserving prior behavior for non-inventory location-restricted callers.
+				if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
+					bestMatch = match;
 			}
 		}
 
