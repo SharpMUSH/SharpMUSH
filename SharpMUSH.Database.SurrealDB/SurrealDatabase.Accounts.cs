@@ -1,24 +1,24 @@
 using SharpMUSH.Library.Models;
 using SurrealDb.Net;
 using SurrealDb.Net.Models;
-using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Database.SurrealDB;
 
-internal record AccountCharacterRef(
-	[property: JsonPropertyName("dbref")] int Dbref
-);
+// SurrealDb.Net deserializes by exact (case-sensitive) field name and does NOT honor
+// [JsonPropertyName]; record property names must match the stored camelCase fields
+// verbatim, exactly as ObjectRecord/PlayerRecord do.
+internal record AccountCharacterRef(int dbref);
 
 internal class AccountDbRecord : Record
 {
-	[JsonPropertyName("username")] public string Username { get; set; } = "";
-	[JsonPropertyName("email")] public string? Email { get; set; }
-	[JsonPropertyName("passwordHash")] public string PasswordHash { get; set; } = "";
-	[JsonPropertyName("createdAt")] public long CreatedAt { get; set; }
-	[JsonPropertyName("updatedAt")] public long UpdatedAt { get; set; }
-	[JsonPropertyName("isVerified")] public bool IsVerified { get; set; }
-	[JsonPropertyName("mustChangePassword")] public bool MustChangePassword { get; set; }
-	[JsonPropertyName("isDisabled")] public bool IsDisabled { get; set; }
+	public string username { get; set; } = "";
+	public string? email { get; set; }
+	public string passwordHash { get; set; } = "";
+	public long createdAt { get; set; }
+	public long updatedAt { get; set; }
+	public bool isVerified { get; set; }
+	public bool mustChangePassword { get; set; }
+	public bool isDisabled { get; set; }
 }
 
 public partial class SurrealDatabase
@@ -122,7 +122,7 @@ CREATE account CONTENT {
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var parameters = new Dictionary<string, object?> { ["accountId"] = new StringRecordId(key), ["dbref"] = characterRef.Number, ["now"] = now };
 		await ExecuteAsync("""
-LET $p = (SELECT id FROM player WHERE object.key = $dbref)[0].id;
+LET $p = (SELECT id FROM player WHERE key = $dbref)[0].id;
 RELATE $accountId->account_owns_character->$p SET createdAt = $now
 """, parameters, cancellationToken);
 	}
@@ -132,7 +132,7 @@ RELATE $accountId->account_owns_character->$p SET createdAt = $now
 		var key = NormalizeSurrealId(accountId, "account");
 		var parameters = new Dictionary<string, object?> { ["accountId"] = new StringRecordId(key), ["dbref"] = characterRef.Number };
 		await ExecuteAsync("""
-DELETE account_owns_character WHERE in = $accountId AND out.object.key = $dbref
+DELETE account_owns_character WHERE in = $accountId AND out.key = $dbref
 """, parameters, cancellationToken);
 	}
 
@@ -141,14 +141,14 @@ DELETE account_owns_character WHERE in = $accountId AND out.object.key = $dbref
 		var key = NormalizeSurrealId(accountId, "account");
 		var parameters = new Dictionary<string, object?> { ["accountId"] = new StringRecordId(key) };
 		var response = await ExecuteAsync("""
-SELECT out.object.key AS dbref FROM account_owns_character WHERE in = $accountId
+SELECT out.key AS dbref FROM account_owns_character WHERE in = $accountId
 """, parameters, cancellationToken);
 
 		var records = response.GetValue<List<AccountCharacterRef>>(0) ?? [];
 		var players = new List<SharpPlayer>();
 		foreach (var record in records)
 		{
-			var obj = await GetObjectNodeAsync(new DBRef(record.Dbref), cancellationToken);
+			var obj = await GetObjectNodeAsync(new DBRef(record.dbref), cancellationToken);
 			if (obj.IsPlayer)
 				players.Add(obj.AsPlayer);
 		}
@@ -160,7 +160,7 @@ SELECT out.object.key AS dbref FROM account_owns_character WHERE in = $accountId
 		var parameters = new Dictionary<string, object?> { ["dbref"] = characterRef.Number };
 		var response = await ExecuteAsync("""
 SELECT in.id AS id, in.username AS username, in.email AS email, in.passwordHash AS passwordHash, in.createdAt AS createdAt, in.updatedAt AS updatedAt, in.isVerified AS isVerified, in.mustChangePassword AS mustChangePassword, in.isDisabled AS isDisabled
-FROM account_owns_character WHERE out.object.key = $dbref
+FROM account_owns_character WHERE out.key = $dbref
 """, parameters, cancellationToken);
 		var results = response.GetValue<List<AccountDbRecord>>(0);
 		return results?.Count > 0 ? MapRecordToAccount(results[0]) : null;
@@ -169,14 +169,14 @@ FROM account_owns_character WHERE out.object.key = $dbref
 	private static SharpAccount MapRecordToAccount(AccountDbRecord rec) => new()
 	{
 		Id = NormalizeAccountId(rec.Id),
-		Username = rec.Username,
-		Email = rec.Email,
-		PasswordHash = rec.PasswordHash,
-		CreatedAt = rec.CreatedAt,
-		UpdatedAt = rec.UpdatedAt,
-		IsVerified = rec.IsVerified,
-		MustChangePassword = rec.MustChangePassword,
-		IsDisabled = rec.IsDisabled
+		Username = rec.username,
+		Email = rec.email,
+		PasswordHash = rec.passwordHash,
+		CreatedAt = rec.createdAt,
+		UpdatedAt = rec.updatedAt,
+		IsVerified = rec.isVerified,
+		MustChangePassword = rec.mustChangePassword,
+		IsDisabled = rec.isDisabled
 	};
 
 	private static string NormalizeAccountId(RecordId? id)

@@ -1,0 +1,99 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Services
+@inject ProfileService Profiles
+@inject IStringLocalizer<SharedResource> Loc
+
+<div class="character-header-widget">
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_data is null || _data.Status >= 400)
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+            @(_data?.Error ?? Loc["ProfileUnavailable"])
+        </MudAlert>
+    }
+    else
+    {
+        <MudText Typo="Typo.h4" Class="mb-1">@(_data.Character ?? CharacterName)</MudText>
+        @if (!string.IsNullOrEmpty(_data.Dbref))
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">@_data.Dbref</MudText>
+        }
+
+        @foreach (var section in VisibleSections)
+        {
+            <MudPaper Outlined="true" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">@section.Name</MudText>
+                <MudSimpleTable Dense="true" Hover="false" Bordered="false" Striped="true" Elevation="0">
+                    <tbody>
+                        @foreach (var field in VisibleFields(section))
+                        {
+                            <tr>
+                                <td style="width:35%;font-weight:600;vertical-align:top;">@field.Label</td>
+                                <td>@RenderValue(field)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>Character whose profile to render. Falls back to the <c>character</c> key in <see cref="Config"/>.</summary>
+    [Parameter] public string? CharacterName { get; set; }
+
+    [Parameter] public JsonElement? Config { get; set; }
+    [Parameter] public string Zone { get; set; } = string.Empty;
+
+    private ProfileService.ProfileSchema? _schema;
+    private ProfileService.ProfileData? _data;
+    private bool _loading = true;
+    private string? _resolvedName;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var name = CharacterName ?? ConfigCharacter();
+        if (string.IsNullOrWhiteSpace(name) || name == _resolvedName)
+        {
+            return;
+        }
+
+        _resolvedName = name;
+        _loading = true;
+        _schema = await Profiles.GetSchemaAsync();
+        _data = await Profiles.GetProfileAsync(name);
+        _loading = false;
+    }
+
+    private string? ConfigCharacter()
+    {
+        if (Config is { } cfg && cfg.ValueKind == JsonValueKind.Object
+            && cfg.TryGetProperty("character", out var prop) && prop.ValueKind == JsonValueKind.String)
+        {
+            return prop.GetString();
+        }
+        return null;
+    }
+
+    // Only sections that have at least one visible field with a value.
+    private IEnumerable<ProfileService.SectionSchema> VisibleSections =>
+        (_schema?.Sections ?? [])
+            .OrderBy(s => s.Order)
+            .Where(s => VisibleFields(s).Any());
+
+    private IEnumerable<ProfileService.FieldSchema> VisibleFields(ProfileService.SectionSchema section) =>
+        (section.Fields ?? [])
+            .Where(f => _data?.Fields is not null
+                        && _data.Fields.TryGetValue(f.Key, out var v)
+                        && v.Visible
+                        && !string.IsNullOrEmpty(v.Value));
+
+    private string RenderValue(ProfileService.FieldSchema field)
+        => _data?.Fields is not null && _data.Fields.TryGetValue(field.Key, out var v)
+            ? v.Value ?? string.Empty
+            : string.Empty;
+}

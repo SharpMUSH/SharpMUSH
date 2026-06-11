@@ -79,7 +79,7 @@ These '@' commands are general utility and programming commands:
 | [@pemit]     | [@prompt]    | [@ps]        | [@remit]     | [@restart]   |
 | [@scan]      | [@search]    | [@select]    | [@stats]     | [@sweep]     |
 | [@switch]    | [@teleport]  | [@trigger]   | [@verb]      | [@version]   |
-| [@wait]      | [@whereis]   | [@zemit]     |              |              |
+| [@wait]      | [@whereis]   | [@wiki]      | [@zemit]     |              |
 
 # @-WIZARD
 These '@' commands are only usable by wizards or privileged players:

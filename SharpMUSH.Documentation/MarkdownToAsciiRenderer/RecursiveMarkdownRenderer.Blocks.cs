@@ -1,3 +1,4 @@
+using Markdig.Extensions.CustomContainers;
 using Markdig.Syntax;
 using MarkupString;
 using SharpMUSH.MarkupString;
@@ -93,6 +94,38 @@ public partial class RecursiveMarkdownRenderer
 
 	private MString RenderThematicBreak()
 		=> MModule.MarkupSingle(_dimStyle, string.Concat(Enumerable.Repeat("-", _maxWidth)));
+
+	/// <summary>Wiki directive names that render live listings on the web portal.</summary>
+	private static readonly HashSet<string> WikiDirectiveNames =
+		new(StringComparer.OrdinalIgnoreCase) { "category", "tag", "pagelist", "recent" };
+
+	/// <summary>
+	/// Renders a <c>::: name args</c> custom container. The wiki's directive blocks
+	/// (category/tag/pagelist/recent) are live web-portal listings that a terminal
+	/// cannot resolve, so they render as a dimmed placeholder describing the listing.
+	/// Any other custom container renders its children like a normal block.
+	/// </summary>
+	protected virtual MString RenderCustomContainer(CustomContainer container)
+	{
+		// Depending on trivia tracking, Markdig may put the whole fence line in Info
+		// or split it across Info/Arguments — normalise to "name" + "rest".
+		var fenceLine = $"{container.Info} {container.Arguments}".Trim();
+		var tokens = fenceLine.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		var name = tokens.Length > 0 ? tokens[0] : string.Empty;
+
+		if (WikiDirectiveNames.Contains(name))
+		{
+			var arg = tokens.Length > 1 ? tokens[1] : string.Empty;
+			var label = string.IsNullOrEmpty(arg) ? name : $"{name} {arg}";
+			return MModule.MarkupSingle(_dimStyle, $"[live listing: {label} — see the web portal]");
+		}
+
+		var parts = container
+			.Select(child => Render(child))
+			.Where(IsNonWhitespace)
+			.ToList();
+		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+	}
 
 	private MString RenderHtmlBlock(HtmlBlock html)
 	{

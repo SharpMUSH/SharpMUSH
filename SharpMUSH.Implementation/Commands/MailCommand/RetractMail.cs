@@ -35,7 +35,7 @@ public static class RetractMail
 		{
 			if (!mail.Fresh)
 			{
-				await notifyService.Notify(executor, "MAIL: Mail already read.");
+				await notifyService.Notify(executor, "MAIL: Mail already read.", executor);
 				continue;
 			}
 

@@ -1,10 +1,14 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services
+@using System.Net
+@using System.Text.RegularExpressions
 @inject WikiMarkdigPipeline Pipeline
+@inject WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
+@inject IDialogService DialogService
 
-<MudCard Class="WikiContent" Style=@Style Elevation="0">
+<MudCard Class="@CssClass" Style=@Style Elevation="0">
     @if (Article is not null)
     {
         <MudCardHeader>
@@ -16,7 +20,7 @@
                 <Authorized>
                     <MudSpacer />
                     <MudIconButton Edge="Edge.End" OnClick="@ActivateEditMode" Icon="@Icons.Material.Filled.Edit" Color=Color.Secondary Ripple=true />
-                    <MudIconButton Edge="Edge.End" Icon="@Icons.Material.Filled.History" Color=Color.Secondary Ripple=true />
+                    <MudIconButton Edge="Edge.End" OnClick="@OpenHistoryDialog" Icon="@Icons.Material.Filled.History" Color=Color.Secondary Ripple=true />
                 </Authorized>
             </AuthorizeView>
         </MudCardHeader>
@@ -28,7 +32,17 @@
         }
         @if (Article is not null)
         {
-            @MarkdownHtml
+            @foreach (var segment in _segments)
+            {
+                @if (segment.Directive is not null)
+                {
+                    <WikiDirectiveBlock Directive="@segment.Directive" Arg="@segment.Arg" />
+                }
+                else
+                {
+                    @((MarkupString)segment.Html)
+                }
+            }
         }
         else
         {
@@ -36,7 +50,9 @@
                 <AuthorizeView>
                     <Authorized>
                         <MudText>@Loc["WikiPageNotExist"]</MudText>
-                        <MudButton EndIcon="@Icons.Material.Filled.Create" Color=Color.Secondary Ripple=true>@Loc["CreateThisPage"]</MudButton>
+                        <MudButton EndIcon="@Icons.Material.Filled.Create" Color=Color.Secondary Ripple=true
+                                   Style="text-transform: none;"
+                                   OnClick="@ActivateEditMode">@Loc["CreateThisPage"]</MudButton>
                     </Authorized>
                     <NotAuthorized>
                         <MudText>@Loc["NothingToSeeHere"]</MudText>
@@ -51,15 +67,49 @@
     [Parameter]
     public required string Slug { get; init; }
 
+    /// <summary>Wiki namespace (e.g. "help"); null means the Main namespace.</summary>
+    [Parameter]
+    public string? Namespace { get; init; }
+
+    /// <summary>Category segment — part of the page's identity.</summary>
+    [Parameter]
+    public string? Category { get; init; }
+
     [Parameter]
     public WikiArticle? Article { get; init; }
 
     [Parameter]
     public required Func<Task> ActivateEditMode { get; init; }
 
-    MarkupString MarkdownHtml;
+    /// <summary>Raised after a successful rollback from the history dialog so the
+    /// parent view can swap in the restored article.</summary>
+    [Parameter]
+    public EventCallback<WikiArticle> OnArticleRestored { get; init; }
 
-    protected override void OnParametersSet()
+    /// <summary>
+    /// One renderable chunk of the article body: either raw HTML, or a dynamic
+    /// directive placeholder (when <c>Directive</c> is non-null).
+    /// </summary>
+    private sealed record BodySegment(string Html, string? Directive = null, string Arg = "");
+
+    /// <summary>
+    /// Matches the placeholder divs emitted by WikiDirectiveExtension at render time:
+    /// &lt;div class="wiki-directive" data-directive="…" data-arg="…"&gt;&lt;/div&gt;
+    /// </summary>
+    private static readonly Regex DirectivePlaceholder = new(
+        "<div class=\"wiki-directive\" data-directive=\"([a-z]+)\" data-arg=\"([^\"]*)\"></div>",
+        RegexOptions.Compiled);
+
+    /// <summary>Matches internal wiki links in rendered HTML; group 1 is the
+    /// URL-path ref ("slug" or "ns/slug"). Anchors, queries, and external URLs
+    /// never match because of the excluded characters.</summary>
+    private static readonly Regex WikiLinkHref = new(
+        "<a href=\"/wiki/([^\"#?]+)\">",
+        RegexOptions.Compiled);
+
+    private List<BodySegment> _segments = [];
+
+    protected override async Task OnParametersSetAsync()
     {
         // Prefer the pre-rendered HTML cached on the article (produced at write time by
         // IWikiService).  Fall back to rendering the raw markdown source via the shared
@@ -67,11 +117,106 @@
         var html = Article?.RenderedHtml
                    ?? (Article is not null ? Pipeline.RenderToHtml(Article.Content) : string.Empty);
 
-        MarkdownHtml = (MarkupString)html;
-        base.OnParametersSet();
+        // Render immediately, then mark redlinks once the existence check returns.
+        _segments = SplitOnDirectives(html);
+
+        var marked = await MarkRedlinksAsync(html);
+        if (marked != html)
+        {
+            _segments = SplitOnDirectives(marked);
+        }
+    }
+
+    /// <summary>
+    /// Tags internal links to nonexistent pages with the wiki-redlink class.
+    /// Existence is resolved at VIEW time (one batched API call) rather than baked
+    /// into the stored HTML, so links un-redden the moment the target is created.
+    /// Failures leave the HTML untouched.
+    /// </summary>
+    private async Task<string> MarkRedlinksAsync(string html)
+    {
+        var refs = WikiLinkHref.Matches(html)
+            .Select(m => m.Groups[1].Value)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (refs.Count == 0) return html;
+
+        var exists = await Wiki.CheckExistsAsync(refs.Select(WebUtility.HtmlDecode)!);
+        foreach (var reference in refs)
+        {
+            var decoded = WebUtility.HtmlDecode(reference);
+            if (exists.TryGetValue(decoded, out var found) && !found)
+            {
+                html = html.Replace(
+                    $"<a href=\"/wiki/{reference}\">",
+                    $"<a href=\"/wiki/{reference}\" class=\"wiki-redlink\">");
+            }
+        }
+
+        return html;
+    }
+
+    /// <summary>
+    /// Splits rendered article HTML on wiki-directive placeholders so the static
+    /// chunks render as raw markup while each directive becomes a live component.
+    /// </summary>
+    private static List<BodySegment> SplitOnDirectives(string html)
+    {
+        var segments = new List<BodySegment>();
+        var position = 0;
+
+        foreach (Match match in DirectivePlaceholder.Matches(html))
+        {
+            if (match.Index > position)
+            {
+                segments.Add(new BodySegment(html[position..match.Index]));
+            }
+
+            segments.Add(new BodySegment(
+                Html: string.Empty,
+                Directive: match.Groups[1].Value,
+                Arg: WebUtility.HtmlDecode(match.Groups[2].Value)));
+
+            position = match.Index + match.Length;
+        }
+
+        if (position < html.Length)
+        {
+            segments.Add(new BodySegment(html[position..]));
+        }
+
+        return segments;
     }
 
     private bool DisplayAsHero => Slug.Equals("home", StringComparison.InvariantCultureIgnoreCase);
 
+    private string CssClass => DisplayAsHero ? "WikiContent WikiContent--hero" : "WikiContent";
+
     private string Style => $"min-height: calc(100vh - var(--mud-appbar-height)); {(DisplayAsHero ? "background:inherit; text-align:center;" : string.Empty)}";
+
+    private async Task OpenHistoryDialog()
+    {
+        var parameters = new DialogParameters<WikiHistoryDialog>
+        {
+            { x => x.Slug, Slug },
+            { x => x.Namespace, Namespace },
+            { x => x.Category, Category },
+            { x => x.CurrentMarkdown, Article?.Content }
+        };
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true,
+            BackdropClick = true
+        };
+        var dialog = await DialogService.ShowAsync<WikiHistoryDialog>($"History: {Slug}", parameters, options);
+        var result = await dialog.Result;
+
+        // The dialog returns the restored article when a rollback succeeded.
+        if (result is { Canceled: false, Data: WikiArticle restored })
+        {
+            await OnArticleRestored.InvokeAsync(restored);
+        }
+    }
 }

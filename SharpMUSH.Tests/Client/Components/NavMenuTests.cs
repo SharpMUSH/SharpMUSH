@@ -5,14 +5,69 @@ namespace SharpMUSH.Tests.Client.Components;
 
 /// <summary>
 /// Tests for the NavMenu component to verify navigation menu behavior.
+/// NavMenu defaults to collapsed (icon-only) mode; expanded mode is opt-in
+/// via <c>IsCollapsed="false"</c>.
 /// </summary>
 public class NavMenuTests : MudBlazorTestContext
 {
+	private IRenderedComponent<NavMenu> RenderExpanded() =>
+		Render<NavMenu>(parameters => parameters.Add(p => p.IsCollapsed, false));
+
+	// ── Default (collapsed) mode ─────────────────────────────────────────────
+
 	[Test]
-	public async Task NavMenu_RendersAllNavigationLinks()
+	public async Task NavMenu_Default_IsCollapsed_RendersIconOnlyLinks()
+	{
+		// Arrange & Act — no parameters: collapsed by default
+		var cut = Render<NavMenu>();
+
+		// Assert - Core links are present but render without text labels
+		var homeLink = cut.Find("a[href='/']");
+		var softcodeLink = cut.Find("a[href='/softcode']");
+		var accountLink = cut.Find("a[href='/account']");
+
+		await Assert.That(homeLink.TextContent.Trim()).IsEmpty();
+		await Assert.That(softcodeLink.TextContent.Trim()).IsEmpty();
+		await Assert.That(accountLink.TextContent.Trim()).IsEmpty();
+	}
+
+	[Test]
+	public async Task NavMenu_Default_IsCollapsed_ShowsAdminLinksAsIconsWithoutGroup()
 	{
 		// Arrange & Act
 		var cut = Render<NavMenu>();
+
+		// Assert - Collapsed mode renders the admin destinations as icon-only links
+		// (feature-equivalent with the expanded group) but without text labels.
+		var configLink = cut.Find("a[href='/admin/config']");
+		await Assert.That(configLink.TextContent.Trim()).IsEmpty();
+
+		// Every admin destination remains reachable when collapsed (the default mode).
+		await Assert.That(cut.FindAll("a[href='/admin/profiles']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/admin/suggestions']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/security']").Count).IsEqualTo(1);
+
+		// The expandable group header (h6 AdminPanel title) is not rendered when collapsed.
+		await Assert.That(cut.FindAll("h6").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task NavMenu_Default_IsCollapsed_HidesAppTitle()
+	{
+		// Arrange & Act
+		var cut = Render<NavMenu>();
+
+		// Assert - The header block (AppTitle / AdminPanel) only renders expanded
+		await Assert.That(cut.FindAll("h6").Count).IsEqualTo(0);
+	}
+
+	// ── Expanded mode ────────────────────────────────────────────────────────
+
+	[Test]
+	public async Task NavMenu_Expanded_RendersAllNavigationLinks()
+	{
+		// Arrange & Act
+		var cut = RenderExpanded();
 
 		// Assert - Verify all expected navigation links are present
 		var homeLink = cut.Find("a[href='/']");
@@ -25,10 +80,10 @@ public class NavMenuTests : MudBlazorTestContext
 	}
 
 	[Test]
-	public async Task NavMenu_HomeLinkText_IsCorrect()
+	public async Task NavMenu_Expanded_HomeLinkText_IsCorrect()
 	{
 		// Arrange & Act
-		var cut = Render<NavMenu>();
+		var cut = RenderExpanded();
 
 		// Assert
 		var homeLink = cut.Find("a[href='/']");
@@ -36,10 +91,10 @@ public class NavMenuTests : MudBlazorTestContext
 	}
 
 	[Test]
-	public async Task NavMenu_SoftcodeLinkText_IsCorrect()
+	public async Task NavMenu_Expanded_SoftcodeLinkText_IsCorrect()
 	{
 		// Arrange & Act
-		var cut = Render<NavMenu>();
+		var cut = RenderExpanded();
 
 		// Assert
 		var softcodeLink = cut.Find("a[href='/softcode']");
@@ -47,10 +102,10 @@ public class NavMenuTests : MudBlazorTestContext
 	}
 
 	[Test]
-	public async Task NavMenu_AccountLinkText_IsCorrect()
+	public async Task NavMenu_Expanded_AccountLinkText_IsCorrect()
 	{
 		// Arrange & Act
-		var cut = Render<NavMenu>();
+		var cut = RenderExpanded();
 
 		// Assert
 		var accountLink = cut.Find("a[href='/account']");
@@ -58,10 +113,10 @@ public class NavMenuTests : MudBlazorTestContext
 	}
 
 	[Test]
-	public async Task NavMenu_SettingsGroupExists()
+	public async Task NavMenu_Expanded_SettingsGroupExists()
 	{
 		// Arrange & Act
-		var cut = Render<NavMenu>();
+		var cut = RenderExpanded();
 
 		// Assert - Verify Settings group with Config link exists
 		var configLink = cut.Find("a[href='/admin/config']");
@@ -70,10 +125,10 @@ public class NavMenuTests : MudBlazorTestContext
 	}
 
 	[Test]
-	public async Task NavMenu_SecurityLinkExists()
+	public async Task NavMenu_Expanded_SecurityLinkExists()
 	{
 		// Arrange & Act
-		var cut = Render<NavMenu>();
+		var cut = RenderExpanded();
 
 		// Assert
 		var securityLink = cut.Find("a[href='/security']");

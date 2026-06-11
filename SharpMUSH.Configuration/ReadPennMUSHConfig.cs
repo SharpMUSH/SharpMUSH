@@ -123,8 +123,11 @@ public static partial class ReadPennMushConfig
 				DatabaseReference(Get(nameof(DatabaseOptions.AncestorExit)), null),
 				DatabaseReference(Get(nameof(DatabaseOptions.AncestorThing)), null),
 				DatabaseReference(Get(nameof(DatabaseOptions.AncestorPlayer)), null),
-				DatabaseReference(Get(nameof(DatabaseOptions.EventHandler)), null),
-				DatabaseReference(Get(nameof(DatabaseOptions.HttpHandler)), null),
+				// Default to the system objects seeded by Migration_CreateDatabase:
+				// #3 Package Manager, #4 HTTP Handler, #5 Event Handler. Matches OptionsService.Default().
+				DatabaseReference(Get(nameof(DatabaseOptions.EventHandler)), 5u),
+				DatabaseReference(Get(nameof(DatabaseOptions.HttpHandler)), 4u),
+				DatabaseReference(Get(nameof(DatabaseOptions.PackageManager)), 3u),
 				UnsignedInteger(Get(nameof(DatabaseOptions.HttpRequestsPerSecond)), 30)
 			),
 			Dump = new DumpOptions(

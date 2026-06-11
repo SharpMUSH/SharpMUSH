@@ -1,0 +1,13 @@
+{
+	"permissions": {
+		"allow": [
+			"Bash(dotnet build *)",
+			"Bash(dotnet run --project SharpMUSH.Tests *)",
+			"Bash(dotnet run --project SharpMUSH.Tests)",
+			"Bash(dotnet run --project SharpMUSH.Tests.Integration *)",
+			"Bash(dotnet run --project SharpMUSH.Tests.Integration)",
+			"Bash(dotnet run --project SharpMUSH.Tests.BUnit *)",
+			"Bash(dotnet run --project SharpMUSH.Tests.BUnit)"
+		]
+	}
+}

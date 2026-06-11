@@ -116,6 +116,58 @@ public class InMemoryWikiServiceTests
 		await Assert.That(main.Id).IsNotEqualTo(help.Id);
 	}
 
+	[Test]
+	public async Task CreateAsync_SameSlugDifferentCategory_Succeeds()
+	{
+		// Category is part of identity, so the same slug may live in different categories.
+		var svc = BuildService();
+		var lore = (await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "lore")).AsT0;
+		var rules = (await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "rules")).AsT0;
+
+		await Assert.That(lore.Id).IsNotEqualTo(rules.Id);
+		await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).AsT0.Id).IsEqualTo(lore.Id);
+		await Assert.That((await svc.GetBySlugAsync("dragons", "rules", WikiNamespace.Main)).AsT0.Id).IsEqualTo(rules.Id);
+	}
+
+	[Test]
+	public async Task CreateAsync_SameSlugSameCategory_ReturnsError()
+	{
+		var svc = BuildService();
+		await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "lore");
+
+		var result = await svc.CreateAsync("Dragons", "more", "#1", WikiNamespace.Main, "lore");
+
+		await Assert.That(result.IsT1).IsTrue();
+	}
+
+	[Test]
+	public async Task SetMetadata_ChangingCategory_RekeysPage()
+	{
+		var svc = BuildService();
+		var page = (await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "lore")).AsT0;
+
+		await svc.SetMetadataAsync(page.Id, "rules", [], true);
+
+		// Now reachable under the new category, and no longer under the old one.
+		await Assert.That((await svc.GetBySlugAsync("dragons", "rules", WikiNamespace.Main)).IsT0).IsTrue();
+		await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).IsT1).IsTrue();
+	}
+
+	[Test]
+	public async Task SetMetadata_ChangingCategoryToExisting_IsRejected()
+	{
+		var svc = BuildService();
+		var lore = (await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "lore")).AsT0;
+		await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "rules");
+
+		// Moving the lore page into "rules" would collide with the existing rules page.
+		var result = await svc.SetMetadataAsync(lore.Id, "rules", [], true);
+
+		await Assert.That(result.IsT1).IsTrue();
+		// The original page is untouched and still in "lore".
+		await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).AsT0.Id).IsEqualTo(lore.Id);
+	}
+
 	// ── GetBySlugAsync ────────────────────────────────────────────────────────
 
 	[Test]
@@ -125,7 +177,7 @@ public class InMemoryWikiServiceTests
 		var created = await CreatePageAsync(svc, title: "Find Me");
 
 		// Slug generated from title: "find_me"
-		var result = await svc.GetBySlugAsync("find_me", WikiNamespace.Main);
+		var result = await svc.GetBySlugAsync("find_me", "general", WikiNamespace.Main);
 
 		await Assert.That(result.IsT0).IsTrue();
 		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
@@ -135,7 +187,7 @@ public class InMemoryWikiServiceTests
 	public async Task GetBySlugAsync_MissingSlug_ReturnsNotFound()
 	{
 		var svc = BuildService();
-		var result = await svc.GetBySlugAsync("nonexistent", WikiNamespace.Main);
+		var result = await svc.GetBySlugAsync("nonexistent", "general", WikiNamespace.Main);
 
 		await Assert.That(result.IsT1).IsTrue();
 	}
@@ -147,7 +199,7 @@ public class InMemoryWikiServiceTests
 		await CreatePageAsync(svc, title: "Ns Test", ns: WikiNamespace.Main);
 
 		// "ns_test" exists in Main but not in Help
-		var result = await svc.GetBySlugAsync("ns_test", WikiNamespace.Help);
+		var result = await svc.GetBySlugAsync("ns_test", "general", WikiNamespace.Help);
 
 		await Assert.That(result.IsT1).IsTrue();
 	}
@@ -392,7 +444,7 @@ public class InMemoryWikiServiceTests
 		var created = await CreatePageAsync(svc, markdown: "**original**");
 
 		// Confirm the initial render contains the original content
-		var before = (await svc.GetBySlugAsync(created.Slug)).AsT0;
+		var before = (await svc.GetBySlugAsync(created.Slug, "general")).AsT0;
 		await Assert.That(before.RenderedHtml).Contains("original");
 
 		// Edit the page
@@ -400,7 +452,7 @@ public class InMemoryWikiServiceTests
 		await Assert.That(updateResult.IsT0).IsTrue();
 
 		// Next slug read must return the fresh HTML
-		var after = (await svc.GetBySlugAsync(created.Slug)).AsT0;
+		var after = (await svc.GetBySlugAsync(created.Slug, "general")).AsT0;
 		await Assert.That(after.RenderedHtml).Contains("updated");
 		await Assert.That(after.RenderedHtml).DoesNotContain("original");
 	}

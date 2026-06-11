@@ -27,7 +27,7 @@ public static class StatusMail
 
 		if (filteredList.IsError)
 		{
-			await notifyService.Notify(executor, $"#-1 {filteredList.AsError}");
+			await notifyService.Notify(executor, $"#-1 {filteredList.AsError}", executor);
 			return MModule.single(filteredList.AsError);
 		}
 
@@ -36,14 +36,14 @@ public static class StatusMail
 		switch (sw)
 		{
 			case "UPDATE" when string.IsNullOrEmpty(statusString):
-				await notifyService.Notify(executor, "Update to what?");
+				await notifyService.Notify(executor, "Update to what?", executor);
 				return MModule.single(ErrorMessages.Returns.UpdateToWhat);
 			case "UPDATE"
 				when statusString is "CLEAR" or "UNCLEAR" or "TAG" or "UNTAG" or "UNREAD" or "READ" or "URGENT" or "UNURGENT":
 				sw = statusString;
 				break;
 			case "UPDATE":
-				await notifyService.Notify(executor, $"{statusString} is not a valid status.");
+				await notifyService.Notify(executor, $"{statusString} is not a valid status.", executor);
 				return MModule.single($"{statusString} is not a valid status.");
 		}
 
@@ -67,7 +67,7 @@ public static class StatusMail
 			await mediator.Send(new UpdateMailCommand(mail, mailUpdate));
 			// Use per-player inbox numbers (1-based index) instead of database IDs
 			// The index is calculated in-memory based on mail position in the filtered list
-			await notifyService.Notify(executor, $"Mail {index} updated.");
+			await notifyService.Notify(executor, $"Mail {index} updated.", executor);
 			idList.Add(index.ToString());
 			index++;
 		}

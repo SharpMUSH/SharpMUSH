@@ -42,7 +42,8 @@ public class ConnectionServerService(
 				disconnectFunction,
 				gmcpFunction,
 				capabilities ?? new ProtocolCapabilities(),
-				null);
+				null,
+				connectionType);
 
 			_sessionState.AddOrUpdate(handle, data, (_, _) =>
 				throw new InvalidOperationException("Handle already registered"));
@@ -195,7 +196,8 @@ public class ConnectionServerService(
 		Action DisconnectFunction,
 		Func<string, string, ValueTask>? GMCPFunction,
 		ProtocolCapabilities Capabilities,
-		PlayerOutputPreferences? Preferences);
+		PlayerOutputPreferences? Preferences,
+		string ConnectionType = "telnet");
 
 	public enum ConnectionState
 	{

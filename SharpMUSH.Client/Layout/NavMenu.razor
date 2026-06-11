@@ -1,5 +1,8 @@
 @* NavMenu with support for collapsed (icon-only) mode *@
+@using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
+@inject ITerminalService Terminal
+@implements IDisposable
 
 <MudPaper Width="@(IsCollapsed ? "60px" : "250px")" Class="py-3" Elevation="0">
     <MudNavMenu>
@@ -9,36 +12,99 @@
             <MudText Typo="Typo.body2" Class="px-4">@Loc["AdminPanel"]</MudText>
             <MudDivider Class="my-2"/>
         }
-        
-        <MudNavLink Href="/" Icon="@Icons.Material.Filled.Home" IconColor="Color.Secondary">
+
+        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home" IconColor="Color.Secondary">
             @if (!IsCollapsed) { <text>@Loc["Home"]</text> }
         </MudNavLink>
-        
+
+        <MudNavLink Href="/characters" Icon="@Icons.Material.Filled.Groups" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>@Loc["Characters"]</text> }
+        </MudNavLink>
+
+        <MudNavLink Href="/wiki" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.MenuBook" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>@Loc["Wiki"]</text> }
+        </MudNavLink>
+
+        <MudNavLink Href="/wiki#recent-changes" Icon="@Icons.Material.Filled.Update" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>@Loc["RecentChanges"]</text> }
+        </MudNavLink>
+
+        <MudNavLink Href="/scenes" Icon="@Icons.Material.Filled.Movie" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>@Loc["SceneArchive"]</text> }
+        </MudNavLink>
+
+        @* Play and Mail are character-scoped: only meaningful once a character is active
+           (selected/connected), so they are hidden at the account level. *@
+        @if (_characterActive)
+        {
+            <MudNavLink Href="/mail" Icon="@Icons.Material.Filled.Mail" IconColor="Color.Secondary">
+                @if (!IsCollapsed) { <text>@Loc["Mail"]</text> }
+            </MudNavLink>
+
+            <MudNavLink Href="/play" Icon="@Icons.Material.Filled.SportsEsports" IconColor="Color.Secondary">
+                @if (!IsCollapsed) { <text>@Loc["Play"]</text> }
+            </MudNavLink>
+        }
+
         <MudNavLink Href="/softcode" Icon="@Icons.Material.Filled.Code" IconColor="Color.Secondary">
             @if (!IsCollapsed) { <text>@Loc["SoftcodeEditor"]</text> }
         </MudNavLink>
 
-        <MudNavLink Href="/account" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>My Account</text> }
+        <MudNavLink Href="/help" Icon="@Icons.Material.Filled.Help" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>@Loc["Help"]</text> }
         </MudNavLink>
-        
+
+        <MudDivider Class="my-2"/>
+
+        <MudNavLink Href="/account" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>@Loc["MyAccount"]</text> }
+        </MudNavLink>
+
+        <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>@Loc["Settings"]</text> }
+        </MudNavLink>
+
         @if (!IsCollapsed)
         {
-            <MudNavGroup Title="@Loc["Settings"].Value" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary" Expanded="true">
+            <MudNavGroup Title="@Loc["AdminPanel"].Value" Icon="@Icons.Material.Filled.AdminPanelSettings" IconColor="Color.Secondary" Expanded="false">
                 <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Tune">@Loc["Config"]</MudNavLink>
+                <MudNavLink Href="/admin/profiles" Icon="@Icons.Material.Filled.Badge">@Loc["ProfileHandler"]</MudNavLink>
                 <MudNavLink Href="/admin/suggestions" Icon="@Icons.Material.Filled.Lightbulb">@Loc["Suggestions"]</MudNavLink>
                 <MudNavLink Href="/security" Icon="@Icons.Material.Filled.Security">@Loc["Security"]</MudNavLink>
             </MudNavGroup>
         }
         else
         {
-            <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary" />
-            <MudNavLink Href="/softcode" Icon="@Icons.Material.Filled.Code" IconColor="Color.Secondary" />
+            @* Collapsed mode is the default, so it must stay feature-equivalent with the
+               expanded admin group: every destination remains reachable as an icon. *@
+            <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Tune" IconColor="Color.Secondary" />
+            <MudNavLink Href="/admin/profiles" Icon="@Icons.Material.Filled.Badge" IconColor="Color.Secondary" />
+            <MudNavLink Href="/admin/suggestions" Icon="@Icons.Material.Filled.Lightbulb" IconColor="Color.Secondary" />
+            <MudNavLink Href="/security" Icon="@Icons.Material.Filled.Security" IconColor="Color.Secondary" />
         }
     </MudNavMenu>
 </MudPaper>
 
 @code {
     [Parameter]
-    public bool IsCollapsed { get; set; } = false;
+    public bool IsCollapsed { get; set; } = true;
+
+    // A character is "active" once the game terminal is connected (i.e. the user has selected /
+    // logged in as a character). Account-level visitors have no character, so Play/Mail stay hidden.
+    private bool _characterActive;
+
+    protected override void OnInitialized()
+    {
+        _characterActive = Terminal.IsConnected;
+        Terminal.ConnectionStateChanged += OnConnectionChanged;
+    }
+
+    private void OnConnectionChanged(bool connected)
+        => InvokeAsync(() =>
+        {
+            _characterActive = connected;
+            StateHasChanged();
+        });
+
+    public void Dispose() => Terminal.ConnectionStateChanged -= OnConnectionChanged;
 }

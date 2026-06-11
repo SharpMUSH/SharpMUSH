@@ -60,6 +60,32 @@ public class JsonFunctionUnitTests
 		await Assert.That(result.ToString()).IsNotEqualTo("#-1 BAD ARGUMENT FORMAT TO json");
 	}
 
+	// Regression: json(array/object,…) with ten or more arguments must keep numeric (not lexical)
+	// argument order. Before the ArgumentsOrdered fix, %10 sorted before %2 and scrambled the result.
+	[Test]
+	public async Task Json_ArrayWithTenElements_PreservesOrder()
+	{
+		const string expr = "json(array,json(number,1),json(number,2),json(number,3),json(number,4),"
+			+ "json(number,5),json(number,6),json(number,7),json(number,8),json(number,9),json(number,10))";
+		var result = (await Parser.FunctionParse(MModule.single(expr)))?.Message?.ToString();
+		await Assert.That(result).IsEqualTo("[1,2,3,4,5,6,7,8,9,10]");
+	}
+
+	// Regression: the exact seeded HTTP`PROFILE`SCHEMA softcode must evaluate to valid JSON.
+	// (Field objects have 11+ args, so this exercises the same ≥10-arg ordering path.)
+	[Test]
+	public async Task SeededProfileSchema_EvaluatesToValidJson()
+	{
+		var code = SharpMUSH.Server.Services.DefaultProfileHandlerSoftcode.Attributes
+			.First(a => a.Attribute == "HTTP`PROFILE`SCHEMA").Code;
+		var result = (await Parser.FunctionParse(MModule.single(code)))?.Message?.ToString() ?? string.Empty;
+
+		await Assert.That(result).DoesNotContain("#-1");
+		using var doc = System.Text.Json.JsonDocument.Parse(result);
+		await Assert.That(doc.RootElement.TryGetProperty("sections", out var sections)).IsTrue();
+		await Assert.That(sections.GetArrayLength()).IsEqualTo(4);
+	}
+
 	[Test]
 	[Arguments("isjson(1)", "1")]
 	[Arguments("isjson(true)", "1")]

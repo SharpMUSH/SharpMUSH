@@ -1,8 +1,11 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
+using NSubstitute;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Models;
+using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Client.Components;
@@ -22,8 +25,13 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiMarkdigPipeline required by component
+		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
+		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
+		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
+		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
+		ctx.Services.AddSingleton(sp => new WikiService(
+			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 
 		var article = new WikiArticle("Test Article", "This is test content", null);
 
@@ -48,8 +56,13 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiMarkdigPipeline required by component
+		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
+		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
+		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
+		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
+		ctx.Services.AddSingleton(sp => new WikiService(
+			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 
 		var article = new WikiArticle("Test Article", "This is **bold** content", null);
 
@@ -75,8 +88,13 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiMarkdigPipeline required by component
+		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
+		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
+		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
+		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
+		ctx.Services.AddSingleton(sp => new WikiService(
+			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 
 		// Act
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
@@ -100,8 +118,13 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiMarkdigPipeline required by component
+		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
+		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
+		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
+		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
+		ctx.Services.AddSingleton(sp => new WikiService(
+			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 
 		// Act
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
@@ -126,8 +149,13 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiMarkdigPipeline required by component
+		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
+		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
+		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
+		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
+		ctx.Services.AddSingleton(sp => new WikiService(
+			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 
 		var article = new WikiArticle("Test Article", "Content", null);
 
@@ -153,8 +181,13 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiMarkdigPipeline required by component
+		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
+		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
+		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
+		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
+		ctx.Services.AddSingleton(sp => new WikiService(
+			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 
 		var article = new WikiArticle("Test Article", "Content", null);
 
@@ -179,8 +212,13 @@ public class WikiDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Add WikiMarkdigPipeline required by component
+		// Add WikiMarkdigPipeline + WikiService required by component. WikiService is only
+		// invoked for redlink checks when the rendered HTML contains /wiki/ links (none in
+		// these fixtures), so a never-called substitute IHttpClientFactory suffices.
 		ctx.Services.AddSingleton<WikiMarkdigPipeline>();
+		ctx.Services.AddSingleton(Substitute.For<IHttpClientFactory>());
+		ctx.Services.AddSingleton(sp => new WikiService(
+			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 
 		var article = new WikiArticle("Home", "Welcome", null);
 

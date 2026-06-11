@@ -25,7 +25,7 @@ public static class ReadMail
 
 		if (actualMail is null)
 		{
-			await notifyService.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber + 1}");
+			await notifyService.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber + 1}", executor);
 			return MModule.single(ErrorMessages.Returns.NoSuchMail);
 		}
 
@@ -50,7 +50,7 @@ public static class ReadMail
 		};
 
 		var output = MModule.multipleWithDelimiter(MModule.single("\n"), messageBuilder);
-		await notifyService.Notify(executor, output);
+		await notifyService.Notify(executor, output, executor);
 
 		await mediator.Send(new UpdateMailCommand(actualMail, MailUpdate.ReadEdit(true)));
 

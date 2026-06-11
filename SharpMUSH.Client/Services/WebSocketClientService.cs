@@ -162,30 +162,58 @@ public class WebSocketClientService : IWebSocketClientService
 		_cancellationTokenSource?.Dispose();
 		_webSocket = null;
 		_cancellationTokenSource = null;
+		ClearSendBuffer();
+	}
+
+	/// <inheritdoc/>
+	public void ClearSendBuffer()
+	{
+		var count = _sendBuffer.Count;
+		_sendBuffer.Clear();
+		if (count > 0)
+			_logger.LogDebug("Send buffer cleared ({Count} stale messages discarded)", count);
 	}
 
 	private async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
 	{
 		var buffer = new byte[1024 * 4];
+		using var messageBuffer = new MemoryStream();
 
 		try
 		{
 			while (_webSocket?.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
 			{
-				var result = await _webSocket.ReceiveAsync(
-					new ArraySegment<byte>(buffer),
-					cancellationToken);
+				// A single server message (e.g. a serialized markup envelope) can exceed the receive
+				// buffer and arrive as several fragments. Accumulate until EndOfMessage and decode the
+				// complete UTF-8 payload once, so callers never see a partial (invalid JSON) frame or a
+				// multi-byte character split across a chunk boundary.
+				WebSocketReceiveResult result;
+				messageBuffer.SetLength(0);
 
-				if (result.MessageType == WebSocketMessageType.Close)
+				do
 				{
-					_logger.LogInformation("WebSocket server closed the connection");
-					ConnectionStateChanged?.Invoke(this, WebSocketState.Closed);
-					break;
+					result = await _webSocket.ReceiveAsync(
+						new ArraySegment<byte>(buffer),
+						cancellationToken);
+
+					if (result.MessageType == WebSocketMessageType.Close)
+					{
+						_logger.LogInformation("WebSocket server closed the connection");
+						ConnectionStateChanged?.Invoke(this, WebSocketState.Closed);
+						break;
+					}
+
+					messageBuffer.Write(buffer, 0, result.Count);
 				}
+				while (!result.EndOfMessage);
 
-				if (result.MessageType == WebSocketMessageType.Text)
+				// Server-initiated close: leave the receive loop so reconnection can run.
+				if (result.MessageType == WebSocketMessageType.Close)
+					break;
+
+				if (result.MessageType == WebSocketMessageType.Text && messageBuffer.Length > 0)
 				{
-					var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+					var message = Encoding.UTF8.GetString(messageBuffer.ToArray());
 					MessageReceived?.Invoke(this, message);
 				}
 			}

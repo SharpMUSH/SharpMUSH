@@ -1,8 +1,334 @@
 @page "/admin/wiki"
 @attribute [Authorize(Roles = "Wizard")]
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject WikiService Wiki
+@inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Wiki Admin — Admin — SharpMUSH</PageTitle>
+<PageTitle>@Loc["WikiAdmin"] — Admin — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Wiki Admin</MudText>
-<MudText Color="Color.Secondary">Protected pages and bulk wiki operations coming soon.</MudText>
+<MudText Typo="Typo.h4" Class="mb-2">@Loc["WikiAdmin"]</MudText>
+<MudText Color="Color.Secondary" Class="mb-4">@Loc["WikiAdminDescription"]</MudText>
+
+<MudDataGrid @ref="_grid"
+             T="WikiPageSummary"
+             ServerData="LoadServerData"
+             MultiSelection="true"
+             @bind-SelectedItems="_selected"
+             Dense="true"
+             Hover="true"
+             Class="mush-dark-grid"
+             Elevation="0">
+    <ToolBarContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width: 100%;">
+            <MudSelect T="string"
+                       Value="@_namespaceFilter"
+                       ValueChanged="@OnNamespaceFilterChanged"
+                       Label="@Loc["WikiNamespaceFilter"]"
+                       Dense="true"
+                       Margin="Margin.Dense"
+                       Variant="Variant.Outlined"
+                       Style="max-width: 220px;">
+                <MudSelectItem T="string" Value="@(string.Empty)">@Loc["WikiAllNamespaces"]</MudSelectItem>
+                <MudSelectItem T="string" Value="@("main")">main</MudSelectItem>
+                <MudSelectItem T="string" Value="@("help")">help</MudSelectItem>
+                <MudSelectItem T="string" Value="@("character")">character</MudSelectItem>
+                <MudSelectItem T="string" Value="@("system")">system</MudSelectItem>
+            </MudSelect>
+            <MudSpacer />
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Warning"
+                       StartIcon="@Icons.Material.Filled.Lock"
+                       Disabled="@(_selected.Count == 0 || _busy)"
+                       OnClick="@(() => BatchProtectAsync(true))">
+                @Loc["WikiProtect"]
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Info"
+                       StartIcon="@Icons.Material.Filled.LockOpen"
+                       Disabled="@(_selected.Count == 0 || _busy)"
+                       OnClick="@(() => BatchProtectAsync(false))">
+                @Loc["WikiUnprotect"]
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.Delete"
+                       Disabled="@(_selected.Count == 0 || _busy)"
+                       OnClick="@(() => _showDeleteConfirm = true)">
+                @Loc["WikiDelete"]
+            </MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                           Color="Color.Secondary"
+                           OnClick="@ReloadAsync" />
+        </MudStack>
+    </ToolBarContent>
+    <Columns>
+        <SelectColumn T="WikiPageSummary" />
+        <TemplateColumn Title="@Loc["WikiTitle"]" Sortable="false">
+            <CellTemplate>
+                <MudLink Href="@PageHref(context.Item)">@context.Item.Title</MudLink>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="p => p.Namespace" Title="@Loc["WikiNamespace"]" Sortable="false" />
+        <PropertyColumn Property="p => p.Category" Title="@Loc["WikiCategory"]" Sortable="false" />
+        <TemplateColumn Title="@Loc["WikiTags"]" Sortable="false">
+            <CellTemplate>
+                @foreach (var tag in context.Item.Tags)
+                {
+                    <MudChip T="string" Text="@tag" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined" />
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="@Loc["WikiPublished"]" Sortable="false">
+            <CellTemplate>
+                <MudIcon Icon="@(context.Item.Published ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff)"
+                         Color="@(context.Item.Published ? Color.Success : Color.Warning)"
+                         Size="Size.Small" />
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="@Loc["WikiProtected"]" Sortable="false">
+            <CellTemplate>
+                <MudIcon Icon="@(context.Item.IsProtected ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
+                         Color="@(context.Item.IsProtected ? Color.Warning : Color.Default)"
+                         Size="Size.Small" />
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="@Loc["WikiUpdated"]" Sortable="false">
+            <CellTemplate>
+                <MudText Typo="Typo.caption">@context.Item.UpdatedAt.LocalDateTime.ToString("g")</MudText>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="p => p.RevisionNumber" Title="@Loc["WikiRevision"]" Sortable="false" />
+        <TemplateColumn Sortable="false">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.EditNote"
+                               Size="Size.Small"
+                               title="@Loc["WikiEditMetadata"]"
+                               OnClick="@(() => OpenMetadataDialog(context.Item))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <NoRecordsContent>
+        <MudText Color="Color.Secondary">@Loc["WikiNoPages"]</MudText>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudDataGridPager T="WikiPageSummary" />
+    </PagerContent>
+</MudDataGrid>
+
+<!-- Delete confirmation dialog -->
+<MudDialog @bind-Visible="_showDeleteConfirm">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Loc["WikiDeleteConfirmTitle"]</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>@string.Format(Loc["WikiDeleteConfirmText"], _selected.Count)</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDeleteConfirm = false)">@Loc["Cancel"]</MudButton>
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Filled"
+                   Disabled="@_busy"
+                   OnClick="@BatchDeleteAsync">
+            @Loc["WikiDelete"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Per-row metadata dialog -->
+<MudDialog @bind-Visible="_showMetadataDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Loc["WikiEditMetadata"]@(_metadataTarget is null ? string.Empty : $" — {_metadataTarget.Title}")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudTextField @bind-Value="_metaCategory"
+                          Label="@Loc["WikiCategory"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+            <MudTextField Value="@_metaTagEntry"
+                          ValueChanged="@((string v) => _metaTagEntry = v)"
+                          Label="@Loc["WikiTags"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          HelperText="@Loc["WikiTagsHelper"]"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@Icons.Material.Filled.Add"
+                          OnAdornmentClick="@AddMetaTag"
+                          OnKeyDown="@OnMetaTagKeyDown"
+                          Immediate="true" />
+            @if (_metaTags.Count > 0)
+            {
+                <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap;">
+                    @foreach (var tag in _metaTags)
+                    {
+                        <MudChip T="string" Text="@tag"
+                                 Size="Size.Small"
+                                 Color="Color.Info"
+                                 Variant="Variant.Outlined"
+                                 OnClose="@(() => _metaTags.Remove(tag))" />
+                    }
+                </MudStack>
+            }
+            <MudSwitch T="bool" @bind-Value="_metaPublished"
+                       Color="Color.Success"
+                       Label="@Loc["WikiPublished"]" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showMetadataDialog = false)">@Loc["Cancel"]</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@_busy"
+                   OnClick="@SaveMetadataAsync">
+            @Loc["Save"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private MudDataGrid<WikiPageSummary>? _grid;
+    private HashSet<WikiPageSummary> _selected = [];
+    private string _namespaceFilter = string.Empty;
+    private bool _busy;
+
+    private bool _showDeleteConfirm;
+
+    private bool _showMetadataDialog;
+    private WikiPageSummary? _metadataTarget;
+    private string? _metaCategory;
+    private string _metaTagEntry = string.Empty;
+    private List<string> _metaTags = [];
+    private bool _metaPublished = true;
+
+    private async Task<GridData<WikiPageSummary>> LoadServerData(GridState<WikiPageSummary> state, CancellationToken _)
+    {
+        var ns = string.IsNullOrEmpty(_namespaceFilter) ? null : _namespaceFilter;
+        var (items, total) = await Wiki.GetAllPagesAsync(
+            skip: state.Page * state.PageSize,
+            take: state.PageSize,
+            ns: ns);
+        return new GridData<WikiPageSummary> { Items = items, TotalItems = total };
+    }
+
+    private static string PageHref(WikiPageSummary page) =>
+        $"/wiki/{page.Namespace.ToLowerInvariant()}/{(page.Category ?? "general")}/{page.Slug}";
+
+    /// <summary>The "ns/category/slug" reference used by batch and existence endpoints.</summary>
+    private static string RefFor(WikiPageSummary page) =>
+        $"{page.Namespace.ToLowerInvariant()}/{page.Category ?? "general"}/{page.Slug}";
+
+    private async Task OnNamespaceFilterChanged(string value)
+    {
+        _namespaceFilter = value;
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _selected = [];
+        if (_grid is not null)
+        {
+            await _grid.ReloadServerData();
+        }
+    }
+
+    // ── Batch operations ─────────────────────────────────────────────────────
+
+    private async Task BatchProtectAsync(bool isProtected)
+    {
+        if (_selected.Count == 0) return;
+        _busy = true;
+        try
+        {
+            // Batch endpoints identify pages by full "ns/category/slug" refs.
+            var result = await Wiki.BatchProtectAsync(_selected.Select(RefFor), isProtected);
+            ReportBatchResult(result);
+            await ReloadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task BatchDeleteAsync()
+    {
+        if (_selected.Count == 0) return;
+        _busy = true;
+        try
+        {
+            var result = await Wiki.BatchDeleteAsync(_selected.Select(RefFor));
+            ReportBatchResult(result);
+            _showDeleteConfirm = false;
+            await ReloadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void ReportBatchResult(OneOf.OneOf<WikiService.WikiBatchResult, string> result) =>
+        result.Switch(
+            ok =>
+            {
+                if (ok.Succeeded.Count > 0)
+                    Snackbar.Add(string.Format(Loc["WikiBatchSucceeded"], ok.Succeeded.Count), Severity.Success);
+                if (ok.Failed.Count > 0)
+                    Snackbar.Add(string.Format(Loc["WikiBatchFailed"], ok.Failed.Count), Severity.Error);
+            },
+            err => Snackbar.Add(err, Severity.Error));
+
+    // ── Metadata dialog ──────────────────────────────────────────────────────
+
+    private void OpenMetadataDialog(WikiPageSummary page)
+    {
+        _metadataTarget = page;
+        _metaCategory = page.Category;
+        _metaTags = [.. page.Tags];
+        _metaTagEntry = string.Empty;
+        _metaPublished = page.Published;
+        _showMetadataDialog = true;
+    }
+
+    private void AddMetaTag()
+    {
+        var tag = _metaTagEntry.Trim().ToLowerInvariant();
+        if (tag.Length > 0 && !_metaTags.Contains(tag))
+        {
+            _metaTags.Add(tag);
+        }
+        _metaTagEntry = string.Empty;
+    }
+
+    private void OnMetaTagKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            AddMetaTag();
+        }
+    }
+
+    private async Task SaveMetadataAsync()
+    {
+        if (_metadataTarget is null) return;
+        _busy = true;
+        try
+        {
+            var result = await Wiki.SetMetadataAsync(
+                _metadataTarget.Slug, _metaCategory, _metaTags, _metaPublished, _metadataTarget.Namespace,
+                currentCategory: _metadataTarget.Category);
+            result.Switch(
+                _ => Snackbar.Add(string.Format(Loc["WikiMetadataSaved"], _metadataTarget.Title), Severity.Success),
+                err => Snackbar.Add(string.Format(Loc["WikiMetadataSaveFailed"], err), Severity.Error));
+            _showMetadataDialog = false;
+            await ReloadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

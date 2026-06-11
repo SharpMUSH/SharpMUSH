@@ -374,16 +374,32 @@ public partial record ParserState(
 				return _argumentsOrdered;
 
 			_argumentsOrderedSource = Arguments;
+			// Key by the numeric comparer so the sorted dictionary keeps %0,%1,%2,…,%10,%11 in
+			// numeric order. A plain ToImmutableSortedDictionary() would order keys lexicographically
+			// ("10" before "2"), scrambling argument order for any function with ten or more args
+			// (e.g. json(object,…) with ≥10 pairs).
 			_argumentsOrdered = Arguments
 				.Where(x => int.TryParse(x.Key, out _))
-				.OrderBy(x => int.Parse(x.Key))
-				.ToImmutableSortedDictionary();
+				.ToImmutableSortedDictionary(x => x.Key, x => x.Value, NumericKeyComparer.Instance);
 			return _argumentsOrdered;
 		}
 	}
 
 	private ImmutableSortedDictionary<string, CallState>? _argumentsOrdered;
 	private Dictionary<string, CallState>? _argumentsOrderedSource;
+
+	/// <summary>Orders numeric-string keys ("0","1","10",…) by their integer value, not lexically.</summary>
+	private sealed class NumericKeyComparer : IComparer<string>
+	{
+		public static readonly NumericKeyComparer Instance = new();
+
+		public int Compare(string? x, string? y)
+		{
+			var xParsed = int.TryParse(x, out var xi);
+			var yParsed = int.TryParse(y, out var yi);
+			return xParsed && yParsed ? xi.CompareTo(yi) : string.CompareOrdinal(x, y);
+		}
+	}
 
 	/// <summary>
 	/// Add a register value to the Register stack.

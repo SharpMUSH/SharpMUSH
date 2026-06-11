@@ -19,10 +19,11 @@ public interface IWikiService
 	// ── Read operations ──────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Retrieves a wiki page by its slug and namespace.
+	/// Retrieves a wiki page by its (namespace, category, slug) identity.
+	/// <paramref name="category"/> is normalised (null/blank → <c>general</c>).
 	/// Returns <c>NotFound</c> if no matching page exists.
 	/// </summary>
-	Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main);
+	Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main);
 
 	/// <summary>
 	/// Retrieves a wiki page by its storage ID.
@@ -40,18 +41,43 @@ public interface IWikiService
 	/// </summary>
 	Task<IReadOnlyList<WikiPage>> GetByNamespaceAsync(WikiNamespace ns, int skip = 0, int take = 50);
 
+	/// <summary>
+	/// Lists ALL pages (optionally restricted to one namespace), ordered by
+	/// namespace then slug, with skip/take pagination. Includes unpublished pages —
+	/// callers are responsible for visibility filtering.
+	/// </summary>
+	Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null);
+
+	/// <summary>
+	/// Returns the total page count (optionally restricted to one namespace).
+	/// </summary>
+	Task<int> CountPagesAsync(WikiNamespace? ns = null);
+
+	/// <summary>
+	/// Lists pages with the given category (case-insensitive), ordered by title.
+	/// </summary>
+	Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50);
+
+	/// <summary>
+	/// Lists pages carrying the given tag (case-insensitive), ordered by title.
+	/// </summary>
+	Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50);
+
 	// ── Write operations ──────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Creates a new wiki page.  The slug must be unique within the namespace.
-	/// Renders the Markdown to HTML and extracts plain text at creation time.
-	/// Returns <c>Error&lt;string&gt;</c> when a page with the same slug already exists in the given namespace.
+	/// Creates a new wiki page. The (namespace, category, slug) identity must be unique.
+	/// <paramref name="category"/> is normalised (null/blank → <c>general</c>) and is part of
+	/// the page's identity, so it is fixed at creation. Renders the Markdown to HTML and extracts
+	/// plain text at creation time.
+	/// Returns <c>Error&lt;string&gt;</c> when a page with the same (namespace, category, slug) already exists.
 	/// </summary>
 	Task<OneOf<WikiPage, Error<string>>> CreateAsync(
 		string title,
 		string markdown,
 		string authorDbref,
-		WikiNamespace ns = WikiNamespace.Main);
+		WikiNamespace ns = WikiNamespace.Main,
+		string? category = null);
 
 	/// <summary>
 	/// Updates an existing page's Markdown content.  Increments the revision counter,
@@ -76,6 +102,18 @@ public interface IWikiService
 	/// Returns <c>NotFound</c> when no page with <paramref name="id"/> exists.
 	/// </summary>
 	Task<OneOf<None, NotFound>> SetProtectionAsync(string id, bool isProtected);
+
+	/// <summary>
+	/// Sets the metadata fields (category, tags, published flag) on a page.
+	/// Does NOT create a revision — metadata changes are not content edits.
+	/// Category and tags are normalised to lower-case; tags are de-duplicated.
+	/// Returns the updated page, or <c>NotFound</c> when no page with <paramref name="id"/> exists.
+	/// </summary>
+	Task<OneOf<WikiPage, NotFound>> SetMetadataAsync(
+		string id,
+		string? category,
+		IReadOnlyList<string> tags,
+		bool published);
 
 	// ── Revision operations ───────────────────────────────────────────────────
 

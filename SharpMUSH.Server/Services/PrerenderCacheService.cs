@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Server.Helpers;
 
 namespace SharpMUSH.Server.Services;
 
@@ -75,7 +76,7 @@ public sealed class PrerenderCacheService(IMemoryCache memoryCache, ILogger<Prer
 		lock (_keyLock)
 			_keys.Add(path);
 
-		logger.LogDebug("PrerenderCache: stored {Path} (TTL 1h)", path);
+		logger.LogDebug("PrerenderCache: stored {Path} (TTL 1h)", LogSanitizer.Sanitize(path));
 	}
 
 	public void Invalidate(string path)
@@ -83,7 +84,7 @@ public sealed class PrerenderCacheService(IMemoryCache memoryCache, ILogger<Prer
 		memoryCache.Remove(CacheKey(path));
 		lock (_keyLock)
 			_keys.Remove(path);
-		logger.LogDebug("PrerenderCache: invalidated {Path}", path);
+		logger.LogDebug("PrerenderCache: invalidated {Path}", LogSanitizer.Sanitize(path));
 	}
 
 	public void InvalidatePrefix(string prefix)
@@ -100,7 +101,7 @@ public sealed class PrerenderCacheService(IMemoryCache memoryCache, ILogger<Prer
 			memoryCache.Remove(CacheKey(k));
 
 		if (toRemove.Count > 0)
-			logger.LogDebug("PrerenderCache: invalidated {Count} entries with prefix '{Prefix}'", toRemove.Count, prefix);
+			logger.LogDebug("PrerenderCache: invalidated {Count} entries with prefix '{Prefix}'", toRemove.Count, LogSanitizer.Sanitize(prefix));
 	}
 
 	private static string CacheKey(string path) => $"prerender:{path}";

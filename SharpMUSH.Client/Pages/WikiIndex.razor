@@ -1,7 +1,112 @@
 @page "/wiki"
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["WikiIndex"]</PageTitle>
 
 <MudText Typo="Typo.h4">@Loc["WikiIndex"]</MudText>
 <WikiView Slug="wiki-index" Mode="WikiView.WikiMode.View" />
+
+<MudGrid Class="mt-4">
+    <MudItem xs="12" md="6">
+        <MudPaper id="recent-changes" Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.Update" Size="Size.Small" Class="mr-1" />
+                @Loc["WikiRecentChanges"]
+            </MudText>
+            @if (_recentLoading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else if (_recent.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WikiNoRecentChanges"]</MudText>
+            }
+            else
+            {
+                <MudList T="WikiPageSummary" Dense="true">
+                    @foreach (var entry in _recent)
+                    {
+                        <MudListItem T="WikiPageSummary" Href="@PageHref(entry)">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudText Typo="Typo.body1">@entry.Title</MudText>
+                                <MudSpacer />
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">r@(entry.RevisionNumber)</MudChip>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                    @entry.UpdatedAt.LocalDateTime.ToString("g")
+                                </MudText>
+                            </MudStack>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Small" Class="mr-1" />
+                @Loc["WikiBrowseByNamespace"]
+            </MudText>
+            <MudTabs Elevation="0" ApplyEffectsToContainer="true" ActivePanelIndexChanged="OnNamespaceTabChanged">
+                @foreach (var ns in Namespaces)
+                {
+                    <MudTabPanel Text="@ns" />
+                }
+            </MudTabs>
+            @if (_namespaceLoading)
+            {
+                <MudProgressLinear Indeterminate="true" Class="mt-2" />
+            }
+            else if (_namespacePages.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">@Loc["WikiNamespaceEmpty"]</MudText>
+            }
+            else
+            {
+                <MudList T="WikiPageSummary" Dense="true">
+                    @foreach (var entry in _namespacePages)
+                    {
+                        <MudListItem T="WikiPageSummary" Href="@PageHref(entry)">
+                            <MudText Typo="Typo.body1">@entry.Title</MudText>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private static readonly string[] Namespaces = ["Main", "Help", "Character", "System"];
+
+    private bool _recentLoading = true;
+    private bool _namespaceLoading = true;
+    private IReadOnlyList<WikiPageSummary> _recent = [];
+    private IReadOnlyList<WikiPageSummary> _namespacePages = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var recentTask = Wiki.GetRecentChangesAsync().AsTask();
+        var namespaceTask = Wiki.GetNamespacePagesAsync(Namespaces[0]).AsTask();
+        await Task.WhenAll(recentTask, namespaceTask);
+
+        _recent = recentTask.Result;
+        _namespacePages = namespaceTask.Result;
+        _recentLoading = false;
+        _namespaceLoading = false;
+    }
+
+    private async Task OnNamespaceTabChanged(int index)
+    {
+        _namespaceLoading = true;
+        _namespacePages = await Wiki.GetNamespacePagesAsync(Namespaces[index]);
+        _namespaceLoading = false;
+    }
+
+    private static string PageHref(WikiPageSummary page) =>
+        $"/wiki/{page.Namespace.ToLowerInvariant()}/{(page.Category ?? "general")}/{page.Slug}";
+}

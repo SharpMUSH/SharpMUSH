@@ -1,11 +1,14 @@
 using Mediator;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Server.Helpers;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -19,6 +22,7 @@ public class AccountController(
 	IMediator mediator,
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
+	IPasswordService passwordService,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<AccountController> logger) : ControllerBase
 {
@@ -71,14 +75,72 @@ public class AccountController(
 
 			await accountService.LinkCharacterAsync(accountId, playerRef);
 
-			logger.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via API", accountId, request.Name, playerRef.Number);
+			logger.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via API", LogSanitizer.Sanitize(accountId), LogSanitizer.Sanitize(request.Name), playerRef.Number);
 			return Ok(new { DbrefNumber = playerRef.Number, CreationTime = playerRef.CreationMilliseconds });
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Character creation failed for account {AccountId}", accountId);
+			logger.LogError(ex, "Character creation failed for account {AccountId}", LogSanitizer.Sanitize(accountId));
 			return BadRequest(ex.Message);
 		}
+	}
+
+	public record LinkCharacterRequest(string CharacterName, string CharacterPassword);
+
+	/// <summary>
+	/// Link an EXISTING character to the authenticated account by verifying the
+	/// character's MUSH password. Counterpart to <see cref="CreateCharacter"/>,
+	/// which creates a brand-new character.
+	/// </summary>
+	[HttpPost("link-character")]
+	public async Task<IActionResult> LinkCharacter([FromBody] LinkCharacterRequest request)
+	{
+		var accountId = await GetAccountIdFromBearerAsync();
+		if (accountId is null) return Unauthorized("Invalid or expired account session.");
+
+		if (string.IsNullOrWhiteSpace(request.CharacterName))
+			return BadRequest("CharacterName is required.");
+
+		var player = await mediator
+			.CreateStream(new GetPlayerQuery(request.CharacterName))
+			.FirstOrDefaultAsync();
+
+		if (player is null)
+		{
+			logger.LogInformation("Account {AccountId}: link-character failed — character not found", LogSanitizer.Sanitize(accountId));
+			return Unauthorized("Invalid character credentials.");
+		}
+
+		var valid = passwordService.PasswordIsValid(
+			$"#{player.Object.Key}:{player.Object.CreationTime}",
+			request.CharacterPassword ?? string.Empty,
+			player.PasswordHash);
+
+		// Mirror the OTT login rule: a character with no stored password hash is
+		// linkable without one; a wrong password against a real hash is rejected.
+		if (!valid && !string.IsNullOrEmpty(player.PasswordHash))
+		{
+			logger.LogInformation("Account {AccountId}: link-character failed — bad password for #{Key}",
+				LogSanitizer.Sanitize(accountId), player.Object.Key);
+			return Unauthorized("Invalid character credentials.");
+		}
+
+		if (valid && passwordService.NeedsRehash(player.PasswordHash))
+		{
+			await passwordService.RehashPasswordAsync(player, request.CharacterPassword ?? string.Empty);
+			logger.LogInformation("Rehashed legacy password for player #{Key} via link-character", player.Object.Key);
+		}
+
+		var charRef = new DBRef(player.Object.Key, player.Object.CreationTime);
+
+		var existingOwner = await accountService.GetAccountForCharacterAsync(charRef);
+		if (existingOwner is not null && existingOwner.Id != accountId)
+			return Conflict("Character is already linked to another account.");
+
+		await accountService.LinkCharacterAsync(accountId, charRef);
+
+		logger.LogInformation("Account {AccountId}: linked existing character #{Key}", LogSanitizer.Sanitize(accountId), player.Object.Key);
+		return Ok(new { DbrefNumber = player.Object.Key, CreationTime = player.Object.CreationTime, player.Object.Name });
 	}
 
 	/// <summary>Unlink a character from the authenticated account.</summary>
@@ -89,7 +151,7 @@ public class AccountController(
 		if (accountId is null) return Unauthorized("Invalid or expired account session.");
 
 		await accountService.UnlinkCharacterAsync(accountId, new DBRef(dbrefNumber));
-		logger.LogInformation("Account {AccountId}: unlinked character #{Key}", accountId, dbrefNumber);
+		logger.LogInformation("Account {AccountId}: unlinked character #{Key}", LogSanitizer.Sanitize(accountId), dbrefNumber);
 		return NoContent();
 	}
 
@@ -154,6 +216,9 @@ public class AccountController(
 			var token = header["Bearer ".Length..].Trim();
 			await accountSessionStore.RevokeAsync(token);
 		}
+		// Also drop the httpOnly refresh cookie set by the JWT login endpoints so a
+		// logged-out browser cannot silently mint new access tokens.
+		Response.Cookies.Delete(AuthController.RefreshCookieName, new CookieOptions { Path = "/api/auth" });
 		return NoContent();
 	}
 

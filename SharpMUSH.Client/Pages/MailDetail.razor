@@ -1,13 +1,95 @@
 @page "/mail/{Id:int}"
 @attribute [Authorize]
+@using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
+@inject MailService Mail
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
 
 <PageTitle>Mail #@Id — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Mail #@Id</MudText>
-<MudText Color="Color.Secondary">Mail message detail coming soon.</MudText>
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Href="/mail" />
+    <MudText Typo="Typo.h5">@Loc["Mail"] #@Id</MudText>
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_message is null)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@Loc["MailNotFound"]</MudAlert>
+}
+else
+{
+    <MudPaper Outlined="true" Class="pa-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+            <MudText Typo="Typo.h6">@_message.Subject</MudText>
+            @if (_message.Urgent)
+            {
+                <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Outlined">@Loc["Urgent"]</MudChip>
+            }
+        </MudStack>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
+            @Loc["From"]: @_message.From
+        </MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
+            @_message.DateSent.LocalDateTime.ToString("f") · @_message.Folder
+        </MudText>
+        <MudDivider Class="mb-4" />
+        <MudText Style="white-space:pre-wrap;">@_message.Body</MudText>
+
+        <MudStack Row="true" Spacing="2" Class="mt-6">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Reply" OnClick="Reply">
+                @Loc["Reply"]
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.Delete" OnClick="DeleteAsync">
+                @Loc["Delete"]
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+}
 
 @code {
-    [Parameter]
-    public int Id { get; set; }
+    [Parameter] public int Id { get; set; }
+
+    [SupplyParameterFromQuery(Name = "folder")]
+    public string? Folder { get; set; }
+
+    private MailService.MailMessage? _message;
+    private bool _loading = true;
+
+    private string FolderName => string.IsNullOrWhiteSpace(Folder) ? "INBOX" : Folder!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _message = await Mail.ReadAsync(FolderName, Id);
+        _loading = false;
+    }
+
+    private void Reply()
+    {
+        if (_message is null) return;
+        var subject = _message.Subject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase)
+            ? _message.Subject
+            : $"Re: {_message.Subject}";
+        Nav.NavigateTo($"/mail/compose?to={Uri.EscapeDataString(_message.From)}&subject={Uri.EscapeDataString(subject)}");
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (await Mail.DeleteAsync(FolderName, Id))
+        {
+            Snackbar.Add(Loc["MailDeleted"], Severity.Success);
+            Nav.NavigateTo("/mail");
+        }
+        else
+        {
+            Snackbar.Add(Loc["MailDeleteFailed"], Severity.Error);
+        }
+    }
 }

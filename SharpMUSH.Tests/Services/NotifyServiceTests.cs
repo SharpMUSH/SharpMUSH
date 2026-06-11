@@ -15,8 +15,12 @@ namespace SharpMUSH.Tests.Services;
 public class NotifyServiceTests
 {
 	[Test]
-	public async Task StringNotifications_AreHtmlEncodedForPuebloAndMxp()
+	public async Task StringNotifications_PublishSerializedMarkup()
 	{
+		// NotifyService no longer renders to ANSI/Pueblo/MXP — it keeps output as an MString and
+		// publishes serialized markup; the ConnectionServer renders it per the connection's wire
+		// format (see MarkupOutputRendererTests). Here we verify the markup is published and that it
+		// round-trips to the original text.
 		var publisher = Substitute.For<IPublisher>();
 		var messageBus = Substitute.For<IMessageBus>();
 		var connections = new ConnectionService(publisher);
@@ -37,40 +41,16 @@ public class NotifyServiceTests
 				["LastConnectionSignal"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
 				["InternetProtocolAddress"] = "127.0.0.1",
 				["HostName"] = "localhost",
-				["ConnectionType"] = "telnet",
-				["OUTPUT_FORMAT"] = "pueblo"
+				["ConnectionType"] = "telnet"
 			}));
 
-		await connections.Register(
-			2,
-			"127.0.0.1",
-			"localhost",
-			"telnet",
-			_ => ValueTask.CompletedTask,
-			_ => ValueTask.CompletedTask,
-			() => Encoding.UTF8,
-			new ConcurrentDictionary<string, string>(new Dictionary<string, string>
-			{
-				["ConnectionStartTime"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
-				["LastConnectionSignal"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
-				["InternetProtocolAddress"] = "127.0.0.1",
-				["HostName"] = "localhost",
-				["ConnectionType"] = "telnet",
-				["OUTPUT_FORMAT"] = "mxp"
-			}));
-
-		await notify.Notify(1, "<send href=\"look\">Tom & \"Sue\"</send>", sender: null);
-		await notify.Notify(2, "<send href=\"look\">Tom & \"Sue\"</send>", sender: null);
+		const string raw = "<send href=\"look\">Tom & \"Sue\"</send>";
+		await notify.Notify(1, raw, sender: null);
 
 		await messageBus.Received(1).HandlePublish(
-			Arg.Is<TelnetOutputMessage>(msg =>
+			Arg.Is<MarkupOutputMessage>(msg =>
 				msg.Handle == 1 &&
-				Encoding.UTF8.GetString(msg.Data).Contains("&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;")));
-
-		await messageBus.Received(1).HandlePublish(
-			Arg.Is<TelnetOutputMessage>(msg =>
-				msg.Handle == 2 &&
-				Encoding.UTF8.GetString(msg.Data).Contains($"{ErrorMessages.Notifications.MxpLineOpen}&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;")));
+				MModule.deserialize(msg.Markup).ToPlainText() == raw));
 	}
 
 	[Test]
@@ -112,8 +92,8 @@ public class NotifyServiceTests
 			MModule.single("Room Zero"));
 
 		await messageBus.Received(1).HandlePublish(
-			Arg.Is<TelnetOutputMessage>(msg =>
+			Arg.Is<MarkupOutputMessage>(msg =>
 				msg.Handle == 7 &&
-				Encoding.UTF8.GetString(msg.Data).Contains("<send href=\"North\">North</send> to Room Zero")));
+				MModule.deserialize(msg.Markup).Render("pueblo").Contains("<send href=\"North\">North</send> to Room Zero")));
 	}
 }

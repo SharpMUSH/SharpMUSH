@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Server.Hubs;
 
 namespace SharpMUSH.Tests.Hubs;
@@ -16,6 +17,12 @@ public class GameHubTests
 	// ── Helpers ──────────────────────────────────────────────────────────────────
 
 	private static (GameHub hub, IGroupManager groups) BuildHub(string? characterDbref = "42")
+	{
+		var (hub, groups, _) = BuildHubWithBus(characterDbref);
+		return (hub, groups);
+	}
+
+	private static (GameHub hub, IGroupManager groups, IMessageBus bus) BuildHubWithBus(string? characterDbref = "42")
 	{
 		var groups = Substitute.For<IGroupManager>();
 		groups.AddToGroupAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -39,14 +46,18 @@ public class GameHubTests
 			context.User.Returns(new ClaimsPrincipal(new ClaimsIdentity()));
 		}
 
-		var hub = new GameHub(NullLogger<GameHub>.Instance)
+		var bus = Substitute.For<IMessageBus>();
+		bus.Publish(Arg.Any<GameCommandMessage>(), Arg.Any<CancellationToken>())
+			.Returns(Task.CompletedTask);
+
+		var hub = new GameHub(bus, NullLogger<GameHub>.Instance)
 		{
 			Groups = groups,
 			Clients = clients,
 			Context = context,
 		};
 
-		return (hub, groups);
+		return (hub, groups, bus);
 	}
 
 	// ── OnConnectedAsync ─────────────────────────────────────────────────────────
@@ -99,23 +110,33 @@ public class GameHubTests
 	// ── SendCommand ──────────────────────────────────────────────────────────────
 
 	[Test]
-	public async Task SendCommand_WithCommand_CreatesCommandMessageForCorrectCharacter()
+	public async Task SendCommand_WithCommand_PublishesMessageForCorrectCharacter()
 	{
 		// Arrange
-		var (hub, _) = BuildHub("77");
+		var (hub, _, bus) = BuildHubWithBus("77");
 
-		// Act — method is fire-and-log; verify it completes without throwing
+		// Act
 		await hub.SendCommand("look");
+
+		// Assert — the command is published to NATS with the caller's dbref
+		await bus.Received(1).Publish(
+			Arg.Is<GameCommandMessage>(m => m.CharacterDbref == "77" && m.Command == "look"),
+			Arg.Any<CancellationToken>());
 	}
 
 	[Test]
-	public async Task SendCommand_WithEmptyCommand_CompletesWithoutThrowing()
+	public async Task SendCommand_WithEmptyCommand_StillPublishes()
 	{
 		// Arrange
-		var (hub, _) = BuildHub("1");
+		var (hub, _, bus) = BuildHubWithBus("1");
 
-		// Act / Assert
+		// Act
 		await hub.SendCommand(string.Empty);
+
+		// Assert
+		await bus.Received(1).Publish(
+			Arg.Is<GameCommandMessage>(m => m.CharacterDbref == "1" && m.Command == string.Empty),
+			Arg.Any<CancellationToken>());
 	}
 
 	// ── JoinRoom ─────────────────────────────────────────────────────────────────
@@ -154,6 +175,40 @@ public class GameHubTests
 			Arg.Any<CancellationToken>());
 	}
 
+	// ── JoinScene / LeaveScene ───────────────────────────────────────────────────
+
+	[Test]
+	public async Task JoinScene_WithSceneId_AddsToSceneGroup()
+	{
+		// Arrange
+		var (hub, groups) = BuildHub();
+
+		// Act
+		await hub.JoinScene("12");
+
+		// Assert
+		await groups.Received(1).AddToGroupAsync(
+			"conn-001",
+			"scene:12",
+			Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task LeaveScene_WithSceneId_RemovesFromSceneGroup()
+	{
+		// Arrange
+		var (hub, groups) = BuildHub();
+
+		// Act
+		await hub.LeaveScene("12");
+
+		// Assert
+		await groups.Received(1).RemoveFromGroupAsync(
+			"conn-001",
+			"scene:12",
+			Arg.Any<CancellationToken>());
+	}
+
 	// ── Group name helpers ───────────────────────────────────────────────────────
 
 	[Test]
@@ -166,5 +221,11 @@ public class GameHubTests
 	public async Task RoomGroupName_ReturnsExpectedFormat()
 	{
 		await Assert.That(GameHub.RoomGroupName("7")).IsEqualTo("room:7");
+	}
+
+	[Test]
+	public async Task SceneGroupName_ReturnsExpectedFormat()
+	{
+		await Assert.That(GameHub.SceneGroupName("3")).IsEqualTo("scene:3");
 	}
 }

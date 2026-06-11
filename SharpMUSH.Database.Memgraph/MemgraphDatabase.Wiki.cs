@@ -15,13 +15,14 @@ public partial class MemgraphDatabase : IWikiService
 
 	// ── Read ──────────────────────────────────────────────────────────────────
 
-	public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main)
+	public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
+		var cat = WikiHelpers.NormalizeCategory(category);
 		await using var session = driver.AsyncSession();
 		var result = await session.RunAsync(
-			"MATCH (p:WikiPage {namespace: $ns, slug: $slug}) RETURN p",
-			new { ns = nsStr, slug });
+			"MATCH (p:WikiPage {namespace: $ns, category: $cat, slug: $slug}) RETURN p",
+			new { ns = nsStr, cat, slug });
 
 		var records = await result.ToListAsync();
 		if (records.Count == 0) return new NotFound();
@@ -63,20 +64,79 @@ public partial class MemgraphDatabase : IWikiService
 		return records.Select(r => NodeToWikiPage(r["p"].As<INode>())).ToList().AsReadOnly();
 	}
 
+	public async Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null)
+	{
+		await using var session = driver.AsyncSession();
+		IResultCursor result;
+		if (ns is not null)
+		{
+			result = await session.RunAsync(
+				"MATCH (p:WikiPage {namespace: $ns}) RETURN p ORDER BY p.namespace ASC, p.slug ASC SKIP $skip LIMIT $take",
+				new { ns = ns.Value.ToString().ToLowerInvariant(), skip, take });
+		}
+		else
+		{
+			result = await session.RunAsync(
+				"MATCH (p:WikiPage) RETURN p ORDER BY p.namespace ASC, p.slug ASC SKIP $skip LIMIT $take",
+				new { skip, take });
+		}
+
+		var records = await result.ToListAsync();
+		return records.Select(r => NodeToWikiPage(r["p"].As<INode>())).ToList().AsReadOnly();
+	}
+
+	public async Task<int> CountPagesAsync(WikiNamespace? ns = null)
+	{
+		await using var session = driver.AsyncSession();
+		var result = ns is not null
+			? await session.RunAsync(
+				"MATCH (p:WikiPage {namespace: $ns}) RETURN count(p) AS cnt",
+				new { ns = ns.Value.ToString().ToLowerInvariant() })
+			: await session.RunAsync("MATCH (p:WikiPage) RETURN count(p) AS cnt");
+
+		var records = await result.ToListAsync();
+		return records.Count > 0 ? records[0]["cnt"].As<int>() : 0;
+	}
+
+	public async Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50)
+	{
+		await using var session = driver.AsyncSession();
+		var result = await session.RunAsync(
+			"MATCH (p:WikiPage {category: $cat}) RETURN p ORDER BY p.title ASC SKIP $skip LIMIT $take",
+			new { cat = WikiHelpers.NormalizeCategory(category) ?? string.Empty, skip, take });
+
+		var records = await result.ToListAsync();
+		return records.Select(r => NodeToWikiPage(r["p"].As<INode>())).ToList().AsReadOnly();
+	}
+
+	public async Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50)
+	{
+		await using var session = driver.AsyncSession();
+		// coalesce guards nodes created before the tags property existed.
+		var result = await session.RunAsync(
+			"MATCH (p:WikiPage) WHERE $tag IN coalesce(p.tags, []) RETURN p ORDER BY p.title ASC SKIP $skip LIMIT $take",
+			new { tag = tag.Trim().ToLowerInvariant(), skip, take });
+
+		var records = await result.ToListAsync();
+		return records.Select(r => NodeToWikiPage(r["p"].As<INode>())).ToList().AsReadOnly();
+	}
+
 	// ── Write ─────────────────────────────────────────────────────────────────
 
 	public async Task<OneOf<WikiPage, Error<string>>> CreateAsync(
 		string title,
 		string markdown,
 		string authorDbref,
-		WikiNamespace ns = WikiNamespace.Main)
+		WikiNamespace ns = WikiNamespace.Main,
+		string? category = null)
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var slug = Slugify(title);
+		var cat = WikiHelpers.NormalizeCategory(category);
 
-		var existing = await GetBySlugAsync(slug, ns);
+		var existing = await GetBySlugAsync(slug, cat, ns);
 		if (existing.IsT0)
-			return new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{nsStr}'.");
+			return new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{nsStr}' category '{cat}'.");
 
 		var now = DateTimeOffset.UtcNow;
 		var pageId = Guid.NewGuid().ToString("N");
@@ -103,12 +163,15 @@ public partial class MemgraphDatabase : IWikiService
 					createdAt: $now,
 					updatedAt: $now,
 					isProtected: false,
-					revisionNumber: 1
+					revisionNumber: 1,
+					category: $cat,
+					tags: [],
+					published: true
 				}) RETURN p
 				""",
 				new
 				{
-					pageId, slug, title, ns = nsStr, markdown, html, plain,
+					pageId, slug, title, ns = nsStr, cat, markdown, html, plain,
 					authorDbref, now = now.ToString("O")
 				});
 
@@ -199,6 +262,38 @@ public partial class MemgraphDatabase : IWikiService
 		return new None();
 	}
 
+	public async Task<OneOf<WikiPage, NotFound>> SetMetadataAsync(
+		string id,
+		string? category,
+		IReadOnlyList<string> tags,
+		bool published)
+	{
+		var lookupResult = await GetByIdAsync(id);
+		if (lookupResult.IsT1)
+			return new NotFound();
+
+		var existingPage = lookupResult.AsT0;
+		var normalizedCategory = WikiHelpers.NormalizeCategory(category);
+		var normalizedTags = WikiHelpers.NormalizeTags(tags);
+
+		// Category is part of page identity; reject a recategorization that would collide.
+		if (!string.Equals(normalizedCategory, existingPage.Category, StringComparison.OrdinalIgnoreCase)
+			&& Enum.TryParse<WikiNamespace>(existingPage.Namespace, ignoreCase: true, out var nsEnum)
+			&& (await GetBySlugAsync(existingPage.Slug, normalizedCategory, nsEnum)).IsT0)
+		{
+			return new NotFound();
+		}
+
+		await using var session = driver.AsyncSession();
+		var result = await session.RunAsync(
+			"MATCH (p:WikiPage {pageId: $id}) SET p.category = $cat, p.tags = $tags, p.published = $pub RETURN p",
+			new { id, cat = normalizedCategory, tags = normalizedTags.ToList(), pub = published });
+
+		var records = await result.ToListAsync();
+		if (records.Count == 0) return new NotFound();
+		return NodeToWikiPage(records[0]["p"].As<INode>());
+	}
+
 	// ── Revisions ─────────────────────────────────────────────────────────────
 
 	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
@@ -262,6 +357,16 @@ public partial class MemgraphDatabase : IWikiService
 		DateTimeOffset.TryParse(node["createdAt"].As<string>(), out createdAt);
 		DateTimeOffset.TryParse(node["updatedAt"].As<string>(), out updatedAt);
 
+		// Metadata props are optional — nodes created before they existed get defaults.
+		var category = node.Properties.TryGetValue("category", out var catVal)
+			? catVal?.As<string?>()
+			: null;
+		var tags = node.Properties.TryGetValue("tags", out var tagsVal) && tagsVal is not null
+			? tagsVal.As<List<string>>()
+			: [];
+		var published = !node.Properties.TryGetValue("published", out var pubVal)
+			|| pubVal is null || pubVal.As<bool>();
+
 		return new WikiPage(
 			Id: node["pageId"].As<string>(),
 			Slug: node["slug"].As<string>(),
@@ -276,7 +381,12 @@ public partial class MemgraphDatabase : IWikiService
 			UpdatedAt: updatedAt,
 			IsProtected: node["isProtected"].As<bool>(),
 			RevisionNumber: node["revisionNumber"].As<int>()
-		);
+		)
+		{
+			Category = string.IsNullOrEmpty(category) ? null : category,
+			Tags = tags,
+			Published = published,
+		};
 	}
 
 	private static WikiRevision NodeToWikiRevision(INode node)

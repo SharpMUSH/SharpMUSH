@@ -85,9 +85,12 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS channel_name ON channel FIELDS name UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS counter_name ON counter FIELDS name UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS mail_key ON mail FIELDS key UNIQUE",
-				"DEFINE INDEX IF NOT EXISTS wiki_page_slug ON wiki_page FIELDS namespace, slug UNIQUE",
+				// Category is part of page identity: backfill legacy null categories, then key on all three.
+				"UPDATE wiki_page SET category = 'general' WHERE category = NONE",
+				"DEFINE INDEX IF NOT EXISTS wiki_page_slug ON wiki_page FIELDS namespace, category, slug UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS wiki_page_updated ON wiki_page FIELDS updatedAt",
 				"DEFINE INDEX IF NOT EXISTS wiki_page_ns ON wiki_page FIELDS namespace",
+				"DEFINE INDEX IF NOT EXISTS wiki_page_category ON wiki_page FIELDS category",
 				"DEFINE INDEX IF NOT EXISTS wiki_revision_page ON wiki_revision FIELDS pageId",
 				"DEFINE INDEX IF NOT EXISTS wiki_revision_page_rev ON wiki_revision FIELDS pageId, revisionNumber UNIQUE",
 				// Indexes on edge/relation tables for fast traversal
@@ -127,8 +130,8 @@ public partial class SurrealDatabase
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-			// Initialize in-memory counter for auto-increment object keys (migration creates keys 0, 1, 2)
-			_nextObjectKey = 2;
+			// Initialize in-memory counter for auto-increment object keys (migration creates keys 0-5)
+			_nextObjectKey = 5;
 
 			// Create Room Zero (key=0)
 			await ExecuteAsync(
@@ -166,6 +169,38 @@ public partial class SurrealDatabase
 				"RELATE room:2->is_object->object:2",
 				cancellationToken);
 
+			// Create Player Three - Package Manager (config package_manager) at Room Zero
+			await ExecuteAsync(
+				"UPSERT object:3 SET name = 'Package Manager', type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 3",
+				new Dictionary<string, object?> { ["now"] = now },
+				cancellationToken);
+			await ExecuteAsync(
+				"UPSERT player:3 SET key = 3, passwordHash = '', passwordSalt = '', aliases = [], quota = 999999",
+				cancellationToken);
+			await ExecuteAsync("RELATE player:3->is_object->object:3", cancellationToken);
+			await ExecuteAsync("RELATE player:3->at_location->room:0", cancellationToken);
+			await ExecuteAsync("RELATE player:3->has_home->room:0", cancellationToken);
+
+			// Create Thing Four - HTTP Handler (config http_handler) in Master Room
+			await ExecuteAsync(
+				"UPSERT object:4 SET name = 'HTTP Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 4",
+				new Dictionary<string, object?> { ["now"] = now },
+				cancellationToken);
+			await ExecuteAsync("UPSERT thing:4 SET key = 4, aliases = []", cancellationToken);
+			await ExecuteAsync("RELATE thing:4->is_object->object:4", cancellationToken);
+			await ExecuteAsync("RELATE thing:4->at_location->room:2", cancellationToken);
+			await ExecuteAsync("RELATE thing:4->has_home->room:2", cancellationToken);
+
+			// Create Thing Five - Event Handler (config event_handler) in Master Room
+			await ExecuteAsync(
+				"UPSERT object:5 SET name = 'Event Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 5",
+				new Dictionary<string, object?> { ["now"] = now },
+				cancellationToken);
+			await ExecuteAsync("UPSERT thing:5 SET key = 5, aliases = []", cancellationToken);
+			await ExecuteAsync("RELATE thing:5->is_object->object:5", cancellationToken);
+			await ExecuteAsync("RELATE thing:5->at_location->room:2", cancellationToken);
+			await ExecuteAsync("RELATE thing:5->has_home->room:2", cancellationToken);
+
 			// Player One at Room Zero
 			await ExecuteAsync(
 				"RELATE player:1->at_location->room:0",
@@ -186,6 +221,10 @@ public partial class SurrealDatabase
 			await ExecuteAsync(
 				"RELATE object:2->has_owner->player:1",
 				cancellationToken);
+			// God owns the handler things; PM (#3) owns itself
+			await ExecuteAsync("RELATE object:4->has_owner->player:1", cancellationToken);
+			await ExecuteAsync("RELATE object:5->has_owner->player:1", cancellationToken);
+			await ExecuteAsync("RELATE object:3->has_owner->player:3", cancellationToken);
 
 			// Create initial flags
 			await CreateInitialFlags(cancellationToken);
@@ -202,6 +241,10 @@ public partial class SurrealDatabase
 			// Give Player One the WIZARD flag
 			await ExecuteAsync(
 				"RELATE object:1->has_flags->object_flag:WIZARD",
+				cancellationToken);
+			// Give the Package Manager (#3) the WIZARD flag
+			await ExecuteAsync(
+				"RELATE object:3->has_flags->object_flag:WIZARD",
 				cancellationToken);
 
 			logger.LogInformation("SurrealDB Migration Completed");

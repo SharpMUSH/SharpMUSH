@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -146,11 +147,36 @@ file sealed class RunStartComparer : IComparer<AttributeRun>
 
 public sealed class ColorJsonConverter : JsonConverter<Color>
 {
-    public override Color Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-        ColorTranslator.FromHtml(reader.GetString()!);
+    /// <summary>
+    /// Parses <c>#rrggbb</c> / <c>#rrggbbaa</c> manually so the converter works on platforms
+    /// where <c>System.Drawing.Common</c> (and thus <see cref="ColorTranslator"/>) is unsupported —
+    /// notably Blazor WebAssembly, where the portal deserializes markup client-side. The
+    /// <see cref="Write"/> method only ever emits these hex forms, so the manual path is exhaustive
+    /// for our own data; a <see cref="ColorTranslator.FromHtml"/> fallback is kept only for any
+    /// foreign named-colour strings (never produced here, never hit on WASM).
+    /// </summary>
+    public override Color Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var s = reader.GetString();
+        if (s is { Length: > 0 } && s[0] == '#' && (s.Length == 7 || s.Length == 9)
+            && byte.TryParse(s.AsSpan(1, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var r)
+            && byte.TryParse(s.AsSpan(3, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var g)
+            && byte.TryParse(s.AsSpan(5, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var b))
+        {
+            byte a = 255;
+            if (s.Length == 9
+                && !byte.TryParse(s.AsSpan(7, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out a))
+                a = 255;
+            return Color.FromArgb(a, r, g, b);
+        }
+
+        return ColorTranslator.FromHtml(s!);
+    }
 
     public override void Write(Utf8JsonWriter writer, Color value, JsonSerializerOptions options) =>
-        writer.WriteStringValue($"#{value.R:X2}{value.G:X2}{value.B:X2}".ToLower());
+        writer.WriteStringValue(value.A == 255
+            ? $"#{value.R:x2}{value.G:x2}{value.B:x2}"
+            : $"#{value.R:x2}{value.G:x2}{value.B:x2}{value.A:x2}");
 }
 
 // ── MarkupString class ────────────────────────────────────────────────────────

@@ -54,6 +54,15 @@ public class HelpTopicInlineParser : InlineParser
 
 		var topic = slice.Text.AsSpan(topicStart, slice.Start - topicStart).ToString();
 
+		// Task-list markers ([ ] / [x] / [X]) are not help topics — decline so the
+		// TaskLists extension (or literal text) handles them.
+		if (string.IsNullOrWhiteSpace(topic) ||
+			topic.Length == 1 && (topic[0] == 'x' || topic[0] == 'X'))
+		{
+			slice.Start = savedStart;
+			return false;
+		}
+
 		// Advance past ']'.
 		c = slice.NextChar();
 

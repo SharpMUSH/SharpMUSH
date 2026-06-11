@@ -201,6 +201,21 @@
   <data name="NothingToSeeHere" xml:space="preserve">
     <value>Nothing to see here.</value>
   </data>
+  <data name="WikiEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="WikiRecentChanges" xml:space="preserve">
+    <value>Recent Changes</value>
+  </data>
+  <data name="WikiNoRecentChanges" xml:space="preserve">
+    <value>No pages have been edited yet.</value>
+  </data>
+  <data name="WikiBrowseByNamespace" xml:space="preserve">
+    <value>Browse by Namespace</value>
+  </data>
+  <data name="WikiNamespaceEmpty" xml:space="preserve">
+    <value>No pages in this namespace yet.</value>
+  </data>
 
   <!-- ======================== -->
   <!-- Counter.razor            -->
@@ -915,5 +930,192 @@
 
   <data name="Terminal" xml:space="preserve">
     <value>Terminal</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- Wiki Admin               -->
+  <!-- ======================== -->
+  <data name="Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="WikiAdmin" xml:space="preserve">
+    <value>Wiki Admin</value>
+  </data>
+  <data name="WikiAdminDescription" xml:space="preserve">
+    <value>Manage wiki pages: metadata, protection, publication state and bulk operations.</value>
+  </data>
+  <data name="WikiTitle" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="WikiNamespace" xml:space="preserve">
+    <value>Namespace</value>
+  </data>
+  <data name="WikiCategory" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="WikiTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="WikiPublished" xml:space="preserve">
+    <value>Published</value>
+  </data>
+  <data name="WikiProtected" xml:space="preserve">
+    <value>Protected</value>
+  </data>
+  <data name="WikiUpdated" xml:space="preserve">
+    <value>Updated</value>
+  </data>
+  <data name="WikiRevision" xml:space="preserve">
+    <value>Revision</value>
+  </data>
+  <data name="WikiProtect" xml:space="preserve">
+    <value>Protect</value>
+  </data>
+  <data name="WikiUnprotect" xml:space="preserve">
+    <value>Unprotect</value>
+  </data>
+  <data name="WikiDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="WikiEditMetadata" xml:space="preserve">
+    <value>Edit Metadata</value>
+  </data>
+  <data name="WikiDeleteConfirmTitle" xml:space="preserve">
+    <value>Delete Pages</value>
+  </data>
+  <data name="WikiDeleteConfirmText" xml:space="preserve">
+    <value>Delete {0} page(s) and all their revisions? This cannot be undone.</value>
+  </data>
+  <data name="WikiBatchSucceeded" xml:space="preserve">
+    <value>{0} page(s) updated</value>
+  </data>
+  <data name="WikiBatchFailed" xml:space="preserve">
+    <value>{0} page(s) failed</value>
+  </data>
+  <data name="WikiNoPages" xml:space="preserve">
+    <value>No wiki pages found.</value>
+  </data>
+  <data name="WikiMetadataSaved" xml:space="preserve">
+    <value>Metadata saved for {0}</value>
+  </data>
+  <data name="WikiMetadataSaveFailed" xml:space="preserve">
+    <value>Metadata save failed: {0}</value>
+  </data>
+  <data name="WikiTagsHelper" xml:space="preserve">
+    <value>Press Enter or the + to add a tag</value>
+  </data>
+  <data name="WikiNamespaceFilter" xml:space="preserve">
+    <value>Namespace filter</value>
+  </data>
+  <data name="WikiAllNamespaces" xml:space="preserve">
+    <value>All namespaces</value>
+  </data>
+  <data name="SearchCharacters" xml:space="preserve">
+    <value>Search characters…</value>
+  </data>
+  <data name="NoCharactersFound" xml:space="preserve">
+    <value>No characters found.</value>
+  </data>
+  <data name="ProfileUnavailable" xml:space="preserve">
+    <value>This character's profile is not available.</value>
+  </data>
+  <data name="Gallery" xml:space="preserve">
+    <value>Gallery</value>
+  </data>
+  <data name="GalleryEmpty" xml:space="preserve">
+    <value>No images yet.</value>
+  </data>
+  <data name="Characters" xml:space="preserve">
+    <value>Characters</value>
+  </data>
+  <data name="Wiki" xml:space="preserve">
+    <value>Wiki</value>
+  </data>
+  <data name="RecentChanges" xml:space="preserve">
+    <value>Recent Changes</value>
+  </data>
+  <data name="SceneArchive" xml:space="preserve">
+    <value>Scenes</value>
+  </data>
+  <data name="Mail" xml:space="preserve">
+    <value>Mail</value>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="Help" xml:space="preserve">
+    <value>Help</value>
+  </data>
+  <data name="MyAccount" xml:space="preserve">
+    <value>My Account</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="EditProfile" xml:space="preserve">
+    <value>Edit Profile</value>
+  </data>
+  <data name="StaffOnlyField" xml:space="preserve">
+    <value>Staff-only — changes apply only if you are staff.</value>
+  </data>
+  <data name="ProfileUpdateFailed" xml:space="preserve">
+    <value>Could not save profile changes.</value>
+  </data>
+  <data name="ProfileUpdated" xml:space="preserve">
+    <value>Profile updated ({0} field(s)).</value>
+  </data>
+  <data name="SetAsIcon" xml:space="preserve">
+    <value>Set as profile icon</value>
+  </data>
+  <data name="GalleryUploadFailed" xml:space="preserve">
+    <value>Image upload failed.</value>
+  </data>
+  <data name="ProfileHandler" xml:space="preserve">
+    <value>Profile Handler</value>
+  </data>
+  <data name="Compose" xml:space="preserve">
+    <value>Compose</value>
+  </data>
+  <data name="Mailbox" xml:space="preserve">
+    <value>Mailbox</value>
+  </data>
+  <data name="MailNeedsCharacter" xml:space="preserve">
+    <value>Select or connect a character to read your mail.</value>
+  </data>
+  <data name="From" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="Subject" xml:space="preserve">
+    <value>Subject</value>
+  </data>
+  <data name="MailEmpty" xml:space="preserve">
+    <value>No messages in this folder.</value>
+  </data>
+  <data name="MailNotFound" xml:space="preserve">
+    <value>Message not found.</value>
+  </data>
+  <data name="Urgent" xml:space="preserve">
+    <value>Urgent</value>
+  </data>
+  <data name="Reply" xml:space="preserve">
+    <value>Reply</value>
+  </data>
+  <data name="MailDeleted" xml:space="preserve">
+    <value>Message deleted.</value>
+  </data>
+  <data name="MailDeleteFailed" xml:space="preserve">
+    <value>Could not delete message.</value>
+  </data>
+  <data name="ComposeMail" xml:space="preserve">
+    <value>Compose Mail</value>
+  </data>
+  <data name="To" xml:space="preserve">
+    <value>To</value>
+  </data>
+  <data name="MailSent" xml:space="preserve">
+    <value>Mail sent.</value>
+  </data>
+  <data name="MailSendFailed" xml:space="preserve">
+    <value>Could not send mail. Check the recipient name.</value>
   </data>
 </root>

@@ -1,8 +1,18 @@
 @page "/play"
 @attribute [Authorize]
+@using SharpMUSH.Client.Components
+@using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
+@inject IPlayTerminalService PlayTerminal
 
 <PageTitle>Play — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Play</MudText>
-<MudText Color="Color.Secondary">Game terminal coming soon.</MudText>
+<MudText Typo="Typo.h4" Class="mb-4">@Loc["Play"]</MudText>
+
+@* The player-interaction terminal. This is a dedicated connection (IPlayTerminalService),
+   separate from the command/softcode terminal in the docked drawer. As a singleton it stays
+   connected across navigation. *@
+<MudPaper Outlined="true" Class="pa-0" Style="height:70vh;display:flex;flex-direction:column;overflow:hidden;">
+    @* Player-facing terminal: suppress the connection [DBG] diagnostics. *@
+    <GlobalTerminal TerminalOverride="PlayTerminal" ShowDiagnostics="false" />
+</MudPaper>

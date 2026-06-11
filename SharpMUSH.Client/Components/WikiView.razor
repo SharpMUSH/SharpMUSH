@@ -1,45 +1,137 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject WikiService Wiki
+@inject NavigationManager Nav
 
-
-@if (Mode == WikiMode.View)
+@if (_loading)
 {
-    <WikiDisplay Slug=@Slug Article=@_article ActivateEditMode="ActivateEditMode" />
+    <WikiPageSkeleton />
+}
+else if (Mode == WikiMode.View)
+{
+    <WikiDisplay Slug="@Slug" Namespace="@Namespace" Category="@Category" Article="@_article" ActivateEditMode="ActivateEditMode"
+                 OnArticleRestored="HandleArticleRestored" />
 }
 else
 {
-    <br/>
-    <WikiEdit Article=@_article/>
+    <br />
+    <WikiEdit Article="@_editDraft"
+              OnSaved="@HandleSave"
+              OnCancel="@HandleCancel" />
+    @if (_saveError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-2">@_saveError</MudAlert>
+    }
 }
 
 @code {
-    public enum WikiMode
-    {
-        View,
-        Edit
-    }
+    public enum WikiMode { View, Edit }
 
-    [Parameter]
-    public required string Slug { get; init; }
+    [Parameter] public required string Slug { get; init; }
+    [Parameter] public required WikiMode Mode { get; set; } = WikiMode.View;
 
-    [Parameter]
-    public required WikiMode Mode { get; set; } = WikiMode.View;
+    /// <summary>Wiki namespace (e.g. "help"); null means the Main namespace.</summary>
+    [Parameter] public string? Namespace { get; init; }
 
-    public async Task ActivateEditMode()
-    {
-        await ValueTask.CompletedTask;
-        Mode = WikiMode.Edit;
-    }
+    /// <summary>Category segment — part of the page's identity. Null defaults to "general".</summary>
+    [Parameter] public string? Category { get; init; }
 
     private WikiArticle? _article;
 
+    // A shallow copy of _article used while editing so the view copy is not mutated live.
+    private WikiArticle? _editDraft;
+    private string? _saveError;
+    private bool _loading = true;
+
+    public async Task ActivateEditMode()
+    {
+        // Build a draft from the current article (or a blank new one if the page doesn't exist yet).
+        _editDraft = _article is not null
+            ? new WikiArticle(_article.Title, _article.Content, _article.Image, _article.RenderedHtml)
+            {
+                Id = _article.Id,
+                Slug = _article.Slug,
+                Category = _article.Category,
+                Tags = [.. _article.Tags],
+                Published = _article.Published,
+            }
+            : new WikiArticle(Slug, string.Empty, null) { Category = Category };
+
+        _saveError = null;
+        Mode = WikiMode.Edit;
+        StateHasChanged();
+    }
+
+    private async Task HandleSave(WikiArticle draft)
+    {
+        _saveError = null;
+        OneOf.OneOf<WikiArticle, string> result;
+
+        if (string.IsNullOrEmpty(draft.Slug))
+        {
+            // New page — category is part of identity, so it's fixed at create from the draft.
+            result = await Wiki.CreatePageAsync(draft.Title, draft.Content, Namespace, draft.Category);
+        }
+        else
+        {
+            // The page is identified by its current (route) category.
+            result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content, ns: Namespace, category: Category);
+        }
+
+        if (result.IsT0 && MetadataChanged(result.AsT0, draft))
+        {
+            // Content save succeeded; push the metadata separately. The created/updated article
+            // carries the server's current category, used as the lookup key in case the category
+            // itself is changing (a re-key/move).
+            result = await Wiki.SetMetadataAsync(
+                result.AsT0.Slug, draft.Category, draft.Tags, draft.Published, Namespace,
+                currentCategory: result.AsT0.Category);
+        }
+
+        await result.Match<Task>(
+            updated =>
+            {
+                _article = updated;
+                _editDraft = null;
+                Mode = WikiMode.View;
+                StateHasChanged();
+                return Task.CompletedTask;
+            },
+            err =>
+            {
+                _saveError = err;
+                StateHasChanged();
+                return Task.CompletedTask;
+            });
+    }
+
+    /// <summary>True when the draft's metadata differs from the just-saved server copy.</summary>
+    private static bool MetadataChanged(WikiArticle saved, WikiArticle draft) =>
+        !string.Equals(saved.Category ?? string.Empty, draft.Category ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+        || saved.Published != draft.Published
+        || !saved.Tags.SequenceEqual(draft.Tags);
+
+    /// <summary>Swaps in the article returned by a successful history-dialog rollback.</summary>
+    private void HandleArticleRestored(WikiArticle restored)
+    {
+        _article = restored;
+        StateHasChanged();
+    }
+
+    private void HandleCancel()
+    {
+        _editDraft = null;
+        _saveError = null;
+        Mode = WikiMode.View;
+        StateHasChanged();
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        var article = await Wiki.GetWikiArticle(Slug);
-        
-        _article = article.IsT0 ? article.AsT0 : null;
-
+        _loading = true;
+        var result = await Wiki.GetWikiArticle(Slug, Category, Namespace);
+        _article = result.IsT0 ? result.AsT0 : null;
+        _loading = false;
         await base.OnInitializedAsync();
     }
 }

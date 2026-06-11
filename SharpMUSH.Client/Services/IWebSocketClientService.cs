@@ -38,4 +38,10 @@ public interface IWebSocketClientService : IAsyncDisposable
 	/// Disconnect from the server
 	/// </summary>
 	Task DisconnectAsync();
+
+	/// <summary>
+	/// Discard any messages queued in the send buffer.
+	/// Call before an OTT login to prevent stale commands from being flushed pre-authentication.
+	/// </summary>
+	void ClearSendBuffer();
 }

@@ -4,10 +4,13 @@ using ColorCode.Common;
 using ColorCode.Compilation;
 using ColorCode.Parsing;
 using ColorCode.Styling;
+using Markdig.Extensions.CustomContainers;
 using Markdig.Extensions.Tables;
+using Markdig.Extensions.TaskLists;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.MarkupString;
 using System.Drawing;
 using System.Text;
@@ -104,11 +107,14 @@ public partial class RecursiveMarkdownRenderer
 			QuoteBlock quote => RenderQuote(quote),
 			ThematicBreakBlock _ => RenderThematicBreak(),
 			HtmlBlock html => RenderHtmlBlock(html),
+			CustomContainer custom => RenderCustomContainer(custom),
 			Table table => RenderTable(table),
 			TableRow row => RenderTableRow(row),
 			TableCell cell => RenderTableCell(cell),
 
 			// Inline elements - specific types first, then base ContainerInline
+			WikiLinkInline wikiLink => RenderWikiLink(wikiLink),
+			TaskList task => RenderTaskList(task),
 			LiteralInline literal => RenderLiteral(literal),
 			CodeInline code => RenderCodeInline(code),
 			EmphasisInline emphasis => RenderEmphasis(emphasis),

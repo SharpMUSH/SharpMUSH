@@ -122,6 +122,17 @@ public record DatabaseOptions(
 	uint? HttpHandler,
 
 	[property: SharpConfig(
+		Name = "package_manager",
+		Category = "Database",
+		Description = "Wizard object that owns softcode-package-managed objects",
+		ValidationPattern = @"^\d*$",
+		Group = "Handlers",
+		Order = 4,
+		Min = 0,
+		Tooltip = "Leave empty to disable the package manager")]
+	uint? PackageManager,
+
+	[property: SharpConfig(
 		Name = "http_per_second",
 		Category = "Database",
 		Description = "Maximum HTTP requests to handle per second",

@@ -12,6 +12,12 @@
 @code {
     [Parameter] public JsonElement? Config { get; set; }
 
+    /// <summary>
+    /// Injected by ZoneRenderer. Not used for rendering but must be declared so
+    /// DynamicComponent does not throw for unmatched parameters.
+    /// </summary>
+    [Parameter] public string Zone { get; set; } = string.Empty;
+
     private string _html = string.Empty;
 
     protected override void OnParametersSet()

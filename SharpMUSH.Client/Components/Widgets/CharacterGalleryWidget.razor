@@ -1,0 +1,153 @@
+@using System.Text.Json
+@using Microsoft.AspNetCore.Components.Forms
+@using SharpMUSH.Client.Services
+@inject GalleryService Gallery
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+<div class="character-gallery-widget">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3" Spacing="2">
+        <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Color="Color.Primary" />
+        <MudText Typo="Typo.h6">@Loc["Gallery"]</MudText>
+        <MudSpacer />
+        @if (CanEdit)
+        {
+            <MudFileUpload T="IBrowserFile" FilesChanged="UploadAsync"
+                           Accept="image/*" MaximumFileCount="1" MaxFileSize="10485760" />
+        }
+    </MudStack>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_items.Count == 0)
+    {
+        <MudPaper Outlined="true" Class="pa-6 d-flex flex-column align-center justify-center" Style="border-style:dashed;">
+            <MudIcon Icon="@Icons.Material.Filled.AddPhotoAlternate" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@Loc["GalleryEmpty"]</MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudGrid Spacing="2">
+            @foreach (var item in _items)
+            {
+                <MudItem xs="6" sm="4">
+                    <MudPaper Outlined="true" Class="gallery-thumb" Style="position:relative;overflow:hidden;">
+                        <MudImage Src="@item.Url" Alt="@item.FileName" Fluid="true"
+                                  ObjectFit="ObjectFit.Cover" Height="120"
+                                  Style="cursor:pointer;width:100%;"
+                                  @onclick="@(() => OpenLightbox(item))" />
+                        @if (item.IsIcon)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Star" Color="Color.Warning" Size="Size.Small"
+                                     Style="position:absolute;top:4px;left:4px;" />
+                        }
+                        @if (CanEdit)
+                        {
+                            <div style="position:absolute;top:0;right:0;display:flex;">
+                                @if (!item.IsIcon)
+                                {
+                                    <MudTooltip Text="@Loc["SetAsIcon"]">
+                                        <MudIconButton Icon="@Icons.Material.Filled.StarBorder" Size="Size.Small"
+                                                       Color="Color.Warning"
+                                                       OnClick="@(() => SetIconAsync(item))" Disabled="_busy" />
+                                    </MudTooltip>
+                                }
+                                <MudTooltip Text="@Loc["Delete"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => DeleteAsync(item))" Disabled="_busy" />
+                                </MudTooltip>
+                            </div>
+                        }
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</div>
+
+<MudOverlay Visible="_lightbox is not null" DarkBackground="true" AutoClose="true"
+            OnClick="@(() => _lightbox = null)">
+    @if (_lightbox is not null)
+    {
+        <MudImage Src="@_lightbox.Url" Alt="@_lightbox.FileName" Fluid="true"
+                  Style="max-height:90vh;max-width:90vw;" />
+    }
+</MudOverlay>
+
+@code {
+    [Parameter] public string? CharacterName { get; set; }
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public JsonElement? Config { get; set; }
+    [Parameter] public string Zone { get; set; } = string.Empty;
+
+    private IReadOnlyList<GalleryService.GalleryItem> _items = [];
+    private GalleryService.GalleryItem? _lightbox;
+    private bool _loading = true;
+    private bool _busy;
+    private string? _resolvedName;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var name = CharacterName ?? ConfigCharacter();
+        if (string.IsNullOrWhiteSpace(name) || name == _resolvedName)
+        {
+            return;
+        }
+        _resolvedName = name;
+        _loading = true;
+        _items = await Gallery.ListAsync(name);
+        _loading = false;
+    }
+
+    private string? ConfigCharacter()
+    {
+        if (Config is { } cfg && cfg.ValueKind == JsonValueKind.Object
+            && cfg.TryGetProperty("character", out var prop) && prop.ValueKind == JsonValueKind.String)
+        {
+            return prop.GetString();
+        }
+        return null;
+    }
+
+    private void OpenLightbox(GalleryService.GalleryItem item) => _lightbox = item;
+
+    private async Task UploadAsync(IBrowserFile? file)
+    {
+        if (file is null || _resolvedName is null) return;
+        _busy = true;
+        IReadOnlyList<GalleryService.GalleryItem>? updated;
+        try { updated = await Gallery.UploadAsync(_resolvedName, file); }
+        finally { _busy = false; }
+        if (updated is null)
+        {
+            Snackbar.Add(Loc["GalleryUploadFailed"], Severity.Error);
+            return;
+        }
+        _items = updated;
+    }
+
+    private async Task DeleteAsync(GalleryService.GalleryItem item)
+    {
+        if (_resolvedName is null) return;
+        _busy = true;
+        IReadOnlyList<GalleryService.GalleryItem>? updated;
+        try { updated = await Gallery.DeleteAsync(_resolvedName, item.AssetId); }
+        finally { _busy = false; }
+        if (updated is not null) { _items = updated; }
+    }
+
+    private async Task SetIconAsync(GalleryService.GalleryItem item)
+    {
+        if (_resolvedName is null) return;
+        var reordered = _items.Select(i => i with { IsIcon = i.AssetId == item.AssetId }).ToList();
+        _busy = true;
+        IReadOnlyList<GalleryService.GalleryItem>? updated;
+        try { updated = await Gallery.ReplaceAsync(_resolvedName, reordered); }
+        finally { _busy = false; }
+        if (updated is not null) { _items = updated; }
+    }
+}

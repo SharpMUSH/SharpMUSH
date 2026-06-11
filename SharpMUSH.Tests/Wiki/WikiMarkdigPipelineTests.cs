@@ -65,7 +65,7 @@ public class WikiMarkdigPipelineTests
 		var html = Pipeline().RenderToHtml("See [[Getting Started]] for details.");
 
 		// Slug derived: "getting_started"
-		await Assert.That(html).Contains("href=\"/wiki/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/getting_started\"");
 		await Assert.That(html).Contains("Getting Started");
 	}
 
@@ -74,17 +74,17 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("See [[Click here|getting_started]] for details.");
 
-		await Assert.That(html).Contains("href=\"/wiki/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/getting_started\"");
 		await Assert.That(html).Contains("Click here");
 	}
 
 	[Test]
 	public async Task RenderToHtml_WikiLinkWithNamespacePrefix_IncludesPrefixInHref()
 	{
-		// [[Help:Getting Started]] → href="/wiki/help/getting_started"
+		// [[Help:Getting Started]] → href="/wiki/help/general/getting_started"
 		var html = Pipeline().RenderToHtml("[[Help:Getting Started]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/help/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/help/general/getting_started\"");
 	}
 
 	[Test]
@@ -92,7 +92,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[my_page]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/my_page\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/my_page\"");
 	}
 
 	[Test]
@@ -100,8 +100,8 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[Page A]] and [[Page B]].");
 
-		await Assert.That(html).Contains("href=\"/wiki/page_a\"");
-		await Assert.That(html).Contains("href=\"/wiki/page_b\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/page_a\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/page_b\"");
 	}
 
 	// ── RenderToHtml — security (DisableHtml) ────────────────────────────────
@@ -207,14 +207,14 @@ public class WikiMarkdigPipelineTests
 	// ── WikiLinkExtension — named contract tests ───────────────────────────────
 
 	/// <summary>
-	/// [[My Page]] → &lt;a href="/wiki/my_page"&gt;My Page&lt;/a&gt;
+	/// [[My Page]] → &lt;a href="/wiki/main/general/my_page"&gt;My Page&lt;/a&gt;
 	/// </summary>
 	[Test]
 	public async Task WikiLinkExtension_ValidPage_EmitsAnchorTag()
 	{
 		var html = Pipeline().RenderToHtml("[[My Page]]");
 
-		await Assert.That(html).Contains("<a href=\"/wiki/my_page\">");
+		await Assert.That(html).Contains("<a href=\"/wiki/main/general/my_page\">");
 		await Assert.That(html).Contains("My Page");
 	}
 
@@ -263,7 +263,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[Help:Getting Started]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/help/getting_started\"");
+		await Assert.That(html).Contains("href=\"/wiki/help/general/getting_started\"");
 	}
 
 	/// <summary>
@@ -274,7 +274,7 @@ public class WikiMarkdigPipelineTests
 	{
 		var html = Pipeline().RenderToHtml("[[Click Here|my_page]]");
 
-		await Assert.That(html).Contains("href=\"/wiki/my_page\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/general/my_page\"");
 		await Assert.That(html).Contains("Click Here");
 		await Assert.That(html).DoesNotContain("my_page</"); // slug must not appear as link text
 	}
@@ -323,5 +323,180 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(html).Contains("src=\"https://example.com/bg.png\"");
 		await Assert.That(html).Contains("loading=\"lazy\"");
 		await Assert.That(html).Contains("class=\"wiki-img\"");
+	}
+
+	// ── Image sizing via generic attributes ───────────────────────────────────
+
+	/// <summary>
+	/// <c>![alt](src){width=200 height=100}</c> emits width/height on the img tag.
+	/// </summary>
+	[Test]
+	public async Task RenderToHtml_ImageWithWidthHeight_EmitsDimensionAttributes()
+	{
+		var html = Pipeline().RenderToHtml("![SharpMUSH logo](/assets/Logo.svg){width=200 height=100}");
+
+		await Assert.That(html).Contains("width=\"200\"");
+		await Assert.That(html).Contains("height=\"100\"");
+		await Assert.That(html).Contains("class=\"wiki-img\"");
+		await Assert.That(html).Contains("loading=\"lazy\"");
+	}
+
+	/// <summary>Percentage dimensions are accepted.</summary>
+	[Test]
+	public async Task RenderToHtml_ImageWithPercentWidth_EmitsWidth()
+	{
+		var html = Pipeline().RenderToHtml("![banner](/img/banner.png){width=50%}");
+
+		await Assert.That(html).Contains("width=\"50%\"");
+	}
+
+	/// <summary>
+	/// Non-numeric dimension values are dropped — they could otherwise smuggle
+	/// markup into the attribute position.
+	/// </summary>
+	[Test]
+	public async Task RenderToHtml_ImageWithInvalidWidth_DropsAttribute()
+	{
+		var html = Pipeline().RenderToHtml("![x](/img/x.png){width=\"200px\" height=javascript}");
+
+		await Assert.That(html).DoesNotContain("width=");
+		await Assert.That(html).DoesNotContain("height=");
+	}
+
+	/// <summary>
+	/// Dangerous generic attributes (onerror, style, id) are never emitted —
+	/// only the whitelisted width/height/class subset survives.
+	/// </summary>
+	[Test]
+	public async Task RenderToHtml_ImageWithEventHandlerAttribute_DropsIt()
+	{
+		var html = Pipeline().RenderToHtml("![x](/img/x.png){onerror=alert(1) style=position:fixed width=64}");
+
+		await Assert.That(html).DoesNotContain("onerror");
+		await Assert.That(html).DoesNotContain("style=");
+		await Assert.That(html).Contains("width=\"64\"");
+	}
+
+	/// <summary>
+	/// Author-supplied CSS classes ({.logo}) are appended after wiki-img.
+	/// </summary>
+	[Test]
+	public async Task RenderToHtml_ImageWithCssClass_AppendsToWikiImgClass()
+	{
+		var html = Pipeline().RenderToHtml("![logo](/assets/Logo.svg){.logo width=200}");
+
+		await Assert.That(html).Contains("class=\"wiki-img logo\"");
+	}
+
+	/// <summary>Class names outside the safe identifier charset are dropped.</summary>
+	[Test]
+	public async Task RenderToHtml_ImageWithUnsafeCssClass_DropsIt()
+	{
+		var html = Pipeline().RenderToHtml("![x](/img/x.png){.bad\"onload=alert(1)}");
+
+		await Assert.That(html).Contains("class=\"wiki-img\"");
+		await Assert.That(html).DoesNotContain("onload");
+	}
+
+	// ── Wiki directive containers (WikiDirectiveExtension) ───────────────────
+
+	/// <summary>::: category lore → placeholder div with data attributes.</summary>
+	[Test]
+	public async Task RenderToHtml_CategoryDirective_EmitsPlaceholderDiv()
+	{
+		var html = Pipeline().RenderToHtml("::: category lore\n:::");
+
+		await Assert.That(html)
+			.Contains("<div class=\"wiki-directive\" data-directive=\"category\" data-arg=\"lore\"></div>");
+	}
+
+	/// <summary>::: tag magic → placeholder div with data attributes.</summary>
+	[Test]
+	public async Task RenderToHtml_TagDirective_EmitsPlaceholderDiv()
+	{
+		var html = Pipeline().RenderToHtml("::: tag magic\n:::");
+
+		await Assert.That(html)
+			.Contains("<div class=\"wiki-directive\" data-directive=\"tag\" data-arg=\"magic\"></div>");
+	}
+
+	/// <summary>::: pagelist help → placeholder div with data attributes.</summary>
+	[Test]
+	public async Task RenderToHtml_PagelistDirective_EmitsPlaceholderDiv()
+	{
+		var html = Pipeline().RenderToHtml("::: pagelist help\n:::");
+
+		await Assert.That(html)
+			.Contains("<div class=\"wiki-directive\" data-directive=\"pagelist\" data-arg=\"help\"></div>");
+	}
+
+	/// <summary>::: recent 10 → placeholder div with the count as the arg.</summary>
+	[Test]
+	public async Task RenderToHtml_RecentDirective_EmitsPlaceholderDiv()
+	{
+		var html = Pipeline().RenderToHtml("::: recent 10\n:::");
+
+		await Assert.That(html)
+			.Contains("<div class=\"wiki-directive\" data-directive=\"recent\" data-arg=\"10\"></div>");
+	}
+
+	/// <summary>The recent count is clamped to 50 when the author asks for more.</summary>
+	[Test]
+	public async Task RenderToHtml_RecentDirectiveOverMax_ClampsTo50()
+	{
+		var html = Pipeline().RenderToHtml("::: recent 999\n:::");
+
+		await Assert.That(html).Contains("data-arg=\"50\"");
+	}
+
+	/// <summary>A non-numeric recent argument renders no directive at all.</summary>
+	[Test]
+	public async Task RenderToHtml_RecentDirectiveNonNumeric_RendersNothing()
+	{
+		var html = Pipeline().RenderToHtml("::: recent lots\n:::");
+
+		await Assert.That(html).DoesNotContain("wiki-directive");
+	}
+
+	/// <summary>
+	/// An argument outside the safe charset (e.g. attempted markup injection)
+	/// renders no directive div — the container is dropped entirely.
+	/// </summary>
+	[Test]
+	public async Task RenderToHtml_DirectiveWithInvalidArg_RendersNoDirectiveDiv()
+	{
+		var html = Pipeline().RenderToHtml("::: category <script>alert(1)</script>\n:::");
+
+		await Assert.That(html).DoesNotContain("wiki-directive");
+		await Assert.That(html).DoesNotContain("<script>");
+	}
+
+	/// <summary>
+	/// Custom containers with an unknown info string keep the default Markdig
+	/// custom-container rendering (div with the info as its class, children kept).
+	/// </summary>
+	[Test]
+	public async Task RenderToHtml_UnknownContainerInfo_KeepsDefaultRendering()
+	{
+		var html = Pipeline().RenderToHtml("::: warning\nBe careful!\n:::");
+
+		await Assert.That(html).Contains("<div class=\"warning\">");
+		await Assert.That(html).Contains("Be careful!");
+		await Assert.That(html).DoesNotContain("wiki-directive");
+	}
+
+	/// <summary>
+	/// Directive placeholders contribute no text to plain-text extraction —
+	/// surrounding prose survives, the directive itself disappears.
+	/// </summary>
+	[Test]
+	public async Task ExtractPlainText_DirectivePage_ContributesNoDirectiveText()
+	{
+		var text = Pipeline().ExtractPlainText("Before text.\n\n::: category lore\n:::\n\nAfter text.");
+
+		await Assert.That(text).Contains("Before text.");
+		await Assert.That(text).Contains("After text.");
+		await Assert.That(text).DoesNotContain("category");
+		await Assert.That(text).DoesNotContain("lore");
 	}
 }

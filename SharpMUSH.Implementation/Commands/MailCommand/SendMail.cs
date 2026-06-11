@@ -75,18 +75,18 @@ public static class SendMail
 		{
 			if (!permissionService.PassesLock(sender, player, LockType.Mail))
 			{
-				await notifyService.Notify(sender, $"MAIL: {player.Object.Name} does not wish to receive mail from you.");
+				await notifyService.Notify(sender, $"MAIL: {player.Object.Name} does not wish to receive mail from you.", sender);
 				continue;
 			}
 
 			await mediator.Send(new SendMailCommand(sender.Object(), player, mail));
-			await notifyService.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.");
+			await notifyService.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.", sender);
 
 			if (!silent)
 			{
 				var mailList = mediator.CreateStream(new GetMailListQuery(player, "INBOX"));
 				await notifyService.Notify(player,
-					$"MAIL: You have received a message ({await mailList.CountAsync()}) from {sender.Object().Name}.");
+					$"MAIL: You have received a message ({await mailList.CountAsync()}) from {sender.Object().Name}.", sender);
 			}
 
 			// Trigger AMAIL attribute if configured and present
