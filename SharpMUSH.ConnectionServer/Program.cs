@@ -103,6 +103,9 @@ public class Program
 		// Add Output Transformation Service
 		builder.Services.AddSingleton<IOutputTransformService, OutputTransformService>();
 
+		// Add Markup Output Renderer (serialized MString -> wire form per connection)
+		builder.Services.AddSingleton<IMarkupOutputRenderer, MarkupOutputRenderer>();
+
 		// Add DescriptorGeneratorService
 		builder.Services.AddSingleton<IDescriptorGeneratorService, DescriptorGeneratorService>();
 
@@ -133,6 +136,8 @@ public class Program
 			{
 				x.AddConsumer<TelnetOutputConsumer>();
 				x.AddConsumer<TelnetPromptConsumer>();
+				x.AddConsumer<MarkupOutputConsumer>();
+				x.AddConsumer<MarkupPromptConsumer>();
 				x.AddConsumer<BroadcastConsumer>();
 				x.AddConsumer<DisconnectConnectionConsumer>();
 				x.AddConsumer<GMCPOutputConsumer>();

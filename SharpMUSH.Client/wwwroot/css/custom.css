@@ -65,6 +65,22 @@ body {
     font-style: italic;
 }
 
+/* ── MarkupString (MString) non-color attributes ──
+   Colors arrive as inline `style` from AnsiMarkup.WrapAsHtmlClass; these classes carry
+   the remaining text attributes. Class names match AnsiMarkup.HtmlClassNames. */
+.ms-bold { font-weight: bold; }
+.ms-faint { opacity: 0.6; }
+.ms-italic { font-style: italic; }
+.ms-underline { text-decoration: underline; }
+.ms-strike { text-decoration: line-through; }
+.ms-underline.ms-strike { text-decoration: underline line-through; }
+.ms-overline { text-decoration: overline; }
+.ms-blink { animation: ms-blink 1s steps(2, start) infinite; }
+
+@keyframes ms-blink {
+    to { visibility: hidden; }
+}
+
 /* ── Softcode Editor ── */
 .mush-editor-fill {
     width: 100%;

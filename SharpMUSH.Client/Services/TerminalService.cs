@@ -229,26 +229,70 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 	private void HandleMessage(object? sender, string message)
 	{
-		foreach (var raw in message.Split('\n'))
-		{
-			var line = StripAnsi(raw.TrimEnd('\r'));
+		var frame = TerminalFrameRenderer.Parse(message);
 
-			// Check for our correlation end-marker
-			if (_pending.HasValue && line == $"{EndMarkerPrefix}{_pending.Value.ReqId}")
+		switch (frame.Kind)
+		{
+			case TerminalFrameKind.Markup:
 			{
-				var (_, tcs, buffer) = _pending.Value;
-				_pending = null;
-				tcs.TrySetResult(buffer.ToArray());
-				// Don't surface the marker line in the terminal
-				continue;
+				var plainTrimmed = frame.Plain.TrimEnd('\r', '\n');
+
+				// The correlation end-marker arrives as its own markup frame.
+				if (TryCompletePendingRequest(plainTrimmed))
+					return;
+
+				// Buffer the response lines for any active correlated request.
+				if (_pending.HasValue)
+					foreach (var raw in frame.Plain.Split('\n'))
+						_pending.Value.Buffer.Add(raw.TrimEnd('\r'));
+
+				if (!string.IsNullOrEmpty(plainTrimmed))
+					AddLine(frame.Plain, frame.Html, TerminalLineSource.Server);
+				return;
 			}
 
-			// Buffer lines for any active correlated request
-			_pending?.Buffer.Add(line);
+			case TerminalFrameKind.Html:
+				if (!string.IsNullOrEmpty(frame.Html))
+					AddLine(frame.Plain, frame.Html, TerminalLineSource.Server);
+				return;
 
-			if (!string.IsNullOrEmpty(line))
-				AddLine(line, TerminalLineSource.Server);
+			case TerminalFrameKind.Oob:
+				// Structured out-of-band data: not for direct display (future hook).
+				return;
+
+			default:
+				// Plain text (banners / pre-markup server text): legacy line-by-line, ANSI-stripped.
+				foreach (var raw in message.Split('\n'))
+				{
+					var line = StripAnsi(raw.TrimEnd('\r'));
+
+					if (TryCompletePendingRequest(line))
+						continue;
+
+					_pending?.Buffer.Add(line);
+
+					if (!string.IsNullOrEmpty(line))
+						AddLine(line, TerminalLineSource.Server);
+				}
+				return;
 		}
+	}
+
+	/// <summary>
+	/// If <paramref name="line"/> is the correlation end-marker for the pending request, completes it
+	/// and returns true (the marker must not be surfaced in the terminal).
+	/// </summary>
+	private bool TryCompletePendingRequest(string line)
+	{
+		if (_pending.HasValue && line == $"{EndMarkerPrefix}{_pending.Value.ReqId}")
+		{
+			var (_, tcs, buffer) = _pending.Value;
+			_pending = null;
+			tcs.TrySetResult(buffer.ToArray());
+			return true;
+		}
+
+		return false;
 	}
 
 	private void HandleStateChange(object? sender, WebSocketState state)
@@ -263,6 +307,17 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	private void AddLine(string text, TerminalLineSource source)
 	{
 		var line = new TerminalLine(DateTime.Now, text, source);
+		AddLine(line);
+	}
+
+	private void AddLine(string text, string html, TerminalLineSource source)
+	{
+		var line = new TerminalLine(DateTime.Now, text, html, source);
+		AddLine(line);
+	}
+
+	private void AddLine(TerminalLine line)
+	{
 		lock (_lines)
 		{
 			if (_lines.Count >= MaxLines)

@@ -10,7 +10,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
-using System.Text;
 
 namespace SharpMUSH.Library.Services;
 
@@ -26,72 +25,34 @@ public class NotifyService(
 	IMediator? mediator = null) : INotifyService
 {
 	/// <summary>
-	/// MXP open line prefix: ESC[0z — signals the client this line may contain
-	/// standard MXP tags. Without any prefix, MXP clients default to locked mode
-	/// and will not interpret tags on the line.
+	/// Publishes output to a single connection as serialized markup. The ConnectionServer owns the
+	/// wire format (ANSI/Pueblo/MXP for terminals, a markup envelope for portal/WebSocket clients),
+	/// so the markup is kept as an <see cref="MString"/> here and only serialized for transport.
 	/// </summary>
-	private const string MxpOpenLinePrefix = ErrorMessages.Notifications.MxpLineOpen;
-
-	/// <summary>
-	/// Prepends the MXP open line prefix (ESC[0z) to each non-empty line of MXP output.
-	/// This signals the client that each line may contain standard open-mode MXP tags.
-	/// </summary>
-	private static string ApplyMxpLinePrefix(string text)
+	private async ValueTask PublishMarkup(long handle, OneOf<MString, string> what)
 	{
-		// Prefix each non-empty line with ESC[0z for MXP open mode
-		var lines = text.Split('\n');
-		return string.Join('\n', lines.Select(line =>
-			line.Length == 0 || line == "\r" ? line : MxpOpenLinePrefix + line));
+		var ms = what.Match(markup => markup, MModule.single);
+		ms = ApplyOutputPrefixSuffix(handle, ms);
+		await publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, MModule.serialize(ms)));
 	}
 
 	/// <summary>
-	/// Renders an MString/string for a specific output format, applying MXP line prefixes if needed.
+	/// Publishes prompt output to a single connection as serialized markup. Prompts are not wrapped
+	/// with OUTPUTPREFIX/OUTPUTSUFFIX and carry no trailing newline.
 	/// </summary>
-	private static string RenderForFormat(OneOf<MString, string> what, string format) =>
-		what.Match(
-			markupString => format switch
-			{
-				"pueblo" => markupString.Render("pueblo"),
-				"mxp" => ApplyMxpLinePrefix(markupString.Render("mxp")),
-				_ => markupString.ToString()
-			},
-			str => RenderPlainTextForFormat(str, format)
-		);
-
-	private static string RenderPlainTextForFormat(string text, string format)
+	private async ValueTask PublishMarkupPrompt(long handle, OneOf<MString, string> what)
 	{
-		var encoded = format switch
-		{
-			"pueblo" or "mxp" => System.Net.WebUtility.HtmlEncode(text),
-			_ => text
-		};
-
-		return format == "mxp"
-			? ApplyMxpLinePrefix(encoded)
-			: encoded;
+		var ms = what.Match(markup => markup, MModule.single);
+		await publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, MModule.serialize(ms)));
 	}
 
 	/// <summary>
-	/// Normalizes line endings by replacing all \n with \r\n and ensuring trailing \r\n
+	/// Wraps markup with OUTPUTPREFIX / OUTPUTSUFFIX if set on the connection, keeping everything as
+	/// an <see cref="MString"/>. Mirrors PennMUSH's per-command output wrapping (src/bsd.c): the
+	/// prefix is emitted as a separate line before the output and the suffix as a separate line
+	/// after. Line-ending normalization is the ConnectionServer's responsibility at render time.
 	/// </summary>
-	private static string NormalizeLineEnding(string text)
-	{
-		// Replace all standalone \n with \r\n (but don't double-up existing \r\n)
-		text = text.Replace("\r\n", "\n"); // First normalize everything to \n
-		text = text.Replace("\n", "\r\n");  // Then convert all to \r\n
-
-		// Ensure it ends with exactly one \r\n
-		text = text.TrimEnd('\r', '\n');
-		return text;
-	}
-
-	/// <summary>
-	/// Wraps text with OUTPUTPREFIX / OUTPUTSUFFIX if set on the connection.
-	/// Mirrors PennMUSH's per-command output wrapping (src/bsd.c).
-	/// The prefix is emitted as a separate line before the output,
-	/// and the suffix as a separate line after.
-	/// </summary>
-	private string ApplyOutputPrefixSuffix(long handle, string text)
+	private MString ApplyOutputPrefixSuffix(long handle, MString text)
 	{
 		var conn = connections.Get(handle);
 		if (conn is null)
@@ -107,19 +68,19 @@ public class NotifyService(
 			return text;
 		}
 
-		var sb = new StringBuilder();
+		var parts = new List<MString>();
 		if (hasPrefix && !string.IsNullOrEmpty(prefix))
 		{
-			sb.Append(NormalizeLineEnding(prefix));
-			sb.Append("\r\n");
+			parts.Add(MModule.single(prefix));
+			parts.Add(MModule.single("\n"));
 		}
-		sb.Append(text);
+		parts.Add(text);
 		if (hasSuffix && !string.IsNullOrEmpty(suffix))
 		{
-			sb.Append("\r\n");
-			sb.Append(NormalizeLineEnding(suffix));
+			parts.Add(MModule.single("\n"));
+			parts.Add(MModule.single(suffix));
 		}
-		return sb.ToString();
+		return MModule.multiple(parts);
 	}
 
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -161,16 +122,10 @@ public class NotifyService(
 			}
 		}
 
-		// Render per-connection to support different output formats (ANSI vs Pueblo HTML)
+		// Publish markup per-connection; the ConnectionServer renders to the connection's wire format.
 		await foreach (var conn in connections.Get(who))
 		{
-			var format = conn.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi");
-			var text = RenderForFormat(what, format);
-
-			text = NormalizeLineEnding(text);
-			var wrapped = ApplyOutputPrefixSuffix(conn.Handle, text);
-			var bytes = Encoding.UTF8.GetBytes(wrapped);
-			await publishEndpoint.HandlePublish(new TelnetOutputMessage(conn.Handle, bytes));
+			await PublishMarkup(conn.Handle, what);
 		}
 	}
 
@@ -187,16 +142,7 @@ public class NotifyService(
 			return;
 		}
 
-		var conn = connections.Get(handle);
-		var format = conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") ?? "ansi";
-		var text = RenderForFormat(what, format);
-
-		text = NormalizeLineEnding(text);
-		text = ApplyOutputPrefixSuffix(handle, text);
-		var bytes = Encoding.UTF8.GetBytes(text);
-
-		// Publish directly to Kafka - batching is handled by KafkaFlow producer
-		await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
+		await PublishMarkup(handle, what);
 	}
 
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -209,17 +155,9 @@ public class NotifyService(
 			return;
 		}
 
-		// Render per-handle to support different output formats (ANSI vs Pueblo HTML)
 		foreach (var handle in handles)
 		{
-			var conn = connections.Get(handle);
-			var format = conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") ?? "ansi";
-			var text = RenderForFormat(what, format);
-
-			text = NormalizeLineEnding(text);
-			var wrapped = ApplyOutputPrefixSuffix(handle, text);
-			var bytes = Encoding.UTF8.GetBytes(wrapped);
-			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
+			await PublishMarkup(handle, what);
 		}
 	}
 
@@ -233,18 +171,9 @@ public class NotifyService(
 			return;
 		}
 
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
-
-		// Prompts typically don't need newlines, but ensure consistency
-		// (Prompts are usually things like "> " without line breaks)
-		var bytes = Encoding.UTF8.GetBytes(text);
-
 		await foreach (var conn in connections.Get(who))
 		{
-			await publishEndpoint.HandlePublish(new TelnetPromptMessage(conn.Handle, bytes));
+			await PublishMarkupPrompt(conn.Handle, what);
 		}
 	}
 
@@ -264,18 +193,10 @@ public class NotifyService(
 			return;
 		}
 
-		var text = what.Match(
-			markupString => markupString.ToString(),
-			str => str
-		);
-
-		// Prompts typically don't need newlines
-		var bytes = Encoding.UTF8.GetBytes(text);
-
-		// Publish prompt message to each handle
+		// Publish prompt markup to each handle
 		foreach (var handle in handles)
 		{
-			await publishEndpoint.HandlePublish(new TelnetPromptMessage(handle, bytes));
+			await PublishMarkupPrompt(handle, what);
 		}
 	}
 

@@ -6,11 +6,13 @@ using System.Text;
 namespace SharpMUSH.ConnectionServer.Consumers;
 
 /// <summary>
-/// Consumes WebSocket output messages from NATS JetStream and sends to connections
+/// Consumes WebSocket output messages from NATS JetStream and sends to connections.
+/// The payload is an out-of-band JSON envelope (e.g. <c>{ "type": "html", ... }</c>) that the
+/// browser parses itself, so it is forwarded verbatim — running it through the ANSI/charset
+/// <see cref="IOutputTransformService"/> would corrupt the JSON.
 /// </summary>
 public class WebSocketOutputConsumer(
 	IConnectionServerService connectionService,
-	IOutputTransformService transformService,
 	ILogger<WebSocketOutputConsumer> logger)
 : IMessageConsumer<WebSocketOutputMessage>
 {
@@ -26,15 +28,7 @@ public class WebSocketOutputConsumer(
 
 		try
 		{
-			var data = Encoding.UTF8.GetBytes(message.Data);
-
-			// Transform output based on capabilities and preferences
-			var transformedData = await transformService.TransformAsync(
-				data,
-				connection.Capabilities,
-				connection.Preferences);
-
-			await connection.OutputFunction(transformedData);
+			await connection.OutputFunction(Encoding.UTF8.GetBytes(message.Data));
 		}
 		catch (Exception ex)
 		{
@@ -48,7 +42,6 @@ public class WebSocketOutputConsumer(
 /// </summary>
 public class WebSocketPromptConsumer(
 	IConnectionServerService connectionService,
-	IOutputTransformService transformService,
 	ILogger<WebSocketPromptConsumer> logger)
 : IMessageConsumer<WebSocketPromptMessage>
 {
@@ -64,15 +57,7 @@ public class WebSocketPromptConsumer(
 
 		try
 		{
-			var data = Encoding.UTF8.GetBytes(message.Data);
-
-			// Transform output based on capabilities and preferences
-			var transformedData = await transformService.TransformAsync(
-				data,
-				connection.Capabilities,
-				connection.Preferences);
-
-			await connection.PromptOutputFunction(transformedData);
+			await connection.PromptOutputFunction(Encoding.UTF8.GetBytes(message.Data));
 		}
 		catch (Exception ex)
 		{

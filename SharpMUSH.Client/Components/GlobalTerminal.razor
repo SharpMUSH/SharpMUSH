@@ -17,7 +17,7 @@
          style="flex:1;min-height:0;overflow-y:auto;padding:6px 10px;white-space:pre-wrap;word-break:break-all;">
         @foreach (var line in _displayLines)
         {
-            <div class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@line.Text</div>
+            <div class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
         }
         <div id="@_bottomId"></div>
     </div>

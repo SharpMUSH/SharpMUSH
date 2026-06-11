@@ -31,6 +31,20 @@ public record WebSocketOutputMessage(long Handle, string Data) : IHandleMessage;
 public record WebSocketPromptMessage(long Handle, string Data) : IHandleMessage;
 
 /// <summary>
+/// Message sent from MainProcess to ConnectionServer carrying serialized markup (an MString as JSON)
+/// for a specific connection. The ConnectionServer owns the wire format: it renders the markup to
+/// ANSI/Pueblo/MXP for terminal connections, or forwards it as a markup envelope for WebSocket
+/// (portal) connections so the browser can render it natively. <see cref="Markup"/> is the output of
+/// <c>MModule.serialize</c>.
+/// </summary>
+public record MarkupOutputMessage(long Handle, string Markup) : IHandleMessage;
+
+/// <summary>
+/// Like <see cref="MarkupOutputMessage"/> but for prompt output (no trailing newline).
+/// </summary>
+public record MarkupPromptMessage(long Handle, string Markup) : IHandleMessage;
+
+/// <summary>
 /// Message sent from MainProcess to ConnectionServer to send GMCP data to a connection
 /// </summary>
 public record GMCPOutputMessage(long Handle, string Module, string Message) : IHandleMessage;
