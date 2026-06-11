@@ -22,7 +22,8 @@ public class NotifyService(
 	IConnectionService connections,
 	ILocalizationService localizationService,
 	IListenerRoutingService? listenerRoutingService = null,
-	IMediator? mediator = null) : INotifyService
+	IMediator? mediator = null,
+	IHttpOutputCapture? httpOutputCapture = null) : INotifyService
 {
 	/// <summary>
 	/// Publishes output to a single connection as serialized markup. The ConnectionServer owns the
@@ -89,6 +90,15 @@ public class NotifyService(
 			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
 		))
+		{
+			return;
+		}
+
+		// Inbound HTTP: while the http_handler's <METHOD> attribute runs, everything emitted to
+		// the handler becomes the HTTP response body instead of going to a (nonexistent)
+		// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
+		if (httpOutputCapture?.TryCapture(who.Number,
+				what.Match(markupString => MModule.plainText(markupString), str => str)) == true)
 		{
 			return;
 		}

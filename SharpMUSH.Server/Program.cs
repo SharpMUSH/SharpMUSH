@@ -1,6 +1,8 @@
 using Core.Arango;
 using Core.Arango.Serilog;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -135,6 +137,11 @@ public class Program
 		app.MapGet("/health", () => "healthy");
 		app.MapGet("/ready", () => "ready");
 
+		// Inbound HTTP to the MUSH: /http/<path> runs the http_handler's <METHOD> attribute as
+		// commands, PennMUSH-style (see help sharphttp). Prefixed (rather than a catch-all) so it
+		// cannot shadow the portal's routes.
+		app.Map("/http/{**path}", HandleMushHttpRequest);
+
 		// Prometheus metrics endpoint (for scraping, not for logging to console)
 		app.MapPrometheusScrapingEndpoint();
 
@@ -143,5 +150,60 @@ public class Program
 		app.MapFallbackToFile("index.html");
 
 		return app;
+	}
+
+	/// <summary>
+	/// Bridges an inbound ASP.NET request to the in-game http_handler: the request's method, path
+	/// (including query string), body, and headers go down to
+	/// <see cref="SharpMUSH.Library.Services.Interfaces.IHttpHandlerCommandDispatcher"/>, and the
+	/// handler-produced status line, content type, headers, and emitted output come back up as the
+	/// HTTP response. Content-Length is computed here, never by softcode.
+	/// </summary>
+	private static async Task HandleMushHttpRequest(
+		HttpContext context,
+		SharpMUSH.Library.Services.Interfaces.IHttpHandlerCommandDispatcher dispatcher)
+	{
+		var request = context.Request;
+
+		// %0 is the path as the MUSH sees it — strip the /http prefix, keep the query string.
+		var path = $"/{context.GetRouteValue("path") as string}{request.QueryString.Value}";
+
+		using var reader = new StreamReader(request.Body);
+		var body = await reader.ReadToEndAsync(context.RequestAborted);
+
+		var headers = request.Headers
+			.SelectMany(header => header.Value.Where(value => value is not null)
+				.Select(value => (header.Key, Value: value!)));
+
+		var result = await dispatcher.DispatchAsync(request.Method, path, body, headers, context.RequestAborted);
+
+		await result.Match(
+			async handled =>
+			{
+				context.Response.StatusCode = handled.Status;
+				var feature = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpResponseFeature>();
+				if (feature is not null)
+				{
+					feature.ReasonPhrase = handled.ReasonPhrase;
+				}
+
+				context.Response.ContentType = handled.ContentType;
+				foreach (var (name, value) in handled.Headers)
+				{
+					// @respond already forbids Content-Length; defend anyway since the server computes it.
+					if (!name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+					{
+						context.Response.Headers.Append(name, value);
+					}
+				}
+
+				await context.Response.WriteAsync(handled.Body, context.RequestAborted);
+			},
+			async _ =>
+			{
+				// No http_handler configured, or no <METHOD> attribute on it (see help sharphttp).
+				context.Response.StatusCode = StatusCodes.Status404NotFound;
+				await context.Response.WriteAsync("Not Found", context.RequestAborted);
+			});
 	}
 }

@@ -220,6 +220,9 @@ public class Startup(
 		services.AddSingleton<IHookService, HookService>();
 		services.AddSingleton<IEventService, EventService>();
 		services.AddSingleton<IHttpHandlerDispatcher, HttpHandlerDispatcher>();
+		// Inbound HTTP: run http_handler <METHOD> attributes as commands (see help sharphttp).
+		services.AddSingleton<IHttpOutputCapture, HttpOutputCapture>();
+		services.AddSingleton<IHttpHandlerCommandDispatcher, HttpHandlerCommandService>();
 		services.AddSingleton<IWarningService, WarningService>();
 		services.AddSingleton<IChannelBufferService, InMemoryChannelBufferService>();
 		services.AddSingleton<IListenPatternMatcher, ListenPatternMatcher>();

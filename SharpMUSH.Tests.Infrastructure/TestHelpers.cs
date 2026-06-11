@@ -72,6 +72,42 @@ public static class TestHelpers
 		Arg.Is<AnySharpObject>(o => o.Object().DBRef == dbRef);
 
 	/// <summary>
+	/// Creates the <see cref="INotifyService"/> substitute used by the test factories. The real
+	/// <see cref="SharpMUSH.Library.Services.NotifyService"/> consults
+	/// <see cref="SharpMUSH.Library.Services.Interfaces.IHttpOutputCapture"/> before delivering to
+	/// connections (inbound-HTTP output becomes the response body); tests replace INotifyService
+	/// with a mock, so the mock must mirror that one behavior or HTTP integration tests would see
+	/// empty bodies. Received()-style assertions are unaffected — When/Do does not change call
+	/// recording, and capture state lives in an AsyncLocal so non-HTTP test flows are no-ops.
+	/// </summary>
+	public static INotifyService CreateNotifyServiceSubstitute()
+	{
+		var capture = new SharpMUSH.Library.Services.HttpOutputCapture();
+		var notifier = Substitute.For<INotifyService>();
+
+		notifier
+			.When(x => x.Notify(Arg.Any<DBRef>(), Arg.Any<OneOf<MString, string>>(),
+				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
+			.Do(call => capture.TryCapture(
+				call.ArgAt<DBRef>(0).Number,
+				PlainText(call.ArgAt<OneOf<MString, string>>(1))));
+
+		// The real service's AnySharpObject overload delegates to the DBRef overload; a substitute
+		// does not, so hook both.
+		notifier
+			.When(x => x.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(),
+				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
+			.Do(call => capture.TryCapture(
+				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
+				PlainText(call.ArgAt<OneOf<MString, string>>(1))));
+
+		return notifier;
+	}
+
+	private static string PlainText(OneOf<MString, string> msg) =>
+		msg.Match(ms => ms.ToPlainText(), s => s);
+
+	/// <summary>
 	/// Polls the NSubstitute <paramref name="notifyService"/> mock until a Notify call matching
 	/// the given <paramref name="executor"/> DBRef and <paramref name="containsText"/> is recorded,
 	/// or until <paramref name="timeoutMs"/> elapses.  This replaces fragile <c>Task.Delay</c>
