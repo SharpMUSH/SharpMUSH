@@ -56,40 +56,25 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	public async Task Post_BodyArrivesAsArgOne()
+	public async Task Put_HeadersAndBodyArriveAtVerbAttribute()
 	{
-		await SeedHandlerAttribute("POST", "think got=[%1]");
-
-		var http = factory.CreateHttpClient();
-		var response = await http.PostAsync("http/submit",
-			new StringContent("""{"channel":"public","msg":"hi"}""", System.Text.Encoding.UTF8, "application/json"));
-		var body = await response.Content.ReadAsStringAsync();
-
-		await Assert.That((int)response.StatusCode).IsEqualTo(200);
-		// The [ ] around %1 are MUSH evaluation brackets — they evaluate away; the JSON body
-		// itself passes through verbatim.
-		await Assert.That(body).Contains("""got={"channel":"public","msg":"hi"}""");
-	}
-
-	[Test]
-	public async Task Put_HeadersArriveAsQRegisters()
-	{
-		// %q<hdr.NAME> per header plus %q<headers> listing the names (help sharphttp / HTTP3).
-		await SeedHandlerAttribute("PUT", "think host=[%q<hdr.host>] custom=[%q<hdr.x-sharp-test>] names=[%q<headers>]");
+		// %q<hdr.NAME> per header plus %q<headers> listing the names (help sharphttp / HTTP3),
+		// and %1 = the raw request body — JSON braces pass through verbatim.
+		await SeedHandlerAttribute("PUT", "think host=%q<hdr.host> custom=%q<hdr.x-sharp-test> names=%q<headers> got=%1");
 
 		var http = factory.CreateHttpClient();
 		using var request = new HttpRequestMessage(HttpMethod.Put, "http/headers");
 		request.Headers.Add("X-Sharp-Test", "marker-value");
-		request.Content = new StringContent(string.Empty);
+		request.Content = new StringContent("""{"channel":"public","msg":"hi"}""", System.Text.Encoding.UTF8, "application/json");
 		var response = await http.SendAsync(request);
 		var body = await response.Content.ReadAsStringAsync();
 
 		await Assert.That((int)response.StatusCode).IsEqualTo(200);
-		// The [ ] are MUSH evaluation brackets and evaluate away; the register values remain.
 		await Assert.That(body).Contains("custom=marker-value");
 		await Assert.That(body).Contains("X-SHARP-TEST");
 		// Host is always present on an HTTP/1.1 request.
 		await Assert.That(body).Contains("host=localhost");
+		await Assert.That(body).Contains("""got={"channel":"public","msg":"hi"}""");
 	}
 
 	[Test]
@@ -130,39 +115,55 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task DefaultVerbHandler_RoutesPathToSubAttribute_WithFormRegisters()
 	{
-		// The stock router template works for ANY method name (REPORT keeps this test's verb
-		// private): REPORT /api/users?name=Joe+Smith ⇒ @include me/REPORT`API`USERS with
-		// %0 = query string, %1 = body, and formq()-decoded %q<form.*> registers ambient.
-		await SeedHandlerAttribute("REPORT", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("REPORT"));
-		await SeedHandlerAttribute("REPORT`API`USERS",
-			"think hello=[%q<form.name>] q=[%0] fields=[%q<fields>] path=[%q<path>]; @respond 200 Routed");
+		// The stock POST router: POST /api/users?name=Joe+Smith ⇒ @include me/POST`API`USERS with
+		// %0 = raw request body and formq()-decoded %q<form.*> registers ambient. (POST is used
+		// because the in-memory test transport only forwards request bodies for standard
+		// body-carrying methods.)
+		await SeedHandlerAttribute("POST", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("POST"));
+		await SeedHandlerAttribute("POST`API`USERS",
+			"think hello=%q<form.name> body=%0 fields=%q<fields> attrpath=%q<attrpath>; @respond 200 Routed");
 
 		var http = factory.CreateHttpClient();
-		using var request = new HttpRequestMessage(new HttpMethod("REPORT"), "http/api/users?name=Joe+Smith&like=a&like=b");
-		var response = await http.SendAsync(request);
+		var response = await http.PostAsync("http/api/users?name=Joe+Smith&like=a&like=b",
+			new StringContent("the-payload"));
 		var body = await response.Content.ReadAsStringAsync();
 
 		await Assert.That((int)response.StatusCode).IsEqualTo(200);
 		await Assert.That(response.ReasonPhrase ?? string.Empty).Contains("Routed");
 		await Assert.That(body).Contains("hello=Joe Smith");
-		await Assert.That(body).Contains("q=name=Joe+Smith&like=a&like=b");
+		await Assert.That(body).Contains("body=the-payload");
 		await Assert.That(body).Contains("fields=NAME LIKE");
-		await Assert.That(body).Contains("path=api/users");
+		await Assert.That(body).Contains("attrpath=api`users");
 	}
 
 	[Test]
-	public async Task DefaultVerbHandler_MissingRoute_IsPennRaw()
+	public async Task DefaultVerbHandler_MissingRoute_Returns404ApiNotFound()
 	{
-		// Penn-raw by design: no existence guard, so an unrouted path returns 200 with @include's
-		// "No such attribute" error text in the body (what naive PennMUSH softcode would do).
+		// The router @asserts the mapped sub-attribute exists; an unrouted path answers a clean
+		// 404 instead of leaking @include's error text into a 200 body.
 		await SeedHandlerAttribute("DELETE", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("DELETE"));
 
 		var http = factory.CreateHttpClient();
 		var response = await http.DeleteAsync("http/no/such/route");
-		var body = await response.Content.ReadAsStringAsync();
 
-		await Assert.That((int)response.StatusCode).IsEqualTo(200);
-		// The engine reports a nonexistent attribute via @include's empty-attribute branch.
-		await Assert.That(body).Contains("Attribute DELETE`no`such`route is empty.");
+		await Assert.That((int)response.StatusCode).IsEqualTo(404);
+		await Assert.That(response.ReasonPhrase ?? string.Empty).Contains("API NOT FOUND");
 	}
+
+	[Test]
+	public async Task DefaultVerbHandler_RootPath_Returns404ApiNotFound()
+	{
+		// Bare "/" maps to an empty attrpath — the @assert guard turns that into the same clean
+		// 404. The request uses the canonical "http" (no trailing slash): CanonicalUrlMiddleware
+		// 301-strips trailing slashes, and the test client's redirect handler re-issues redirected
+		// requests as GET, which would hit the wrong verb attribute.
+		await SeedHandlerAttribute("DELETE", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("DELETE"));
+
+		var http = factory.CreateHttpClient();
+		var response = await http.DeleteAsync("http");
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(404);
+		await Assert.That(response.ReasonPhrase ?? string.Empty).Contains("API NOT FOUND");
+	}
+
 }

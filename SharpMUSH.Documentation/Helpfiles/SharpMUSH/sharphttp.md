@@ -198,15 +198,14 @@ SharpMUSH seeds default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&P
 Each default verb attribute routes by URL path to a backtick-namespaced sub-attribute:
 
 ```sharp
-GET /api/users?name=Joe+Smith   =>   @include me/GET`API`USERS=name=Joe+Smith,<body>
+GET /api/users?name=Joe+Smith   =>   @include me/GET`API`USERS=<body>
 ```
 
 Before dispatching, the router sets:
-- *%q<path>* — the path with the leading slash, query string, and trailing slashes stripped (`api/users`)
-- *%q<params>* — the raw query string (`name=Joe+Smith`)
-- *%q<fields>* — the [formq()]-decoded parameter name list; each parameter is readable as *%q<form.*>*
+- *%q<attrpath>* — the path mapped to attribute form: leading slash and query stripped, remaining slashes become backticks (`api`users`)
+- *%q<fields>* — the [formq()]-decoded query parameter name list; each parameter is readable as *%q<form.*>*
 
-The sub-attribute receives *%0* = the raw query string and *%1* = the raw request body. The body is left raw on purpose — check *%q<hdr.content-type>* and use [formq()] or [json_query()] on *%1* as appropriate.
+The sub-attribute receives *%0* = the raw request body. The body is left raw on purpose — check *%q<hdr.content-type>* and use [formq()] or [json_query()] on *%0* as appropriate. The raw query string remains available as `after(%0,?)` only at the verb level; sub-attributes read the decoded *%q<form.*>* registers instead.
 
 To serve `GET /api/users`:
 
@@ -214,7 +213,13 @@ To serve `GET /api/users`:
 > &GET`API`USERS #4=@respond/type application/json ; think json(object,hello,json(string,%q<form.name>))
 ```
 
-There is deliberately no existence guard: a request whose path has no matching sub-attribute returns 200 with @include's error text as the body, exactly as naive PennMUSH softcode would behave. Add your own guard (e.g. `hasattr()` + `@respond 404 Not Found`) by editing the verb attributes if you want clean 404s.
+The router guards the dispatch with `@assert`: a request whose path maps to no sub-attribute — including the bare root `/` — answers **404 API NOT FOUND** and stops. The seeded router for each verb is:
+
+```sharp
+think setq(fields,formq(after(%0,?)))
+@assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND
+@include me/GET`%q<attrpath>=%1
+```
 
 **See Also:**
 - [http]
