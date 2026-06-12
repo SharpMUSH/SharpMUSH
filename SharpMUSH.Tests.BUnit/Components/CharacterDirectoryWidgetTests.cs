@@ -39,9 +39,9 @@ file sealed class RosterHandler : HttpMessageHandler
 }
 
 /// <summary>
-/// Verifies the directory widget's category behavior: grouping comes entirely from the data
-/// (named categories alphabetical, blanks pooled untitled at the bottom), and HiddenCategories
-/// filters rows out of the listing and the count.
+/// Verifies the directory widget's category grouping comes entirely from the data: named
+/// categories alphabetical, blanks pooled untitled at the bottom, no invented labels.
+/// (Who is listed at all is MUSH-side policy — FN`CHARVIS — so the widget does no filtering.)
 /// </summary>
 public class CharacterDirectoryWidgetTests : BunitContext
 {
@@ -83,21 +83,5 @@ public class CharacterDirectoryWidgetTests : BunitContext
             .IsLessThan(markup.IndexOf(">Pleb<", StringComparison.Ordinal));
         // The widget invents no label for the blank category.
         await Assert.That(markup).DoesNotContain("Player");
-    }
-
-    [TUnit.Core.Test]
-    public async Task HiddenCategories_FilterRowsAndCount()
-    {
-        var cut = Render<CharacterDirectoryWidget>(p => p
-            .Add(c => c.HiddenCategories, ["Guest"]));
-        cut.WaitForAssertion(() =>
-        {
-            if (!cut.Markup.Contains("Pleb")) throw new InvalidOperationException("roster not loaded yet");
-        }, TimeSpan.FromSeconds(5));
-
-        await Assert.That(cut.Markup).DoesNotContain("Gus");
-        await Assert.That(cut.Markup).DoesNotContain(">Guest<");
-        // Count chip reflects the visible roster: 4 seeded minus 1 hidden guest.
-        await Assert.That(cut.Markup).Contains(">3<");
     }
 }

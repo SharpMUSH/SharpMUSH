@@ -50,11 +50,17 @@ public static class DefaultProfileHandlerSoftcode
 		("FN`JARRINS",
 			"json_mod(%0,insert,$\\[[json_query(%0,size)]\\],u(FN`CHARROW,%1))"),
 
-		// GET /http/characters — every player as [{name, objid, created}, ...], unsorted
-		// (the portal sorts client-side).
+		// Directory visibility predicate for one player (%0): 1 to list, 0 to hide. The default
+		// hides the Guest category; games redefine this to filter however they like. Filtering
+		// is deliberately MUSH-side — the portal lists exactly what the game returns.
+		("FN`CHARVIS",
+			"not(strmatch(u(FN`CHARCAT,%0),Guest))"),
+
+		// GET /http/characters — every FN`CHARVIS-visible player as [{name, objid, created,
+		// category}, ...], unsorted (the portal sorts client-side).
 		("GET`CHARACTERS",
 			"@respond/type application/json; " +
-			"think fold(me/FN`JARRINS,lsearch(all,type,player),\\[\\])"),
+			"think fold(me/FN`JARRINS,filter(me/FN`CHARVIS,lsearch(all,type,player)),\\[\\])"),
 
 		// GET /http/profile?objid=#1:123 — one character's public profile data.
 		("GET`PROFILE",
