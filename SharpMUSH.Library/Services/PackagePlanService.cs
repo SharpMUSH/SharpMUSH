@@ -175,16 +175,15 @@ public partial class PackagePlanService : IPackagePlanService
 
 			foreach (var (attrName, attr) in obj.Attributes)
 			{
-				var resolved = PackageRefSubstitution.Substitute(attr.Value, Resolve, out var unresolved);
-				var requiresApply = unresolved.Count > 0;
-				unresolvedCount += unresolved.Count;
+				// Code never carries dbrefs (decision 20.21): tokens become
+				// [v(PM`REFS`...)] recalls — a total, game-portable transform.
+				var resolved = PackageRefIndirection.TransformCode(attr.Value);
 
 				if (objid is null || live is null)
 				{
 					// Target is created by this apply — every attribute is a create.
 					changes.Add(new PackageAttributeChange(
-						obj.Ref, null, attrName, PackageAttributeAction.Create,
-						NewValue: resolved, RequiresApplyResolution: requiresApply));
+						obj.Ref, null, attrName, PackageAttributeAction.Create, NewValue: resolved));
 					continue;
 				}
 
@@ -192,7 +191,38 @@ public partial class PackagePlanService : IPackagePlanService
 				var baseline = baselineByKey.GetValueOrDefault((objid, attrName.ToUpperInvariant()));
 				var liveValue = live.Attributes.TryGetValue(attrName, out var lv) ? lv : null;
 
-				changes.Add(ClassifyExisting(obj.Ref, objid, attrName, baseline?.BaselineValue, liveValue, resolved, requiresApply));
+				changes.Add(ClassifyExisting(obj.Ref, objid, attrName, baseline?.BaselineValue, liveValue, resolved, requiresApply: false));
+			}
+
+			// Synthesize the engine-managed PM`REFS`<NAME> ref attributes this
+			// object needs: value = the resolved objid/answer (decision 20.21).
+			// They run through the same three-way table, so a user re-pointing
+			// a ref locally is preserved as KeepLocal on upgrade.
+			foreach (var reference in PackageRefIndirection.RefsUsedIn(obj))
+			{
+				var refAttr = PackageRefIndirection.AttributeNameFor(reference);
+				var resolution = Resolve(reference);
+				var newValue = resolution ?? reference.ToString();
+				if (resolution is null)
+				{
+					unresolvedCount++;
+				}
+
+				if (objid is null || live is null)
+				{
+					changes.Add(new PackageAttributeChange(
+						obj.Ref, null, refAttr, PackageAttributeAction.Create,
+						NewValue: newValue, RequiresApplyResolution: resolution is null));
+					continue;
+				}
+
+				manifestKeys.Add((objid, refAttr.ToUpperInvariant()));
+				var baseline = baselineByKey.GetValueOrDefault((objid, refAttr.ToUpperInvariant()));
+				var liveValue = live.Attributes.TryGetValue(refAttr, out var lv) ? lv : null;
+
+				changes.Add(ClassifyExisting(
+					obj.Ref, objid, refAttr, baseline?.BaselineValue, liveValue, newValue,
+					requiresApply: resolution is null));
 			}
 		}
 
@@ -231,7 +261,7 @@ public partial class PackagePlanService : IPackagePlanService
 
 		if (unresolvedCount > 0)
 		{
-			notes.Add($"{unresolvedCount} ref(s) resolve at apply time (new objects or unanswered configure prompts); affected values are compared as written.");
+			notes.Add($"{unresolvedCount} PM`REFS entr{(unresolvedCount == 1 ? "y" : "ies")} resolve at apply time (new objects or unanswered configure prompts).");
 		}
 
 		return changes;

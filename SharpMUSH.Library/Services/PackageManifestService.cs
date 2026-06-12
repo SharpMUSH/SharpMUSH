@@ -910,6 +910,13 @@ public partial class PackageManifestService : IPackageManifestService
 				continue;
 			}
 
+			if (PackageRefIndirection.IsReservedAttribute(attrName))
+			{
+				issues.Add(PackageManifestIssue.Error(path,
+					"The PM` attribute tree is reserved for the package engine (ref indirection, decision 20.21)."));
+				continue;
+			}
+
 			if (attributes.ContainsKey(attrName))
 			{
 				issues.Add(PackageManifestIssue.Error(path, $"Duplicate attribute '{attrName}'."));
@@ -960,6 +967,7 @@ public partial class PackageManifestService : IPackageManifestService
 		var definedRefs = objects.Select(o => o.Ref).ToHashSet(StringComparer.Ordinal);
 		var dependencyIds = dependencies.Select(d => d.PackageId).ToHashSet(StringComparer.Ordinal);
 		var usedConfigureKeys = new HashSet<string>(StringComparer.Ordinal);
+		var usedWellKnownNames = new HashSet<string>(StringComparer.Ordinal);
 
 		void CheckRef(PackageRef reference, string path, bool requiresDbref)
 		{
@@ -980,6 +988,9 @@ public partial class PackageManifestService : IPackageManifestService
 				case PackageRefKind.WellKnown when !_wellKnownRefs.Contains(reference.Name):
 					issues.Add(PackageManifestIssue.Error(path,
 						$"'{reference}' is not a recognized well-known ref ({string.Join(", ", _wellKnownRefs.Order())})."));
+					break;
+				case PackageRefKind.WellKnown:
+					usedWellKnownNames.Add(reference.Name);
 					break;
 				case PackageRefKind.Configure:
 					usedConfigureKeys.Add(reference.Name);
@@ -1049,6 +1060,26 @@ public partial class PackageManifestService : IPackageManifestService
 		{
 			issues.Add(PackageManifestIssue.Warning($"configure.{unused}",
 				$"Configure ref '{{{{?{unused}}}}}' is declared but never used."));
+		}
+
+		// Same-package refs of every kind share the PM`REFS`<NAME> indirection
+		// namespace (decision 20.21) — cross-kind name collisions are errors.
+		foreach (var name in definedRefs.Intersect(configure.Keys, StringComparer.Ordinal))
+		{
+			issues.Add(PackageManifestIssue.Error("configure",
+				$"'{name}' is both an object ref and a configure key; they would collide in the PM`REFS`{name.ToUpperInvariant()} indirection attribute."));
+		}
+
+		foreach (var name in definedRefs.Intersect(usedWellKnownNames, StringComparer.Ordinal))
+		{
+			issues.Add(PackageManifestIssue.Error("objects",
+				$"Object ref '{name}' collides with the well-known ref '{{{{${name}}}}}' in the PM`REFS`{name.ToUpperInvariant()} indirection attribute."));
+		}
+
+		foreach (var name in configure.Keys.Intersect(usedWellKnownNames, StringComparer.Ordinal))
+		{
+			issues.Add(PackageManifestIssue.Error("configure",
+				$"Configure key '{name}' collides with the well-known ref '{{{{${name}}}}}' in the PM`REFS`{name.ToUpperInvariant()} indirection attribute."));
 		}
 
 		DetectParentCycles(objects, issues);

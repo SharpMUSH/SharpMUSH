@@ -118,8 +118,22 @@ unless you want a trailing newline.
 
 Refs appear in `parent:` / `location:` / `destination:` fields (exactly one
 token, quoted — a bare `{` confuses YAML), and anywhere inside attribute and
-lock values. At apply time each token is substituted with the real value on
-the target game.
+lock values.
+
+**How refs resolve at apply time (decision 20.21):** installed code never
+contains raw dbrefs. In attribute values, each token becomes a
+`` [v(PM`REFS`NAME)] `` recall, and the engine maintains a `` PM`REFS`NAME ``
+attribute on every object whose code uses the ref, holding the resolved
+objid (or configure value). Cross-package refs namespace by dependency id
+(`` PM`REFS`WHO-WHERE`WW_FUNCTIONS ``). That keeps installed code readable,
+lets admins re-point a ref by editing one attribute — and because the ref
+attrs are baseline-managed, a local re-point survives upgrades as a kept
+local change. Structural fields (`parent:`/`location:`/`destination:`) and
+lock strings are not function-evaluated, so they resolve to dbrefs directly.
+The `` PM` `` attribute tree is reserved: manifests may not define attributes
+under it, and ref names must be unique across kinds within a package (an
+object ref `storage` and a configure key `storage` would collide in
+`` PM`REFS`STORAGE ``).
 
 Rules, all enforced at parse time:
 

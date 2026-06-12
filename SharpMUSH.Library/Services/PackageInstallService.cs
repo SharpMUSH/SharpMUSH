@@ -110,6 +110,13 @@ public class PackageInstallService(
 			{
 				Want(record.Objid, attrName);
 			}
+
+			// Engine-managed ref attrs (decision 20.21) — the plan engine
+			// three-way-compares them like any other managed attribute.
+			foreach (var reference in PackageRefIndirection.RefsUsedIn(obj))
+			{
+				Want(record.Objid, PackageRefIndirection.AttributeNameFor(reference));
+			}
 		}
 
 		var states = new Dictionary<string, LiveObjectState>(StringComparer.Ordinal);
@@ -278,9 +285,28 @@ public class PackageInstallService(
 
 			var spec = manifestByRef.GetValueOrDefault(change.TargetRef);
 			var attrSpec = spec?.Attributes.GetValueOrDefault(change.Attribute);
-			var newValue = attrSpec is null
-				? change.NewValue
-				: SubstituteFully(attrSpec.Value, Resolve, change.TargetRef, change.Attribute, notes);
+			string? newValue;
+			if (attrSpec is not null)
+			{
+				// Code: tokens become [v(PM`REFS`...)] recalls — never dbrefs (20.21).
+				newValue = PackageRefIndirection.TransformCode(attrSpec.Value);
+			}
+			else if (change.NewValue is not null && change.Attribute.StartsWith(
+				$"{PackageRefIndirection.RefsBranch}`", StringComparison.OrdinalIgnoreCase))
+			{
+				// Engine-managed ref attr: the value IS the resolution. A token
+				// that still cannot resolve here (unanswered configure) is fatal.
+				newValue = PackageRefSubstitution.Substitute(change.NewValue, Resolve, out var stillUnresolved);
+				if (stillUnresolved.Count > 0)
+				{
+					return new Error<string>(
+						$"{change.TargetRef}/{change.Attribute}: ref {stillUnresolved[0]} is unresolved — answer its configure prompt before applying.");
+				}
+			}
+			else
+			{
+				newValue = change.NewValue;
+			}
 
 			var error = await ApplyAttributeChangeAsync(
 				manifest, change, objid, newValue, decisions, pmWizard, preApply, finalValues, notes, cancellationToken);

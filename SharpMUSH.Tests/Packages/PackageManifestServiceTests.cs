@@ -805,6 +805,61 @@ public class PackageManifestServiceTests
 
 	#endregion
 
+	#region Ref indirection (decision 20.21)
+
+	[Test]
+	public async Task ReservedPmAttributeTree_IsError()
+	{
+		var result = _service.ParseManifest(MinimalManifest(attributes:
+			"""
+			      PM`REFS`CUSTOM: "nope"
+			"""));
+
+		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.AsT1.Errors.Any(e => e.Message.Contains("reserved"))).IsTrue();
+	}
+
+	[Test]
+	public async Task CrossKindRefNameCollisions_AreErrors()
+	{
+		// Internal ref 'storage' vs configure key 'storage' → same PM`REFS`STORAGE attr.
+		var configureCollision = _service.ParseManifest(
+			"""
+			package: probe
+			version: "1.0"
+			configure:
+			  storage:
+			    label: "Storage"
+			objects:
+			  - ref: storage
+			    type: thing
+			    name: Storage Thing
+			    attributes:
+			      FN_X: "get({{?storage}}/DATA)"
+			""");
+		await Assert.That(configureCollision.IsT1).IsTrue();
+		await Assert.That(configureCollision.AsT1.Errors.Any(e =>
+			e.Message.Contains("PM`REFS`STORAGE"))).IsTrue();
+
+		// Internal ref 'room_zero' vs use of {{$room_zero}}.
+		var wellKnownCollision = _service.ParseManifest(
+			"""
+			package: probe
+			version: "1.0"
+			objects:
+			  - ref: room_zero
+			    type: thing
+			    name: Misleading Name
+			    attributes:
+			      FN_X: "loc({{$room_zero}})"
+			""");
+		await Assert.That(wellKnownCollision.IsT1).IsTrue();
+		await Assert.That(wellKnownCollision.AsT1.Errors.Any(e =>
+			e.Message.Contains("PM`REFS`ROOM_ZERO"))).IsTrue();
+	}
+
+	#endregion
+
 	#region Community listings
 
 	[Test]

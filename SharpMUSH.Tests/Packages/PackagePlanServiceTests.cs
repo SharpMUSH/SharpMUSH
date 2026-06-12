@@ -73,7 +73,7 @@ public class PackagePlanServiceTests
 	}
 
 	[Test]
-	public async Task FreshInstall_InternalRefsResolveAtApply()
+	public async Task FreshInstall_CodeIndirects_RefAttrSynthesized()
 	{
 		var manifest = Parse(
 			"""
@@ -91,10 +91,64 @@ public class PackagePlanServiceTests
 			""");
 
 		var changeset = _service.ComputeChangeset(Inputs(manifest));
-		var attr = changeset.Attributes.Single();
-		await Assert.That(attr.RequiresApplyResolution).IsTrue();
-		await Assert.That(attr.NewValue).Contains("{{b}}");
+
+		// Code never carries dbrefs or tokens — it recalls via v(PM`REFS`...).
+		var code = changeset.Attributes.Single(a => a.Attribute == "FN_X");
+		await Assert.That(code.NewValue).IsEqualTo("u([v(PM`REFS`B)]/FN_Y)");
+		await Assert.That(code.RequiresApplyResolution).IsFalse();
+
+		// The engine-managed ref attr carries the (apply-time) resolution.
+		var refAttr = changeset.Attributes.Single(a => a.Attribute == "PM`REFS`B");
+		await Assert.That(refAttr.Action).IsEqualTo(PackageAttributeAction.Create);
+		await Assert.That(refAttr.NewValue).IsEqualTo("{{b}}");
+		await Assert.That(refAttr.RequiresApplyResolution).IsTrue();
 		await Assert.That(changeset.Notes.Any(n => n.Contains("apply time"))).IsTrue();
+	}
+
+	[Test]
+	public async Task RepointedRefAttr_SurvivesUpgrade_AsKeepLocal()
+	{
+		// The point of decision 20.21: a user re-points PM`REFS`B locally; the
+		// package's own resolution is unchanged, so the re-point is preserved.
+		var manifest = Parse(
+			"""
+			package: probe
+			version: "1.1"
+			objects:
+			  - ref: a
+			    type: thing
+			    name: Thing A
+			    attributes:
+			      FN_X: "u({{b}}/FN_Y)"
+			  - ref: b
+			    type: thing
+			    name: Thing B
+			""");
+		var installed = Installed("probe");
+		var installedObjects = new[]
+		{
+			new PackageObjectRecord("probe", "a", "#10:1", "thing"),
+			new PackageObjectRecord("probe", "b", "#20:5", "thing")
+		};
+		var baselines = new[]
+		{
+			new ManagedAttributeRecord("probe", "#10:1", "FN_X", "u([v(PM`REFS`B)]/FN_Y)", "h1", "1.0.0"),
+			new ManagedAttributeRecord("probe", "#10:1", "PM`REFS`B", "#20:5", "h2", "1.0.0")
+		};
+		var live = new LivePackageState(new Dictionary<string, LiveObjectState>
+		{
+			["#10:1"] = LiveObject("#10:1", "Thing A",
+				("FN_X", "u([v(PM`REFS`B)]/FN_Y)"), ("PM`REFS`B", "#99:9")), // user re-pointed!
+			["#20:5"] = LiveObject("#20:5", "Thing B")
+		});
+
+		var changeset = _service.ComputeChangeset(Inputs(manifest, installed, installedObjects, baselines, live: live));
+
+		var refAttr = changeset.Attributes.Single(a => a.Attribute == "PM`REFS`B");
+		await Assert.That(refAttr.Action).IsEqualTo(PackageAttributeAction.KeepLocal);
+		await Assert.That(refAttr.LiveValue).IsEqualTo("#99:9");
+		await Assert.That(changeset.Attributes.Single(a => a.Attribute == "FN_X").Action)
+			.IsEqualTo(PackageAttributeAction.NoChange);
 	}
 
 	#endregion
@@ -487,23 +541,26 @@ public class PackagePlanServiceTests
 		var installedObjects = new[] { new PackageObjectRecord("probe", "a", "#10:1", "thing") };
 		var baselines = new[]
 		{
-			new ManagedAttributeRecord("probe", "#10:1", "FN_X", "get(#42:9/DATA)", "h", "1.0.0")
+			new ManagedAttributeRecord("probe", "#10:1", "FN_X", "get([v(PM`REFS`STORAGE)]/DATA)", "h", "1.0.0"),
+			new ManagedAttributeRecord("probe", "#10:1", "PM`REFS`STORAGE", "#42:9", "h2", "1.0.0")
 		};
 		var live = new LivePackageState(new Dictionary<string, LiveObjectState>
 		{
-			["#10:1"] = LiveObject("#10:1", "Thing A", ("FN_X", "get(#42:9/DATA)"))
+			["#10:1"] = LiveObject("#10:1", "Thing A",
+				("FN_X", "get([v(PM`REFS`STORAGE)]/DATA)"), ("PM`REFS`STORAGE", "#42:9"))
 		});
 
-		// Answer present: value resolves and matches the baseline → NoChange.
+		// Answer present: code and ref attr both match their baselines → NoChange.
 		var answered = _service.ComputeChangeset(Inputs(
 			manifest, installed, installedObjects, baselines, live: live,
 			configure: new Dictionary<string, string> { ["storage"] = "#42:9" }));
-		await Assert.That(answered.Attributes.Single().Action).IsEqualTo(PackageAttributeAction.NoChange);
+		await Assert.That(answered.Attributes.All(a => a.Action == PackageAttributeAction.NoChange)).IsTrue();
 
-		// No answer yet: compared as written, flagged for apply-time resolution.
+		// No answer yet: only the ref ATTR awaits resolution; code is total.
 		var unanswered = _service.ComputeChangeset(Inputs(
 			manifest, installed, installedObjects, baselines, live: live));
-		await Assert.That(unanswered.Attributes.Single().RequiresApplyResolution).IsTrue();
+		await Assert.That(unanswered.Attributes.Single(a => a.Attribute == "FN_X").RequiresApplyResolution).IsFalse();
+		await Assert.That(unanswered.Attributes.Single(a => a.Attribute == "PM`REFS`STORAGE").RequiresApplyResolution).IsTrue();
 	}
 
 	#endregion

@@ -251,6 +251,13 @@ public partial class PackageAuthoringService(
 		var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		await foreach (var attribute in database.GetAttributesAsync(dbref.Value, "*", cancellationToken))
 		{
+			// The PM` tree is engine-managed ref indirection (decision 20.21) —
+			// the apply engine recreates it; exports must never carry it.
+			if (PackageRefIndirection.IsReservedAttribute(attribute.Name))
+			{
+				continue;
+			}
+
 			attributes[attribute.Name] = attribute.Value.ToPlainText();
 		}
 

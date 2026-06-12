@@ -1036,6 +1036,23 @@ pattern collisions across installed packages (the MUSH analog of file
 conflicts) and flags them in review. `provides:`, `recommends:`, `suggests:`
 are reserved keys — parsed and ignored with a warning until specified.
 
+### 20.21 Ref Indirection in Installed Code
+
+**Decision:** Installed softcode never contains raw dbrefs. At apply time,
+each `{{ref}}` in an attribute value becomes `[v(PM`REFS`NAME)]`, and
+the engine maintains a `PM`REFS`NAME` attribute (attribute tree) on every
+object whose code uses the ref, holding the resolved objid (or configure
+value). Cross-package refs namespace by dependency id
+(`PM`REFS`WHO-WHERE`WW_FUNCTIONS`). The ref attrs are baseline-managed like
+any other attribute, so a user re-pointing a ref locally survives upgrades
+as KeepLocal. Benefits: readable installed code, one-place re-pointing,
+game-portable baselines (identical across installs). Structural fields
+(parent/location/destination) and lock strings are not function-evaluated
+and keep direct dbref resolution. The `PM`` attribute tree is reserved —
+manifests may not define attributes under it, authoring exports exclude it,
+and same-package ref names must be unique across kinds (internal /
+well-known-used / configure) since they share the namespace.
+
 ---
 
 ## Design Documents Index

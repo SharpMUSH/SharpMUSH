@@ -107,12 +107,18 @@ public class PackageAuthoringServiceTests
 		var cloneObjid = applied.AsT0.CreatedObjects["rt_core"];
 		await Assert.That(cloneObjid).IsNotEqualTo(sourceObjid);
 
-		// The clone's attribute resolved {{rt_core}} to the CLONE's dbref and
-		// {{$room_zero}} to Room Zero — symbolic refs survived the round trip.
+		// The clone's code recalls refs via v(PM`REFS`...) (decision 20.21),
+		// and its ref attrs point at the CLONE's dbref and Room Zero.
 		var cloneDbref = PackageInstallService.ParseObjid(cloneObjid)!.Value;
 		var attribute = await Database.GetAttributeAsync(cloneDbref, ["FN_GREET"]).LastOrDefaultAsync();
+		await Assert.That(attribute!.Value.ToPlainText())
+			.IsEqualTo("Hello from [v(PM`REFS`RT_CORE)] near [v(PM`REFS`ROOM_ZERO)]");
+
 		var roomZero = (await Database.GetObjectNodeAsync(new DBRef(0))).Known().Object().DBRef.ToString();
-		await Assert.That(attribute!.Value.ToPlainText()).IsEqualTo($"Hello from {cloneObjid} near {roomZero}");
+		var refCore = await Database.GetAttributeAsync(cloneDbref, ["PM", "REFS", "RT_CORE"]).LastOrDefaultAsync();
+		var refRoom = await Database.GetAttributeAsync(cloneDbref, ["PM", "REFS", "ROOM_ZERO"]).LastOrDefaultAsync();
+		await Assert.That(refCore!.Value.ToPlainText()).IsEqualTo(cloneObjid);
+		await Assert.That(refRoom!.Value.ToPlainText()).IsEqualTo(roomZero);
 
 		await installer.UninstallAsync("roundtrip-pkg");
 	}

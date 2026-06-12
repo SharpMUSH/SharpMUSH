@@ -189,6 +189,16 @@
 - [x] Full round-trip: author → export → install → verify state
       (`FullRoundTrip_AuthorExportInstall_VerifyState`)
 
+### Iteration: Ref Indirection (decision 20.21)
+- [x] Installed code recalls refs via `[v(PM`REFS`NAME)]` instead of hard-coded
+      dbrefs; engine maintains baseline-managed `PM`REFS`*` attribute trees per
+      object (user re-points survive upgrades as KeepLocal — tested)
+- [x] Reserved `PM`` attribute tree (manifest validation + authoring export exclusion)
+- [x] Cross-kind ref-name collision validation (shared PM`REFS namespace)
+- [x] Structural fields and locks keep direct dbref resolution (not function-evaluated)
+- [x] Registry + install e2e suites verified on SurrealDB and Memgraph providers
+      (`SHARPMUSH_DATABASE_PROVIDER=surrealdb|memgraph`)
+
 ## Deferred to v2 (post-merge polish)
 - [ ] Dependency graph visualization (deps render as text/blockers today)
 - [ ] Dbref linking in review panes (clickable, resolution tooltip)

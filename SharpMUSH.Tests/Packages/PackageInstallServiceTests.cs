@@ -93,7 +93,7 @@ public class PackageInstallServiceTests
 	private async Task<string> ReadAttributeAsync(string objid, string attribute)
 	{
 		var dbref = PackageInstallService.ParseObjid(objid)!.Value;
-		var leaf = await Database.GetAttributeAsync(dbref, [attribute], CancellationToken.None)
+		var leaf = await Database.GetAttributeAsync(dbref, attribute.Split('`'), CancellationToken.None)
 			.LastOrDefaultAsync();
 		return leaf?.Value.ToPlainText() ?? "";
 	}
@@ -127,12 +127,17 @@ public class PackageInstallServiceTests
 		await Assert.That(boardNode.IsNone()).IsFalse();
 		await Assert.That(boardNode.Known().Object().Name).IsEqualTo("E2E Board");
 
-		// Attributes written with refs fully substituted.
+		// Code carries v(PM`REFS`...) recalls, never dbrefs (decision 20.21).
 		var cmd = await ReadAttributeAsync(boardObjid, "CMD_+E2E");
-		await Assert.That(cmd).Contains(boardObjid);
-		await Assert.That(cmd).Contains(roomZero);
+		await Assert.That(cmd).Contains("[v(PM`REFS`BOARD)]");
+		await Assert.That(cmd).Contains("[v(PM`REFS`STORAGE)]");
 		await Assert.That(cmd).DoesNotContain("{{");
+		await Assert.That(cmd).DoesNotContain(boardObjid);
 		await Assert.That(await ReadAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-one-format");
+
+		// The engine-managed ref attrs hold the resolutions.
+		await Assert.That(await ReadAttributeAsync(boardObjid, "PM`REFS`BOARD")).IsEqualTo(boardObjid);
+		await Assert.That(await ReadAttributeAsync(boardObjid, "PM`REFS`STORAGE")).IsEqualTo(roomZero);
 
 		// Registry rows recorded: package, objects, baselines (full values), revision 1.
 		var installedRecord = await Registry.GetInstalledPackageAsync("e2e-pkg");
@@ -140,6 +145,7 @@ public class PackageInstallServiceTests
 		await Assert.That((await Registry.GetPackageObjectsAsync("e2e-pkg")).Count).IsEqualTo(3);
 		var baselines = await Registry.GetManagedAttributesAsync("e2e-pkg");
 		await Assert.That(baselines.Single(b => b.Attribute == "FN_FMT").BaselineValue).IsEqualTo("version-one-format");
+		await Assert.That(baselines.Single(b => b.Attribute == "PM`REFS`BOARD").BaselineValue).IsEqualTo(boardObjid);
 		await Assert.That((await Registry.GetPackageRevisionsAsync("e2e-pkg")).Single().Kind)
 			.IsEqualTo(PackageRevisionKind.Install);
 
