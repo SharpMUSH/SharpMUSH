@@ -1,0 +1,29 @@
+format: 1
+package: who-where
+version: 1.2.0
+authors: [SharpMUSH]
+description: "+who and +where commands with a shared formatting object."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [who, where, social]
+convention_prefix: WW_
+requires_server: ">=0.1"
+
+objects:
+  - ref: ww_global
+    type: thing
+    name: Who-Where Global Object
+    parent: "{{ww_functions}}"
+    attributes:
+      CMD_+WHO: |-
+        $+who:@pemit %#=[u({{ww_functions}}/WW_FN_HEADER,Who)][iter(lwho(),%r[ljust(name(%i0),20)][conn(%i0)],,)]
+      CMD_+WHERE: |-
+        $+where:@pemit %#=[u({{ww_functions}}/WW_FN_HEADER,Where)][iter(lwho(),%r[ljust(name(%i0),20)][name(loc(%i0))],,)]
+
+  - ref: ww_functions
+    type: thing
+    name: Who-Where Function Object
+    flags: [no_command]
+    attributes:
+      WW_FN_HEADER: |-
+        [repeat(=,5)]%b%0%b[repeat(=,70)]

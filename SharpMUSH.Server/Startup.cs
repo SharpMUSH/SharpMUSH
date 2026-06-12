@@ -211,6 +211,12 @@ public class Startup(
 		services.AddSingleton<IAccountService, AccountService>();
 		services.AddHostedService<BootstrapService>();
 		services.AddSingleton<ISqlService, SqlService>();
+		services.AddSingleton<IPackageManifestService, PackageManifestService>();
+		services.AddSingleton<IPackagePlanService, PackagePlanService>();
+		services.AddSingleton<IPackageInstallService, PackageInstallService>();
+		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();
+		services.AddSingleton<IPackageSourceService>(sp =>
+			new Services.GitPackageSourceService(sp.GetRequiredService<IPackageManifestService>()));
 		services.AddSingleton<ICommunicationService, CommunicationService>();
 		services.AddSingleton<ILockService, LockService>();
 		services.AddSingleton<IGameBroadcastService, GameBroadcastService>();
@@ -232,6 +238,9 @@ public class Startup(
 // Wiki subsystem — backed by whichever ISharpDatabase is active (all three DB backends implement IWikiService).
 		services.AddSingleton<WikiMarkdigPipeline>();
 		services.AddSingleton<IWikiService>(sp => (IWikiService)sp.GetRequiredService<ISharpDatabase>());
+
+// Package registry — backed by whichever ISharpDatabase is active (all three DB backends implement IPackageRegistryService).
+		services.AddSingleton<IPackageRegistryService>(sp => (IPackageRegistryService)sp.GetRequiredService<ISharpDatabase>());
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
 // Scene subsystem — InMemorySceneService for dev/test; swap for a persistent implementation later.

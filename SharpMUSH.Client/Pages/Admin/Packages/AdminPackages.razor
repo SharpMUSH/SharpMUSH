@@ -1,0 +1,277 @@
+@page "/admin/packages"
+@attribute [Authorize(Roles = "Wizard")]
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.Models.Packages
+@inject PackagesAdminService Packages
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Packages — Admin — SharpMUSH</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+    <MudText Typo="Typo.h4">Softcode Packages</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.TravelExplore"
+               Href="/admin/packages/browse">Browse</MudButton>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Cloud"
+               Href="/admin/packages/remotes">Remotes</MudButton>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Edit"
+               Href="/admin/packages/author">Author</MudButton>
+</MudStack>
+<MudText Color="Color.Secondary" Class="mb-4">
+    Installed softcode packages. Upgrades and installs always go through a reviewed plan — nothing applies automatically.
+</MudText>
+
+@if (_installed is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_installed.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">
+        No packages installed yet. Configure a remote, then browse it to install your first package.
+    </MudAlert>
+}
+else
+{
+    <MudTable Items="_installed" Dense="true" Hover="true">
+        <HeaderContent>
+            <MudTh>Package</MudTh>
+            <MudTh>Version</MudTh>
+            <MudTh>Source</MudTh>
+            <MudTh>Installed</MudTh>
+            <MudTh>Objects / Attrs</MudTh>
+            <MudTh>Update</MudTh>
+            <MudTh />
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>
+                <MudText Typo="Typo.body1">@context.Package.Id</MudText>
+                @if (context.Dependents.Count > 0)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        required by @string.Join(", ", context.Dependents)
+                    </MudText>
+                }
+            </MudTd>
+            <MudTd>@context.Package.Version <MudText Typo="Typo.caption" Color="Color.Secondary">rev @context.Package.CurrentRevision</MudText></MudTd>
+            <MudTd>
+                <MudText Typo="Typo.caption">@context.Package.SourceRepo</MudText>
+            </MudTd>
+            <MudTd>@context.Package.InstalledAt.ToString("yyyy-MM-dd")</MudTd>
+            <MudTd>@context.ObjectCount / @context.ManagedAttributeCount</MudTd>
+            <MudTd>
+                @if (_updates.TryGetValue(context.Package.Id, out var update))
+                {
+                    @if (update.InstalledTagMoved)
+                    {
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small"
+                                 Icon="@Icons.Material.Filled.Warning">tag moved!</MudChip>
+                    }
+                    @if (update.UpdateAvailable)
+                    {
+                        <MudChip T="string" Color="Color.Info" Size="Size.Small">@update.LatestVersion available</MudChip>
+                    }
+                    else if (!update.InstalledTagMoved)
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small">current</MudChip>
+                    }
+                    @if (update.PathChangedAtHead)
+                    {
+                        <MudTooltip Text="Files changed on the dev channel since install">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">dev drift</MudChip>
+                        </MudTooltip>
+                    }
+                }
+                else
+                {
+                    <MudButton Size="Size.Small" Disabled="@_busy"
+                               OnClick="@(() => CheckUpdateAsync(context.Package.Id))">check</MudButton>
+                }
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" title="Revision history"
+                               OnClick="@(() => OpenHistoryAsync(context.Package.Id))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" title="Uninstall"
+                               OnClick="@(() => OpenUninstall(context))" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+<MudDialog @bind-Visible="_showHistory" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <TitleContent><MudText Typo="Typo.h6">@_historyPackage — revisions</MudText></TitleContent>
+    <DialogContent>
+        @if (_revisions is null)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <MudList T="string" Dense="true">
+                @foreach (var revision in _revisions)
+                {
+                    <MudListItem T="string">
+                        <MudStack Row="true" AlignItems="AlignItems.Center">
+                            <MudText>rev @revision.Revision — @revision.Kind @revision.Version</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@revision.AppliedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                            <MudSpacer />
+                            @if (revision.Revision != _revisions.Max(r => r.Revision))
+                            {
+                                <MudButton Size="Size.Small" Disabled="@_busy"
+                                           OnClick="@(() => RollbackAsync(_historyPackage!, revision.Revision))">
+                                    roll back to this
+                                </MudButton>
+                            }
+                        </MudStack>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showHistory = false)">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_showUninstall">
+    <TitleContent><MudText Typo="Typo.h6">Uninstall @_uninstallTarget?.Package.Id?</MudText></TitleContent>
+    <DialogContent>
+        <MudText>
+            @_uninstallTarget?.ObjectCount object(s) will be marked for destruction and
+            @_uninstallTarget?.ManagedAttributeCount managed attribute record(s) removed.
+        </MudText>
+        @if (_uninstallTarget?.Dependents.Count > 0)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mt-2">
+                Depended on by: @string.Join(", ", _uninstallTarget.Dependents)
+            </MudAlert>
+            <MudCheckBox T="bool" @bind-Value="_forceUninstall" Label="Force removal anyway" Color="Color.Error" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showUninstall = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" Disabled="@_busy" OnClick="@UninstallAsync">
+            Uninstall
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private IReadOnlyList<InstalledPackageDto>? _installed;
+    private readonly Dictionary<string, PackageUpdateInfo> _updates = new();
+    private bool _busy;
+
+    private bool _showHistory;
+    private string? _historyPackage;
+    private IReadOnlyList<RevisionDto>? _revisions;
+
+    private bool _showUninstall;
+    private InstalledPackageDto? _uninstallTarget;
+    private bool _forceUninstall;
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    private async Task ReloadAsync()
+    {
+        _installed = await Packages.GetInstalledAsync();
+        StateHasChanged();
+    }
+
+    private async Task CheckUpdateAsync(string id)
+    {
+        _busy = true;
+        try
+        {
+            var update = await Packages.CheckForUpdateAsync(id);
+            if (update is null)
+            {
+                Snackbar.Add("Update check failed — is the source repo reachable?", Severity.Warning);
+            }
+            else
+            {
+                _updates[id] = update;
+                if (update.InstalledTagMoved)
+                {
+                    Snackbar.Add($"TRUST WARNING: the release tag for {id} {update.InstalledVersion} no longer points at the installed commit.", Severity.Error);
+                }
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task OpenHistoryAsync(string id)
+    {
+        _historyPackage = id;
+        _revisions = null;
+        _showHistory = true;
+        _revisions = await Packages.GetRevisionsAsync(id);
+    }
+
+    private async Task RollbackAsync(string id, int revision)
+    {
+        _busy = true;
+        try
+        {
+            var (result, error) = await Packages.RollbackAsync(id, revision);
+            if (error is not null)
+            {
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            Snackbar.Add($"Rolled back to revision {result!.RestoredFromRevision} (new revision {result.Revision}).", Severity.Success);
+            foreach (var note in result.Notes)
+            {
+                Snackbar.Add(note, Severity.Info);
+            }
+
+            _showHistory = false;
+            _updates.Remove(id);
+            await ReloadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void OpenUninstall(InstalledPackageDto target)
+    {
+        _uninstallTarget = target;
+        _forceUninstall = false;
+        _showUninstall = true;
+    }
+
+    private async Task UninstallAsync()
+    {
+        if (_uninstallTarget is null)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var error = await Packages.UninstallAsync(_uninstallTarget.Package.Id, _forceUninstall);
+            if (error is not null)
+            {
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            Snackbar.Add($"Uninstalled {_uninstallTarget.Package.Id}.", Severity.Success);
+            _showUninstall = false;
+            _updates.Remove(_uninstallTarget.Package.Id);
+            await ReloadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

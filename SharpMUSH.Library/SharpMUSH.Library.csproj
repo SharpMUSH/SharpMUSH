@@ -33,6 +33,7 @@
 
     <PackageReference Include="System.Data.SqlClient" Version="4.9.1" />
     <PackageReference Include="TelnetNegotiationCore" Version="2.5.0" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
     <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.5.0" />
 		<PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
   </ItemGroup>

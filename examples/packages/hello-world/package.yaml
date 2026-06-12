@@ -1,0 +1,15 @@
+format: 1
+package: hello-world
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Minimal example package: one object, one command."
+license: MIT
+keywords: [example, greeting]
+
+objects:
+  - ref: hello_global
+    type: thing
+    name: Hello World Object
+    attributes:
+      CMD_+HELLO: |-
+        $+hello:@pemit %#=Hello, [name(%#)]!

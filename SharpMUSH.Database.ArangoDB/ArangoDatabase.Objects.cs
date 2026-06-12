@@ -692,6 +692,7 @@ public partial class ArangoDatabase
 		{
 			_key = target.Key.ToString(),
 			Locks = target.Locks
+				.Where(kvp => !string.Equals(kvp.Key, lockName, StringComparison.OrdinalIgnoreCase))
 				.Select(kvp => new KeyValuePair<string, SharpLockDataQueryResult>(
 					kvp.Key,
 					new SharpLockDataQueryResult

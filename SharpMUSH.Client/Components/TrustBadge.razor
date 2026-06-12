@@ -1,0 +1,25 @@
+@using SharpMUSH.Library.Models.Packages
+
+<MudTooltip Text="@Tooltip">
+    <MudChip T="string" Size="Size.Small" Color="@BadgeColor" Variant="Variant.Filled">
+        @Trust.ToString().ToLowerInvariant()
+    </MudChip>
+</MudTooltip>
+
+@code {
+    [Parameter] public PackageRemoteTrust Trust { get; set; }
+
+    private Color BadgeColor => Trust switch
+    {
+        PackageRemoteTrust.Official => Color.Success,
+        PackageRemoteTrust.Community => Color.Warning,
+        _ => Color.Error
+    };
+
+    private string Tooltip => Trust switch
+    {
+        PackageRemoteTrust.Official => "Maintained by the SharpMUSH organization",
+        PackageRemoteTrust.Community => "Known community source — review code before applying",
+        _ => "Unreviewed source — inspect everything before applying"
+    };
+}

@@ -1,0 +1,186 @@
+@page "/admin/packages/browse"
+@attribute [Authorize(Roles = "Wizard")]
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models.Packages
+@inject PackagesAdminService Packages
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Browse Packages — Admin — SharpMUSH</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-2">Browse Packages</MudText>
+<MudText Color="Color.Secondary" Class="mb-4">
+    Refreshes the remote's repo cache and lists its packages. Versions come from release tags;
+    the branch tip is the dev channel.
+</MudText>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+    <MudSelect T="string" @bind-Value="_selectedRemote" Label="Remote" Variant="Variant.Outlined"
+               Margin="Margin.Dense" Style="max-width: 320px">
+        @foreach (var remote in _remotes ?? [])
+        {
+            <MudSelectItem Value="@remote.Name">@remote.Name</MudSelectItem>
+        }
+    </MudSelect>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || string.IsNullOrEmpty(_selectedRemote))"
+               OnClick="@BrowseAsync">Refresh &amp; browse</MudButton>
+    @if (_remoteRecord is not null)
+    {
+        <TrustBadge Trust="@_remoteRecord.Trust" />
+    }
+</MudStack>
+
+@if (_remoteRecord is { Trust: PackageRemoteTrust.Unknown })
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">
+        This source has not been reviewed. Inspect all code on the review screen before applying.
+    </MudAlert>
+}
+
+@if (_busy)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+
+@if (_snapshot is not null)
+{
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+        @_snapshot.Url at @_snapshot.HeadCommit[..Math.Min(10, _snapshot.HeadCommit.Length)]
+    </MudText>
+    <MudGrid>
+        @foreach (var entry in _snapshot.Packages)
+        {
+            <MudItem xs="12" md="6">
+                <MudCard>
+                    <MudCardHeader>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Class="w-100">
+                            <MudText Typo="Typo.h6">@(entry.PackageId ?? entry.Path)</MudText>
+                            <MudSpacer />
+                            <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="README"
+                                           OnClick="@(() => ShowReadmeAsync(entry))" />
+                        </MudStack>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudText Typo="Typo.body2" Class="mb-2">@(entry.Description ?? "(no description)")</MudText>
+                        @if (entry.PackageId is null)
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true">Manifest at the tip did not parse.</MudAlert>
+                        }
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
+                            <MudSelect T="string" Value="@SelectedVersion(entry)" ValueChanged="@(v => _selectedVersions[entry.Path] = v)"
+                                       Label="Version" Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 220px">
+                                @foreach (var version in entry.Versions)
+                                {
+                                    <MudSelectItem Value="@version.Version">@version.Version</MudSelectItem>
+                                }
+                                <MudSelectItem Value="@DevChannel">dev channel (@(entry.Version ?? "tip"))</MudSelectItem>
+                            </MudSelect>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                       OnClick="@(() => GoToReview(entry))">Review install</MudButton>
+                        </MudStack>
+                        @if (entry.Versions.Count == 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                No release tags — only the dev channel is available.
+                            </MudText>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+<MudDialog @bind-Visible="_showReadme" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent><MudText Typo="Typo.h6">@_readmeTitle</MudText></TitleContent>
+    <DialogContent>
+        @if (_readmeHtml is null)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <div class="wiki-content">@((MarkupString)_readmeHtml)</div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showReadme = false)">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private const string DevChannel = "__dev__";
+
+    private IReadOnlyList<PackageRemoteRecord>? _remotes;
+    private PackageRemoteRecord? _remoteRecord;
+    private string _selectedRemote = "";
+    private PackageRepoSnapshot? _snapshot;
+    private readonly Dictionary<string, string> _selectedVersions = new();
+    private bool _busy;
+
+    private bool _showReadme;
+    private string? _readmeTitle;
+    private string? _readmeHtml;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _remotes = await Packages.GetRemotesAsync();
+
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var preset = query["remote"];
+        if (!string.IsNullOrEmpty(preset) && _remotes.Any(r => r.Name == preset))
+        {
+            _selectedRemote = preset;
+            await BrowseAsync();
+        }
+        else if (_remotes.Count == 1)
+        {
+            _selectedRemote = _remotes[0].Name;
+        }
+    }
+
+    private string SelectedVersion(PackageRepoEntry entry) =>
+        _selectedVersions.GetValueOrDefault(entry.Path)
+        ?? entry.Versions.FirstOrDefault()?.Version
+        ?? DevChannel;
+
+    private async Task BrowseAsync()
+    {
+        _busy = true;
+        _snapshot = null;
+        try
+        {
+            _remoteRecord = (_remotes ?? []).FirstOrDefault(r => r.Name == _selectedRemote);
+            var (snapshot, error) = await Packages.BrowseAsync(_selectedRemote);
+            if (error is not null)
+            {
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            _snapshot = snapshot;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task ShowReadmeAsync(PackageRepoEntry entry)
+    {
+        _readmeTitle = entry.PackageId ?? entry.Path;
+        _readmeHtml = null;
+        _showReadme = true;
+        var readme = await Packages.GetRemoteReadmeAsync(_selectedRemote, entry.Path);
+        _readmeHtml = readme?.Html ?? "<em>No README available.</em>";
+    }
+
+    private void GoToReview(PackageRepoEntry entry)
+    {
+        var version = SelectedVersion(entry);
+        var versionPart = version == DevChannel ? "" : $"&version={Uri.EscapeDataString(version)}";
+        Nav.NavigateTo(
+            $"/admin/packages/review?remote={Uri.EscapeDataString(_selectedRemote)}&path={Uri.EscapeDataString(entry.Path)}{versionPart}");
+    }
+}

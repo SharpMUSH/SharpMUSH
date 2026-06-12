@@ -1,0 +1,44 @@
+format: 1
+package: starter-area
+version: 1.0.0
+authors: [SharpMUSH]
+description: "A two-room starter area demonstrating rooms and linked exits."
+license: MIT
+keywords: [area, building, example]
+
+objects:
+  - ref: town_square
+    type: room
+    name: Town Square
+    parent: "{{$room_zero}}"
+    attributes:
+      DESCRIBE: |-
+        A modest square of worn cobblestones. The warm glow of the
+        Rusty Tankard spills out of its doorway to the east.
+
+  - ref: rusty_tankard
+    type: room
+    name: The Rusty Tankard
+    parent: "{{$room_zero}}"
+    attributes:
+      DESCRIBE: |-
+        Low beams, a crackling hearth, and a barkeep who has heard
+        every story twice. The square lies back out to the west.
+
+  - ref: square_to_tavern
+    type: exit
+    name: Tavern;tavern;east;e
+    location: "{{town_square}}"
+    destination: "{{rusty_tankard}}"
+    attributes:
+      SUCCESS: |-
+        You push through the tavern door.
+
+  - ref: tavern_to_square
+    type: exit
+    name: Square;square;out;west;w
+    location: "{{rusty_tankard}}"
+    destination: "{{town_square}}"
+    attributes:
+      SUCCESS: |-
+        You step back out into the square.

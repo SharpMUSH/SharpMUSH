@@ -1,0 +1,349 @@
+@page "/admin/packages/review"
+@attribute [Authorize(Roles = "Wizard")]
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.Models.Packages
+@inject PackagesAdminService Packages
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Review Install — Admin — SharpMUSH</PageTitle>
+
+@if (_plan is null)
+{
+    <MudText Typo="Typo.h4" Class="mb-2">Review</MudText>
+    @if (_loadError is not null)
+    {
+        <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
+    }
+    else
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+}
+else
+{
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+        <MudText Typo="Typo.h4">
+            @(_plan.Changeset.Kind == PackageRevisionKind.Install ? "Install" : "Upgrade"): @_plan.PackageId @_plan.Version
+        </MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Outlined" OnClick="@(() => Nav.NavigateTo("/admin/packages/browse"))">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanApply || _busy)" OnClick="@ApplyAsync">
+            Apply
+        </MudButton>
+    </MudStack>
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
+        @_remote / @_path at @_plan.Commit[..Math.Min(10, _plan.Commit.Length)]
+        @if (_plan.Changeset.FromVersion is not null)
+        {
+            <text> — upgrading from @_plan.Changeset.FromVersion</text>
+        }
+    </MudText>
+
+    @* ── Blockers ─────────────────────────────────────────────────────── *@
+    @foreach (var issue in _plan.Changeset.DependencyIssues)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-2">
+            @if (issue.IsConflict)
+            {
+                <text>Conflicts with installed <b>@issue.PackageId</b> @issue.InstalledVersion.</text>
+            }
+            else
+            {
+                <text>Requires <b>@issue.PackageId</b> @issue.Constraint
+                    @(issue.InstalledVersion is null ? " — not installed." : $" — installed: {issue.InstalledVersion}.")</text>
+                @if (issue.Source is not null)
+                {
+                    <text> Available from @issue.Source.Repo@(issue.Source.Path is null ? "" : $" ({issue.Source.Path})").</text>
+                }
+            }
+        </MudAlert>
+    }
+
+    @foreach (var warning in _plan.ManifestWarnings)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-1">@warning</MudAlert>
+    }
+    @foreach (var collision in _plan.Changeset.CommandCollisions)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-1">
+            $-command "@collision.Pattern" is already defined by package @collision.OtherPackageId
+            (@collision.OtherObjid/@collision.OtherAttribute).
+        </MudAlert>
+    }
+    @foreach (var note in _plan.Changeset.Notes)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-1">@note</MudAlert>
+    }
+
+    @* ── Configure ────────────────────────────────────────────────────── *@
+    @if (_plan.Configure.Count > 0)
+    {
+        <MudCard Class="mb-4">
+            <MudCardHeader><MudText Typo="Typo.h6">Configuration</MudText></MudCardHeader>
+            <MudCardContent>
+                <MudStack Spacing="2">
+                    @foreach (var prompt in _plan.Configure)
+                    {
+                        <MudTextField T="string"
+                                      Value="@(_answers.GetValueOrDefault(prompt.Key) ?? prompt.Default ?? "")"
+                                      ValueChanged="@(v => _answers[prompt.Key] = v)"
+                                      Label="@($"{prompt.Label} ({prompt.Type})")"
+                                      HelperText="@(prompt.Type == "dbref" ? "Object id, e.g. #123:456" : null)"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    }
+                    <MudButton Variant="Variant.Outlined" Disabled="@_busy" OnClick="@ReplanAsync">
+                        Re-plan with these answers
+                    </MudButton>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    }
+
+    @* ── Objects ──────────────────────────────────────────────────────── *@
+    <MudCard Class="mb-4">
+        <MudCardHeader><MudText Typo="Typo.h6">Objects (@_plan.Changeset.Objects.Count)</MudText></MudCardHeader>
+        <MudCardContent>
+            <MudTable Items="_plan.Changeset.Objects" Dense="true">
+                <HeaderContent>
+                    <MudTh>Ref</MudTh><MudTh>Action</MudTh><MudTh>Type</MudTh><MudTh>Name</MudTh><MudTh>Details</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><code>@context.Ref</code></MudTd>
+                    <MudTd><MudChip T="string" Size="Size.Small" Color="@ObjectColor(context.Action)">@context.Action</MudChip></MudTd>
+                    <MudTd>@context.Type.ToString().ToLowerInvariant()</MudTd>
+                    <MudTd>@context.Name</MudTd>
+                    <MudTd>
+                        @if (context.RenamedFromRef is not null)
+                        {
+                            <MudText Typo="Typo.caption">renamed from @context.RenamedFromRef (keeps @context.Objid)</MudText>
+                        }
+                        @foreach (var diff in context.MetadataDiffs ?? [])
+                        {
+                            <MudText Typo="Typo.caption">@diff</MudText>
+                        }
+                        @if (context.Action == PackageObjectAction.Delete)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Error">@context.Objid will be marked GOING</MudText>
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+
+    @* ── Attributes ───────────────────────────────────────────────────── *@
+    <MudCard Class="mb-4">
+        <MudCardHeader>
+            <MudText Typo="Typo.h6">
+                Attributes (@_plan.Changeset.Attributes.Count)
+                @if (_conflicts.Count > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">@_conflicts.Count conflict(s)</MudChip>
+                }
+            </MudText>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudExpansionPanels MultiExpansion="true" Dense="true">
+                @foreach (var change in _plan.Changeset.Attributes)
+                {
+                    var render = RenderFor(change);
+                    <MudExpansionPanel Expanded="@(change.Action == PackageAttributeAction.Conflict)">
+                        <TitleContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <code>@change.TargetRef/@change.Attribute</code>
+                                <MudChip T="string" Size="Size.Small" Color="@AttributeColor(change)">
+                                    @(change.Action == PackageAttributeAction.Conflict ? $"conflict: {change.Conflict}" : change.Action.ToString())
+                                </MudChip>
+                                @foreach (var danger in render?.DangerousPatterns ?? [])
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Error"
+                                             Icon="@Icons.Material.Filled.Warning">@danger</MudChip>
+                                }
+                                @if (change.RequiresApplyResolution)
+                                {
+                                    <MudTooltip Text="Some refs resolve at apply time (new objects / configure)">
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">resolves at apply</MudChip>
+                                    </MudTooltip>
+                                }
+                            </MudStack>
+                        </TitleContent>
+                        <ChildContent>
+                            <MudGrid>
+                                @if (render?.BaseHtml is not null)
+                                {
+                                    <MudItem xs="12" md="4">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Base (as installed)</MudText>
+                                        <pre class="mush-pane">@((MarkupString)render.BaseHtml)</pre>
+                                    </MudItem>
+                                }
+                                @if (render?.LiveHtml is not null)
+                                {
+                                    <MudItem xs="12" md="4">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Live (your version)</MudText>
+                                        <pre class="mush-pane">@((MarkupString)render.LiveHtml)</pre>
+                                    </MudItem>
+                                }
+                                @if (render?.NewHtml is not null)
+                                {
+                                    <MudItem xs="12" md="4">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">New (@_plan.Version)</MudText>
+                                        <pre class="mush-pane">@((MarkupString)render.NewHtml)</pre>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+
+                            @if (change.Action == PackageAttributeAction.Conflict)
+                            {
+                                var key = DecisionKey(change);
+                                <MudRadioGroup T="string"
+                                               Value="@(_decisions.GetValueOrDefault(key) ?? "")"
+                                               ValueChanged="@(v => _decisions[key] = v)">
+                                    <MudRadio T="string" Value="@("KeepMine")">Keep mine</MudRadio>
+                                    <MudRadio T="string" Value="@("TakeTheirs")">
+                                        @(change.Conflict == PackageConflictKind.ModifyDelete ? "Delete it (take theirs)" : "Take theirs")
+                                    </MudRadio>
+                                    <MudRadio T="string" Value="@("UseCustom")">Edit merged value</MudRadio>
+                                </MudRadioGroup>
+                                @if (_decisions.GetValueOrDefault(key) == "UseCustom")
+                                {
+                                    <MudTextField T="string"
+                                                  Value="@(_customValues.GetValueOrDefault(key) ?? change.LiveValue ?? change.NewValue ?? "")"
+                                                  ValueChanged="@(v => _customValues[key] = v)"
+                                                  Label="Merged value" Lines="4" Variant="Variant.Outlined" />
+                                }
+                            }
+                        </ChildContent>
+                    </MudExpansionPanel>
+                }
+            </MudExpansionPanels>
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    private string _remote = "";
+    private string _path = "";
+    private string? _version;
+
+    private PlanResponse? _plan;
+    private string? _loadError;
+    private bool _busy;
+
+    private readonly Dictionary<string, string> _answers = new();
+    private readonly Dictionary<string, string> _decisions = new();
+    private readonly Dictionary<string, string> _customValues = new();
+    private Dictionary<(string, string), AttributeRenderDto> _renders = new();
+    private List<PackageAttributeChange> _conflicts = [];
+
+    private bool CanApply =>
+        _plan is not null
+        && !_plan.Changeset.IsBlocked
+        && _conflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(DecisionKey(c))));
+
+    protected override async Task OnInitializedAsync()
+    {
+        var query = System.Web.HttpUtility.ParseQueryString(Nav.ToAbsoluteUri(Nav.Uri).Query);
+        _remote = query["remote"] ?? "";
+        _path = query["path"] ?? "";
+        _version = query["version"];
+        if (string.IsNullOrEmpty(_remote))
+        {
+            _loadError = "Missing 'remote' parameter.";
+            return;
+        }
+
+        await ReplanAsync();
+    }
+
+    private async Task ReplanAsync()
+    {
+        _busy = true;
+        try
+        {
+            var (plan, error) = await Packages.PlanAsync(new PlanRequest(_remote, _path, _version, new(_answers)));
+            if (error is not null)
+            {
+                _loadError = error;
+                return;
+            }
+
+            _plan = plan;
+            _renders = plan!.Renders.ToDictionary(r => (r.TargetRef, r.Attribute), r => r);
+            _conflicts = plan.Changeset.Attributes
+                .Where(a => a.Action == PackageAttributeAction.Conflict)
+                .ToList();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private AttributeRenderDto? RenderFor(PackageAttributeChange change) =>
+        _renders.GetValueOrDefault((change.TargetRef, change.Attribute));
+
+    private static string DecisionKey(PackageAttributeChange change) =>
+        $"{change.TargetRef} {change.Attribute}";
+
+    private async Task ApplyAsync()
+    {
+        if (_plan is null)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var decisions = _conflicts.Select(c =>
+            {
+                var key = DecisionKey(c);
+                var resolution = Enum.Parse<PackageConflictResolution>(_decisions[key]);
+                return new PackageConflictDecision(
+                    c.TargetRef, c.Attribute, resolution,
+                    resolution == PackageConflictResolution.UseCustom
+                        ? _customValues.GetValueOrDefault(key) ?? c.LiveValue ?? ""
+                        : null);
+            }).ToList();
+
+            var (result, error) = await Packages.ApplyAsync(new ApplyRequest(
+                _remote, _path, _version, new(_answers), decisions));
+            if (error is not null)
+            {
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            Snackbar.Add($"{_plan.PackageId} {_plan.Version} applied (revision {result!.Revision}).", Severity.Success);
+            foreach (var note in result.Notes.Take(6))
+            {
+                Snackbar.Add(note, Severity.Info);
+            }
+
+            Nav.NavigateTo("/admin/packages");
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static Color ObjectColor(PackageObjectAction action) => action switch
+    {
+        PackageObjectAction.Create or PackageObjectAction.RecreateMissing => Color.Info,
+        PackageObjectAction.Delete => Color.Error,
+        PackageObjectAction.Rename or PackageObjectAction.UpdateMetadata => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static Color AttributeColor(PackageAttributeChange change) => change.Action switch
+    {
+        PackageAttributeAction.Conflict => Color.Warning,
+        PackageAttributeAction.Create or PackageAttributeAction.AutoUpgrade => Color.Info,
+        PackageAttributeAction.Delete or PackageAttributeAction.RemoveBaseline => Color.Error,
+        PackageAttributeAction.KeepLocal or PackageAttributeAction.Adopt => Color.Tertiary,
+        _ => Color.Default
+    };
+}

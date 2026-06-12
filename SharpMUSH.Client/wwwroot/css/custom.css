@@ -565,3 +565,24 @@ body {
     border-radius: 4px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
+
+/* ── Package review: MUSHcode highlighting ─────────────────────────────── */
+.mush-pane {
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-family: 'Cascadia Mono', 'Fira Code', monospace;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.mush-cmdpattern { color: #c792ea; font-weight: 600; }
+.mush-fn { color: #82aaff; }
+.mush-sub { color: #f78c6c; }
+.mush-dbref { color: #89ddff; text-decoration: underline dotted; }
+.mush-ref { color: #c3e88d; font-style: italic; }
+.mush-atcmd { color: #ffcb6b; }
+.mush-danger { background: rgba(255, 83, 80, 0.25); border-bottom: 2px solid #ff5350; }

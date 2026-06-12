@@ -1,0 +1,308 @@
+@page "/admin/packages/author"
+@attribute [Authorize(Roles = "Wizard")]
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models.Packages
+@inject PackagesAdminService Packages
+@inject ISnackbar Snackbar
+
+<PageTitle>Author Package — Admin — SharpMUSH</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-2">Author a Package</MudText>
+<MudText Color="Color.Secondary" Class="mb-4">
+    Turn live objects into a package.yaml. Every dbref in the selection must end up symbolic:
+    in-selection references resolve automatically; the rest you classify below.
+</MudText>
+
+@* ── Step 1: selection ──────────────────────────────────────────────────── *@
+<MudCard Class="mb-4">
+    <MudCardHeader><MudText Typo="Typo.h6">1 — Select objects</MudText></MudCardHeader>
+    <MudCardContent>
+        <MudTextField @bind-Value="_objidInput" Label="Object ids (one per line, e.g. #847:1778518155494)"
+                      Lines="3" Variant="Variant.Outlined" />
+        <MudButton Class="mt-2" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_busy" OnClick="@ScanAsync">
+            Scan selection
+        </MudButton>
+    </MudCardContent>
+</MudCard>
+
+@if (_scan is not null)
+{
+    @* ── Step 2: objects, refs, attribute selection ─────────────────────── *@
+    <MudCard Class="mb-4">
+        <MudCardHeader><MudText Typo="Typo.h6">2 — Refs &amp; attributes</MudText></MudCardHeader>
+        <MudCardContent>
+            <MudExpansionPanels MultiExpansion="true" Dense="true">
+                @foreach (var obj in _scan.Objects)
+                {
+                    <MudExpansionPanel>
+                        <TitleContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudText>@obj.Name</MudText>
+                                <MudChip T="string" Size="Size.Small">@obj.Type.ToLowerInvariant()</MudChip>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@obj.Objid</MudText>
+                            </MudStack>
+                        </TitleContent>
+                        <ChildContent>
+                            <MudTextField T="string"
+                                          Value="@(_refs.GetValueOrDefault(obj.Objid) ?? obj.SuggestedRef)"
+                                          ValueChanged="@(v => _refs[obj.Objid] = v)"
+                                          Label="Manifest ref (lowercase, underscores)"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Attributes to include:</MudText>
+                            @foreach (var attr in obj.Attributes.Keys.OrderBy(a => a, StringComparer.Ordinal))
+                            {
+                                var key = (obj.Objid, attr);
+                                <MudCheckBox T="bool"
+                                             Value="@(!_excluded.Contains(key))"
+                                             ValueChanged="@(included => ToggleAttribute(key, included))"
+                                             Label="@attr" Dense="true" />
+                            }
+                        </ChildContent>
+                    </MudExpansionPanel>
+                }
+            </MudExpansionPanels>
+        </MudCardContent>
+    </MudCard>
+
+    @* ── Step 3: external dbref classification ──────────────────────────── *@
+    @if (_scan.ExternalDbrefs.Count > 0)
+    {
+        <MudCard Class="mb-4">
+            <MudCardHeader>
+                <MudText Typo="Typo.h6">3 — Classify external references (@_scan.ExternalDbrefs.Count)</MudText>
+            </MudCardHeader>
+            <MudCardContent>
+                @foreach (var external in _scan.ExternalDbrefs)
+                {
+                    var c = ClassificationFor(external.Dbref);
+                    <MudPaper Class="pa-3 mb-2" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudText><code>@external.Dbref</code></MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @external.Occurrences occurrence(s), e.g. in @external.ExampleAttribute
+                            </MudText>
+                        </MudStack>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-1">
+                            <MudSelect T="string" Value="@c.Mode" ValueChanged="@(m => SetMode(external.Dbref, m))"
+                                       Label="Resolution" Margin="Margin.Dense" Variant="Variant.Outlined"
+                                       Style="max-width: 200px">
+                                <MudSelectItem Value="@("wellknown")">well-known</MudSelectItem>
+                                <MudSelectItem Value="@("configure")">configure</MudSelectItem>
+                            </MudSelect>
+                            @if (c.Mode == "wellknown")
+                            {
+                                <MudSelect T="string" Value="@c.WellKnown" ValueChanged="@(v => SetWellKnown(external.Dbref, v))"
+                                           Label="Well-known ref" Margin="Margin.Dense" Variant="Variant.Outlined"
+                                           Style="max-width: 220px">
+                                    @foreach (var name in WellKnownRefs.All.Order())
+                                    {
+                                        <MudSelectItem Value="@name">$@name</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            }
+                            else
+                            {
+                                <MudTextField T="string" Value="@c.ConfigureKey" ValueChanged="@(v => SetConfigureKey(external.Dbref, v))"
+                                              Label="Configure key" Margin="Margin.Dense" Variant="Variant.Outlined"
+                                              Style="max-width: 200px" />
+                                <MudTextField T="string" Value="@c.ConfigureLabel" ValueChanged="@(v => SetConfigureLabel(external.Dbref, v))"
+                                              Label="Prompt shown to installers" Margin="Margin.Dense" Variant="Variant.Outlined" />
+                            }
+                        </MudStack>
+                    </MudPaper>
+                }
+            </MudCardContent>
+        </MudCard>
+    }
+
+    @* ── Step 4: metadata + export ──────────────────────────────────────── *@
+    <MudCard Class="mb-4">
+        <MudCardHeader><MudText Typo="Typo.h6">4 — Metadata &amp; export</MudText></MudCardHeader>
+        <MudCardContent>
+            <MudGrid Spacing="2">
+                <MudItem xs="12" md="4">
+                    <MudTextField @bind-Value="_packageId" Label="Package id (lowercase, hyphens)"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="6" md="2">
+                    <MudTextField @bind-Value="_version" Label="Version" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MudTextField @bind-Value="_license" Label="License (optional)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudTextField @bind-Value="_authors" Label="Authors (comma-separated)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_description" Label="Description" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+            </MudGrid>
+            <MudButton Class="mt-3" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_busy" OnClick="@ExportAsync">
+                Export package.yaml
+            </MudButton>
+        </MudCardContent>
+    </MudCard>
+}
+
+<MudDialog @bind-Visible="_showExport" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent><MudText Typo="Typo.h6">package.yaml</MudText></TitleContent>
+    <DialogContent>
+        <pre class="mush-pane" style="max-height: 480px">@_exportedYaml</pre>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Commit this to a package repo (one directory per package), list it in index.yaml,
+            and tag releases as <code>&lt;package&gt;/v&lt;version&gt;</code>.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Href="@DownloadHref" download="package.yaml" Color="Color.Primary" Variant="Variant.Filled">
+            Download
+        </MudButton>
+        <MudButton OnClick="@(() => _showExport = false)">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private sealed class ExternalClassification
+    {
+        public string Mode = "configure";
+        public string WellKnown = WellKnownRefs.RoomZero;
+        public string ConfigureKey = "";
+        public string ConfigureLabel = "";
+    }
+
+    private string _objidInput = "";
+    private PackageAuthoringScan? _scan;
+    private bool _busy;
+
+    private readonly Dictionary<string, string> _refs = new();
+    private readonly HashSet<(string Objid, string Attribute)> _excluded = new();
+    private readonly Dictionary<string, ExternalClassification> _classifications = new();
+
+    private string _packageId = "";
+    private string _version = "1.0.0";
+    private string _description = "";
+    private string _license = "";
+    private string _authors = "";
+
+    private bool _showExport;
+    private string _exportedYaml = "";
+
+    private string DownloadHref =>
+        $"data:application/x-yaml;base64,{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(_exportedYaml))}";
+
+    private ExternalClassification ClassificationFor(string dbref)
+    {
+        if (!_classifications.TryGetValue(dbref, out var classification))
+        {
+            _classifications[dbref] = classification = new ExternalClassification();
+        }
+
+        return classification;
+    }
+
+    private void SetMode(string dbref, string mode) => ClassificationFor(dbref).Mode = mode;
+    private void SetWellKnown(string dbref, string name) => ClassificationFor(dbref).WellKnown = name;
+    private void SetConfigureKey(string dbref, string key) => ClassificationFor(dbref).ConfigureKey = key;
+    private void SetConfigureLabel(string dbref, string label) => ClassificationFor(dbref).ConfigureLabel = label;
+
+    private void ToggleAttribute((string, string) key, bool included)
+    {
+        if (included)
+        {
+            _excluded.Remove(key);
+        }
+        else
+        {
+            _excluded.Add(key);
+        }
+    }
+
+    private async Task ScanAsync()
+    {
+        var objids = _objidInput
+            .Split(['\n', ',', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+        if (objids.Count == 0)
+        {
+            Snackbar.Add("Enter at least one object id.", Severity.Warning);
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var (scan, error) = await Packages.AuthorScanAsync(objids);
+            if (error is not null)
+            {
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            _scan = scan;
+            _refs.Clear();
+            _excluded.Clear();
+            _classifications.Clear();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        if (_scan is null)
+        {
+            return;
+        }
+
+        var wellKnown = new Dictionary<string, string>();
+        var configure = new Dictionary<string, AuthoringConfigureClassification>();
+        foreach (var external in _scan.ExternalDbrefs)
+        {
+            var c = ClassificationFor(external.Dbref);
+            if (c.Mode == "wellknown")
+            {
+                wellKnown[external.Dbref] = c.WellKnown;
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(c.ConfigureKey) || string.IsNullOrWhiteSpace(c.ConfigureLabel))
+                {
+                    Snackbar.Add($"Classify {external.Dbref}: configure refs need a key and a label.", Severity.Warning);
+                    return;
+                }
+
+                configure[external.Dbref] = new AuthoringConfigureClassification(
+                    c.ConfigureKey.Trim().ToLowerInvariant(), c.ConfigureLabel.Trim());
+            }
+        }
+
+        var selections = _scan.Objects.Select(obj => new AuthoringObjectSelection(
+            obj.Objid,
+            (_refs.GetValueOrDefault(obj.Objid) ?? obj.SuggestedRef).Trim().ToLowerInvariant(),
+            _excluded.Where(e => e.Objid == obj.Objid).Select(e => e.Attribute).ToList())).ToList();
+
+        _busy = true;
+        try
+        {
+            var (yaml, error) = await Packages.AuthorExportAsync(new PackageAuthoringRequest(
+                _packageId.Trim(), _version.Trim(), _description.Trim(),
+                string.IsNullOrWhiteSpace(_license) ? null : _license.Trim(),
+                _authors.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                selections, wellKnown, configure));
+            if (error is not null)
+            {
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            _exportedYaml = yaml!;
+            _showExport = true;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

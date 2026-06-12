@@ -93,6 +93,16 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS wiki_page_category ON wiki_page FIELDS category",
 				"DEFINE INDEX IF NOT EXISTS wiki_revision_page ON wiki_revision FIELDS pageId",
 				"DEFINE INDEX IF NOT EXISTS wiki_revision_page_rev ON wiki_revision FIELDS pageId, revisionNumber UNIQUE",
+				// Softcode package manager system data (decisions 20.3, 20.13)
+				"DEFINE INDEX IF NOT EXISTS sys_package_pkgid ON sys_package FIELDS packageId UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS sys_package_object_pkg_ref ON sys_package_object FIELDS packageId, refName UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS sys_package_object_objid ON sys_package_object FIELDS objid",
+				"DEFINE INDEX IF NOT EXISTS sys_managed_attribute_key ON sys_managed_attribute FIELDS packageId, objid, attribute UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS sys_managed_attribute_objid ON sys_managed_attribute FIELDS objid",
+				"DEFINE INDEX IF NOT EXISTS sys_package_dependency_pkg ON sys_package_dependency FIELDS packageId",
+				"DEFINE INDEX IF NOT EXISTS sys_package_dependency_dep ON sys_package_dependency FIELDS dependsOnId",
+				"DEFINE INDEX IF NOT EXISTS sys_remote_name ON sys_remote FIELDS name UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS sys_package_revision_key ON sys_package_revision FIELDS packageId, revision UNIQUE",
 				// Indexes on edge/relation tables for fast traversal
 				"DEFINE INDEX IF NOT EXISTS has_attribute_in ON has_attribute FIELDS in",
 				"DEFINE INDEX IF NOT EXISTS has_attribute_out ON has_attribute FIELDS out",

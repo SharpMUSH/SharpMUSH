@@ -936,6 +936,106 @@ picker, dbref resolution, export) all in Blazor.
 who-where, finger, http-hooks. These are THE default softcode experience.
 The http-hooks package wires up the game→web bridge.
 
+> Decisions 20.11–20.20 were adopted 2026-06-12 from the format review
+> (`softcode-package-manager-format-review.md`), which carries the evidence
+> and prior-art citations for each.
+
+### 20.11 Ref Syntax (format v2)
+
+**Decision:** Uniform mustache refs, replacing bare sigils: `{{name}}`
+(intra-package), `{{$name}}` (well-known), `{{?name}}` (configure),
+`{{pkg/ref}}` (cross-package; `pkg` must be a declared dependency).
+Case-insensitive end-to-end (defined lowercase, matched any case). Exactly
+two braces; `{{{{` escapes a literal `{{`. Every `{{...}}` token must parse
+as a valid, resolvable ref — malformed or unresolved tokens are hard errors
+(no heuristic warnings). Accepted residual collision: literal MUSHcode
+`{{word}}` requires escaping; nested brace groups like `{{a},{b}}` do not
+match and are unaffected.
+
+### 20.12 MUSHcode Carrier (format v2)
+
+**Decision:** Block scalars only. Attribute values are written as YAML block
+scalars (`|-`); single-quoted strings tolerated for trivial one-liners. The
+authoring exporter always emits block scalars. Plain and double-quoted code
+is rejected by documentation/lint guidance (double-quote `\` escapes and
+plain-scalar `&`/` #`/leading-`@%[{` rules corrupt MUSHcode). No external
+payload files — a package manifest is self-contained.
+
+### 20.13 Baselines, Revisions, Rollback
+
+**Decision:** Helm-grade upgrade state. `sys_managed_attributes` stores
+`baseline_value` (full text) alongside `baseline_hash` (fast drift index).
+New `sys_package_revisions` collection: one record per apply — resolved
+manifest snapshot, configure answers, pre-apply values of everything
+modified, source commit, version, timestamp, monotonic revision number.
+Rollback applies a prior revision's snapshot as a NEW revision. Configure
+answers persist across upgrades (no re-prompting). Retention configurable
+(default 10).
+
+### 20.14 Releases via Git Tags
+
+**Decision:** Go-modules monorepo convention: releases are tags named
+`<package-dir>/v<semver>` (e.g. `who-where/v1.2.0`). Version list = tag
+list; installs pin tags; HEAD is the dev channel for untagged repos.
+Release tags are immutable (CI-enforced in the official repo). Consumer-side
+moved-tag detection: if the tag for the installed version no longer points
+at `installed_commit`, show a loud trust warning before any changeset.
+
+### 20.15 Changeset Classification (extended)
+
+**Decision:** Plan engine classifies beyond value modification: deletes
+(attr/object removed in new version), modify/delete conflicts, add/add
+conflicts (package adds an attr that already exists locally with different
+content). Renames never become destroy+create: per-object
+`previous_refs: [old_name]` and package-level `replaces: old-package-id`
+hints preserve dbrefs and registry continuity.
+
+### 20.16 Version & Constraint Semantics
+
+**Decision:** SemVer 2.0.0 item-11 prerelease ordering (dot-split
+identifiers; numeric compared numerically and always lower than
+alphanumeric; fewer fields lower on equal prefix). node-semver prerelease
+range rule: a prerelease version satisfies a constraint only if some clause
+carries a prerelease on the same [major,minor,patch] tuple — prereleases are
+never selected implicitly. No `^`/`~` operators (targeted error messages
+suggest `>= <` form). Build metadata (`+`) unsupported with a clear error.
+
+### 20.17 Manifest Metadata (format v2)
+
+**Decision:** `format:` field (missing = 1; unknown minor → warn, unknown
+major → reject — the Python Metadata-Version rule). New fields: `license`,
+`homepage`, `keywords` (≤5 advisory), `requires_server` (engine version
+constraint, checked at plan time). Exits become expressible: `location:`
+(required for exits, optional for things/players, forbidden for rooms) and
+`destination:` (exits only). `index.yaml` entries may carry optional
+`package`/`version`/`description` for cheap browsing and duplicate-id CI.
+
+### 20.18 Package Identity
+
+**Decision:** Flat ids (≤64 chars, `[a-z][a-z0-9-]*`) bound to their source
+repo at install. Installing an id from a different repo than recorded is a
+hard error with guidance. Provenance always shown in UI. Official-repo CI
+enforces npm-style moniker rule (punctuation-collapse collision check).
+`package` is reserved as a dependency id.
+
+### 20.19 Configure Parameters (typed)
+
+**Decision:** Typed configure parameters in v1: `type: dbref | string |
+number | boolean` (default `dbref`) with optional `default` (forbidden for
+dbref type — portability is the point of configure). Only dbref-typed refs
+may appear in `parent:`/`location:`/`destination:`. Undeclared `{{?name}}`
+usage is a hard error (explicit syntax removes the old wildcard ambiguity).
+Answers persisted in revisions (20.13). `pattern` reserved for future
+validation.
+
+### 20.20 Conflicts & Reserved Relationships
+
+**Decision:** `conflicts:` honored at plan time (same forms as `depends`
+minus source hints). The plan engine additionally auto-detects `$command`
+pattern collisions across installed packages (the MUSH analog of file
+conflicts) and flags them in review. `provides:`, `recommends:`, `suggests:`
+are reserved keys — parsed and ignored with a warning until specified.
+
 ---
 
 ## Design Documents Index
