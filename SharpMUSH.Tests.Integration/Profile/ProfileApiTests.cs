@@ -1,5 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -47,6 +49,47 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		await Assert.That(god.ValueKind).IsEqualTo(JsonValueKind.Object);
 		await Assert.That(god.GetProperty("objid").GetString()).IsEqualTo(objid);
 		await Assert.That(god.GetProperty("created").ValueKind).IsEqualTo(JsonValueKind.Number);
+		// FN`CHARCAT default categorization: God carries the WIZARD flag in every provider's seed.
+		await Assert.That(god.GetProperty("category").GetString()).IsEqualTo("Wizard");
+	}
+
+	/// <summary>
+	/// Covers the default FN`CHARCAT / FN`CHARVIS policy beyond the Wizard branch: a ROYALTY
+	/// player categorizes as Royalty, a flagless player has a blank category, and a Guest-powered
+	/// player is filtered out of the directory entirely (MUSH-side, via filter(me/FN`CHARVIS,…)).
+	/// </summary>
+	[Test]
+	public async Task Characters_CategorizesByFlags_AndHidesGuests()
+	{
+		var mediator = factory.Services.GetRequiredService<IMediator>();
+		var home = new DBRef(0, null);
+
+		await mediator.Send(new CreatePlayerCommand("DirRoyal", "testpass", home, home, 1));
+		await mediator.Send(new CreatePlayerCommand("DirPleb", "testpass", home, home, 1));
+		await mediator.Send(new CreatePlayerCommand("DirGuest", "testpass", home, home, 1));
+
+		var royal = await mediator.CreateStream(new GetPlayerQuery("DirRoyal")).FirstAsync();
+		var royaltyFlag = await mediator.Send(new GetObjectFlagQuery("ROYALTY"));
+		await Assert.That(royaltyFlag).IsNotNull();
+		await mediator.Send(new SetObjectFlagCommand(new AnySharpObject(royal), royaltyFlag!));
+
+		var guest = await mediator.CreateStream(new GetPlayerQuery("DirGuest")).FirstAsync();
+		var guestPower = await mediator.Send(new GetPowerQuery("Guest"));
+		await Assert.That(guestPower).IsNotNull();
+		await mediator.Send(new SetObjectPowerCommand(new AnySharpObject(guest), guestPower!));
+
+		var http = factory.CreateHttpClient();
+		var response = await http.GetAsync("http/characters");
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		using var doc = JsonDocument.Parse(body);
+		var rows = doc.RootElement.EnumerateArray()
+			.ToDictionary(row => row.GetProperty("name").GetString()!, row => row);
+
+		await Assert.That(rows["DirRoyal"].GetProperty("category").GetString()).IsEqualTo("Royalty");
+		await Assert.That(rows["DirPleb"].GetProperty("category").GetString()).IsEqualTo(string.Empty);
+		await Assert.That(rows.ContainsKey("DirGuest")).IsFalse();
 	}
 
 	[Test]

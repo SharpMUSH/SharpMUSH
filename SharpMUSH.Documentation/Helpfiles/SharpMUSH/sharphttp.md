@@ -225,7 +225,7 @@ think setq(fields,formq(after(%0,?)))
 
 SharpMUSH also seeds these routed sub-attributes (used by the web portal; edit freely — seeded once, never overwritten):
 
-- `GET /http/characters` (`&GET`CHARACTERS`) — a JSON array of every player: `[{name, objid, created}, ...]`. Built with `fold()` over `lsearch(all,type,player)`.
+- `GET /http/characters` (`&GET`CHARACTERS`) — a JSON array of listed players: `[{name, objid, created, category}, ...]`. Built with `fold()` over `filter(me/FN`CHARVIS, lsearch(all,type,player))`. `category` comes from `&FN`CHARCAT` — by default flag-based, first match wins: `Wizard` (WIZARD flag), `Royalty` (ROYALTY flag), `Guest` (the Guest power); everyone else is blank. Who is listed at all comes from `&FN`CHARVIS` (1 to list, 0 to hide) — the default hides the `Guest` category. Both are MUSH-side policy: redefine them freely; the portal hard-codes nothing — it lists exactly what comes back, grouping by label (alphabetically) and pooling blanks in an untitled section at the bottom.
 - `GET /http/profile/schema` (`&GET`PROFILE`SCHEMA`) — the profile field/section schema.
 - `GET /http/profile?objid=#1:123` (`&GET`PROFILE`) — one character's public profile. Characters are addressed by **objid** (stable across renames, safe against dbref recycling); an unknown objid answers `404 NO SUCH CHARACTER`. Profile values live in `PROFILE`<key>` attributes on the character.
 

@@ -12,7 +12,8 @@ namespace SharpMUSH.Server.Services;
 ///
 /// Characters are addressed by **objid** (#dbref:creation-ms) rather than name: stable across
 /// renames, no name-matching ambiguity, and safe against dbref recycling. The character list is
-/// the objid source — each row carries name, objid, and creation time.
+/// the objid source — each row carries name, objid, creation time, and a category (FN`CHARCAT:
+/// Wizard / Royalty / Guest by default, blank for everyone else, redefinable per game).
 ///
 /// Profile values are stored as PROFILE`&lt;key&gt; attributes on the character. With no viewer
 /// identity on the /http/ path, the profile serves the PUBLIC view only. Real HTTP statuses come
@@ -33,20 +34,33 @@ public static class DefaultProfileHandlerSoftcode
 		("FN`FIELD",
 			"json(object,value,json(string,get(%0/PROFILE`%1)),visible,json(boolean,true))"),
 
+		// Default directory categorization for one player. %0 = player dbref/objid.
+		// Flag-based, first match wins: Wizard > Royalty > Guest (the power); everyone else is
+		// uncategorized (blank — the portal pools blanks in an untitled section at the bottom).
+		// Games can redefine this attribute to categorize however they like.
+		("FN`CHARCAT",
+			"firstof(if(hasflag(%0,WIZARD),Wizard),if(hasflag(%0,ROYALTY),Royalty),if(haspower(%0,Guest),Guest))"),
+
 		// One character-directory row. %0 = player dbref/objid.
 		// created is the raw creation time in unix milliseconds (ctime's utc form).
 		("FN`CHARROW",
-			"json(object,name,json(string,name(%0)),objid,json(string,objid(%0)),created,json(number,ctime(%0,1)))"),
+			"json(object,name,json(string,name(%0)),objid,json(string,objid(%0)),created,json(number,ctime(%0,1)),category,json(string,u(FN`CHARCAT,%0)))"),
 
 		// fold() step: append one row to the accumulating JSON array. %0 = array so far, %1 = player.
 		("FN`JARRINS",
 			"json_mod(%0,insert,$\\[[json_query(%0,size)]\\],u(FN`CHARROW,%1))"),
 
-		// GET /http/characters — every player as [{name, objid, created}, ...], unsorted
-		// (the portal sorts client-side).
+		// Directory visibility predicate for one player (%0): 1 to list, 0 to hide. The default
+		// hides the Guest category; games redefine this to filter however they like. Filtering
+		// is deliberately MUSH-side — the portal lists exactly what the game returns.
+		("FN`CHARVIS",
+			"not(strmatch(u(FN`CHARCAT,%0),Guest))"),
+
+		// GET /http/characters — every FN`CHARVIS-visible player as [{name, objid, created,
+		// category}, ...], unsorted (the portal sorts client-side).
 		("GET`CHARACTERS",
 			"@respond/type application/json; " +
-			"think fold(me/FN`JARRINS,lsearch(all,type,player),\\[\\])"),
+			"think fold(me/FN`JARRINS,filter(me/FN`CHARVIS,lsearch(all,type,player)),\\[\\])"),
 
 		// GET /http/profile?objid=#1:123 — one character's public profile data.
 		("GET`PROFILE",

@@ -32,36 +32,47 @@
     }
     else
     {
-        <MudGrid Spacing="2">
-            @foreach (var character in Filtered)
+        @foreach (var group in Grouped)
+        {
+            @if (group.Key.Length > 0)
             {
-                <MudItem xs="12" sm="6" md="4" lg="3">
-                    <MudLink Href="@($"/character/{Uri.EscapeDataString(character.Name)}")"
-                             Underline="Underline.None"
-                             Style="display:block;height:100%;">
-                        <MudCard Outlined="true" Class="character-card" Style="height:100%;">
-                            <MudCardContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
-                                        @(string.IsNullOrEmpty(character.Name) ? "?" : character.Name[..1].ToUpperInvariant())
-                                    </MudAvatar>
-                                    <div>
-                                        <MudText Typo="Typo.subtitle1">@character.Name</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@character.Dbref</MudText>
-                                    </div>
-                                </MudStack>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudLink>
-                </MudItem>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2 mt-2">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">@group.Key</MudText>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@group.Count()</MudChip>
+                </MudStack>
             }
-        </MudGrid>
+            <MudGrid Spacing="2" Class="mb-2">
+                @foreach (var character in group)
+                {
+                    <MudItem xs="12" sm="6" md="4" lg="3">
+                        <MudLink Href="@($"/character/{Uri.EscapeDataString(character.Name)}")"
+                                 Underline="Underline.None"
+                                 Style="display:block;height:100%;">
+                            <MudCard Outlined="true" Class="character-card" Style="height:100%;">
+                                <MudCardContent>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
+                                            @(string.IsNullOrEmpty(character.Name) ? "?" : character.Name[..1].ToUpperInvariant())
+                                        </MudAvatar>
+                                        <div>
+                                            <MudText Typo="Typo.subtitle1">@character.Name</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@character.Dbref</MudText>
+                                        </div>
+                                    </MudStack>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudLink>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
     }
 </div>
 
 @code {
     // Standard widget parameters supplied by ZoneRenderer; unused here but required so
-    // DynamicComponent does not throw on unmatched parameters.
+    // DynamicComponent does not throw on unmatched parameters. Directory filtering is
+    // MUSH-side (FN`CHARVIS softcode) — the widget lists exactly what the game returns.
     [Parameter] public System.Text.Json.JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
 
@@ -73,6 +84,13 @@
         string.IsNullOrWhiteSpace(_search)
             ? _all
             : _all.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    // Categories come entirely from the game's FN`CHARCAT softcode — the portal imposes none of
+    // its own. Named categories render alphabetically; blank ones pool in an untitled section last.
+    private IEnumerable<IGrouping<string, CharacterDirectoryService.CharacterSummary>> Grouped =>
+        Filtered.GroupBy(c => c.Category?.Trim() ?? string.Empty)
+            .OrderBy(g => g.Key.Length == 0 ? 1 : 0)
+            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
