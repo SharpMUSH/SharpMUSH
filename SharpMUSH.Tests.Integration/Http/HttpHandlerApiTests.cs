@@ -38,11 +38,13 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 		// The milestone: think output becomes the body; @respond sets the status line. The status
 		// text is unquoted — the PennMUSH oracle rejects `@respond 200 "TEST RESPONSE"` because
 		// the character after the space must be alphanumeric (and responds `HTTP/1.1 200 TEST
-		// RESPONSE` for the unquoted form).
-		await SeedHandlerAttribute("GET", "think %0|%1; @respond 200 TEST RESPONSE");
+		// RESPONSE` for the unquoted form). Uses the custom QUERY method so the seeded GET router
+		// (which ProfileApiTests depends on) is never overwritten by a parallel test.
+		await SeedHandlerAttribute("QUERY", "think %0|%1; @respond 200 TEST RESPONSE");
 
 		var http = factory.CreateHttpClient();
-		var response = await http.GetAsync("http/foo?bar=baz");
+		using var request = new HttpRequestMessage(new HttpMethod("QUERY"), "http/foo?bar=baz");
+		var response = await http.SendAsync(request);
 		var body = await response.Content.ReadAsStringAsync();
 
 		await Assert.That((int)response.StatusCode).IsEqualTo(200);

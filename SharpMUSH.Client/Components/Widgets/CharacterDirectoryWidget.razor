@@ -36,7 +36,7 @@
             @foreach (var character in Filtered)
             {
                 <MudItem xs="12" sm="6" md="4" lg="3">
-                    <MudLink Href="@($"/character/{Uri.EscapeDataString(character.Slug)}")"
+                    <MudLink Href="@($"/character/{Uri.EscapeDataString(character.Name)}")"
                              Underline="Underline.None"
                              Style="display:block;height:100%;">
                         <MudCard Outlined="true" Class="character-card" Style="height:100%;">
@@ -47,7 +47,7 @@
                                     </MudAvatar>
                                     <div>
                                         <MudText Typo="Typo.subtitle1">@character.Name</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">#@character.Dbref</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@character.Dbref</MudText>
                                     </div>
                                 </MudStack>
                             </MudCardContent>

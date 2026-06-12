@@ -71,19 +71,23 @@ public class JsonFunctionUnitTests
 		await Assert.That(result).IsEqualTo("[1,2,3,4,5,6,7,8,9,10]");
 	}
 
-	// Regression: the exact seeded HTTP`PROFILE`SCHEMA softcode must evaluate to valid JSON.
-	// (Field objects have 11+ args, so this exercises the same ≥10-arg ordering path.)
+	// Regression: the seeded GET`PROFILE`SCHEMA softcode's json() payload must evaluate to valid
+	// JSON. (Field objects carry many args, exercising the ≥10-arg ordering path.) The seeded
+	// attribute is a command list — "@respond/type …; think json(…)" — so this evaluates the
+	// think payload as a function expression.
 	[Test]
 	public async Task SeededProfileSchema_EvaluatesToValidJson()
 	{
 		var code = SharpMUSH.Server.Services.DefaultProfileHandlerSoftcode.Attributes
-			.First(a => a.Attribute == "HTTP`PROFILE`SCHEMA").Code;
-		var result = (await Parser.FunctionParse(MModule.single(code)))?.Message?.ToString() ?? string.Empty;
+			.First(a => a.Attribute == "GET`PROFILE`SCHEMA").Code;
+		var jsonExpression = code[(code.IndexOf("think ", StringComparison.Ordinal) + "think ".Length)..];
+		var result = (await Parser.FunctionParse(MModule.single(jsonExpression)))?.Message?.ToString() ?? string.Empty;
 
 		await Assert.That(result).DoesNotContain("#-1");
 		using var doc = System.Text.Json.JsonDocument.Parse(result);
 		await Assert.That(doc.RootElement.TryGetProperty("sections", out var sections)).IsTrue();
-		await Assert.That(sections.GetArrayLength()).IsEqualTo(4);
+		// Public read-only schema: Demographics + Status + Description.
+		await Assert.That(sections.GetArrayLength()).IsEqualTo(3);
 	}
 
 	[Test]

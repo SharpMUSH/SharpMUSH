@@ -221,6 +221,14 @@ think setq(fields,formq(after(%0,?)))
 @include me/GET`%q<attrpath>=%1
 ```
 
+### Stock routes
+
+SharpMUSH also seeds these routed sub-attributes (used by the web portal; edit freely — seeded once, never overwritten):
+
+- `GET /http/characters` (`&GET`CHARACTERS`) — a JSON array of every player: `[{name, objid, created}, ...]`. Built with `fold()` over `lsearch(all,type,player)`.
+- `GET /http/profile/schema` (`&GET`PROFILE`SCHEMA`) — the profile field/section schema.
+- `GET /http/profile?objid=#1:123` (`&GET`PROFILE`) — one character's public profile. Characters are addressed by **objid** (stable across renames, safe against dbref recycling); an unknown objid answers `404 NO SUCH CHARACTER`. Profile values live in `PROFILE`<key>` attributes on the character.
+
 **See Also:**
 - [http]
 - [formq()]
