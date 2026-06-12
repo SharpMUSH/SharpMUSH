@@ -1,5 +1,10 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
@@ -11,6 +16,7 @@ public class FlagFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	[Arguments("andflags(%#,P)", "1")]
@@ -167,6 +173,44 @@ public class FlagFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Penn-oracle verified (tools/oracle, 2026-06-12): unheld, unknown, and empty power names
+	// all return 0 — an unknown power is NOT an error in Penn.
+	[Test]
+	[Arguments("haspower(%#, guest)", "0")]
+	[Arguments("haspower(%#, notapower)", "0")]
+	[Arguments("haspower(%#,)", "0")]
+	public async Task Haspower(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Penn-oracle verified: a held power reports 1, matched case-insensitively (GuEsT).
+	[Test]
+	public async Task HaspowerGranted()
+	{
+		var home = new DBRef(0, null);
+		var subject = await Mediator.Send(new CreatePlayerCommand("HaspowerSubject", "testpass", home, home, 1));
+		var player = await Mediator.CreateStream(new GetPlayerQuery("HaspowerSubject")).FirstAsync();
+		var guestPower = await Mediator.Send(new GetPowerQuery("Guest"));
+		await Assert.That(guestPower).IsNotNull();
+		await Mediator.Send(new SetObjectPowerCommand(new AnySharpObject(player), guestPower!));
+
+		var granted = (await Parser.FunctionParse(MModule.single($"haspower(#{subject.Number}, GuEsT)")))?.Message!;
+		await Assert.That(granted.ToPlainText()).IsEqualTo("1");
+
+		var other = (await Parser.FunctionParse(MModule.single($"haspower(#{subject.Number}, builder)")))?.Message!;
+		await Assert.That(other.ToPlainText()).IsEqualTo("0");
+	}
+
+	// Penn-oracle verified: an invalid object is an error (#-1 NO SUCH OBJECT VISIBLE).
+	[Test]
+	public async Task HaspowerInvalidObject()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("haspower(#99999, guest)")))?.Message!;
+		await Assert.That(result.ToPlainText()).StartsWith("#-1");
 	}
 
 	[Test]
