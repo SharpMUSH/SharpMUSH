@@ -34,10 +34,13 @@
     {
         @foreach (var group in Grouped)
         {
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2 mt-2">
-                <MudText Typo="Typo.subtitle2" Color="Color.Primary">@group.Key</MudText>
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@group.Count()</MudChip>
-            </MudStack>
+            @if (group.Key.Length > 0)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2 mt-2">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">@group.Key</MudText>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@group.Count()</MudChip>
+                </MudStack>
+            }
             <MudGrid Spacing="2" Class="mb-2">
                 @foreach (var character in group)
                 {
@@ -81,12 +84,11 @@
             ? _all
             : _all.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
 
-    // The default FN`CHARCAT categories render in rank order; game-defined extras follow alphabetically.
-    private static readonly string[] CategoryOrder = ["Wizard", "Royalty", "Guest", "Player"];
-
+    // Categories come entirely from the game's FN`CHARCAT softcode — the portal imposes none of
+    // its own. Named categories render alphabetically; blank ones pool in an untitled section last.
     private IEnumerable<IGrouping<string, CharacterDirectoryService.CharacterSummary>> Grouped =>
-        Filtered.GroupBy(c => string.IsNullOrWhiteSpace(c.Category) ? "Player" : c.Category)
-            .OrderBy(g => Array.IndexOf(CategoryOrder, g.Key) is var rank && rank >= 0 ? rank : CategoryOrder.Length)
+        Filtered.GroupBy(c => c.Category?.Trim() ?? string.Empty)
+            .OrderBy(g => g.Key.Length == 0 ? 1 : 0)
             .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()

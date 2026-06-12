@@ -12,10 +12,10 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 {
 	/// <summary>
 	/// A directory row from the GET`CHARACTERS softcode: name, objid, creation unix-ms, and the
-	/// game-defined category (FN`CHARCAT — Wizard/Royalty/Guest/Player by default). Category
-	/// defaults to "Player" for handlers that predate categorization.
+	/// game-defined category (FN`CHARCAT). The portal imposes no categories of its own — blank
+	/// (or absent, on handlers that predate categorization) means uncategorized.
 	/// </summary>
-	public record CharacterSummary(string Name, string Objid, long Created, string Category = "Player")
+	public record CharacterSummary(string Name, string Objid, long Created, string Category = "")
 	{
 		public DateTimeOffset CreatedAt => DateTimeOffset.FromUnixTimeMilliseconds(Created);
 
