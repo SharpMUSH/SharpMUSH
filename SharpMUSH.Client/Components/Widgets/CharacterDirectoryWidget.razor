@@ -1,3 +1,4 @@
+@using System.Text.Json
 @using SharpMUSH.Client.Services
 @inject CharacterDirectoryService Directory
 @inject IStringLocalizer<SharedResource> Loc
@@ -9,7 +10,7 @@
         <MudSpacer />
         @if (!_loading)
         {
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_all.Count</MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Visible.Count</MudChip>
         }
     </MudStack>
 
@@ -70,19 +71,55 @@
 </div>
 
 @code {
-    // Standard widget parameters supplied by ZoneRenderer; unused here but required so
-    // DynamicComponent does not throw on unmatched parameters.
     [Parameter] public System.Text.Json.JsonElement? Config { get; set; }
+
+    // Zone is supplied by ZoneRenderer; unused here but required so DynamicComponent does not
+    // throw on unmatched parameters.
     [Parameter] public string Zone { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Categories to filter out of the listing, matched case-insensitively against FN`CHARCAT
+    /// labels — for direct placement (e.g. the /characters page). When the widget is
+    /// zone-rendered with a Config, the config's hiddenCategories wins.
+    /// </summary>
+    [Parameter] public IReadOnlyList<string> HiddenCategories { get; set; } = [];
 
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _all = [];
     private bool _loading = true;
     private string _search = string.Empty;
+    private IReadOnlyList<string> _hidden = [];
+
+    protected override void OnParametersSet()
+    {
+        _hidden = HiddenCategories;
+        if (Config is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var cfg = Config.Value.Deserialize<Models.Widgets.CharacterDirectoryConfig>(
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            _hidden = cfg?.HiddenCategories ?? HiddenCategories;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+        }
+        catch (NotSupportedException)
+        {
+        }
+    }
+
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> Visible =>
+        _hidden.Count == 0
+            ? _all
+            : _all.Where(c => !_hidden.Contains(c.Category?.Trim() ?? string.Empty, StringComparer.OrdinalIgnoreCase)).ToList();
 
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> Filtered =>
         string.IsNullOrWhiteSpace(_search)
-            ? _all
-            : _all.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
+            ? Visible
+            : Visible.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
 
     // Categories come entirely from the game's FN`CHARCAT softcode — the portal imposes none of
     // its own. Named categories render alphabetically; blank ones pool in an untitled section last.

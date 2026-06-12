@@ -1,4 +1,5 @@
 using SharpMUSH.Client.Components.Widgets;
+using SharpMUSH.Client.Models.Widgets;
 using SharpMUSH.Library.Models.Portal.Widgets;
 
 namespace SharpMUSH.Client.Widgets;
@@ -20,5 +21,5 @@ public sealed class CharacterDirectoryWidgetDescriptor : IPortalWidget
 		WidgetZone.RightSidebar
 	];
 	public Type ComponentType => typeof(CharacterDirectoryWidget);
-	public Type? ConfigType => null;
+	public Type? ConfigType => typeof(CharacterDirectoryConfig);
 }

@@ -6,6 +6,7 @@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     @* The directory is a registered portal widget (CharacterDirectory), so it can also be
-       dropped into any content zone via the layout editor. *@
-    <CharacterDirectoryWidget />
+       dropped into any content zone via the layout editor. Guests are transient logins, not
+       characters — keep them out of the public roster. *@
+    <CharacterDirectoryWidget HiddenCategories="@(["Guest"])" />
 </MudContainer>
