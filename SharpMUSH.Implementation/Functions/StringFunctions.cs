@@ -13,6 +13,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.MarkupString;
 using SharpMUSH.MarkupString.TextAlignerModule;
 using System.Drawing;
@@ -1335,11 +1336,97 @@ public partial class Functions
 
 		return ValueTask.FromResult<CallState>((arg0, arg1, arg2) switch
 		{
+			// No paramname: the list of parameter names, duplicates included (help sharphttp:
+			// "name,hobby,like,like"). NOTE: joining the NameValueCollection itself bound the
+			// params-object[] Join overload and returned ToString() — the re-encoded query string.
 			(var str, "", var outSep)
-				=> string.Join(outSep, HttpUtility.ParseQueryString(str)),
+				=> string.Join(outSep, str
+					.Split('&', StringSplitOptions.RemoveEmptyEntries)
+					.Select(pair => HttpUtility.UrlDecode(pair.Split('=', 2)[0]))),
 			var (str, field, outSep)
 				=> string.Join(outSep, HttpUtility.ParseQueryString(str).GetValues(field) ?? []),
 		});
+	}
+
+	/// <summary>
+	/// formq(&lt;string&gt;[, &lt;prefix&gt;]) — decodes a form-encoded string (HTTP query string or
+	/// form-urlencoded body) and sets one q-register per parameter, named
+	/// &lt;prefix&gt;&lt;NORMALIZED-NAME&gt; (default prefix FORM., so name → %q&lt;form.name&gt;).
+	/// Decoding matches formdecode() (%-unescaping, + as space). Array parameters collapse into
+	/// one %r-joined register, whichever way the client spells them: repeated names
+	/// (like=a&amp;like=b) and PHP/Rails-style brackets (like[]=a&amp;like[]=b) both produce
+	/// %q&lt;form.like&gt; = a%rb — mirroring the %q&lt;hdr.*&gt; duplicate-header convention. Bare
+	/// tokens (?flag with no =) become registers with an empty value. Returns the space-separated
+	/// list of normalized parameter names (without the prefix), mirroring %q&lt;headers&gt;.
+	/// SharpMUSH extension — no PennMUSH equivalent. See help formq / help sharphttp.
+	/// </summary>
+	[SharpFunction(Name = "formq", MinArgs = 1, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.HasSideFX,
+		ParameterNames = ["string", "prefix"])]
+	public static ValueTask<CallState> FormQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var formString = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		var prefix = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, "FORM.").ToPlainText()!.ToUpperInvariant();
+
+		// Form -> dictionary translation: accumulate values per normalized name, preserving
+		// arrival order of both names and values. ParseQueryString does the wire decoding
+		// (%-unescaping, + as space, duplicate keys); the dictionary fold above it merges the
+		// equivalent array spellings (repeated names and trailing-[] names) into one entry.
+		var parsed = HttpUtility.ParseQueryString(formString);
+		var values = new Dictionary<string, List<string>>();
+		var names = new List<string>();
+
+		void Accumulate(string rawName, string value)
+		{
+			// PHP/Rails array marker: a single trailing "[]" denotes an array parameter.
+			var trimmed = rawName.EndsWith("[]", StringComparison.Ordinal) ? rawName[..^2] : rawName;
+			var normalized = RegisterNames.NormalizeSegment(trimmed);
+			if (normalized.Length == 0)
+			{
+				return;
+			}
+
+			if (!values.TryGetValue(normalized, out var list))
+			{
+				list = [];
+				values[normalized] = list;
+				names.Add(normalized);
+			}
+
+			list.Add(value);
+		}
+
+		foreach (var key in parsed.AllKeys)
+		{
+			if (key is null)
+			{
+				// Bare tokens ("?flag" with no '='): ParseQueryString files each under the null
+				// key with the token itself as the value. Register them as empty-valued flags.
+				foreach (var bare in parsed.GetValues(null) ?? [])
+				{
+					Accumulate(bare, string.Empty);
+				}
+			}
+			else
+			{
+				foreach (var value in parsed.GetValues(key) ?? [])
+				{
+					Accumulate(key, value);
+				}
+			}
+		}
+
+		var allValid = true;
+		foreach (var name in names)
+		{
+			allValid &= parser.CurrentState.AddRegister(
+				$"{prefix}{name}", MModule.single(string.Join('\n', values[name])));
+		}
+
+		return ValueTask.FromResult<CallState>(allValid
+			? new CallState(string.Join(' ', names))
+			: new CallState(ErrorMessages.Returns.BadRegName));
 	}
 
 	[SharpFunction(Name = "hmac", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["algorithm", "key", "string"])]

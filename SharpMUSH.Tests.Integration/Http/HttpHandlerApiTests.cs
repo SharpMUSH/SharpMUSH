@@ -38,11 +38,13 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 		// The milestone: think output becomes the body; @respond sets the status line. The status
 		// text is unquoted — the PennMUSH oracle rejects `@respond 200 "TEST RESPONSE"` because
 		// the character after the space must be alphanumeric (and responds `HTTP/1.1 200 TEST
-		// RESPONSE` for the unquoted form).
-		await SeedHandlerAttribute("GET", "think %0|%1; @respond 200 TEST RESPONSE");
+		// RESPONSE` for the unquoted form). Uses the custom QUERY method so the seeded GET router
+		// (which ProfileApiTests depends on) is never overwritten by a parallel test.
+		await SeedHandlerAttribute("QUERY", "think %0|%1; @respond 200 TEST RESPONSE");
 
 		var http = factory.CreateHttpClient();
-		var response = await http.GetAsync("http/foo?bar=baz");
+		using var request = new HttpRequestMessage(new HttpMethod("QUERY"), "http/foo?bar=baz");
+		var response = await http.SendAsync(request);
 		var body = await response.Content.ReadAsStringAsync();
 
 		await Assert.That((int)response.StatusCode).IsEqualTo(200);
@@ -56,40 +58,25 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	public async Task Post_BodyArrivesAsArgOne()
+	public async Task Put_HeadersAndBodyArriveAtVerbAttribute()
 	{
-		await SeedHandlerAttribute("POST", "think got=[%1]");
-
-		var http = factory.CreateHttpClient();
-		var response = await http.PostAsync("http/submit",
-			new StringContent("""{"channel":"public","msg":"hi"}""", System.Text.Encoding.UTF8, "application/json"));
-		var body = await response.Content.ReadAsStringAsync();
-
-		await Assert.That((int)response.StatusCode).IsEqualTo(200);
-		// The [ ] around %1 are MUSH evaluation brackets — they evaluate away; the JSON body
-		// itself passes through verbatim.
-		await Assert.That(body).Contains("""got={"channel":"public","msg":"hi"}""");
-	}
-
-	[Test]
-	public async Task Put_HeadersArriveAsQRegisters()
-	{
-		// %q<hdr.NAME> per header plus %q<headers> listing the names (help sharphttp / HTTP3).
-		await SeedHandlerAttribute("PUT", "think host=[%q<hdr.host>] custom=[%q<hdr.x-sharp-test>] names=[%q<headers>]");
+		// %q<hdr.NAME> per header plus %q<headers> listing the names (help sharphttp / HTTP3),
+		// and %1 = the raw request body — JSON braces pass through verbatim.
+		await SeedHandlerAttribute("PUT", "think host=%q<hdr.host> custom=%q<hdr.x-sharp-test> names=%q<headers> got=%1");
 
 		var http = factory.CreateHttpClient();
 		using var request = new HttpRequestMessage(HttpMethod.Put, "http/headers");
 		request.Headers.Add("X-Sharp-Test", "marker-value");
-		request.Content = new StringContent(string.Empty);
+		request.Content = new StringContent("""{"channel":"public","msg":"hi"}""", System.Text.Encoding.UTF8, "application/json");
 		var response = await http.SendAsync(request);
 		var body = await response.Content.ReadAsStringAsync();
 
 		await Assert.That((int)response.StatusCode).IsEqualTo(200);
-		// The [ ] are MUSH evaluation brackets and evaluate away; the register values remain.
 		await Assert.That(body).Contains("custom=marker-value");
 		await Assert.That(body).Contains("X-SHARP-TEST");
 		// Host is always present on an HTTP/1.1 request.
 		await Assert.That(body).Contains("host=localhost");
+		await Assert.That(body).Contains("""got={"channel":"public","msg":"hi"}""");
 	}
 
 	[Test]
@@ -111,14 +98,74 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 		await Assert.That(body).Contains("\"ok\":true");
 	}
 
+	// NOTE on verb allocation: the bootstrap seeds default routers for GET/POST/PUT/DELETE/PATCH/
+	// HEAD at startup, the factory is shared per session, and TUnit runs tests in parallel — so
+	// each test owns a distinct verb attribute to avoid clobbering a concurrent test's seeding.
+
 	[Test]
 	public async Task UnseededMethod_Returns404()
 	{
-		// No DELETE attribute on the handler: SharpMUSH answers 404 (deliberate deviation from
-		// Penn's 200-empty; see help sharphttp HTTP2).
+		// TRACE is not among the seeded default verbs: SharpMUSH answers 404 for a missing
+		// <METHOD> attribute (deliberate deviation from Penn's 200-empty; see help sharphttp).
 		var http = factory.CreateHttpClient();
-		var response = await http.DeleteAsync("http/anything");
+		using var request = new HttpRequestMessage(HttpMethod.Trace, "http/anything");
+		var response = await http.SendAsync(request);
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
+
+	[Test]
+	public async Task DefaultVerbHandler_RoutesPathToSubAttribute_WithFormRegisters()
+	{
+		// The stock POST router: POST /api/users?name=Joe+Smith ⇒ @include me/POST`API`USERS with
+		// %0 = raw request body and formq()-decoded %q<form.*> registers ambient. (POST is used
+		// because the in-memory test transport only forwards request bodies for standard
+		// body-carrying methods.)
+		await SeedHandlerAttribute("POST", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("POST"));
+		await SeedHandlerAttribute("POST`API`USERS",
+			"think hello=%q<form.name> body=%0 fields=%q<fields> attrpath=%q<attrpath>; @respond 200 Routed");
+
+		var http = factory.CreateHttpClient();
+		var response = await http.PostAsync("http/api/users?name=Joe+Smith&like=a&like=b",
+			new StringContent("the-payload"));
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		await Assert.That(response.ReasonPhrase ?? string.Empty).Contains("Routed");
+		await Assert.That(body).Contains("hello=Joe Smith");
+		await Assert.That(body).Contains("body=the-payload");
+		await Assert.That(body).Contains("fields=NAME LIKE");
+		await Assert.That(body).Contains("attrpath=api`users");
+	}
+
+	[Test]
+	public async Task DefaultVerbHandler_MissingRoute_Returns404ApiNotFound()
+	{
+		// The router @asserts the mapped sub-attribute exists; an unrouted path answers a clean
+		// 404 instead of leaking @include's error text into a 200 body.
+		await SeedHandlerAttribute("DELETE", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("DELETE"));
+
+		var http = factory.CreateHttpClient();
+		var response = await http.DeleteAsync("http/no/such/route");
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(404);
+		await Assert.That(response.ReasonPhrase ?? string.Empty).Contains("API NOT FOUND");
+	}
+
+	[Test]
+	public async Task DefaultVerbHandler_RootPath_Returns404ApiNotFound()
+	{
+		// Bare "/" maps to an empty attrpath — the @assert guard turns that into the same clean
+		// 404. The request uses the canonical "http" (no trailing slash): CanonicalUrlMiddleware
+		// 301-strips trailing slashes, and the test client's redirect handler re-issues redirected
+		// requests as GET, which would hit the wrong verb attribute.
+		await SeedHandlerAttribute("DELETE", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("DELETE"));
+
+		var http = factory.CreateHttpClient();
+		var response = await http.DeleteAsync("http");
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(404);
+		await Assert.That(response.ReasonPhrase ?? string.Empty).Contains("API NOT FOUND");
+	}
+
 }

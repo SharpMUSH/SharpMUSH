@@ -5,10 +5,11 @@ using System.Text.Json.Serialization;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// Client-side character-profile reader. Fetches the admin-defined schema and a character's
-/// visible field values from the server (<c>GET /api/profile-schema</c>, <c>GET /api/profile/{name}</c>),
-/// which proxy the in-game http_handler. The portal is a pure renderer — the handler decides which
-/// fields exist and which are visible to the requesting viewer.
+/// Client-side character-profile reader. Fetches the schema and a character's public field values
+/// from the in-game http_handler's routed softcode (<c>GET /http/profile/schema</c>,
+/// <c>GET /http/profile?objid=…</c> — see help sharphttp). Characters are addressed by objid
+/// (stable across renames); the portal is a pure renderer — the softcode decides which fields
+/// exist and what they contain. Read-only: profile editing is currently out of scope.
 /// </summary>
 public class ProfileService(IHttpClientFactory httpClientFactory, ILogger<ProfileService> logger)
 {
@@ -17,7 +18,6 @@ public class ProfileService(IHttpClientFactory httpClientFactory, ILogger<Profil
 		string Key,
 		string Label,
 		string Type,
-		[property: JsonPropertyName("editable_by")] string? EditableBy,
 		[property: JsonPropertyName("visible_to")] string? VisibleTo);
 
 	/// <summary>A schema section grouping related fields.</summary>
@@ -33,25 +33,24 @@ public class ProfileService(IHttpClientFactory httpClientFactory, ILogger<Profil
 	/// <summary>A single field's value plus whether the viewer may see it.</summary>
 	public record FieldValue(string? Value, bool Visible);
 
-	/// <summary>A character's profile data as the handler chose to expose it to this viewer.</summary>
+	/// <summary>A character's profile data. HTTP status carries errors — no JSON envelope.</summary>
 	public record ProfileData(
-		int Status,
 		string? Character,
+		string? Objid,
 		string? Dbref,
-		Dictionary<string, FieldValue>? Fields,
-		string? Error);
+		Dictionary<string, FieldValue>? Fields);
 
-	/// <summary>Loads the field/section schema, or <c>null</c> when no handler is configured.</summary>
+	/// <summary>Loads the field/section schema, or <c>null</c> when no handler route is seeded.</summary>
 	public async Task<ProfileSchema?> GetSchemaAsync()
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			return await http.GetFromJsonAsync<ProfileSchema>("api/profile-schema");
+			return await http.GetFromJsonAsync<ProfileSchema>("http/profile/schema");
 		}
 		catch (HttpRequestException ex)
 		{
-			// 404 = no handler configured; 502 = handler returned invalid output (see ProfileController).
+			// 404 = no handler/route configured.
 			logger.LogWarning(ex, "Failed to load profile schema (status {Status}).", ex.StatusCode);
 			return null;
 		}
@@ -64,50 +63,22 @@ public class ProfileService(IHttpClientFactory httpClientFactory, ILogger<Profil
 		}
 	}
 
-	/// <summary>Loads a character's visible profile data, or <c>null</c> when unavailable.</summary>
-	public async Task<ProfileData?> GetProfileAsync(string name)
+	/// <summary>Loads a character's public profile data by objid, or <c>null</c> when unavailable.</summary>
+	public async Task<ProfileData?> GetProfileAsync(string objid)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			return await http.GetFromJsonAsync<ProfileData>($"api/profile/{Uri.EscapeDataString(name)}");
+			return await http.GetFromJsonAsync<ProfileData>($"http/profile?objid={Uri.EscapeDataString(objid)}");
 		}
 		catch (HttpRequestException ex)
 		{
-			logger.LogWarning(ex, "Failed to load profile for {Name} (status {Status}).", name, ex.StatusCode);
+			logger.LogWarning(ex, "Failed to load profile for {Objid} (status {Status}).", objid, ex.StatusCode);
 			return null;
 		}
 		catch (Exception ex) when (ex is JsonException or NotSupportedException)
 		{
-			logger.LogWarning(ex, "Profile response for {Name} was not valid JSON.", name);
-			return null;
-		}
-	}
-
-	/// <summary>The handler's response to an edit: which fields it actually applied.</summary>
-	public record UpdateResult(int Status, string? Updated, string? Error);
-
-	/// <summary>
-	/// Submits changed fields to the handler (<c>POST /api/profile/{name}</c>). The handler enforces
-	/// editability per viewer and returns the space-separated list of fields it applied.
-	/// Returns <c>null</c> when the request fails or is rejected (e.g. not authorized).
-	/// </summary>
-	public async Task<UpdateResult?> UpdateAsync(string name, IReadOnlyDictionary<string, string> fields)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync($"api/profile/{Uri.EscapeDataString(name)}", fields);
-			if (!response.IsSuccessStatusCode)
-			{
-				logger.LogWarning("Profile update for {Name} returned {Status}.", name, response.StatusCode);
-				return null;
-			}
-			return await response.Content.ReadFromJsonAsync<UpdateResult>();
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogWarning(ex, "Failed to update profile for {Name}.", name);
+			logger.LogWarning(ex, "Profile response for {Objid} was not valid JSON.", objid);
 			return null;
 		}
 	}

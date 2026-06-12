@@ -9,30 +9,12 @@
 
 @* Composed from registered portal widgets (CharacterHeader / CharacterGallery) plus the wiki
    body for the Character:Name page. Each widget is an IPortalWidget and can also be placed in
-   a zone via the layout editor. *@
+   a zone via the layout editor. Profiles are read-only on the portal for now (the in-game
+   http_handler softcode serves the public view; editing happens in-game). *@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <MudGrid Spacing="4">
         <MudItem xs="12" md="8">
-            @if (_editing)
-            {
-                <ProfileEditor CharacterName="@Name"
-                               OnSaved="OnEditorSaved"
-                               OnCancel="@(() => _editing = false)" />
-            }
-            else
-            {
-                @if (_canEdit)
-                {
-                    <MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-2">
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.Edit"
-                                   OnClick="@(() => _editing = true)">
-                            @Loc["EditProfile"]
-                        </MudButton>
-                    </MudStack>
-                }
-                <CharacterHeaderWidget @key="_version" CharacterName="@Name" />
-            }
+            <CharacterHeaderWidget CharacterName="@Name" />
 
             @* Freeform wiki body lives at the Character:Name wiki page. *@
             <MudPaper Outlined="true" Class="pa-4 mt-4">
@@ -49,20 +31,12 @@
     [Parameter]
     public required string Name { get; set; }
 
-    private bool _editing;
     private bool _canEdit;
-    private int _version;
 
     protected override async Task OnInitializedAsync()
     {
-        // Show edit affordances to any authenticated user; the server enforces owner/staff rights.
+        // Gallery edit affordances for any authenticated user; the server enforces real rights.
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _canEdit = authState.User.Identity?.IsAuthenticated == true;
-    }
-
-    private void OnEditorSaved()
-    {
-        _editing = false;
-        _version++; // re-key the header widget so it re-fetches the updated values
     }
 }

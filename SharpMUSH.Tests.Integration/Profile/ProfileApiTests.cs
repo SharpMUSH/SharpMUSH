@@ -10,52 +10,95 @@ using System.Text.Json;
 namespace SharpMUSH.Tests.Integration.Profile;
 
 /// <summary>
-/// HTTP-level integration tests for the default character-profile web behavior. These boot the
-/// full server, so the default <c>HTTP`PROFILE`*</c> softcode is seeded onto the http_handler
-/// (#4, which the config now defaults to) and the request travels the real ASP.NET pipeline +
-/// MUSHcode evaluation.
-///
-/// Guards two regressions that crashed / 404'd the portal Character Page:
-///  - the seeded schema must evaluate to valid JSON (ArgumentsOrdered numeric-order fix), and
-///  - the GET route must resolve an existing character by name (pmatch global-player-match fix).
+/// End-to-end tests for the default character-profile and character-directory softcode, served
+/// through the routed http_handler (help sharphttp). The bootstrap seeds the GET verb router and
+/// the GET`CHARACTERS / GET`PROFILE`SCHEMA / GET`PROFILE sub-attributes onto #4 at startup;
+/// characters are addressed by objid via a query parameter, and real HTTP statuses come from
+/// @respond — there is no JSON status envelope.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class ProfileApiTests(ServerWebAppFactory factory)
 {
-	[Test]
-	public async Task ProfileSchema_ReturnsValidJsonWithSections()
+	/// <summary>Resolves #1 (God)'s name and objid from the engine, so tests aren't tied to literals.</summary>
+	private async Task<(string Name, string Objid)> GodIdentity()
 	{
-		var http = factory.CreateHttpClient();
-
-		var response = await http.GetAsync("api/profile-schema");
-
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-		var json = await response.Content.ReadAsStringAsync();
-		using var doc = JsonDocument.Parse(json); // would throw if the handler returned #-1 / empty
-		await Assert.That(doc.RootElement.TryGetProperty("sections", out var sections)).IsTrue();
-		await Assert.That(sections.GetArrayLength()).IsEqualTo(4);
-	}
-
-	[Test]
-	public async Task ProfileGet_ResolvesExistingCharacterByName()
-	{
-		// Resolve #1 (God)'s actual name from the engine so the test isn't tied to a literal.
 		var mediator = factory.Services.GetRequiredService<IMediator>();
 		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1, null)));
 		await Assert.That(god.IsNone).IsFalse();
-		var name = god.Known.Object().Name;
+		var obj = god.Known.Object();
+		return (obj.Name, $"#{obj.Key}:{obj.CreationTime}");
+	}
+
+	[Test]
+	public async Task Characters_ListsEveryPlayerWithObjid()
+	{
+		var (name, objid) = await GodIdentity();
 
 		var http = factory.CreateHttpClient();
-		var response = await http.GetAsync($"api/profile/{Uri.EscapeDataString(name)}");
+		var response = await http.GetAsync("http/characters");
+		var body = await response.Content.ReadAsStringAsync();
 
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-		var json = await response.Content.ReadAsStringAsync();
-		using var doc = JsonDocument.Parse(json);
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		using var doc = JsonDocument.Parse(body);
+		await Assert.That(doc.RootElement.ValueKind).IsEqualTo(JsonValueKind.Array);
 
-		// The handler's GET softcode resolves the character via pmatch(after(%1,profile/)). This 404'd
-		// when after() included its delimiter (returning "profile/God" instead of "God") — see the
-		// after() regression in StringFunctionTests — and again when pmatch was visibility-gated.
-		await Assert.That(doc.RootElement.GetProperty("status").GetInt32()).IsEqualTo(200);
+		var god = doc.RootElement.EnumerateArray()
+			.FirstOrDefault(row => row.GetProperty("name").GetString() == name);
+		await Assert.That(god.ValueKind).IsEqualTo(JsonValueKind.Object);
+		await Assert.That(god.GetProperty("objid").GetString()).IsEqualTo(objid);
+		await Assert.That(god.GetProperty("created").ValueKind).IsEqualTo(JsonValueKind.Number);
+	}
+
+	[Test]
+	public async Task ProfileSchema_ReturnsSectionsJson()
+	{
+		var http = factory.CreateHttpClient();
+		var response = await http.GetAsync("http/profile/schema");
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		await Assert.That(response.Content.Headers.ContentType?.MediaType).IsEqualTo("application/json");
+		using var doc = JsonDocument.Parse(body);
+		await Assert.That(doc.RootElement.TryGetProperty("sections", out var sections)).IsTrue();
+		// Public read-only schema: Demographics + Status + Description.
+		await Assert.That(sections.GetArrayLength()).IsEqualTo(3);
+	}
+
+	[Test]
+	public async Task ProfileGet_ByObjid_ReturnsPublicProfile()
+	{
+		var (name, objid) = await GodIdentity();
+
+		var http = factory.CreateHttpClient();
+		var response = await http.GetAsync($"http/profile?objid={Uri.EscapeDataString(objid)}");
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		using var doc = JsonDocument.Parse(body);
 		await Assert.That(doc.RootElement.GetProperty("character").GetString()).IsEqualTo(name);
+		await Assert.That(doc.RootElement.GetProperty("objid").GetString()).IsEqualTo(objid);
+		// All public fields are present as {value, visible} even when unset.
+		var fields = doc.RootElement.GetProperty("fields");
+		await Assert.That(fields.TryGetProperty("fullname", out var fullname)).IsTrue();
+		await Assert.That(fullname.GetProperty("visible").GetBoolean()).IsTrue();
+	}
+
+	[Test]
+	public async Task ProfileGet_UnknownObjid_Returns404()
+	{
+		var http = factory.CreateHttpClient();
+		var response = await http.GetAsync("http/profile?objid=%23999999:12345");
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+		await Assert.That(response.ReasonPhrase ?? string.Empty).Contains("NO SUCH CHARACTER");
+	}
+
+	[Test]
+	public async Task ProfileGet_MissingObjidParam_Returns404()
+	{
+		var http = factory.CreateHttpClient();
+		var response = await http.GetAsync("http/profile");
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
 }
