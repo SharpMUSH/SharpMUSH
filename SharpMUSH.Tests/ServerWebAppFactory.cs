@@ -220,7 +220,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
-			Substitute.For<INotifyService>(),
+			TestHelpers.CreateNotifyServiceSubstitute(),
 			_customDatabaseName,
 			_sqlPlatform);
 

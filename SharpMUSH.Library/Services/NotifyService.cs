@@ -22,7 +22,8 @@ public class NotifyService(
 	IConnectionService connections,
 	ILocalizationService localizationService,
 	IListenerRoutingService? listenerRoutingService = null,
-	IMediator? mediator = null) : INotifyService
+	IMediator? mediator = null,
+	IHttpOutputCapture? httpOutputCapture = null) : INotifyService
 {
 	/// <summary>
 	/// Publishes output to a single connection as serialized markup. The ConnectionServer owns the
@@ -89,6 +90,15 @@ public class NotifyService(
 			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
 		))
+		{
+			return;
+		}
+
+		// Inbound HTTP: while the http_handler's <METHOD> attribute runs, everything emitted to
+		// the handler becomes the HTTP response body instead of going to a (nonexistent)
+		// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
+		if (httpOutputCapture?.TryCapture(who.Number,
+				what.Match(markupString => MModule.plainText(markupString), str => str)) == true)
 		{
 			return;
 		}
@@ -258,8 +268,22 @@ public class NotifyService(
 		return new CallState(errorReturn);
 	}
 
+	/// <summary>
+	/// HTTP output capture for localized notifications: these resolve per-connection (locale),
+	/// so without this check a localized message to a connectionless http_handler would silently
+	/// vanish instead of joining the response body (e.g. @include's "No such attribute: …").
+	/// Captured text uses the neutral locale.
+	/// </summary>
+	private bool TryCaptureLocalized(DBRef who, string key, object[] args)
+		=> httpOutputCapture?.TryCapture(who.Number, localizationService.Format(key, null, args)) == true;
+
 	public async ValueTask NotifyLocalized(DBRef who, string key, params object[] args)
 	{
+		if (TryCaptureLocalized(who, key, args))
+		{
+			return;
+		}
+
 		await foreach (var conn in connections.Get(who))
 		{
 			conn.Metadata.TryGetValue("Locale", out var locale);
@@ -281,6 +305,11 @@ public class NotifyService(
 
 	public async ValueTask NotifyLocalized(DBRef who, string key, AnySharpObject? sender, params object[] args)
 	{
+		if (TryCaptureLocalized(who, key, args))
+		{
+			return;
+		}
+
 		await foreach (var conn in connections.Get(who))
 		{
 			conn.Metadata.TryGetValue("Locale", out var locale);
@@ -302,6 +331,15 @@ public class NotifyService(
 
 	public async ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args)
 	{
+		if (httpOutputCapture is not null)
+		{
+			var neutral = MarkupTemplateFormatter.Format(localizationService.Get(key, null), args);
+			if (httpOutputCapture.TryCapture(who.Number, MModule.plainText(neutral)))
+			{
+				return;
+			}
+		}
+
 		await foreach (var conn in connections.Get(who))
 		{
 			conn.Metadata.TryGetValue("Locale", out var locale);

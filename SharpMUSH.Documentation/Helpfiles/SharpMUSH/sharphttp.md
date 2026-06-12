@@ -161,6 +161,78 @@ You say, "potato^cheese"
 You say, "name,hobby,like,like"
 ```
 
+**See Also:**
+- [formq()]
+
+# FORMQ()
+`formq(<string>[, <prefix>])`
+
+formq() decodes form-encoded data — an HTTP query string or a form-urlencoded body — and sets one **Q-register per parameter**, so HTTP handler softcode can read named parameters directly instead of calling [formdecode()] per field. This is a SharpMUSH extension; there is no PennMUSH equivalent.
+
+Each parameter becomes the register *<prefix><NAME>* (default prefix `FORM.`), so `?name=Joe` is readable as *%q<form.name>*. Names are normalized the same way HTTP header registers are (uppercased; anything outside `A-Z 0-9 _ . -` becomes `_`).
+
+Array parameters collapse into one %r-separated register, whichever way the client spells them: repeated names (`like=a&like=b`) and bracket arrays (`like[]=a&like[]=b`) both produce *%q<form.like>* containing `a%rb` — the same convention as duplicate HTTP headers in *%q<hdr.*>*. Bare tokens (`?debug` with no `=`) become registers with an empty value.
+
+formq() returns the space-separated list of normalized parameter names (without the prefix), mirroring *%q<headers>*.
+
+### Examples
+
+```sharp
+> think [setq(n,formq(name=Joe+Smith&like=a&like=b))]%q<n> / %q<form.name> / %q<form.like>
+NAME LIKE / Joe Smith / a
+b
+
+> think [null(formq(a=1,arg.))]%q<arg.a>
+1
+```
+
+The default HTTP verb handlers (see [http examples]) call formq() on the query string for you, so route sub-attributes can read *%q<form.*>* immediately.
+
+**See Also:**
+- [formdecode()]
+- [setq()]
+
+# HTTP ROUTING
+SharpMUSH seeds default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&PATCH`, `&HEAD`) onto the http_handler (#4) at first startup. They are seeded once and **never overwritten** — edit them freely.
+
+Each default verb attribute routes by URL path to a backtick-namespaced sub-attribute:
+
+```sharp
+GET /api/users?name=Joe+Smith   =>   @include me/GET`API`USERS=<body>
+```
+
+Before dispatching, the router sets:
+- *%q<attrpath>* — the path mapped to attribute form: leading slash and query stripped, remaining slashes become backticks (`api`users`)
+- *%q<fields>* — the [formq()]-decoded query parameter name list; each parameter is readable as *%q<form.*>*
+
+The sub-attribute receives *%0* = the raw request body. The body is left raw on purpose — check *%q<hdr.content-type>* and use [formq()] or [json_query()] on *%0* as appropriate. The raw query string remains available as `after(%0,?)` only at the verb level; sub-attributes read the decoded *%q<form.*>* registers instead.
+
+To serve `GET /api/users`:
+
+```sharp
+> &GET`API`USERS #4=@respond/type application/json ; think json(object,hello,json(string,%q<form.name>))
+```
+
+The router guards the dispatch with `@assert`: a request whose path maps to no sub-attribute — including the bare root `/` — answers **404 API NOT FOUND** and stops. The seeded router for each verb is:
+
+```sharp
+think setq(fields,formq(after(%0,?)))
+@assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND
+@include me/GET`%q<attrpath>=%1
+```
+
+### Stock routes
+
+SharpMUSH also seeds these routed sub-attributes (used by the web portal; edit freely — seeded once, never overwritten):
+
+- `GET /http/characters` (`&GET`CHARACTERS`) — a JSON array of listed players: `[{name, objid, created, category}, ...]`. Built with `fold()` over `filter(me/FN`CHARVIS, lsearch(all,type,player))`. `category` comes from `&FN`CHARCAT` — by default flag-based, first match wins: `Wizard` (WIZARD flag), `Royalty` (ROYALTY flag), `Guest` (the Guest power); everyone else is blank. Who is listed at all comes from `&FN`CHARVIS` (1 to list, 0 to hide) — the default hides the `Guest` category. Both are MUSH-side policy: redefine them freely; the portal hard-codes nothing — it lists exactly what comes back, grouping by label (alphabetically) and pooling blanks in an untitled section at the bottom.
+- `GET /http/profile/schema` (`&GET`PROFILE`SCHEMA`) — the profile field/section schema.
+- `GET /http/profile?objid=#1:123` (`&GET`PROFILE`) — one character's public profile. Characters are addressed by **objid** (stable across renames, safe against dbref recycling); an unknown objid answers `404 NO SUCH CHARACTER`. Profile values live in `PROFILE`<key>` attributes on the character.
+
+**See Also:**
+- [http]
+- [formq()]
+
 # HTTP EXAMPLES
 There are a number of HTTP Examples.
 

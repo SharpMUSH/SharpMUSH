@@ -409,8 +409,9 @@ public partial record ParserState(
 	/// <returns>Success if it was a valid register.</returns>
 	public bool AddRegister(string register, MString value)
 	{
-		// Validate register pattern: alphanumeric characters, underscores, and hyphens
-		// Register names should be uppercase and match pattern: [A-Z0-9_-]+
+		// Validate register pattern: alphanumeric characters, underscores, hyphens, and dots.
+		// Register names should be uppercase and match pattern: [A-Z0-9_.-]+
+		// Dots are required for the HTTP handler's %q<hdr.name> header registers (see help sharphttp).
 		if (string.IsNullOrEmpty(register) || !RegisterNameRegex().IsMatch(register))
 		{
 			return false;
@@ -430,6 +431,6 @@ public partial record ParserState(
 		return true;
 	}
 
-	[GeneratedRegex(@"^[A-Z0-9_\-]+$")]
+	[GeneratedRegex(@"^[A-Z0-9_.\-]+$")]
 	private static partial Regex RegisterNameRegex();
 }

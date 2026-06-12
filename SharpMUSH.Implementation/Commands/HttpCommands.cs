@@ -210,38 +210,29 @@ public partial class Commands
 
 			var fullStatusText = statusArg.Message?.ToPlainText() ?? string.Empty;
 
-			// Split on first space to separate code from text
-			var spaceIndex = fullStatusText.IndexOf(' ');
-			string statusCodeText;
-			string statusText;
-
-			if (spaceIndex > 0)
+			// PennMUSH-exact validation (src/cmds.c cmd_respond, oracle-verified): exactly three
+			// digits, a space, then text whose first character is alphanumeric. The text is
+			// REQUIRED — `@respond 500` alone is rejected, as is `@respond 200 "quoted"` (the
+			// quote is not alphanumeric). All characters must be ASCII. The error messages match
+			// PennMUSH verbatim because they leak into the HTTP response body via output capture.
+			if (fullStatusText.Length < 5
+					|| !char.IsAsciiDigit(fullStatusText[0])
+					|| !char.IsAsciiDigit(fullStatusText[1])
+					|| !char.IsAsciiDigit(fullStatusText[2])
+					|| fullStatusText[3] != ' '
+					|| !char.IsAsciiLetterOrDigit(fullStatusText[4])
+					|| fullStatusText.Any(c => !char.IsAscii(c)))
 			{
-				statusCodeText = fullStatusText[..spaceIndex].Trim();
-				statusText = fullStatusText[(spaceIndex + 1)..].Trim();
-			}
-			else
-			{
-				statusCodeText = fullStatusText.Trim();
-				statusText = string.Empty;
-			}
-
-			// Validate status code is 3 digits
-			if (!int.TryParse(statusCodeText, out var statusCode) || statusCode < 100 || statusCode > 999)
-			{
-				await NotifyService!.Notify(executor, "Status code must be a 3-digit number.", executor);
+				await NotifyService!.Notify(executor, "@respond must be 3 digits, space, then text .", executor);
 				return new CallState(ErrorMessages.Returns.StatusCodeMustBe3Digit);
 			}
 
-			// Build the full status line
-			var statusLine = string.IsNullOrWhiteSpace(statusText)
-				? statusCodeText
-				: $"{statusCodeText} {statusText}";
+			var statusLine = fullStatusText;
 
 			// Validate total length < 40 characters as per documentation
 			if (statusLine.Length >= 40)
 			{
-				await NotifyService!.Notify(executor, "Status line must be less than 40 characters.", executor);
+				await NotifyService!.Notify(executor, "@respond status code too long.", executor);
 				return new CallState(ErrorMessages.Returns.StatusLineTooLong);
 			}
 
