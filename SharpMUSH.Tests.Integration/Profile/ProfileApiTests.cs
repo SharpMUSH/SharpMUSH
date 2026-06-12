@@ -47,6 +47,8 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		await Assert.That(god.ValueKind).IsEqualTo(JsonValueKind.Object);
 		await Assert.That(god.GetProperty("objid").GetString()).IsEqualTo(objid);
 		await Assert.That(god.GetProperty("created").ValueKind).IsEqualTo(JsonValueKind.Number);
+		// FN`CHARCAT default categorization: God carries the WIZARD flag in every provider's seed.
+		await Assert.That(god.GetProperty("category").GetString()).IsEqualTo("Wizard");
 	}
 
 	[Test]

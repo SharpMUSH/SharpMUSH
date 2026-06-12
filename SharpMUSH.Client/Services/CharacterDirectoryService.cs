@@ -10,8 +10,12 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILogger<CharacterDirectoryService> logger)
 {
-	/// <summary>A directory row from the GET`CHARACTERS softcode: name, objid, creation unix-ms.</summary>
-	public record CharacterSummary(string Name, string Objid, long Created)
+	/// <summary>
+	/// A directory row from the GET`CHARACTERS softcode: name, objid, creation unix-ms, and the
+	/// game-defined category (FN`CHARCAT — Wizard/Royalty/Guest/Player by default). Category
+	/// defaults to "Player" for handlers that predate categorization.
+	/// </summary>
+	public record CharacterSummary(string Name, string Objid, long Created, string Category = "Player")
 	{
 		public DateTimeOffset CreatedAt => DateTimeOffset.FromUnixTimeMilliseconds(Created);
 

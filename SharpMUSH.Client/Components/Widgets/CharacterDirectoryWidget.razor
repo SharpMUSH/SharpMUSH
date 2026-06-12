@@ -32,30 +32,37 @@
     }
     else
     {
-        <MudGrid Spacing="2">
-            @foreach (var character in Filtered)
-            {
-                <MudItem xs="12" sm="6" md="4" lg="3">
-                    <MudLink Href="@($"/character/{Uri.EscapeDataString(character.Name)}")"
-                             Underline="Underline.None"
-                             Style="display:block;height:100%;">
-                        <MudCard Outlined="true" Class="character-card" Style="height:100%;">
-                            <MudCardContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
-                                        @(string.IsNullOrEmpty(character.Name) ? "?" : character.Name[..1].ToUpperInvariant())
-                                    </MudAvatar>
-                                    <div>
-                                        <MudText Typo="Typo.subtitle1">@character.Name</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@character.Dbref</MudText>
-                                    </div>
-                                </MudStack>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudLink>
-                </MudItem>
-            }
-        </MudGrid>
+        @foreach (var group in Grouped)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2 mt-2">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">@group.Key</MudText>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@group.Count()</MudChip>
+            </MudStack>
+            <MudGrid Spacing="2" Class="mb-2">
+                @foreach (var character in group)
+                {
+                    <MudItem xs="12" sm="6" md="4" lg="3">
+                        <MudLink Href="@($"/character/{Uri.EscapeDataString(character.Name)}")"
+                                 Underline="Underline.None"
+                                 Style="display:block;height:100%;">
+                            <MudCard Outlined="true" Class="character-card" Style="height:100%;">
+                                <MudCardContent>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
+                                            @(string.IsNullOrEmpty(character.Name) ? "?" : character.Name[..1].ToUpperInvariant())
+                                        </MudAvatar>
+                                        <div>
+                                            <MudText Typo="Typo.subtitle1">@character.Name</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@character.Dbref</MudText>
+                                        </div>
+                                    </MudStack>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudLink>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
     }
 </div>
 
@@ -73,6 +80,14 @@
         string.IsNullOrWhiteSpace(_search)
             ? _all
             : _all.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    // The default FN`CHARCAT categories render in rank order; game-defined extras follow alphabetically.
+    private static readonly string[] CategoryOrder = ["Wizard", "Royalty", "Guest", "Player"];
+
+    private IEnumerable<IGrouping<string, CharacterDirectoryService.CharacterSummary>> Grouped =>
+        Filtered.GroupBy(c => string.IsNullOrWhiteSpace(c.Category) ? "Player" : c.Category)
+            .OrderBy(g => Array.IndexOf(CategoryOrder, g.Key) is var rank && rank >= 0 ? rank : CategoryOrder.Length)
+            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
