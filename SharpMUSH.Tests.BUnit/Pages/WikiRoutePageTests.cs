@@ -165,6 +165,9 @@ file static class WikiServiceSetup
             .AddSingleton(sp => new GalleryService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 NullLogger<GalleryService>.Instance))
+            .AddSingleton(sp => new CharacterDirectoryService(
+                sp.GetRequiredService<IHttpClientFactory>(),
+                NullLogger<CharacterDirectoryService>.Instance))
             .AddSingleton<IStringLocalizer<SharedResource>, StubLocalizer<SharedResource>>();
 
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
