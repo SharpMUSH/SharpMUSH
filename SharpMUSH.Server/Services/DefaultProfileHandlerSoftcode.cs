@@ -38,7 +38,7 @@ public static class DefaultProfileHandlerSoftcode
 		// Flag-based, first match wins: Wizard > Royalty > Guest (the power) > Player.
 		// Games can redefine this attribute to categorize however they like.
 		("FN`CHARCAT",
-			"if(hasflag(%0,WIZARD),Wizard,if(hasflag(%0,ROYALTY),Royalty,if(haspower(%0,Guest),Guest,Player)))"),
+			"firstof(if(hasflag(%0,WIZARD),Wizard),if(hasflag(%0,ROYALTY),Royalty),if(haspower(%0,Guest),Guest),Player)"),
 
 		// One character-directory row. %0 = player dbref/objid.
 		// created is the raw creation time in unix milliseconds (ctime's utc form).
