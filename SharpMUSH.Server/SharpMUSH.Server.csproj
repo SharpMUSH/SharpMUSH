@@ -65,6 +65,7 @@
 
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
+    <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.7" />
     <None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">
@@ -79,6 +80,16 @@
       <Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- The default HTTP handler softcode, installed via the package manager at
+         first boot. Single source of truth shared with examples/ and the public repo. -->
+    <EmbeddedResource Include="..\examples\packages\http-handler\package.yaml">
+      <Link>BundledPackages\http-handler.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.http-handler.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\profile-handler\package.yaml">
+      <Link>BundledPackages\profile-handler.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.profile-handler.package.yaml</LogicalName>
+    </EmbeddedResource>
     <PackageReference Include="SurrealDb.Embedded.InMemory" Version="0.9.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
   </ItemGroup>

@@ -1,0 +1,57 @@
+format: 1
+package: bbs-lite
+version: 0.9.0-beta
+authors: [SharpMUSH]
+description: "Tiny bulletin board demonstrating dependencies, typed configure params, cross-package refs, and locks."
+license: MIT
+keywords: [bbs, boards, example]
+convention_prefix: BBSL_
+requires_server: ">=0.1"
+
+depends:
+  - package: who-where
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
+      path: who-where/
+      branch: main
+
+conflicts:
+  - legacy-bbs
+
+configure:
+  bbs_storage:
+    label: "Object that stores board posts (any thing the game owns)"
+    type: dbref
+  board_name:
+    label: "Display name of the board"
+    type: string
+    default: "Community Board"
+
+objects:
+  - ref: bbsl_global
+    type: thing
+    name: BBS-Lite Global Object
+    attributes:
+      CMD_+BBPOST: |-
+        $+bbpost *:&POST_[secs()] {{?bbs_storage}}=%0; @pemit %#=Posted to {{?board_name}}.
+      CMD_+BBREAD: |-
+        $+bbread:@pemit %#=[u({{bbsl_functions}}/BBSL_FN_LIST,{{?bbs_storage}})]
+
+  - ref: bbsl_functions
+    type: thing
+    name: BBS-Lite Function Object
+    parent: "{{who-where/ww_functions}}"
+    flags: [no_command]
+    locks:
+      use: "{{bbsl_global}}"
+    attributes:
+      BBSL_FN_LIST:
+        value: |-
+          firstof(iter(lattr(%0/POST_*),%r[get(%0/%i0)],,),No posts on {{?board_name}} yet.)
+        flags: [no_clone]
+
+  - ref: bbsl_lounge
+    type: room
+    name: BBS Lounge
+    parent: "{{$room_zero}}"

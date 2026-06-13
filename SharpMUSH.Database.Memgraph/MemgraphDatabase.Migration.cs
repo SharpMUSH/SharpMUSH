@@ -86,7 +86,15 @@ public partial class MemgraphDatabase
 "CREATE INDEX ON :AttributeFlag(name)",
 "CREATE INDEX ON :AttributeEntry(name)",
 "CREATE INDEX ON :Channel(name)",
-"CREATE INDEX ON :Counter(name)"
+"CREATE INDEX ON :Counter(name)",
+// Softcode package manager system data (decisions 20.3, 20.13)
+"CREATE INDEX ON :SysPackage(id)",
+"CREATE INDEX ON :SysPackageObject(packageId)",
+"CREATE INDEX ON :SysPackageObject(objid)",
+"CREATE INDEX ON :SysManagedAttribute(packageId)",
+"CREATE INDEX ON :SysManagedAttribute(objid)",
+"CREATE INDEX ON :SysRemote(name)",
+"CREATE INDEX ON :SysPackageRevision(packageId)"
 };
 
 			// DDL (CREATE INDEX) must run as auto-commit in Memgraph — explicit/managed

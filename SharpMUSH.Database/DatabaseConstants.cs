@@ -24,6 +24,15 @@ public static class DatabaseConstants
 	public const string WikiPages = "node_wiki_pages";
 	public const string WikiRevisions = "node_wiki_revisions";
 
+	// Softcode package manager system collections (decisions 20.3, 20.13).
+	// Not visible to softcode; travels with backups.
+	public const string Packages = "sys_packages";
+	public const string PackageObjects = "sys_package_objects";
+	public const string PackageDependsOn = "sys_package_depends";
+	public const string ManagedAttributes = "sys_managed_attributes";
+	public const string PackageRemotes = "sys_remotes";
+	public const string PackageRevisions = "sys_package_revisions";
+
 	public static readonly string[] verticesContainer = [Rooms, Players, Things];
 	public static readonly string[] verticesContent = [Players, Exits, Things];
 	public static readonly string[] verticesAll = [Rooms, Players, Exits, Things];

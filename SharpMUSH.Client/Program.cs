@@ -31,6 +31,7 @@ builder.Services.AddSingleton<ISceneService, InMemorySceneService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();
+builder.Services.AddSingleton<PackagesAdminService>();
 builder.Services.AddSingleton<BannedNamesService>();
 builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<IWebSocketClientService, WebSocketClientService>();

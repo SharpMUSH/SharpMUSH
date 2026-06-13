@@ -1,0 +1,225 @@
+@page "/admin/packages/remotes"
+@attribute [Authorize(Roles = "Wizard")]
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.Models.Packages
+@inject PackagesAdminService Packages
+@inject ISnackbar Snackbar
+
+<PageTitle>Package Remotes — Admin — SharpMUSH</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-2">Package Remotes</MudText>
+<MudText Color="Color.Secondary" Class="mb-4">
+    Git repos this game installs packages from. Trust levels are your call —
+    community listings below are curated in the official repo, never self-declared.
+</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="7">
+        <MudCard>
+            <MudCardHeader><MudText Typo="Typo.h6">Configured remotes</MudText></MudCardHeader>
+            <MudCardContent>
+                @if (_remotes is null)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else
+                {
+                    <MudTable Items="_remotes" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Name</MudTh><MudTh>URL</MudTh><MudTh>Trust</MudTh><MudTh>Branch</MudTh><MudTh />
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Name</MudTd>
+                            <MudTd><MudText Typo="Typo.caption">@context.Url</MudText></MudTd>
+                            <MudTd><TrustBadge Trust="@context.Trust" /></MudTd>
+                            <MudTd>@(context.Branch ?? "default")</MudTd>
+                            <MudTd>
+                                <MudIconButton Icon="@Icons.Material.Filled.TravelExplore" Size="Size.Small"
+                                               title="Browse" Href="@($"/admin/packages/browse?remote={Uri.EscapeDataString(context.Name)}")" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                               OnClick="@(() => DeleteAsync(context.Name))" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Add a remote</MudText>
+                <MudStack Spacing="2">
+                    <MudTextField @bind-Value="_newName" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField @bind-Value="_newUrl" Label="Git URL" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudStack Row="true" Spacing="2">
+                        <MudSelect T="string" @bind-Value="_newTrust" Label="Trust" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="@("official")">official</MudSelectItem>
+                            <MudSelectItem Value="@("community")">community</MudSelectItem>
+                            <MudSelectItem Value="@("unknown")">unknown</MudSelectItem>
+                        </MudSelect>
+                        <MudTextField @bind-Value="_newBranch" Label="Branch (optional)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudStack>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_busy" OnClick="@AddRemoteAsync">
+                        Add remote
+                    </MudButton>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="5">
+        <MudCard>
+            <MudCardHeader>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="w-100">
+                    <MudText Typo="Typo.h6">Community directory</MudText>
+                    <MudSpacer />
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Disabled="@_busy"
+                                   OnClick="@LoadCommunityAsync" />
+                </MudStack>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                    Accepted community repos, curated in the official packages repo.
+                </MudText>
+                @if (_community is null)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else
+                {
+                    @foreach (var entry in _community.Listings)
+                    {
+                        <MudPaper Class="pa-3 mb-2" Outlined="true">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.subtitle1">@entry.Listing.Name</MudText>
+                                <TrustBadge Trust="PackageRemoteTrust.Community" />
+                                <MudSpacer />
+                                <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="README"
+                                               OnClick="@(() => ShowReadmeAsync(entry.Listing))" />
+                                @if (entry.AlreadyConfigured)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success">configured</MudChip>
+                                }
+                                else
+                                {
+                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@_busy"
+                                               OnClick="@(() => AddCommunityAsync(entry.Listing))">Add</MudButton>
+                                }
+                            </MudStack>
+                            <MudText Typo="Typo.body2">@entry.Listing.Description</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Listing.Url</MudText>
+                        </MudPaper>
+                    }
+                    @if (_community.Listings.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No community repos accepted yet.</MudText>
+                    }
+                    @foreach (var error in _community.Errors)
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-1">@error</MudAlert>
+                    }
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+<MudDialog @bind-Visible="_showReadme" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent><MudText Typo="Typo.h6">@_readmeTitle</MudText></TitleContent>
+    <DialogContent>
+        @if (_readmeHtml is null)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <div class="wiki-content">@((MarkupString)_readmeHtml)</div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showReadme = false)">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private IReadOnlyList<PackageRemoteRecord>? _remotes;
+    private CommunityReposResponse? _community;
+    private bool _busy;
+
+    private string _newName = "";
+    private string _newUrl = "";
+    private string _newTrust = "community";
+    private string _newBranch = "";
+
+    private bool _showReadme;
+    private string? _readmeTitle;
+    private string? _readmeHtml;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _remotes = await Packages.GetRemotesAsync();
+        await LoadCommunityAsync();
+    }
+
+    private async Task LoadCommunityAsync()
+    {
+        _community = null;
+        _community = await Packages.GetCommunityReposAsync();
+    }
+
+    private async Task AddRemoteAsync()
+    {
+        _busy = true;
+        try
+        {
+            var error = await Packages.UpsertRemoteAsync(new RemoteRequest(
+                _newName, _newUrl, _newTrust, string.IsNullOrWhiteSpace(_newBranch) ? null : _newBranch));
+            if (error is not null)
+            {
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            Snackbar.Add($"Remote '{_newName}' saved.", Severity.Success);
+            _newName = _newUrl = _newBranch = "";
+            _remotes = await Packages.GetRemotesAsync();
+            await LoadCommunityAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task AddCommunityAsync(CommunityRepoListing listing)
+    {
+        _busy = true;
+        try
+        {
+            var error = await Packages.UpsertRemoteAsync(new RemoteRequest(
+                listing.Name, listing.Url, "community", listing.Branch));
+            Snackbar.Add(error ?? $"Added '{listing.Name}' as a community remote.", error is null ? Severity.Success : Severity.Error);
+            _remotes = await Packages.GetRemotesAsync();
+            await LoadCommunityAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task DeleteAsync(string name)
+    {
+        await Packages.DeleteRemoteAsync(name);
+        Snackbar.Add($"Removed remote '{name}'.", Severity.Info);
+        _remotes = await Packages.GetRemotesAsync();
+        await LoadCommunityAsync();
+    }
+
+    private async Task ShowReadmeAsync(CommunityRepoListing listing)
+    {
+        _readmeTitle = listing.Name;
+        _readmeHtml = null;
+        _showReadme = true;
+        var readme = await Packages.GetCommunityReadmeAsync(listing.Url);
+        _readmeHtml = readme?.Html ?? "<em>No README available.</em>";
+    }
+}

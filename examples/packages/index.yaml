@@ -1,0 +1,29 @@
+name: SharpMUSH Example Packages
+description: Reference packages demonstrating the package.yaml manifest format.
+packages:
+  - path: hello-world/
+    package: hello-world
+    version: 1.0.0
+    description: Minimal example — one object, one command
+  - path: who-where/
+    name: Who/Where
+    package: who-where
+    version: 1.2.0
+    description: +who and +where commands
+  - path: bbs-lite/
+    name: BBS Lite
+    package: bbs-lite
+    version: 0.9.0-beta
+    description: Tiny bulletin board — dependencies, configure, cross-package refs
+  - path: starter-area/
+    package: starter-area
+    version: 1.0.0
+    description: Two rooms and linked exits
+  - path: http-handler/
+    package: http-handler
+    version: 1.0.0
+    description: Inbound HTTP verb routers (attach mode)
+  - path: profile-handler/
+    package: profile-handler
+    version: 1.0.0
+    description: Read-only character directory + profile API (requires http-handler)

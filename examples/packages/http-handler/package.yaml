@@ -1,0 +1,33 @@
+format: 1
+package: http-handler
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Inbound HTTP verb routers (GET/POST/…) for the configured http_handler object."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [http, api, router]
+requires_server: ">=0.1"
+
+# Attach mode (decision 20.3): manages the verb-router attributes on the
+# existing http_handler object ({{$http_handler}}, #4 by default). The base of
+# the HTTP API — feature packages (e.g. profile-handler) depend on this and add
+# their own routes as backtick children of these verbs.
+objects:
+  - ref: handler
+    target: "{{$http_handler}}"
+    attributes:
+      # %0 = path+query, %1 = body. formq() decodes the query string into
+      # %q<form.*>; @assert maps the path to VERB`PATH`SEGMENTS and 404s on a
+      # missing route; @include runs the sub-handler with %0 = raw body.
+      GET: |-
+        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/GET`%q<attrpath>=%1
+      POST: |-
+        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,POST`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/POST`%q<attrpath>=%1
+      PUT: |-
+        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,PUT`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/PUT`%q<attrpath>=%1
+      DELETE: |-
+        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,DELETE`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/DELETE`%q<attrpath>=%1
+      PATCH: |-
+        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,PATCH`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/PATCH`%q<attrpath>=%1
+      HEAD: |-
+        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,HEAD`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/HEAD`%q<attrpath>=%1
