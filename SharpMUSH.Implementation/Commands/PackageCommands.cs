@@ -19,7 +19,7 @@ public partial class Commands
 	private static partial Regex PackageIdRegex();
 
 	/// <summary>
-	/// @PACKAGE — the in-game shortcut to the softcode package authoring service
+	/// @PACKAGE — the in-game face of the softcode package authoring service
 	/// (the same engine behind /admin/packages/author). Wraps scan + export so a
 	/// wizard can turn a cluster of live objects into a package.yaml manifest
 	/// without leaving the game.
@@ -52,7 +52,7 @@ public partial class Commands
 		var tokens = objectList.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 		if (tokens.Length == 0)
 		{
-			await NotifyService!.Notify(executor, "PACKAGE: You must name at least one object to package.");
+			await NotifyService!.Notify(executor, "PACKAGE: You must name at least one object to package.", executor);
 			return new CallState(string.Empty);
 		}
 
@@ -75,7 +75,7 @@ public partial class Commands
 			var known = found.Known();
 			if (!await PermissionService!.CanExamine(executor, known))
 			{
-				await NotifyService!.Notify(executor, $"PACKAGE: You can't examine {known.Object().Name}.");
+				await NotifyService!.Notify(executor, $"PACKAGE: You can't examine {known.Object().Name}.", executor);
 				return new CallState(string.Empty);
 			}
 
@@ -87,7 +87,7 @@ public partial class Commands
 		var scan = await authoring.ScanAsync(objids.Distinct().ToList());
 		if (scan.IsT1)
 		{
-			await NotifyService!.Notify(executor, $"PACKAGE: {scan.AsT1.Value}");
+			await NotifyService!.Notify(executor, $"PACKAGE: {scan.AsT1.Value}", executor);
 			return new CallState(string.Empty);
 		}
 
@@ -121,7 +121,7 @@ public partial class Commands
 				report.Append("Finish at: /admin/packages/author");
 			}
 
-			await NotifyService!.Notify(executor, report.ToString());
+			await NotifyService!.Notify(executor, report.ToString(), executor);
 			return new CallState(string.Empty);
 		}
 
@@ -129,7 +129,8 @@ public partial class Commands
 		if (!args.TryGetValue("1", out var idArg) || string.IsNullOrWhiteSpace(idArg.Message?.ToPlainText()))
 		{
 			await NotifyService!.Notify(executor,
-				"PACKAGE: Usage: @package <objects>=<package-id>[,<version>[,<description>]]  (or @package/scan <objects>)");
+				"PACKAGE: Usage: @package <objects>=<package-id>[,<version>[,<description>]]  (or @package/scan <objects>)",
+				executor);
 			return new CallState(string.Empty);
 		}
 
@@ -137,7 +138,8 @@ public partial class Commands
 		if (!PackageIdRegex().IsMatch(packageId))
 		{
 			await NotifyService!.Notify(executor,
-				$"PACKAGE: '{packageId}' is not a valid package id (lowercase letters, digits and hyphens; must start with a letter).");
+				$"PACKAGE: '{packageId}' is not a valid package id (lowercase letters, digits and hyphens; must start with a letter).",
+				executor);
 			return new CallState(string.Empty);
 		}
 
@@ -156,7 +158,7 @@ public partial class Commands
 			blocked.AppendLine(
 				"Each must be classified as a well-known object or a configure parameter — finish this package at:");
 			blocked.Append("  /admin/packages/author");
-			await NotifyService!.Notify(executor, blocked.ToString());
+			await NotifyService!.Notify(executor, blocked.ToString(), executor);
 			return new CallState(string.Empty);
 		}
 
@@ -206,7 +208,7 @@ public partial class Commands
 
 		if (export.IsT1)
 		{
-			await NotifyService!.Notify(executor, $"PACKAGE: {export.AsT1.Value}");
+			await NotifyService!.Notify(executor, $"PACKAGE: {export.AsT1.Value}", executor);
 			return new CallState(string.Empty);
 		}
 
@@ -216,7 +218,7 @@ public partial class Commands
 		output.AppendLine("----- BEGIN package.yaml -----");
 		output.AppendLine(export.AsT0.TrimEnd());
 		output.Append("----- END package.yaml -----");
-		await NotifyService!.Notify(executor, output.ToString());
+		await NotifyService!.Notify(executor, output.ToString(), executor);
 		return new CallState(string.Empty);
 	}
 }
