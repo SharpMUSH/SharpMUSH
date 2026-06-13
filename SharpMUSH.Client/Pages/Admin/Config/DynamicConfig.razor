@@ -202,6 +202,23 @@
         position: relative;
     }
 
+    .config-list-field {
+        margin-bottom: 8px;
+    }
+
+    .config-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        min-height: 32px;
+        margin-bottom: 8px;
+    }
+
+    .config-dict-panels {
+        margin-bottom: 4px;
+    }
+
     .default-chip {
         position: absolute;
         right: 8px;
@@ -280,6 +297,7 @@
         _hasChanges = false;
         _validationErrors.Clear();
         _dictDrafts.Clear();
+        _listDrafts.Clear();
         
         try
         {
@@ -415,121 +433,131 @@
         {
             var items = GetStringListValue(prop);
             <MudItem xs="12">
-                <div class="d-flex align-center mb-1">
-                    <MudText Typo="Typo.subtitle2">@displayName</MudText>
-                    @if (isChanged)
+                <MudField Label="@displayName" Variant="Variant.Outlined" Class="config-list-field">
+                    @if (!string.IsNullOrEmpty(prop.Description))
                     {
-                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Warning" Class="ml-2" />
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">@prop.Description</MudText>
                     }
-                </div>
-                @if (!string.IsNullOrEmpty(prop.Description))
-                {
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">@prop.Description</MudText>
-                }
-                @for (var i = 0; i < items.Count; i++)
-                {
-                    var index = i;
-                    <div class="d-flex align-center mb-2" @key="@($"{prop.Path}-{index}")">
-                        <MudTextField T="string"
-                                      Value="@items[index]"
-                                      ValueChanged="@(v => UpdateListItem(prop, index, v))"
-                                      Variant="Variant.Outlined"
-                                      Margin="Margin.Dense"
-                                      Class="flex-grow-1" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                       Color="Color.Error"
-                                       Size="Size.Small"
-                                       Class="ml-1"
-                                       OnClick="@(() => RemoveListItem(prop, index))" />
+                    <div class="config-chip-row">
+                        @if (items.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["NoItems"]</MudText>
+                        }
+                        @for (var i = 0; i < items.Count; i++)
+                        {
+                            var index = i;
+                            <MudChip T="string"
+                                     Text="@items[index]"
+                                     Size="Size.Small"
+                                     Color="@(isChanged ? Color.Warning : Color.Primary)"
+                                     Variant="Variant.Filled"
+                                     OnClose="@(() => RemoveListItemAt(prop, index))" />
+                        }
                     </div>
-                }
-                @if (items.Count == 0)
-                {
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">@Loc["NoItems"]</MudText>
-                }
-                <MudButton StartIcon="@Icons.Material.Filled.Add"
-                           Variant="Variant.Text"
-                           Color="Color.Secondary"
-                           Size="Size.Small"
-                           OnClick="@(() => AddListItem(prop))">
-                    @Loc["AddItem"]
-                </MudButton>
+                    <MudTextField T="string"
+                                  Value="@GetListDraft(prop)"
+                                  ValueChanged="@(v => SetListDraft(prop, v))"
+                                  Placeholder="@Loc["AddItem"]"
+                                  Variant="Variant.Text"
+                                  Margin="Margin.Dense"
+                                  Immediate="true"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@Icons.Material.Filled.Add"
+                                  OnAdornmentClick="@(() => CommitListDraft(prop))"
+                                  OnKeyDown="@(e => OnListDraftKeyDown(prop, e))" />
+                </MudField>
             </MudItem>
         }
         else if (prop.Component == "dictionary")
         {
             var entries = GetDictDraft(prop);
             <MudItem xs="12">
-                <div class="d-flex align-center mb-1">
-                    <MudText Typo="Typo.subtitle2">@displayName</MudText>
-                    @if (isChanged)
+                <MudField Label="@displayName" Variant="Variant.Outlined" Class="config-list-field">
+                    @if (!string.IsNullOrEmpty(prop.Description))
                     {
-                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Warning" Class="ml-2" />
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">@prop.Description</MudText>
                     }
-                </div>
-                @if (!string.IsNullOrEmpty(prop.Description))
-                {
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">@prop.Description</MudText>
-                }
-                @for (var e = 0; e < entries.Count; e++)
-                {
-                    var entryIndex = e;
-                    var entry = entries[entryIndex];
-                    <MudPaper Outlined="true" Class="pa-3 mb-2" @key="@($"{prop.Path}-entry-{entryIndex}")">
-                        <div class="d-flex align-center mb-2">
-                            <MudTextField T="string"
-                                          Value="@entry.Key"
-                                          ValueChanged="@(v => UpdateDictKey(prop, entryIndex, v))"
-                                          Label="@Loc["Key"]"
-                                          Variant="Variant.Outlined"
-                                          Margin="Margin.Dense"
-                                          Class="flex-grow-1" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                           Color="Color.Error"
-                                           Size="Size.Small"
-                                           Class="ml-1"
-                                           OnClick="@(() => RemoveDictEntry(prop, entryIndex))" />
-                        </div>
-                        <div class="ml-4">
-                            @for (var v = 0; v < entry.Values.Count; v++)
+                    @if (entries.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">@Loc["NoEntries"]</MudText>
+                    }
+                    else
+                    {
+                        <MudExpansionPanels MultiExpansion="true" Elevation="0" Class="config-dict-panels">
+                            @for (var e = 0; e < entries.Count; e++)
                             {
-                                var valueIndex = v;
-                                <div class="d-flex align-center mb-2" @key="@($"{prop.Path}-{entryIndex}-{valueIndex}")">
-                                    <MudTextField T="string"
-                                                  Value="@entry.Values[valueIndex]"
-                                                  ValueChanged="@(val => UpdateDictValueItem(prop, entryIndex, valueIndex, val))"
-                                                  Label="@Loc["Value"]"
-                                                  Variant="Variant.Outlined"
-                                                  Margin="Margin.Dense"
-                                                  Class="flex-grow-1" />
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                   Color="Color.Error"
-                                                   Size="Size.Small"
-                                                   Class="ml-1"
-                                                   OnClick="@(() => RemoveDictValueItem(prop, entryIndex, valueIndex))" />
-                                </div>
+                                var entryIndex = e;
+                                var entry = entries[entryIndex];
+                                <MudExpansionPanel @key="@($"{prop.Path}-entry-{entryIndex}")">
+                                    <TitleContent>
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@Icons.Material.Filled.Key" Size="Size.Small" Class="mr-2" />
+                                            <MudText Typo="Typo.body1">
+                                                @(string.IsNullOrWhiteSpace(entry.Key) ? Loc["NewEntry"].Value : entry.Key)
+                                            </MudText>
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text" Class="ml-2">
+                                                @entry.Values.Count
+                                            </MudChip>
+                                        </div>
+                                    </TitleContent>
+                                    <ChildContent>
+                                        <div class="d-flex align-center mb-3">
+                                            <MudTextField T="string"
+                                                          Value="@entry.Key"
+                                                          ValueChanged="@(v => UpdateDictKey(prop, entryIndex, v))"
+                                                          Label="@Loc["Key"]"
+                                                          Variant="Variant.Outlined"
+                                                          Margin="Margin.Dense"
+                                                          Class="flex-grow-1" />
+                                            <MudTooltip Text="@Loc["RemoveEntry"]">
+                                                <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline"
+                                                               Color="Color.Error"
+                                                               Size="Size.Small"
+                                                               Class="ml-1"
+                                                               OnClick="@(() => RemoveDictEntry(prop, entryIndex))" />
+                                            </MudTooltip>
+                                        </div>
+                                        <div class="config-chip-row">
+                                            @if (entry.Values.Count == 0)
+                                            {
+                                                <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["NoItems"]</MudText>
+                                            }
+                                            @for (var v = 0; v < entry.Values.Count; v++)
+                                            {
+                                                var valueIndex = v;
+                                                <MudChip T="string"
+                                                         Text="@entry.Values[valueIndex]"
+                                                         Size="Size.Small"
+                                                         Color="Color.Primary"
+                                                         Variant="Variant.Filled"
+                                                         OnClose="@(() => RemoveDictValueItem(prop, entryIndex, valueIndex))" />
+                                            }
+                                        </div>
+                                        <MudTextField T="string"
+                                                      Value="@entry.ValueDraft"
+                                                      ValueChanged="@(v => entry.ValueDraft = v)"
+                                                      Placeholder="@Loc["AddValue"]"
+                                                      Variant="Variant.Text"
+                                                      Margin="Margin.Dense"
+                                                      Immediate="true"
+                                                      Adornment="Adornment.End"
+                                                      AdornmentIcon="@Icons.Material.Filled.Add"
+                                                      OnAdornmentClick="@(() => CommitDictValueDraft(prop, entryIndex))"
+                                                      OnKeyDown="@(e => OnDictValueDraftKeyDown(prop, entryIndex, e))" />
+                                    </ChildContent>
+                                </MudExpansionPanel>
                             }
-                            <MudButton StartIcon="@Icons.Material.Filled.Add"
-                                       Variant="Variant.Text"
-                                       Color="Color.Secondary"
-                                       Size="Size.Small"
-                                       OnClick="@(() => AddDictValueItem(prop, entryIndex))">
-                                @Loc["AddValue"]
-                            </MudButton>
-                        </div>
-                    </MudPaper>
-                }
-                @if (entries.Count == 0)
-                {
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">@Loc["NoEntries"]</MudText>
-                }
-                <MudButton StartIcon="@Icons.Material.Filled.Add"
-                           Variant="Variant.Text"
-                           Color="Color.Secondary"
-                           Size="Size.Small"
-                           OnClick="@(() => AddDictEntry(prop))">
-                    @Loc["AddEntry"]
-                </MudButton>
+                        </MudExpansionPanels>
+                    }
+                    <MudButton StartIcon="@Icons.Material.Filled.Add"
+                               Variant="Variant.Text"
+                               Color="Color.Secondary"
+                               Size="Size.Small"
+                               Class="mt-2"
+                               OnClick="@(() => AddDictEntry(prop))">
+                        @Loc["AddEntry"]
+                    </MudButton>
+                </MudField>
             </MudItem>
         }
         else if (prop.Component == "text")
@@ -653,22 +681,35 @@
         _ => new List<string>()
     };
 
-    private void UpdateListItem(PropertyMetadata prop, int index, string newValue)
+    // Transient "add" text for each string-list field, keyed by property path.
+    private readonly Dictionary<string, string> _listDrafts = new();
+
+    private string GetListDraft(PropertyMetadata prop) =>
+        _listDrafts.GetValueOrDefault(prop.Path, string.Empty);
+
+    private void SetListDraft(PropertyMetadata prop, string value) =>
+        _listDrafts[prop.Path] = value;
+
+    private void CommitListDraft(PropertyMetadata prop)
     {
+        var draft = GetListDraft(prop).Trim();
+        _listDrafts[prop.Path] = string.Empty;
+        if (draft.Length == 0) return;
+
         var list = GetStringListValue(prop);
-        if (index >= 0 && index < list.Count)
-            list[index] = newValue;
+        if (list.Contains(draft)) return;
+
+        list.Add(draft);
         UpdateValue(prop, list.ToArray());
     }
 
-    private void AddListItem(PropertyMetadata prop)
+    private void OnListDraftKeyDown(PropertyMetadata prop, KeyboardEventArgs args)
     {
-        var list = GetStringListValue(prop);
-        list.Add(string.Empty);
-        UpdateValue(prop, list.ToArray());
+        if (args.Key == "Enter")
+            CommitListDraft(prop);
     }
 
-    private void RemoveListItem(PropertyMetadata prop, int index)
+    private void RemoveListItemAt(PropertyMetadata prop, int index)
     {
         var list = GetStringListValue(prop);
         if (index >= 0 && index < list.Count)
@@ -684,6 +725,10 @@
     {
         public string Key { get; set; } = string.Empty;
         public List<string> Values { get; set; } = new();
+
+        // Transient "add value" text bound to this entry's input, travels with the entry
+        // regardless of list reordering.
+        public string ValueDraft { get; set; } = string.Empty;
     }
 
     private readonly Dictionary<string, List<DictEntry>> _dictDrafts = new();
@@ -757,21 +802,24 @@
         SyncDictDraft(prop);
     }
 
-    private void UpdateDictValueItem(PropertyMetadata prop, int entryIndex, int valueIndex, string newValue)
+    private void CommitDictValueDraft(PropertyMetadata prop, int entryIndex)
     {
         var draft = GetDictDraft(prop);
-        if (entryIndex >= 0 && entryIndex < draft.Count &&
-            valueIndex >= 0 && valueIndex < draft[entryIndex].Values.Count)
-            draft[entryIndex].Values[valueIndex] = newValue;
+        if (entryIndex < 0 || entryIndex >= draft.Count) return;
+
+        var entry = draft[entryIndex];
+        var value = entry.ValueDraft.Trim();
+        entry.ValueDraft = string.Empty;
+        if (value.Length == 0 || entry.Values.Contains(value)) return;
+
+        entry.Values.Add(value);
         SyncDictDraft(prop);
     }
 
-    private void AddDictValueItem(PropertyMetadata prop, int entryIndex)
+    private void OnDictValueDraftKeyDown(PropertyMetadata prop, int entryIndex, KeyboardEventArgs args)
     {
-        var draft = GetDictDraft(prop);
-        if (entryIndex >= 0 && entryIndex < draft.Count)
-            draft[entryIndex].Values.Add(string.Empty);
-        SyncDictDraft(prop);
+        if (args.Key == "Enter")
+            CommitDictValueDraft(prop, entryIndex);
     }
 
     private void RemoveDictValueItem(PropertyMetadata prop, int entryIndex, int valueIndex)
@@ -905,6 +953,7 @@
             _currentValues[kvp.Key] = kvp.Value;
         }
         _dictDrafts.Clear();
+        _listDrafts.Clear();
         _hasChanges = false;
         _changedCount = 0;
         _validationErrors.Clear();
@@ -918,6 +967,7 @@
             _currentValues[prop.Path] = prop.DefaultValue;
         }
         _dictDrafts.Clear();
+        _listDrafts.Clear();
         RecalculateChanges();
         StateHasChanged();
         Snackbar.Add(Loc["DefaultsRestored"].Value, Severity.Info);

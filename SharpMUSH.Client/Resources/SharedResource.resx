@@ -895,6 +895,12 @@
   <data name="AddValue" xml:space="preserve">
     <value>Add Value</value>
   </data>
+  <data name="NewEntry" xml:space="preserve">
+    <value>New entry</value>
+  </data>
+  <data name="RemoveEntry" xml:space="preserve">
+    <value>Remove entry</value>
+  </data>
   <data name="SaveConfiguration" xml:space="preserve">
     <value>Save Configuration</value>
   </data>
