@@ -252,6 +252,29 @@
 - [x] Fixed pre-existing GitPackageSourceServiceTests shared-fixture ordering
       flake (.Single() assumed one package; now selects who-where by path)
 
+### Iteration: Application packages (decision 20.22)
+- [x] Manifest `kind:` discriminator — `softcode` (default) or `application`;
+      format minor bumped to 1.1. Softcode requires `objects:`/forbids
+      `application:`; application requires `application:`/forbids `objects:`
+      (parser + validation, `PackageManifestService`)
+- [x] `application:` block parses into `PackageApplicationSpec` (mirrors
+      `RegisteredApplication`); string fields accept `{{?configure}}`/
+      `{{$well_known}}`/`{{dependency/ref}}` refs (validated like attr values,
+      substituted at apply)
+- [x] Apply registers the application via `IApplicationRegistryService`,
+      stamping `RegisteredApplication.OwningPackage`; uninstall reclaims every
+      application a package owns. Plan surfaces the registration as a note
+- [x] `OwningPackage` round-trips on all three providers (Arango/Memgraph/
+      Surreal); `ApplicationsController` preserves it on manual edits and
+      manual registrations stay unowned (null)
+- [x] Example `chargen-app` package (`kind: application`, depends on `chargen`,
+      configurable `minimum_role`) + index entry + README section; kept honest
+      by `ExamplePackageTests`
+- [x] Tests: `ApplicationPackageManifestTests` (parse/validation) +
+      `PackageInstallServiceTests.ApplicationPackage_RegistersAndUnregisters_PortalApplication`
+      (dep-gated plan, configure-resolved role, owning-package provenance,
+      dependents block, uninstall reclaim)
+
 ## Deferred to v2 (post-merge polish)
 - [ ] Dependency graph visualization (deps render as text/blockers today)
 - [ ] Dbref linking in review panes (clickable, resolution tooltip)

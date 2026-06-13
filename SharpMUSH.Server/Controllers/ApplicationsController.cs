@@ -43,7 +43,8 @@ public class ApplicationsController(
 		string MinimumRole,
 		string? NavPlacement,
 		string[] Zones,
-		int Order);
+		int Order,
+		string? OwningPackage = null);
 
 	[HttpGet]
 	public async Task<ActionResult<IReadOnlyList<ApplicationDto>>> List()
@@ -89,6 +90,11 @@ public class ApplicationsController(
 			return BadRequest(new { error = $"Schema endpoint validation failed: {reason}" });
 		}
 
+		// Preserve provenance: a manual edit of a package-installed application keeps its OwningPackage,
+		// so uninstalling the package still reclaims the record. Manual registrations stay unowned.
+		var existing = await registry.GetApplicationAsync(dto.Slug.Trim());
+		var owningPackage = existing.Match(app => app.OwningPackage, _ => null);
+
 		var application = new RegisteredApplication(
 			dto.Slug.Trim(),
 			dto.DisplayName.Trim(),
@@ -100,7 +106,8 @@ public class ApplicationsController(
 			role,
 			string.IsNullOrWhiteSpace(dto.NavPlacement) ? null : dto.NavPlacement.Trim(),
 			ParseZones(dto.Zones),
-			dto.Order);
+			dto.Order,
+			owningPackage);
 
 		await registry.UpsertApplicationAsync(application);
 		logger.LogInformation("Registered application '{Slug}' ({Kind}).", application.Slug, application.Kind);
@@ -192,5 +199,6 @@ public class ApplicationsController(
 		a.MinimumRole.ToString(),
 		a.NavPlacement,
 		(a.Zones ?? []).Select(z => z.ToString()).ToArray(),
-		a.Order);
+		a.Order,
+		a.OwningPackage);
 }

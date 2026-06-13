@@ -19,7 +19,7 @@ public partial class MemgraphDatabase : IApplicationRegistryService
 			MERGE (a:SysApplication {slug: $slug})
 			SET a.displayName = $displayName, a.icon = $icon, a.kind = $kind, a.schemaUrl = $schemaUrl,
 			    a.dataUrl = $dataUrl, a.submitRoute = $submitRoute, a.minimumRole = $minimumRole,
-			    a.navPlacement = $navPlacement, a.zones = $zones, a.order = $order
+			    a.navPlacement = $navPlacement, a.zones = $zones, a.order = $order, a.owningPackage = $owningPackage
 			""",
 			new
 			{
@@ -33,7 +33,8 @@ public partial class MemgraphDatabase : IApplicationRegistryService
 				minimumRole = application.MinimumRole.ToString(),
 				navPlacement = application.NavPlacement,
 				zones = ApplicationRegistryMapping.ZonesToString(application.Zones),
-				order = application.Order
+				order = application.Order,
+				owningPackage = application.OwningPackage
 			});
 	}
 
@@ -71,7 +72,8 @@ public partial class MemgraphDatabase : IApplicationRegistryService
 		Enum.Parse<PortalRole>(node.Properties["minimumRole"].As<string>(), ignoreCase: true),
 		OptionalString(node, "navPlacement"),
 		ApplicationRegistryMapping.ZonesFromString(OptionalString(node, "zones")),
-		node.Properties["order"].As<int>());
+		node.Properties["order"].As<int>(),
+		OptionalString(node, "owningPackage"));
 
 	#endregion
 }

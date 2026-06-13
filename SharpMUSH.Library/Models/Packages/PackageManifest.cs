@@ -19,7 +19,9 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Conflicts">Packages that cannot be installed alongside this one.</param>
 /// <param name="Dependencies">Packages this package requires, with version constraints.</param>
 /// <param name="Configure"><c>{{?configure}}</c> parameters the installing admin supplies, keyed by name.</param>
-/// <param name="Objects">Objects the package manages, in manifest order.</param>
+/// <param name="Objects">Objects the package manages, in manifest order (empty for <see cref="PackageKind.Application"/> packages).</param>
+/// <param name="Kind">Package kind: a softcode package (objects/attributes) or an application package (a portal registration).</param>
+/// <param name="Application">The dynamic-application registration this package installs, when <see cref="Kind"/> is <see cref="PackageKind.Application"/>; otherwise null.</param>
 public sealed record PackageManifest(
 	PackageFormatVersion Format,
 	string Name,
@@ -35,7 +37,66 @@ public sealed record PackageManifest(
 	IReadOnlyList<PackageDependencySpec> Conflicts,
 	IReadOnlyList<PackageDependencySpec> Dependencies,
 	IReadOnlyDictionary<string, PackageConfigureSpec> Configure,
-	IReadOnlyList<PackageObjectSpec> Objects);
+	IReadOnlyList<PackageObjectSpec> Objects,
+	PackageKind Kind = PackageKind.Softcode,
+	PackageApplicationSpec? Application = null);
+
+/// <summary>
+/// The two kinds of package the manager installs. A <see cref="Softcode"/>
+/// package creates objects and manages attributes (the original Area-20 model).
+/// An <see cref="Application"/> package carries no objects of its own — it
+/// registers a Dynamic Application (Area 21) in the portal and <c>depends</c>
+/// on the softcode package that provides its HTTP-handler routes.
+/// </summary>
+public enum PackageKind
+{
+	/// <summary>Objects and attributes (the default). Requires <c>objects:</c>; forbids <c>application:</c>.</summary>
+	Softcode,
+
+	/// <summary>A portal application registration. Requires <c>application:</c>; forbids <c>objects:</c>.</summary>
+	Application
+}
+
+/// <summary>
+/// The portal registration an application package installs: it maps one-to-one
+/// onto a <c>RegisteredApplication</c> in the Area-21 application registry, but
+/// its string fields may carry <c>{{?configure}}</c>/<c>{{$well_known}}</c>/
+/// <c>{{dependency/ref}}</c> refs that are resolved at apply time, so the
+/// installing admin can tune role, placement, and endpoints per game.
+/// </summary>
+/// <param name="Slug">URL-safe unique key; the application renders at <c>/apps/{slug}</c>. Defaults to the package id.</param>
+/// <param name="DisplayName">Human-readable label shown in nav and the widget palette.</param>
+/// <param name="Icon">Material icon name, or null for a default.</param>
+/// <param name="Kind">Full-page (<c>page</c>) or placeable widget (<c>widget</c>).</param>
+/// <param name="SchemaUrl">Relative HTTP-handler route returning the Portal Schema Document (e.g. <c>http/chargen/schema</c>).</param>
+/// <param name="DataUrl">Optional relative route returning data values (view display / form prefill).</param>
+/// <param name="SubmitRoute">Optional base relative route for the schema's POST actions.</param>
+/// <param name="MinimumRole">Lowest portal role that may see the nav entry / open the route (may be a configure ref, resolved at apply).</param>
+/// <param name="NavPlacement">Nav section hint for page apps, or null to hide from nav.</param>
+/// <param name="Zones">Allowed layout zones for widget apps, or null/empty for none.</param>
+/// <param name="Order">Sort order within nav / listings.</param>
+public sealed record PackageApplicationSpec(
+	string Slug,
+	string DisplayName,
+	string? Icon,
+	PackageApplicationDisplay Kind,
+	string SchemaUrl,
+	string? DataUrl,
+	string? SubmitRoute,
+	string MinimumRole,
+	string? NavPlacement,
+	IReadOnlyList<string> Zones,
+	int Order);
+
+/// <summary>How an application surfaces in the portal (mirrors <c>ApplicationKind</c>).</summary>
+public enum PackageApplicationDisplay
+{
+	/// <summary>A nav-linked full-page application at <c>/apps/{slug}</c>.</summary>
+	Page,
+
+	/// <summary>A schema-driven widget that can be placed into a layout zone.</summary>
+	Widget
+}
 
 /// <summary>
 /// The manifest format version (decision 20.17). Consumers warn on a newer
@@ -46,7 +107,7 @@ public sealed record PackageManifest(
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 0);
+	public static PackageFormatVersion Supported { get; } = new(1, 1);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

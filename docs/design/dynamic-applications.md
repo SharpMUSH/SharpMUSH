@@ -301,6 +301,18 @@ are backtick children of the verb routers from the bundled `http-handler` packag
 schema/data/submit endpoints, allowed roles, and nav/zone placement → the DB registry
 record. The portal validates the schema endpoint returns parseable JSON before saving.
 
+**One-step alternative (application packages, decision 20.22).** Step (b) can also ship
+as an Area-20 **application package** (`kind: application`): a manifest carrying only the
+`application:` block, depending on the softcode package from (a). Installing it registers
+the application (stamped with its `OwningPackage`); uninstalling it removes the
+registration. This makes the linking step distributable, versioned, and reversible through
+the package manager instead of a hand registration — see
+`examples/packages/chargen-app/` and the application-packages section of
+`examples/packages/README.md`. Its application-field strings (role, placement, endpoints)
+accept `{{?configure}}` refs, so the installing admin tunes them at apply. Manual
+registration in `/admin/applications` remains for one-offs (such records have a null
+`OwningPackage`).
+
 ## Permissions
 
 - **Field/section visibility is softcode-owned** — the per-datum `visible` flag, exactly

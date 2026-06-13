@@ -1053,6 +1053,28 @@ manifests may not define attributes under it, authoring exports exclude it,
 and same-package ref names must be unique across kinds (internal /
 well-known-used / configure) since they share the namespace.
 
+### 20.22 Application Packages (Area 21 ↔ Area 20)
+
+**Decision:** A package declares a `kind:` — `softcode` (the default; the
+original object/attribute model) or `application`. An **application package**
+registers a Dynamic Application (Area 21) in the portal and owns **no objects
+of its own**: it carries an `application:` block (the `RegisteredApplication`
+fields — slug, display name, icon, page/widget kind, schema/data/submit
+routes, minimum role, nav placement, zones, order) and `depends:` on the
+softcode package that provides its HTTP-handler routes. The two kinds are
+mutually exclusive about payload: a softcode package requires `objects:` and
+forbids `application:`; an application package requires `application:` and
+forbids `objects:`. Application-block string fields accept the same
+`{{?configure}}` / `{{$well_known}}` / `{{dependency/ref}}` refs as attribute
+values, resolved at apply, so one published application package adapts its
+role/placement/endpoints per game. Applying registers the application (stamped
+with `OwningPackage` for provenance); uninstalling reclaims it. This collapses
+the former two-step setup (install softcode, then hand-register in
+`/admin/applications`) into a single installable, versioned, uninstallable
+unit, while a manual registration stays available for one-offs (its
+`OwningPackage` is null). The manifest format minor bumps to **1.1** for the
+new `kind`/`application` keys. Decision: confirmed 2026-06-13.
+
 ---
 
 ## Design Documents Index
