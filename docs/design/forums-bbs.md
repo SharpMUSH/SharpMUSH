@@ -43,16 +43,17 @@ in their terminal panel.
 
 ## HTTP Handler (Read-Only)
 
-The HTTP handler exposes board data for the web portal to display:
+The HTTP handler exposes board data for the web portal to display (PLANNED — not yet
+implemented; routes under the live `/http/...` handler prefix):
 
 ```
-GET /mush/bbs/boards
+GET /http/bbs/boards
   → List of boards: name, description, post count, last post date, read perms
 
-GET /mush/bbs/boards/{board_name}?page=1&limit=25
+GET /http/bbs/boards/{board_name}?page=1&limit=25
   → List of posts: id, author, subject, date, read/unread
 
-GET /mush/bbs/posts/{board_name}/{post_id}
+GET /http/bbs/posts/{board_name}/{post_id}
   → Post detail: author, subject, date, body (MString)
 ```
 

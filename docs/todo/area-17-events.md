@@ -23,8 +23,8 @@
 - [ ] `+events/mine` — list scenes I'm RSVP'd to
 
 ### HTTP Handler
-- [ ] GET /mush/scenes/upcoming → scheduled scenes (future start, state=scheduled)
-- [ ] POST /mush/scene/{id}/rsvp → { character_id, status } (simple toggle)
+- [ ] GET /http/scenes/upcoming → scheduled scenes (future start, state=scheduled)
+- [ ] POST /http/scene/{id}/rsvp → { character_id, status } (simple toggle)
 - [ ] RSVP via HTTP handler directly (no terminal routing needed for one-field toggle)
 
 ### NATS Events

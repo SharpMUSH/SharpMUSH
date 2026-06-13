@@ -51,19 +51,23 @@ profile data. The portal is a consumer/renderer, not a data owner.
 
 ### Endpoints (served by the HTTP handler MUSHcode)
 
+Implemented today by the `profile-handler` package (read-only). Routes are under the live
+`/http/...` handler prefix (not the obsolete `/mush/...`):
+
 ```
-GET /mush/profile-schema
+GET /http/profile/schema
   → Returns field definitions, sections, types, display order
   → Cached by portal (invalidated on schema change event)
 
-GET /mush/profile/{character_name_or_dbref}
-  → Returns structured field values for that character
-  → Viewer identity passed via auth header (determines visibility)
+GET /http/profile?objid={objid}
+  → Returns structured field values for that character (addressed by stable objid)
+  → Viewer identity passed via JWT (determines visibility)
   → Response includes: fields, values, and per-field visibility metadata
 
-POST /mush/profile/{character_name_or_dbref}
-  → Updates structured fields (from web editor)
+POST /http/profile?objid={objid}   (PLANNED — not yet implemented)
+  → Would update structured fields from a web editor
   → Handler validates permissions and stores (sets attributes on character)
+  → Profile editing is currently out of scope; the handler is read-only today
 ```
 
 ### Schema Endpoint Response Shape
@@ -217,7 +221,7 @@ The wiki freeform section follows wiki permissions:
 Player clicks "Edit Profile" on their character page
   → Form rendered from schema (field types determine input widgets)
   → Player edits fields marked editable_by: "self"
-  → Submit → POST /mush/profile/{character} with changed fields
+  → Submit → POST /http/profile?objid={objid} with changed fields (planned)
   → HTTP handler validates and sets attributes on the game object
   → NATS event fired → portal cache invalidated → page re-renders
 ```

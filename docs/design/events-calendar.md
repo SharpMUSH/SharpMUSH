@@ -173,7 +173,7 @@ All use existing `portal.scene.live` subject. No new NATS subject needed.
 RSVP from web triggers the same game action as the in-game command:
 
 ```
-POST /mush/scene/42/rsvp
+POST /http/scene/42/rsvp          (PLANNED — not yet implemented)
   → { character_id: "#42", status: "attending" }
   → HTTP handler executes RSVP logic
   → NATS event published
