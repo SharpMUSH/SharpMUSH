@@ -102,7 +102,10 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		await Assert.That((int)response.StatusCode).IsEqualTo(200);
 		await Assert.That(response.Content.Headers.ContentType?.MediaType).IsEqualTo("application/json");
 		using var doc = JsonDocument.Parse(body);
-		await Assert.That(doc.RootElement.TryGetProperty("sections", out var sections)).IsTrue();
+		// Schema-driven view (PortalSchemaDocument shape): sections live under pages[].sections.
+		await Assert.That(doc.RootElement.TryGetProperty("pages", out var pages)).IsTrue();
+		await Assert.That(pages.GetArrayLength()).IsEqualTo(1);
+		await Assert.That(pages[0].TryGetProperty("sections", out var sections)).IsTrue();
 		// Public read-only schema: Demographics + Status + Description.
 		await Assert.That(sections.GetArrayLength()).IsEqualTo(3);
 	}

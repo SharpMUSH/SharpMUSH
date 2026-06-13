@@ -18,7 +18,6 @@ using SharpMUSH.MarkupString;
 using SharpMUSH.MarkupString.TextAlignerModule;
 using System.Drawing;
 using System.Globalization;
-using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -2152,11 +2151,44 @@ public partial class Functions
 
 	[SharpFunction(Name = "urldecode", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public static ValueTask<CallState> URLDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> new(new CallState(WebUtility.HtmlDecode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
+		=> new(new CallState(PercentDecode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
 
 	[SharpFunction(Name = "urlencode", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public static ValueTask<CallState> URLEncode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> new(new CallState(WebUtility.HtmlEncode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
+		=> new(new CallState(Uri.EscapeDataString(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
+
+	/// <summary>
+	/// Percent-decodes a string the way PennMUSH's <c>urldecode()</c> does (via libcurl's
+	/// <c>curl_easy_unescape</c>): only <c>%XX</c> escapes are decoded — a literal <c>+</c> is
+	/// left untouched (unlike form decoding) — and any decoded byte that is not printable ASCII
+	/// (0x20–0x7E) is replaced with <c>?</c>, matching Penn's per-byte <c>isprint</c> filter.
+	/// </summary>
+	private static string PercentDecode(string input)
+	{
+		var src = Encoding.UTF8.GetBytes(input);
+		var decoded = new List<byte>(src.Length);
+		for (var i = 0; i < src.Length; i++)
+		{
+			if (src[i] == (byte)'%' && i + 2 < src.Length
+				&& Uri.IsHexDigit((char)src[i + 1]) && Uri.IsHexDigit((char)src[i + 2]))
+			{
+				decoded.Add((byte)((Uri.FromHex((char)src[i + 1]) << 4) | Uri.FromHex((char)src[i + 2])));
+				i += 2;
+			}
+			else
+			{
+				decoded.Add(src[i]);
+			}
+		}
+
+		var result = new StringBuilder(decoded.Count);
+		foreach (var b in decoded)
+		{
+			result.Append(b is >= 0x20 and <= 0x7E ? (char)b : '?');
+		}
+
+		return result.ToString();
+	}
 
 	[SharpFunction(Name = "wrap", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["string", "width", "osep", "isep", "indent"])]
 	public static async ValueTask<CallState> Wrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
