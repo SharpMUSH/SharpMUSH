@@ -454,6 +454,94 @@ public class MyrddinBBSIntegrationTests
 	}
 
 	/// <summary>
+	/// Uses the in-game @package command to confirm the installed Myrddin BBS
+	/// (bbpocket + mbboard) can be turned into a package, and that the combined
+	/// schema of both objects is as expected from the command's own output.
+	///
+	/// After install, Myrddin's hardcoded #222 has been rewritten to bbpocket's
+	/// real dbref, so the two objects reference only each other — the selection is
+	/// self-contained and exports as a manifest in a single step. Runs before any
+	/// BBS group is created so bbpocket carries no external group dbrefs yet.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
+	public async Task BBS_CanBeTurnedIntoPackage()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("MYRDDIN BBS -> @package");
+		Log(new string('=', 78));
+
+		await Assert.That(_bbpocketDbref).IsNotNull()
+			.Because("bbpocket must have been created during install");
+		await Assert.That(_mbboardDbref).IsNotNull()
+			.Because("mbboard must have been created during install");
+		var bbpocket = _bbpocketDbref!;
+		var mbboard = _mbboardDbref!;
+		Log($"bbpocket={bbpocket}, mbboard={mbboard}");
+
+		// 1) @package/scan — read-only schema report. Both install objects reference
+		//    only each other, so the report should declare the selection self-contained.
+		var scanMsgs = await RunAndCollect($"@package/scan {bbpocket} {mbboard}");
+		var scanReport = string.Join("\n", scanMsgs);
+		Log($"\n--- @package/scan ---\n{scanReport}");
+
+		await Assert.That(scanReport).Contains("PACKAGE SCAN: 2 object(s) selected")
+			.Because("both BBS objects should be scanned together");
+		await Assert.That(scanReport).Contains("bbpocket")
+			.Because("the scan should list bbpocket and its suggested ref");
+		await Assert.That(scanReport).Contains("Self-contained")
+			.Because("after install the BBS objects reference only each other (no external dbrefs)");
+
+		// 2) @package export — produce the manifest in one step.
+		var pkgMsgs = await RunAndCollect($"@package {bbpocket} {mbboard}=myrddin-bbs");
+		var manifest = pkgMsgs.FirstOrDefault(m => m.Contains("BEGIN package.yaml"))
+			?? string.Join("\n", pkgMsgs);
+		Log($"\n--- @package export ---\n{manifest}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_Package_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS PACKAGE] Full test output written to: {outputPath}");
+
+		// Manifest metadata and both objects (bbpocket keeps its name; mbboard was
+		// renamed to "BBS - Myrddin's Global BBS v4.0.6" at the end of install).
+		await Assert.That(manifest).Contains("package: myrddin-bbs");
+		await Assert.That(manifest).Contains("ref: bbpocket")
+			.Because("bbpocket should be exported under its own ref");
+		await Assert.That(manifest).Contains("type: thing")
+			.Because("the BBS objects are things");
+		await Assert.That(manifest).Contains("Global BBS v4.0.6")
+			.Because("the renamed mbboard object should be present in the manifest");
+
+		// bbpocket's function/config attribute schema.
+		foreach (var attr in new[] { "GET_GROUP", "NXT_MESS", "VALID_GROUPS", "VERSION", "BUFFER_SIZE" })
+		{
+			await Assert.That(manifest).Contains(attr)
+				.Because($"bbpocket should export its {attr} attribute");
+		}
+
+		// mbboard's command schema — assert via the $-command bodies, which are stable
+		// regardless of how attribute names containing '+' are rendered.
+		foreach (var cmd in new[] { "$+bbread", "$+bbpost", "$+bbnewgroup", "$+bblist" })
+		{
+			await Assert.That(manifest).Contains(cmd)
+				.Because($"mbboard should export the {cmd} command");
+		}
+
+		await Assert.That(manifest).Contains("CREDITS")
+			.Because("mbboard's CREDITS attribute should be exported");
+
+		// Cross-reference rewriting: mbboard's references to bbpocket become a symbolic
+		// ref, and no raw dbref of bbpocket survives in the manifest.
+		await Assert.That(manifest).Contains("{{bbpocket}}")
+			.Because("references to bbpocket must be tokenized as a symbolic ref");
+		await Assert.That(manifest).DoesNotContain($"{bbpocket}/")
+			.Because("no raw dbref of bbpocket should remain — manifests never carry dbrefs");
+	}
+
+	/// <summary>
 	/// Truncates a string to the specified maximum length, appending "..." if truncated.
 	/// </summary>
 	private static string Truncate(string value, int maxLength)
@@ -516,7 +604,8 @@ public class MyrddinBBSIntegrationTests
 	/// Validates no ANTLR parser errors and no #-1 errors during the workflow.
 	/// </summary>
 	[Test]
-	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
+	// Runs after the packaging test so bbpocket has no group dbrefs when it is packaged.
+	[DependsOn(nameof(BBS_CanBeTurnedIntoPackage))]
 	public async Task BBS_NewGroup_ThenBBRead_ShowsGroup()
 	{
 		var output = new StringBuilder();
