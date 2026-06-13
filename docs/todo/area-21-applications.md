@@ -3,6 +3,25 @@
 Design: `docs/design/dynamic-applications.md`. Depends on Area 13 (widget system),
 Area 6 (HTTP handler / profile schema), Area 20 (package manager).
 
+## Status (2026-06-13) — implemented & green
+
+Phases 1–8 landed and the full solution builds (warnings-as-errors). Backend registry
+runs on all three providers (registry tests pass on Arango via Podman); schema
+serialization, the view-renderer bUnit test, the chargen-schema JSON-validity test, and the
+example-package manifest all pass.
+
+**Implementation refinements vs. the design doc:**
+- Access uses a single **`MinimumRole`** (the `PortalRole` hierarchy), not an
+  `allowedRoles[]` list — a literal allow-list would wrongly exclude God when Wizard is
+  listed. Nav + `/apps/{slug}` gate hierarchically; the controller validates the schema
+  endpoint before persisting.
+- Writes are `[Authorize(Roles = nameof(PortalRole.Wizard))]`, matching the existing
+  WikiController convention; note this excludes God (#1) — a portal-wide quirk to revisit.
+- `mstring` fields render as text for now (markup-pipeline integration deferred).
+
+**Still open:** Phase 9 screenshots (need the running UI captured); richer display
+elements; the v2 deferrals below.
+
 ## Pre-Implementation
 - [ ] Confirm decisions with project owner (transport = HTTP `<POST>`; admin registers
       both Page and Widget; schemas live in softcode, served over `/http`; registry
