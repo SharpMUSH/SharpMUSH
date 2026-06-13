@@ -162,6 +162,14 @@ else
             return;
         }
 
+        // Advisory required-field check before a final submit (softcode remains authoritative).
+        // Partial submits (buttons, "next") never block — softcode decides what is complete.
+        if (actionName == "submit" && !ValidateRequired())
+        {
+            StateHasChanged();
+            return;
+        }
+
         _busy = true;
         _globalError = null;
         _errors.Clear();
@@ -207,6 +215,28 @@ else
         }
 
         StateHasChanged();
+    }
+
+    // Returns false (and populates field errors) when a required field is empty.
+    private bool ValidateRequired()
+    {
+        _errors.Clear();
+        _globalError = null;
+        foreach (var field in AllFields())
+        {
+            if (field.Validation?.Required == true && field.Key is not null && string.IsNullOrWhiteSpace(GetString(field.Key)))
+            {
+                _errors[field.Key] = $"{field.Label ?? field.Key} is required.";
+            }
+        }
+
+        if (_errors.Count > 0)
+        {
+            _globalError = "Please fill in the highlighted required fields.";
+            return false;
+        }
+
+        return true;
     }
 
     private void BindErrors(IReadOnlyDictionary<string, string>? errors, bool bindToFields)

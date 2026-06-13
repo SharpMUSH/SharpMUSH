@@ -115,12 +115,21 @@ else
                 break;
 
             default: // "field"
+                var raw = ValueToString(element.Key is not null ? Lookup(element.Key) : null);
                 <div class="mb-2">
                     @if (!string.IsNullOrWhiteSpace(element.Label))
                     {
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@element.Label</MudText>
                     }
-                    <MudText Typo="Typo.body1">@ValueToString(element.Key is not null ? Lookup(element.Key) : null)</MudText>
+                    @if (string.Equals(element.Type, "mstring", StringComparison.OrdinalIgnoreCase))
+                    {
+                        @* mstring fields carry ANSI/MXP markup — render it the way the terminal does. *@
+                        <div class="mud-typography mud-typography-body1">@((MarkupString)RenderMarkup(raw))</div>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body1">@raw</MudText>
+                    }
                 </div>
                 break;
         }
@@ -159,6 +168,27 @@ else
 
     private JsonElement? Lookup(string key)
         => Data?.Fields is not null && Data.Fields.TryGetValue(key, out var v) ? v.Value : null;
+
+    // Render a serialized MString to safe HTML the way the terminal does
+    // (MarkupString library → AnsiMarkup.WrapAsHtmlClass). Falls back to HTML-encoded
+    // text when the value is not a serialized MString envelope.
+    private static string RenderMarkup(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            // Fully qualified: in a .razor file the bare "MarkupString" binds to Blazor's type.
+            return global::MarkupString.MarkupStringModule.deserialize(value).Render("html");
+        }
+        catch (Exception)
+        {
+            return System.Net.WebUtility.HtmlEncode(value);
+        }
+    }
 
     /// <summary>Renders any JSON value as display text (strings unquoted, scalars as written).</summary>
     internal static string ValueToString(JsonElement? value)

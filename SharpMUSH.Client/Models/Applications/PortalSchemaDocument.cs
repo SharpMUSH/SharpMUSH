@@ -56,28 +56,28 @@ public sealed record SchemaSection(
 /// ("markdown", "image", "table", "keyvalue", "divider", "button"). Unused properties stay null.
 /// </summary>
 public sealed record SchemaElement(
-	string? Kind,
+	string? Kind = null,
 	// field
-	string? Key,
-	string? Label,
-	string? Type,
-	IReadOnlyList<SchemaOption>? Options,
-	JsonElement? Default,
-	string? Help,
-	SchemaValidation? Validation,
-	[property: JsonPropertyName("visible_to")] string? VisibleTo,
+	string? Key = null,
+	string? Label = null,
+	string? Type = null,
+	IReadOnlyList<SchemaOption>? Options = null,
+	JsonElement? Default = null,
+	string? Help = null,
+	SchemaValidation? Validation = null,
+	[property: JsonPropertyName("visible_to")] string? VisibleTo = null,
 	// markdown / static value
-	string? Value,
+	string? Value = null,
 	// image
-	[property: JsonPropertyName("src_field")] string? SrcField,
-	string? Alt,
+	[property: JsonPropertyName("src_field")] string? SrcField = null,
+	string? Alt = null,
 	// table
-	[property: JsonPropertyName("rows_field")] string? RowsField,
-	IReadOnlyList<SchemaColumn>? Columns,
+	[property: JsonPropertyName("rows_field")] string? RowsField = null,
+	IReadOnlyList<SchemaColumn>? Columns = null,
 	// keyvalue
-	IReadOnlyList<string>? Fields,
+	IReadOnlyList<string>? Fields = null,
 	// button
-	string? Action);
+	string? Action = null);
 
 /// <summary>A select/radio/multiselect choice.</summary>
 public sealed record SchemaOption(string Value, string Label);
