@@ -24,7 +24,6 @@ builder.Services.AddSingleton<WikiMarkdigPipeline>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<WikiAssetService>();
 builder.Services.AddSingleton<CharacterDirectoryService>();
-builder.Services.AddSingleton<ProfileService>();
 builder.Services.AddSingleton<SchemaAppService>();
 builder.Services.AddSingleton<ApplicationRegistryClient>();
 builder.Services.AddSingleton<GalleryService>();

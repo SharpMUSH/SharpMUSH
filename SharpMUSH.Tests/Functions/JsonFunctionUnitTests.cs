@@ -84,7 +84,11 @@ public class JsonFunctionUnitTests
 
 		await Assert.That(result).DoesNotContain("#-1");
 		using var doc = System.Text.Json.JsonDocument.Parse(result);
-		await Assert.That(doc.RootElement.TryGetProperty("sections", out var sections)).IsTrue();
+		// Area 21: the profile schema is a kind:"view" Portal Schema Document.
+		await Assert.That(doc.RootElement.GetProperty("kind").GetString()).IsEqualTo("view");
+		var pages = doc.RootElement.GetProperty("pages");
+		await Assert.That(pages.GetArrayLength()).IsEqualTo(1);
+		var sections = pages[0].GetProperty("sections");
 		// Public read-only schema: Demographics + Status + Description.
 		await Assert.That(sections.GetArrayLength()).IsEqualTo(3);
 	}

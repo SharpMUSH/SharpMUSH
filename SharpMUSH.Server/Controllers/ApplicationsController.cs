@@ -81,8 +81,8 @@ public class ApplicationsController(
 			return BadRequest(new { error = $"Unknown role: {dto.MinimumRole}" });
 		}
 
-		// Validate the schema endpoint returns parseable JSON before persisting — same defensive
-		// stance as the client's ProfileService, but enforced server-side at registration time.
+		// Validate the schema endpoint returns parseable JSON before persisting — the same defensive
+		// stance the client's SchemaAppService takes, but enforced server-side at registration time.
 		var (ok, reason) = await ValidateSchemaEndpointAsync(dto.SchemaUrl);
 		if (!ok)
 		{

@@ -6,7 +6,7 @@ namespace SharpMUSH.Client.Services;
 /// Client-side character directory. Reads the full character list from the in-game
 /// http_handler's routed softcode (<c>GET /http/characters</c> → <c>GET`CHARACTERS</c> on #4 —
 /// see help sharphttp). Each row carries the character's objid, which is how profiles are
-/// addressed (<see cref="ProfileService"/>).
+/// addressed (the profile view is a schema-driven <see cref="SchemaAppService"/> fetch).
 /// </summary>
 public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILogger<CharacterDirectoryService> logger)
 {

@@ -159,9 +159,9 @@ file static class WikiServiceSetup
                 NullLogger<WikiService>.Instance))
             // CharacterProfile composes the profile/gallery widgets, which inject these.
             // Their reads hit the in-memory handler's 404 fallback and degrade gracefully.
-            .AddSingleton(sp => new ProfileService(
+            .AddSingleton(sp => new SchemaAppService(
                 sp.GetRequiredService<IHttpClientFactory>(),
-                NullLogger<ProfileService>.Instance))
+                NullLogger<SchemaAppService>.Instance))
             .AddSingleton(sp => new GalleryService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 NullLogger<GalleryService>.Instance))
