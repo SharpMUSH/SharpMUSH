@@ -241,6 +241,9 @@ public class Startup(
 
 // Package registry — backed by whichever ISharpDatabase is active (all three DB backends implement IPackageRegistryService).
 		services.AddSingleton<IPackageRegistryService>(sp => (IPackageRegistryService)sp.GetRequiredService<ISharpDatabase>());
+
+// Dynamic Application registry (Area 21) — same pattern; every DB backend implements IApplicationRegistryService.
+		services.AddSingleton<IApplicationRegistryService>(sp => (IApplicationRegistryService)sp.GetRequiredService<ISharpDatabase>());
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
 // Scene subsystem — InMemorySceneService for dev/test; swap for a persistent implementation later.
