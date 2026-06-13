@@ -144,11 +144,11 @@ public static partial class ReadPennMushConfig
 				RequiredString(Get(nameof(FileOptions.ColorsFile)), "colors.json")
 			),
 			Flag = new FlagOptions(
-				PlayerFlags: RequiredString(Get(nameof(FlagOptions.PlayerFlags)), "enter_ok ansi no_command").Split(' '),
-				RoomFlags: RequiredString(Get(nameof(FlagOptions.RoomFlags)), "no_command").Split(' '),
-				ThingFlags: RequiredString(Get(nameof(FlagOptions.ThingFlags)), "").Split(' '),
-				ExitFlags: RequiredString(Get(nameof(FlagOptions.ExitFlags)), "no_command").Split(' '),
-				ChannelFlags: RequiredString(Get(nameof(FlagOptions.ChannelFlags)), "player").Split(' ')
+				PlayerFlags: RequiredString(Get(nameof(FlagOptions.PlayerFlags)), "enter_ok ansi no_command").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+				RoomFlags: RequiredString(Get(nameof(FlagOptions.RoomFlags)), "no_command").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+				ThingFlags: RequiredString(Get(nameof(FlagOptions.ThingFlags)), "").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+				ExitFlags: RequiredString(Get(nameof(FlagOptions.ExitFlags)), "no_command").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+				ChannelFlags: RequiredString(Get(nameof(FlagOptions.ChannelFlags)), "player").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
 			),
 			Function = new FunctionOptions(
 				SaferUserFunctions: Boolean(Get(nameof(FunctionOptions.SaferUserFunctions)), true),

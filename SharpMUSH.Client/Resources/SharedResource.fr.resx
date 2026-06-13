@@ -216,6 +216,27 @@
   <data name="ResetChanges" xml:space="preserve">
     <value>Réinitialiser les modifications</value>
   </data>
+  <data name="AddItem" xml:space="preserve">
+    <value>Ajouter un élément</value>
+  </data>
+  <data name="NoItems" xml:space="preserve">
+    <value>Aucun élément</value>
+  </data>
+  <data name="AddEntry" xml:space="preserve">
+    <value>Ajouter une entrée</value>
+  </data>
+  <data name="NoEntries" xml:space="preserve">
+    <value>Aucune entrée</value>
+  </data>
+  <data name="AddValue" xml:space="preserve">
+    <value>Ajouter une valeur</value>
+  </data>
+  <data name="NewEntry" xml:space="preserve">
+    <value>Nouvelle entrée</value>
+  </data>
+  <data name="RemoveEntry" xml:space="preserve">
+    <value>Supprimer l'entrée</value>
+  </data>
   <data name="UnsavedChanges" xml:space="preserve">
     <value>Modifications non enregistrées</value>
   </data>
