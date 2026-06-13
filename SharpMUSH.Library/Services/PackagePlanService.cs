@@ -76,10 +76,12 @@ public partial class PackagePlanService : IPackagePlanService
 
 	// ── Objects (decision 20.15: renames never become destroy+create) ──────
 
-	private static string? ResolveTargetObjid(PackageRef target, PackagePlanInputs inputs) => target.Kind switch
+	private static string? ResolveTargetObjid(PackageRef target, PackagePlanInputs inputs) => target switch
 	{
-		PackageRefKind.WellKnown => inputs.WellKnownObjids.GetValueOrDefault(target.Name),
-		PackageRefKind.Configure => inputs.ConfigureAnswers.GetValueOrDefault(target.Name),
+		{ Kind: PackageRefKind.WellKnown } => inputs.WellKnownObjids.GetValueOrDefault(target.Name),
+		{ Kind: PackageRefKind.Configure } => inputs.ConfigureAnswers.GetValueOrDefault(target.Name),
+		{ Kind: PackageRefKind.Internal, Package: not null } =>
+			inputs.CrossPackageObjids.GetValueOrDefault($"{target.Package}/{target.Name}"),
 		_ => null
 	};
 

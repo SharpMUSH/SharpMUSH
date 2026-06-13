@@ -165,7 +165,7 @@ attributes and never creates, restructures, or destroys it.
 ```yaml
 objects:
   - ref: handler
-    target: "{{$http_handler}}"   # an existing {{$well_known}} or {{?configure}} object
+    target: "{{$http_handler}}"   # an existing object to manage attributes on
     attributes:
       GET: |-
         think routed
@@ -174,10 +174,17 @@ objects:
 - Only `ref`, `target`, and `attributes` are allowed — no
   `type`/`name`/`parent`/`location`/`destination`/`flags`/`locks`.
 - The `target` must resolve to an object that already exists (the package can't
-  create it); a `{{$well_known}}` or `{{?configure}}` ref.
+  create it). Three kinds: `{{$well_known}}`, `{{?configure}}`, or
+  `{{dependency/ref}}` — an object **another package provides** (it must be a
+  declared dependency). A same-package ref is not a valid target; put the
+  attributes on the created object directly.
 - The package records the managed attributes (so upgrades three-way-merge and
   uninstall removes them) but **not** the object — uninstall leaves it in place.
-- The `http-hooks` example is the canonical attach package.
+- **A provider can't be uninstalled while attached:** if package B attaches to
+  an object package A created, A's uninstall is blocked until B is removed (or
+  forced). The `http-handler` / `profile-handler` pair are the canonical attach
+  packages — `profile-handler` adds its routes as backtick children of
+  `http-handler`'s verbs and depends on it.
 
 ### Versions and constraints
 

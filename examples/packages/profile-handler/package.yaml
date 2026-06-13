@@ -1,39 +1,28 @@
 format: 1
-package: http-hooks
+package: profile-handler
 version: 1.0.0
 authors: [SharpMUSH]
-description: "Default inbound HTTP handler: verb routers + read-only character directory and profile API."
+description: "Read-only character directory and profile API, served through the HTTP verb routers."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [http, api, profile, portal]
 requires_server: ">=0.1"
 
-# Attach mode (decision 20.3): the HTTP handler object already exists as
-# server infrastructure (the http_handler config option, #4 by default). This
-# package owns only the softcode ON it — it never creates or destroys the
-# object. Uninstalling removes these attributes; the handler object stays.
+# Requires the verb routers — its GET`* routes are backtick children of the GET
+# verb that http-handler provides. The dependency also blocks uninstalling
+# http-handler while this is installed.
+depends:
+  - package: http-handler
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
+      path: http-handler/
+
 objects:
   - ref: handler
     target: "{{$http_handler}}"
     attributes:
-      # ── Verb routers (GET/POST/… → backtick sub-attribute dispatch) ──────
-      # %0 = path+query, %1 = body. formq() decodes the query string into
-      # %q<form.*>; @assert maps the path to VERB`PATH`SEGMENTS and 404s on a
-      # missing route; @include runs the sub-handler with %0 = raw body.
-      GET: |-
-        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/GET`%q<attrpath>=%1
-      POST: |-
-        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,POST`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/POST`%q<attrpath>=%1
-      PUT: |-
-        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,PUT`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/PUT`%q<attrpath>=%1
-      DELETE: |-
-        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,DELETE`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/DELETE`%q<attrpath>=%1
-      PATCH: |-
-        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,PATCH`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/PATCH`%q<attrpath>=%1
-      HEAD: |-
-        think setq(fields,formq(after(%0,?))); @assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,HEAD`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/HEAD`%q<attrpath>=%1
-
-      # ── Profile helpers (me-relative; redefinable per game) ──────────────
+      # ── Helpers (me-relative; redefinable per game) ──────────────────────
       # One profile field as the {value, visible} shape. %0 = objid, %1 = key.
       FN`FIELD: |-
         json(object,value,json(string,get(%0/PROFILE`%1)),visible,json(boolean,true))
@@ -50,7 +39,7 @@ objects:
       FN`CHARVIS: |-
         not(strmatch(u(FN`CHARCAT,%0),Guest))
 
-      # ── Routes (parent attrs before their backtick children) ─────────────
+      # ── Routes (children of http-handler's GET verb) ─────────────────────
       # GET /http/characters — every visible player as a JSON array.
       GET`CHARACTERS: |-
         @respond/type application/json; think fold(me/FN`JARRINS,filter(me/FN`CHARVIS,lsearch(all,type,player)),\[\])

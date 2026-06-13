@@ -19,23 +19,32 @@ public class HttpHooksPackageTests(ServerWebAppFactory factory)
 		(IPackageRegistryService)factory.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
-	public async Task HttpHooks_IsInstalledAsAPackage_ManagingHandlerAttributes()
+	public async Task DefaultHandler_IsInstalledAsSplitPackages_ManagingHandlerAttributes()
 	{
-		// The bootstrap installed the bundled package at startup.
-		var installed = await Registry.GetInstalledPackageAsync("http-hooks");
-		await Assert.That(installed.IsT0).IsTrue();
-		await Assert.That(installed.AsT0.Version).IsEqualTo("1.0.0");
+		// The bootstrap installed both bundled packages at startup, in order.
+		var http = await Registry.GetInstalledPackageAsync("http-handler");
+		var profile = await Registry.GetInstalledPackageAsync("profile-handler");
+		await Assert.That(http.IsT0).IsTrue();
+		await Assert.That(profile.IsT0).IsTrue();
 
-		// Attach mode: it manages attributes but owns no objects (#4 is infrastructure).
-		await Assert.That((await Registry.GetPackageObjectsAsync("http-hooks")).Count).IsEqualTo(0);
+		// Attach mode: neither owns objects (#4 is infrastructure).
+		await Assert.That((await Registry.GetPackageObjectsAsync("http-handler")).Count).IsEqualTo(0);
+		await Assert.That((await Registry.GetPackageObjectsAsync("profile-handler")).Count).IsEqualTo(0);
 
-		var managed = await Registry.GetManagedAttributesAsync("http-hooks");
-		var attrs = managed.Select(m => m.Attribute).ToList();
-		await Assert.That(attrs).Contains("GET");
-		await Assert.That(attrs).Contains("GET`CHARACTERS");
-		await Assert.That(attrs).Contains("GET`PROFILE`SCHEMA");
-		// Every managed attribute lives on the one handler object.
-		await Assert.That(managed.Select(m => m.Objid).Distinct().Count()).IsEqualTo(1);
+		// http-handler owns the verb routers; profile-handler owns the routes.
+		var httpAttrs = (await Registry.GetManagedAttributesAsync("http-handler")).Select(m => m.Attribute).ToList();
+		await Assert.That(httpAttrs).Contains("GET");
+		await Assert.That(httpAttrs).Contains("POST");
+
+		var profileAttrs = (await Registry.GetManagedAttributesAsync("profile-handler")).Select(m => m.Attribute).ToList();
+		await Assert.That(profileAttrs).Contains("GET`CHARACTERS");
+		await Assert.That(profileAttrs).Contains("GET`PROFILE`SCHEMA");
+		// profile-handler does NOT manage the bare verb routers.
+		await Assert.That(profileAttrs).DoesNotContain("GET");
+
+		// profile-handler depends on http-handler.
+		var profileDeps = await Registry.GetPackageDependenciesAsync("profile-handler");
+		await Assert.That(profileDeps.Select(d => d.DependsOnId)).Contains("http-handler");
 	}
 
 	[Test]

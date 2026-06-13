@@ -143,8 +143,10 @@ public class GitPackageSourceServiceTests
 		var snapshot = result.AsT0;
 		await Assert.That(snapshot.HeadCommit).IsEqualTo(RevParse("main"));
 
-		var entry = snapshot.Packages.Single();
-		await Assert.That(entry.Path).IsEqualTo("who-where");
+		// Select who-where by path: a sibling-package test may have committed
+		// other packages to the shared fixture repo before this test runs.
+		await Assert.That(snapshot.Packages.Any(p => p.Path == "who-where")).IsTrue();
+		var entry = snapshot.Packages.Single(p => p.Path == "who-where");
 		await Assert.That(entry.PackageId).IsEqualTo("who-where");
 		await Assert.That(entry.Version).IsEqualTo("1.1.0");
 		await Assert.That(entry.Description).Contains("+who");

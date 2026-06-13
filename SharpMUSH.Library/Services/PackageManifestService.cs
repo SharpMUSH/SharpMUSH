@@ -874,14 +874,20 @@ public partial class PackageManifestService : IPackageManifestService
 		if (target is null)
 		{
 			issues.Add(PackageManifestIssue.Error($"{path}.target",
-				"'target' must be a single ref ({{$well_known}} or {{?configure}})."));
+				"'target' must be a single ref ({{$well_known}}, {{?configure}}, or {{dependency/ref}})."));
 			return null;
 		}
 
-		if (target.Kind is not (PackageRefKind.WellKnown or PackageRefKind.Configure))
+		// Valid attach targets: a well-known object, a configure-supplied
+		// object, or a cross-package object from a declared dependency
+		// (decision 20.3). A same-package internal ref is not a valid attach
+		// target — declare attributes on the created object directly.
+		var validTarget = target.Kind is PackageRefKind.WellKnown or PackageRefKind.Configure
+			|| (target.Kind == PackageRefKind.Internal && target.Package is not null);
+		if (!validTarget)
 		{
 			issues.Add(PackageManifestIssue.Error($"{path}.target",
-				$"'target' must be a {{{{$well_known}}}} or {{{{?configure}}}} ref, not '{target}'."));
+				$"'target' must be a {{{{$well_known}}}}, {{{{?configure}}}}, or {{{{dependency/ref}}}} ref, not '{target}'."));
 			return null;
 		}
 

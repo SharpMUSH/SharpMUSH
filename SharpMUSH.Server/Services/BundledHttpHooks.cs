@@ -5,41 +5,56 @@ using SharpMUSH.Library.Services;
 namespace SharpMUSH.Server.Services;
 
 /// <summary>
-/// Reads the bundled <c>http-hooks</c> package manifest (the single source of
-/// truth for the default HTTP handler softcode) and exposes its handler
+/// Reads the bundled default-handler package manifests (the single source of
+/// truth for the default HTTP handler softcode) and exposes their handler
 /// attributes by name. Used by <see cref="DefaultHttpHandlerBootstrapService"/>
 /// and by tests that need a canonical attribute value without depending on the
 /// old hardcoded C# constants.
 /// </summary>
 public static class BundledHttpHooks
 {
-	private const string ResourceName = "SharpMUSH.Server.BundledPackages.http-hooks.package.yaml";
+	/// <summary>Bundled package ids in dependency order (base first).</summary>
+	public static readonly IReadOnlyList<string> PackageIds = ["http-handler", "profile-handler"];
 
-	private static readonly Lazy<FrozenDictionary<string, string>> Lazy = new(Load);
+	private static readonly Lazy<FrozenDictionary<string, string>> Lazy = new(LoadAll);
 
-	/// <summary>All handler attribute (name → value) pairs from the bundled manifest.</summary>
+	/// <summary>All default-handler attribute (name → value) pairs, merged across the bundled packages.</summary>
 	public static FrozenDictionary<string, string> Attributes => Lazy.Value;
 
 	/// <summary>The value of one handler attribute (e.g. <c>POST</c>, <c>GET`PROFILE`SCHEMA</c>).</summary>
 	public static string Attribute(string name) => Attributes[name];
 
-	private static FrozenDictionary<string, string> Load()
+	/// <summary>The raw YAML of one bundled package manifest.</summary>
+	public static string ManifestYaml(string packageId)
 	{
-		using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(ResourceName)
-			?? throw new InvalidOperationException($"Bundled resource '{ResourceName}' not found.");
+		var resource = $"SharpMUSH.Server.BundledPackages.{packageId}.package.yaml";
+		using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource)
+			?? throw new InvalidOperationException($"Bundled resource '{resource}' not found.");
 		using var reader = new StreamReader(stream);
-		var yaml = reader.ReadToEnd();
+		return reader.ReadToEnd();
+	}
 
-		var parsed = new PackageManifestService().ParseManifest(yaml);
-		if (parsed.IsT1)
+	private static FrozenDictionary<string, string> LoadAll()
+	{
+		var service = new PackageManifestService();
+		var merged = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+		foreach (var packageId in PackageIds)
 		{
-			throw new InvalidOperationException(
-				$"Bundled http-hooks manifest is invalid: {string.Join("; ", parsed.AsT1.Issues.Select(i => i.ToString()))}");
+			var parsed = service.ParseManifest(ManifestYaml(packageId));
+			if (parsed.IsT1)
+			{
+				throw new InvalidOperationException(
+					$"Bundled {packageId} manifest is invalid: {string.Join("; ", parsed.AsT1.Issues.Select(i => i.ToString()))}");
+			}
+
+			// Each default package has a single attach object (the handler).
+			foreach (var (name, attr) in parsed.AsT0.Manifest.Objects.Single().Attributes)
+			{
+				merged[name] = attr.Value;
+			}
 		}
 
-		// The package has a single attach object (the handler).
-		var handler = parsed.AsT0.Manifest.Objects.Single();
-		return handler.Attributes.ToFrozenDictionary(
-			kv => kv.Key, kv => kv.Value.Value, StringComparer.OrdinalIgnoreCase);
+		return merged.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 	}
 }

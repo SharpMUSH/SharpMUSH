@@ -265,6 +265,59 @@ public class PackageInstallServiceTests
 	}
 
 	[Test, NotInParallel]
+	public async Task CrossPackageAttach_BlocksProvidersUninstall_UntilAttacherGone()
+	{
+		// Request #1: a package that PROVIDES an object cannot be uninstalled
+		// while another package is ATTACHED to it (manages attributes on it).
+		var provider = Parse(
+			"""
+			package: attach-provider
+			version: "1.0"
+			objects:
+			  - ref: hub
+			    type: thing
+			    name: Attach Hub
+			    attributes:
+			      FN_BASE: |-
+			        base
+			""");
+		var attacher = Parse(
+			"""
+			package: attach-consumer
+			version: "1.0"
+			depends:
+			  - attach-provider: ">=1.0"
+			objects:
+			  - ref: ext
+			    target: "{{attach-provider/hub}}"
+			    attributes:
+			      FN_EXT: |-
+			        extension
+			""");
+
+		var answers = new Dictionary<string, string>();
+		var providerResult = await Installer.ApplyAsync(provider, new PackageApplyRequest(Source(), answers, []));
+		await Assert.That(providerResult.IsT0).IsTrue();
+		var hubObjid = providerResult.AsT0.CreatedObjects["hub"];
+
+		// The attacher manages an attribute on the provider's object (cross-package attach).
+		await Assert.That((await Installer.ApplyAsync(attacher, new PackageApplyRequest(Source(), answers, []))).IsT0).IsTrue();
+		await Assert.That(await ReadAttributeAsync(hubObjid, "FN_EXT")).IsEqualTo("extension");
+		await Assert.That((await Registry.GetPackageObjectsAsync("attach-consumer")).Count).IsEqualTo(0);
+
+		// Uninstalling the provider is blocked while the attacher is present —
+		// both by the dependency and by the attachment guard.
+		var blocked = await Installer.UninstallAsync("attach-provider");
+		await Assert.That(blocked.IsT1).IsTrue();
+		await Assert.That(blocked.AsT1.Value).Contains("attach-consumer");
+
+		// Remove the attacher, then the provider uninstalls cleanly.
+		await Assert.That((await Installer.UninstallAsync("attach-consumer")).IsT0).IsTrue();
+		await Assert.That(await ReadAttributeAsync(hubObjid, "FN_EXT")).IsEqualTo("");
+		await Assert.That((await Installer.UninstallAsync("attach-provider")).IsT0).IsTrue();
+	}
+
+	[Test, NotInParallel]
 	public async Task Uninstall_BlockedByDependents_UnlessForced()
 	{
 		var basePkg = Parse(

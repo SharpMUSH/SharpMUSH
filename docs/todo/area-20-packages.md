@@ -167,12 +167,15 @@
 - [x] who-where package (+who, +where) — published and tagged who-where/v1.2.0
 - [ ] events package — GATED on events system (area 17)
 - [ ] finger package — straightforward once profile attrs settle (area 6)
-- [x] http-hooks package — DONE. The default HTTP verb routers + read-only
-      profile/character-directory API, delivered as an attach-mode package
-      (`examples/packages/http-hooks/`, published + tagged http-hooks/v1.0.0).
-      Replaces the hardcoded DefaultHttpVerbSoftcode/DefaultProfileHandlerSoftcode
-      C# seeding; the bootstrap now installs the bundled package at first boot.
-      Proof of concept for the package manager owning a core system's softcode.
+- [x] http-handler + profile-handler packages — DONE. The default HTTP verb
+      routers (`http-handler`) and the read-only profile/character-directory API
+      (`profile-handler`, which depends on http-handler) — split attach-mode
+      packages (`examples/packages/`, published + tagged http-handler/v1.0.0 and
+      profile-handler/v1.0.0). Replace the hardcoded DefaultHttpVerbSoftcode/
+      DefaultProfileHandlerSoftcode C# seeding; the bootstrap installs both
+      bundled packages in dependency order at first boot. Proof of concept for
+      the package manager owning a core system's softcode, with enable/disable
+      granularity (verb routers without the profile API).
 - [x] Each published package: manifest, README, validated in CI; install verified by
       the apply-engine e2e suite
 
@@ -204,6 +207,21 @@
 - [x] Registry + install e2e suites verified on SurrealDB and Memgraph providers
       (`SHARPMUSH_DATABASE_PROVIDER=surrealdb|memgraph`)
 
+### Iteration: Cross-package attach + split default packages (decision 20.3)
+- [x] Attach `target:` now also accepts `{{dependency/ref}}` (cross-package) —
+      a package manages attributes on an object another package provides
+- [x] Uninstall guard: a package that provides an object cannot be uninstalled
+      while another package is attached to it (manages attributes on it),
+      unless forced — complements the existing dependents block
+- [x] Split http-hooks into `http-handler` (verb routers) + `profile-handler`
+      (read-only directory/profile API, requires http-handler); the bootstrap
+      installs both in dependency order; enables independent enable/disable
+- [x] Tests: cross-package attach target parse test; cross-package attach
+      install + provider-uninstall-blocked-while-attached integration test
+      (verified on all three backends); split-package live integration test
+- [x] Fixed a pre-existing GitPackageSourceServiceTests isolation bug
+      (shared fixture repo + `.Single()` assumption — CI ordering exposed it)
+
 ### Iteration: Attach mode + http-hooks proof of concept (decision 20.3)
 - [x] Manifest `target:` (attach) objects — manage attributes on an existing
       well-known/configure object without creating, restructuring, or destroying it
@@ -217,6 +235,22 @@
       integration test; live "handler is package-managed" + endpoint-serves tests;
       all existing HTTP/profile integration tests still pass (behavior identical),
       verified on ArangoDB + SurrealDB + Memgraph
+
+### Iteration: cross-package attach + provider/attacher integrity (decision 20.3)
+- [x] Attach `target:` may be `{{dependency/ref}}` (cross-package) in addition
+      to `{{$well_known}}`/`{{?configure}}` — a package can manage attributes on
+      an object ANOTHER package provides (the design doc's cross-package attribute
+      ownership). Same-package internal targets rejected; cross-package requires
+      a declared dependency
+- [x] Uninstall guard: a package that PROVIDES an object cannot be uninstalled
+      while another package is ATTACHED to it (manages attributes on it), unless
+      forced — complements the existing dependents block
+- [x] http-hooks split into http-handler (verb routers) + profile-handler
+      (profile API, depends on http-handler); enable/disable each independently
+- [x] Tests: cross-package attach parse/apply, provider-uninstall-blocked-while-
+      attached (all 3 backends); split-package bootstrap + integration
+- [x] Fixed pre-existing GitPackageSourceServiceTests shared-fixture ordering
+      flake (.Single() assumed one package; now selects who-where by path)
 
 ## Deferred to v2 (post-merge polish)
 - [ ] Dependency graph visualization (deps render as text/blockers today)

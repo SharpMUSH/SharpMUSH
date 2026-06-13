@@ -855,8 +855,9 @@ public class PackageManifestServiceTests
 	}
 
 	[Test]
-	public async Task AttachObject_TargetMustBeWellKnownOrConfigure()
+	public async Task AttachObject_TargetKinds_WellKnownConfigureCrossPackage_NotSamePackage()
 	{
+		// Same-package internal target is rejected (declare attrs on the object directly).
 		var internalTarget = _service.ParseManifest(
 			"""
 			package: hooks
@@ -874,6 +875,7 @@ public class PackageManifestServiceTests
 		await Assert.That(internalTarget.IsT1).IsTrue();
 		await Assert.That(internalTarget.AsT1.Errors.Any(e => e.Path == "objects[1].target")).IsTrue();
 
+		// Configure target is allowed.
 		var configureTarget = _service.ParseManifest(
 			"""
 			package: hooks
@@ -889,6 +891,38 @@ public class PackageManifestServiceTests
 			        think get({{?store}}/X)
 			""");
 		await Assert.That(configureTarget.IsT0).IsTrue();
+
+		// Cross-package target (a declared dependency's object) is allowed.
+		var crossTarget = _service.ParseManifest(
+			"""
+			package: ext
+			version: "1.0"
+			depends:
+			  - base-pkg: ">=1.0"
+			objects:
+			  - ref: handler
+			    target: "{{base-pkg/hub}}"
+			    attributes:
+			      FN_X: |-
+			        think extension
+			""");
+		await Assert.That(crossTarget.IsT0).IsTrue();
+		await Assert.That(crossTarget.AsT0.Manifest.Objects.Single().Target)
+			.IsEqualTo(new PackageRef(PackageRefKind.Internal, "hub", "base-pkg"));
+
+		// Cross-package target to an UNDECLARED dependency is an error.
+		var undeclared = _service.ParseManifest(
+			"""
+			package: ext
+			version: "1.0"
+			objects:
+			  - ref: handler
+			    target: "{{base-pkg/hub}}"
+			    attributes:
+			      FN_X: |-
+			        think extension
+			""");
+		await Assert.That(undeclared.IsT1).IsTrue();
 	}
 
 	[Test]

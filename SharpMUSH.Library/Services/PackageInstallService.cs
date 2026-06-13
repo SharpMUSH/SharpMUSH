@@ -65,7 +65,7 @@ public class PackageInstallService(
 
 		var wellKnown = await BuildWellKnownMapAsync(cancellationToken);
 		var live = await GatherLiveStateAsync(
-			manifest, installedObjects, baselines, wellKnown, configureAnswers, cancellationToken);
+			manifest, installedObjects, baselines, wellKnown, configureAnswers, crossPackageObjids, cancellationToken);
 
 		return new PackagePlanInputs(
 			manifest, installed, installedObjects, baselines, allInstalled, otherManaged, live,
@@ -78,6 +78,7 @@ public class PackageInstallService(
 		IReadOnlyList<ManagedAttributeRecord> baselines,
 		IReadOnlyDictionary<string, string> wellKnown,
 		IReadOnlyDictionary<string, string> configureAnswers,
+		IReadOnlyDictionary<string, string> crossPackageObjids,
 		CancellationToken cancellationToken)
 	{
 		// Attributes of interest per objid: everything this package manages
@@ -107,9 +108,14 @@ public class PackageInstallService(
 			// read the attributes the manifest manages on it.
 			if (obj.Target is not null)
 			{
-				var targetObjid = obj.Target.Kind == PackageRefKind.WellKnown
-					? wellKnown.GetValueOrDefault(obj.Target.Name)
-					: configureAnswers.GetValueOrDefault(obj.Target.Name);
+				var targetObjid = obj.Target switch
+				{
+					{ Kind: PackageRefKind.WellKnown } => wellKnown.GetValueOrDefault(obj.Target.Name),
+					{ Kind: PackageRefKind.Configure } => configureAnswers.GetValueOrDefault(obj.Target.Name),
+					{ Kind: PackageRefKind.Internal, Package: not null } =>
+						crossPackageObjids.GetValueOrDefault($"{obj.Target.Package}/{obj.Target.Name}"),
+					_ => null
+				};
 				if (targetObjid is null)
 				{
 					continue;
@@ -707,6 +713,31 @@ public class PackageInstallService(
 		var notes = new List<string>();
 		var ownObjects = await registry.GetPackageObjectsAsync(packageId);
 		var ownObjids = ownObjects.Select(o => o.Objid).ToHashSet(StringComparer.Ordinal);
+
+		// Attachment guard (decision 20.3): another package may manage
+		// attributes on one of THIS package's objects (cross-package attach).
+		// Destroying the object would orphan those attributes, so block while
+		// any attachment exists — unless forced.
+		if (ownObjids.Count > 0 && !force)
+		{
+			var attachers = new SortedSet<string>(StringComparer.Ordinal);
+			foreach (var objid in ownObjids)
+			{
+				foreach (var managed in await registry.GetManagedAttributesForObjectAsync(objid))
+				{
+					if (managed.PackageId != packageId)
+					{
+						attachers.Add(managed.PackageId);
+					}
+				}
+			}
+
+			if (attachers.Count > 0)
+			{
+				return new Error<string>(
+					$"Cannot uninstall '{packageId}': {string.Join(", ", attachers)} {(attachers.Count == 1 ? "is" : "are")} attached to its object(s). Uninstall them first or force-remove.");
+			}
+		}
 
 		// Managed attrs on objects this package does NOT own (cross-package): clear them.
 		foreach (var managed in (await registry.GetManagedAttributesAsync(packageId))
