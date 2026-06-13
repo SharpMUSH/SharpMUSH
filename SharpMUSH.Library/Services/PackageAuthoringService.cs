@@ -191,7 +191,11 @@ public partial class PackageAuthoringService(
 				foreach (var (attrName, value) in included)
 				{
 					body.AppendLine($"      {attrName}:");
-					body.AppendLine("        value: |-");
+					// Explicit block-indentation indicator (content is indented 2 past the
+					// `value:` key). Without it, YamlDotNet cannot auto-detect indentation
+					// for values whose only line is blank/whitespace-only (e.g. an empty
+					// attribute), and rejects the manifest with "extra spaces in first line".
+					body.AppendLine("        value: |2-");
 					foreach (var line in Tokenize(value).Replace("\r\n", "\n").Split('\n'))
 					{
 						body.AppendLine($"          {line}");
