@@ -666,7 +666,7 @@
     private List<string> GetStringListValue(PropertyMetadata prop)
     {
         if (_currentValues.TryGetValue(prop.Path, out var value) && value != null)
-            return CoerceToStringList(value);
+            return NonBlank(CoerceToStringList(value));
         return new List<string>();
     }
 
@@ -750,23 +750,26 @@
         {
             case Dictionary<string, string[]> dict:
                 foreach (var kvp in dict)
-                    result.Add(new DictEntry { Key = kvp.Key, Values = kvp.Value.ToList() });
+                    result.Add(new DictEntry { Key = kvp.Key, Values = NonBlank(kvp.Value) });
                 break;
             case JsonElement { ValueKind: JsonValueKind.Object } je:
                 foreach (var prop in je.EnumerateObject())
-                    result.Add(new DictEntry { Key = prop.Name, Values = CoerceToStringList(prop.Value) });
+                    result.Add(new DictEntry { Key = prop.Name, Values = NonBlank(CoerceToStringList(prop.Value)) });
                 break;
             case System.Collections.IDictionary idict:
                 foreach (System.Collections.DictionaryEntry entry in idict)
                     result.Add(new DictEntry
                     {
                         Key = entry.Key?.ToString() ?? "",
-                        Values = entry.Value != null ? CoerceToStringList(entry.Value) : new List<string>()
+                        Values = entry.Value != null ? NonBlank(CoerceToStringList(entry.Value)) : new List<string>()
                     });
                 break;
         }
         return result;
     }
+
+    private static List<string> NonBlank(IEnumerable<string> values) =>
+        values.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
 
     private void SyncDictDraft(PropertyMetadata prop)
     {
