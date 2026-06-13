@@ -7,9 +7,9 @@
 ## Implementation Tasks
 
 ### HTTP Handler (Read-Only)
-- [ ] GET /mush/bbs/boards → list boards (name, desc, post count, last post, read perms)
-- [ ] GET /mush/bbs/boards/{name}?page=&limit= → posts in board (id, author, subject, date)
-- [ ] GET /mush/bbs/posts/{board}/{id} → full post body (MString)
+- [ ] GET /http/bbs/boards → list boards (name, desc, post count, last post, read perms)
+- [ ] GET /http/bbs/boards/{name}?page=&limit= → posts in board (id, author, subject, date)
+- [ ] GET /http/bbs/posts/{board}/{id} → full post body (MString)
 - [ ] Permission check: requesting character's access vs board read lock
 - [ ] Filter board list to only boards character can read
 

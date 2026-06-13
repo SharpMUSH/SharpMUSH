@@ -33,6 +33,10 @@ public static class DatabaseConstants
 	public const string PackageRemotes = "sys_remotes";
 	public const string PackageRevisions = "sys_package_revisions";
 
+	// Dynamic Application registry (Area 21) — schema-driven pages/widgets an admin
+	// has linked into the portal. Not visible to softcode; travels with backups.
+	public const string Applications = "sys_applications";
+
 	public static readonly string[] verticesContainer = [Rooms, Players, Things];
 	public static readonly string[] verticesContent = [Players, Exits, Things];
 	public static readonly string[] verticesAll = [Rooms, Players, Exits, Things];

@@ -1,0 +1,157 @@
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Authorization
+@using SharpMUSH.Library.Models.Portal.Applications
+@using SharpMUSH.Library.Models.Portal.Widgets
+@inject ApplicationRegistryClient Registry
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_slug" Label="Slug" Required="true" Variant="Variant.Outlined"
+                              Disabled="@(!_isNew)" HelperText="URL key — /apps/{slug}. Cannot change after creation." />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_displayName" Label="Display name" Required="true" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="ApplicationKind" @bind-Value="_kind" Label="Kind" Variant="Variant.Outlined">
+                    <MudSelectItem T="ApplicationKind" Value="ApplicationKind.Page">Page (/apps/{slug})</MudSelectItem>
+                    <MudSelectItem T="ApplicationKind" Value="ApplicationKind.Widget">Widget (layout zone)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="PortalRole" @bind-Value="_minimumRole" Label="Minimum role" Variant="Variant.Outlined">
+                    @foreach (var role in Enum.GetValues<PortalRole>())
+                    {
+                        <MudSelectItem T="PortalRole" Value="role">@role</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_schemaUrl" Label="Schema URL" Required="true" Variant="Variant.Outlined"
+                              HelperText="HTTP-handler route returning the Portal Schema Document, e.g. http/chargen/schema" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_dataUrl" Label="Data URL (optional)" Variant="Variant.Outlined"
+                              HelperText="View display / form prefill data" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_submitRoute" Label="Submit route (optional)" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_icon" Label="Icon (optional)" Variant="Variant.Outlined"
+                              HelperText="MudBlazor Material icon string" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_navPlacement" Label="Nav placement (optional)" Variant="Variant.Outlined"
+                              HelperText="Set to show a Page app in nav" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_order" Label="Order" Variant="Variant.Outlined" />
+            </MudItem>
+            @if (_kind == ApplicationKind.Widget)
+            {
+                <MudItem xs="12">
+                    <MudSelect T="WidgetZone" @bind-SelectedValues="_zones" MultiSelection="true"
+                               Label="Allowed zones" Variant="Variant.Outlined">
+                        @foreach (var zone in Enum.GetValues<WidgetZone>())
+                        {
+                            <MudSelectItem T="WidgetZone" Value="zone">@zone</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            }
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_saving">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Save
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public PortalApplication? Existing { get; set; }
+
+    private bool _isNew;
+    private bool _saving;
+    private string _slug = "";
+    private string _displayName = "";
+    private string? _icon;
+    private ApplicationKind _kind = ApplicationKind.Page;
+    private string _schemaUrl = "";
+    private string? _dataUrl;
+    private string? _submitRoute;
+    private PortalRole _minimumRole = PortalRole.Player;
+    private string? _navPlacement;
+    private IReadOnlyCollection<WidgetZone> _zones = new HashSet<WidgetZone>();
+    private int _order;
+
+    protected override void OnInitialized()
+    {
+        _isNew = Existing is null;
+        if (Existing is not null)
+        {
+            _slug = Existing.Slug;
+            _displayName = Existing.DisplayName;
+            _icon = Existing.Icon;
+            _kind = Existing.KindEnum;
+            _schemaUrl = Existing.SchemaUrl;
+            _dataUrl = Existing.DataUrl;
+            _submitRoute = Existing.SubmitRoute;
+            _minimumRole = Existing.MinimumRoleEnum;
+            _navPlacement = Existing.NavPlacement;
+            _zones = Existing.ZoneEnums.ToHashSet();
+            _order = Existing.Order;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(_slug) || string.IsNullOrWhiteSpace(_displayName)
+            || string.IsNullOrWhiteSpace(_schemaUrl))
+        {
+            Snackbar.Add("Slug, display name, and schema URL are required.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        var model = new PortalApplication(
+            _slug.Trim(),
+            _displayName.Trim(),
+            string.IsNullOrWhiteSpace(_icon) ? null : _icon,
+            _kind.ToString(),
+            _schemaUrl.Trim(),
+            string.IsNullOrWhiteSpace(_dataUrl) ? null : _dataUrl,
+            string.IsNullOrWhiteSpace(_submitRoute) ? null : _submitRoute,
+            _minimumRole.ToString(),
+            string.IsNullOrWhiteSpace(_navPlacement) ? null : _navPlacement,
+            _zones.Select(z => z.ToString()).ToArray(),
+            _order);
+
+        var (ok, error) = await Registry.UpsertAsync(model);
+        _saving = false;
+
+        if (ok)
+        {
+            Snackbar.Add($"Saved {model.Slug}.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Save failed.", Severity.Error);
+        }
+    }
+}

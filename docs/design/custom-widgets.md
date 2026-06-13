@@ -162,6 +162,8 @@ Provide a `sharpmush-widget-template` repo:
   without full restart. Complex (assembly unloading) but nice for dev.
 - **Plugin manifest** (v2): JSON manifest in the DLL declaring dependencies,
   version compatibility, author. Portal validates compatibility before loading.
-- **Declarative widgets** (v2): JSON-defined widgets that don't need compiled
-  code: "fetch this URL, render response with this Mustache template."
-  Limited but zero-code for simple data display.
+- **Declarative widgets**: now specified by **Area 21 — Dynamic Applications**
+  (`dynamic-applications.md`). JSON-defined, zero-code widgets and full-page apps
+  whose UI is a softcode-served Portal Schema Document, with actions that POST to the
+  in-game HTTP handler. This supersedes the original "fetch a URL, render with a
+  Mustache template" sketch with a typed schema + action model.

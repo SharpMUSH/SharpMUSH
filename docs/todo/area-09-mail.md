@@ -5,11 +5,14 @@
 - [ ] Identify any decisions that need revision based on current codebase state
 
 ## Implementation Tasks
-- [ ] HTTP handler: GET /mush/mail/inbox (flat list, paginated, newest first)
-- [ ] HTTP handler: GET /mush/mail/{id} (full message, mark as read)
-- [ ] HTTP handler: POST /mush/mail/send (validate, route to game engine @mail)
-- [ ] HTTP handler: POST /mush/mail/{id}/delete
-- [ ] HTTP handler: POST /mush/mail/mark-read (bulk)
+> Note: mail shipped as a REST controller (`MailController`, `[Route("api/mail")]`), not the
+> `/http` softcode handler originally sketched here; the active character comes from the JWT.
+> Routes below reflect what was built — see `docs/design/mail-messaging.md`.
+- [ ] REST: GET /api/mail?folder=INBOX (folder messages, newest first)
+- [ ] REST: GET /api/mail/folders (folder names)
+- [ ] REST: GET /api/mail/{folder}/{number} (full message, mark as read)
+- [ ] REST: POST /api/mail (validate, route to game engine @mail)
+- [ ] REST: DELETE /api/mail/{folder}/{number}
 - [ ] NATS event on new mail (`portal.mail`)
 - [ ] SignalR push: new mail notification → badge + toast
 - [ ] Unread count: fetch on page load, update via SignalR

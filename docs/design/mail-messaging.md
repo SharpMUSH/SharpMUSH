@@ -34,27 +34,27 @@ overhaul required.
 attributes (or however SharpMUSH stores mail internally). The portal
 does NOT maintain a separate mail collection.
 
-**HTTP handler endpoints:**
+**REST API endpoints** (implemented as `MailController`, `[Route("api/mail")]`; the active
+character is taken from the JWT, not a query param — this was built as a REST controller,
+not an `/http` softcode handler):
 
 ```
-GET /mush/mail/inbox?character={dbref}&page=1&limit=25
-  → Flat list of messages, newest first
-  → Each message: id, from, to, subject, date, read/unread, body
+GET /api/mail?folder=INBOX
+  → Messages in a folder, newest first
+  → Each message: number, from, subject, date, read/unread, body
 
-GET /mush/mail/{message_id}?character={dbref}
-  → Full message body
-  → Marks as read
+GET /api/mail/folders
+  → The character's folder names
 
-POST /mush/mail/send
-  → { from: dbref, to: [names/dbrefs], subject: str, body: str }
-  → Validates permissions, sends via game engine
+GET /api/mail/{folder}/{number}
+  → Full message body; marks as read
 
-POST /mush/mail/{message_id}/delete?character={dbref}
-  → Deletes from character's mailbox
+POST /api/mail
+  → { to: [names/dbrefs], subject: str, body: str, urgent: bool }
+  → Validates permissions, sends via game engine @mail
 
-POST /mush/mail/mark-read
-  → { message_ids: [...] }
-  → Bulk mark as read
+DELETE /api/mail/{folder}/{number}
+  → Deletes from the character's mailbox
 ```
 
 ## Web Portal Mail UI

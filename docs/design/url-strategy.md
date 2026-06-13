@@ -35,6 +35,7 @@ non-API routes (standard WASM hosting pattern).
 /mail/compose               Compose new mail
 /play                       Game terminal (current character)
 /scenes/42/live             Live scene participation
+/apps/{slug}                Dynamic Application (schema-driven; role-gated per registry)
 /settings                   Account settings
 /settings/characters        Character management
 /settings/theme             Color/theme preference
@@ -58,8 +59,9 @@ non-API routes (standard WASM hosting pattern).
 
 ```
 /api/...                    REST endpoints (reads)
+/api/applications           Dynamic Application registry (admin, Wizard+)
 /hubs/game                  SignalR hub (WebSocket)
-/mush/...                   HTTP handler (game engine bridge)
+/http/...                   HTTP handler (game engine bridge; runs <METHOD> softcode)
 ```
 
 ## URL Conventions

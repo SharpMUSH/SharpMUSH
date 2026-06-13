@@ -1,0 +1,227 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Models.Applications
+@using Markdig
+
+@* Renders a read-only Portal Schema Document (kind:"view"). Pure renderer: all values and their
+   per-viewer visibility come from softcode via the data payload. See dynamic-applications.md. *@
+
+@if (Document?.Pages is null)
+{
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">Nothing to display.</MudText>
+}
+else
+{
+    @if (!string.IsNullOrWhiteSpace(Document.Title))
+    {
+        <MudText Typo="Typo.h5" Class="mb-4">@Document.Title</MudText>
+    }
+
+    @foreach (var page in Document.Pages.OrderBy(p => p.Order))
+    {
+        @if (!string.IsNullOrWhiteSpace(page.Title) && Document.Pages.Count > 1)
+        {
+            <MudText Typo="Typo.h6" Class="mt-2 mb-2">@(page.Title)</MudText>
+        }
+
+        @foreach (var section in (page.Sections ?? []).OrderBy(s => s.Order))
+        {
+            var elements = VisibleElements(section).ToList();
+            @if (elements.Count > 0)
+            {
+                <MudPaper Outlined="true" Class="pa-4 mb-4">
+                    @if (!string.IsNullOrWhiteSpace(section.Name))
+                    {
+                        <MudText Typo="Typo.h6" Class="mb-2">@section.Name</MudText>
+                    }
+                    @if (section.Columns > 1)
+                    {
+                        <MudGrid Spacing="3">
+                            @foreach (var element in elements)
+                            {
+                                <MudItem xs="12" md="@ColumnWidth(section.Columns, element.Span)">
+                                    @RenderElement(element)
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    }
+                    else
+                    {
+                        @foreach (var element in elements)
+                        {
+                            @RenderElement(element)
+                        }
+                    }
+                </MudPaper>
+            }
+        }
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public PortalSchemaDocument? Document { get; set; }
+
+    /// <summary>Data values keyed by field key (value + per-viewer visibility), à la the profile API.</summary>
+    [Parameter] public SchemaData? Data { get; set; }
+
+    private IEnumerable<SchemaElement> VisibleElements(SchemaSection section)
+        => (section.Elements ?? []).Where(IsVisible);
+
+    // Responsive width (out of 12) for one element in an N-column section, honoring its span.
+    private static int ColumnWidth(int columns, int span)
+        => Math.Clamp(12 / Math.Max(1, columns) * Math.Max(1, span), 1, 12);
+
+    // A field element shows only if its datum exists and the softcode marked it visible. Non-field
+    // display elements (markdown/divider/etc.) always show — they carry no per-viewer policy.
+    private bool IsVisible(SchemaElement element)
+    {
+        if (!string.Equals(element.Kind, "field", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(element.Kind, "keyvalue", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (element.Kind == "keyvalue")
+        {
+            return (element.Fields ?? []).Any(IsKeyVisible);
+        }
+
+        return element.Key is not null && IsKeyVisible(element.Key);
+    }
+
+    private bool IsKeyVisible(string key)
+        => Data?.Fields is not null
+           && Data.Fields.TryGetValue(key, out var v)
+           && v.Visible
+           && !string.IsNullOrEmpty(ValueToString(v.Value));
+
+    private RenderFragment RenderElement(SchemaElement element) => __builder =>
+    {
+        switch ((element.Kind ?? "field").ToLowerInvariant())
+        {
+            case "divider":
+                <MudDivider Class="my-2" />
+                break;
+
+            case "markdown":
+                <div>@((MarkupString)Markdown.ToHtml(element.Value ?? string.Empty))</div>
+                break;
+
+            case "image":
+                var src = element.SrcField is not null ? ValueToString(Lookup(element.SrcField)) : element.Value;
+                @if (!string.IsNullOrWhiteSpace(src))
+                {
+                    <MudImage Src="@src" Alt="@(element.Alt ?? string.Empty)" Fluid="true" Class="rounded" />
+                }
+                break;
+
+            case "table":
+                @RenderTable(element)
+                break;
+
+            case "keyvalue":
+                <MudSimpleTable Dense="true" Bordered="false" Elevation="0">
+                    <tbody>
+                        @foreach (var key in (element.Fields ?? []).Where(IsKeyVisible))
+                        {
+                            <tr>
+                                <td class="mud-text-secondary" style="width: 35%;">@key</td>
+                                <td>@ValueToString(Lookup(key))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+                break;
+
+            default: // "field"
+                var raw = ValueToString(element.Key is not null ? Lookup(element.Key) : null);
+                <div class="mb-2">
+                    @if (!string.IsNullOrWhiteSpace(element.Label))
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@element.Label</MudText>
+                    }
+                    @if (string.Equals(element.Type, "mstring", StringComparison.OrdinalIgnoreCase))
+                    {
+                        @* mstring fields carry ANSI/MXP markup — render it the way the terminal does. *@
+                        <div class="mud-typography mud-typography-body1">@((MarkupString)RenderMarkup(raw))</div>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body1">@raw</MudText>
+                    }
+                </div>
+                break;
+        }
+    };
+
+    private RenderFragment RenderTable(SchemaElement element) => __builder =>
+    {
+        var rows = element.RowsField is not null ? Lookup(element.RowsField) : null;
+        if (rows is not { ValueKind: JsonValueKind.Array } || element.Columns is null)
+        {
+            return;
+        }
+
+        <MudSimpleTable Dense="true" Striped="true">
+            <thead>
+                <tr>
+                    @foreach (var col in element.Columns)
+                    {
+                        <th>@col.Label</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in rows.Value.EnumerateArray())
+                {
+                    <tr>
+                        @foreach (var col in element.Columns)
+                        {
+                            <td>@(row.TryGetProperty(col.Key, out var cell) ? ValueToString(cell) : string.Empty)</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    };
+
+    private JsonElement? Lookup(string key)
+        => Data?.Fields is not null && Data.Fields.TryGetValue(key, out var v) ? v.Value : null;
+
+    // Render a serialized MString to safe HTML the way the terminal does
+    // (MarkupString library → AnsiMarkup.WrapAsHtmlClass). Falls back to HTML-encoded
+    // text when the value is not a serialized MString envelope.
+    private static string RenderMarkup(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            // Fully qualified: in a .razor file the bare "MarkupString" binds to Blazor's type.
+            return global::MarkupString.MarkupStringModule.deserialize(value).Render("html");
+        }
+        catch (Exception)
+        {
+            return System.Net.WebUtility.HtmlEncode(value);
+        }
+    }
+
+    /// <summary>Renders any JSON value as display text (strings unquoted, scalars as written).</summary>
+    internal static string ValueToString(JsonElement? value)
+    {
+        if (value is not { } element)
+        {
+            return string.Empty;
+        }
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString() ?? string.Empty,
+            JsonValueKind.Null or JsonValueKind.Undefined => string.Empty,
+            JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => element.ToString(),
+            _ => element.GetRawText()
+        };
+    }
+}

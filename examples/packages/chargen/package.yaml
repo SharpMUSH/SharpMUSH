@@ -1,0 +1,33 @@
+format: 1
+package: chargen
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Example Dynamic Application (Area 21) — a character-application form served as a Portal Schema Document over the HTTP verb routers."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [http, portal, application, form, chargen]
+requires_server: ">=0.1"
+
+# Requires the verb routers — its GET`*/POST`* routes are backtick children of the
+# GET/POST verbs that http-handler provides.
+depends:
+  - package: http-handler
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
+      path: http-handler/
+
+objects:
+  - ref: handler
+    target: "{{$http_handler}}"
+    attributes:
+      # ── Routes (children of http-handler's GET/POST verbs) ───────────────
+      # GET /http/chargen/schema — the form schema the portal renders. Pure literal json()
+      # so it is self-contained (no helper attributes) and validates standalone.
+      GET`CHARGEN`SCHEMA: |-
+        @respond/type application/json; think json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,Character Application),pages,json(array,json(object,key,json(string,main),title,json(string,Application),order,json(number,1),sections,json(array,json(object,name,json(string,About),order,json(number,1),elements,json(array,json(object,kind,json(string,field),key,json(string,charname),label,json(string,Character Name),type,json(string,text),validation,json(object,required,json(boolean,true),max_length,json(number,60))),json(object,kind,json(string,field),key,json(string,concept),label,json(string,Concept),type,json(string,text)),json(object,kind,json(string,field),key,json(string,class),label,json(string,Class),type,json(string,select),options,json(array,json(object,value,json(string,fighter),label,json(string,Fighter)),json(object,value,json(string,wizard),label,json(string,Wizard)),json(object,value,json(string,rogue),label,json(string,Rogue)))),json(object,kind,json(string,field),key,json(string,background),label,json(string,Background),type,json(string,mstring))))))),actions,json(object,submit,json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/chargen/submit),payload,json(string,fields),on_success,json(object,toast,json(string,Application submitted!)),on_error,json(object,bind_field_errors,json(boolean,true)))))
+
+      # POST /http/chargen/submit — validate and acknowledge. %1 = posted field JSON.
+      # Demonstration: requires a non-empty character name, returns the structured envelope.
+      POST`CHARGEN`SUBMIT: |-
+        @respond/type application/json; think firstof(if(not(t(edit(json_query(%1,get,charname),",))),json(object,ok,json(boolean,false),errors,json(object,charname,json(string,A character name is required.)))),json(object,ok,json(boolean,true),message,json(string,Application received. Staff will review it.),redirect,json(string,/characters)))

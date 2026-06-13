@@ -1,0 +1,111 @@
+@page "/admin/applications"
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Authorization
+@using SharpMUSH.Library.Models.Portal.Applications
+@using SharpMUSH.Library.Models.Portal.Widgets
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = nameof(PortalRole.Wizard))]
+@inject ApplicationRegistryClient Registry
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Dynamic Applications</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <div>
+            <MudText Typo="Typo.h4">Dynamic Applications</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                Link softcode-defined forms and views into the portal as pages or widgets (Area 21).
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@(() => Edit(null))">Register application</MudButton>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+    }
+    else if (_apps.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">No applications registered yet.</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="_apps" Hover="true" Dense="true">
+            <HeaderContent>
+                <MudTh>Slug</MudTh>
+                <MudTh>Name</MudTh>
+                <MudTh>Kind</MudTh>
+                <MudTh>Schema URL</MudTh>
+                <MudTh>Min role</MudTh>
+                <MudTh>Order</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Slug"><code>@context.Slug</code></MudTd>
+                <MudTd DataLabel="Name">@context.DisplayName</MudTd>
+                <MudTd DataLabel="Kind">@context.Kind</MudTd>
+                <MudTd DataLabel="Schema URL"><code>@context.SchemaUrl</code></MudTd>
+                <MudTd DataLabel="Min role">@context.MinimumRole</MudTd>
+                <MudTd DataLabel="Order">@context.Order</MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => Edit(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => Delete(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    private bool _loading = true;
+    private List<PortalApplication> _apps = [];
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _apps = (await Registry.ListAsync()).ToList();
+        _loading = false;
+    }
+
+    private async Task Edit(PortalApplication? existing)
+    {
+        var parameters = new DialogParameters<ApplicationEditDialog>
+        {
+            { x => x.Existing, existing }
+        };
+        var dialog = await DialogService.ShowAsync<ApplicationEditDialog>(
+            existing is null ? "Register application" : $"Edit {existing.Slug}", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task Delete(PortalApplication app)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Remove application",
+            $"Remove '{app.DisplayName}' ({app.Slug})? This only unlinks it from the portal; the softcode is untouched.",
+            yesText: "Remove", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            if (await Registry.DeleteAsync(app.Slug))
+            {
+                Snackbar.Add($"Removed {app.Slug}.", Severity.Success);
+                await LoadAsync();
+            }
+            else
+            {
+                Snackbar.Add("Failed to remove application.", Severity.Error);
+            }
+        }
+    }
+}
