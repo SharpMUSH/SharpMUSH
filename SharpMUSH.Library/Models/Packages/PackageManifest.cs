@@ -94,11 +94,20 @@ public enum PackageConfigureType
 	Boolean
 }
 
-/// <summary>An object the package manages.</summary>
+/// <summary>
+/// An object the package manages. Two modes: a <em>created</em> object (the
+/// package creates and owns it, with <see cref="Type"/>/<see cref="Name"/>/
+/// structure), or an <em>attach</em> object (decision 20.3 cross-object
+/// attribute ownership — when <see cref="Target"/> is set the object already
+/// exists, e.g. <c>{{$http_handler}}</c>, and the package only manages the
+/// declared attributes on it: it is never created, restructured, or
+/// destroyed).
+/// </summary>
 /// <param name="Ref">Abstract intra-package name (lowercase); other objects reference it as <c>{{ref}}</c>.</param>
-/// <param name="Type">The game object type to create.</param>
-/// <param name="Name">In-game object name.</param>
-/// <param name="Parent">Optional @parent, as a symbolic ref.</param>
+/// <param name="Type">The game object type to create (placeholder for attach objects).</param>
+/// <param name="Name">In-game object name (empty for attach objects).</param>
+/// <param name="Target">Attach mode: an existing object (<c>{{$well_known}}</c> or <c>{{?configure}}</c>) to manage attributes on, or null for a created object.</param>
+/// <param name="Parent">Optional @parent, as a symbolic ref (created objects only).</param>
 /// <param name="Location">Where the object lives: required for exits (source room), optional for things/players, forbidden for rooms.</param>
 /// <param name="Destination">Exit destination; exits only.</param>
 /// <param name="PreviousRefs">Former ref names of this object (rename continuity across versions, decision 20.15).</param>
@@ -109,13 +118,18 @@ public sealed record PackageObjectSpec(
 	string Ref,
 	PackageObjectType Type,
 	string Name,
+	PackageRef? Target,
 	PackageRef? Parent,
 	PackageRef? Location,
 	PackageRef? Destination,
 	IReadOnlyList<string> PreviousRefs,
 	IReadOnlyList<string> Flags,
 	IReadOnlyDictionary<string, string> Locks,
-	IReadOnlyDictionary<string, PackageAttributeSpec> Attributes);
+	IReadOnlyDictionary<string, PackageAttributeSpec> Attributes)
+{
+	/// <summary>True when this entry manages attributes on an existing object rather than creating one.</summary>
+	public bool IsAttach => Target is not null;
+}
 
 /// <summary>Game object types a package may create.</summary>
 public enum PackageObjectType

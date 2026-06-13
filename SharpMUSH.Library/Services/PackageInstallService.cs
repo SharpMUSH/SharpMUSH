@@ -63,17 +63,21 @@ public class PackageInstallService(
 			}
 		}
 
-		var live = await GatherLiveStateAsync(manifest, installedObjects, baselines, cancellationToken);
+		var wellKnown = await BuildWellKnownMapAsync(cancellationToken);
+		var live = await GatherLiveStateAsync(
+			manifest, installedObjects, baselines, wellKnown, configureAnswers, cancellationToken);
 
 		return new PackagePlanInputs(
 			manifest, installed, installedObjects, baselines, allInstalled, otherManaged, live,
-			await BuildWellKnownMapAsync(cancellationToken), configureAnswers, crossPackageObjids);
+			wellKnown, configureAnswers, crossPackageObjids);
 	}
 
 	private async Task<LivePackageState> GatherLiveStateAsync(
 		PackageManifest manifest,
 		IReadOnlyList<PackageObjectRecord> installedObjects,
 		IReadOnlyList<ManagedAttributeRecord> baselines,
+		IReadOnlyDictionary<string, string> wellKnown,
+		IReadOnlyDictionary<string, string> configureAnswers,
 		CancellationToken cancellationToken)
 	{
 		// Attributes of interest per objid: everything this package manages
@@ -96,8 +100,35 @@ public class PackageInstallService(
 
 		var installedByRef = installedObjects.ToDictionary(o => o.Ref, StringComparer.Ordinal);
 		var orphanObjids = installedObjects.Select(o => o.Objid).ToHashSet(StringComparer.Ordinal);
+		var attachObjids = new List<string>();
 		foreach (var obj in manifest.Objects)
 		{
+			// Attach objects (decision 20.3): resolve the existing target and
+			// read the attributes the manifest manages on it.
+			if (obj.Target is not null)
+			{
+				var targetObjid = obj.Target.Kind == PackageRefKind.WellKnown
+					? wellKnown.GetValueOrDefault(obj.Target.Name)
+					: configureAnswers.GetValueOrDefault(obj.Target.Name);
+				if (targetObjid is null)
+				{
+					continue;
+				}
+
+				attachObjids.Add(targetObjid);
+				foreach (var attrName in obj.Attributes.Keys)
+				{
+					Want(targetObjid, attrName);
+				}
+
+				foreach (var reference in PackageRefIndirection.RefsUsedIn(obj))
+				{
+					Want(targetObjid, PackageRefIndirection.AttributeNameFor(reference));
+				}
+
+				continue;
+			}
+
 			var record = installedByRef.GetValueOrDefault(obj.Ref)
 				?? obj.PreviousRefs.Select(r => installedByRef.GetValueOrDefault(r)).FirstOrDefault(r => r is not null);
 			if (record is null)
@@ -120,7 +151,10 @@ public class PackageInstallService(
 		}
 
 		var states = new Dictionary<string, LiveObjectState>(StringComparer.Ordinal);
-		foreach (var objid in installedObjects.Select(o => o.Objid).Concat(baselines.Select(b => b.Objid)).Distinct())
+		foreach (var objid in installedObjects.Select(o => o.Objid)
+			.Concat(baselines.Select(b => b.Objid))
+			.Concat(attachObjids)
+			.Distinct())
 		{
 			states[objid] = await ReadLiveObjectAsync(
 				objid,
@@ -185,6 +219,15 @@ public class PackageInstallService(
 		await AddAsync(WellKnownRefs.MasterRoom, options.MasterRoom, 2);
 		await AddAsync(WellKnownRefs.PlayerStart, options.PlayerStart, 0);
 		await AddAsync(WellKnownRefs.PackageManager, options.PackageManager, 3);
+
+		// http_handler is optional (nullable, no fixed fallback) — only mapped
+		// when configured, so a package targeting {{$http_handler}} on a game
+		// without one fails to resolve rather than guessing a dbref.
+		if (options.HttpHandler is > 0)
+		{
+			await AddAsync(WellKnownRefs.HttpHandler, options.HttpHandler, options.HttpHandler.Value);
+		}
+
 		return map;
 	}
 
@@ -234,6 +277,20 @@ public class PackageInstallService(
 			is PackageObjectAction.NoChange or PackageObjectAction.UpdateMetadata or PackageObjectAction.Rename))
 		{
 			objidByRef[change.Ref] = change.Objid!;
+		}
+
+		// Attach objects (decision 20.3): the target must already exist; we
+		// never create it, so an unresolved target is a hard apply error.
+		foreach (var change in changeset.Objects.Where(c => c.Action == PackageObjectAction.Attach))
+		{
+			if (change.Objid is null || await GetKnownAsync(change.Objid, cancellationToken) is null)
+			{
+				return new Error<string>(
+					$"Attach target for {{{{{change.Ref}}}}} ({change.Name}) does not resolve to an existing object; "
+					+ "configure it or check the http_handler setting before applying.");
+			}
+
+			objidByRef[change.Ref] = change.Objid;
 		}
 
 		string? Resolve(PackageRef reference) => reference switch
@@ -335,7 +392,10 @@ public class PackageInstallService(
 			await registry.RemovePackageObjectAsync(manifest.Name, change.RenamedFromRef!);
 		}
 
-		foreach (var spec in manifest.Objects)
+		// Attach objects are NOT recorded here — the package does not own them.
+		// Their managed attributes live in sys_managed_attributes, which is what
+		// uninstall clears (without destroying the object). Decision 20.3.
+		foreach (var spec in manifest.Objects.Where(o => !o.IsAttach))
 		{
 			await registry.UpsertPackageObjectAsync(new PackageObjectRecord(
 				manifest.Name, spec.Ref, objidByRef[spec.Ref], spec.Type.ToString().ToLowerInvariant()));

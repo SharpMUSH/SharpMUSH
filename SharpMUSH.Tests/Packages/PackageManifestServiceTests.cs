@@ -805,6 +805,123 @@ public class PackageManifestServiceTests
 
 	#endregion
 
+	#region Attach mode (decision 20.3)
+
+	[Test]
+	public async Task AttachObject_Parses_TargetAndAttributesOnly()
+	{
+		var result = _service.ParseManifest(
+			"""
+			package: hooks
+			version: "1.0"
+			objects:
+			  - ref: handler
+			    target: "{{$http_handler}}"
+			    attributes:
+			      GET: |-
+			        think hello
+			""");
+
+		await Assert.That(result.IsT0).IsTrue();
+		var obj = result.AsT0.Manifest.Objects.Single();
+		await Assert.That(obj.IsAttach).IsTrue();
+		await Assert.That(obj.Target).IsEqualTo(new PackageRef(PackageRefKind.WellKnown, "http_handler"));
+		await Assert.That(obj.Attributes.ContainsKey("GET")).IsTrue();
+	}
+
+	[Test]
+	public async Task AttachObject_RejectsCreationOnlyKeys()
+	{
+		var result = _service.ParseManifest(
+			"""
+			package: hooks
+			version: "1.0"
+			objects:
+			  - ref: handler
+			    target: "{{$http_handler}}"
+			    type: thing
+			    name: Nope
+			    flags: [wizard]
+			    attributes:
+			      GET: |-
+			        think hi
+			""");
+
+		await Assert.That(result.IsT1).IsTrue();
+		var paths = result.AsT1.Errors.Select(e => e.Path).ToList();
+		await Assert.That(paths).Contains("objects[0].type");
+		await Assert.That(paths).Contains("objects[0].name");
+		await Assert.That(paths).Contains("objects[0].flags");
+	}
+
+	[Test]
+	public async Task AttachObject_TargetMustBeWellKnownOrConfigure()
+	{
+		var internalTarget = _service.ParseManifest(
+			"""
+			package: hooks
+			version: "1.0"
+			objects:
+			  - ref: other
+			    type: thing
+			    name: Other
+			  - ref: handler
+			    target: "{{other}}"
+			    attributes:
+			      GET: |-
+			        think hi
+			""");
+		await Assert.That(internalTarget.IsT1).IsTrue();
+		await Assert.That(internalTarget.AsT1.Errors.Any(e => e.Path == "objects[1].target")).IsTrue();
+
+		var configureTarget = _service.ParseManifest(
+			"""
+			package: hooks
+			version: "1.0"
+			configure:
+			  store:
+			    label: "Storage"
+			objects:
+			  - ref: handler
+			    target: "{{?store}}"
+			    attributes:
+			      GET: |-
+			        think get({{?store}}/X)
+			""");
+		await Assert.That(configureTarget.IsT0).IsTrue();
+	}
+
+	[Test]
+	public async Task AttachObject_RequiresAttributes_AndValidTarget()
+	{
+		var noAttrs = _service.ParseManifest(
+			"""
+			package: hooks
+			version: "1.0"
+			objects:
+			  - ref: handler
+			    target: "{{$http_handler}}"
+			""");
+		await Assert.That(noAttrs.IsT1).IsTrue();
+		await Assert.That(noAttrs.AsT1.Errors.Any(e => e.Path == "objects[0].attributes")).IsTrue();
+
+		var badTarget = _service.ParseManifest(
+			"""
+			package: hooks
+			version: "1.0"
+			objects:
+			  - ref: handler
+			    target: "not-a-ref"
+			    attributes:
+			      GET: |-
+			        think hi
+			""");
+		await Assert.That(badTarget.IsT1).IsTrue();
+		await Assert.That(badTarget.AsT1.Errors.Any(e => e.Path == "objects[0].target")).IsTrue();
+	}
+
+	#endregion
+
 	#region Ref indirection (decision 20.21)
 
 	[Test]

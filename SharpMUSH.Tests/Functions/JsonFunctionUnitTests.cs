@@ -78,8 +78,7 @@ public class JsonFunctionUnitTests
 	[Test]
 	public async Task SeededProfileSchema_EvaluatesToValidJson()
 	{
-		var code = SharpMUSH.Server.Services.DefaultProfileHandlerSoftcode.Attributes
-			.First(a => a.Attribute == "GET`PROFILE`SCHEMA").Code;
+		var code = SharpMUSH.Server.Services.BundledHttpHooks.Attribute("GET`PROFILE`SCHEMA");
 		var jsonExpression = code[(code.IndexOf("think ", StringComparison.Ordinal) + "think ".Length)..];
 		var result = (await Parser.FunctionParse(MModule.single(jsonExpression)))?.Message?.ToString() ?? string.Empty;
 

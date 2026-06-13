@@ -51,7 +51,10 @@ public enum PackageObjectAction
 	RecreateMissing,
 
 	/// <summary>Object was removed from the package; propose destroying it.</summary>
-	Delete
+	Delete,
+
+	/// <summary>Attach mode (decision 20.3): manage attributes on an existing object the package does not create or own.</summary>
+	Attach
 }
 
 /// <summary>One object-level action.</summary>

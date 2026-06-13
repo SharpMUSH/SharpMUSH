@@ -153,6 +153,51 @@ public class PackagePlanServiceTests
 
 	#endregion
 
+	#region Attach mode (decision 20.3)
+
+	[Test]
+	public async Task AttachObject_ManagesAttrsOnExistingTarget_NoCreateNoDelete()
+	{
+		var manifest = Parse(
+			"""
+			package: hooks
+			version: "1.0"
+			objects:
+			  - ref: handler
+			    target: "{{$http_handler}}"
+			    attributes:
+			      GET: |-
+			        think routed
+			""");
+
+		// http_handler well-known resolves to an existing live object #4.
+		var inputs = new PackagePlanInputs(
+			manifest, null, [], [], [], [],
+			new LivePackageState(new Dictionary<string, LiveObjectState>
+			{
+				["#4:7"] = new("#4:7", true, "HTTP Handler", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
+			}),
+			new Dictionary<string, string> { ["room_zero"] = "#0:0", ["http_handler"] = "#4:7" },
+			new Dictionary<string, string>(),
+			new Dictionary<string, string>());
+
+		var changeset = _service.ComputeChangeset(inputs);
+
+		// One Attach object action, no Create/Delete; objid is the existing target.
+		var objchange = changeset.Objects.Single();
+		await Assert.That(objchange.Action).IsEqualTo(PackageObjectAction.Attach);
+		await Assert.That(objchange.Objid).IsEqualTo("#4:7");
+		await Assert.That(changeset.Objects.Any(o => o.Action == PackageObjectAction.Create)).IsFalse();
+
+		// The attribute is created on the target.
+		var attr = changeset.Attributes.Single(a => a.Attribute == "GET");
+		await Assert.That(attr.Action).IsEqualTo(PackageAttributeAction.Create);
+		await Assert.That(attr.Objid).IsEqualTo("#4:7");
+		await Assert.That(attr.NewValue).IsEqualTo("think routed");
+	}
+
+	#endregion
+
 	#region Three-way truth table
 
 	private PackageChangeset UpgradeWith(string? baseValue, string? liveValue, string newValue = "value-new")

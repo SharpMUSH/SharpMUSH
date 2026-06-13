@@ -76,6 +76,13 @@ public partial class PackagePlanService : IPackagePlanService
 
 	// ── Objects (decision 20.15: renames never become destroy+create) ──────
 
+	private static string? ResolveTargetObjid(PackageRef target, PackagePlanInputs inputs) => target.Kind switch
+	{
+		PackageRefKind.WellKnown => inputs.WellKnownObjids.GetValueOrDefault(target.Name),
+		PackageRefKind.Configure => inputs.ConfigureAnswers.GetValueOrDefault(target.Name),
+		_ => null
+	};
+
 	private static (List<PackageObjectChange> Changes, Dictionary<string, string> ObjidByRef, HashSet<string> DeletedObjids)
 		ClassifyObjects(PackagePlanInputs inputs, List<string> notes)
 	{
@@ -86,6 +93,30 @@ public partial class PackagePlanService : IPackagePlanService
 
 		foreach (var obj in inputs.Manifest.Objects)
 		{
+			// Attach mode (decision 20.3): the target object already exists; we
+			// only manage its attributes — never create, restructure, or delete it.
+			if (obj.Target is not null)
+			{
+				var targetObjid = ResolveTargetObjid(obj.Target, inputs);
+				if (targetObjid is null)
+				{
+					notes.Add($"Attach target {obj.Target} for {{{{{obj.Ref}}}}} is not resolved yet (answer its configure prompt before applying).");
+					changes.Add(new PackageObjectChange(obj.Ref, PackageObjectAction.Attach, obj.Type, obj.Target.ToString()));
+					continue;
+				}
+
+				var targetLive = inputs.Live.Objects.GetValueOrDefault(targetObjid);
+				if (targetLive is null || !targetLive.Exists)
+				{
+					notes.Add($"Attach target {obj.Target} ({targetObjid}) for {{{{{obj.Ref}}}}} does not exist on this game; it cannot be created.");
+				}
+
+				objidByRef[obj.Ref] = targetObjid;
+				changes.Add(new PackageObjectChange(
+					obj.Ref, PackageObjectAction.Attach, obj.Type, targetLive?.Name ?? obj.Target.ToString(), targetObjid));
+				continue;
+			}
+
 			if (installedByRef.TryGetValue(obj.Ref, out var installed))
 			{
 				consumedInstalledRefs.Add(obj.Ref);

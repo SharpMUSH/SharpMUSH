@@ -155,6 +155,30 @@ Rules, all enforced at parse time:
 - **Things/players** may declare `location:`; without one they land in the
   Package Manager wizard's inventory.
 
+### Attach mode: managing attributes on an existing object
+
+Some packages need to manage the *softcode on a core object they don't create*
+— e.g. the configured HTTP handler, the master room. An object entry with a
+`target:` ref is an **attach object**: the package manages only its declared
+attributes and never creates, restructures, or destroys it.
+
+```yaml
+objects:
+  - ref: handler
+    target: "{{$http_handler}}"   # an existing {{$well_known}} or {{?configure}} object
+    attributes:
+      GET: |-
+        think routed
+```
+
+- Only `ref`, `target`, and `attributes` are allowed — no
+  `type`/`name`/`parent`/`location`/`destination`/`flags`/`locks`.
+- The `target` must resolve to an object that already exists (the package can't
+  create it); a `{{$well_known}}` or `{{?configure}}` ref.
+- The package records the managed attributes (so upgrades three-way-merge and
+  uninstall removes them) but **not** the object — uninstall leaves it in place.
+- The `http-hooks` example is the canonical attach package.
+
 ### Versions and constraints
 
 Versions are SemVer: `MAJOR[.MINOR[.PATCH]][-prerelease]` (`2.4.1`, `1.0`,

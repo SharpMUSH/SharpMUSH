@@ -121,7 +121,7 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 		// %0 = raw request body and formq()-decoded %q<form.*> registers ambient. (POST is used
 		// because the in-memory test transport only forwards request bodies for standard
 		// body-carrying methods.)
-		await SeedHandlerAttribute("POST", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("POST"));
+		await SeedHandlerAttribute("POST", SharpMUSH.Server.Services.BundledHttpHooks.Attribute("POST"));
 		await SeedHandlerAttribute("POST`API`USERS",
 			"think hello=%q<form.name> body=%0 fields=%q<fields> attrpath=%q<attrpath>; @respond 200 Routed");
 
@@ -143,7 +143,7 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 	{
 		// The router @asserts the mapped sub-attribute exists; an unrouted path answers a clean
 		// 404 instead of leaking @include's error text into a 200 body.
-		await SeedHandlerAttribute("DELETE", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("DELETE"));
+		await SeedHandlerAttribute("DELETE", SharpMUSH.Server.Services.BundledHttpHooks.Attribute("DELETE"));
 
 		var http = factory.CreateHttpClient();
 		var response = await http.DeleteAsync("http/no/such/route");
@@ -159,7 +159,7 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 		// 404. The request uses the canonical "http" (no trailing slash): CanonicalUrlMiddleware
 		// 301-strips trailing slashes, and the test client's redirect handler re-issues redirected
 		// requests as GET, which would hit the wrong verb attribute.
-		await SeedHandlerAttribute("DELETE", SharpMUSH.Server.Services.DefaultHttpVerbSoftcode.CodeFor("DELETE"));
+		await SeedHandlerAttribute("DELETE", SharpMUSH.Server.Services.BundledHttpHooks.Attribute("DELETE"));
 
 		var http = factory.CreateHttpClient();
 		var response = await http.DeleteAsync("http");

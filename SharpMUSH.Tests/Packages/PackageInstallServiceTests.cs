@@ -208,6 +208,63 @@ public class PackageInstallServiceTests
 	}
 
 	[Test, NotInParallel]
+	public async Task AttachObject_ManagesAttrsOnExistingObject_UninstallLeavesObject()
+	{
+		// Attach mode (decision 20.3): a package that manages attributes on an
+		// object it does not own. Uses a {{?configure}} target so it's isolated
+		// from the shared http_handler. Mirrors how http-hooks attaches to #4.
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(3))).Known();
+		var pm = pmNode.Match(p => p, _ => null!, _ => null!, _ => null!);
+		var location = pmNode.Match<SharpMUSH.Library.DiscriminatedUnions.AnySharpContainer>(
+			p => p, _ => null!, _ => null!, t => t);
+
+		// A pre-existing object the package will attach to (not created by it).
+		var hostDbref = await Database.CreateThingAsync("Attach Host", location, pm, location);
+		await Database.SetAttributeAsync(hostDbref, ["PRE_EXISTING"], MModule.single("untouched"), pm);
+		var hostObjid = (await Database.GetObjectNodeAsync(hostDbref)).Known().Object().DBRef.ToString();
+
+		var manifest = Parse(
+			"""
+			package: attach-pkg
+			version: "1.0"
+			configure:
+			  host:
+			    label: "Object to attach to"
+			objects:
+			  - ref: handler
+			    target: "{{?host}}"
+			    attributes:
+			      CMD_X: |-
+			        $+x:@pemit %#=managed
+			""");
+
+		var answers = new Dictionary<string, string> { ["host"] = hostObjid };
+		var install = await Installer.ApplyAsync(manifest, new PackageApplyRequest(Source(), answers, []));
+		await Assert.That(install.IsT0).IsTrue();
+		// Attach mode created no owned objects.
+		await Assert.That(install.AsT0.CreatedObjects.Count).IsEqualTo(0);
+
+		// The attribute landed on the existing host; its own attrs are untouched.
+		await Assert.That(await ReadAttributeAsync(hostObjid, "CMD_X")).IsEqualTo("$+x:@pemit %#=managed");
+		await Assert.That(await ReadAttributeAsync(hostObjid, "PRE_EXISTING")).IsEqualTo("untouched");
+
+		// The package owns the attribute (sys_managed_attributes) but NOT the
+		// object (sys_package_objects is empty — attach mode).
+		await Assert.That((await Registry.GetPackageObjectsAsync("attach-pkg")).Count).IsEqualTo(0);
+		var managed = await Registry.GetManagedAttributesAsync("attach-pkg");
+		await Assert.That(managed.Single().Objid).IsEqualTo(hostObjid);
+		await Assert.That(managed.Single().Attribute).IsEqualTo("CMD_X");
+
+		// Uninstall removes the managed attribute but leaves the host object —
+		// it is not the package's to destroy.
+		await Assert.That((await Installer.UninstallAsync("attach-pkg")).IsT0).IsTrue();
+		await Assert.That(await ReadAttributeAsync(hostObjid, "CMD_X")).IsEqualTo("");
+		await Assert.That(await ReadAttributeAsync(hostObjid, "PRE_EXISTING")).IsEqualTo("untouched");
+		var hostStillThere = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(hostObjid)!.Value);
+		await Assert.That(hostStillThere.IsNone()).IsFalse();
+	}
+
+	[Test, NotInParallel]
 	public async Task Uninstall_BlockedByDependents_UnlessForced()
 	{
 		var basePkg = Parse(

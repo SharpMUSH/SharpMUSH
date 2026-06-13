@@ -32,7 +32,12 @@ public partial class PackageManifestService : IPackageManifestService
 
 	private static readonly IReadOnlySet<string> KnownObjectKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
-		"ref", "type", "name", "parent", "location", "destination", "previous_refs", "flags", "locks", "attributes"
+		"ref", "type", "name", "target", "parent", "location", "destination", "previous_refs", "flags", "locks", "attributes"
+	};
+
+	private static readonly IReadOnlySet<string> AttachForbiddenKeys = new HashSet<string>(StringComparer.Ordinal)
+	{
+		"type", "name", "parent", "location", "destination", "previous_refs", "flags", "locks"
 	};
 
 	private const int MaxPackageIdLength = 64;
@@ -773,6 +778,19 @@ public partial class PackageManifestService : IPackageManifestService
 				continue;
 			}
 
+			// Attach mode (decision 20.3): manage attributes on an existing
+			// object (well-known or configure) instead of creating one.
+			if (obj.ContainsKey("target"))
+			{
+				var attachSpec = ReadAttachObject(obj, refName, path, issues);
+				if (attachSpec is not null)
+				{
+					objects.Add(attachSpec);
+				}
+
+				continue;
+			}
+
 			var typeText = obj.GetValueOrDefault("type") as string;
 			if (typeText is null || !Enum.TryParse<PackageObjectType>(typeText, ignoreCase: true, out var type))
 			{
@@ -831,10 +849,53 @@ public partial class PackageManifestService : IPackageManifestService
 			var attributes = ReadAttributes(obj, path, issues);
 
 			objects.Add(new PackageObjectSpec(
-				refName, type, objectName.Trim(), parent, location, destination, previousRefs, flags, locks, attributes));
+				refName, type, objectName.Trim(), null, parent, location, destination, previousRefs, flags, locks, attributes));
 		}
 
 		return objects;
+	}
+
+	/// <summary>
+	/// Parses an attach-mode object: a <c>target</c> ref plus attributes only.
+	/// Creation-only keys (type/name/parent/location/destination/flags/locks/
+	/// previous_refs) are rejected — an attach object manages attributes on an
+	/// existing object and never restructures or destroys it.
+	/// </summary>
+	private static PackageObjectSpec? ReadAttachObject(
+		Dictionary<string, object?> obj, string refName, string path, List<PackageManifestIssue> issues)
+	{
+		foreach (var key in obj.Keys.Where(AttachForbiddenKeys.Contains))
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.{key}",
+				$"'{key}' is not allowed on a 'target' (attach) object — attach objects manage only attributes."));
+		}
+
+		var target = PackageRefScanner.ParseSingle(obj.GetValueOrDefault("target") as string ?? "");
+		if (target is null)
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.target",
+				"'target' must be a single ref ({{$well_known}} or {{?configure}})."));
+			return null;
+		}
+
+		if (target.Kind is not (PackageRefKind.WellKnown or PackageRefKind.Configure))
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.target",
+				$"'target' must be a {{{{$well_known}}}} or {{{{?configure}}}} ref, not '{target}'."));
+			return null;
+		}
+
+		var attributes = ReadAttributes(obj, path, issues);
+		if (attributes.Count == 0)
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.attributes",
+				"An attach object must declare at least one attribute."));
+			return null;
+		}
+
+		return new PackageObjectSpec(
+			refName, PackageObjectType.Thing, "", target, null, null, null, [], [],
+			new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), attributes);
 	}
 
 	private static PackageRef? ReadRefField(
@@ -1031,7 +1092,7 @@ public partial class PackageManifestService : IPackageManifestService
 			var path = $"objects[{i}]";
 
 			foreach (var (fieldName, reference) in new[]
-				{ ("parent", obj.Parent), ("location", obj.Location), ("destination", obj.Destination) })
+				{ ("target", obj.Target), ("parent", obj.Parent), ("location", obj.Location), ("destination", obj.Destination) })
 			{
 				if (reference is not null)
 				{

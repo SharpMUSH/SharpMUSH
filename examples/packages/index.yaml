@@ -19,3 +19,7 @@ packages:
     package: starter-area
     version: 1.0.0
     description: Two rooms and linked exits
+  - path: http-hooks/
+    package: http-hooks
+    version: 1.0.0
+    description: Default inbound HTTP handler — verb routers + profile API (attach mode)

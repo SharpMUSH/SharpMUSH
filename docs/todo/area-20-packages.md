@@ -167,7 +167,12 @@
 - [x] who-where package (+who, +where) — published and tagged who-where/v1.2.0
 - [ ] events package — GATED on events system (area 17)
 - [ ] finger package — straightforward once profile attrs settle (area 6)
-- [ ] http-hooks package — GATED on stabilizing the HTTP handler event-object contract
+- [x] http-hooks package — DONE. The default HTTP verb routers + read-only
+      profile/character-directory API, delivered as an attach-mode package
+      (`examples/packages/http-hooks/`, published + tagged http-hooks/v1.0.0).
+      Replaces the hardcoded DefaultHttpVerbSoftcode/DefaultProfileHandlerSoftcode
+      C# seeding; the bootstrap now installs the bundled package at first boot.
+      Proof of concept for the package manager owning a core system's softcode.
 - [x] Each published package: manifest, README, validated in CI; install verified by
       the apply-engine e2e suite
 
@@ -198,6 +203,20 @@
 - [x] Structural fields and locks keep direct dbref resolution (not function-evaluated)
 - [x] Registry + install e2e suites verified on SurrealDB and Memgraph providers
       (`SHARPMUSH_DATABASE_PROVIDER=surrealdb|memgraph`)
+
+### Iteration: Attach mode + http-hooks proof of concept (decision 20.3)
+- [x] Manifest `target:` (attach) objects — manage attributes on an existing
+      well-known/configure object without creating, restructuring, or destroying it
+- [x] `http_handler` well-known ref (resolved from the http_handler config option)
+- [x] Plan/apply/uninstall: attach objects record managed attributes but not
+      ownership; uninstall clears attrs and leaves the object in place
+- [x] `http-hooks` package authored (single source of truth for default handler
+      softcode); `DefaultHttpHandlerBootstrapService` rewritten to install the
+      bundled package; old hardcoded softcode C# files deleted
+- [x] Tests: attach-mode parse/plan unit tests; isolated attach apply/uninstall
+      integration test; live "handler is package-managed" + endpoint-serves tests;
+      all existing HTTP/profile integration tests still pass (behavior identical),
+      verified on ArangoDB + SurrealDB + Memgraph
 
 ## Deferred to v2 (post-merge polish)
 - [ ] Dependency graph visualization (deps render as text/blockers today)
