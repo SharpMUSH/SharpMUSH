@@ -1,0 +1,43 @@
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models.Portal.Applications
+@inject ApplicationRegistryClient Registry
+
+@* Dynamic nav links for registered full-page applications the current user may access. Page apps
+   with a NavPlacement appear here; widget apps are placed via the layout editor instead. *@
+
+@foreach (var app in _apps)
+{
+    <MudNavLink Href="@($"/apps/{app.Slug}")"
+                Icon="@(string.IsNullOrWhiteSpace(app.Icon) ? Icons.Material.Filled.Apps : app.Icon)"
+                IconColor="Color.Secondary">
+        @if (!IsCollapsed)
+        {
+            <text>@app.DisplayName</text>
+        }
+    </MudNavLink>
+}
+
+@code {
+    [Parameter] public bool IsCollapsed { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private IReadOnlyList<PortalApplication> _apps = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var role = AuthState is null
+            ? SharpMUSH.Library.Authorization.PortalRole.Guest
+            : PortalRoleHelper.CurrentRole((await AuthState).User);
+
+        var all = await Registry.ListAsync();
+        _apps = all
+            .Where(a => a.KindEnum == ApplicationKind.Page
+                        && !string.IsNullOrWhiteSpace(a.NavPlacement)
+                        && role >= a.MinimumRoleEnum)
+            .OrderBy(a => a.Order)
+            .ThenBy(a => a.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+}

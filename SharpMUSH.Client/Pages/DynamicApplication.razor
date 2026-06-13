@@ -1,0 +1,86 @@
+@page "/apps/{Slug}"
+@using SharpMUSH.Client.Components.Schema
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Authorization
+@inject ApplicationRegistryClient Registry
+@inject SchemaAppService Schema
+
+@* Renders a full-page Dynamic Application (Area 21): resolves the registry entry, fetches its
+   softcode-served Portal Schema Document, role-gates it, and picks the form or view renderer. *@
+
+<PageTitle>@(_app?.DisplayName ?? "Application")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+    }
+    else if (_app is null)
+    {
+        <MudAlert Severity="Severity.Warning">No application is registered at <code>/apps/@Slug</code>.</MudAlert>
+    }
+    else if (!_authorized)
+    {
+        <MudAlert Severity="Severity.Error">You do not have access to this application.</MudAlert>
+    }
+    else if (_schema is null)
+    {
+        <MudAlert Severity="Severity.Error">
+            The application's schema could not be loaded. The softcode handler at
+            <code>@_app.SchemaUrl</code> may be missing or returning invalid JSON.
+        </MudAlert>
+    }
+    else if (_schema.IsForm)
+    {
+        <SchemaFormRenderer Document="_schema" Data="_data" />
+    }
+    else
+    {
+        <SchemaViewRenderer Document="_schema" Data="_data" />
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public string Slug { get; set; } = string.Empty;
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private bool _loading = true;
+    private bool _authorized;
+    private PortalApplication? _app;
+    private PortalSchemaDocument? _schema;
+    private SchemaData? _data;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _app = await Registry.GetAsync(Slug);
+
+        if (_app is not null)
+        {
+            _authorized = await IsAuthorizedAsync(_app.MinimumRoleEnum);
+            if (_authorized)
+            {
+                _schema = await Schema.GetSchemaAsync(_app.SchemaUrl);
+                if (!string.IsNullOrWhiteSpace(_app.DataUrl))
+                {
+                    _data = await Schema.GetDataAsync(_app.DataUrl!);
+                }
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task<bool> IsAuthorizedAsync(PortalRole minimum)
+    {
+        if (AuthState is null)
+        {
+            return minimum <= PortalRole.Guest;
+        }
+
+        var state = await AuthState;
+        return PortalRoleHelper.Meets(state.User, minimum);
+    }
+}

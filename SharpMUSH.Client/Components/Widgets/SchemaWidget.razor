@@ -1,0 +1,68 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Components.Schema
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@inject SchemaAppService Schema
+
+@* A schema-driven widget (Area 21). Its config carries { schemaUrl, dataUrl }; it renders the
+   softcode-served Portal Schema Document with the same renderers the full-page route uses. *@
+
+@if (_loading)
+{
+    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+}
+else if (_schema is null)
+{
+    <MudText Typo="Typo.caption" Class="mud-text-secondary">Widget schema unavailable.</MudText>
+}
+else if (_schema.IsForm)
+{
+    <SchemaFormRenderer Document="_schema" Data="_data" />
+}
+else
+{
+    <SchemaViewRenderer Document="_schema" Data="_data" />
+}
+
+@code {
+    [Parameter] public JsonElement? Config { get; set; }
+
+    /// <summary>Injected by ZoneRenderer; declared so DynamicComponent does not throw on the extra parameter.</summary>
+    [Parameter] public string Zone { get; set; } = string.Empty;
+
+    private bool _loading = true;
+    private PortalSchemaDocument? _schema;
+    private SchemaData? _data;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _schema = null;
+        _data = null;
+
+        var schemaUrl = ConfigString("schemaUrl");
+        if (!string.IsNullOrWhiteSpace(schemaUrl))
+        {
+            _schema = await Schema.GetSchemaAsync(schemaUrl!);
+            var dataUrl = ConfigString("dataUrl");
+            if (!string.IsNullOrWhiteSpace(dataUrl))
+            {
+                _data = await Schema.GetDataAsync(dataUrl!);
+            }
+        }
+
+        _loading = false;
+    }
+
+    private string? ConfigString(string property)
+    {
+        if (Config is not { } config || config.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return config.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+    }
+}

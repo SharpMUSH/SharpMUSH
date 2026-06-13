@@ -54,6 +54,9 @@
             @if (!IsCollapsed) { <text>@Loc["Help"]</text> }
         </MudNavLink>
 
+        @* Registered full-page Dynamic Applications (Area 21), role-filtered. *@
+        <ApplicationNavLinks IsCollapsed="IsCollapsed" />
+
         <MudDivider Class="my-2"/>
 
         <MudNavLink Href="/account" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Secondary">
@@ -69,6 +72,7 @@
             <MudNavGroup Title="@Loc["AdminPanel"].Value" Icon="@Icons.Material.Filled.AdminPanelSettings" IconColor="Color.Secondary" Expanded="false">
                 <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Tune">@Loc["Config"]</MudNavLink>
                 <MudNavLink Href="/admin/packages" Icon="@Icons.Material.Filled.Inventory2">Packages</MudNavLink>
+                <MudNavLink Href="/admin/applications" Icon="@Icons.Material.Filled.Apps">Applications</MudNavLink>
                 <MudNavLink Href="/admin/profiles" Icon="@Icons.Material.Filled.Badge">@Loc["ProfileHandler"]</MudNavLink>
                 <MudNavLink Href="/admin/suggestions" Icon="@Icons.Material.Filled.Lightbulb">@Loc["Suggestions"]</MudNavLink>
                 <MudNavLink Href="/security" Icon="@Icons.Material.Filled.Security">@Loc["Security"]</MudNavLink>
@@ -80,6 +84,7 @@
                expanded admin group: every destination remains reachable as an icon. *@
             <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Tune" IconColor="Color.Secondary" />
             <MudNavLink Href="/admin/packages" Icon="@Icons.Material.Filled.Inventory2" IconColor="Color.Secondary" />
+            <MudNavLink Href="/admin/applications" Icon="@Icons.Material.Filled.Apps" IconColor="Color.Secondary" />
             <MudNavLink Href="/admin/profiles" Icon="@Icons.Material.Filled.Badge" IconColor="Color.Secondary" />
             <MudNavLink Href="/admin/suggestions" Icon="@Icons.Material.Filled.Lightbulb" IconColor="Color.Secondary" />
             <MudNavLink Href="/security" Icon="@Icons.Material.Filled.Security" IconColor="Color.Secondary" />

@@ -1,0 +1,389 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@using Markdig
+@inject SchemaAppService Schema
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+@* Renders an editable Portal Schema Document (kind:"form"). Collects field values, POSTs actions to
+   the in-game handler, and binds the structured response back. All branching/progression is
+   softcode-driven: an action may return a replacement schema, which simply re-renders. *@
+
+@if (_document?.Pages is null || _document.Pages.Count == 0)
+{
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">This form has no pages.</MudText>
+}
+else
+{
+    var page = CurrentPage;
+
+    @if (!string.IsNullOrWhiteSpace(_document.Title))
+    {
+        <MudText Typo="Typo.h5" Class="mb-1">@_document.Title</MudText>
+    }
+    @if (_document.Pages.Count > 1)
+    {
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+            Step @(_pageIndex + 1) of @_document.Pages.Count@(string.IsNullOrWhiteSpace(page.Title) ? "" : $" — {page.Title}")
+        </MudText>
+    }
+
+    @if (_globalError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="my-2" ShowCloseIcon="true" CloseIconClicked="() => _globalError = null">
+            @_globalError
+        </MudAlert>
+    }
+
+    <MudForm @ref="_form" Class="mt-2">
+        @foreach (var section in (page.Sections ?? []).OrderBy(s => s.Order))
+        {
+            <MudPaper Outlined="true" Class="pa-4 mb-4">
+                @if (!string.IsNullOrWhiteSpace(section.Name))
+                {
+                    <MudText Typo="Typo.h6" Class="mb-2">@section.Name</MudText>
+                }
+                @foreach (var element in section.Elements ?? [])
+                {
+                    @RenderElement(element)
+                }
+            </MudPaper>
+        }
+    </MudForm>
+
+    <div class="d-flex justify-space-between mt-2">
+        <div>
+            @if (_pageIndex > 0)
+            {
+                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ChevronLeft"
+                           OnClick="PrevPage" Disabled="_busy">Back</MudButton>
+            }
+        </div>
+        <div class="d-flex gap-2">
+            @if (_pageIndex < _document.Pages.Count - 1)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight"
+                           OnClick="NextPage" Disabled="_busy">Next</MudButton>
+            }
+            else if (HasAction("submit"))
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Check"
+                           OnClick="@(() => Dispatch("submit"))" Disabled="_busy">
+                    @if (_busy)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Submit
+                </MudButton>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public PortalSchemaDocument? Document { get; set; }
+
+    /// <summary>Optional prefill data (form editing an existing record).</summary>
+    [Parameter] public SchemaData? Data { get; set; }
+
+    private PortalSchemaDocument? _document;
+    private MudForm? _form;
+    private int _pageIndex;
+    private bool _busy;
+    private string? _globalError;
+    private readonly Dictionary<string, object?> _values = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _errors = new(StringComparer.Ordinal);
+
+    private SchemaPage CurrentPage => _document!.Pages!.OrderBy(p => p.Order).ElementAt(_pageIndex);
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_document, Document))
+        {
+            LoadDocument(Document);
+        }
+    }
+
+    private void LoadDocument(PortalSchemaDocument? document)
+    {
+        _document = document;
+        _pageIndex = 0;
+        _errors.Clear();
+        SeedDefaults();
+    }
+
+    // Seed unset fields with their schema default or prefill value.
+    private void SeedDefaults()
+    {
+        foreach (var element in AllFields())
+        {
+            if (element.Key is null || _values.ContainsKey(element.Key))
+            {
+                continue;
+            }
+
+            if (Data?.Fields is not null && Data.Fields.TryGetValue(element.Key, out var datum) && datum.Value is { } dv)
+            {
+                _values[element.Key] = SchemaViewRenderer.ValueToString(dv);
+            }
+            else if (element.Default is { } def)
+            {
+                _values[element.Key] = SchemaViewRenderer.ValueToString(def);
+            }
+        }
+    }
+
+    private IEnumerable<SchemaElement> AllFields()
+        => (_document?.Pages ?? [])
+            .SelectMany(p => p.Sections ?? [])
+            .SelectMany(s => s.Elements ?? [])
+            .Where(e => string.Equals(e.Kind ?? "field", "field", StringComparison.OrdinalIgnoreCase) && e.Key is not null);
+
+    private bool HasAction(string name) => _document?.Actions?.ContainsKey(name) == true;
+
+    private void NextPage()
+    {
+        if (_pageIndex < _document!.Pages!.Count - 1) _pageIndex++;
+    }
+
+    private void PrevPage()
+    {
+        if (_pageIndex > 0) _pageIndex--;
+    }
+
+    // ── Action dispatch ──────────────────────────────────────────────────────
+
+    private async Task Dispatch(string actionName)
+    {
+        if (_document?.Actions is null || !_document.Actions.TryGetValue(actionName, out var action)
+            || string.IsNullOrWhiteSpace(action.Route))
+        {
+            return;
+        }
+
+        _busy = true;
+        _globalError = null;
+        _errors.Clear();
+        StateHasChanged();
+
+        var result = await Schema.SubmitAsync(action.Route!, _values);
+
+        _busy = false;
+
+        if (result.Ok)
+        {
+            if (result.Fields is not null && (action.OnSuccess?.MergeFields ?? false))
+            {
+                foreach (var (key, value) in result.Fields)
+                {
+                    _values[key] = SchemaViewRenderer.ValueToString(value);
+                }
+            }
+
+            if (result.Schema is not null)
+            {
+                // Softcode-driven progression: re-render from the returned document.
+                LoadDocument(result.Schema);
+            }
+
+            if (!string.IsNullOrWhiteSpace(action.OnSuccess?.Toast) || !string.IsNullOrWhiteSpace(result.Message))
+            {
+                Snackbar.Add(action.OnSuccess?.Toast ?? result.Message!, Severity.Success);
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.Redirect))
+            {
+                Nav.NavigateTo(result.Redirect!);
+            }
+            else if (!string.IsNullOrWhiteSpace(action.OnSuccess?.Navigate))
+            {
+                Nav.NavigateTo(action.OnSuccess!.Navigate!);
+            }
+        }
+        else
+        {
+            BindErrors(result.Errors, action.OnError?.BindFieldErrors ?? true);
+        }
+
+        StateHasChanged();
+    }
+
+    private void BindErrors(IReadOnlyDictionary<string, string>? errors, bool bindToFields)
+    {
+        if (errors is null)
+        {
+            _globalError = "The action failed.";
+            return;
+        }
+
+        foreach (var (key, message) in errors)
+        {
+            if (key == "_global" || !bindToFields)
+            {
+                _globalError = message;
+            }
+            else
+            {
+                _errors[key] = message;
+            }
+        }
+    }
+
+    // ── Value helpers ──────────────────────────────────────────────────────────
+
+    private string GetString(string key) => _values.TryGetValue(key, out var v) ? v?.ToString() ?? "" : "";
+    private void SetString(string key, string? value) { _values[key] = value; _errors.Remove(key); }
+
+    private bool GetBool(string key) => _values.TryGetValue(key, out var v) && v is bool b && b;
+    private void SetBool(string key, bool value) { _values[key] = value; _errors.Remove(key); }
+
+    private double? GetNumber(string key)
+        => _values.TryGetValue(key, out var v) && v is not null && double.TryParse(v.ToString(), out var d) ? d : null;
+    private void SetNumber(string key, double? value) { _values[key] = value; _errors.Remove(key); }
+
+    private IEnumerable<string> GetMulti(string key)
+        => _values.TryGetValue(key, out var v) && v is IEnumerable<string> list ? list : [];
+    private void SetMulti(string key, IEnumerable<string> values) { _values[key] = values.ToList(); _errors.Remove(key); }
+
+    private string? Error(string key) => _errors.TryGetValue(key, out var e) ? e : null;
+
+    // ── Element rendering ────────────────────────────────────────────────────
+
+    private RenderFragment RenderElement(SchemaElement element) => __builder =>
+    {
+        switch ((element.Kind ?? "field").ToLowerInvariant())
+        {
+            case "divider":
+                <MudDivider Class="my-2" />
+                break;
+            case "markdown":
+                <div class="mb-2">@((MarkupString)Markdown.ToHtml(element.Value ?? string.Empty))</div>
+                break;
+            case "button":
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mb-2"
+                           OnClick="@(() => Dispatch(element.Action ?? string.Empty))"
+                           Disabled="@(_busy || string.IsNullOrWhiteSpace(element.Action) || !HasAction(element.Action!))">
+                    @(element.Label ?? "Action")
+                </MudButton>
+                break;
+            case "field":
+                @RenderField(element)
+                break;
+        }
+    };
+
+    private RenderFragment RenderField(SchemaElement element) => __builder =>
+    {
+        if (element.Key is null || string.Equals(element.Type, "hidden", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var key = element.Key;
+        var label = element.Label ?? key;
+        var help = element.Help;
+        var error = Error(key);
+        var required = element.Validation?.Required ?? false;
+
+        switch ((element.Type ?? "text").ToLowerInvariant())
+        {
+            case "boolean":
+                <div class="mb-2">
+                    <MudSwitch T="bool" Value="GetBool(key)" ValueChanged="v => SetBool(key, v)"
+                               Label="@label" Color="Color.Primary" />
+                    @if (!string.IsNullOrWhiteSpace(help))
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@help</MudText>
+                    }
+                </div>
+                break;
+
+            case "number":
+            case "slider":
+                @if (element.Type == "slider")
+                {
+                    <div class="mb-3">
+                        <MudText Typo="Typo.body2">@label: @(GetNumber(key)?.ToString() ?? "—")</MudText>
+                        <MudSlider T="double" Value="@(GetNumber(key) ?? element.Validation?.Min ?? 0)"
+                                   ValueChanged="v => SetNumber(key, v)"
+                                   Min="@(element.Validation?.Min ?? 0)" Max="@(element.Validation?.Max ?? 100)" Step="1" />
+                    </div>
+                }
+                else
+                {
+                    <MudNumericField T="double?" Value="GetNumber(key)" ValueChanged="v => SetNumber(key, v)"
+                                     Label="@label" Variant="Variant.Outlined" Class="mb-2"
+                                     HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error"
+                                     Min="@(element.Validation?.Min)" Max="@(element.Validation?.Max)" />
+                }
+                break;
+
+            case "textarea":
+            case "mstring":
+                <MudTextField T="string" Value="GetString(key)" ValueChanged="v => SetString(key, v)"
+                              Label="@label" Variant="Variant.Outlined" Lines="4" Class="mb-2"
+                              HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error" />
+                break;
+
+            case "select":
+                <MudSelect T="string" Value="GetString(key)" ValueChanged="v => SetString(key, v)"
+                           Label="@label" Variant="Variant.Outlined" Class="mb-2"
+                           HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error">
+                    @foreach (var option in element.Options ?? [])
+                    {
+                        <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
+                    }
+                </MudSelect>
+                break;
+
+            case "multiselect":
+                <MudSelect T="string" SelectedValues="GetMulti(key).ToHashSet()"
+                           SelectedValuesChanged="v => SetMulti(key, v)" MultiSelection="true"
+                           Label="@label" Variant="Variant.Outlined" Class="mb-2"
+                           HelperText="@help" Error="@(error is not null)" ErrorText="@error">
+                    @foreach (var option in element.Options ?? [])
+                    {
+                        <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
+                    }
+                </MudSelect>
+                break;
+
+            case "radio":
+                <div class="mb-2">
+                    <MudText Typo="Typo.body2">@label</MudText>
+                    <MudRadioGroup T="string" Value="GetString(key)" ValueChanged="v => SetString(key, v)">
+                        @foreach (var option in element.Options ?? [])
+                        {
+                            <MudRadio T="string" Value="@option.Value">@option.Label</MudRadio>
+                        }
+                    </MudRadioGroup>
+                    @if (error is not null)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error">@error</MudText>
+                    }
+                </div>
+                break;
+
+            case "date":
+                <MudDatePicker Label="@label" Date="ParseDate(GetString(key))"
+                               DateChanged="d => SetDate(key, d)"
+                               Variant="Variant.Outlined" Class="mb-2" HelperText="@help"
+                               Error="@(error is not null)" ErrorText="@error" />
+                break;
+
+            default: // text
+                <MudTextField T="string" Value="GetString(key)" ValueChanged="v => SetString(key, v)"
+                              Label="@label" Variant="Variant.Outlined" Class="mb-2"
+                              HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error"
+                              MaxLength="@(element.Validation?.MaxLength ?? 524288)" />
+                break;
+        }
+    };
+
+    private static DateTime? ParseDate(string value)
+        => DateTime.TryParse(value, out var d) ? d : null;
+
+    private void SetDate(string key, DateTime? date)
+        => SetString(key, date?.ToString("yyyy-MM-dd"));
+}
