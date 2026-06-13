@@ -18,12 +18,22 @@ public partial class Commands
 	[GeneratedRegex("^[a-z][a-z0-9-]*$")]
 	private static partial Regex PackageIdRegex();
 
+	[GeneratedRegex(@"#(?<number>\d+)(?::\d+)?")]
+	private static partial Regex PackageDbrefRegex();
+
+	private const string VeiledAttributeFlag = "VEILED";
+
 	/// <summary>
 	/// @PACKAGE — the in-game face of the softcode package authoring service
 	/// (the same engine behind /admin/packages/author). Wraps scan + export so a
 	/// wizard can turn a cluster of live objects into a package.yaml manifest
 	/// without leaving the game.
 	///
+	/// <para>
+	/// Visibility matches @decompile: an object must pass <c>CanExamine</c>, and only
+	/// the attributes the executor can see (per <c>GetVisibleAttributesAsync</c>, with
+	/// VEILED attributes skipped) are ever scanned or exported.
+	/// </para>
 	/// <para>
 	/// <c>@package/scan obj1 obj2 ...</c> — read-only report: shows the suggested
 	/// ref for each object and any dbrefs referenced outside the selection.
@@ -32,8 +42,8 @@ public partial class Commands
 	/// <c>@package obj1 obj2 ...=&lt;id&gt;[,&lt;version&gt;[,&lt;description&gt;]]</c> — exports the
 	/// selection as a manifest, pemitted back to you. In-selection dbrefs become
 	/// <c>{{ref}}</c> tokens automatically. This single-step path only succeeds when
-	/// the selection is self-contained (every dbref in their attributes points at
-	/// another selected object); anything referencing the outside world needs the
+	/// the selection is self-contained (every dbref in the visible attributes points
+	/// at another selected object); anything referencing the outside world needs the
 	/// well-known / configure classification step in the web authoring panel.
 	/// </para>
 	/// </summary>
@@ -57,7 +67,9 @@ public partial class Commands
 		}
 
 		// Resolve every named object to a stable objid the authoring service understands.
+		// Object visibility matches @decompile: each must pass CanExamine.
 		var objids = new List<string>();
+		var knownByObjid = new Dictionary<string, AnySharpObject>(StringComparer.Ordinal);
 		foreach (var token in tokens)
 		{
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, enactor, executor, token, LocateFlags.All);
@@ -79,7 +91,9 @@ public partial class Commands
 				return new CallState(string.Empty);
 			}
 
-			objids.Add(known.Object().DBRef.ToString());
+			var objid = known.Object().DBRef.ToString();
+			objids.Add(objid);
+			knownByObjid[objid] = known;
 		}
 
 		var authoring = parser.ServiceProvider.GetRequiredService<IPackageAuthoringService>();
@@ -93,18 +107,51 @@ public partial class Commands
 
 		var scanResult = scan.AsT0;
 
-		// /SCAN: read-only report only — never produces a manifest.
+		// Attribute visibility matches @decompile: keep only the attributes the
+		// executor may see (GetVisibleAttributesAsync), minus VEILED. Everything else
+		// is excluded from the export and ignored when judging self-containment.
+		var visibleByObjid = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+		foreach (var obj in scanResult.Objects)
+		{
+			var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			if (knownByObjid.TryGetValue(obj.Objid, out var known))
+			{
+				var visible = await AttributeService!.GetVisibleAttributesAsync(executor, known);
+				if (visible.IsAttribute)
+				{
+					foreach (var attr in visible.AsAttributes)
+					{
+						if (!attr.Flags.Any(f => f.Name.Equals(VeiledAttributeFlag, StringComparison.OrdinalIgnoreCase)))
+						{
+							names.Add(attr.Name);
+						}
+					}
+				}
+			}
+
+			visibleByObjid[obj.Objid] = names;
+		}
+
+		var selectedNumbers = knownByObjid.Values.Select(k => k.Object().DBRef.Number).ToHashSet();
+
+		// /SCAN: read-only report only — never produces a manifest. External dbrefs are
+		// computed over the visible attributes so the report agrees with what export does.
 		if (switches.Contains("SCAN"))
 		{
+			var external = ExternalDbrefsOverVisible(scanResult, visibleByObjid, selectedNumbers);
+
 			var report = new StringBuilder();
 			report.AppendLine($"PACKAGE SCAN: {scanResult.Objects.Count} object(s) selected.");
 			foreach (var obj in scanResult.Objects)
 			{
+				var visibleCount = visibleByObjid[obj.Objid].Count;
+				var hidden = obj.Attributes.Count - visibleCount;
+				var hiddenNote = hidden > 0 ? $", {hidden} hidden" : string.Empty;
 				report.AppendLine(
-					$"  {obj.Name} ({obj.Type}, {obj.Objid}) -> ref '{obj.SuggestedRef}'; {obj.Attributes.Count} attr(s), {obj.Flags.Count} flag(s).");
+					$"  {obj.Name} ({obj.Type}, {obj.Objid}) -> ref '{obj.SuggestedRef}'; {visibleCount} visible attr(s){hiddenNote}, {obj.Flags.Count} flag(s).");
 			}
 
-			if (scanResult.ExternalDbrefs.Count == 0)
+			if (external.Count == 0)
 			{
 				report.AppendLine("Self-contained: no external dbrefs. Ready to package with:");
 				report.Append($"  @package {objectList}=<package-id>");
@@ -112,10 +159,10 @@ public partial class Commands
 			else
 			{
 				report.AppendLine(
-					$"External references ({scanResult.ExternalDbrefs.Count}) must be classified in the web authoring panel:");
-				foreach (var ext in scanResult.ExternalDbrefs)
+					$"External references ({external.Count}) must be classified in the web authoring panel:");
+				foreach (var (dbref, count, example) in external)
 				{
-					report.AppendLine($"  {ext.Dbref}  ({ext.Occurrences} occurrence(s), e.g. {ext.ExampleAttribute})");
+					report.AppendLine($"  {dbref}  ({count} occurrence(s), e.g. {example})");
 				}
 
 				report.Append("Finish at: /admin/packages/author");
@@ -143,25 +190,6 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		// Self-contained only: any dbref pointing outside the selection needs the
-		// well-known/configure classification the web authoring panel provides.
-		if (scanResult.ExternalDbrefs.Count > 0)
-		{
-			var blocked = new StringBuilder();
-			blocked.AppendLine(
-				$"PACKAGE: These objects reference {scanResult.ExternalDbrefs.Count} dbref(s) outside your selection, so they aren't self-contained:");
-			foreach (var ext in scanResult.ExternalDbrefs)
-			{
-				blocked.AppendLine($"  {ext.Dbref}  ({ext.Occurrences} occurrence(s), e.g. {ext.ExampleAttribute})");
-			}
-
-			blocked.AppendLine(
-				"Each must be classified as a well-known object or a configure parameter — finish this package at:");
-			blocked.Append("  /admin/packages/author");
-			await NotifyService!.Notify(executor, blocked.ToString(), executor);
-			return new CallState(string.Empty);
-		}
-
 		var version = args.TryGetValue("2", out var versionArg)
 			? versionArg.Message?.ToPlainText().Trim() ?? string.Empty
 			: string.Empty;
@@ -178,7 +206,10 @@ public partial class Commands
 			description = $"Exported from {executor.Object().Name} via @package.";
 		}
 
-		// Give every object a unique manifest ref derived from its suggested slug.
+		// Give every object a unique manifest ref derived from its suggested slug, and
+		// exclude every attribute the executor cannot see (parity with @decompile). The
+		// authoring exporter only inspects included attributes when resolving dbrefs, so
+		// self-containment is judged over exactly the visible set.
 		var usedRefs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		var selections = new List<AuthoringObjectSelection>();
 		foreach (var obj in scanResult.Objects)
@@ -197,7 +228,9 @@ public partial class Commands
 				refName = candidate;
 			}
 
-			selections.Add(new AuthoringObjectSelection(obj.Objid, refName, []));
+			var visible = visibleByObjid[obj.Objid];
+			var excluded = obj.Attributes.Keys.Where(k => !visible.Contains(k)).ToList();
+			selections.Add(new AuthoringObjectSelection(obj.Objid, refName, excluded));
 		}
 
 		var export = await authoring.ExportAsync(new PackageAuthoringRequest(
@@ -208,7 +241,13 @@ public partial class Commands
 
 		if (export.IsT1)
 		{
-			await NotifyService!.Notify(executor, $"PACKAGE: {export.AsT1.Value}", executor);
+			var error = export.AsT1.Value;
+			// Unclassified dbrefs mean the selection isn't self-contained — point the
+			// user at the web panel where they can classify them.
+			var hint = error.StartsWith("Unclassified", StringComparison.Ordinal)
+				? "\nThese objects reference the outside world — finish this package at: /admin/packages/author"
+				: string.Empty;
+			await NotifyService!.Notify(executor, $"PACKAGE: {error}{hint}", executor);
 			return new CallState(string.Empty);
 		}
 
@@ -220,5 +259,47 @@ public partial class Commands
 		output.Append("----- END package.yaml -----");
 		await NotifyService!.Notify(executor, output.ToString(), executor);
 		return new CallState(string.Empty);
+	}
+
+	/// <summary>
+	/// Finds dbrefs referenced in the <em>visible</em> attribute values that are not
+	/// themselves in the selection. Mirrors the authoring service's scan, but scoped to
+	/// the attributes the executor may see so the scan report matches the export.
+	/// </summary>
+	private static List<(string Dbref, int Count, string Example)> ExternalDbrefsOverVisible(
+		PackageAuthoringScan scanResult,
+		IReadOnlyDictionary<string, HashSet<string>> visibleByObjid,
+		IReadOnlySet<int> selectedNumbers)
+	{
+		var external = new Dictionary<int, (int Count, string Example)>();
+		foreach (var obj in scanResult.Objects)
+		{
+			var visible = visibleByObjid[obj.Objid];
+			foreach (var (attrName, value) in obj.Attributes)
+			{
+				if (!visible.Contains(attrName))
+				{
+					continue;
+				}
+
+				foreach (Match match in PackageDbrefRegex().Matches(value))
+				{
+					var number = int.Parse(match.Groups["number"].Value);
+					if (selectedNumbers.Contains(number))
+					{
+						continue;
+					}
+
+					external[number] = external.TryGetValue(number, out var existing)
+						? (existing.Count + 1, existing.Example)
+						: (1, $"{obj.Objid}/{attrName}");
+				}
+			}
+		}
+
+		return external
+			.OrderByDescending(kv => kv.Value.Count)
+			.Select(kv => ($"#{kv.Key}", kv.Value.Count, kv.Value.Example))
+			.ToList();
 	}
 }

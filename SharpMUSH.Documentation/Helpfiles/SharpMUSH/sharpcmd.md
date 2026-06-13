@@ -3001,6 +3001,8 @@ Wizard-only. Turns one or more live objects into a softcode package manifest (`p
 
 This single-step export only succeeds when the selection is **self-contained** — every dbref in the objects' attributes points at another selected object. If any attribute references an object outside the selection, that dbref must be classified as a well-known object or a configure parameter, which is done in the web authoring panel; `@package` will tell you which dbrefs are unresolved and point you there.
 
+`@package` obeys the same visibility rules as `@decompile`: an object must pass your examine permission, and only the attributes you can see — VEILED attributes excluded — are scanned or written into the manifest.
+
 
 **See Also:**
 - [@decompile]

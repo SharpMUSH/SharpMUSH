@@ -108,9 +108,43 @@ public class PackageCommandTests
 			MModule.single($"@package #{thing.Number}=ext-pkg"));
 
 		// No manifest — the external dbref must be classified in the web panel.
-		await ExpectNotify(god, "aren't self-contained");
+		await ExpectNotify(god, "Unclassified");
 		await ExpectNotify(god, "/admin/packages/author");
 	}
+
+	[Test]
+	public async ValueTask Package_VeiledAttribute_IsExcludedFromManifest()
+	{
+		var god = WebAppFactoryArg.ExecutorDBRef;
+
+		var thing = await CreateThingAsync("PkgVeiledThing");
+		// A public attribute (exported) and a VEILED one (@decompile hides it, so must we).
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&PUBLICATTR #{thing.Number}=public shown value"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&SECRETATTR #{thing.Number}=veiled secret value"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@set #{thing.Number}/SECRETATTR=VEILED"));
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@package #{thing.Number}=veil-pkg"));
+
+		// The manifest is produced, includes the public attribute, and omits the
+		// VEILED one entirely — matching what @decompile would show.
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(god), Arg.Is<OneOf<MString, string>>(msg =>
+				MessageContains(msg, "----- BEGIN package.yaml -----") &&
+				MessageContains(msg, "PUBLICATTR") &&
+				!MessageContains(msg, "SECRETATTR") &&
+				!MessageContains(msg, "veiled secret value")),
+				TestHelpers.MatchingObject(god), INotifyService.NotificationType.Announce);
+	}
+
+	private static bool MessageContains(OneOf<MString, string> msg, string contains)
+		=> (msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
+		   (msg.IsT1 && msg.AsT1.Contains(contains));
 
 	[Test]
 	public async ValueTask Package_InvalidPackageId_IsRejected()
