@@ -495,30 +495,55 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(scanReport).Contains("Self-contained")
 			.Because("after install the BBS objects reference only each other (no external dbrefs)");
 
-		// 2) @package export — produce the manifest in one step.
-		var pkgMsgs = await RunAndCollect($"@package {bbpocket} {mbboard}=myrddin-bbs");
-		var manifest = pkgMsgs.FirstOrDefault(m => m.Contains("BEGIN package.yaml"))
+		// 2) @package export — produce the manifest in one step. Version (the BBS's
+		//    own 4.0.6) and a description are supplied so the CI-generated artifact is
+		//    publishable as-is.
+		var pkgMsgs = await RunAndCollect(
+			$"@package {bbpocket} {mbboard}=myrddin-bbs,4.0.6,Myrddin's Global Bulletin Board v4.0.6");
+		var packageMessage = pkgMsgs.FirstOrDefault(m => m.Contains("BEGIN package.yaml"))
 			?? string.Join("\n", pkgMsgs);
-		Log($"\n--- @package export ---\n{manifest}");
 
-		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_Package_TestOutput.txt");
-		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS PACKAGE] Full test output written to: {outputPath}");
+		// Extract just the YAML between the markers — this is the publishable manifest.
+		const string beginMarker = "----- BEGIN package.yaml -----";
+		const string endMarker = "----- END package.yaml -----";
+		var begin = packageMessage.IndexOf(beginMarker, StringComparison.Ordinal);
+		var end = packageMessage.IndexOf(endMarker, StringComparison.Ordinal);
+		var manifestYaml = begin >= 0 && end > begin
+			? packageMessage[(begin + beginMarker.Length)..end].Trim('\r', '\n')
+			: packageMessage;
 
-		// Manifest metadata and both objects (bbpocket keeps its name; mbboard was
-		// renamed to "BBS - Myrddin's Global BBS v4.0.6" at the end of install).
-		await Assert.That(manifest).Contains("package: myrddin-bbs");
-		await Assert.That(manifest).Contains("ref: bbpocket")
+		Log($"\n--- generated myrddin-bbs/package.yaml ---\n{manifestYaml}");
+
+		// Write the run log AND the standalone manifest so CI publishes both. The
+		// .yaml is the real generated package.yaml, sourced from a live @package run
+		// (this is how the manifest is obtained without a local SDK/DB).
+		var logPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_Package_TestOutput.txt");
+		var manifestPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_GeneratedPackage.yaml");
+		await File.WriteAllTextAsync(logPath, output.ToString());
+		await File.WriteAllTextAsync(manifestPath, manifestYaml);
+		Console.WriteLine($"[BBS PACKAGE] Run log: {logPath}");
+		Console.WriteLine($"[BBS PACKAGE] Generated manifest: {manifestPath}");
+
+		// The extracted artifact is a complete manifest with the expected metadata.
+		await Assert.That(manifestYaml).Contains("format: 1")
+			.Because("the generated artifact should be a complete package manifest");
+		await Assert.That(manifestYaml).Contains("package: myrddin-bbs");
+		await Assert.That(manifestYaml).Contains("version: \"4.0.6\"")
+			.Because("the version passed to @package should be carried into the manifest");
+
+		// Both objects (bbpocket keeps its name; mbboard was renamed to
+		// "BBS - Myrddin's Global BBS v4.0.6" at the end of install).
+		await Assert.That(manifestYaml).Contains("ref: bbpocket")
 			.Because("bbpocket should be exported under its own ref");
-		await Assert.That(manifest).Contains("type: thing")
+		await Assert.That(manifestYaml).Contains("type: thing")
 			.Because("the BBS objects are things");
-		await Assert.That(manifest).Contains("Global BBS v4.0.6")
+		await Assert.That(manifestYaml).Contains("Global BBS v4.0.6")
 			.Because("the renamed mbboard object should be present in the manifest");
 
 		// bbpocket's function/config attribute schema.
 		foreach (var attr in new[] { "GET_GROUP", "NXT_MESS", "VALID_GROUPS", "VERSION", "BUFFER_SIZE" })
 		{
-			await Assert.That(manifest).Contains(attr)
+			await Assert.That(manifestYaml).Contains(attr)
 				.Because($"bbpocket should export its {attr} attribute");
 		}
 
@@ -526,18 +551,18 @@ public class MyrddinBBSIntegrationTests
 		// regardless of how attribute names containing '+' are rendered.
 		foreach (var cmd in new[] { "$+bbread", "$+bbpost", "$+bbnewgroup", "$+bblist" })
 		{
-			await Assert.That(manifest).Contains(cmd)
+			await Assert.That(manifestYaml).Contains(cmd)
 				.Because($"mbboard should export the {cmd} command");
 		}
 
-		await Assert.That(manifest).Contains("CREDITS")
+		await Assert.That(manifestYaml).Contains("CREDITS")
 			.Because("mbboard's CREDITS attribute should be exported");
 
 		// Cross-reference rewriting: mbboard's references to bbpocket become a symbolic
 		// ref, and no raw dbref of bbpocket survives in the manifest.
-		await Assert.That(manifest).Contains("{{bbpocket}}")
+		await Assert.That(manifestYaml).Contains("{{bbpocket}}")
 			.Because("references to bbpocket must be tokenized as a symbolic ref");
-		await Assert.That(manifest).DoesNotContain($"{bbpocket}/")
+		await Assert.That(manifestYaml).DoesNotContain($"{bbpocket}/")
 			.Because("no raw dbref of bbpocket should remain — manifests never carry dbrefs");
 	}
 

@@ -158,3 +158,11 @@ jobs:
           name: test-telemetry-integration-${{ matrix.database }}
           path: test-telemetry-integration.md
           if-no-files-found: ignore
+
+      - name: Upload Generated Myrddin BBS Package Manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: myrddin-bbs-package-${{ matrix.database }}
+          path: '**/MyrddinBBS_GeneratedPackage.yaml'
+          if-no-files-found: warn
