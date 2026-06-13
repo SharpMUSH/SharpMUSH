@@ -21,6 +21,7 @@ public sealed record PackageChangeset(
 	PackageRevisionKind Kind,
 	IReadOnlyList<PackageObjectChange> Objects,
 	IReadOnlyList<PackageAttributeChange> Attributes,
+	IReadOnlyList<PackageStructureChange> Structure,
 	IReadOnlyList<PackageDependencyIssue> DependencyIssues,
 	IReadOnlyList<PackageCommandCollision> CommandCollisions,
 	IReadOnlyList<string> Notes)
@@ -28,8 +29,10 @@ public sealed record PackageChangeset(
 	/// <summary>True when dependency/conflict issues prevent applying at all.</summary>
 	public bool IsBlocked => DependencyIssues.Count > 0;
 
-	/// <summary>True when at least one attribute needs an admin decision.</summary>
-	public bool HasConflicts => Attributes.Any(a => a.Action == PackageAttributeAction.Conflict);
+	/// <summary>True when at least one attribute or structure element needs an admin decision.</summary>
+	public bool HasConflicts =>
+		Attributes.Any(a => a.Action == PackageAttributeAction.Conflict)
+		|| Structure.Any(s => s.Action == PackageStructureAction.Conflict);
 }
 
 /// <summary>Object-level classification.</summary>
@@ -142,6 +145,103 @@ public sealed record PackageAttributeChange(
 	string? NewValue = null,
 	bool RequiresApplyResolution = false);
 
+/// <summary>The kind of object-structure element a <see cref="PackageStructureChange"/> describes.</summary>
+public enum PackageStructureKind
+{
+	/// <summary>An object flag (set-valued, binary presence).</summary>
+	ObjectFlag,
+
+	/// <summary>An object power (set-valued, binary presence).</summary>
+	ObjectPower,
+
+	/// <summary>A flag on a specific attribute (set-valued, binary presence; carries <see cref="PackageStructureChange.Attribute"/>).</summary>
+	AttributeFlag,
+
+	/// <summary>A lock (value-typed: a lock-type name mapped to a lock string; uses the full attribute conflict model).</summary>
+	Lock
+}
+
+/// <summary>
+/// Classification of one object-structure element under the same dpkg/ucf
+/// three-way merge as attributes (decision 20.7), extended for full object
+/// structure diffs: object flags, object powers, attribute flags, and locks.
+/// Binary elements (flags/powers/attribute flags) resolve deterministically and
+/// never conflict; value-typed locks can.
+/// </summary>
+public enum PackageStructureAction
+{
+	/// <summary>Newly declared (or, for locks, a changed value the package owns): set it.</summary>
+	Add,
+
+	/// <summary>Already present live and now package-managed: record a baseline without writing.</summary>
+	Adopt,
+
+	/// <summary>Base, live, and new agree: nothing to do.</summary>
+	NoChange,
+
+	/// <summary>Admin diverged locally and the package did not (removed a binary element it still declares, or edited a lock the package left unchanged): keep the live state (dpkg keep-local).</summary>
+	KeepLocal,
+
+	/// <summary>Removed from the package and still present live (locally unmodified): unset it.</summary>
+	Remove,
+
+	/// <summary>Removed from the package and already gone live: just drop the baseline element.</summary>
+	RemoveBaseline,
+
+	/// <summary>Value-typed (lock) divergence needing an admin decision; see <see cref="PackageConflictKind"/>.</summary>
+	Conflict
+}
+
+/// <summary>
+/// One object-structure-level action (flag/power/attribute-flag/lock add or
+/// remove on upgrade). Binary elements leave the value panes null; locks carry
+/// Base/Live/New lock strings for the three-pane review.
+/// </summary>
+/// <param name="TargetRef">Manifest ref of the target object, or its objid for non-package targets.</param>
+/// <param name="Objid">Resolved target objid when the object already exists.</param>
+/// <param name="Kind">Which structure element this describes.</param>
+/// <param name="Element">Flag name, power name, or lock-type name.</param>
+/// <param name="Action">Classification.</param>
+/// <param name="Attribute">For <see cref="PackageStructureKind.AttributeFlag"/>, the attribute the flag lives on.</param>
+/// <param name="Conflict">Set when <paramref name="Action"/> is <see cref="PackageStructureAction.Conflict"/> (locks only).</param>
+/// <param name="BaseValue">Lock baseline string, or null (binary/absent).</param>
+/// <param name="LiveValue">Current live lock string, or null.</param>
+/// <param name="NewValue">Incoming lock string with refs resolved as far as possible, or null for removals/binary.</param>
+/// <param name="RequiresApplyResolution">True when a lock's new value references objects that only get dbrefs at apply time.</param>
+public sealed record PackageStructureChange(
+	string TargetRef,
+	string? Objid,
+	PackageStructureKind Kind,
+	string Element,
+	PackageStructureAction Action,
+	string? Attribute = null,
+	PackageConflictKind? Conflict = null,
+	string? BaseValue = null,
+	string? LiveValue = null,
+	string? NewValue = null,
+	bool RequiresApplyResolution = false);
+
+/// <summary>
+/// The package-managed object structure baseline for one object (decision
+/// 20.13, extended): the flags, powers, locks, and per-attribute flags the
+/// package set at the last install/upgrade. Persisted as one JSON document per
+/// (package, objid) so the three-way merge and rollback can reason offline.
+/// </summary>
+/// <param name="Flags">Object flag names the package set.</param>
+/// <param name="Powers">Object power names the package set.</param>
+/// <param name="Locks">Lock-type name → resolved lock string the package set.</param>
+/// <param name="AttributeFlags">Attribute name → flag names the package set on it.</param>
+public sealed record PackageStructureBaseline(
+	IReadOnlyList<string> Flags,
+	IReadOnlyList<string> Powers,
+	IReadOnlyDictionary<string, string> Locks,
+	IReadOnlyDictionary<string, IReadOnlyList<string>> AttributeFlags)
+{
+	public static PackageStructureBaseline Empty { get; } = new(
+		[], [], new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+		new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase));
+}
+
 /// <summary>A dependency or conflict violation that blocks apply (decisions 20.6, 20.20).</summary>
 /// <param name="PackageId">The other package involved.</param>
 /// <param name="Constraint">Declared constraint text (empty = any).</param>
@@ -186,12 +286,20 @@ public sealed record LivePackageState(IReadOnlyDictionary<string, LiveObjectStat
 /// <param name="Name">Current in-game name.</param>
 /// <param name="Attributes">Current attribute values by name (case-insensitive keys expected).</param>
 /// <param name="HasContents">True when the object contains things/players (delete-review warning).</param>
+/// <param name="Flags">Current object flag names, or null when not gathered (treated as empty).</param>
+/// <param name="Powers">Current object power names, or null when not gathered (treated as empty).</param>
+/// <param name="Locks">Current lock-type → lock string, or null when not gathered (treated as empty).</param>
+/// <param name="AttributeFlags">Current attribute name → flag names, or null when not gathered (treated as empty).</param>
 public sealed record LiveObjectState(
 	string Objid,
 	bool Exists,
 	string Name,
 	IReadOnlyDictionary<string, string> Attributes,
-	bool HasContents = false);
+	bool HasContents = false,
+	IReadOnlyList<string>? Flags = null,
+	IReadOnlyList<string>? Powers = null,
+	IReadOnlyDictionary<string, string>? Locks = null,
+	IReadOnlyDictionary<string, IReadOnlyList<string>>? AttributeFlags = null);
 
 /// <summary>
 /// Everything the pure plan computation needs (decision 20.7). The caller —
@@ -208,6 +316,7 @@ public sealed record LiveObjectState(
 /// <param name="WellKnownObjids">Resolution map: well-known ref name → objid.</param>
 /// <param name="ConfigureAnswers">Resolution map: configure key → value (objid for dbref-typed); may be partial before review.</param>
 /// <param name="CrossPackageObjids">Resolution map: <c>pkg/ref</c> → objid for dependency-owned objects.</param>
+/// <param name="StructureBaselines">This package's managed object-structure baselines, keyed by objid (decision 20.13, extended for full structure diffs).</param>
 public sealed record PackagePlanInputs(
 	PackageManifest Manifest,
 	InstalledPackageRecord? Installed,
@@ -218,4 +327,5 @@ public sealed record PackagePlanInputs(
 	LivePackageState Live,
 	IReadOnlyDictionary<string, string> WellKnownObjids,
 	IReadOnlyDictionary<string, string> ConfigureAnswers,
-	IReadOnlyDictionary<string, string> CrossPackageObjids);
+	IReadOnlyDictionary<string, string> CrossPackageObjids,
+	IReadOnlyDictionary<string, PackageStructureBaseline>? StructureBaselines = null);

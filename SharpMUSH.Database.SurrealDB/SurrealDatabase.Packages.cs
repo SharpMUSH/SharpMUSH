@@ -40,6 +40,14 @@ internal class SysManagedAttributeDbRecord : Record
 	public string baselineVersion { get; set; } = "";
 }
 
+internal class SysManagedStructureDbRecord : Record
+{
+	public string packageId { get; set; } = "";
+	public string objid { get; set; } = "";
+	public string structureJson { get; set; } = "";
+	public string baselineVersion { get; set; } = "";
+}
+
 internal class SysPackageDependencyDbRecord : Record
 {
 	public string packageId { get; set; } = "";
@@ -79,6 +87,9 @@ public partial class SurrealDatabase : IPackageRegistryService
 
 	private const string SysManagedAttributeFields =
 		"id, packageId, objid, attribute, baselineValue, baselineHash, baselineVersion";
+
+	private const string SysManagedStructureFields =
+		"id, packageId, objid, structureJson, baselineVersion";
 
 	private const string SysPackageDependencyFields = "id, packageId, dependsOnId, constraint";
 
@@ -139,6 +150,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 		var parameters = new Dictionary<string, object?> { ["pkg"] = packageId };
 		await ExecuteAsync("DELETE sys_package_object WHERE packageId = $pkg", parameters);
 		await ExecuteAsync("DELETE sys_managed_attribute WHERE packageId = $pkg", parameters);
+		await ExecuteAsync("DELETE sys_managed_structure WHERE packageId = $pkg", parameters);
 		await ExecuteAsync("DELETE sys_package_revision WHERE packageId = $pkg", parameters);
 		await ExecuteAsync("DELETE sys_package_dependency WHERE packageId = $pkg OR dependsOnId = $pkg", parameters);
 		await ExecuteAsync("DELETE type::thing('sys_package', $pkg)", parameters);
@@ -226,6 +238,41 @@ public partial class SurrealDatabase : IPackageRegistryService
 	{
 		await ExecuteAsync("DELETE type::thing('sys_managed_attribute', $key)",
 			new Dictionary<string, object?> { ["key"] = $"{packageId}/{objid}/{attribute}" });
+	}
+
+	// ── Managed object structure ────────────────────────────────────────────
+
+	public async Task UpsertManagedStructureAsync(ManagedStructureRecord record)
+	{
+		var parameters = new Dictionary<string, object?>
+		{
+			["key"] = $"{record.PackageId}/{record.Objid}",
+			["pkg"] = record.PackageId,
+			["objid"] = record.Objid,
+			["structureJson"] = record.StructureJson,
+			["baselineVersion"] = record.BaselineVersion
+		};
+		await ExecuteAsync("""
+			UPSERT type::thing('sys_managed_structure', $key) SET packageId = $pkg, objid = $objid,
+				structureJson = $structureJson, baselineVersion = $baselineVersion
+			""", parameters);
+	}
+
+	public async Task<IReadOnlyList<ManagedStructureRecord>> GetManagedStructuresAsync(string packageId)
+	{
+		var response = await ExecuteAsync(
+			$"SELECT {SysManagedStructureFields} FROM sys_managed_structure WHERE packageId = $pkg ORDER BY objid",
+			new Dictionary<string, object?> { ["pkg"] = packageId });
+		var results = response.GetValue<List<SysManagedStructureDbRecord>>(0) ?? [];
+		return results
+			.Select(r => new ManagedStructureRecord(r.packageId, r.objid, r.structureJson, r.baselineVersion))
+			.ToList();
+	}
+
+	public async Task RemoveManagedStructureAsync(string packageId, string objid)
+	{
+		await ExecuteAsync("DELETE type::thing('sys_managed_structure', $key)",
+			new Dictionary<string, object?> { ["key"] = $"{packageId}/{objid}" });
 	}
 
 	// ── Dependencies ───────────────────────────────────────────────────────

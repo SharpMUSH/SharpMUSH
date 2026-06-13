@@ -517,4 +517,85 @@ public class PackageInstallServiceTests
 
 		await Assert.That((await Installer.UninstallAsync("flags-pkg")).IsT0).IsTrue();
 	}
+
+	private async Task<IReadOnlyList<string>> ReadObjectFlagsAsync(string objid)
+	{
+		var node = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(objid)!.Value);
+		var flags = new List<string>();
+		await foreach (var flag in node.Known().Object().Flags.Value)
+		{
+			flags.Add(flag.Name);
+		}
+
+		return flags;
+	}
+
+	private async Task<bool> HasLockAsync(string objid, string lockType)
+	{
+		var node = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(objid)!.Value);
+		return node.Known().Object().Locks.ContainsKey(lockType);
+	}
+
+	[Test, NotInParallel]
+	public async Task Upgrade_AddsAndRemovesObjectFlagsAndLocks()
+	{
+		// v1 sets two flags and a lock; v2 drops one flag and the lock entirely.
+		// Full object-structure diff: the dropped flag is unset and the lock removed,
+		// while the retained flag survives — never additive.
+		var v1 = Parse(
+			"""
+			package: struct-pkg
+			version: "1.0"
+			objects:
+			  - ref: gadget
+			    type: thing
+			    name: Struct Gadget
+			    flags: [dark, opaque]
+			    locks:
+			      use: "=#1"
+			    attributes:
+			      FN: |-
+			        x
+			""");
+
+		var install = await Installer.ApplyAsync(v1, new PackageApplyRequest(Source(), new Dictionary<string, string>(), []));
+		await Assert.That(install.IsT0).IsTrue();
+		var gadgetObjid = install.AsT0.CreatedObjects["gadget"];
+
+		var flagsV1 = await ReadObjectFlagsAsync(gadgetObjid);
+		await Assert.That(flagsV1).Contains("DARK");
+		await Assert.That(flagsV1).Contains("OPAQUE");
+		await Assert.That(await HasLockAsync(gadgetObjid, "use")).IsTrue();
+
+		var v2 = Parse(
+			"""
+			package: struct-pkg
+			version: "1.1"
+			objects:
+			  - ref: gadget
+			    type: thing
+			    name: Struct Gadget
+			    flags: [dark]
+			    attributes:
+			      FN: |-
+			        x
+			""");
+
+		var plan = await Installer.PlanAsync(v2);
+		await Assert.That(plan.Structure.Single(s =>
+				s.Kind == PackageStructureKind.ObjectFlag && string.Equals(s.Element, "opaque", StringComparison.OrdinalIgnoreCase))
+			.Action).IsEqualTo(PackageStructureAction.Remove);
+		await Assert.That(plan.Structure.Single(s => s.Kind == PackageStructureKind.Lock).Action)
+			.IsEqualTo(PackageStructureAction.Remove);
+
+		var upgrade = await Installer.ApplyAsync(v2, new PackageApplyRequest(Source("commit-2"), new Dictionary<string, string>(), []));
+		await Assert.That(upgrade.IsT0).IsTrue();
+
+		var flagsV2 = await ReadObjectFlagsAsync(gadgetObjid);
+		await Assert.That(flagsV2).Contains("DARK");
+		await Assert.That(flagsV2).DoesNotContain("OPAQUE");
+		await Assert.That(await HasLockAsync(gadgetObjid, "use")).IsFalse();
+
+		await Assert.That((await Installer.UninstallAsync("struct-pkg")).IsT0).IsTrue();
+	}
 }

@@ -60,6 +60,17 @@ public interface IPackageRegistryService
 	/// <summary>Removes one managed-attribute record.</summary>
 	Task RemoveManagedAttributeAsync(string packageId, string objid, string attribute);
 
+	// ── Managed object structure (flags/powers/locks/attribute flags) ────────
+
+	/// <summary>Creates or replaces a managed object-structure baseline (keyed by package+objid).</summary>
+	Task UpsertManagedStructureAsync(ManagedStructureRecord record);
+
+	/// <summary>Lists every object-structure baseline a package manages, across all objects.</summary>
+	Task<IReadOnlyList<ManagedStructureRecord>> GetManagedStructuresAsync(string packageId);
+
+	/// <summary>Removes one managed object-structure baseline.</summary>
+	Task RemoveManagedStructureAsync(string packageId, string objid);
+
 	// ── Dependencies ─────────────────────────────────────────────────────────
 
 	/// <summary>

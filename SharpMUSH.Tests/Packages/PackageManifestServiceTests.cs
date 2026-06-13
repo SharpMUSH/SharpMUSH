@@ -791,18 +791,35 @@ public class PackageManifestServiceTests
 	}
 
 	[Test]
-	public async Task Powers_AreNotASupportedObjectKey_WarnAndIgnore()
+	public async Task ObjectPowers_Parse()
 	{
-		// The package format models flags and locks on objects, but has no concept
-		// of powers: a 'powers' key is an unknown key — warned and dropped, never
-		// applied. (If powers ever become supported, this test should flip to an
-		// assertion that they parse onto the spec.)
 		var result = _service.ParseManifest(MinimalManifest(objectExtras: "    powers: [pueblo, idle]"));
 
 		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Warnings.Any(w => w.Path == "objects[0].powers")).IsTrue();
-		// Nothing power-shaped survives onto the parsed object.
-		await Assert.That(result.AsT0.Manifest.Objects.Single().Flags.Count).IsEqualTo(0);
+		await Assert.That(result.AsT0.Manifest.Objects.Single().Powers.ToArray())
+			.IsEquivalentTo((string[])["pueblo", "idle"]);
+	}
+
+	[Test]
+	public async Task AttachObject_RejectsPowers()
+	{
+		// Attach objects manage attributes only — object-level powers (like flags
+		// and locks) are creation-only and rejected.
+		var result = _service.ParseManifest(
+			"""
+			package: hooks
+			version: "1.0"
+			objects:
+			  - ref: handler
+			    target: "{{$http_handler}}"
+			    powers: [pueblo]
+			    attributes:
+			      GET: |-
+			        think hi
+			""");
+
+		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.AsT1.Errors.Any(e => e.Path == "objects[0].powers")).IsTrue();
 	}
 
 	#endregion
