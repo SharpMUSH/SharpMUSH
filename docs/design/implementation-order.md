@@ -81,12 +81,15 @@ B and C are fully parallel with A.
 | C | 17 | Events = scheduled scenes | Scenes (7) |
 | D | 19 | Custom widget plugin loading | Widget system (13) |
 | E | 20 (official pkgs) | Author default packages (scenes, bbs, etc.) | Pkg manager complete, features exist |
+| F | 21 | Dynamic Applications (schema-driven forms/views + registry) | Widget system (13), HTTP handler/Profiles (6), Pkg manager (20) |
 
 **Why parallel:**
 - Search needs content to exist but doesn't care about BBS/events
 - BBS web view depends on the softcode being installable (pkg manager)
 - Events are just a scene extension
 - Custom widgets are just a plugin loader on top of the widget system
+- Dynamic Applications reuse the profile schema/HTTP-handler pattern (6), plug into the
+  widget system (13), and ship schemas as packages (20) — no new server transport
 
 ## Critical Path (longest chain)
 

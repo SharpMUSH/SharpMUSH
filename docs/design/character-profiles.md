@@ -7,6 +7,12 @@ header injected from the game's HTTP handler. This gives profiles all wiki
 features (history, revisions, search, wiki-links, Markdown editing) while the
 game retains authority over structured data (demographics, stats, fields).
 
+> **Note (Area 21):** The profile schema below is the canonical `kind:"view"` instance of
+> the **Portal Schema Document** defined in `dynamic-applications.md`. The structured
+> header is one specialization of the general schema-driven renderer — a `view` of
+> `sections[] → keyvalue fields`. New profile field types and the eventual schema-aware
+> profile *editor* should be expressed as that document type rather than a bespoke shape.
+
 ## Architecture
 
 ```
