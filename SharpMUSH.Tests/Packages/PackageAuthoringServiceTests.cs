@@ -167,7 +167,7 @@ public class PackageAuthoringServiceTests
 			new Dictionary<string, AuthoringConfigureClassification>()));
 
 		await Assert.That(result.IsT0).IsTrue()
-			.Because("block scalars must round-trip even when a value is blank or whitespace-only");
+			.Because($"export must produce a valid manifest for blank/whitespace values; got: {(result.IsT1 ? result.AsT1.Value : "success")}");
 
 		var parsed = new PackageManifestService().ParseManifest(result.AsT0);
 		await Assert.That(parsed.IsT0).IsTrue();

@@ -191,14 +191,27 @@ public partial class PackageAuthoringService(
 				foreach (var (attrName, value) in included)
 				{
 					body.AppendLine($"      {attrName}:");
-					// Explicit block-indentation indicator (content is indented 2 past the
-					// `value:` key). Without it, YamlDotNet cannot auto-detect indentation
-					// for values whose only line is blank/whitespace-only (e.g. an empty
-					// attribute), and rejects the manifest with "extra spaces in first line".
-					body.AppendLine("        value: |2-");
-					foreach (var line in Tokenize(value).Replace("\r\n", "\n").Split('\n'))
+					var tokenized = Tokenize(value).Replace("\r\n", "\n");
+					// Empty or leading/trailing-whitespace single-line values cannot ride in
+					// a literal block scalar: YamlDotNet can't anchor indentation on an
+					// all-blank line (it rejects the manifest with "extra spaces in first
+					// line"), and leading whitespace would be silently lost. Carry those as a
+					// single-quoted scalar, which preserves whitespace exactly. Everything
+					// else stays a block scalar so MUSHcode diffs stay readable.
+					if (!tokenized.Contains('\n')
+						&& (tokenized.Length == 0
+							|| char.IsWhiteSpace(tokenized[0])
+							|| char.IsWhiteSpace(tokenized[^1])))
 					{
-						body.AppendLine($"          {line}");
+						body.AppendLine($"        value: {QuoteYaml(tokenized)}");
+					}
+					else
+					{
+						body.AppendLine("        value: |-");
+						foreach (var line in tokenized.Split('\n'))
+						{
+							body.AppendLine($"          {line}");
+						}
 					}
 				}
 			}
