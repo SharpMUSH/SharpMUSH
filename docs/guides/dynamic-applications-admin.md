@@ -1,11 +1,12 @@
 # Admin Guide: Dynamic Applications
 
-> **Status — documentation ahead of implementation.** This guide is written against the
-> Area 21 design (`docs/design/dynamic-applications.md`). The UI it describes is being
-> built in Phases 5–7 of `docs/todo/area-21-applications.md`. Screenshot placeholders
-> below are marked **[SCREENSHOT]** and will be captured once the registration UI and the
-> `/apps/{slug}` route are live. Until then, treat the layouts described as the intended
-> design.
+> **Status — implemented; screenshots pending a deployment.** The feature this guide
+> describes is built and tested (`docs/todo/area-21-applications.md`). The REST surface was
+> verified live against a bootstrapped server + ArangoDB: registering a valid app returns
+> 200 and round-trips; a bogus schema URL is rejected ("Schema endpoint validation failed");
+> an unknown kind is rejected. The **[SCREENSHOT]** markers below are still placeholders —
+> capturing them needs a served WASM deployment and a browser, which the build environment
+> here lacks; capture them from a real instance using the steps in each section.
 
 ## What a Dynamic Application is
 

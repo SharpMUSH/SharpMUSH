@@ -19,8 +19,15 @@ example-package manifest all pass.
   WikiController convention; note this excludes God (#1) — a portal-wide quirk to revisit.
 - `mstring` fields render as text for now (markup-pipeline integration deferred).
 
-**Still open:** Phase 9 screenshots (need the running UI captured); richer display
-elements; the v2 deferrals below.
+Refinements since: `mstring` field values now render as portal markup (terminal pipeline);
+the form renderer does an advisory required-field check before a final submit. The REST
+surface was verified live against a bootstrapped server + ArangoDB (valid register 200 +
+round-trip; bogus schema URL rejected by validation; unknown kind rejected).
+
+**Still open:** Phase 9 **screenshots** — the guides' `[SCREENSHOT]` markers still need
+capture from a served WASM deployment with a browser (the dev `dotnet run` here serves the
+API but not the WASM, and no browser is installed); richer display elements; the v2
+deferrals below.
 
 ## Pre-Implementation
 - [ ] Confirm decisions with project owner (transport = HTTP `<POST>`; admin registers

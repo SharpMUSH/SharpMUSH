@@ -1,11 +1,11 @@
 # Softcode Author Guide: Dynamic Application Schemas
 
-> **Status — documentation ahead of implementation.** Written against the Area 21 design
-> (`docs/design/dynamic-applications.md`); the rendering client is built in Phases 1–3 of
-> `docs/todo/area-21-applications.md`. The softcode contract below is stable — it is the
-> same HTTP-handler model the character-profile API already uses, which you can read today
-> in `examples/packages/profile-handler/package.yaml`. **[SCREENSHOT]** markers point at
-> UI that lands later.
+> **Status — implemented.** The rendering client, registry, and routes described here are
+> built and tested (`docs/todo/area-21-applications.md`). The softcode contract below is the
+> same HTTP-handler model the character-profile API uses
+> (`examples/packages/profile-handler/package.yaml`), and the worked example lives at
+> `examples/packages/chargen/` — its GET`CHARGEN`SCHEMA is covered by a test that asserts it
+> evaluates to valid JSON. **[SCREENSHOT]** markers await capture from a served deployment.
 
 ## The model in one paragraph
 
