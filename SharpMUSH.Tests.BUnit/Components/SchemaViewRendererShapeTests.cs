@@ -35,6 +35,9 @@ public class SchemaViewRendererShapeTests : BunitContext
 	private static SchemaSection Section(int order, string? name, params SchemaElement[] elements) =>
 		new(name, order, null, elements);
 
+	private static SchemaSection Columns(int order, string? name, int columns, params SchemaElement[] elements) =>
+		new(name, order, null, elements, columns);
+
 	private IRenderedComponent<SchemaViewRenderer> RenderView(PortalSchemaDocument doc, SchemaData? data = null) =>
 		Render<SchemaViewRenderer>(p => p.Add(x => x.Document, doc).Add(x => x.Data, data));
 
@@ -185,6 +188,43 @@ public class SchemaViewRendererShapeTests : BunitContext
 
 		await Assert.That(cut.Markup).Contains("Strength");
 		await Assert.That(cut.Markup).Contains("14");
+	}
+
+	[TUnit.Core.Test]
+	public async Task DefaultColumns_StacksElements_NoGrid()
+	{
+		var doc = View(null, Page(1, null, Section(1, "S",
+			new SchemaElement(Kind: "field", Key: "a", Label: "A", Type: "text"),
+			new SchemaElement(Kind: "field", Key: "b", Label: "B", Type: "text"))));
+		var cut = RenderView(doc, Data(("a", "1", true), ("b", "2", true)));
+
+		// Per-row default: no grid.
+		await Assert.That(cut.FindAll("div.mud-grid").Count).IsEqualTo(0);
+	}
+
+	[TUnit.Core.Test]
+	public async Task TwoColumns_RendersGrid_WithHalfWidthItems()
+	{
+		var doc = View(null, Page(1, null, Columns(1, "S", 2,
+			new SchemaElement(Kind: "field", Key: "a", Label: "A", Type: "text"),
+			new SchemaElement(Kind: "field", Key: "b", Label: "B", Type: "text"))));
+		var cut = RenderView(doc, Data(("a", "1", true), ("b", "2", true)));
+
+		await Assert.That(cut.FindAll("div.mud-grid").Count).IsGreaterThanOrEqualTo(1);
+		await Assert.That(cut.FindAll("div.mud-grid-item").Count).IsEqualTo(2);
+		// 12 / 2 columns = md-6 per item.
+		await Assert.That(cut.FindAll("div.mud-grid-item-md-6").Count).IsEqualTo(2);
+	}
+
+	[TUnit.Core.Test]
+	public async Task ColumnSpan_WidensElementToFullRow()
+	{
+		var doc = View(null, Page(1, null, Columns(1, "S", 2,
+			new SchemaElement(Kind: "field", Key: "wide", Label: "Wide", Type: "text", Span: 2))));
+		var cut = RenderView(doc, Data(("wide", "x", true)));
+
+		// span 2 in a 2-column section → md-12 (full width).
+		await Assert.That(cut.FindAll("div.mud-grid-item-md-12").Count).IsEqualTo(1);
 	}
 
 	[TUnit.Core.Test]

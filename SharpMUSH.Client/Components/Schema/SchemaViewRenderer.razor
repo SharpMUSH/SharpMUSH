@@ -33,9 +33,23 @@ else
                     {
                         <MudText Typo="Typo.h6" Class="mb-2">@section.Name</MudText>
                     }
-                    @foreach (var element in elements)
+                    @if (section.Columns > 1)
                     {
-                        @RenderElement(element)
+                        <MudGrid Spacing="3">
+                            @foreach (var element in elements)
+                            {
+                                <MudItem xs="12" md="@ColumnWidth(section.Columns, element.Span)">
+                                    @RenderElement(element)
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    }
+                    else
+                    {
+                        @foreach (var element in elements)
+                        {
+                            @RenderElement(element)
+                        }
                     }
                 </MudPaper>
             }
@@ -51,6 +65,10 @@ else
 
     private IEnumerable<SchemaElement> VisibleElements(SchemaSection section)
         => (section.Elements ?? []).Where(IsVisible);
+
+    // Responsive width (out of 12) for one element in an N-column section, honoring its span.
+    private static int ColumnWidth(int columns, int span)
+        => Math.Clamp(12 / Math.Max(1, columns) * Math.Max(1, span), 1, 12);
 
     // A field element shows only if its datum exists and the softcode marked it visible. Non-field
     // display elements (markdown/divider/etc.) always show — they carry no per-viewer policy.

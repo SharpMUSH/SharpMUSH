@@ -78,6 +78,19 @@ ANSI/MXP markup. `select`/`radio`/`multiselect` carry an `options` array of
 **Display elements (for `view`, also usable in `form`):** `markdown`, `image` (`src_field`),
 `table` (`rows_field` + `columns`), `keyvalue` (`fields`), `divider`, `button`.
 
+**Layout.** A section stacks its elements one per row by default. To place fields
+side-by-side, set the section's `columns` to 2+ (it becomes a responsive grid, single-column
+on mobile); give an element `span: N` to make it occupy N of those columns:
+
+```jsonc
+{ "name": "Ability Scores", "order": 2, "columns": 3, "elements": [
+  { "kind": "field", "key": "str", "label": "STR", "type": "number" },
+  { "kind": "field", "key": "dex", "label": "DEX", "type": "number" },
+  { "kind": "field", "key": "con", "label": "CON", "type": "number" },
+  { "kind": "field", "key": "notes", "label": "Notes", "type": "textarea", "span": 3 }
+]}
+```
+
 ## The action response envelope (what `POST` routes return)
 
 ```jsonc

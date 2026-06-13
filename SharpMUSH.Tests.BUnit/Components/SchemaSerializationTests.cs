@@ -74,6 +74,29 @@ public class SchemaSerializationTests
 	}
 
 	[TUnit.Core.Test]
+	public async Task Section_DeserializesColumnsAndSpan_DefaultingToOne()
+	{
+		const string json = """
+		{ "kind": "view", "schema_version": 1, "pages": [ { "key": "p1", "order": 1, "sections": [
+		  { "name": "Grid", "order": 1, "columns": 3, "elements": [
+		    { "kind": "field", "key": "a", "type": "text" },
+		    { "kind": "field", "key": "wide", "type": "textarea", "span": 3 } ] },
+		  { "name": "Stacked", "order": 2, "elements": [ { "kind": "field", "key": "b", "type": "text" } ] }
+		] } ] }
+		""";
+
+		var doc = JsonSerializer.Deserialize<PortalSchemaDocument>(json, SchemaJson.Options);
+
+		var grid = doc!.Pages![0].Sections![0];
+		await Assert.That(grid.Columns).IsEqualTo(3);
+		await Assert.That(grid.Elements![0].Span).IsEqualTo(1);   // default
+		await Assert.That(grid.Elements![1].Span).IsEqualTo(3);   // explicit
+
+		var stacked = doc.Pages![0].Sections![1];
+		await Assert.That(stacked.Columns).IsEqualTo(1);          // default = per-row
+	}
+
+	[TUnit.Core.Test]
 	public async Task ActionResult_DeserializesErrorEnvelope()
 	{
 		const string json = """

@@ -44,12 +44,17 @@ public sealed record SchemaPage(
 	string? Next,
 	string? Prev);
 
-/// <summary>A section grouping related elements.</summary>
+/// <summary>
+/// A section grouping related elements. <c>Columns</c> controls layout: 1 (default) stacks elements
+/// one per row; 2+ lays them out side-by-side in an N-column responsive grid (single column on
+/// mobile). An element's <see cref="SchemaElement.Span"/> lets it occupy more than one column.
+/// </summary>
 public sealed record SchemaSection(
 	string? Name,
 	int Order,
 	[property: JsonPropertyName("visible_to")] string? VisibleTo,
-	IReadOnlyList<SchemaElement>? Elements);
+	IReadOnlyList<SchemaElement>? Elements,
+	int Columns = 1);
 
 /// <summary>
 /// A single element. <c>Kind</c> discriminates: "field" (an input/value) or a display element
@@ -77,7 +82,9 @@ public sealed record SchemaElement(
 	// keyvalue
 	IReadOnlyList<string>? Fields = null,
 	// button
-	string? Action = null);
+	string? Action = null,
+	// layout: how many of the section's columns this element occupies (default 1)
+	int Span = 1);
 
 /// <summary>A select/radio/multiselect choice.</summary>
 public sealed record SchemaOption(string Value, string Label);

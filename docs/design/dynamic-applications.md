@@ -100,8 +100,11 @@ One document type, `kind: "form" | "view"`, generalizing the profile schema's
   has several; a single-page form/view has exactly one. `next`/`prev` name sibling page
   keys for navigation affordances (the renderer shows controls; progression itself is
   softcode-driven — see below).
-- **`sections[]`** — `{ name, order, visible_to?, elements[] }`. Generalizes profile
-  sections; rendered in `order`.
+- **`sections[]`** — `{ name, order, visible_to?, elements[], columns? }`. Generalizes
+  profile sections; rendered in `order`. **`columns`** controls layout: `1` (default) stacks
+  elements one per row; `2+` lays them side-by-side in an N-column responsive grid (always a
+  single column on mobile). An element's optional **`span`** (default `1`) lets it occupy more
+  than one column — e.g. `span: 2` in a 2-column section spans the full row.
 - **`elements[]`** — each element is either a **field** (an input in a `form`, a value in
   a `view`) or a **non-field display element** (markdown, image, table, keyvalue,
   divider, button).

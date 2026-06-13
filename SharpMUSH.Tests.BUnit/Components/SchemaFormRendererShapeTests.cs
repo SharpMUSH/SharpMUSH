@@ -57,6 +57,9 @@ public class SchemaFormRendererShapeTests : BunitContext
 	private static SchemaPage Page(int order, string? title, params SchemaElement[] elements) =>
 		new($"p{order}", title, order, [new SchemaSection("Fields", 1, null, elements)], null, null);
 
+	private static SchemaPage ColumnsPage(int columns, params SchemaElement[] elements) =>
+		new("p1", null, 1, [new SchemaSection("Fields", 1, null, elements, columns)], null, null);
+
 	private static SchemaElement Field(string key, string label, string type,
 		IReadOnlyList<SchemaOption>? options = null, SchemaValidation? validation = null) =>
 		new(Kind: "field", Key: key, Label: label, Type: type, Options: options, Validation: validation);
@@ -229,6 +232,32 @@ public class SchemaFormRendererShapeTests : BunitContext
 		await Assert.That(cut.FindAll("h2").Count).IsGreaterThanOrEqualTo(1);
 		await Assert.That(cut.FindAll("hr.mud-divider").Count).IsGreaterThanOrEqualTo(1);
 		await Assert.That(cut.FindAll("button").Any(b => b.TextContent.Contains("Roll Stats"))).IsTrue();
+	}
+
+	[TUnit.Core.Test]
+	public async Task DefaultColumns_StacksFields_NoGrid()
+	{
+		var cut = RenderForm(Form(null, null, Page(1, null,
+			Field("a", "A", "text"), Field("b", "B", "text"))));
+		await Assert.That(cut.FindAll("div.mud-grid").Count).IsEqualTo(0);
+	}
+
+	[TUnit.Core.Test]
+	public async Task TwoColumns_RendersGrid_WithHalfWidthItems()
+	{
+		var cut = RenderForm(Form(null, null, ColumnsPage(2,
+			Field("a", "A", "text"), Field("b", "B", "text"))));
+		await Assert.That(cut.FindAll("div.mud-grid").Count).IsGreaterThanOrEqualTo(1);
+		await Assert.That(cut.FindAll("div.mud-grid-item").Count).IsEqualTo(2);
+		await Assert.That(cut.FindAll("div.mud-grid-item-md-6").Count).IsEqualTo(2);
+	}
+
+	[TUnit.Core.Test]
+	public async Task ColumnSpan_WidensFieldToFullRow()
+	{
+		var cut = RenderForm(Form(null, null, ColumnsPage(2,
+			new SchemaElement(Kind: "field", Key: "bio", Label: "Bio", Type: "textarea", Span: 2))));
+		await Assert.That(cut.FindAll("div.mud-grid-item-md-12").Count).IsEqualTo(1);
 	}
 
 	[TUnit.Core.Test]
