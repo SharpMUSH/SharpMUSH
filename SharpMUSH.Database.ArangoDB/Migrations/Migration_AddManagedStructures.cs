@@ -13,7 +13,7 @@ namespace SharpMUSH.Database.ArangoDB.Migrations;
 /// </summary>
 public class Migration_AddManagedStructures : IArangoMigration
 {
-	public long Id => 20260613_001;
+	public long Id => 20260613_002;
 
 	public string Name => "add_managed_structures";
 
