@@ -31,6 +31,11 @@ public enum ApplicationKind
 /// <param name="NavPlacement">Nav section hint for Page apps, or null to hide from nav.</param>
 /// <param name="Zones">Allowed layout zones for Widget apps, or null for none.</param>
 /// <param name="Order">Sort order within nav / listings (ascending).</param>
+/// <param name="OwningPackage">
+/// Package id that installed this application (Area-20 application package), or null for a manually
+/// registered application. When set, the package manager owns the record's lifecycle: uninstalling the
+/// package removes it.
+/// </param>
 public sealed record RegisteredApplication(
 	string Slug,
 	string DisplayName,
@@ -42,4 +47,5 @@ public sealed record RegisteredApplication(
 	PortalRole MinimumRole,
 	string? NavPlacement,
 	IReadOnlyList<WidgetZone>? Zones,
-	int Order);
+	int Order,
+	string? OwningPackage = null);

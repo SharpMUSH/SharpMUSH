@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using OneOf;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Library.Services.Interfaces;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
@@ -22,7 +24,14 @@ public partial class PackageManifestService : IPackageManifestService
 	private static readonly IReadOnlySet<string> KnownManifestKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
-		"convention_prefix", "requires_server", "replaces", "conflicts", "depends", "configure", "objects"
+		"convention_prefix", "requires_server", "replaces", "conflicts", "depends", "configure", "objects",
+		"kind", "application"
+	};
+
+	private static readonly IReadOnlySet<string> KnownApplicationKeys = new HashSet<string>(StringComparer.Ordinal)
+	{
+		"slug", "display_name", "icon", "type", "schema_url", "data_url", "submit_route",
+		"minimum_role", "nav_placement", "zones", "order"
 	};
 
 	private static readonly IReadOnlySet<string> ReservedManifestKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -132,9 +141,20 @@ public partial class PackageManifestService : IPackageManifestService
 		}
 
 		var configure = ReadConfigure(doc, issues);
-		var objects = ReadObjects(doc, issues);
 
-		ValidateRefs(objects, configure, dependencies, issues);
+		var kind = ReadKind(doc, issues);
+
+		// A softcode package requires objects and forbids an application block;
+		// an application package is the mirror — it registers a portal app and
+		// carries no objects of its own (it depends on a softcode package for
+		// its routes). Read both unconditionally so every issue is reported, but
+		// gate the requirement/forbidden checks on the declared kind.
+		var objects = kind == PackageKind.Application
+			? ReadObjectsForApplication(doc, issues)
+			: ReadObjects(doc, issues);
+		var application = ReadApplication(doc, name, kind, issues);
+
+		ValidateRefs(objects, application, configure, dependencies, issues);
 
 		if (issues.Any(i => i.Severity == PackageManifestIssueSeverity.Error))
 		{
@@ -156,7 +176,9 @@ public partial class PackageManifestService : IPackageManifestService
 			conflicts,
 			dependencies,
 			configure,
-			objects);
+			objects,
+			kind,
+			application);
 
 		return new ParsedPackageManifest(manifest, issues);
 	}
@@ -732,6 +754,157 @@ public partial class PackageManifestService : IPackageManifestService
 		}
 	}
 
+	private static PackageKind ReadKind(Dictionary<string, object?> doc, List<PackageManifestIssue> issues)
+	{
+		if (!doc.TryGetValue("kind", out var node) || node is null)
+		{
+			return PackageKind.Softcode;
+		}
+
+		if (node is string text && Enum.TryParse<PackageKind>(text, ignoreCase: true, out var kind))
+		{
+			return kind;
+		}
+
+		issues.Add(PackageManifestIssue.Error("kind", $"'{node}' is not a valid package kind (softcode, application)."));
+		return PackageKind.Softcode;
+	}
+
+	/// <summary>
+	/// Application packages register a portal app and own no objects; an
+	/// <c>objects:</c> key is therefore an error. Returns an empty object list.
+	/// </summary>
+	private static IReadOnlyList<PackageObjectSpec> ReadObjectsForApplication(
+		Dictionary<string, object?> doc, List<PackageManifestIssue> issues)
+	{
+		if (doc.ContainsKey("objects"))
+		{
+			issues.Add(PackageManifestIssue.Error("objects",
+				"An application package owns no objects — declare the routes in a softcode package and 'depends' on it. Remove 'objects'."));
+		}
+
+		return [];
+	}
+
+	/// <summary>
+	/// Reads the <c>application:</c> block (decision 20.22). Required for an
+	/// application package, forbidden otherwise. String fields may carry
+	/// <c>{{?configure}}</c>/<c>{{$well_known}}</c>/<c>{{dependency/ref}}</c>
+	/// refs resolved at apply; literal values are validated against the role and
+	/// zone enums here.
+	/// </summary>
+	private static PackageApplicationSpec? ReadApplication(
+		Dictionary<string, object?> doc, string? packageName, PackageKind kind, List<PackageManifestIssue> issues)
+	{
+		var present = doc.TryGetValue("application", out var node) && node is not null;
+
+		if (kind != PackageKind.Application)
+		{
+			if (present)
+			{
+				issues.Add(PackageManifestIssue.Error("application",
+					"'application' is only valid when 'kind: application'."));
+			}
+
+			return null;
+		}
+
+		if (!present)
+		{
+			issues.Add(PackageManifestIssue.Error("application", "An application package requires an 'application' block."));
+			return null;
+		}
+
+		if (node is not Dictionary<object, object> rawApp)
+		{
+			issues.Add(PackageManifestIssue.Error("application", "'application' must be a mapping."));
+			return null;
+		}
+
+		var app = Normalize(rawApp);
+		foreach (var key in app.Keys.Where(k => !KnownApplicationKeys.Contains(k)))
+		{
+			issues.Add(PackageManifestIssue.Warning($"application.{key}", $"Unknown key '{key}' is ignored."));
+		}
+
+		string? AppString(string key)
+		{
+			if (!app.TryGetValue(key, out var value) || value is null)
+			{
+				return null;
+			}
+
+			if (value is string text)
+			{
+				return text;
+			}
+
+			issues.Add(PackageManifestIssue.Error($"application.{key}", $"'{key}' must be a string."));
+			return null;
+		}
+
+		var slug = AppString("slug")?.Trim().ToLowerInvariant() ?? packageName;
+		if (string.IsNullOrEmpty(slug) || !PackageSlugRegex().IsMatch(slug) || slug.Length > MaxPackageIdLength)
+		{
+			issues.Add(PackageManifestIssue.Error("application.slug",
+				$"'{slug}' is not a valid application slug (lowercase letters, digits, hyphens; must start with a letter)."));
+		}
+
+		var displayName = AppString("display_name");
+		if (string.IsNullOrWhiteSpace(displayName))
+		{
+			issues.Add(PackageManifestIssue.Error("application.display_name", "An application requires a 'display_name'."));
+		}
+
+		var displayKind = PackageApplicationDisplay.Page;
+		if (AppString("type") is { } typeText && !Enum.TryParse(typeText, ignoreCase: true, out displayKind))
+		{
+			issues.Add(PackageManifestIssue.Error("application.type", $"'{typeText}' is not a valid application type (page, widget)."));
+		}
+
+		var schemaUrl = AppString("schema_url");
+		if (string.IsNullOrWhiteSpace(schemaUrl))
+		{
+			issues.Add(PackageManifestIssue.Error("application.schema_url", "An application requires a 'schema_url'."));
+		}
+
+		var minimumRole = AppString("minimum_role")?.Trim() ?? nameof(PortalRole.Player);
+		if (!ContainsRef(minimumRole) && !Enum.TryParse<PortalRole>(minimumRole, ignoreCase: true, out _))
+		{
+			issues.Add(PackageManifestIssue.Error("application.minimum_role",
+				$"'{minimumRole}' is not a valid role (guest, player, builder, royalty, wizard, god) or a configure ref."));
+		}
+
+		var zones = ReadStringList(app, "zones", issues);
+		foreach (var zone in zones.Where(z => !ContainsRef(z) && !Enum.TryParse<WidgetZone>(z, ignoreCase: true, out _)))
+		{
+			issues.Add(PackageManifestIssue.Error("application.zones", $"'{zone}' is not a valid widget zone."));
+		}
+
+		var order = 0;
+		if (app.TryGetValue("order", out var orderNode) && orderNode is not null
+			&& !int.TryParse(orderNode.ToString(), out order))
+		{
+			issues.Add(PackageManifestIssue.Error("application.order", $"'{orderNode}' is not a valid order (integer)."));
+		}
+
+		return new PackageApplicationSpec(
+			slug ?? "",
+			displayName ?? "",
+			AppString("icon"),
+			displayKind,
+			schemaUrl ?? "",
+			AppString("data_url"),
+			AppString("submit_route"),
+			minimumRole,
+			AppString("nav_placement"),
+			zones,
+			order);
+	}
+
+	/// <summary>True when a field carries at least one <c>{{ref}}</c> token (validated separately by <see cref="ValidateRefs"/>).</summary>
+	private static bool ContainsRef(string value) => value.Contains("{{", StringComparison.Ordinal);
+
 	private static IReadOnlyList<PackageObjectSpec> ReadObjects(
 		Dictionary<string, object?> doc, List<PackageManifestIssue> issues)
 	{
@@ -1027,6 +1200,7 @@ public partial class PackageManifestService : IPackageManifestService
 	/// </summary>
 	private void ValidateRefs(
 		IReadOnlyList<PackageObjectSpec> objects,
+		PackageApplicationSpec? application,
 		IReadOnlyDictionary<string, PackageConfigureSpec> configure,
 		IReadOnlyList<PackageDependencySpec> dependencies,
 		List<PackageManifestIssue> issues)
@@ -1120,6 +1294,32 @@ public partial class PackageManifestService : IPackageManifestService
 			foreach (var (lockName, lockValue) in obj.Locks)
 			{
 				ScanText(lockValue, $"{path}.locks.{lockName}");
+			}
+		}
+
+		// Application-package fields share the configure machinery: any
+		// {{?configure}}/{{$well_known}}/{{dependency/ref}} token in a string
+		// field must resolve, exactly as attribute values do.
+		if (application is not null)
+		{
+			(string Field, string? Value)[] appFields =
+			[
+				("display_name", application.DisplayName), ("icon", application.Icon),
+				("schema_url", application.SchemaUrl), ("data_url", application.DataUrl),
+				("submit_route", application.SubmitRoute), ("minimum_role", application.MinimumRole),
+				("nav_placement", application.NavPlacement)
+			];
+			foreach (var (fieldName, value) in appFields)
+			{
+				if (value is not null)
+				{
+					ScanText(value, $"application.{fieldName}");
+				}
+			}
+
+			foreach (var zone in application.Zones)
+			{
+				ScanText(zone, "application.zones");
 			}
 		}
 

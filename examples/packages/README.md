@@ -26,6 +26,7 @@ which games can add as a remote in the admin panel.
 | [`who-where/`](who-where/) | Multiple objects, internal refs, parents, flags, a convention prefix |
 | [`starter-area/`](starter-area/) | Rooms and exits (`location:` / `destination:`) |
 | [`bbs-lite/`](bbs-lite/) | Dependencies with source hints, typed configure params, cross-package refs, conflicts, locks, prerelease versions |
+| [`chargen-app/`](chargen-app/) | An application package (`kind: application`): registers a portal page, depends on a softcode package, configurable role |
 
 ## The manifest: `package.yaml`
 
@@ -246,12 +247,61 @@ attributes, or dependency ids; any invalid or unresolvable `{{token}}`;
 parent cycles; exits without location/destination (or location on a room /
 destination on a non-exit); configure type violations (dbref defaults,
 non-dbref refs in placement fields); self/overlapping depends-conflicts;
-format major newer than supported.
+an invalid `kind`; an application package missing its `application:` block or
+declaring `objects:` (and vice-versa for a softcode package); an invalid
+application slug, type, role, or zone; format major newer than supported.
 
 Warnings (manifest is accepted): unknown keys (typo detection); reserved keys
 (`provides`, `recommends`, `suggests`, configure `pattern`); declared-but-
 unused configure refs; more than 5 keywords; format minor newer than
 supported.
+
+## Application packages (`kind: application`)
+
+Most packages are **softcode** packages (`kind: softcode`, the default): they
+create objects and manage attributes. An **application** package
+(`kind: application`) is the portal counterpart — it registers a
+[Dynamic Application](../../docs/design/dynamic-applications.md) (Area 21) and
+owns **no objects of its own**. Instead it `depends:` on the softcode package
+that provides its HTTP-handler routes (the schema/data/submit attributes).
+
+```yaml
+format: 1.1
+package: chargen-app
+kind: application                 # softcode (default) | application
+version: 1.0.0
+depends:
+  - chargen: ">=1.0 <2.0"         # the softcode package providing the routes
+
+configure:
+  access:                         # an application field can be admin-configured
+    label: "Minimum role"
+    type: string
+    default: player
+
+application:                      # required for kind: application; forbidden otherwise
+  slug: chargen                   # URL key; the app renders at /apps/chargen (defaults to the package id)
+  display_name: Character Application
+  icon: assignment_ind            # optional Material icon
+  type: page                      # page | widget
+  schema_url: http/chargen/schema # GET → Portal Schema Document
+  data_url: http/chargen          # optional GET → data (view display / form prefill)
+  submit_route: http/chargen      # optional POST base for actions
+  minimum_role: "{{?access}}"     # guest|player|builder|royalty|wizard|god, or a {{?configure}} ref
+  nav_placement: main             # optional nav section (page apps)
+  zones: [MainContent]            # optional layout zones (widget apps)
+  order: 50                       # optional sort order
+```
+
+The string fields (`display_name`, `icon`, `schema_url`, `data_url`,
+`submit_route`, `minimum_role`, `nav_placement`, `zones`) accept the same
+`{{?configure}}` / `{{$well_known}}` / `{{dependency/ref}}` refs as attribute
+values, resolved at apply — so one published application package adapts its
+role, placement, and endpoints to each game it is installed on. Applying the
+package registers the application (the same record `/admin/applications`
+creates by hand); uninstalling it removes the registration. A `kind:
+application` manifest must **not** declare `objects:` — keep the softcode in a
+separate package and depend on it.
 
 ## Repos, discovery, and releases
 

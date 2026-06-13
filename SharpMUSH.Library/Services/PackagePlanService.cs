@@ -23,6 +23,14 @@ public partial class PackagePlanService : IPackagePlanService
 		var attributes = ClassifyAttributes(inputs, objidByRef, deletedObjids, notes);
 		var collisions = DetectCommandCollisions(inputs);
 
+		// Application packages (kind: application) carry no objects; surface the
+		// portal registration the apply will perform so the review is not blank.
+		if (manifest is { Kind: PackageKind.Application, Application: { } app })
+		{
+			var verb = inputs.Installed is null ? "Registers" : "Updates";
+			notes.Add($"{verb} application '{app.Slug}' ({app.Kind}) at /apps/{app.Slug}, served from '{app.SchemaUrl}'.");
+		}
+
 		return new PackageChangeset(
 			manifest.Name,
 			inputs.Installed?.Version,

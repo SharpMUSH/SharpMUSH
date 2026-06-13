@@ -4,10 +4,13 @@ using System.Text.Json;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Models.Portal.Applications;
+using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -21,6 +24,7 @@ namespace SharpMUSH.Library.Services;
 public class PackageInstallService(
 	ISharpDatabase database,
 	IPackageRegistryService registry,
+	IApplicationRegistryService applications,
 	IPackagePlanService planner,
 	IOptionsWrapper<SharpMUSHOptions> configuration) : IPackageInstallService
 {
@@ -437,7 +441,66 @@ public class PackageInstallService(
 			DateTimeOffset.UtcNow));
 		await registry.PrunePackageRevisionsAsync(manifest.Name, request.KeepRevisions);
 
+		// Application packages (kind: application) register a portal app instead
+		// of creating objects; its string fields resolve through the same ref map
+		// as objects/attributes, so {{?configure}} settings land here too.
+		if (manifest is { Kind: PackageKind.Application, Application: not null })
+		{
+			var built = BuildRegisteredApplication(manifest.Application, manifest.Name, Resolve);
+			if (built.IsT1)
+			{
+				return built.AsT1;
+			}
+
+			await applications.UpsertApplicationAsync(built.AsT0);
+			notes.Add($"Registered application '{built.AsT0.Slug}' ({built.AsT0.Kind}) at /apps/{built.AsT0.Slug}.");
+		}
+
 		return new PackageApplyResult(revision, created, notes);
+	}
+
+	/// <summary>
+	/// Resolves an application package's <c>application:</c> block into a
+	/// <see cref="RegisteredApplication"/>, substituting refs in its string
+	/// fields and parsing the role/kind/zone enums. Provenance is stamped with
+	/// the package id so uninstall can reclaim it.
+	/// </summary>
+	private static OneOf<RegisteredApplication, Error<string>> BuildRegisteredApplication(
+		PackageApplicationSpec spec, string packageId, Func<PackageRef, string?> resolve)
+	{
+		string? Sub(string? value) =>
+			value is null ? null : PackageRefSubstitution.Substitute(value, resolve, out _);
+
+		var roleText = Sub(spec.MinimumRole) ?? nameof(PortalRole.Player);
+		if (!Enum.TryParse<PortalRole>(roleText, ignoreCase: true, out var role))
+		{
+			return new Error<string>(
+				$"Application '{spec.Slug}': minimum_role '{roleText}' is not a valid role — answer its configure prompt or fix the manifest.");
+		}
+
+		var zones = spec.Zones
+			.Select(z => Sub(z))
+			.Where(z => !string.IsNullOrWhiteSpace(z))
+			.Select(z => Enum.TryParse<WidgetZone>(z, ignoreCase: true, out var zone) ? zone : (WidgetZone?)null)
+			.Where(z => z is not null)
+			.Select(z => z!.Value)
+			.ToList();
+
+		var application = new RegisteredApplication(
+			spec.Slug,
+			Sub(spec.DisplayName) ?? spec.Slug,
+			Sub(spec.Icon),
+			Enum.Parse<ApplicationKind>(spec.Kind.ToString()),
+			Sub(spec.SchemaUrl) ?? spec.SchemaUrl,
+			Sub(spec.DataUrl),
+			Sub(spec.SubmitRoute),
+			role,
+			Sub(spec.NavPlacement),
+			zones.Count == 0 ? null : zones,
+			spec.Order,
+			packageId);
+
+		return application;
 	}
 
 	private async Task<OneOf<string, Error<string>>> CreateObjectAsync(
@@ -753,6 +816,15 @@ public class PackageInstallService(
 		foreach (var record in ownObjects)
 		{
 			await MarkGoingAsync(record.Objid, notes, cancellationToken);
+		}
+
+		// Application packages own portal registrations rather than objects;
+		// reclaim every application this package installed.
+		foreach (var app in (await applications.GetApplicationsAsync())
+			.Where(a => string.Equals(a.OwningPackage, packageId, StringComparison.Ordinal)))
+		{
+			await applications.RemoveApplicationAsync(app.Slug);
+			notes.Add($"Removed application '{app.Slug}'.");
 		}
 
 		await registry.RemoveInstalledPackageAsync(packageId);

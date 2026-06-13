@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -20,6 +22,7 @@ public class PackageInstallServiceTests
 
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IPackageRegistryService Registry => (IPackageRegistryService)Database;
+	private IApplicationRegistryService Applications => (IApplicationRegistryService)Database;
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 	private PackageManifestService Manifests { get; } = new();
 
@@ -355,5 +358,86 @@ public class PackageInstallServiceTests
 
 		await Assert.That((await Installer.UninstallAsync("e2e-child")).IsT0).IsTrue();
 		await Assert.That((await Installer.UninstallAsync("e2e-base")).IsT0).IsTrue();
+	}
+
+	[Test, NotInParallel]
+	public async Task ApplicationPackage_RegistersAndUnregisters_PortalApplication()
+	{
+		// An application package owns no objects: it depends on a softcode package
+		// and registers a portal application, with a {{?configure}} ref tuning the
+		// minimum role at apply (decision 20.22).
+		var routes = Parse(
+			"""
+			package: appdep-routes
+			version: "1.0"
+			objects:
+			  - ref: marker
+			    type: thing
+			    name: Appdep Routes Marker
+			""");
+
+		var appPackage = Parse(
+			"""
+			package: appdep-app
+			version: 1.0.0
+			kind: application
+			depends:
+			  - appdep-routes: ">=1.0"
+			configure:
+			  access:
+			    label: "Minimum role"
+			    type: string
+			    default: player
+			application:
+			  slug: appdep
+			  display_name: Appdep Application
+			  icon: assignment_ind
+			  type: page
+			  schema_url: http/appdep/schema
+			  submit_route: http/appdep
+			  minimum_role: "{{?access}}"
+			  nav_placement: main
+			  order: 50
+			""");
+
+		var answers = new Dictionary<string, string> { ["access"] = "wizard" };
+
+		// The dependency must be present first — the plan blocks until then.
+		var blockedPlan = await Installer.PlanAsync(appPackage, answers);
+		await Assert.That(blockedPlan.IsBlocked).IsTrue();
+
+		await Assert.That((await Installer.ApplyAsync(routes, new PackageApplyRequest(Source(), new Dictionary<string, string>(), []))).IsT0).IsTrue();
+
+		// Now the plan resolves and surfaces the registration as a note.
+		var plan = await Installer.PlanAsync(appPackage, answers);
+		await Assert.That(plan.IsBlocked).IsFalse();
+		await Assert.That(plan.Objects.Count).IsEqualTo(0);
+		await Assert.That(plan.Notes.Any(n => n.Contains("Registers application 'appdep'"))).IsTrue();
+
+		// Apply registers the portal application with the configure-resolved role.
+		var apply = await Installer.ApplyAsync(appPackage, new PackageApplyRequest(Source(), answers, []));
+		await Assert.That(apply.IsT0).IsTrue();
+		await Assert.That(apply.AsT0.CreatedObjects.Count).IsEqualTo(0);
+
+		var registered = await Applications.GetApplicationAsync("appdep");
+		await Assert.That(registered.IsT0).IsTrue();
+		var app = registered.AsT0;
+		await Assert.That(app.DisplayName).IsEqualTo("Appdep Application");
+		await Assert.That(app.Kind).IsEqualTo(ApplicationKind.Page);
+		await Assert.That(app.SchemaUrl).IsEqualTo("http/appdep/schema");
+		await Assert.That(app.MinimumRole).IsEqualTo(PortalRole.Wizard);
+		await Assert.That(app.OwningPackage).IsEqualTo("appdep-app");
+
+		// The dependency cannot be removed while the application depends on it.
+		var blockedUninstall = await Installer.UninstallAsync("appdep-routes");
+		await Assert.That(blockedUninstall.IsT1).IsTrue();
+		await Assert.That(blockedUninstall.AsT1.Value).Contains("appdep-app");
+
+		// Uninstalling the application package reclaims the registration.
+		await Assert.That((await Installer.UninstallAsync("appdep-app")).IsT0).IsTrue();
+		await Assert.That((await Applications.GetApplicationAsync("appdep")).IsT1).IsTrue();
+		await Assert.That((await Registry.GetInstalledPackageAsync("appdep-app")).IsT1).IsTrue();
+
+		await Assert.That((await Installer.UninstallAsync("appdep-routes")).IsT0).IsTrue();
 	}
 }

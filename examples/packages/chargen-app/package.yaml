@@ -1,0 +1,40 @@
+format: 1.1
+package: chargen-app
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "Registers the character-application form (chargen) as a portal page at /apps/chargen."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [portal, application, form, chargen]
+requires_server: ">=0.1"
+
+# An application package owns no objects — it depends on the softcode package
+# that provides its HTTP-handler routes (the schema + submit handlers) and
+# registers the portal entry point that renders them.
+depends:
+  - package: chargen
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
+      path: chargen/
+
+# The installing admin chooses who may open the application. A {{?configure}}
+# ref in an application field is prompted at review and substituted at apply,
+# exactly like refs in attribute values.
+configure:
+  access:
+    label: "Minimum portal role that may open the application"
+    type: string
+    default: player
+
+application:
+  slug: chargen
+  display_name: Character Application
+  icon: assignment_ind
+  type: page
+  schema_url: http/chargen/schema
+  submit_route: http/chargen
+  minimum_role: "{{?access}}"
+  nav_placement: main
+  order: 50

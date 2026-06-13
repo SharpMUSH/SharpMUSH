@@ -24,6 +24,7 @@ public partial class ArangoDatabase : IApplicationRegistryService
 		public string? NavPlacement { get; set; }
 		public string Zones { get; set; } = "";
 		public int Order { get; set; }
+		public string? OwningPackage { get; set; }
 	}
 
 	public async Task UpsertApplicationAsync(RegisteredApplication application)
@@ -50,7 +51,8 @@ public partial class ArangoDatabase : IApplicationRegistryService
 			["MinimumRole"] = a.MinimumRole.ToString(),
 			["NavPlacement"] = a.NavPlacement,
 			["Zones"] = ApplicationRegistryMapping.ZonesToString(a.Zones),
-			["Order"] = a.Order
+			["Order"] = a.Order,
+			["OwningPackage"] = a.OwningPackage
 		};
 	}
 
@@ -98,7 +100,8 @@ public partial class ArangoDatabase : IApplicationRegistryService
 		Enum.Parse<PortalRole>(d.MinimumRole, ignoreCase: true),
 		d.NavPlacement,
 		ApplicationRegistryMapping.ZonesFromString(d.Zones),
-		d.Order);
+		d.Order,
+		d.OwningPackage);
 
 	#endregion
 }

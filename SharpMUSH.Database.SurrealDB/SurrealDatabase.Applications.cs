@@ -23,6 +23,7 @@ internal class SysApplicationDbRecord : Record
 	public string? navPlacement { get; set; }
 	public string zones { get; set; } = "";
 	public int sortOrder { get; set; }
+	public string? owningPackage { get; set; }
 }
 
 public partial class SurrealDatabase : IApplicationRegistryService
@@ -30,7 +31,7 @@ public partial class SurrealDatabase : IApplicationRegistryService
 	#region Application Registry
 
 	private const string SysApplicationFields =
-		"id, slug, displayName, icon, kind, schemaUrl, dataUrl, submitRoute, minimumRole, navPlacement, zones, sortOrder";
+		"id, slug, displayName, icon, kind, schemaUrl, dataUrl, submitRoute, minimumRole, navPlacement, zones, sortOrder, owningPackage";
 
 	public async Task UpsertApplicationAsync(RegisteredApplication application)
 	{
@@ -46,13 +47,14 @@ public partial class SurrealDatabase : IApplicationRegistryService
 			["minimumRole"] = application.MinimumRole.ToString(),
 			["navPlacement"] = application.NavPlacement,
 			["zones"] = ApplicationRegistryMapping.ZonesToString(application.Zones),
-			["sortOrder"] = application.Order
+			["sortOrder"] = application.Order,
+			["owningPackage"] = application.OwningPackage
 		};
 		await ExecuteAsync("""
 			UPSERT type::thing('sys_application', $slug) SET slug = $slug, displayName = $displayName,
 				icon = $icon, kind = $kind, schemaUrl = $schemaUrl, dataUrl = $dataUrl,
 				submitRoute = $submitRoute, minimumRole = $minimumRole, navPlacement = $navPlacement,
-				zones = $zones, sortOrder = $sortOrder
+				zones = $zones, sortOrder = $sortOrder, owningPackage = $owningPackage
 			""", parameters);
 	}
 
@@ -91,7 +93,8 @@ public partial class SurrealDatabase : IApplicationRegistryService
 		Enum.Parse<PortalRole>(r.minimumRole, ignoreCase: true),
 		r.navPlacement,
 		ApplicationRegistryMapping.ZonesFromString(r.zones),
-		r.sortOrder);
+		r.sortOrder,
+		r.owningPackage);
 
 	#endregion
 }

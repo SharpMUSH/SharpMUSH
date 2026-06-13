@@ -31,3 +31,7 @@ packages:
     package: chargen
     version: 1.0.0
     description: Dynamic Application (Area 21) — a character-application form (requires http-handler)
+  - path: chargen-app/
+    package: chargen-app
+    version: 1.0.0
+    description: Application package (Area 21) — registers chargen as a portal page (requires chargen)
