@@ -166,6 +166,8 @@ public static partial class SchemaBuilder
 				underlyingType == typeof(decimal)) return "number";
 		if (underlyingType == typeof(string)) return "string";
 		if (underlyingType.IsEnum) return "enum";
+		if (underlyingType == typeof(string[])) return "array";
+		if (underlyingType == typeof(Dictionary<string, string[]>)) return "dictionary";
 
 		return "string";
 	}
@@ -181,6 +183,8 @@ public static partial class SchemaBuilder
 				underlyingType == typeof(float) || underlyingType == typeof(double) ||
 				underlyingType == typeof(decimal)) return "numeric";
 		if (underlyingType.IsEnum) return "select";
+		if (underlyingType == typeof(string[])) return "stringlist";
+		if (underlyingType == typeof(Dictionary<string, string[]>)) return "dictionary";
 
 		return "text";
 	}

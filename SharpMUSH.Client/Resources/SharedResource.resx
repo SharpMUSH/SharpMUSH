@@ -880,6 +880,21 @@
   <data name="ResetChanges" xml:space="preserve">
     <value>Reset Changes</value>
   </data>
+  <data name="AddItem" xml:space="preserve">
+    <value>Add Item</value>
+  </data>
+  <data name="NoItems" xml:space="preserve">
+    <value>No items</value>
+  </data>
+  <data name="AddEntry" xml:space="preserve">
+    <value>Add Entry</value>
+  </data>
+  <data name="NoEntries" xml:space="preserve">
+    <value>No entries</value>
+  </data>
+  <data name="AddValue" xml:space="preserve">
+    <value>Add Value</value>
+  </data>
   <data name="SaveConfiguration" xml:space="preserve">
     <value>Save Configuration</value>
   </data>
