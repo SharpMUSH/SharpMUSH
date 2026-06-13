@@ -101,6 +101,14 @@ public class PackageInstallServiceTests
 		return leaf?.Value.ToPlainText() ?? "";
 	}
 
+	private async Task<IReadOnlyList<string>> ReadAttributeFlagsAsync(string objid, string attribute)
+	{
+		var dbref = PackageInstallService.ParseObjid(objid)!.Value;
+		var leaf = await Database.GetAttributeAsync(dbref, attribute.Split('`'), CancellationToken.None)
+			.LastOrDefaultAsync();
+		return leaf?.Flags.Select(f => f.Name).ToList() ?? [];
+	}
+
 	[Test, NotInParallel]
 	public async Task InstallUpgradeRollbackUninstall_EndToEnd()
 	{
@@ -439,5 +447,74 @@ public class PackageInstallServiceTests
 		await Assert.That((await Registry.GetInstalledPackageAsync("appdep-app")).IsT1).IsTrue();
 
 		await Assert.That((await Installer.UninstallAsync("appdep-routes")).IsT0).IsTrue();
+	}
+
+	[Test, NotInParallel]
+	public async Task Upgrade_AppliesAttributeFlags_AndRemovesDroppedAttribute()
+	{
+		// Two apply-side upgrade behaviours the end-to-end test above does not
+		// cover: declared attribute flags are applied to the live attribute, and
+		// an attribute dropped from the new version (locally untouched) is cleanly
+		// deleted — value cleared AND its baseline record removed.
+		var v1 = Parse(
+			"""
+			package: flags-pkg
+			version: "1.0"
+			objects:
+			  - ref: widget
+			    type: thing
+			    name: Flags Widget
+			    attributes:
+			      FN_KEEP:
+			        value: |-
+			          keep-me
+			        flags: [no_command, veiled]
+			      FN_DROP: |-
+			        drop-me-next-version
+			""");
+
+		var install = await Installer.ApplyAsync(v1, new PackageApplyRequest(Source(), new Dictionary<string, string>(), []));
+		await Assert.That(install.IsT0).IsTrue();
+		var widgetObjid = install.AsT0.CreatedObjects["widget"];
+
+		// Attribute flags landed on the live attribute (applied additively at apply).
+		var keepFlags = await ReadAttributeFlagsAsync(widgetObjid, "FN_KEEP");
+		await Assert.That(keepFlags).Contains("no_command");
+		await Assert.That(keepFlags).Contains("veiled");
+		await Assert.That(await ReadAttributeAsync(widgetObjid, "FN_DROP")).IsEqualTo("drop-me-next-version");
+		await Assert.That((await Registry.GetManagedAttributesAsync("flags-pkg")).Any(b => b.Attribute == "FN_DROP")).IsTrue();
+
+		// Upgrade to v2: FN_DROP is gone from the manifest and was never modified
+		// locally, so the plan classifies it as a clean Delete.
+		var v2 = Parse(
+			"""
+			package: flags-pkg
+			version: "1.1"
+			objects:
+			  - ref: widget
+			    type: thing
+			    name: Flags Widget
+			    attributes:
+			      FN_KEEP:
+			        value: |-
+			          keep-me
+			        flags: [no_command, veiled]
+			""");
+
+		var plan = await Installer.PlanAsync(v2);
+		await Assert.That(plan.Attributes.Single(a => a.Attribute == "FN_DROP").Action)
+			.IsEqualTo(PackageAttributeAction.Delete);
+
+		var upgrade = await Installer.ApplyAsync(v2, new PackageApplyRequest(Source("commit-2"), new Dictionary<string, string>(), []));
+		await Assert.That(upgrade.IsT0).IsTrue();
+
+		// FN_DROP is gone from both the live object and the baseline registry...
+		await Assert.That(await ReadAttributeAsync(widgetObjid, "FN_DROP")).IsEqualTo("");
+		await Assert.That((await Registry.GetManagedAttributesAsync("flags-pkg")).Any(b => b.Attribute == "FN_DROP")).IsFalse();
+		// ...while FN_KEEP and its flags survive the upgrade untouched.
+		await Assert.That(await ReadAttributeAsync(widgetObjid, "FN_KEEP")).IsEqualTo("keep-me");
+		await Assert.That(await ReadAttributeFlagsAsync(widgetObjid, "FN_KEEP")).Contains("veiled");
+
+		await Assert.That((await Installer.UninstallAsync("flags-pkg")).IsT0).IsTrue();
 	}
 }

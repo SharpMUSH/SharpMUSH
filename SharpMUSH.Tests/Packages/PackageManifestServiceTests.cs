@@ -757,6 +757,54 @@ public class PackageManifestServiceTests
 		await Assert.That(bad.IsT1).IsTrue();
 	}
 
+	[Test]
+	public async Task ObjectFlagsAndLocks_Parse()
+	{
+		var result = _service.ParseManifest(MinimalManifest(
+			objectExtras: "    flags: [no_command, dark]\n    locks:\n      use: \"{{a}}\"\n      page: \"=#1\""));
+
+		await Assert.That(result.IsT0).IsTrue();
+		var obj = result.AsT0.Manifest.Objects.Single();
+		await Assert.That(obj.Flags.ToArray()).IsEquivalentTo((string[])["no_command", "dark"]);
+		await Assert.That(obj.Locks["use"]).IsEqualTo("{{a}}");
+		await Assert.That(obj.Locks["page"]).IsEqualTo("=#1");
+	}
+
+	[Test]
+	public async Task AttributeFlags_ParseFromMappingForm_ShorthandHasNone()
+	{
+		// Attribute flags are supported only via the mapping form (value: + flags:);
+		// the bare-string shorthand carries no flags.
+		var result = _service.ParseManifest(MinimalManifest(attributes:
+			"""
+			      WITH_FLAGS:
+			        value: |-
+			          think hi
+			        flags: [no_command, veiled]
+			      SHORTHAND: "plain value"
+			"""));
+
+		await Assert.That(result.IsT0).IsTrue();
+		var attrs = result.AsT0.Manifest.Objects.Single().Attributes;
+		await Assert.That(attrs["WITH_FLAGS"].Flags.ToArray()).IsEquivalentTo((string[])["no_command", "veiled"]);
+		await Assert.That(attrs["SHORTHAND"].Flags.Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task Powers_AreNotASupportedObjectKey_WarnAndIgnore()
+	{
+		// The package format models flags and locks on objects, but has no concept
+		// of powers: a 'powers' key is an unknown key — warned and dropped, never
+		// applied. (If powers ever become supported, this test should flip to an
+		// assertion that they parse onto the spec.)
+		var result = _service.ParseManifest(MinimalManifest(objectExtras: "    powers: [pueblo, idle]"));
+
+		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.AsT0.Warnings.Any(w => w.Path == "objects[0].powers")).IsTrue();
+		// Nothing power-shaped survives onto the parsed object.
+		await Assert.That(result.AsT0.Manifest.Objects.Single().Flags.Count).IsEqualTo(0);
+	}
+
 	#endregion
 
 	#region Index

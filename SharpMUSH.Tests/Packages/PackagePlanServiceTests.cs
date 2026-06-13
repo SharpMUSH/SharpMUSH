@@ -609,4 +609,160 @@ public class PackagePlanServiceTests
 	}
 
 	#endregion
+
+	#region Removed-object attributes fold into the object delete
+
+	[Test]
+	public async Task RemovedObject_ItsManagedAttributes_AreNotSeparatelyClassified()
+	{
+		// When an entire object is dropped from the new version, the object-level
+		// Delete is the unit of change (decision 20.15): its managed-attribute
+		// baselines must NOT each surface as their own Delete/Conflict. This pins
+		// the deletedObjids short-circuit in the baseline sweep — even a locally
+		// modified attribute (which on a SURVIVING object would be a ModifyDelete
+		// conflict) is folded into the single object Delete.
+		var manifest = Parse(SimpleManifest); // only object {{a}} remains
+		var installed = Installed("probe");
+		var installedObjects = new[]
+		{
+			new PackageObjectRecord("probe", "a", "#10:1", "thing"),
+			new PackageObjectRecord("probe", "gone", "#20:5", "thing")
+		};
+		var baselines = new[]
+		{
+			new ManagedAttributeRecord("probe", "#10:1", "FN_X", "value-new", "h1", "1.0.0"),
+			new ManagedAttributeRecord("probe", "#20:5", "FN_OLD", "base", "h2", "1.0.0"),
+			new ManagedAttributeRecord("probe", "#20:5", "FN_OLD2", "base2", "h3", "1.0.0")
+		};
+		var live = new LivePackageState(new Dictionary<string, LiveObjectState>
+		{
+			["#10:1"] = LiveObject("#10:1", "Thing A", ("FN_X", "value-new")),
+			["#20:5"] = LiveObject("#20:5", "Gone Thing", ("FN_OLD", "locally-changed"), ("FN_OLD2", "base2"))
+		});
+
+		var changeset = _service.ComputeChangeset(Inputs(manifest, installed, installedObjects, baselines, live: live));
+
+		var deleted = changeset.Objects.Single(o => o.Ref == "gone");
+		await Assert.That(deleted.Action).IsEqualTo(PackageObjectAction.Delete);
+		// None of the deleted object's attributes appear as separate changes.
+		await Assert.That(changeset.Attributes.Any(a => a.Objid == "#20:5")).IsFalse();
+		await Assert.That(changeset.Attributes.Any(a => a.Attribute is "FN_OLD" or "FN_OLD2")).IsFalse();
+	}
+
+	#endregion
+
+	#region Flags, locks & powers are outside the upgrade diff
+
+	// The live snapshot the plan engine compares against (LiveObjectState) carries
+	// only an object's name and attribute VALUES — it has no flag, lock, or power
+	// state, nor does PackageObjectChange/PackageAttributeChange model any of them.
+	// Object flags and locks are therefore never part of the upgrade review: the
+	// apply engine re-applies them additively (set, never unset), and powers are
+	// not a package concept at all. These tests pin that contract so any future
+	// move to diff flags/locks is a deliberate, visible decision rather than an
+	// accidental behaviour change.
+
+	[Test]
+	public async Task ObjectFlags_DoNotProduceAChangeset_OnUpgrade()
+	{
+		var manifest = Parse(
+			"""
+			package: probe
+			version: "1.1"
+			objects:
+			  - ref: a
+			    type: thing
+			    name: Thing A
+			    flags: [wizard, royalty]
+			    attributes:
+			      FN_X: "value-new"
+			""");
+		var installed = Installed("probe");
+		var installedObjects = new[] { new PackageObjectRecord("probe", "a", "#10:1", "thing") };
+		var baselines = new[] { new ManagedAttributeRecord("probe", "#10:1", "FN_X", "value-new", "h", "1.0.0") };
+		var live = new LivePackageState(new Dictionary<string, LiveObjectState>
+		{
+			["#10:1"] = LiveObject("#10:1", "Thing A", ("FN_X", "value-new"))
+		});
+
+		var changeset = _service.ComputeChangeset(Inputs(manifest, installed, installedObjects, baselines, live: live));
+
+		// Flags are parsed onto the manifest spec...
+		await Assert.That(manifest.Objects.Single().Flags.ToArray()).IsEquivalentTo((string[])["wizard", "royalty"]);
+		// ...but the object plan is driven by name alone — no flag drift is surfaced.
+		var obj = changeset.Objects.Single();
+		await Assert.That(obj.Action).IsEqualTo(PackageObjectAction.NoChange);
+		await Assert.That(obj.MetadataDiffs?.Count ?? 0).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task ObjectLocks_DoNotProduceAChangeset_OnUpgrade()
+	{
+		var manifest = Parse(
+			"""
+			package: probe
+			version: "1.1"
+			objects:
+			  - ref: a
+			    type: thing
+			    name: Thing A
+			    locks:
+			      use: "{{a}}"
+			    attributes:
+			      FN_X: "value-new"
+			""");
+		var installed = Installed("probe");
+		var installedObjects = new[] { new PackageObjectRecord("probe", "a", "#10:1", "thing") };
+		var baselines = new[] { new ManagedAttributeRecord("probe", "#10:1", "FN_X", "value-new", "h", "1.0.0") };
+		var live = new LivePackageState(new Dictionary<string, LiveObjectState>
+		{
+			["#10:1"] = LiveObject("#10:1", "Thing A", ("FN_X", "value-new"))
+		});
+
+		var changeset = _service.ComputeChangeset(Inputs(manifest, installed, installedObjects, baselines, live: live));
+
+		await Assert.That(manifest.Objects.Single().Locks.ContainsKey("use")).IsTrue();
+		await Assert.That(changeset.Objects.Single().Action).IsEqualTo(PackageObjectAction.NoChange);
+		// Lock strings are not function-evaluated, so they synthesize no PM`REFS
+		// attrs and never surface as a changeset entry.
+		await Assert.That(changeset.Attributes.Any(a => a.Attribute.StartsWith("PM`REFS"))).IsFalse();
+		await Assert.That(changeset.Attributes.Single().Attribute).IsEqualTo("FN_X");
+	}
+
+	[Test]
+	public async Task AttributeFlags_DoNotAffectPlanClassification()
+	{
+		// An attribute declares flags but its value is unchanged from baseline and
+		// live. The three-way table keys on VALUE only, so the result is NoChange —
+		// attribute-flag drift is not part of the review (the apply engine applies
+		// the declared flags additively whenever it writes the value).
+		var manifest = Parse(
+			"""
+			package: probe
+			version: "1.1"
+			objects:
+			  - ref: a
+			    type: thing
+			    name: Thing A
+			    attributes:
+			      FN_X:
+			        value: "value-new"
+			        flags: [no_command, veiled]
+			""");
+		var installed = Installed("probe");
+		var installedObjects = new[] { new PackageObjectRecord("probe", "a", "#10:1", "thing") };
+		var baselines = new[] { new ManagedAttributeRecord("probe", "#10:1", "FN_X", "value-new", "h", "1.0.0") };
+		var live = new LivePackageState(new Dictionary<string, LiveObjectState>
+		{
+			["#10:1"] = LiveObject("#10:1", "Thing A", ("FN_X", "value-new"))
+		});
+
+		var changeset = _service.ComputeChangeset(Inputs(manifest, installed, installedObjects, baselines, live: live));
+
+		await Assert.That(manifest.Objects.Single().Attributes["FN_X"].Flags.ToArray())
+			.IsEquivalentTo((string[])["no_command", "veiled"]);
+		await Assert.That(changeset.Attributes.Single().Action).IsEqualTo(PackageAttributeAction.NoChange);
+	}
+
+	#endregion
 }
