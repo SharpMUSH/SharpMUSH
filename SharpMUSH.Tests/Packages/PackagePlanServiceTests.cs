@@ -32,7 +32,8 @@ public class PackagePlanServiceTests
 		IReadOnlyList<InstalledPackageRecord>? allInstalled = null,
 		IReadOnlyList<ManagedAttributeRecord>? otherManaged = null,
 		LivePackageState? live = null,
-		IReadOnlyDictionary<string, string>? configure = null) => new(
+		IReadOnlyDictionary<string, string>? configure = null,
+		IReadOnlyDictionary<string, PackageStructureBaseline>? structureBaselines = null) => new(
 		manifest,
 		installed,
 		installedObjects ?? [],
@@ -42,7 +43,8 @@ public class PackagePlanServiceTests
 		live ?? LivePackageState.Empty,
 		new Dictionary<string, string> { ["room_zero"] = "#0:0" },
 		configure ?? new Dictionary<string, string>(),
-		new Dictionary<string, string>());
+		new Dictionary<string, string>(),
+		structureBaselines);
 
 	private const string SimpleManifest =
 		"""
@@ -606,6 +608,255 @@ public class PackagePlanServiceTests
 			manifest, installed, installedObjects, baselines, live: live));
 		await Assert.That(unanswered.Attributes.Single(a => a.Attribute == "FN_X").RequiresApplyResolution).IsFalse();
 		await Assert.That(unanswered.Attributes.Single(a => a.Attribute == "PM`REFS`STORAGE").RequiresApplyResolution).IsTrue();
+	}
+
+	#endregion
+
+	#region Removed-object attributes fold into the object delete
+
+	[Test]
+	public async Task RemovedObject_ItsManagedAttributes_AreNotSeparatelyClassified()
+	{
+		// When an entire object is dropped from the new version, the object-level
+		// Delete is the unit of change (decision 20.15): its managed-attribute
+		// baselines must NOT each surface as their own Delete/Conflict. This pins
+		// the deletedObjids short-circuit in the baseline sweep — even a locally
+		// modified attribute (which on a SURVIVING object would be a ModifyDelete
+		// conflict) is folded into the single object Delete.
+		var manifest = Parse(SimpleManifest); // only object {{a}} remains
+		var installed = Installed("probe");
+		var installedObjects = new[]
+		{
+			new PackageObjectRecord("probe", "a", "#10:1", "thing"),
+			new PackageObjectRecord("probe", "gone", "#20:5", "thing")
+		};
+		var baselines = new[]
+		{
+			new ManagedAttributeRecord("probe", "#10:1", "FN_X", "value-new", "h1", "1.0.0"),
+			new ManagedAttributeRecord("probe", "#20:5", "FN_OLD", "base", "h2", "1.0.0"),
+			new ManagedAttributeRecord("probe", "#20:5", "FN_OLD2", "base2", "h3", "1.0.0")
+		};
+		var live = new LivePackageState(new Dictionary<string, LiveObjectState>
+		{
+			["#10:1"] = LiveObject("#10:1", "Thing A", ("FN_X", "value-new")),
+			["#20:5"] = LiveObject("#20:5", "Gone Thing", ("FN_OLD", "locally-changed"), ("FN_OLD2", "base2"))
+		});
+
+		var changeset = _service.ComputeChangeset(Inputs(manifest, installed, installedObjects, baselines, live: live));
+
+		var deleted = changeset.Objects.Single(o => o.Ref == "gone");
+		await Assert.That(deleted.Action).IsEqualTo(PackageObjectAction.Delete);
+		// None of the deleted object's attributes appear as separate changes.
+		await Assert.That(changeset.Attributes.Any(a => a.Objid == "#20:5")).IsFalse();
+		await Assert.That(changeset.Attributes.Any(a => a.Attribute is "FN_OLD" or "FN_OLD2")).IsFalse();
+	}
+
+	#endregion
+
+	#region Object structure three-way merge (flags, powers, locks, attribute flags)
+
+	// Full object-structure diffs (decision 20.7, extended): object flags, object
+	// powers, attribute flags, and locks all merge three-way against a persisted
+	// per-object structure baseline. Binary elements resolve deterministically and
+	// never conflict; value-typed locks reuse the attribute conflict model.
+
+	private const string FlaggedManifest =
+		"""
+		package: probe
+		version: "1.1"
+		objects:
+		  - ref: a
+		    type: thing
+		    name: Thing A
+		    flags: [no_command, dark]
+		    powers: [pueblo]
+		    attributes:
+		      FN_X:
+		        value: "value-new"
+		        flags: [no_command, veiled]
+		""";
+
+	/// <summary>Builds inputs where {{a}} is installed at #10:1 with the given live structure and baseline.</summary>
+	private PackagePlanInputs StructureInputs(
+		string manifest, LiveObjectState liveA, PackageStructureBaseline? baselineA)
+	{
+		var live = new LivePackageState(new Dictionary<string, LiveObjectState> { ["#10:1"] = liveA });
+		var structureBaselines = baselineA is null
+			? null
+			: new Dictionary<string, PackageStructureBaseline> { ["#10:1"] = baselineA };
+		return Inputs(
+			Parse(manifest), Installed("probe"),
+			[new PackageObjectRecord("probe", "a", "#10:1", "thing")],
+			[new ManagedAttributeRecord("probe", "#10:1", "FN_X", "value-new", "h", "1.0.0")],
+			live: live, structureBaselines: structureBaselines);
+	}
+
+	private static LiveObjectState LiveStructured(
+		IReadOnlyList<string>? flags = null, IReadOnlyList<string>? powers = null,
+		IReadOnlyDictionary<string, string>? locks = null,
+		IReadOnlyDictionary<string, IReadOnlyList<string>>? attrFlags = null) => new(
+		"#10:1", true, "Thing A",
+		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["FN_X"] = "value-new" },
+		false, flags, powers, locks, attrFlags);
+
+	private static PackageStructureChange Flag(PackageChangeset cs, string name) =>
+		cs.Structure.Single(s => s.Kind == PackageStructureKind.ObjectFlag && s.Element == name);
+
+	[Test]
+	public async Task FreshInstall_AllStructureIsAdd()
+	{
+		// No installed record/baseline: every flag, power, and attribute flag is Add.
+		var changeset = _service.ComputeChangeset(Inputs(Parse(FlaggedManifest)));
+
+		await Assert.That(Flag(changeset, "no_command").Action).IsEqualTo(PackageStructureAction.Add);
+		await Assert.That(Flag(changeset, "dark").Action).IsEqualTo(PackageStructureAction.Add);
+		await Assert.That(changeset.Structure.Single(s => s.Kind == PackageStructureKind.ObjectPower).Element)
+			.IsEqualTo("pueblo");
+		await Assert.That(changeset.Structure
+			.Where(s => s.Kind == PackageStructureKind.AttributeFlag)
+			.All(s => s.Action == PackageStructureAction.Add)).IsTrue();
+	}
+
+	[Test]
+	public async Task NewFlag_Added_DroppedFlag_Removed()
+	{
+		// Baseline + live had [no_command]; the new version declares [no_command, dark]
+		// and drops the previously-set [royalty] → dark Add, royalty Remove, no_command NoChange.
+		var baseline = new PackageStructureBaseline(
+			["no_command", "royalty"], [], new Dictionary<string, string>(),
+			new Dictionary<string, IReadOnlyList<string>>());
+		var live = LiveStructured(flags: ["no_command", "royalty"]);
+
+		var changeset = _service.ComputeChangeset(StructureInputs(FlaggedManifest, live, baseline));
+
+		await Assert.That(Flag(changeset, "no_command").Action).IsEqualTo(PackageStructureAction.NoChange);
+		await Assert.That(Flag(changeset, "dark").Action).IsEqualTo(PackageStructureAction.Add);
+		await Assert.That(Flag(changeset, "royalty").Action).IsEqualTo(PackageStructureAction.Remove);
+	}
+
+	[Test]
+	public async Task AdminRemovedFlag_PackageStillDeclares_KeepLocal()
+	{
+		// Baseline had no_command; admin unset it live; the package still declares it.
+		var baseline = new PackageStructureBaseline(
+			["no_command", "dark"], ["pueblo"], new Dictionary<string, string>(),
+			new Dictionary<string, IReadOnlyList<string>>());
+		var live = LiveStructured(flags: ["dark"], powers: ["pueblo"]); // admin removed no_command
+
+		var changeset = _service.ComputeChangeset(StructureInputs(FlaggedManifest, live, baseline));
+
+		await Assert.That(Flag(changeset, "no_command").Action).IsEqualTo(PackageStructureAction.KeepLocal);
+		await Assert.That(Flag(changeset, "dark").Action).IsEqualTo(PackageStructureAction.NoChange);
+	}
+
+	[Test]
+	public async Task AdminAddedFlag_NotPackageManaged_LeftUntouched()
+	{
+		// The admin set an unrelated flag (wizard) the package neither knew nor wants:
+		// it is not in baseline ∪ new, so it produces no structure change at all.
+		var baseline = new PackageStructureBaseline(
+			["no_command", "dark"], ["pueblo"], new Dictionary<string, string>(),
+			new Dictionary<string, IReadOnlyList<string>>());
+		var live = LiveStructured(flags: ["no_command", "dark", "wizard"], powers: ["pueblo"]);
+
+		var changeset = _service.ComputeChangeset(StructureInputs(FlaggedManifest, live, baseline));
+
+		await Assert.That(changeset.Structure.Any(s => s.Element == "wizard")).IsFalse();
+	}
+
+	[Test]
+	public async Task UnmanagedFlagMatchingNew_Adopt()
+	{
+		// No baseline (not previously managed) but the flag is already set live and
+		// the new version declares it → Adopt (record baseline, no write).
+		var live = LiveStructured(flags: ["no_command", "dark"], powers: ["pueblo"],
+			attrFlags: new Dictionary<string, IReadOnlyList<string>> { ["FN_X"] = ["no_command", "veiled"] });
+
+		var changeset = _service.ComputeChangeset(StructureInputs(FlaggedManifest, live, baselineA: null));
+
+		await Assert.That(Flag(changeset, "no_command").Action).IsEqualTo(PackageStructureAction.Adopt);
+	}
+
+	[Test]
+	public async Task AttributeFlag_AddedAndRemoved_AcrossVersions()
+	{
+		// Baseline attr-flags were [no_command]; new declares [no_command, veiled] →
+		// veiled Add, no_command NoChange.
+		var baseline = new PackageStructureBaseline(
+			["no_command", "dark"], ["pueblo"], new Dictionary<string, string>(),
+			new Dictionary<string, IReadOnlyList<string>> { ["FN_X"] = ["no_command"] });
+		var live = LiveStructured(flags: ["no_command", "dark"], powers: ["pueblo"],
+			attrFlags: new Dictionary<string, IReadOnlyList<string>> { ["FN_X"] = ["no_command"] });
+
+		var changeset = _service.ComputeChangeset(StructureInputs(FlaggedManifest, live, baseline));
+
+		var attrFlagChanges = changeset.Structure
+			.Where(s => s.Kind == PackageStructureKind.AttributeFlag && s.Attribute == "FN_X")
+			.ToDictionary(s => s.Element, s => s.Action);
+		await Assert.That(attrFlagChanges["veiled"]).IsEqualTo(PackageStructureAction.Add);
+		await Assert.That(attrFlagChanges["no_command"]).IsEqualTo(PackageStructureAction.NoChange);
+	}
+
+	[Test]
+	public async Task Lock_BothChanged_Conflict_AdminUnchanged_AutoUpgrade()
+	{
+		// Locks are value-typed and reuse the attribute conflict model.
+		const string manifest =
+			"""
+			package: probe
+			version: "1.1"
+			objects:
+			  - ref: a
+			    type: thing
+			    name: Thing A
+			    locks:
+			      use: "=#5"
+			    attributes:
+			      FN_X: "value-new"
+			""";
+
+		// Package changed the lock (base "=#1" -> new "=#5"); admin left it at base.
+		var baselineAuto = new PackageStructureBaseline(
+			[], [], new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["use"] = "=#1" },
+			new Dictionary<string, IReadOnlyList<string>>());
+		var liveAuto = LiveStructured(locks: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["use"] = "=#1" });
+		var auto = _service.ComputeChangeset(StructureInputs(manifest, liveAuto, baselineAuto));
+		var autoLock = auto.Structure.Single(s => s.Kind == PackageStructureKind.Lock);
+		await Assert.That(autoLock.Action).IsEqualTo(PackageStructureAction.Add); // write the package's new lock
+		await Assert.That(autoLock.NewValue).IsEqualTo("=#5");
+
+		// Admin also changed it locally → ModifyModify conflict.
+		var liveConflict = LiveStructured(locks: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["use"] = "=#9" });
+		var conflict = _service.ComputeChangeset(StructureInputs(manifest, liveConflict, baselineAuto));
+		var conflictLock = conflict.Structure.Single(s => s.Kind == PackageStructureKind.Lock);
+		await Assert.That(conflictLock.Action).IsEqualTo(PackageStructureAction.Conflict);
+		await Assert.That(conflictLock.Conflict).IsEqualTo(PackageConflictKind.ModifyModify);
+		await Assert.That(conflict.HasConflicts).IsTrue();
+	}
+
+	[Test]
+	public async Task Lock_DroppedFromManifest_Unmodified_Remove()
+	{
+		const string manifest =
+			"""
+			package: probe
+			version: "1.1"
+			objects:
+			  - ref: a
+			    type: thing
+			    name: Thing A
+			    attributes:
+			      FN_X: "value-new"
+			""";
+		var baseline = new PackageStructureBaseline(
+			[], [], new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["use"] = "=#1" },
+			new Dictionary<string, IReadOnlyList<string>>());
+		var live = LiveStructured(locks: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["use"] = "=#1" });
+
+		var changeset = _service.ComputeChangeset(StructureInputs(manifest, live, baseline));
+
+		var lockChange = changeset.Structure.Single(s => s.Kind == PackageStructureKind.Lock);
+		await Assert.That(lockChange.Action).IsEqualTo(PackageStructureAction.Remove);
 	}
 
 	#endregion

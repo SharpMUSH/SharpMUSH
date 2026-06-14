@@ -65,13 +65,28 @@ public sealed record PackageRollbackResult(int Revision, int RestoredFromRevisio
 /// <param name="Version">Package version applied.</param>
 /// <param name="Objects">Package objects after this apply (ref, objid, type).</param>
 /// <param name="Attributes">Final effective value of every managed attribute after this apply.</param>
+/// <param name="Structure">Final package-managed object structure (flags/powers/locks/attribute flags) per object after this apply.</param>
 public sealed record PackageRevisionSnapshot(
 	string Version,
 	IReadOnlyList<PackageRevisionSnapshotObject> Objects,
-	IReadOnlyList<PackageRevisionSnapshotAttribute> Attributes);
+	IReadOnlyList<PackageRevisionSnapshotAttribute> Attributes,
+	IReadOnlyList<PackageRevisionSnapshotStructure>? Structure = null);
 
 /// <summary>One object in a revision snapshot.</summary>
 public sealed record PackageRevisionSnapshotObject(string Ref, string Objid, string Type);
 
 /// <summary>One managed attribute's final effective value in a revision snapshot.</summary>
 public sealed record PackageRevisionSnapshotAttribute(string Objid, string Attribute, string Value);
+
+/// <summary>One object's final package-managed structure in a revision snapshot.</summary>
+/// <param name="Objid">Object the structure lives on.</param>
+/// <param name="Flags">Object flag names the package set.</param>
+/// <param name="Powers">Object power names the package set.</param>
+/// <param name="Locks">Lock-type name → resolved lock string the package set.</param>
+/// <param name="AttributeFlags">Attribute name → flag names the package set on it.</param>
+public sealed record PackageRevisionSnapshotStructure(
+	string Objid,
+	IReadOnlyList<string> Flags,
+	IReadOnlyList<string> Powers,
+	IReadOnlyDictionary<string, string> Locks,
+	IReadOnlyDictionary<string, IReadOnlyList<string>> AttributeFlags);

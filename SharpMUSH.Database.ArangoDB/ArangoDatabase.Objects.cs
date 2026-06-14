@@ -707,11 +707,15 @@ public partial class ArangoDatabase
 
 	public async ValueTask UnsetLockAsync(SharpObject target, string lockName, CancellationToken ct = default)
 	{
+		// The Locks object must be REPLACED, not merged: a PATCH with mergeObjects
+		// would merge the filtered dictionary into the stored one and re-add the
+		// very key we are removing. mergeObjects:false replaces the Locks attribute
+		// wholesale (other top-level attributes, absent from this patch, are untouched).
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
 		{
 			_key = target.Key.ToString(),
 			Locks = target.Locks
-				.Where(kvp => kvp.Key != lockName)
+				.Where(kvp => !string.Equals(kvp.Key, lockName, StringComparison.OrdinalIgnoreCase))
 				.Select(kvp => new KeyValuePair<string, SharpLockDataQueryResult>(
 					kvp.Key,
 					new SharpLockDataQueryResult
@@ -720,7 +724,7 @@ public partial class ArangoDatabase
 						Flags = kvp.Value.Flags.ToString()
 					}))
 				.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
-		}, mergeObjects: true, cancellationToken: ct);
+		}, mergeObjects: false, cancellationToken: ct);
 	}
 	public IAsyncEnumerable<SharpPlayer> GetPlayerByNameOrAliasAsync(string name,
 		CancellationToken ct = default)

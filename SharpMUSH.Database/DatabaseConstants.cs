@@ -30,6 +30,7 @@ public static class DatabaseConstants
 	public const string PackageObjects = "sys_package_objects";
 	public const string PackageDependsOn = "sys_package_depends";
 	public const string ManagedAttributes = "sys_managed_attributes";
+	public const string ManagedStructures = "sys_managed_structures";
 	public const string PackageRemotes = "sys_remotes";
 	public const string PackageRevisions = "sys_package_revisions";
 

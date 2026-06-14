@@ -79,6 +79,8 @@ public partial class MemgraphDatabase : IPackageRegistryService
 		await ExecuteWithRetryAsync(
 			"MATCH (d:SysManagedAttribute {packageId: $id}) DETACH DELETE d", new { id = packageId });
 		await ExecuteWithRetryAsync(
+			"MATCH (d:SysManagedStructure {packageId: $id}) DETACH DELETE d", new { id = packageId });
+		await ExecuteWithRetryAsync(
 			"MATCH (d:SysPackageRevision {packageId: $id}) DETACH DELETE d", new { id = packageId });
 		await ExecuteWithRetryAsync(
 			"MATCH (p:SysPackage {id: $id}) DETACH DELETE p", new { id = packageId });
@@ -168,6 +170,47 @@ public partial class MemgraphDatabase : IPackageRegistryService
 		await ExecuteWithRetryAsync(
 			"MATCH (d:SysManagedAttribute {packageId: $id, objid: $objid, attribute: $attribute}) DETACH DELETE d",
 			new { id = packageId, objid, attribute });
+	}
+
+	// ── Managed object structure ────────────────────────────────────────────
+
+	public async Task UpsertManagedStructureAsync(ManagedStructureRecord record)
+	{
+		await ExecuteWithRetryAsync("""
+			MERGE (d:SysManagedStructure {packageId: $packageId, objid: $objid})
+			SET d.structureJson = $structureJson, d.baselineVersion = $baselineVersion
+			""",
+			new
+			{
+				packageId = record.PackageId,
+				objid = record.Objid,
+				structureJson = record.StructureJson,
+				baselineVersion = record.BaselineVersion
+			});
+	}
+
+	public async Task<IReadOnlyList<ManagedStructureRecord>> GetManagedStructuresAsync(string packageId)
+	{
+		var result = await ExecuteWithRetryAsync(
+			"MATCH (d:SysManagedStructure {packageId: $id}) RETURN d ORDER BY d.objid",
+			new { id = packageId });
+
+		return result.Result.Select(r =>
+		{
+			var node = r["d"].As<INode>();
+			return new ManagedStructureRecord(
+				node.Properties["packageId"].As<string>(),
+				node.Properties["objid"].As<string>(),
+				node.Properties["structureJson"].As<string>(),
+				node.Properties["baselineVersion"].As<string>());
+		}).ToList();
+	}
+
+	public async Task RemoveManagedStructureAsync(string packageId, string objid)
+	{
+		await ExecuteWithRetryAsync(
+			"MATCH (d:SysManagedStructure {packageId: $id, objid: $objid}) DETACH DELETE d",
+			new { id = packageId, objid });
 	}
 
 	// ── Dependencies ───────────────────────────────────────────────────────

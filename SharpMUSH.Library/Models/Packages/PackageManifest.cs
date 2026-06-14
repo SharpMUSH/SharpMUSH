@@ -173,6 +173,7 @@ public enum PackageConfigureType
 /// <param name="Destination">Exit destination; exits only.</param>
 /// <param name="PreviousRefs">Former ref names of this object (rename continuity across versions, decision 20.15).</param>
 /// <param name="Flags">Flag names to set on the object.</param>
+/// <param name="Powers">Power names to set on the object.</param>
 /// <param name="Locks">Lock values keyed by lock type name.</param>
 /// <param name="Attributes">Attributes to set, keyed by attribute name.</param>
 public sealed record PackageObjectSpec(
@@ -185,6 +186,7 @@ public sealed record PackageObjectSpec(
 	PackageRef? Destination,
 	IReadOnlyList<string> PreviousRefs,
 	IReadOnlyList<string> Flags,
+	IReadOnlyList<string> Powers,
 	IReadOnlyDictionary<string, string> Locks,
 	IReadOnlyDictionary<string, PackageAttributeSpec> Attributes)
 {

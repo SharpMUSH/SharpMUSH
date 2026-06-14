@@ -49,6 +49,23 @@ public sealed record ManagedAttributeRecord(
 	string BaselineHash,
 	string BaselineVersion);
 
+/// <summary>
+/// The object-structure baseline a package manages on one object
+/// (sys_managed_structures): the flags, powers, locks, and per-attribute flags
+/// it set at the last install/upgrade, serialized as one JSON document so the
+/// full three-way structure merge and rollback can run offline (decision 20.13,
+/// extended for full object structure diffs).
+/// </summary>
+/// <param name="PackageId">Managing package.</param>
+/// <param name="Objid">Object the structure lives on.</param>
+/// <param name="StructureJson">JSON of <see cref="PackageStructureBaseline"/> as applied at the last install/upgrade.</param>
+/// <param name="BaselineVersion">Package version that set the baseline.</param>
+public sealed record ManagedStructureRecord(
+	string PackageId,
+	string Objid,
+	string StructureJson,
+	string BaselineVersion);
+
 /// <summary>A dependency edge between two installed packages (sys_package_depends).</summary>
 /// <param name="PackageId">The depending package.</param>
 /// <param name="DependsOnId">The package depended upon.</param>
