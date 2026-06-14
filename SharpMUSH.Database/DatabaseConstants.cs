@@ -38,6 +38,11 @@ public static class DatabaseConstants
 	// has linked into the portal. Not visible to softcode; travels with backups.
 	public const string Applications = "sys_applications";
 
+	// Portal RBAC — custom roles (keyed by slug) and account→role assignments.
+	// Not visible to softcode; travels with backups.
+	public const string Roles = "sys_roles";
+	public const string AccountHasRole = "edge_account_has_role";
+
 	public static readonly string[] verticesContainer = [Rooms, Players, Things];
 	public static readonly string[] verticesContent = [Players, Exits, Things];
 	public static readonly string[] verticesAll = [Rooms, Players, Exits, Things];
@@ -67,6 +72,8 @@ public static class DatabaseConstants
 	/// Describes the relationship between actualized types and their objects.
 	/// <see cref="verticesAll"/> -> <see cref="IsObject"/> -> <see cref="Objects"/>
 	/// </summary>
+	public const string GraphRoles = "graph_roles";
+
 	public const string GraphObjects = "graph_objects";
 	/// <summary>
 	/// Describes the relationship between objects and their expanded data.

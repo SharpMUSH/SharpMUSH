@@ -103,6 +103,8 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS sys_package_dependency_dep ON sys_package_dependency FIELDS dependsOnId",
 				"DEFINE INDEX IF NOT EXISTS sys_remote_name ON sys_remote FIELDS name UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS sys_package_revision_key ON sys_package_revision FIELDS packageId, revision UNIQUE",
+				// Portal RBAC — custom roles (keyed by slug) and account→role assignments.
+				"DEFINE INDEX IF NOT EXISTS role_slug ON role FIELDS slug UNIQUE",
 				// Indexes on edge/relation tables for fast traversal
 				"DEFINE INDEX IF NOT EXISTS has_attribute_in ON has_attribute FIELDS in",
 				"DEFINE INDEX IF NOT EXISTS has_attribute_out ON has_attribute FIELDS out",

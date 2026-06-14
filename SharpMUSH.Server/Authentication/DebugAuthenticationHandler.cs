@@ -38,6 +38,9 @@ public class DebugAuthenticationHandler(
 		// way God- and Wizard-gated endpoints both authorize under debug auth.
 		claims.AddRange(Enum.GetNames<Library.Authorization.PortalRole>()
 			.Select(name => new Claim(ClaimTypes.Role, name)));
+		// #1 is God → grant every permission scope so the new policy-based gates authorize too.
+		claims.AddRange(Library.Authorization.PortalPermission.AllScopes
+			.Select(scope => new Claim(Library.Authorization.PortalPermission.ClaimType, scope)));
 
 		try
 		{

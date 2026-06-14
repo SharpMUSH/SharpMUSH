@@ -28,11 +28,15 @@ public class DebugAuthStateProvider(AccountAuthService accountAuth) : Authentica
 	/// Cached on first successful server round-trip.
 	private AccountAuthService.DebugOttResponse? _cached;
 
-	/// <summary>One role claim per <see cref="PortalRole"/> name. The bootstrap account
-	/// owns player #1 (God), the top of the hierarchy; since role checks are exact string
-	/// matches, the principal needs a claim for every gated role (Wizard, God, …).</summary>
+	/// <summary>One role claim per <see cref="PortalRole"/> name PLUS one permission claim per
+	/// scope. The bootstrap account owns player #1 (God), the top of the hierarchy; role and
+	/// permission checks are exact matches, so the debug principal gets every role and every
+	/// permission scope (so both the legacy role gates and the new policy gates authorize).</summary>
 	private static readonly Claim[] DebugRoleClaims =
-		Enum.GetNames<PortalRole>().Select(name => new Claim(ClaimTypes.Role, name)).ToArray();
+	[
+		.. Enum.GetNames<PortalRole>().Select(name => new Claim(ClaimTypes.Role, name)),
+		.. PortalPermission.AllScopes.Select(scope => new Claim(PortalPermission.ClaimType, scope))
+	];
 
 	public override async Task<AuthenticationState> GetAuthenticationStateAsync()
 	{

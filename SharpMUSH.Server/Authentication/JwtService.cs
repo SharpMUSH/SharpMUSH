@@ -22,6 +22,8 @@ public class JwtService(
 	IRefreshTokenStore refreshTokenStore,
 	IRoleDerivationService roleDerivation,
 	IAccountService accountService,
+	IRoleRegistryService roleRegistry,
+	IPermissionResolver permissionResolver,
 	IMediator mediator,
 	ILogger<JwtService> logger) : IJwtService
 {
@@ -37,7 +39,8 @@ public class JwtService(
 		PortalRole role,
 		CancellationToken ct = default)
 	{
-		var accessToken = BuildAccessToken(account, character, role, out var expiresIn);
+		var scopes = await ComputeGrantedScopesAsync(account, role);
+		var accessToken = BuildAccessToken(account, character, role, scopes, out var expiresIn);
 
 		var charRef = new DBRef(character.Object.Key, character.Object.CreationTime);
 		var refreshTtl = TimeSpan.FromDays(_opts.RefreshTokenLifetimeDays);
@@ -99,8 +102,27 @@ public class JwtService(
 	// secret. The token is signed (HMAC-SHA256) and transmitted only over TLS.
 	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
 		Justification = "JWT sub/unique_name claims are standard bearer-token identifiers, not secret data.")]
+	/// <summary>
+	/// Computes the granted permission scopes for an account: the account's effective roles are
+	/// the (current, possibly admin-edited) built-in role for its flag-derived <paramref name="role"/>
+	/// unioned with its explicitly-assigned roles, resolved by priority/three-state.
+	/// </summary>
+	private async Task<IReadOnlySet<string>> ComputeGrantedScopesAsync(SharpAccount account, PortalRole role)
+	{
+		var allRoles = await roleRegistry.GetRolesAsync();
+		var bySlug = allRoles.ToDictionary(r => r.Slug, StringComparer.OrdinalIgnoreCase);
+
+		var effective = new Dictionary<string, SharpRole>(StringComparer.OrdinalIgnoreCase);
+		if (bySlug.TryGetValue(BuiltInRoles.SlugFor(role), out var derived))
+			effective[derived.Slug] = derived;
+		foreach (var assigned in await roleRegistry.GetRolesForAccountAsync(account.Id!))
+			effective[assigned.Slug] = assigned;
+
+		return permissionResolver.Resolve(effective.Values);
+	}
+
 	private string BuildAccessToken(SharpAccount account, SharpPlayer character, PortalRole role,
-		out int expiresIn)
+		IReadOnlySet<string> scopes, out int expiresIn)
 	{
 		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_opts.SigningKey));
 		var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -118,6 +140,10 @@ public class JwtService(
 			new("character_creation_time", character.Object.CreationTime.ToString()),
 			new("character_name", character.Object.Name),
 		};
+
+		// Discord-style permission scopes — the gates authorize on these (the Role claim above
+		// is kept for back-compat and per-app MinimumRole thresholds).
+		claims.AddRange(scopes.Select(s => new Claim(PortalPermission.ClaimType, s)));
 
 		var token = new JwtSecurityToken(
 			issuer: _opts.Issuer,

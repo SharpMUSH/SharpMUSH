@@ -210,6 +210,7 @@ public class Startup(
 		services.AddSingleton<IAccountSessionStore, InMemoryAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();
 		services.AddHostedService<BootstrapService>();
+		services.AddHostedService<RoleSeedService>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<IPackageManifestService, PackageManifestService>();
 		services.AddSingleton<IPackagePlanService, PackagePlanService>();
@@ -244,6 +245,9 @@ public class Startup(
 
 // Dynamic Application registry (Area 21) — same pattern; every DB backend implements IApplicationRegistryService.
 		services.AddSingleton<IApplicationRegistryService>(sp => (IApplicationRegistryService)sp.GetRequiredService<ISharpDatabase>());
+// Portal RBAC role registry — same cast pattern; every DB backend implements IRoleRegistryService.
+		services.AddSingleton<IRoleRegistryService>(sp => (IRoleRegistryService)sp.GetRequiredService<ISharpDatabase>());
+		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
 // Scene subsystem — InMemorySceneService for dev/test; swap for a persistent implementation later.
