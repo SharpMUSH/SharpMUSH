@@ -5,32 +5,162 @@
 
 <PageTitle>First-Run Setup — SharpMUSH</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="pa-4" Style="margin-top:80px;">
-	<MudPaper Elevation="3" Class="pa-6">
-		<MudText Typo="Typo.h5" Class="mb-2">Welcome to SharpMUSH</MudText>
-		<MudText Typo="Typo.body2" Class="mb-4" Style="color:#888;">
+<div class="setup-page">
+	<div class="setup-card">
+		<div class="setup-kicker">First-Run Setup</div>
+		<h1 class="setup-title">Welcome to SharpMUSH</h1>
+		<p class="setup-lead">
 			No accounts exist yet. Create your administrator account to get started.
 			This account will be linked to player #1 (God).
-		</MudText>
+		</p>
 
 		@if (_error is not null)
 		{
-			<MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+			<div class="setup-error" role="alert">@_error</div>
 		}
 
-		<MudTextField @bind-Value="_username" Label="Username" Variant="Variant.Outlined"
-					  Margin="Margin.Dense" Class="mb-3" Disabled="@_busy" />
-		<MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password"
-					  Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" Disabled="@_busy" />
-		<MudTextField @bind-Value="_confirm" Label="Confirm Password" InputType="InputType.Password"
-					  Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4" Disabled="@_busy" />
+		<div class="setup-field">
+			<label class="setup-label" for="setup-username">Username</label>
+			<input id="setup-username" class="setup-input" type="text"
+				   @bind="_username" @bind:event="oninput" disabled="@_busy" autocomplete="username" />
+		</div>
 
-		<MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-				   Disabled="@_busy" OnClick="SubmitAsync">
+		<div class="setup-field">
+			<label class="setup-label" for="setup-password">Password</label>
+			<input id="setup-password" class="setup-input" type="password"
+				   @bind="_password" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
+		</div>
+
+		<div class="setup-field">
+			<label class="setup-label" for="setup-confirm">Confirm Password</label>
+			<input id="setup-confirm" class="setup-input" type="password"
+				   @bind="_confirm" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
+		</div>
+
+		<button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
 			@(_busy ? "Setting up…" : "Create Admin Account")
-		</MudButton>
-	</MudPaper>
-</MudContainer>
+		</button>
+	</div>
+</div>
+
+<style>
+	.setup-page {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 100%;
+		padding: var(--cpad);
+	}
+
+	.setup-card {
+		width: 100%;
+		max-width: 420px;
+		background: var(--surface);
+		border: 1px solid var(--border-soft);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow);
+		padding: 30px 28px;
+	}
+
+	.setup-kicker {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: var(--accent);
+		margin-bottom: 8px;
+	}
+
+	.setup-title {
+		margin: 0;
+		font-family: var(--font-display);
+		font-size: 26px;
+		font-weight: 600;
+		color: var(--text);
+		line-height: 1.15;
+	}
+
+	.setup-lead {
+		margin: 10px 0 22px;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		line-height: 1.5;
+		color: var(--text-dim);
+	}
+
+	.setup-error {
+		margin-bottom: 18px;
+		padding: 10px 12px;
+		border-radius: var(--radius);
+		background: rgba(244, 67, 54, 0.10);
+		border: 1px solid rgba(244, 67, 54, 0.35);
+		color: #f4a8a3;
+		font-family: var(--font-ui);
+		font-size: 13px;
+	}
+
+	.setup-field {
+		margin-bottom: 16px;
+	}
+
+	.setup-label {
+		display: block;
+		margin-bottom: 6px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--text-faint);
+	}
+
+	.setup-input {
+		width: 100%;
+		box-sizing: border-box;
+		height: 42px;
+		padding: 0 12px;
+		background: var(--surface-3);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		color: var(--text);
+		font-family: var(--font-ui);
+		font-size: 14px;
+		outline: none;
+		transition: border-color 0.14s ease;
+	}
+
+	.setup-input:focus {
+		border-color: var(--accent);
+	}
+
+	.setup-input:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
+	}
+
+	.setup-submit {
+		width: 100%;
+		height: 44px;
+		margin-top: 8px;
+		border: none;
+		border-radius: var(--radius);
+		background: var(--accent);
+		color: var(--accent-on);
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: filter 0.12s ease;
+	}
+
+	.setup-submit:hover:not(:disabled) {
+		filter: brightness(1.08);
+	}
+
+	.setup-submit:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+</style>
 
 @code {
 	private string _username = string.Empty;

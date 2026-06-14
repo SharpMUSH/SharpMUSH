@@ -2,91 +2,123 @@
 @inject CharacterDirectoryService Directory
 @inject IStringLocalizer<SharedResource> Loc
 
-<div class="character-directory-widget">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3" Spacing="2">
-        <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Primary" />
-        <MudText Typo="Typo.h6">@Loc["Characters"]</MudText>
-        <MudSpacer />
+<div>
+    @* Search + count *@
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <MudTextField @bind-Value="_search" Immediate="true"
+                      Placeholder="@Loc["SearchCharacters"]"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Style="max-width:320px;" />
         @if (!_loading)
         {
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_all.Count</MudChip>
+            <MudText Style="color:var(--text-faint);font-size:13px;">@Filtered.Count found</MudText>
         }
-    </MudStack>
+    </div>
 
-    <MudTextField @bind-Value="_search"
-                  Immediate="true"
-                  Placeholder="@Loc["SearchCharacters"]"
-                  Adornment="Adornment.Start"
-                  AdornmentIcon="@Icons.Material.Filled.Search"
-                  Variant="Variant.Outlined"
-                  Margin="Margin.Dense"
-                  Class="mb-4" />
+    @* Category filter pills — sourced entirely from the MUSH *@
+    @if (!_loading && _categories.Count > 1)
+    {
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
+            <MudChip T="string" Variant="@(_selectedCategory is null ? Variant.Filled : Variant.Outlined)"
+                     Color="@(_selectedCategory is null ? Color.Primary : Color.Default)"
+                     Size="Size.Small" OnClick="() => _selectedCategory = null"
+                     Style="border-radius:var(--radius);">
+                All
+            </MudChip>
+            @foreach (var cat in _categories)
+            {
+                var c = cat;
+                <MudChip T="string" Variant="@(_selectedCategory == c ? Variant.Filled : Variant.Outlined)"
+                         Color="@(_selectedCategory == c ? Color.Primary : Color.Default)"
+                         Size="Size.Small" OnClick="() => _selectedCategory = c"
+                         Style="border-radius:var(--radius);">
+                    @(c.Length == 0 ? "Other" : c)
+                </MudChip>
+            }
+        </div>
+    }
 
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
+            @for (var i = 0; i < 8; i++)
+            {
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="80px" Style="border-radius:var(--radius);" />
+            }
+        </div>
     }
     else if (Filtered.Count == 0)
     {
-        <MudAlert Severity="Severity.Normal" Variant="Variant.Outlined">@Loc["NoCharactersFound"]</MudAlert>
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@Loc["NoCharactersFound"]</MudAlert>
     }
     else
     {
         @foreach (var group in Grouped)
         {
-            @if (group.Key.Length > 0)
+            @if (_selectedCategory is null && _categories.Count > 1)
             {
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2 mt-2">
-                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">@group.Key</MudText>
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@group.Count()</MudChip>
-                </MudStack>
+                <MudText Style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;margin-top:8px;">
+                    @(group.Key.Length == 0 ? "Other" : group.Key)
+                </MudText>
             }
-            <MudGrid Spacing="2" Class="mb-2">
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px;">
                 @foreach (var character in group)
                 {
-                    <MudItem xs="12" sm="6" md="4" lg="3">
-                        <MudLink Href="@($"/character/{Uri.EscapeDataString(character.Name)}")"
-                                 Underline="Underline.None"
-                                 Style="display:block;height:100%;">
-                            <MudCard Outlined="true" Class="character-card" Style="height:100%;">
-                                <MudCardContent>
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                        <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
-                                            @(string.IsNullOrEmpty(character.Name) ? "?" : character.Name[..1].ToUpperInvariant())
-                                        </MudAvatar>
-                                        <div>
-                                            <MudText Typo="Typo.subtitle1">@character.Name</MudText>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@character.Dbref</MudText>
-                                        </div>
-                                    </MudStack>
-                                </MudCardContent>
-                            </MudCard>
-                        </MudLink>
-                    </MudItem>
+                    var hue = Math.Abs(character.Name.GetHashCode()) % 360;
+                    <MudLink Href="@($"/character/{Uri.EscapeDataString(character.Name)}")"
+                             Underline="Underline.None" Style="display:block;">
+                        <MudPaper Elevation="0"
+                                  Style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);transition:border-color 0.12s,background 0.12s;cursor:pointer;"
+                                  Class="char-card">
+                            <div style="position:relative;flex-shrink:0;">
+                                <MudAvatar Style="@($"background:hsl({hue},50%,30%);color:#fff;font-weight:600;font-size:15px;width:40px;height:40px;")">
+                                    @character.Name[0].ToString().ToUpper()
+                                </MudAvatar>
+                            </div>
+                            <div style="min-width:0;">
+                                <MudText Style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@character.Name</MudText>
+                                <MudText Style="font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">@character.Dbref</MudText>
+                            </div>
+                        </MudPaper>
+                    </MudLink>
                 }
-            </MudGrid>
+            </div>
         }
     }
 </div>
 
+<style>
+    .char-card:hover {
+        border-color: var(--accent) !important;
+        background: var(--surface-2) !important;
+    }
+</style>
+
 @code {
-    // Standard widget parameters supplied by ZoneRenderer; unused here but required so
-    // DynamicComponent does not throw on unmatched parameters. Directory filtering is
-    // MUSH-side (FN`CHARVIS softcode) — the widget lists exactly what the game returns.
     [Parameter] public System.Text.Json.JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
 
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _all = [];
     private bool _loading = true;
     private string _search = string.Empty;
+    private string? _selectedCategory;
+    private List<string> _categories = [];
 
-    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> Filtered =>
-        string.IsNullOrWhiteSpace(_search)
-            ? _all
-            : _all.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> Filtered
+    {
+        get
+        {
+            var results = _all.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_search))
+                results = results.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
+            if (_selectedCategory is not null)
+                results = results.Where(c => (c.Category?.Trim() ?? string.Empty) == _selectedCategory);
+            return results.ToList();
+        }
+    }
 
-    // Categories come entirely from the game's FN`CHARCAT softcode — the portal imposes none of
-    // its own. Named categories render alphabetically; blank ones pool in an untitled section last.
     private IEnumerable<IGrouping<string, CharacterDirectoryService.CharacterSummary>> Grouped =>
         Filtered.GroupBy(c => c.Category?.Trim() ?? string.Empty)
             .OrderBy(g => g.Key.Length == 0 ? 1 : 0)
@@ -95,6 +127,12 @@
     protected override async Task OnInitializedAsync()
     {
         _all = await Directory.ListAsync();
+        _categories = _all
+            .Select(c => c.Category?.Trim() ?? string.Empty)
+            .Distinct()
+            .OrderBy(c => c.Length == 0 ? 1 : 0)
+            .ThenBy(c => c, StringComparer.OrdinalIgnoreCase)
+            .ToList();
         _loading = false;
     }
 }

@@ -2,66 +2,97 @@
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services
 @using System.Net
+@using System.Text
 @using System.Text.RegularExpressions
 @inject WikiMarkdigPipeline Pipeline
 @inject WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
-@inject IDialogService DialogService
 
-<MudCard Class="@CssClass" Style=@Style Elevation="0">
-    @if (Article is not null)
-    {
-        <MudCardHeader>
-            @if (!DisplayAsHero)
-            {
-                <MudText Align="Align.Center" Typo="Typo.h2" Style="width:100%" Class="mud-text-secondary">@Article.Title</MudText>
-            }
-            <AuthorizeView>
+@if (Article is null)
+{
+    <div class="wiki-article">
+        <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:14px;" /> Wiki</a>
+        <MudAlert Severity="@Severity.Info" Variant="Variant.Outlined" Class="mt-2">
+            <AuthorizeView Policy="wiki.create">
                 <Authorized>
-                    <MudSpacer />
-                    <MudIconButton Edge="Edge.End" OnClick="@ActivateEditMode" Icon="@Icons.Material.Filled.Edit" Color=Color.Secondary Ripple=true />
-                    <MudIconButton Edge="Edge.End" OnClick="@OpenHistoryDialog" Icon="@Icons.Material.Filled.History" Color=Color.Secondary Ripple=true />
+                    <MudText>@Loc["WikiPageNotExist"]</MudText>
+                    <MudButton EndIcon="@Icons.Material.Filled.Create" Color="Color.Primary" Ripple="true"
+                               Style="text-transform:none;"
+                               OnClick="@ActivateEditMode">@Loc["CreateThisPage"]</MudButton>
                 </Authorized>
+                <NotAuthorized>
+                    <MudText>@Loc["NothingToSeeHere"]</MudText>
+                </NotAuthorized>
             </AuthorizeView>
-        </MudCardHeader>
-    }
-    <MudCardContent>
-        @if (Article?.Image is not null)
-        {
-            <MudImage Height="500" Width="500" Src="@Article.Image" />
-        }
-        @if (Article is not null)
-        {
-            @foreach (var segment in _segments)
+        </MudAlert>
+    </div>
+}
+else if (DisplayAsHero)
+{
+    @* Home hero — centered, no article chrome *@
+    <div class="WikiContent WikiContent--hero" style="text-align:center;">
+        <div class="mud-card-content">
+            @if (Article.Image is not null)
             {
-                @if (segment.Directive is not null)
-                {
-                    <WikiDirectiveBlock Directive="@segment.Directive" Arg="@segment.Arg" />
-                }
-                else
-                {
-                    @((MarkupString)segment.Html)
-                }
+                <img class="wiki-img" src="@Article.Image" alt="@Article.Title" />
             }
-        }
-        else
-        {
-            <MudAlert Severity="@Severity.Info">
-                <AuthorizeView>
+            @RenderSegments
+        </div>
+    </div>
+}
+else
+{
+    @* Article — prototype WikiArticleScreen: kicker + title + meta + content + TOC *@
+    <div class="wiki-article-grid">
+        <article class="wiki-article-main">
+            <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:14px;" /> Wiki</a>
+            <div class="wiki-article-kicker">@CategoryLabel</div>
+            <h1 class="wiki-article-title">@Article.Title</h1>
+
+            <div class="wiki-article-meta">
+                <span class="wiki-article-edit">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:13px;" /> anyone can edit
+                </span>
+                <div style="flex:1;"></div>
+                <AuthorizeView Policy="wiki.edit">
                     <Authorized>
-                        <MudText>@Loc["WikiPageNotExist"]</MudText>
-                        <MudButton EndIcon="@Icons.Material.Filled.Create" Color=Color.Secondary Ripple=true
-                                   Style="text-transform: none;"
-                                   OnClick="@ActivateEditMode">@Loc["CreateThisPage"]</MudButton>
+                        <button type="button" class="wiki-btn wiki-btn--solid" @onclick="ActivateEditMode">
+                            <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:14px;" /> Edit
+                        </button>
                     </Authorized>
-                    <NotAuthorized>
-                        <MudText>@Loc["NothingToSeeHere"]</MudText>
-                    </NotAuthorized>
                 </AuthorizeView>
-            </MudAlert>
-        }
-    </MudCardContent>
-</MudCard>
+                <a class="wiki-btn" href="@HistoryHref">
+                    <MudIcon Icon="@Icons.Material.Filled.History" Style="font-size:14px;" /> History
+                </a>
+            </div>
+
+            <div class="WikiContent wiki-article-body">
+                <div class="mud-card-content">
+                    @if (Article.Image is not null)
+                    {
+                        <img class="wiki-img" src="@Article.Image" alt="@Article.Title" />
+                    }
+                    @RenderSegments
+                </div>
+            </div>
+        </article>
+
+        <aside class="wiki-toc">
+            @if (_toc.Count > 0)
+            {
+                <div class="wiki-toc-sticky">
+                    <div class="wiki-toc-label">On this page</div>
+                    <div class="wiki-toc-list">
+                        @foreach (var entry in _toc)
+                        {
+                            <a href="#@entry.Anchor">@entry.Text</a>
+                        }
+                    </div>
+                </div>
+            }
+        </aside>
+    </div>
+}
 
 @code {
     [Parameter]
@@ -81,8 +112,8 @@
     [Parameter]
     public required Func<Task> ActivateEditMode { get; init; }
 
-    /// <summary>Raised after a successful rollback from the history dialog so the
-    /// parent view can swap in the restored article.</summary>
+    /// <summary>Raised after a successful rollback (kept for API compatibility with WikiView;
+    /// restore now lives on the dedicated history page).</summary>
     [Parameter]
     public EventCallback<WikiArticle> OnArticleRestored { get; init; }
 
@@ -92,33 +123,32 @@
     /// </summary>
     private sealed record BodySegment(string Html, string? Directive = null, string Arg = "");
 
-    /// <summary>
-    /// Matches the placeholder divs emitted by WikiDirectiveExtension at render time:
-    /// &lt;div class="wiki-directive" data-directive="…" data-arg="…"&gt;&lt;/div&gt;
-    /// </summary>
+    private sealed record TocEntry(string Text, string Anchor);
+
     private static readonly Regex DirectivePlaceholder = new(
         "<div class=\"wiki-directive\" data-directive=\"([a-z]+)\" data-arg=\"([^\"]*)\"></div>",
         RegexOptions.Compiled);
 
-    /// <summary>Matches internal wiki links in rendered HTML; group 1 is the
-    /// URL-path ref ("slug" or "ns/slug"). Anchors, queries, and external URLs
-    /// never match because of the excluded characters.</summary>
     private static readonly Regex WikiLinkHref = new(
         "<a href=\"/wiki/([^\"#?]+)\">",
         RegexOptions.Compiled);
 
     private List<BodySegment> _segments = [];
+    private List<TocEntry> _toc = [];
+
+    private string CategoryLabel =>
+        string.IsNullOrWhiteSpace(Category) ? "General" : char.ToUpper(Category[0]) + Category[1..];
+
+    private string HistoryHref =>
+        $"/wiki/{(Namespace ?? "main").ToLowerInvariant()}/{(string.IsNullOrWhiteSpace(Category) ? "general" : Category)}/{Slug}/history";
 
     protected override async Task OnParametersSetAsync()
     {
-        // Prefer the pre-rendered HTML cached on the article (produced at write time by
-        // IWikiService).  Fall back to rendering the raw markdown source via the shared
-        // pipeline when the article was created without a cached copy (e.g. stub data).
         var html = Article?.RenderedHtml
                    ?? (Article is not null ? Pipeline.RenderToHtml(Article.Content) : string.Empty);
 
-        // Render immediately, then mark redlinks once the existence check returns.
         _segments = SplitOnDirectives(html);
+        _toc = BuildToc(Article?.Content);
 
         var marked = await MarkRedlinksAsync(html);
         if (marked != html)
@@ -127,12 +157,48 @@
         }
     }
 
-    /// <summary>
-    /// Tags internal links to nonexistent pages with the wiki-redlink class.
-    /// Existence is resolved at VIEW time (one batched API call) rather than baked
-    /// into the stored HTML, so links un-redden the moment the target is created.
-    /// Failures leave the HTML untouched.
-    /// </summary>
+    private RenderFragment RenderSegments => __builder =>
+    {
+        foreach (var segment in _segments)
+        {
+            if (segment.Directive is not null)
+            {
+                <WikiDirectiveBlock Directive="@segment.Directive" Arg="@segment.Arg" />
+            }
+            else
+            {
+                @((MarkupString)segment.Html)
+            }
+        }
+    };
+
+    /// <summary>Parses level-2 (##) markdown headings into a table of contents.
+    /// Anchors match Markdig's auto-identifier (GitHub-style) so #links resolve.</summary>
+    private static List<TocEntry> BuildToc(string? markdown)
+    {
+        if (string.IsNullOrEmpty(markdown)) return [];
+        return markdown.Split('\n')
+            .Select(l => l.TrimEnd())
+            .Where(l => l.StartsWith("## ", StringComparison.Ordinal))
+            .Select(l => l[3..].Trim())
+            .Where(t => t.Length > 0)
+            .Select(t => new TocEntry(t, Slugify(t)))
+            .ToList();
+    }
+
+    private static string Slugify(string text)
+    {
+        var sb = new StringBuilder();
+        foreach (var ch in text.ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(ch)) sb.Append(ch);
+            else if (ch is ' ' or '-' or '_') sb.Append('-');
+        }
+        var s = sb.ToString();
+        while (s.Contains("--", StringComparison.Ordinal)) s = s.Replace("--", "-");
+        return s.Trim('-');
+    }
+
     private async Task<string> MarkRedlinksAsync(string html)
     {
         var refs = WikiLinkHref.Matches(html)
@@ -156,10 +222,6 @@
         return html;
     }
 
-    /// <summary>
-    /// Splits rendered article HTML on wiki-directive placeholders so the static
-    /// chunks render as raw markup while each directive becomes a live component.
-    /// </summary>
     private static List<BodySegment> SplitOnDirectives(string html)
     {
         var segments = new List<BodySegment>();
@@ -189,34 +251,126 @@
     }
 
     private bool DisplayAsHero => Slug.Equals("home", StringComparison.InvariantCultureIgnoreCase);
-
-    private string CssClass => DisplayAsHero ? "WikiContent WikiContent--hero" : "WikiContent";
-
-    private string Style => $"min-height: calc(100vh - var(--mud-appbar-height)); {(DisplayAsHero ? "background:inherit; text-align:center;" : string.Empty)}";
-
-    private async Task OpenHistoryDialog()
-    {
-        var parameters = new DialogParameters<WikiHistoryDialog>
-        {
-            { x => x.Slug, Slug },
-            { x => x.Namespace, Namespace },
-            { x => x.Category, Category },
-            { x => x.CurrentMarkdown, Article?.Content }
-        };
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseOnEscapeKey = true,
-            BackdropClick = true
-        };
-        var dialog = await DialogService.ShowAsync<WikiHistoryDialog>($"History: {Slug}", parameters, options);
-        var result = await dialog.Result;
-
-        // The dialog returns the restored article when a rollback succeeded.
-        if (result is { Canceled: false, Data: WikiArticle restored })
-        {
-            await OnArticleRestored.InvokeAsync(restored);
-        }
-    }
 }
+
+<style>
+    .wiki-article {
+        padding: var(--cpad);
+    }
+
+    .wiki-article-grid {
+        padding: var(--cpad);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        gap: 36px;
+    }
+    @@media (max-width: 860px) {
+        .wiki-article-grid { grid-template-columns: 1fr; gap: 20px; }
+        .wiki-toc { display: none; }
+    }
+
+    .wiki-article-main { min-width: 0; }
+
+    .wiki-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+        text-decoration: none;
+        margin-bottom: 18px;
+    }
+    .wiki-back:hover { color: var(--accent); }
+
+    .wiki-article-kicker {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 10px;
+    }
+    .wiki-article-title {
+        margin: 0 0 14px;
+        font-family: var(--font-display);
+        font-size: 34px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+        line-height: 1.15;
+    }
+
+    .wiki-article-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 22px;
+        margin-bottom: 22px;
+        border-bottom: 1px solid var(--border-soft);
+    }
+    .wiki-article-edit {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--accent);
+    }
+    .wiki-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 11px;
+        border-radius: var(--radius);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text-dim);
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.12s;
+    }
+    .wiki-btn:hover {
+        background: var(--surface-2);
+        color: var(--text);
+        border-color: var(--border);
+    }
+    .wiki-btn--solid {
+        background: var(--surface-2);
+        border-color: var(--border);
+        color: var(--text);
+    }
+
+    /* TOC */
+    .wiki-toc-sticky { position: sticky; top: 0; }
+    .wiki-toc-label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        margin-bottom: 8px;
+    }
+    .wiki-toc-list {
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid var(--border-soft);
+    }
+    .wiki-toc-list a {
+        padding: 5px 0 5px 14px;
+        margin-left: -1px;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+        text-decoration: none;
+        border-left: 2px solid transparent;
+        transition: color 0.12s, border-color 0.12s;
+    }
+    .wiki-toc-list a:hover {
+        color: var(--accent);
+        border-left-color: var(--accent);
+    }
+</style>

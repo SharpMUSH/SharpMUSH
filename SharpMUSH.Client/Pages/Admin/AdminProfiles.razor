@@ -1,82 +1,86 @@
 @page "/admin/profiles"
-@attribute [Authorize(Roles = "Wizard")]
+@attribute [Authorize(Policy = "players.moderate")]
 @using System.Net.Http.Json
 @inject IHttpClientFactory HttpClientFactory
 @inject ISnackbar Snackbar
 
 <PageTitle>Profile Handler — Admin — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Profile Handler</MudText>
+<div style="padding:var(--cpad);">
+    <div class="ph-header">
+        <div class="ph-kicker">Administration</div>
+        <h1 class="ph-title">Profile Handler</h1>
+        <p class="ph-subtitle">
+            Character profiles are served by the in-game <code>http_handler</code> object via its
+            <code>HTTP`PROFILE`*</code> softcode. Customize it in-game with <code>&amp;HTTP`PROFILE`GET …</code>,
+            or reinstall the stock handler below.
+        </p>
+    </div>
 
-<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-    Character profiles are served by the in-game <code>http_handler</code> object via its
-    <code>HTTP`PROFILE`*</code> softcode. Customize it in-game with <code>&amp;HTTP`PROFILE`GET …</code>,
-    or reinstall the stock handler below.
-</MudText>
-
-@if (_loading)
-{
-    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-}
-else if (_status is null)
-{
-    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Could not load handler status.</MudAlert>
-}
-else
-{
-    <MudPaper Class="pa-4 mb-4">
-        <MudStack Spacing="1">
-            <MudStack Row="true" Spacing="2">
-                <MudText Typo="Typo.subtitle2">Configured:</MudText>
-                <MudText>@(_status.Configured ? "Yes" : "No (http_handler unset)")</MudText>
-            </MudStack>
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Style="color:var(--accent);" />
+    }
+    else if (_status is null)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Could not load handler status.</MudAlert>
+    }
+    else
+    {
+        <div class="ph-card ph-status">
+            <div class="ph-status-row">
+                <span class="ph-status-label">Configured</span>
+                <span class="ph-status-value">@(_status.Configured ? "Yes" : "No (http_handler unset)")</span>
+            </div>
             @if (_status.Configured)
             {
-                <MudStack Row="true" Spacing="2">
-                    <MudText Typo="Typo.subtitle2">Handler:</MudText>
-                    <MudText>
+                <div class="ph-status-row">
+                    <span class="ph-status-label">Handler</span>
+                    <span class="ph-status-value">
                         @(_status.HandlerExists
                             ? $"{_status.HandlerName} (#{_status.HandlerDbref})"
                             : $"#{_status.HandlerDbref} — NOT FOUND")
-                    </MudText>
-                </MudStack>
+                    </span>
+                </div>
             }
-        </MudStack>
-    </MudPaper>
+        </div>
 
-    @if (_status.HandlerExists)
-    {
-        <MudTable Items="_status.Attributes" Hover="true" Dense="true" Class="mb-4">
-            <HeaderContent>
-                <MudTh>Attribute</MudTh>
-                <MudTh>Status</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Attribute"><code>@context.Attribute</code></MudTd>
-                <MudTd DataLabel="Status">
-                    @if (context.Present)
-                    {
-                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Outlined">Present</MudChip>
-                    }
-                    else
-                    {
-                        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">Missing</MudChip>
-                    }
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
+        @if (_status.HandlerExists)
+        {
+            <div class="ph-card ph-attrs">
+                <div class="ph-attrs-head">
+                    <span>Attribute</span>
+                    <span>Status</span>
+                </div>
+                @foreach (var attr in _status.Attributes)
+                {
+                    <div class="ph-attrs-row">
+                        <code>@attr.Attribute</code>
+                        @if (attr.Present)
+                        {
+                            <span class="ph-chip ph-chip-ok">Present</span>
+                        }
+                        else
+                        {
+                            <span class="ph-chip ph-chip-warn">Missing</span>
+                        }
+                    </div>
+                }
+            </div>
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.RestartAlt"
-                   OnClick="ResetAsync" Disabled="_resetting">
-            @(_resetting ? "Resetting…" : "Reset to Defaults")
-        </MudButton>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mt-2">
-            Overwrites the stock <code>HTTP`PROFILE`*</code> and <code>FN`*</code> attributes with the
-            built-in defaults. Custom attributes you added are left untouched.
-        </MudText>
+            <MudButton Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Filled.RestartAlt"
+                       OnClick="ResetAsync" Disabled="_resetting"
+                       Style="background:var(--accent);color:var(--accent-on);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;">
+                @(_resetting ? "Resetting…" : "Reset to Defaults")
+            </MudButton>
+            <p class="ph-caption">
+                Overwrites the stock <code>HTTP`PROFILE`*</code> and <code>FN`*</code> attributes with the
+                built-in defaults. Custom attributes you added are left untouched.
+            </p>
+        }
     }
-}
+</div>
 
 @code {
     private record AttributeStatus(string Attribute, bool Present);
@@ -129,3 +133,115 @@ else
         _resetting = false;
     }
 }
+
+<style>
+    .ph-header { margin-bottom: 24px; }
+    .ph-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .ph-title {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        color: var(--text);
+        margin: 0;
+    }
+    .ph-subtitle {
+        font-size: 13px;
+        color: var(--text-dim);
+        margin: 10px 0 0;
+        max-width: 720px;
+        line-height: 1.6;
+    }
+    .ph-subtitle code, .ph-caption code, .ph-attrs-row code {
+        font-family: var(--font-mono);
+        font-size: 0.92em;
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 1px 5px;
+        color: var(--text);
+    }
+
+    .ph-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        padding: 18px 20px;
+        margin-bottom: 16px;
+    }
+
+    .ph-status-row {
+        display: flex;
+        gap: 12px;
+        align-items: baseline;
+        padding: 4px 0;
+    }
+    .ph-status-label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        min-width: 90px;
+    }
+    .ph-status-value {
+        font-size: 14px;
+        color: var(--text);
+    }
+
+    .ph-attrs { padding: 0; overflow: hidden; }
+    .ph-attrs-head {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 20px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        border-bottom: 1px solid var(--border-soft);
+        background: var(--surface-3);
+    }
+    .ph-attrs-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 11px 20px;
+        border-bottom: 1px solid var(--border-soft);
+    }
+    .ph-attrs-row:last-child { border-bottom: none; }
+    .ph-attrs-row:hover { background: rgba(var(--glow), 0.04); }
+
+    .ph-chip {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        padding: 2px 10px;
+        border-radius: 99px;
+        border: 1px solid transparent;
+    }
+    .ph-chip-ok {
+        color: #6cde9a;
+        background: rgba(108, 222, 154, 0.12);
+        border-color: rgba(108, 222, 154, 0.35);
+    }
+    .ph-chip-warn {
+        color: #d9a23a;
+        background: rgba(217, 162, 58, 0.12);
+        border-color: rgba(217, 162, 58, 0.35);
+    }
+
+    .ph-caption {
+        font-size: 12px;
+        color: var(--text-dim);
+        margin: 10px 0 0;
+        line-height: 1.6;
+    }
+</style>

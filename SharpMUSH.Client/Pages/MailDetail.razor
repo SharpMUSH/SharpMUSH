@@ -8,50 +8,95 @@
 
 <PageTitle>Mail #@Id — SharpMUSH</PageTitle>
 
-<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
-    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Href="/mail" />
-    <MudText Typo="Typo.h5">@Loc["Mail"] #@Id</MudText>
-</MudStack>
+<div style="padding:var(--cpad);">
 
-@if (_loading)
-{
-    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-}
-else if (_message is null)
-{
-    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">@Loc["MailNotFound"]</MudAlert>
-}
-else
-{
-    <MudPaper Outlined="true" Class="pa-4">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
-            <MudText Typo="Typo.h6">@_message.Subject</MudText>
-            @if (_message.Urgent)
-            {
-                <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Outlined">@Loc["Urgent"]</MudChip>
-            }
-        </MudStack>
-        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
-            @Loc["From"]: @_message.From
-        </MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
-            @_message.DateSent.LocalDateTime.ToString("f") · @_message.Folder
-        </MudText>
-        <MudDivider Class="mb-4" />
-        <MudText Style="white-space:pre-wrap;">@_message.Body</MudText>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Href="/mail"
+                       Style="color:var(--text-dim);" />
+        <div>
+            <div class="md-kicker">@Loc["Mail"]</div>
+            <div class="md-title">#@Id</div>
+        </div>
+    </div>
 
-        <MudStack Row="true" Spacing="2" Class="mt-6">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Reply" OnClick="Reply">
-                @Loc["Reply"]
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Error"
-                       StartIcon="@Icons.Material.Filled.Delete" OnClick="DeleteAsync">
-                @Loc["Delete"]
-            </MudButton>
-        </MudStack>
-    </MudPaper>
-}
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Style="color:var(--accent);" />
+    }
+    else if (_message is null)
+    {
+        <div class="md-card" style="color:var(--text-dim);">@Loc["MailNotFound"]</div>
+    }
+    else
+    {
+        <div class="md-card">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                <div style="font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--text);">@_message.Subject</div>
+                @if (_message.Urgent)
+                {
+                    <span class="md-urgent">@Loc["Urgent"]</span>
+                }
+            </div>
+            <div style="font-size:13px;color:var(--text-dim);margin-bottom:2px;">
+                @Loc["From"]: <span style="color:var(--text);">@_message.From</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-faint);margin-bottom:16px;">
+                @_message.DateSent.LocalDateTime.ToString("f") · @_message.Folder
+            </div>
+
+            <div style="height:1px;background:var(--border-soft);margin-bottom:16px;"></div>
+
+            <div style="white-space:pre-wrap;font-family:var(--font-mono);font-size:13px;line-height:1.6;color:var(--text);">@_message.Body</div>
+
+            <div style="display:flex;gap:10px;margin-top:28px;">
+                <MudButton Variant="Variant.Filled"
+                           Style="background:var(--accent);color:var(--accent-on);text-transform:none;font-weight:600;"
+                           StartIcon="@Icons.Material.Filled.Reply" OnClick="Reply">
+                    @Loc["Reply"]
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Style="border-color:var(--border);color:var(--text-dim);text-transform:none;"
+                           StartIcon="@Icons.Material.Filled.Delete" OnClick="DeleteAsync">
+                    @Loc["Delete"]
+                </MudButton>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .md-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+    }
+    .md-title {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 700;
+        line-height: 1.1;
+        color: var(--text);
+    }
+    .md-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        padding: 24px;
+    }
+    .md-urgent {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--accent);
+        border: 1px solid rgba(var(--glow),0.3);
+        border-radius: 999px;
+        padding: 2px 8px;
+    }
+</style>
 
 @code {
     [Parameter] public int Id { get; set; }

@@ -7,52 +7,47 @@
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
 
-<div class="pa-4">
-	<MudText Typo="Typo.h4" GutterBottom="true">@Loc["ImportPennMUSHDatabase"]</MudText>
-	<MudText Typo="Typo.body1" Class="mb-4">
-		@Loc["ImportDatabaseDescription"]
-	</MudText>
+<div class="dbimport-page">
+	<header class="dbimport-header">
+		<div class="dbimport-kicker">Admin · Database</div>
+		<h1 class="dbimport-title">@Loc["ImportPennMUSHDatabase"]</h1>
+		<p class="dbimport-subtitle">@Loc["ImportDatabaseDescription"]</p>
+	</header>
 
 	@if (!_isConverting && _result == null)
 	{
-		<MudPaper Class="pa-4">
-			<MudCard Outlined="true" Style="min-height: 200px; border: 2px dashed #ccc;">
-            <MudCardContent>
-                <MudFileUpload T="IBrowserFile"
-                                Accept=".db,.txt"
-                                FilesChanged="OnFileSelected"
-                                MaximumFileCount="1"
-                                MaxFileSize="104857600" />
-					<div class="d-flex flex-column align-center justify-center" style="min-height: 150px;">
-						<MudIcon Icon="Icons.Material.Filled.CloudUpload" Size="Size.Large" />
-						<MudText Typo="Typo.h6">@Loc["DropDatabaseFile"]</MudText>
-						<MudText Typo="Typo.body2" Class="mt-2">
-							@Loc["SupportedFormatsDb"]
-						</MudText>
-					</div>
-				</MudCardContent>
-			</MudCard>
-		</MudPaper>
+		<div class="dbimport-card dbimport-dropzone">
+			<MudFileUpload T="IBrowserFile"
+			               Accept=".db,.txt"
+			               FilesChanged="OnFileSelected"
+			               MaximumFileCount="1"
+			               MaxFileSize="104857600" />
+			<div class="dbimport-dropzone-inner">
+				<MudIcon Icon="Icons.Material.Filled.CloudUpload" Class="dbimport-dropzone-icon" />
+				<span class="dbimport-dropzone-title">@Loc["DropDatabaseFile"]</span>
+				<span class="dbimport-dropzone-hint">@Loc["SupportedFormatsDb"]</span>
+			</div>
+		</div>
 
 		@if (_selectedFile != null)
 		{
-			<MudPaper Class="pa-4 mt-4">
-				<MudText Typo="Typo.h6" GutterBottom="true">@Loc["SelectedFile"]</MudText>
-				<MudStack Row="true" Spacing="2" Style="align-items: center;">
-					<MudIcon Icon="Icons.Material.Filled.Description" />
-					<MudText>@_selectedFile.Name</MudText>
-					<MudText Typo="Typo.caption">(@($"{_selectedFile.Size / 1024.0 / 1024.0:F1}") MB)</MudText>
-				</MudStack>
+			<div class="dbimport-card">
+				<div class="dbimport-section-label">@Loc["SelectedFile"]</div>
+				<div class="dbimport-file-row">
+					<MudIcon Icon="Icons.Material.Filled.Description" Class="dbimport-file-icon" />
+					<span class="dbimport-file-name">@_selectedFile.Name</span>
+					<span class="dbimport-file-size">(@($"{_selectedFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
+				</div>
 
-				<MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-4">
-					<MudButton StartIcon="Icons.Material.Filled.Clear" 
+				<div class="dbimport-actions">
+					<MudButton StartIcon="Icons.Material.Filled.Clear"
+					           Class="dbimport-btn dbimport-btn-ghost"
 					           OnClick="ClearSelection">
 						@Loc["ClearSelection"]
 					</MudButton>
-					
-					<MudButton StartIcon="Icons.Material.Filled.Upload" 
-					           Color="Color.Primary" 
-					           Variant="Variant.Filled"
+
+					<MudButton StartIcon="Icons.Material.Filled.Upload"
+					           Class="dbimport-btn dbimport-btn-primary"
 					           OnClick="StartConversion"
 					           Disabled="_isUploading">
 						@if (_isUploading)
@@ -65,177 +60,359 @@
 							<MudText>@Loc["StartConversion"]</MudText>
 						}
 					</MudButton>
-				</MudStack>
-			</MudPaper>
+				</div>
+			</div>
 		}
 	}
 	else if (_isConverting && _progress != null)
 	{
-		<MudPaper Class="pa-4">
-			<MudText Typo="Typo.h5" GutterBottom="true">@Loc["ConvertingDatabase"]</MudText>
-			
-			<MudProgressLinear Value="@_progress.PercentageComplete" 
-			                   Color="Color.Primary" 
-			                   Size="Size.Large" 
-			                   Class="mt-4 mb-2" />
-			
-			<MudText Typo="Typo.body1" Align="Align.Center" Class="mb-4">
+		<div class="dbimport-card">
+			<div class="dbimport-section-label">@Loc["ConvertingDatabase"]</div>
+
+			<MudProgressLinear Value="@_progress.PercentageComplete"
+			                   Color="Color.Primary"
+			                   Size="Size.Large"
+			                   Class="mt-3 mb-2" />
+
+			<div class="dbimport-progress-caption">
 				@($"{_progress.PercentageComplete:F1}% Complete - {_progress.CurrentPhase}")
-			</MudText>
+			</div>
 
-			<MudGrid>
-				<MudItem xs="12" md="6">
-					<MudPaper Class="pa-3" Elevation="2">
-						<MudText Typo="Typo.h6" GutterBottom="true">@Loc["Progress"]</MudText>
-						<MudStack Spacing="2">
-							<MudText>@Loc["Phase"] <strong>@_progress.CurrentPhase</strong></MudText>
-							<MudText>@Loc["Elapsed"] <strong>@FormatTimeSpan(_progress.ElapsedTime)</strong></MudText>
-							@if (_progress.EstimatedTimeRemaining.HasValue)
-							{
-								<MudText>@Loc["EstimatedRemaining"] <strong>@FormatTimeSpan(_progress.EstimatedTimeRemaining.Value)</strong></MudText>
-							}
-						</MudStack>
-					</MudPaper>
-				</MudItem>
+			<div class="dbimport-grid">
+				<div class="dbimport-tile">
+					<div class="dbimport-tile-label">@Loc["Progress"]</div>
+					<div class="dbimport-stat-list">
+						<div class="dbimport-stat"><span>@Loc["Phase"]</span><strong>@_progress.CurrentPhase</strong></div>
+						<div class="dbimport-stat"><span>@Loc["Elapsed"]</span><strong>@FormatTimeSpan(_progress.ElapsedTime)</strong></div>
+						@if (_progress.EstimatedTimeRemaining.HasValue)
+						{
+							<div class="dbimport-stat"><span>@Loc["EstimatedRemaining"]</span><strong>@FormatTimeSpan(_progress.EstimatedTimeRemaining.Value)</strong></div>
+						}
+					</div>
+				</div>
 
-				<MudItem xs="12" md="6">
-					<MudPaper Class="pa-3" Elevation="2">
-						<MudText Typo="Typo.h6" GutterBottom="true">@Loc["ObjectsCreated"]</MudText>
-						<MudStack Spacing="2">
-							<MudText>@Loc["Players"] <strong>@_progress.PlayersCreated</strong></MudText>
-							<MudText>@Loc["Rooms"] <strong>@_progress.RoomsCreated</strong></MudText>
-							<MudText>@Loc["Things"] <strong>@_progress.ThingsCreated</strong></MudText>
-							<MudText>@Loc["Exits"] <strong>@_progress.ExitsCreated</strong></MudText>
-							<MudText>@Loc["Total"] <strong>@_progress.ProcessedObjects / @_progress.TotalObjects</strong></MudText>
-						</MudStack>
-					</MudPaper>
-				</MudItem>
+				<div class="dbimport-tile">
+					<div class="dbimport-tile-label">@Loc["ObjectsCreated"]</div>
+					<div class="dbimport-stat-list">
+						<div class="dbimport-stat"><span>@Loc["Players"]</span><strong>@_progress.PlayersCreated</strong></div>
+						<div class="dbimport-stat"><span>@Loc["Rooms"]</span><strong>@_progress.RoomsCreated</strong></div>
+						<div class="dbimport-stat"><span>@Loc["Things"]</span><strong>@_progress.ThingsCreated</strong></div>
+						<div class="dbimport-stat"><span>@Loc["Exits"]</span><strong>@_progress.ExitsCreated</strong></div>
+						<div class="dbimport-stat"><span>@Loc["Total"]</span><strong>@_progress.ProcessedObjects / @_progress.TotalObjects</strong></div>
+					</div>
+				</div>
 
-				<MudItem xs="12" md="6">
-					<MudPaper Class="pa-3" Elevation="2">
-						<MudText Typo="Typo.h6" GutterBottom="true">@Loc["AdditionalData"]</MudText>
-						<MudStack Spacing="2">
-							<MudText>@Loc["AttributesLabel"] <strong>@_progress.AttributesCreated</strong></MudText>
-							<MudText>@Loc["Locks"] <strong>@_progress.LocksCreated</strong></MudText>
-						</MudStack>
-					</MudPaper>
-				</MudItem>
+				<div class="dbimport-tile">
+					<div class="dbimport-tile-label">@Loc["AdditionalData"]</div>
+					<div class="dbimport-stat-list">
+						<div class="dbimport-stat"><span>@Loc["AttributesLabel"]</span><strong>@_progress.AttributesCreated</strong></div>
+						<div class="dbimport-stat"><span>@Loc["Locks"]</span><strong>@_progress.LocksCreated</strong></div>
+					</div>
+				</div>
 
 				@if (_progress.RecentErrors.Any() || _progress.RecentWarnings.Any())
 				{
-					<MudItem xs="12" md="6">
-						<MudPaper Class="pa-3" Elevation="2">
-							<MudText Typo="Typo.h6" GutterBottom="true">@Loc["Issues"]</MudText>
-							@if (_progress.RecentErrors.Any())
-							{
-								<MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">
-									@_progress.RecentErrors.Count error(s)
-								</MudAlert>
-							}
-							@if (_progress.RecentWarnings.Any())
-							{
-								<MudAlert Severity="Severity.Warning" Dense="true">
-									@_progress.RecentWarnings.Count warning(s)
-								</MudAlert>
-							}
-						</MudPaper>
-					</MudItem>
+					<div class="dbimport-tile">
+						<div class="dbimport-tile-label">@Loc["Issues"]</div>
+						@if (_progress.RecentErrors.Any())
+						{
+							<MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">
+								@_progress.RecentErrors.Count error(s)
+							</MudAlert>
+						}
+						@if (_progress.RecentWarnings.Any())
+						{
+							<MudAlert Severity="Severity.Warning" Dense="true">
+								@_progress.RecentWarnings.Count warning(s)
+							</MudAlert>
+						}
+					</div>
 				}
-			</MudGrid>
+			</div>
 
-			<MudButton StartIcon="Icons.Material.Filled.Cancel" 
-			           Color="Color.Error" 
-			           Variant="Variant.Outlined"
-			           OnClick="CancelConversion"
-			           Class="mt-4">
-				@Loc["CancelConversion"]
-			</MudButton>
-		</MudPaper>
+			<div class="dbimport-actions dbimport-actions-start">
+				<MudButton StartIcon="Icons.Material.Filled.Cancel"
+				           Class="dbimport-btn dbimport-btn-danger"
+				           OnClick="CancelConversion">
+					@Loc["CancelConversion"]
+				</MudButton>
+			</div>
+		</div>
 	}
 	else if (_result != null)
 	{
-		<MudPaper Class="pa-4">
+		<div class="dbimport-card">
 			<MudAlert Severity="@(_result.IsSuccessful ? Severity.Success : Severity.Error)" Class="mb-4">
 				@if (_result.IsSuccessful)
 				{
-					<MudText Typo="Typo.h5">@Loc["ConversionSuccess"]</MudText>
+					<MudText Typo="Typo.h6">@Loc["ConversionSuccess"]</MudText>
 				}
 				else
 				{
-					<MudText Typo="Typo.h5">@Loc["ConversionErrors"]</MudText>
+					<MudText Typo="Typo.h6">@Loc["ConversionErrors"]</MudText>
 				}
 			</MudAlert>
 
-			<MudGrid>
-				<MudItem xs="12" md="6">
-					<MudPaper Class="pa-3" Elevation="2">
-						<MudText Typo="Typo.h6" GutterBottom="true">@Loc["ObjectsConverted"]</MudText>
-						<MudStack Spacing="2">
-							<MudText>@Loc["Players"] <strong>@_result.PlayersConverted</strong></MudText>
-							<MudText>@Loc["Rooms"] <strong>@_result.RoomsConverted</strong></MudText>
-							<MudText>@Loc["Things"] <strong>@_result.ThingsConverted</strong></MudText>
-							<MudText>@Loc["Exits"] <strong>@_result.ExitsConverted</strong></MudText>
-							<MudText>@Loc["TotalObjects"] <strong>@_result.TotalObjects</strong></MudText>
-						</MudStack>
-					</MudPaper>
-				</MudItem>
+			<div class="dbimport-grid">
+				<div class="dbimport-tile">
+					<div class="dbimport-tile-label">@Loc["ObjectsConverted"]</div>
+					<div class="dbimport-stat-list">
+						<div class="dbimport-stat"><span>@Loc["Players"]</span><strong>@_result.PlayersConverted</strong></div>
+						<div class="dbimport-stat"><span>@Loc["Rooms"]</span><strong>@_result.RoomsConverted</strong></div>
+						<div class="dbimport-stat"><span>@Loc["Things"]</span><strong>@_result.ThingsConverted</strong></div>
+						<div class="dbimport-stat"><span>@Loc["Exits"]</span><strong>@_result.ExitsConverted</strong></div>
+						<div class="dbimport-stat"><span>@Loc["TotalObjects"]</span><strong>@_result.TotalObjects</strong></div>
+					</div>
+				</div>
 
-				<MudItem xs="12" md="6">
-					<MudPaper Class="pa-3" Elevation="2">
-						<MudText Typo="Typo.h6" GutterBottom="true">@Loc["AdditionalData"]</MudText>
-						<MudStack Spacing="2">
-							<MudText>@Loc["AttributesLabel"] <strong>@_result.AttributesConverted</strong></MudText>
-							<MudText>@Loc["Locks"] <strong>@_result.LocksConverted</strong></MudText>
-							<MudText>@Loc["Duration"] <strong>@FormatTimeSpan(_result.Duration)</strong></MudText>
-						</MudStack>
-					</MudPaper>
-				</MudItem>
+				<div class="dbimport-tile">
+					<div class="dbimport-tile-label">@Loc["AdditionalData"]</div>
+					<div class="dbimport-stat-list">
+						<div class="dbimport-stat"><span>@Loc["AttributesLabel"]</span><strong>@_result.AttributesConverted</strong></div>
+						<div class="dbimport-stat"><span>@Loc["Locks"]</span><strong>@_result.LocksConverted</strong></div>
+						<div class="dbimport-stat"><span>@Loc["Duration"]</span><strong>@FormatTimeSpan(_result.Duration)</strong></div>
+					</div>
+				</div>
 
 				@if (_result.Errors.Any())
 				{
-					<MudItem xs="12">
-						<MudPaper Class="pa-3" Elevation="2">
-							<MudText Typo="Typo.h6" GutterBottom="true" Color="Color.Error">Errors (@_result.Errors.Count)</MudText>
-							<MudList T="string" Dense="true">
-								@foreach (var error in _result.Errors)
-								{
-									<MudListItem T="string">
-										<MudText Color="Color.Error">@error</MudText>
-									</MudListItem>
-								}
-							</MudList>
-						</MudPaper>
-					</MudItem>
+					<div class="dbimport-tile dbimport-tile-wide">
+						<div class="dbimport-tile-label dbimport-tile-label-error">Errors (@_result.Errors.Count)</div>
+						<MudList T="string" Dense="true">
+							@foreach (var error in _result.Errors)
+							{
+								<MudListItem T="string">
+									<MudText Color="Color.Error">@error</MudText>
+								</MudListItem>
+							}
+						</MudList>
+					</div>
 				}
 
 				@if (_result.Warnings.Any())
 				{
-					<MudItem xs="12">
-						<MudPaper Class="pa-3" Elevation="2">
-							<MudText Typo="Typo.h6" GutterBottom="true" Color="Color.Warning">Warnings (@_result.Warnings.Count)</MudText>
-							<MudList T="string" Dense="true">
-								@foreach (var warning in _result.Warnings)
-								{
-									<MudListItem T="string">
-										<MudText Color="Color.Warning">@warning</MudText>
-									</MudListItem>
-								}
-							</MudList>
-						</MudPaper>
-					</MudItem>
+					<div class="dbimport-tile dbimport-tile-wide">
+						<div class="dbimport-tile-label dbimport-tile-label-warning">Warnings (@_result.Warnings.Count)</div>
+						<MudList T="string" Dense="true">
+							@foreach (var warning in _result.Warnings)
+							{
+								<MudListItem T="string">
+									<MudText Color="Color.Warning">@warning</MudText>
+								</MudListItem>
+							}
+						</MudList>
+					</div>
 				}
-			</MudGrid>
+			</div>
 
-			<MudButton StartIcon="Icons.Material.Filled.Refresh" 
-			           Color="Color.Primary" 
-			           Variant="Variant.Filled"
-			           OnClick="Reset"
-			           Class="mt-4">
-				@Loc["ImportAnotherDatabase"]
-			</MudButton>
-		</MudPaper>
+			<div class="dbimport-actions dbimport-actions-start">
+				<MudButton StartIcon="Icons.Material.Filled.Refresh"
+				           Class="dbimport-btn dbimport-btn-primary"
+				           OnClick="Reset">
+					@Loc["ImportAnotherDatabase"]
+				</MudButton>
+			</div>
+		</div>
 	}
 </div>
+
+<style>
+	.dbimport-page {
+		padding: var(--cpad);
+	}
+
+	.dbimport-header {
+		margin-bottom: 24px;
+	}
+	.dbimport-kicker {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: var(--accent);
+		margin-bottom: 10px;
+	}
+	.dbimport-title {
+		margin: 0;
+		font-family: var(--font-display);
+		font-size: 26px;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		color: var(--text);
+	}
+	.dbimport-subtitle {
+		margin: 8px 0 0;
+		font-family: var(--font-ui);
+		font-size: 13.5px;
+		color: var(--text-dim);
+		max-width: 70ch;
+	}
+
+	.dbimport-card {
+		background: var(--surface);
+		border: 1px solid var(--border-soft);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow);
+		padding: 20px;
+		margin-bottom: 16px;
+	}
+
+	.dbimport-dropzone {
+		border: 1.5px dashed var(--border);
+	}
+	.dbimport-dropzone-inner {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		min-height: 140px;
+		margin-top: 8px;
+	}
+	.dbimport-dropzone-icon {
+		font-size: 44px !important;
+		color: var(--accent);
+	}
+	.dbimport-dropzone-title {
+		font-family: var(--font-display);
+		font-size: 17px;
+		font-weight: 600;
+		color: var(--text);
+	}
+	.dbimport-dropzone-hint {
+		font-family: var(--font-ui);
+		font-size: 12.5px;
+		color: var(--text-dim);
+	}
+
+	.dbimport-section-label {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--text-dim);
+		margin-bottom: 14px;
+	}
+
+	.dbimport-file-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.dbimport-file-icon {
+		font-size: 20px !important;
+		color: var(--accent);
+	}
+	.dbimport-file-name {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		color: var(--text);
+	}
+	.dbimport-file-size {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--text-faint);
+	}
+
+	.dbimport-actions {
+		display: flex;
+		justify-content: space-between;
+		gap: 12px;
+		margin-top: 18px;
+	}
+	.dbimport-actions-start {
+		justify-content: flex-start;
+	}
+
+	.dbimport-progress-caption {
+		text-align: center;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--text-dim);
+		margin-bottom: 18px;
+	}
+
+	.dbimport-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		gap: 14px;
+	}
+	.dbimport-tile {
+		background: var(--surface-3);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 16px;
+	}
+	.dbimport-tile-wide {
+		grid-column: 1 / -1;
+	}
+	.dbimport-tile-label {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--text-dim);
+		margin-bottom: 12px;
+	}
+	.dbimport-tile-label-error {
+		color: #ff6b6b;
+	}
+	.dbimport-tile-label-warning {
+		color: #ffb454;
+	}
+
+	.dbimport-stat-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.dbimport-stat {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 12px;
+		font-family: var(--font-ui);
+		font-size: 13.5px;
+		color: var(--text-dim);
+	}
+	.dbimport-stat strong {
+		font-family: var(--font-mono);
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--text);
+	}
+
+	::deep .dbimport-btn {
+		text-transform: none;
+		font-family: var(--font-ui);
+		font-weight: 600;
+		border-radius: var(--radius);
+	}
+	::deep .dbimport-btn-primary {
+		background: var(--accent);
+		color: var(--accent-on);
+	}
+	::deep .dbimport-btn-primary:hover {
+		background: var(--accent-dim);
+	}
+	::deep .dbimport-btn-ghost {
+		color: var(--text-dim);
+		border: 1px solid var(--border);
+		background: var(--surface-2);
+	}
+	::deep .dbimport-btn-ghost:hover {
+		color: var(--text);
+		border-color: var(--accent);
+	}
+	::deep .dbimport-btn-danger {
+		color: #ff6b6b;
+		border: 1px solid rgba(255, 107, 107, 0.4);
+		background: transparent;
+	}
+	::deep .dbimport-btn-danger:hover {
+		background: rgba(255, 107, 107, 0.1);
+	}
+</style>
 
 @code {
 	private IBrowserFile? _selectedFile;

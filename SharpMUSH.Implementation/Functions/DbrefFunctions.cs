@@ -109,15 +109,18 @@ public partial class Functions
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			locate =>
+			async locate =>
 			{
 				if (!locate.IsContainer)
 				{
 					return CallState.Empty;
 				}
 
-				var contents = locate.AsContainer.Content(Mediator!);
-				return string.Join(" ", contents.Take(1).Select(x => x.Object().DBRef.ToString()));
+				var contents = await locate.AsContainer.Content(Mediator!)
+					.Take(1)
+					.Select(x => x.Object().DBRef.ToString())
+					.ToListAsync();
+				return string.Join(" ", contents);
 			});
 	}
 
@@ -2210,15 +2213,17 @@ LOCATE()
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			 locate =>
+			 async locate =>
 			{
 				if (!locate.IsContainer)
 				{
 					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ", locate.AsContainer.Content(Mediator!)
-					.Select(x => x.Object().DBRef.ToString()));
+				var contents = await locate.AsContainer.Content(Mediator!)
+					.Select(x => x.Object().DBRef.ToString())
+					.ToListAsync();
+				return string.Join(" ", contents);
 			});
 	}
 
@@ -2232,16 +2237,18 @@ LOCATE()
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			 locate =>
+			 async locate =>
 			{
 				if (!locate.IsContainer)
 				{
 					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ", locate.AsContainer.Content(Mediator!)
+				var exits = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsExit)
-					.Select(x => x.Object().DBRef.ToString()));
+					.Select(x => x.Object().DBRef.ToString())
+					.ToListAsync();
+				return string.Join(" ", exits);
 			});
 	}
 
@@ -2255,16 +2262,18 @@ LOCATE()
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			locate =>
+			async locate =>
 			{
 				if (!locate.IsContainer)
 				{
 					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ", locate.AsContainer.Content(Mediator!)
+				var players = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
-					.Select(x => x.Object().DBRef.ToString()));
+					.Select(x => x.Object().DBRef.ToString())
+					.ToListAsync();
+				return string.Join(" ", players);
 			});
 	}
 
@@ -2278,16 +2287,18 @@ LOCATE()
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			locate =>
+			async locate =>
 			{
 				if (!locate.IsContainer)
 				{
 					return ErrorMessages.Returns.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ", locate.AsContainer.Content(Mediator!)
+				var things = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsThing)
-					.Select(x => x.Object().DBRef.ToString()));
+					.Select(x => x.Object().DBRef.ToString())
+					.ToListAsync();
+				return string.Join(" ", things);
 			});
 	}
 

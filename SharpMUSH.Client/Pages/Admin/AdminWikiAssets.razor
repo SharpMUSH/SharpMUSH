@@ -1,5 +1,5 @@
 @page "/admin/wiki/assets"
-@attribute [Authorize(Roles = "Wizard")]
+@attribute [Authorize(Policy = "media.admin")]
 @using SharpMUSH.Client.Services
 @inject WikiAssetService AssetService
 @inject ISnackbar Snackbar
@@ -7,64 +7,239 @@
 
 <PageTitle>Wiki Assets — Admin — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Wiki Assets</MudText>
+<div style="padding:var(--cpad);">
+    @* Header — prototype SectionTitle: kicker + title *@
+    <div class="assets-head">
+        <div>
+            <div class="assets-kicker">Staff · Media</div>
+            <h1 class="assets-title">Wiki Assets</h1>
+        </div>
+    </div>
 
-<MudPaper Class="pa-4 mb-4">
-    <MudStack Row="true" Spacing="3" Style="align-items: center;">
+    @* Upload card *@
+    <div class="assets-upload">
         <MudFileUpload T="IBrowserFile"
                        Accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
                        FilesChanged="OnFileSelected"
                        MaximumFileCount="1"
-                       MaxFileSize="10485760" />
+                       MaxFileSize="10485760"
+                       Disabled="_isUploading" />
         @if (_isUploading)
         {
-            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-            <MudText Typo="Typo.body2">Uploading…</MudText>
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+            <span class="assets-upload-status">Uploading…</span>
         }
-        <MudText Typo="Typo.caption" Color="Color.Secondary">
-            PNG, JPEG, GIF, WebP or SVG — 10 MB max.
-        </MudText>
-    </MudStack>
-</MudPaper>
+        <span class="assets-upload-hint">PNG, JPEG, GIF, WebP or SVG — 10 MB max.</span>
+    </div>
 
-<MudTable Items="_assets" Loading="_isLoading" Hover="true" Dense="true">
-    <HeaderContent>
-        <MudTh>Preview</MudTh>
-        <MudTh>File Name</MudTh>
-        <MudTh>Size</MudTh>
-        <MudTh>Content Type</MudTh>
-        <MudTh>Uploaded</MudTh>
-        <MudTh>Uploader</MudTh>
-        <MudTh>Actions</MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd DataLabel="Preview">
-            <img src="@context.Url" alt="@context.FileName" style="max-width: 64px; max-height: 64px;" />
-        </MudTd>
-        <MudTd DataLabel="File Name">@context.FileName</MudTd>
-        <MudTd DataLabel="Size">@FormatSize(context.SizeBytes)</MudTd>
-        <MudTd DataLabel="Content Type">@context.ContentType</MudTd>
-        <MudTd DataLabel="Uploaded">@context.UploadedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
-        <MudTd DataLabel="Uploader">@context.UploaderDbref</MudTd>
-        <MudTd DataLabel="Actions">
-            <MudStack Row="true" Spacing="1">
-                <MudButton Size="Size.Small"
-                           Variant="Variant.Outlined"
-                           StartIcon="@Icons.Material.Filled.ContentCopy"
-                           OnClick="@(() => CopyMarkdown(context))">
-                    Copy Markdown
-                </MudButton>
-                <MudIconButton Size="Size.Small"
-                               Color="Color.Error"
-                               Icon="@Icons.Material.Filled.Delete"
-                               OnClick="@(() => DeleteAsset(context))" />
-            </MudStack>
-        </MudTd>
-    </RowTemplate>
-    <NoRecordsContent>
-        <MudText>No assets uploaded yet.</MudText>
-    </NoRecordsContent>
-</MudTable>
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_assets.Count == 0)
+    {
+        <div class="assets-empty">No assets uploaded yet.</div>
+    }
+    else
+    {
+        <div class="assets-grid">
+            @foreach (var asset in _assets)
+            {
+                <div class="assets-card" @key="asset.Id">
+                    <div class="assets-thumb">
+                        <img src="@asset.Url" alt="@asset.FileName" />
+                        <span class="assets-thumb-type">@ShortType(asset.ContentType)</span>
+                    </div>
+                    <div class="assets-card-body">
+                        <div class="assets-card-name" title="@asset.FileName">@asset.FileName</div>
+                        <div class="assets-card-meta">
+                            <span>@FormatSize(asset.SizeBytes)</span>
+                            <span>@asset.UploadedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+                        </div>
+                        <div class="assets-card-meta">
+                            <span class="assets-card-uploader" title="@asset.UploaderDbref">@asset.UploaderDbref</span>
+                        </div>
+                        <div class="assets-card-actions">
+                            <button type="button" class="assets-btn" @onclick="@(() => CopyMarkdown(asset))">
+                                <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Style="font-size:14px;" /> Copy Markdown
+                            </button>
+                            <button type="button" class="assets-icon-btn assets-icon-btn--danger"
+                                    title="Delete" @onclick="@(() => DeleteAsset(asset))">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:14px;" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .assets-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .assets-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .assets-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+
+    /* Upload card */
+    .assets-upload {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        padding: 16px 18px;
+        margin-bottom: 18px;
+    }
+    .assets-upload-status {
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+    }
+    .assets-upload-hint {
+        font-family: var(--font-ui);
+        font-size: 12px;
+        color: var(--text-faint);
+    }
+
+    .assets-empty {
+        padding: 28px;
+        text-align: center;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+    }
+
+    /* Asset grid */
+    .assets-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 14px;
+    }
+    .assets-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+    }
+    .assets-thumb {
+        position: relative;
+        aspect-ratio: 16 / 10;
+        background: var(--surface-3);
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+    }
+    .assets-thumb img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    .assets-thumb-type {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-dim);
+        padding: 2px 7px;
+        border-radius: 99px;
+        background: rgba(0, 0, 0, 0.55);
+    }
+    .assets-card-body {
+        padding: 10px 12px;
+    }
+    .assets-card-name {
+        font-family: var(--font-mono);
+        font-size: 12.5px;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .assets-card-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 6px;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--text-faint);
+    }
+    .assets-card-uploader {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .assets-card-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+    }
+    .assets-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        flex: 1;
+        justify-content: center;
+        padding: 6px 10px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface-3);
+        color: var(--text-dim);
+        font-family: var(--font-ui);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+    }
+    .assets-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .assets-icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface-3);
+        color: var(--text-dim);
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .assets-icon-btn--danger:hover {
+        color: #e57373;
+        border-color: rgba(229, 115, 115, 0.5);
+        background: rgba(229, 115, 115, 0.1);
+    }
+</style>
 
 @code {
     private const long MaxUploadBytes = 10_485_760;
@@ -149,4 +324,12 @@
         >= 1_024 => $"{bytes / 1_024.0:F1} KB",
         _ => $"{bytes} B",
     };
+
+    private static string ShortType(string contentType)
+    {
+        var slash = contentType.LastIndexOf('/');
+        return (slash >= 0 && slash < contentType.Length - 1
+            ? contentType[(slash + 1)..]
+            : contentType).ToUpperInvariant();
+    }
 }

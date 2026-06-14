@@ -7,29 +7,34 @@
 
 <PageTitle>My Account — SharpMUSH</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="pa-4">
+<div style="padding:var(--cpad);">
 
     @if (!AccountAuth.IsLoggedIn)
     {
-        @if (_isDebugAuth)
-        {
-            <MudAlert Severity="Severity.Info" Class="mb-2">
-                <strong>Debug Mode</strong> — You are authenticated as <em>DebugAdmin</em> (development environment).
-                No account session is associated; account management features require a real account login.
-            </MudAlert>
-        }
-        else
-        {
-            <MudAlert Severity="Severity.Info">
-                You are not logged in to an account. Use the terminal login panel to log in.
-            </MudAlert>
-        }
-        <MudButton Class="mt-2" Variant="Variant.Filled" Color="Color.Primary"
-                   OnClick='() => Nav.NavigateTo("/")'>Go to Home</MudButton>
+        <div class="acct-card" style="max-width:560px;">
+            @if (_isDebugAuth)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-3">
+                    <strong>Debug Mode</strong> — You are authenticated as <em>DebugAdmin</em> (development environment).
+                    No account session is associated; account management features require a real account login.
+                </MudAlert>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-3">
+                    You are not logged in to an account. Use the terminal login panel to log in.
+                </MudAlert>
+            }
+            <button class="acct-btn acct-btn-primary" @onclick='() => Nav.NavigateTo("/")'>Go to Home</button>
+        </div>
         return;
     }
 
-    <MudText Typo="Typo.h5" Class="mb-4">My Account: @AccountAuth.Username</MudText>
+    @* ── Page header ── *@
+    <div class="acct-header">
+        <div class="acct-kicker">Account</div>
+        <div class="acct-title">@AccountAuth.Username</div>
+    </div>
 
     @if (AccountAuth.MustChangePassword)
     {
@@ -40,89 +45,83 @@
     }
 
     @* ── Profile section ── *@
-    <MudPaper Elevation="1" Class="pa-4 mb-4">
-        <MudText Typo="Typo.h6" Class="mb-3">Profile</MudText>
+    <div class="acct-card">
+        <div class="acct-card-title">Profile</div>
 
         @* Username *@
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
             @if (_editingUsername)
             {
                 <MudTextField @bind-Value="_newUsername" Label="Username"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1;" />
-                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
-                           Disabled="_busy" OnClick="SaveUsernameAsync">Save</MudButton>
-                <MudButton Size="Size.Small" Variant="Variant.Text"
-                           OnClick="() => _editingUsername = false">Cancel</MudButton>
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" Style="flex:1;" />
+                <button class="acct-btn acct-btn-primary" disabled="@_busy" @onclick="SaveUsernameAsync">Save</button>
+                <button class="acct-btn acct-btn-ghost" @onclick="() => _editingUsername = false">Cancel</button>
             }
             else
             {
-                <MudText Style="flex:1;"><strong>Username:</strong> @AccountAuth.Username</MudText>
-                <MudButton Size="Size.Small" Variant="Variant.Outlined"
-                           OnClick="() => { _newUsername = AccountAuth.Username ?? string.Empty; _editingUsername = true; }">
+                <div style="flex:1;color:var(--text);"><span class="acct-label">Username</span> @AccountAuth.Username</div>
+                <button class="acct-btn acct-btn-outline"
+                        @onclick="() => { _newUsername = AccountAuth.Username ?? string.Empty; _editingUsername = true; }">
                     Edit
-                </MudButton>
+                </button>
             }
         </div>
 
         @* Password *@
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:4px;">
             @if (_editingPassword)
             {
-                <div style="display:flex;flex-direction:column;gap:6px;flex:1;">
+                <div style="display:flex;flex-direction:column;gap:8px;flex:1;">
                     <MudTextField @bind-Value="_oldPassword" Label="Current password"
                                   InputType="InputType.Password"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
                     <MudTextField @bind-Value="_newPassword" Label="New password"
                                   InputType="InputType.Password"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
                 </div>
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
-                               Disabled="_busy" OnClick="SavePasswordAsync">Save</MudButton>
-                    <MudButton Size="Size.Small" Variant="Variant.Text"
-                               OnClick="() => _editingPassword = false">Cancel</MudButton>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <button class="acct-btn acct-btn-primary" disabled="@_busy" @onclick="SavePasswordAsync">Save</button>
+                    <button class="acct-btn acct-btn-ghost" @onclick="() => _editingPassword = false">Cancel</button>
                 </div>
             }
             else
             {
-                <MudText Style="flex:1;"><strong>Password:</strong> ••••••••</MudText>
-                <MudButton Size="Size.Small" Variant="Variant.Outlined"
-                           OnClick="() => _editingPassword = true">Change</MudButton>
+                <div style="flex:1;color:var(--text);"><span class="acct-label">Password</span> ••••••••</div>
+                <button class="acct-btn acct-btn-outline" @onclick="() => _editingPassword = true">Change</button>
             }
         </div>
 
         @if (_profileError is not null)
         {
-            <MudAlert Severity="Severity.Error" Class="mt-2">@_profileError</MudAlert>
+            <MudAlert Severity="Severity.Error" Class="mt-3">@_profileError</MudAlert>
         }
         @if (_profileSuccess is not null)
         {
-            <MudAlert Severity="Severity.Success" Class="mt-2">@_profileSuccess</MudAlert>
+            <MudAlert Severity="Severity.Success" Class="mt-3">@_profileSuccess</MudAlert>
         }
-    </MudPaper>
+    </div>
 
     @* ── Characters section ── *@
-    <MudPaper Elevation="1" Class="pa-4 mb-4">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <MudText Typo="Typo.h6">Characters</MudText>
-            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
-                       OnClick="RefreshCharactersAsync" Disabled="_busy">
+    <div class="acct-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div class="acct-card-title" style="margin-bottom:0;">Characters</div>
+            <button class="acct-btn acct-btn-outline" @onclick="RefreshCharactersAsync" disabled="@_busy">
                 <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Class="mr-1" />
                 Refresh
-            </MudButton>
+            </button>
         </div>
 
         @if (_loadingChars)
         {
-            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" Style="color:var(--accent);" />
         }
         else if (AccountAuth.Characters.Count == 0)
         {
-            <MudText Style="color:#888;">No characters linked to this account.</MudText>
+            <div style="color:var(--text-faint);">No characters linked to this account.</div>
         }
         else
         {
-            <MudTable Items="AccountAuth.Characters" Dense="true" Hover="true">
+            <MudTable Items="AccountAuth.Characters" Dense="true" Hover="true" Class="acct-table" Elevation="0">
                 <HeaderContent>
                     <MudTh>Name</MudTh>
                     <MudTh>Dbref</MudTh>
@@ -135,7 +134,7 @@
                     <MudTd>
                         @foreach (var flag in (context.Flags ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Style="margin:1px;">@flag</MudChip>
+                            <span class="acct-flag">@flag</span>
                         }
                     </MudTd>
                     <MudTd>
@@ -150,40 +149,223 @@
         @* Create new character *@
         @if (_showCreateChar)
         {
-            <MudDivider Class="my-3" />
-            <MudText Typo="Typo.subtitle2" Class="mb-2">Create new character</MudText>
-            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <div class="acct-divider"></div>
+            <div class="acct-subtitle">Create new character</div>
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
                 <MudTextField @bind-Value="_newCharName" Label="Character name"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1;min-width:140px;" />
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" Style="flex:1;min-width:140px;" />
                 <MudTextField @bind-Value="_newCharPassword" Label="Password"
                               InputType="InputType.Password"
-                              Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1;min-width:140px;" />
-                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
-                           Disabled="_busy" OnClick="CreateCharacterAsync">Create</MudButton>
-                <MudButton Size="Size.Small" Variant="Variant.Text"
-                           OnClick="() => _showCreateChar = false">Cancel</MudButton>
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" Style="flex:1;min-width:140px;" />
+                <button class="acct-btn acct-btn-primary" disabled="@_busy" @onclick="CreateCharacterAsync">Create</button>
+                <button class="acct-btn acct-btn-ghost" @onclick="() => _showCreateChar = false">Cancel</button>
             </div>
             @if (_charError is not null)
             {
-                <MudAlert Severity="Severity.Error" Class="mt-2">@_charError</MudAlert>
+                <MudAlert Severity="Severity.Error" Class="mt-3">@_charError</MudAlert>
             }
         }
         else
         {
-            <MudButton Class="mt-3" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
-                       OnClick="() => { _showCreateChar = true; _charError = null; }">
+            <button class="acct-btn acct-btn-outline" style="margin-top:16px;"
+                    @onclick="() => { _showCreateChar = true; _charError = null; }">
                 + Create new character
-            </MudButton>
+            </button>
         }
-    </MudPaper>
+    </div>
 
     @* ── Logout ── *@
-    <MudButton Variant="Variant.Outlined" Color="Color.Error"
-               OnClick="LogoutAsync">
+    <button class="acct-btn acct-btn-danger" @onclick="LogoutAsync">
         Log out of account
-    </MudButton>
+    </button>
 
-</MudContainer>
+</div>
+
+<style>
+    .acct-header {
+        margin-bottom: 28px;
+    }
+
+    .acct-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 8px;
+    }
+
+    .acct-title {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1.15;
+    }
+
+    .acct-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        padding: 22px 24px;
+        margin-bottom: 20px;
+    }
+
+    .acct-card-title {
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 16px;
+    }
+
+    .acct-subtitle {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-dim);
+        margin-bottom: 10px;
+    }
+
+    .acct-label {
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        margin-right: 8px;
+    }
+
+    .acct-divider {
+        height: 1px;
+        background: var(--border-soft);
+        margin: 18px 0;
+    }
+
+    /* ── Buttons ── */
+    .acct-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        font-weight: 600;
+        padding: 7px 16px;
+        border-radius: var(--radius);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+        line-height: 1.2;
+    }
+
+    .acct-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .acct-btn-primary {
+        background: var(--accent);
+        color: var(--accent-on);
+    }
+
+    .acct-btn-primary:hover:not(:disabled) {
+        box-shadow: 0 0 12px rgba(var(--glow), 0.4);
+    }
+
+    .acct-btn-outline {
+        background: transparent;
+        color: var(--text-dim);
+        border-color: var(--border);
+    }
+
+    .acct-btn-outline:hover:not(:disabled) {
+        color: var(--accent);
+        border-color: var(--accent);
+    }
+
+    .acct-btn-ghost {
+        background: transparent;
+        color: var(--text-faint);
+    }
+
+    .acct-btn-ghost:hover:not(:disabled) {
+        color: var(--text-dim);
+    }
+
+    .acct-btn-danger {
+        background: transparent;
+        color: #f56b6b;
+        border-color: rgba(245, 107, 107, 0.4);
+    }
+
+    .acct-btn-danger:hover:not(:disabled) {
+        background: rgba(245, 107, 107, 0.08);
+        border-color: #f56b6b;
+    }
+
+    /* ── Flags ── */
+    .acct-flag {
+        display: inline-block;
+        margin: 1px;
+        padding: 2px 8px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        border-radius: var(--radius);
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        color: var(--accent);
+    }
+
+    /* ── Token-styled inputs (MudBlazor outlined) ── */
+    .acct-input ::deep .mud-input-outlined .mud-input-outlined-border {
+        border-color: var(--border) !important;
+    }
+
+    .acct-input ::deep .mud-input-root {
+        background: var(--surface-3);
+        border-radius: var(--radius);
+        color: var(--text);
+    }
+
+    .acct-input ::deep input {
+        color: var(--text);
+    }
+
+    .acct-input ::deep .mud-input.mud-input-focused .mud-input-outlined-border {
+        border-color: var(--accent) !important;
+        border-width: 1px !important;
+    }
+
+    .acct-input ::deep label.mud-input-label {
+        color: var(--text-faint);
+    }
+
+    .acct-input ::deep label.mud-input-label-inputcontrol.mud-input-focused {
+        color: var(--accent);
+    }
+
+    /* ── Token-styled table ── */
+    .acct-table ::deep .mud-table-root {
+        background: transparent;
+    }
+
+    .acct-table ::deep th {
+        color: var(--text-faint) !important;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-bottom-color: var(--border) !important;
+    }
+
+    .acct-table ::deep td {
+        color: var(--text);
+        border-bottom-color: var(--border-soft) !important;
+    }
+
+    .acct-table ::deep tr:hover td {
+        background: var(--surface-2) !important;
+    }
+</style>
 
 @code {
     private bool _editingUsername;

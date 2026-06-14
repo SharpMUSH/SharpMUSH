@@ -63,7 +63,7 @@ public class ApplicationsController(
 	}
 
 	[HttpPost]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.ApplicationsAdmin)]
 	public async Task<IActionResult> Upsert([FromBody] ApplicationDto dto)
 	{
 		if (string.IsNullOrWhiteSpace(dto.Slug) || string.IsNullOrWhiteSpace(dto.DisplayName)
@@ -115,7 +115,7 @@ public class ApplicationsController(
 	}
 
 	[HttpDelete("{slug}")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.ApplicationsAdmin)]
 	public async Task<IActionResult> Delete(string slug)
 	{
 		await registry.RemoveApplicationAsync(slug);

@@ -1,5 +1,5 @@
 @page "/admin/packages"
-@attribute [Authorize(Roles = "Wizard")]
+@attribute [Authorize(Policy = "packages.admin")]
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.API
 @using SharpMUSH.Library.Models.Packages
@@ -9,97 +9,194 @@
 
 <PageTitle>Packages — Admin — SharpMUSH</PageTitle>
 
-<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
-    <MudText Typo="Typo.h4">Softcode Packages</MudText>
-    <MudSpacer />
-    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.TravelExplore"
-               Href="/admin/packages/browse">Browse</MudButton>
-    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Cloud"
-               Href="/admin/packages/remotes">Remotes</MudButton>
-    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Edit"
-               Href="/admin/packages/author">Author</MudButton>
-</MudStack>
-<MudText Color="Color.Secondary" Class="mb-4">
-    Installed softcode packages. Upgrades and installs always go through a reviewed plan — nothing applies automatically.
-</MudText>
+<div style="padding:var(--cpad);">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
+        <MudText Typo="Typo.h4" Style="font-weight:700;">Softcode Packages</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.TravelExplore"
+                   Href="/admin/packages/browse">Browse</MudButton>
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Cloud"
+                   Href="/admin/packages/remotes">Remotes</MudButton>
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit"
+                   Href="/admin/packages/author">Author</MudButton>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                       OnClick="ReloadAsync" Disabled="_busy" />
+    </div>
+    <MudText Style="color:var(--text-dim);font-size:14px;margin-bottom:20px;">
+        Installed softcode packages. Upgrades always go through a reviewed plan — nothing applies automatically.
+    </MudText>
 
-@if (_installed is null)
-{
-    <MudProgressLinear Indeterminate="true" />
-}
-else if (_installed.Count == 0)
-{
-    <MudAlert Severity="Severity.Info">
-        No packages installed yet. Configure a remote, then browse it to install your first package.
-    </MudAlert>
-}
-else
-{
-    <MudTable Items="_installed" Dense="true" Hover="true">
-        <HeaderContent>
-            <MudTh>Package</MudTh>
-            <MudTh>Version</MudTh>
-            <MudTh>Source</MudTh>
-            <MudTh>Installed</MudTh>
-            <MudTh>Objects / Attrs</MudTh>
-            <MudTh>Update</MudTh>
-            <MudTh />
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>
-                <MudText Typo="Typo.body1">@context.Package.Id</MudText>
-                @if (context.Dependents.Count > 0)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        required by @string.Join(", ", context.Dependents)
-                    </MudText>
-                }
-            </MudTd>
-            <MudTd>@context.Package.Version <MudText Typo="Typo.caption" Color="Color.Secondary">rev @context.Package.CurrentRevision</MudText></MudTd>
-            <MudTd>
-                <MudText Typo="Typo.caption">@context.Package.SourceRepo</MudText>
-            </MudTd>
-            <MudTd>@context.Package.InstalledAt.ToString("yyyy-MM-dd")</MudTd>
-            <MudTd>@context.ObjectCount / @context.ManagedAttributeCount</MudTd>
-            <MudTd>
-                @if (_updates.TryGetValue(context.Package.Id, out var update))
-                {
-                    @if (update.InstalledTagMoved)
-                    {
-                        <MudChip T="string" Color="Color.Error" Size="Size.Small"
-                                 Icon="@Icons.Material.Filled.Warning">tag moved!</MudChip>
-                    }
-                    @if (update.UpdateAvailable)
-                    {
-                        <MudChip T="string" Color="Color.Info" Size="Size.Small">@update.LatestVersion available</MudChip>
-                    }
-                    else if (!update.InstalledTagMoved)
-                    {
-                        <MudChip T="string" Color="Color.Success" Size="Size.Small">current</MudChip>
-                    }
-                    @if (update.PathChangedAtHead)
-                    {
-                        <MudTooltip Text="Files changed on the dev channel since install">
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">dev drift</MudChip>
+    @* ── Stat tiles ── *@
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+        @{
+            var updatesAvailable = _installed is not null ? _installed.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable) : 0;
+        }
+        @foreach (var tile in new[]
+        {
+            (_installed?.Count.ToString() ?? "—",         "Installed",         Icons.Material.Filled.Archive,         "var(--accent)"),
+            (updatesAvailable.ToString(),                  "Updates Available", Icons.Material.Filled.SystemUpdate,    "#6cde9a"),
+            ("—",                                         "Remotes",           Icons.Material.Filled.Cloud,           "#5aa9ff"),
+            (_installed?.Sum(p => p.ObjectCount).ToString() ?? "—", "Objects", Icons.Material.Filled.DataObject,      "#b39cff"),
+        })
+        {
+            var (val, label, icon, color) = tile;
+            <MudPaper Elevation="0" Style="@($"padding:16px 18px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);")">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <MudIcon Icon="@icon" Style="@($"color:{color};font-size:22px;")" />
+                    <div>
+                        <MudText Style="@($"font-size:22px;font-weight:700;color:{color};line-height:1.1;")">
+                            @(_installed is null ? "—" : val)
+                        </MudText>
+                        <MudText Class="section-kicker" Style="opacity:0.7;">@label</MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        }
+    </div>
+
+    @* ── Tabs + search ── *@
+    @if (_installed is not null)
+    {
+        var installedCount = _installed.Count;
+        var updateCount = _installed.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable);
+        <div class="pkg-tabs">
+            <button class="pkg-tab @(_tab == PkgTab.Installed ? "active" : "")" @onclick="@(() => _tab = PkgTab.Installed)">
+                Installed
+                <span class="pkg-tab-count">@installedCount</span>
+            </button>
+            <button class="pkg-tab @(_tab == PkgTab.Updates ? "active" : "")" @onclick="@(() => _tab = PkgTab.Updates)">
+                Updates
+                <span class="pkg-tab-count">@updateCount</span>
+            </button>
+            <div style="flex:1;"></div>
+            <div class="pkg-search">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:16px;color:var(--text-faint);" />
+                <input type="text" placeholder="Search packages…" value="@_search"
+                       @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
+            </div>
+        </div>
+    }
+
+    @* ── Installed list ── *@
+    @if (_installed is null)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        @for (var i = 0; i < 4; i++) { <MudSkeleton Height="64px" Class="mb-2" /> }
+    }
+    else if (_installed.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            No packages installed yet. Configure a remote, then browse it to install your first package.
+        </MudAlert>
+    }
+    else
+    {
+        var visible = FilteredPackages().ToList();
+        if (visible.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                @(_tab == PkgTab.Updates ? "No packages have an update available." : "No packages match your search.")
+            </MudAlert>
+        }
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            @foreach (var pkg in visible)
+            {
+                var p = pkg;
+                _updates.TryGetValue(p.Package.Id, out var update);
+                <MudPaper Elevation="0"
+                          Style="display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);"
+                          Class="pkg-row">
+                    @* Icon + name *@
+                    <MudIcon Icon="@Icons.Material.Filled.Archive"
+                             Style="font-size:20px;color:var(--accent);flex-shrink:0;" />
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
+                            <MudText Style="font-size:14px;font-weight:600;">@p.Package.Id</MudText>
+                            <MudChip T="string" Size="Size.Small"
+                                     Style="height:18px;font-size:10px;padding:0 5px;border:1px solid var(--border);">
+                                v@p.Package.Version
+                            </MudChip>
+                            @if (!string.IsNullOrEmpty(p.Package.SourceRepo))
+                            {
+                                <MudChip T="string" Size="Size.Small"
+                                         Style="height:18px;font-size:10px;padding:0 5px;background:rgba(90,169,255,0.10);color:#5aa9ff;">
+                                    @p.Package.SourceRepo
+                                </MudChip>
+                            }
+                            @if (update is not null)
+                            {
+                                @if (update.InstalledTagMoved)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Error"
+                                             Style="height:18px;font-size:10px;padding:0 5px;">
+                                        tag moved!
+                                    </MudChip>
+                                }
+                                else if (update.UpdateAvailable)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                                             Style="height:18px;font-size:10px;padding:0 5px;">
+                                        @update.LatestVersion available
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default"
+                                             Style="height:18px;font-size:10px;padding:0 5px;">
+                                        current
+                                    </MudChip>
+                                }
+                                @if (update.PathChangedAtHead)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                             Style="height:18px;font-size:10px;padding:0 5px;">
+                                        dev drift
+                                    </MudChip>
+                                }
+                            }
+                        </div>
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <MudText Style="font-size:12px;color:var(--text-faint);">
+                                installed @p.Package.InstalledAt.ToString("yyyy-MM-dd")
+                            </MudText>
+                            <MudText Style="font-size:12px;color:var(--text-faint);">
+                                @p.ObjectCount obj / @p.ManagedAttributeCount attr
+                            </MudText>
+                            @if (p.Dependents.Count > 0)
+                            {
+                                <MudText Style="font-size:12px;color:var(--text-faint);">
+                                    required by @string.Join(", ", p.Dependents)
+                                </MudText>
+                            }
+                        </div>
+                    </div>
+                    @* Actions *@
+                    <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+                        @if (update is null)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small"
+                                       Disabled="@_busy"
+                                       OnClick="@(() => CheckUpdateAsync(p.Package.Id))">
+                                Check
+                            </MudButton>
+                        }
+                        <MudTooltip Text="Revision history">
+                            <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small"
+                                           OnClick="@(() => OpenHistoryAsync(p.Package.Id))" />
                         </MudTooltip>
-                    }
-                }
-                else
-                {
-                    <MudButton Size="Size.Small" Disabled="@_busy"
-                               OnClick="@(() => CheckUpdateAsync(context.Package.Id))">check</MudButton>
-                }
-            </MudTd>
-            <MudTd>
-                <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" title="Revision history"
-                               OnClick="@(() => OpenHistoryAsync(context.Package.Id))" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" title="Uninstall"
-                               OnClick="@(() => OpenUninstall(context))" />
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
-}
+                        <MudTooltip Text="Uninstall">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                           Color="Color.Error"
+                                           OnClick="@(() => OpenUninstall(p))" />
+                        </MudTooltip>
+                    </div>
+                </MudPaper>
+            }
+        </div>
+    }
+</div>
 
+@* History dialog *@
 <MudDialog @bind-Visible="_showHistory" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
     <TitleContent><MudText Typo="Typo.h6">@_historyPackage — revisions</MudText></TitleContent>
     <DialogContent>
@@ -112,16 +209,19 @@ else
             <MudList T="string" Dense="true">
                 @foreach (var revision in _revisions)
                 {
+                    var rev = revision;
                     <MudListItem T="string">
                         <MudStack Row="true" AlignItems="AlignItems.Center">
-                            <MudText>rev @revision.Revision — @revision.Kind @revision.Version</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@revision.AppliedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                            <MudText Style="font-size:13px;">rev @rev.Revision — @rev.Kind @rev.Version</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @rev.AppliedAt.ToString("yyyy-MM-dd HH:mm")
+                            </MudText>
                             <MudSpacer />
                             @if (revision.Revision != _revisions.Max(r => r.Revision))
                             {
                                 <MudButton Size="Size.Small" Disabled="@_busy"
-                                           OnClick="@(() => RollbackAsync(_historyPackage!, revision.Revision))">
-                                    roll back to this
+                                           OnClick="@(() => RollbackAsync(_historyPackage!, rev.Revision))">
+                                    Roll back
                                 </MudButton>
                             }
                         </MudStack>
@@ -135,6 +235,7 @@ else
     </DialogActions>
 </MudDialog>
 
+@* Uninstall confirm dialog *@
 <MudDialog @bind-Visible="_showUninstall">
     <TitleContent><MudText Typo="Typo.h6">Uninstall @_uninstallTarget?.Package.Id?</MudText></TitleContent>
     <DialogContent>
@@ -158,10 +259,103 @@ else
     </DialogActions>
 </MudDialog>
 
+<style>
+    .pkg-row { transition: border-color 0.12s; }
+    .pkg-row:hover { border-color: var(--accent) !important; }
+
+    .pkg-tabs {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--border-soft);
+    }
+
+    .pkg-tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        cursor: pointer;
+        font-family: var(--font-ui);
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text-dim);
+        transition: color 0.12s, border-color 0.12s;
+    }
+
+    .pkg-tab:hover { color: var(--text); }
+
+    .pkg-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+    }
+
+    .pkg-tab-count {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-faint);
+        padding: 0 6px;
+        border-radius: 99px;
+        background: var(--surface-2);
+    }
+
+    .pkg-tab.active .pkg-tab-count {
+        color: var(--accent);
+        background: rgba(var(--glow), 0.12);
+    }
+
+    .pkg-search {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 10px;
+        margin-bottom: 6px;
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        transition: border-color 0.12s;
+    }
+
+    .pkg-search:focus-within { border-color: var(--accent); }
+
+    .pkg-search input {
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text);
+        font-family: var(--font-ui);
+        font-size: 13px;
+        width: 200px;
+    }
+
+    .pkg-search input::placeholder { color: var(--text-faint); }
+</style>
+
 @code {
+    private enum PkgTab { Installed, Updates }
+
     private IReadOnlyList<InstalledPackageDto>? _installed;
     private readonly Dictionary<string, PackageUpdateInfo> _updates = new();
     private bool _busy;
+
+    private PkgTab _tab = PkgTab.Installed;
+    private string _search = string.Empty;
+
+    private IEnumerable<InstalledPackageDto> FilteredPackages()
+    {
+        if (_installed is null) return [];
+        IEnumerable<InstalledPackageDto> rows = _installed;
+        if (_tab == PkgTab.Updates)
+            rows = rows.Where(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable);
+        if (!string.IsNullOrWhiteSpace(_search))
+            rows = rows.Where(p => p.Package.Id.Contains(_search, StringComparison.OrdinalIgnoreCase));
+        return rows;
+    }
 
     private bool _showHistory;
     private string? _historyPackage;
@@ -186,22 +380,15 @@ else
         {
             var update = await Packages.CheckForUpdateAsync(id);
             if (update is null)
-            {
                 Snackbar.Add("Update check failed — is the source repo reachable?", Severity.Warning);
-            }
             else
             {
                 _updates[id] = update;
                 if (update.InstalledTagMoved)
-                {
                     Snackbar.Add($"TRUST WARNING: the release tag for {id} {update.InstalledVersion} no longer points at the installed commit.", Severity.Error);
-                }
             }
         }
-        finally
-        {
-            _busy = false;
-        }
+        finally { _busy = false; }
     }
 
     private async Task OpenHistoryAsync(string id)
@@ -223,21 +410,14 @@ else
                 Snackbar.Add(error, Severity.Error);
                 return;
             }
-
             Snackbar.Add($"Rolled back to revision {result!.RestoredFromRevision} (new revision {result.Revision}).", Severity.Success);
             foreach (var note in result.Notes)
-            {
                 Snackbar.Add(note, Severity.Info);
-            }
-
             _showHistory = false;
             _updates.Remove(id);
             await ReloadAsync();
         }
-        finally
-        {
-            _busy = false;
-        }
+        finally { _busy = false; }
     }
 
     private void OpenUninstall(InstalledPackageDto target)
@@ -249,11 +429,7 @@ else
 
     private async Task UninstallAsync()
     {
-        if (_uninstallTarget is null)
-        {
-            return;
-        }
-
+        if (_uninstallTarget is null) return;
         _busy = true;
         try
         {
@@ -263,15 +439,11 @@ else
                 Snackbar.Add(error, Severity.Error);
                 return;
             }
-
             Snackbar.Add($"Uninstalled {_uninstallTarget.Package.Id}.", Severity.Success);
             _showUninstall = false;
             _updates.Remove(_uninstallTarget.Package.Id);
             await ReloadAsync();
         }
-        finally
-        {
-            _busy = false;
-        }
+        finally { _busy = false; }
     }
 }

@@ -5,76 +5,87 @@
 @if (_loading)
 {
     <PageTitle>@Loc["Scene"] — SharpMUSH</PageTitle>
-    <MudProgressLinear Indeterminate="true" />
+    <div style="padding:var(--cpad);">
+        <MudProgressLinear Indeterminate="true" />
+    </div>
 }
 else if (_notFound)
 {
-    <PageTitle>@Loc["Scene"] @Id — @Loc["NotFound"]</PageTitle>
-    <MudAlert Severity="Severity.Warning">@Loc["SceneNotFound"]</MudAlert>
-    <MudButton Href="/scenes" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
-        @Loc["BackToArchive"]
-    </MudButton>
+    <PageTitle>@Loc["Scene"] — @Loc["NotFound"]</PageTitle>
+    <div style="padding:var(--cpad);">
+        <MudAlert Severity="Severity.Warning">@Loc["SceneNotFound"]</MudAlert>
+        <MudButton Href="/scenes" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
+            @Loc["BackToArchive"]
+        </MudButton>
+    </div>
 }
 else
 {
     <PageTitle>@_scene!.Title — SharpMUSH</PageTitle>
+    <div style="padding:var(--cpad);">
 
-    <MudText Typo="Typo.h4" Class="mb-1">
-        @(string.IsNullOrWhiteSpace(_scene!.Title) ? Loc["Untitled"] : _scene!.Title)
-    </MudText>
-    <MudText Typo="Typo.subtitle1" Color="Color.Secondary" Class="mb-1">
-        @_scene!.RoomName
-    </MudText>
-    @if (!string.IsNullOrWhiteSpace(_scene!.Description))
-    {
-        <MudText Typo="Typo.body1" Class="mb-2">@_scene!.Description</MudText>
-    }
-    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
-        @Loc["StartedAt"]: @_scene.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-        @if (_scene.ClosedAt.HasValue)
+        @* Header *@
+        <div style="margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                @if (!_scene!.ClosedAt.HasValue)
+                {
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small"
+                             Style="font-size:10px;letter-spacing:0.06em;height:20px;padding:0 7px;">LIVE</MudChip>
+                }
+                <MudText Typo="Typo.h4" Style="font-weight:700;line-height:1.2;">
+                    @(string.IsNullOrWhiteSpace(_scene!.Title) ? Loc["Untitled"].ToString() : _scene!.Title)
+                </MudText>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;color:var(--text-dim);font-size:13px;">
+                <span>
+                    <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:3px;" />
+                    @_scene!.RoomName
+                </span>
+                <span>
+                    <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Style="vertical-align:middle;margin-right:3px;" />
+                    @_scene!.ParticipantDbrefs.Count participant(s)
+                </span>
+                <span>@_scene!.StartedAt.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_scene!.Description))
+            {
+                <MudText Style="color:var(--text-dim);font-size:14px;margin-top:8px;">@_scene!.Description</MudText>
+            }
+        </div>
+
+        @* Transcript *@
+        @if (_messages.Count == 0)
         {
-            <span> · @Loc["ClosedAt"]: @_scene.ClosedAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@Loc["NoMessagesInScene"]</MudAlert>
         }
         else
         {
-            <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="ml-2">@Loc["Active"]</MudChip>
-        }
-    </MudText>
-
-    <MudDivider Class="mb-4" />
-
-    @if (_messages.Count == 0)
-    {
-        <MudAlert Severity="Severity.Info">@Loc["NoMessagesInScene"]</MudAlert>
-    }
-    else
-    {
-        <div class="scene-log">
-            @foreach (var msg in _messages)
-            {
-                <div class="scene-line scene-line--@msg.MessageType.ToString().ToLowerInvariant()">
-                    @((MarkupString)msg.RenderedHtml)
+            <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;">
+                <div class="scene-log" style="max-height:65vh;padding:16px;">
+                    @foreach (var msg in _messages)
+                    {
+                        <div class="scene-line scene-line--@msg.MessageType.ToString().ToLowerInvariant()">
+                            @((MarkupString)msg.RenderedHtml)
+                        </div>
+                    }
                 </div>
+            </MudPaper>
+        }
+
+        @* Actions *@
+        <div style="display:flex;gap:10px;margin-top:16px;">
+            @if (!_scene!.ClosedAt.HasValue)
+            {
+                <MudButton Href="@($"/scenes/{Id}/live")"
+                           Variant="Variant.Filled" Color="Color.Primary">
+                    @Loc["WatchLive"]
+                </MudButton>
             }
+            <MudButton Href="/scenes" Variant="Variant.Text" Color="Color.Default">
+                @Loc["BackToArchive"]
+            </MudButton>
         </div>
-    }
-
-    @if (!_scene.ClosedAt.HasValue)
-    {
-        <MudButton Href="@($"/scenes/{Id}/live")"
-                   Color="Color.Secondary"
-                   Variant="Variant.Outlined"
-                   Class="mt-4">
-            @Loc["WatchLive"]
-        </MudButton>
-    }
-
-    <MudButton Href="/scenes"
-               Color="Color.Default"
-               Variant="Variant.Text"
-               Class="mt-4 ml-2">
-        @Loc["BackToArchive"]
-    </MudButton>
+    </div>
 }
 
 @code {

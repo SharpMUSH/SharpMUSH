@@ -1,189 +1,171 @@
 @page "/admin/config"
+@attribute [Authorize(Policy = "config.admin")]
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.API
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
 @inject ConfigSchemaService SchemaService
-@inject AdminConfigService AdminConfigService
-@inject ISnackbar Snackbar
-@inject IJSRuntime JS
 
 <PageTitle>@Loc["Configuration"] - @Loc["AppTitle"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="py-6 config-section-page">
-    <MudStack Spacing="4">
-        @* Header *@
-        <MudPaper Elevation="0" Class="pa-4">
-            <MudText Typo="Typo.h4" Color="Color.Secondary">
-                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" /> @Loc["ServerConfiguration"]
-            </MudText>
-            <MudText Typo="Typo.body1" Class="mt-2">
-                @Loc["ManageAllSettings"]
-            </MudText>
-        </MudPaper>
+<div class="config-home">
+    @* Header — prototype SectionTitle: kicker + title + description *@
+    <div class="config-home-header">
+        <div class="config-kicker">Admin · server configuration</div>
+        <h1 class="config-title">@Loc["ServerConfiguration"]</h1>
+        <p class="config-desc">@Loc["ManageAllSettings"]</p>
+    </div>
 
-        @if (_loading)
-        {
-            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
-        }
-        else
-        {
-            @* Category Cards *@
-            <MudGrid>
-                @* Server Category *@
-                <MudItem xs="12" md="6">
-                    <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/net"))">
-                        <MudCardContent>
-                            <MudStack Spacing="2">
-                                <MudStack Row="true" AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Secondary" Size="Size.Large" />
-                                    <MudText Typo="Typo.h6">@Loc["Server"]</MudText>
-                                </MudStack>
-                                <MudText Typo="Typo.body2">@Loc["ServerCategoryDescription"]</MudText>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
-                                         Text="@($"{GetGroupCount("Server")} {Loc["Settings"].Value}")" />
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
-                @* Performance Category *@
-                <MudItem xs="12" md="6">
-                    <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/limit"))">
-                        <MudCardContent>
-                            <MudStack Spacing="2">
-                                <MudStack Row="true" AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Secondary" Size="Size.Large" />
-                                    <MudText Typo="Typo.h6">@Loc["Performance"]</MudText>
-                                </MudStack>
-                                <MudText Typo="Typo.body2">@Loc["PerformanceCategoryDescription"]</MudText>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
-                                         Text="@($"{GetGroupCount("Performance")} {Loc["Settings"].Value}")" />
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
-                @* Security Category *@
-                <MudItem xs="12" md="6">
-                    <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/sitelock"))">
-                        <MudCardContent>
-                            <MudStack Spacing="2">
-                                <MudStack Row="true" AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Secondary" Size="Size.Large" />
-                                    <MudText Typo="Typo.h6">@Loc["Security"]</MudText>
-                                </MudStack>
-                                <MudText Typo="Typo.body2">@Loc["SecurityCategoryDescription"]</MudText>
-                                <MudStack Row="true" Spacing="2">
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
-                                             Text="@($"{GetGroupCount("Security")} {Loc["Settings"].Value}")" />
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="@Loc["Important"].Value" />
-                                </MudStack>
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
-                @* Content Category *@
-                <MudItem xs="12" md="6">
-                    <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/message"))">
-                        <MudCardContent>
-                            <MudStack Spacing="2">
-                                <MudStack Row="true" AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Article" Color="Color.Secondary" Size="Size.Large" />
-                                    <MudText Typo="Typo.h6">@Loc["Content"]</MudText>
-                                </MudStack>
-                                <MudText Typo="Typo.body2">@Loc["ContentCategoryDescription"]</MudText>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
-                                         Text="@($"{GetGroupCount("Content")} {Loc["Settings"].Value}")" />
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
-                @* Logs & Files Category *@
-                <MudItem xs="12" md="6">
-                    <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/log"))">
-                        <MudCardContent>
-                            <MudStack Spacing="2">
-                                <MudStack Row="true" AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Secondary" Size="Size.Large" />
-                                    <MudText Typo="Typo.h6">@Loc["LogsAndFiles"]</MudText>
-                                </MudStack>
-                                <MudText Typo="Typo.body2">@Loc["LogsCategoryDescription"]</MudText>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
-                                         Text="@($"{GetGroupCount("Logs")} {Loc["Settings"].Value}")" />
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
-                @* Advanced Category *@
-                <MudItem xs="12" md="6">
-                    <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/attribute"))">
-                        <MudCardContent>
-                            <MudStack Spacing="2">
-                                <MudStack Row="true" AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Secondary" Size="Size.Large" />
-                                    <MudText Typo="Typo.h6">@Loc["Advanced"]</MudText>
-                                </MudStack>
-                                <MudText Typo="Typo.body2">@Loc["AdvancedCategoryDescription"]</MudText>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
-                                         Text="@($"{GetGroupCount("Advanced")} {Loc["Settings"].Value}")" />
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-            </MudGrid>
-
-            @* Quick Actions *@
-            <MudPaper Outlined="true" Class="pa-4">
-                <MudText Typo="Typo.h6" Class="mb-3">@Loc["QuickActions"]</MudText>
-                <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Secondary"
-                               StartIcon="@Icons.Material.Filled.Search"
-                               Disabled="true">
-                        @Loc["SearchAllSettings"]
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Default"
-                               StartIcon="@Icons.Material.Filled.Upload"
-                               OnClick="@(() => Navigation.NavigateTo("/admin/config/import"))">
-                        @Loc["ImportConfigFile"]
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Default"
-                               StartIcon="@Icons.Material.Filled.Download"
-                               OnClick="ExportConfig">
-                        @Loc["ExportConfiguration"]
-                    </MudButton>
-                </MudStack>
-            </MudPaper>
-        }
-    </MudStack>
-</MudContainer>
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
+    }
+    else
+    {
+        <div class="config-cat-grid">
+            @foreach (var cat in Categories)
+            {
+                var c = cat;
+                <div class="config-cat-card" @onclick="@(() => Navigation.NavigateTo(c.Route))">
+                    <div class="config-cat-icon">
+                        <MudIcon Icon="@c.Icon" Style="font-size:22px;color:var(--accent);" />
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="config-cat-title">
+                            @Loc[c.TitleKey]
+                            @if (c.Important)
+                            {
+                                <span class="config-cat-flag">@Loc["Important"]</span>
+                            }
+                        </div>
+                        <div class="config-cat-desc">@Loc[c.DescKey]</div>
+                        <div class="config-cat-count">@GetGroupCount(c.Group) @Loc["Settings"]</div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
 
 <style>
-    .config-section-page {
-        padding: 32px;
+    .config-home-header {
+        margin-bottom: 24px;
     }
 
-    .category-card {
+    .config-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+
+    .config-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+
+    .config-desc {
+        margin: 6px 0 0;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+    }
+
+    .config-cat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+        gap: 14px;
+    }
+
+    .config-cat-card {
+        display: flex;
+        gap: 14px;
+        padding: 18px;
         cursor: pointer;
-        transition: all 0.2s ease;
-        height: 100%;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        transition: border-color 0.15s ease, transform 0.15s ease;
     }
 
-    .category-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0, 245, 183, 0.2);
+    .config-cat-card:hover {
+        border-color: rgba(var(--glow), 0.4);
+        transform: translateY(-2px);
+    }
+
+    .config-cat-icon {
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        border-radius: var(--radius);
+        background: rgba(var(--glow), 0.08);
+        border: 1px solid rgba(var(--glow), 0.18);
+    }
+
+    .config-cat-title {
+        font-family: var(--font-ui);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .config-cat-flag {
+        font-family: var(--font-mono);
+        font-size: 9px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #e57373;
+        background: rgba(229, 115, 115, 0.12);
+        border: 1px solid rgba(229, 115, 115, 0.3);
+        border-radius: 99px;
+        padding: 1px 6px;
+    }
+
+    .config-cat-desc {
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        color: var(--text-dim);
+        line-height: 1.5;
+        margin-bottom: 8px;
+    }
+
+    .config-cat-count {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--accent);
     }
 </style>
 
 @code {
     private bool _loading = true;
     private Dictionary<string, int> _groupCounts = new();
+
+    private sealed record CatCard(string Group, string TitleKey, string DescKey, string Icon, string Route, bool Important = false);
+
+    private static readonly CatCard[] Categories =
+    [
+        new("Server",      "Server",       "ServerCategoryDescription",      Icons.Material.Filled.Computer,   "/admin/config/net"),
+        new("Performance", "Performance",  "PerformanceCategoryDescription", Icons.Material.Filled.Speed,      "/admin/config/limit"),
+        new("Security",    "Security",     "SecurityCategoryDescription",    Icons.Material.Filled.Security,   "/admin/config/sitelock", Important: true),
+        new("Content",     "Content",      "ContentCategoryDescription",     Icons.Material.Filled.Article,    "/admin/config/message"),
+        new("Logs",        "LogsAndFiles", "LogsCategoryDescription",        Icons.Material.Filled.FolderOpen, "/admin/config/log"),
+        new("Advanced",    "Advanced",     "AdvancedCategoryDescription",    Icons.Material.Filled.Tune,       "/admin/config/attribute"),
+    ];
 
     // Maps nav group names to the schema category names they contain
     private static readonly Dictionary<string, string[]> GroupCategories = new(StringComparer.OrdinalIgnoreCase)
@@ -222,21 +204,4 @@
 
     private int GetGroupCount(string group) =>
         _groupCounts.TryGetValue(group, out var count) ? count : 0;
-
-    private async Task ExportConfig()
-    {
-        var json = await AdminConfigService.ExportConfigAsync();
-        if (json == null)
-        {
-            Snackbar.Add(Loc["ExportFailed"].Value, Severity.Error);
-            return;
-        }
-
-        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-        var base64 = Convert.ToBase64String(bytes);
-        await JS.InvokeVoidAsync("eval",
-            $"var a=document.createElement('a');a.href='data:application/json;base64,{base64}';a.download='sharpmush-config.json';a.click()");
-        Snackbar.Add(Loc["ConfigurationExported"].Value, Severity.Success);
-    }
 }
-

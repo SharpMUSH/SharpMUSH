@@ -1,9 +1,9 @@
-﻿@using MudBlazor.Utilities
 @using SharpMUSH.Client.Components
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using SharpMUSH.Library.Models.Portal.Widgets
 @inherits LayoutComponentBase
+@implements IDisposable
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> Loc
 @inject ITerminalService Terminal
@@ -11,204 +11,192 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ILayoutService LayoutService
 
-<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<MudLayout>
-    <MudAppBar Elevation="1" Dense="true">
-        @if (!_isConfigRoute)
-        {
-            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => DrawerToggle())" />
-        }
-        @if (_isConfigRoute)
-        {
-            <MudText Typo="Typo.h6" Color="Color.Secondary">@Loc["Configuration"]</MudText>
-        }
+@* ── Phosphor Refined shell: full-height sidebar + content column ── *@
+<div class="phosphor-shell">
 
-        @* TopBar widget zone *@
-        @if (_layout is not null)
-        {
-            <ZoneRenderer Zone="WidgetZone.TopBar" Layout="_layout" />
-        }
+    @* ── Left sidebar (full height) ── *@
+    <NavMenu IsCollapsed="@_sidebarCollapsed" />
 
-        <MudSpacer />
-        <LanguagePicker />
+    @* ── LeftSidebar widget zone (optional) ── *@
+    @if (_layout is not null && _layout.Settings.LeftSidebarEnabled && !_isConfigRoute)
+    {
+        <div class="phosphor-widget-aside" style="@($"width:{_layout.Settings.LeftSidebarWidth};")">
+            <ZoneRenderer Zone="WidgetZone.LeftSidebar" Layout="_layout" />
+        </div>
+    }
 
-        @* Character / Account switcher — shown when logged in to an account or in debug mode *@
-        @if (AccountAuth.IsLoggedIn || _isDebugAuth)
-        {
-            <MudMenu Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                <ActivatorContent>
-                    <MudButton Variant="Variant.Text" Color="Color.Inherit"
-                               EndIcon="@Icons.Material.Filled.ArrowDropDown"
-                               Style="text-transform:none;font-size:13px;"
-                               OnClick="@context.ToggleAsync">
-                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
-                        @(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")
-                    </MudButton>
-                </ActivatorContent>
-                <ChildContent>
-                    @if (_isDebugAuth)
-                    {
-                        <MudMenuItem Disabled="true">
-                            <MudText Typo="Typo.caption" Style="color:#888;">Dev Mode (DebugAdmin)</MudText>
-                        </MudMenuItem>
-                    }
-                    else
-                    {
-                        <MudMenuItem Disabled="true">
-                            <MudText Typo="Typo.caption" Style="color:#888;">
-                                Account: @AccountAuth.Username
-                            </MudText>
-                        </MudMenuItem>
-                        @if (AccountAuth.Characters.Count > 0)
+    @* ── Content column ── *@
+    <div class="phosphor-content-col">
+
+        @* ── Topbar ── *@
+        <header class="phosphor-topbar">
+            <button class="phosphor-icon-btn" @onclick="ToggleSidebar" title="Toggle navigation">
+                <MudIcon Icon="@Icons.Material.Filled.Menu" Style="font-size:20px;" />
+            </button>
+            <div class="phosphor-topbar-title">@PageTitle()</div>
+
+            @* TopBar widget zone *@
+            @if (_layout is not null)
+            {
+                <ZoneRenderer Zone="WidgetZone.TopBar" Layout="_layout" />
+            }
+
+            <div style="flex:1;"></div>
+
+            @* Global search bar *@
+            <div class="phosphor-search">
+                <span class="phosphor-search-icon">⌕</span>
+                <input type="search"
+                       placeholder="Search…"
+                       @bind="_searchQuery"
+                       @bind:event="oninput"
+                       @onkeydown="HandleSearchKeyDown" />
+                <span class="phosphor-search-kbd">⌘K</span>
+            </div>
+
+            <LanguagePicker />
+
+            @* Terminal toggle *@
+            <button class="@($"phosphor-icon-btn{(_terminalOpen ? " phosphor-icon-btn--active" : "")}")"
+                    @onclick="ToggleTerminal"
+                    title="@(_terminalOpen ? "Close Terminal" : "Open Terminal")">
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:18px;" />
+            </button>
+
+            <div class="phosphor-topbar-divider"></div>
+
+            @* Character / Account switcher *@
+            @if (AccountAuth.IsLoggedIn || _isDebugAuth)
+            {
+                <MudMenu Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                    <ActivatorContent>
+                        <button class="phosphor-user-btn" @onclick="@context.ToggleAsync">
+                            <span class="phosphor-user-avatar">@UserInitial</span>
+                            <span class="phosphor-user-name">@(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")</span>
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Style="font-size:15px;color:var(--text-faint);" />
+                        </button>
+                    </ActivatorContent>
+                    <ChildContent>
+                        @if (_isDebugAuth)
                         {
-                            <MudDivider />
                             <MudMenuItem Disabled="true">
-                                <MudText Typo="Typo.caption" Style="color:#888;">Play as:</MudText>
+                                <MudText Typo="Typo.caption" Style="color:#888;">Dev Mode (DebugAdmin)</MudText>
                             </MudMenuItem>
-                            @foreach (var c in AccountAuth.Characters)
+                        }
+                        else
+                        {
+                            <MudMenuItem Disabled="true">
+                                <MudText Typo="Typo.caption" Style="color:#888;">
+                                    Account: @AccountAuth.Username
+                                </MudText>
+                            </MudMenuItem>
+                            @if (AccountAuth.Characters.Count > 0)
                             {
-                                var character = c;
-                                <MudMenuItem OnClick="() => SwitchCharacterAsync(character)">
-                                    @character.Name (#@character.DbrefNumber)
+                                <MudDivider />
+                                <MudMenuItem Disabled="true">
+                                    <MudText Typo="Typo.caption" Style="color:#888;">Play as:</MudText>
                                 </MudMenuItem>
+                                @foreach (var c in AccountAuth.Characters)
+                                {
+                                    var character = c;
+                                    <MudMenuItem OnClick="() => SwitchCharacterAsync(character)">
+                                        @character.Name (#@character.DbrefNumber)
+                                    </MudMenuItem>
+                                }
                             }
                         }
-                    }
-                    <MudDivider />
-                    <MudMenuItem Href="/account">
-                        <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small" Class="mr-2" />
-                        Account Settings
-                    </MudMenuItem>
-                    @if (!_isDebugAuth)
-                    {
-                        <MudMenuItem OnClick="AccountLogoutAsync">
-                            <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Class="mr-2" />
-                            Disconnect
+                        <MudDivider />
+                        <MudMenuItem Href="/account">
+                            <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small" Class="mr-2" />
+                            Account Settings
                         </MudMenuItem>
-                    }
-                </ChildContent>
-            </MudMenu>
-        }
+                        @if (!_isDebugAuth)
+                        {
+                            <MudMenuItem OnClick="AccountLogoutAsync">
+                                <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Class="mr-2" />
+                                Disconnect
+                            </MudMenuItem>
+                        }
+                    </ChildContent>
+                </MudMenu>
+            }
+            else
+            {
+                <LoginDisplay />
+            }
+        </header>
 
-        <MudTooltip Text="@(_terminalOpen ? "Close Terminal" : "Open Terminal")">
-            <MudIconButton Icon="@Icons.Material.Filled.Terminal"
-                           Color="@(_terminalOpen ? Color.Success : Color.Inherit)"
-                           OnClick="ToggleTerminal"
-                           title="Terminal" />
-        </MudTooltip>
-        <LoginDisplay />
-    </MudAppBar>
-    
-    @* Primary Drawer - Collapses to mini when in config route *@
-    <MudDrawer Open="@(_isConfigRoute ? true : _drawerOpen)"
-               ClipMode="DrawerClipMode.Always" 
-               Elevation="2"
-               Variant="@(_isConfigRoute ? DrawerVariant.Mini : DrawerVariant.Responsive)"
-               OpenMiniOnHover="true">
-        <NavMenu IsCollapsed="@_isConfigRoute" />
-        @* LeftSidebar widget zone placed inside the primary drawer *@
-        @if (_layout is not null && _layout.Settings.LeftSidebarEnabled)
-        {
-            <ZoneRenderer Zone="WidgetZone.LeftSidebar" Layout="_layout" />
-        }
-    </MudDrawer>
-    
-    @* Config Drawer - Shows when on config route *@
-    @if (_isConfigRoute)
-    {
-        <MudDrawer Open="true"
-                   ClipMode="DrawerClipMode.Docked"
-                   Variant="DrawerVariant.Persistent"
-                   Anchor="Anchor.Left"
-                   Width="280px"
-                   Elevation="0"
-                   Class="config-secondary-drawer"
-                   Style="margin-left: 60px;">
-            <ConfigNavDrawer />
-        </MudDrawer>
-    }
-
-    @* Right Sidebar widget zone — only when enabled and on a non-config route *@
-    @if (_layout is not null && _layout.Settings.RightSidebarEnabled && !_isConfigRoute)
-    {
-        <MudDrawer Open="true"
-                   Anchor="Anchor.Right"
-                   ClipMode="DrawerClipMode.Always"
-                   Variant="DrawerVariant.Persistent"
-                   Width="@_layout.Settings.RightSidebarWidth"
-                   Elevation="2">
-            <ZoneRenderer Zone="WidgetZone.RightSidebar" Layout="_layout" />
-        </MudDrawer>
-    }
-    
-    <MudMainContent Class="@(_isConfigRoute ? "config-main-content" : "")"
-                    Style="@(_terminalOpen ? "padding-bottom: 320px;" : "")">
-        <MudContainer MaxWidth="MaxWidth.False" Class="@(_isConfigRoute ? "pa-0" : "")">
+        @* ── Scrollable main content ── *@
+        <main class="phosphor-main"
+              style="@(_terminalOpen ? "padding-bottom:300px;" : "")">
             @Body
             @* MainContent widget zone renders below the page body *@
             @if (_layout is not null)
             {
                 <ZoneRenderer Zone="WidgetZone.MainContent" Layout="_layout" />
             }
-        </MudContainer>
-    </MudMainContent>
+        </main>
 
-    @* Footer widget zone *@
-    @if (_layout is not null)
+        @* ── Footer widget zone — only when explicitly enabled ── *@
+        @if (_layout is not null && _layout.Settings.FooterEnabled)
+        {
+            <div class="phosphor-footer">
+                <ZoneRenderer Zone="WidgetZone.Footer" Layout="_layout" />
+            </div>
+        }
+
+        @* ── Terminal drawer (slides up over content) ── *@
+        @if (_terminalOpen)
+        {
+            <div class="phosphor-terminal">
+                <div class="phosphor-terminal-header">
+                    <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:15px;color:var(--accent);margin-right:9px;" />
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);letter-spacing:0.05em;">command terminal</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);margin-left:8px;">
+                        · @(Terminal.IsConnected ? "connected" : "disconnected")
+                    </span>
+                    <div style="flex:1;"></div>
+                    <button class="phosphor-icon-btn" @onclick="ToggleTerminal" title="Close Terminal">
+                        <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:18px;" />
+                    </button>
+                </div>
+                <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+                    <GlobalTerminal />
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── RightSidebar widget zone (optional) ── *@
+    @if (_layout is not null && _layout.Settings.RightSidebarEnabled && !_isConfigRoute)
     {
-        <MudPaper Elevation="1" Class="pa-2 widget-footer">
-            <ZoneRenderer Zone="WidgetZone.Footer" Layout="_layout" />
-        </MudPaper>
-    }
-
-    @* Global bottom terminal drawer *@
-    <MudDrawer @bind-Open="_terminalOpen"
-               Anchor="Anchor.Bottom"
-               Elevation="4"
-               Variant="DrawerVariant.Temporary"
-               ClipMode="DrawerClipMode.Never"
-               Class="terminal-bottom-drawer"
-               Width="100%"
-               Height="300px">
-        <MudDrawerHeader Style="padding:4px 12px;background:#111;border-bottom:1px solid #333;display:flex;align-items:center;">
-            <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" Color="Color.Secondary" Style="margin-right:8px;" />
-            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Terminal</MudText>
-            <MudSpacer />
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                           Color="Color.Default" OnClick="ToggleTerminal" />
-        </MudDrawerHeader>
-        <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
-            <GlobalTerminal />
+        <div class="phosphor-widget-aside phosphor-widget-aside--right" style="@($"width:{_layout.Settings.RightSidebarWidth};")">
+            <ZoneRenderer Zone="WidgetZone.RightSidebar" Layout="_layout" />
         </div>
-    </MudDrawer>
-</MudLayout>
+    }
+</div>
 
 @code {
-    private readonly MudTheme _theme = new()
-    {
-        PaletteDark = new PaletteDark
-        {
-            Primary = MudColor.Parse("#00f5b7"),
-            Secondary = MudColor.Parse("#00f5b7"),
-            AppbarText = MudColor.Parse("#00f5b7"),
-            TextPrimary = "rgba(255, 255, 255, 0.87)",
-            TextSecondary = "rgba(255, 255, 255, 0.60)",
-            Surface = MudColor.Parse("#242424"),
-            Background = MudColor.Parse("#1a1a1a")
-        }
-    };
-    
-    private bool _isDarkMode = true;
-    private bool _drawerOpen = false;
+    private bool _sidebarCollapsed = false;
     private bool _isConfigRoute = false;
     private bool _terminalOpen = false;
     private string? _terminalPlayerName;
     private bool _isDebugAuth;
     private LayoutConfiguration? _layout;
+    private string _searchQuery = string.Empty;
+
+    private string UserInitial
+    {
+        get
+        {
+            var name = _terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin";
+            return name.Length > 0 ? name[0].ToString().ToUpper() : "?";
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -284,6 +272,36 @@
         _isConfigRoute = NavigationManager.Uri.Contains("/admin/config");
     }
 
+    @* Page title derived from the active route, mirroring the prototype topbar. *@
+    private string PageTitle()
+    {
+        if (_isConfigRoute) return Loc["Configuration"];
+        var path = new Uri(NavigationManager.Uri).AbsolutePath.Trim('/');
+        if (string.IsNullOrEmpty(path)) return Loc["Home"];
+        var seg = path.Split('/');
+        return seg switch
+        {
+            ["play"] => Loc["Play"],
+            ["scenes", ..] => Loc["SceneArchive"],
+            ["characters", ..] => Loc["Characters"],
+            ["mail", ..] => Loc["Mail"],
+            ["wiki", ..] => Loc["Wiki"],
+            ["softcode", ..] => Loc["SoftcodeEditor"],
+            ["apps", ..] => "Applications",
+            ["account"] => Loc["MyAccount"],
+            ["settings"] => Loc["Settings"],
+            ["help", ..] => Loc["Help"],
+            ["admin", "packages", ..] => "Packages",
+            ["admin", "wiki", ..] => "Wiki Admin",
+            ["admin", "media", ..] => "Image Library",
+            ["admin", "applications", ..] => "Applications",
+            _ => Capitalize(seg[^1].Replace('-', ' ')),
+        };
+    }
+
+    private static string Capitalize(string s)
+        => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s[1..];
+
     private async Task EnsureAccountRoutingAsync()
     {
         var currentPath = new Uri(NavigationManager.Uri).AbsolutePath;
@@ -305,14 +323,17 @@
     private static bool IsHomePath(string currentPath)
         => string.IsNullOrEmpty(currentPath) || currentPath == "/";
 
-    void DrawerToggle()
-    {
-        _drawerOpen = !_drawerOpen;
-    }
+    private void ToggleSidebar() => _sidebarCollapsed = !_sidebarCollapsed;
 
-    void ToggleTerminal()
+    private void ToggleTerminal() => _terminalOpen = !_terminalOpen;
+
+    private void HandleSearchKeyDown(KeyboardEventArgs e)
     {
-        _terminalOpen = !_terminalOpen;
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            NavigationManager.NavigateTo($"/wiki?q={Uri.EscapeDataString(_searchQuery.Trim())}");
+            _searchQuery = string.Empty;
+        }
     }
 
     public void Dispose()
@@ -321,9 +342,3 @@
         LayoutService.OnLayoutChanged -= HandleLayoutChanged;
     }
 }
-
-<style>
-    .config-main-content {
-        margin-left: 340px !important; /* 60px mini drawer + 280px config drawer */
-    }
-</style>

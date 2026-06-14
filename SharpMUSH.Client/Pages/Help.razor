@@ -3,4 +3,58 @@
 
 <PageTitle>Help — SharpMUSH</PageTitle>
 
-<WikiView Slug="help-index" Mode="WikiView.WikiMode.View" />
+<div class="help-page">
+    <header class="help-header">
+        <div class="help-kicker">Documentation</div>
+        <h1 class="help-title">Help</h1>
+        <p class="help-subtitle">Browse topics, search references, and read the manual.</p>
+    </header>
+
+    <section class="help-body">
+        <WikiView Slug="help-index" Mode="WikiView.WikiMode.View" />
+    </section>
+</div>
+
+<style>
+    .help-page {
+        padding: var(--cpad);
+        width: 100%;
+    }
+
+    .help-header {
+        margin-bottom: 22px;
+    }
+
+    .help-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 8px;
+    }
+
+    .help-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.15;
+    }
+
+    .help-subtitle {
+        margin: 8px 0 0;
+        font-family: var(--font-ui);
+        font-size: 14px;
+        color: var(--text-dim);
+    }
+
+    .help-body {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        padding: 22px 26px;
+    }
+</style>

@@ -5,27 +5,43 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Name</PageTitle>
+<PageTitle>@Name — SharpMUSH</PageTitle>
 
-@* Composed from registered portal widgets (CharacterHeader / CharacterGallery) plus the wiki
-   body for the Character:Name page. Each widget is an IPortalWidget and can also be placed in
-   a zone via the layout editor. Profiles are read-only on the portal for now (the in-game
-   http_handler softcode serves the public view; editing happens in-game). *@
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    <MudGrid Spacing="4">
-        <MudItem xs="12" md="8">
-            <CharacterHeaderWidget CharacterName="@Name" />
+<div>
+    @* Banner *@
+    @{
+        var hue = Math.Abs((Name ?? "").GetHashCode()) % 360;
+    }
+    <div style="@($"height:160px;background:linear-gradient(135deg,hsl({hue},40%,14%) 0%,hsl({(hue+40)%360},30%,10%) 100%);position:relative;")">
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(var(--glow),0.12) 0%,transparent 60%);pointer-events:none;"></div>
+    </div>
 
-            @* Freeform wiki body lives at the Character:Name wiki page. *@
-            <MudPaper Outlined="true" Class="pa-4 mt-4">
-                <WikiView Slug="@Name" Mode="WikiView.WikiMode.View" />
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="12" md="4">
-            <CharacterGalleryWidget CharacterName="@Name" CanEdit="_canEdit" />
-        </MudItem>
-    </MudGrid>
-</MudContainer>
+    <div style="padding:0 var(--cpad) var(--cpad);">
+        @* Avatar overlapping banner *@
+        <div style="margin-top:-40px;margin-bottom:16px;display:flex;align-items:flex-end;gap:16px;">
+            <MudAvatar Style="@($"background:hsl({hue},50%,30%);color:#fff;font-size:28px;font-weight:700;width:80px;height:80px;border:3px solid var(--bg);flex-shrink:0;")" >
+                @(Name?.Length > 0 ? Name[0].ToString().ToUpper() : "?")
+            </MudAvatar>
+            <div style="padding-bottom:6px;">
+                <MudText Typo="Typo.h5" Style="font-weight:700;line-height:1.2;">@Name</MudText>
+            </div>
+        </div>
+
+        @* Profile content *@
+        <MudGrid Spacing="4">
+            <MudItem xs="12" md="8">
+                <CharacterHeaderWidget CharacterName="@Name" />
+
+                <MudPaper Elevation="0" Style="padding:20px;margin-top:16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+                    <WikiView Slug="@Name" Mode="WikiView.WikiMode.View" />
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <CharacterGalleryWidget CharacterName="@Name" CanEdit="_canEdit" />
+            </MudItem>
+        </MudGrid>
+    </div>
+</div>
 
 @code {
     [Parameter]
@@ -35,7 +51,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Gallery edit affordances for any authenticated user; the server enforces real rights.
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _canEdit = authState.User.Identity?.IsAuthenticated == true;
     }

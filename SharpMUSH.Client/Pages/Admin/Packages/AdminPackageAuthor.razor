@@ -1,5 +1,5 @@
 @page "/admin/packages/author"
-@attribute [Authorize(Roles = "Wizard")]
+@attribute [Authorize(Policy = "packages.admin")]
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Models.Packages
 @inject PackagesAdminService Packages
@@ -7,30 +7,34 @@
 
 <PageTitle>Author Package — Admin — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-2">Author a Package</MudText>
-<MudText Color="Color.Secondary" Class="mb-4">
-    Turn live objects into a package.yaml. Every dbref in the selection must end up symbolic:
-    in-selection references resolve automatically; the rest you classify below.
-</MudText>
+<div style="padding:var(--cpad);">
+    <div class="pkg-header">
+        <div class="pkg-kicker">Build · Package authoring</div>
+        <h1 class="pkg-title">Author a Package</h1>
+        <p class="pkg-desc">
+            Turn live objects into a package.yaml. Every dbref in the selection must end up symbolic:
+            in-selection references resolve automatically; the rest you classify below.
+        </p>
+    </div>
 
-@* ── Step 1: selection ──────────────────────────────────────────────────── *@
-<MudCard Class="mb-4">
-    <MudCardHeader><MudText Typo="Typo.h6">1 — Select objects</MudText></MudCardHeader>
-    <MudCardContent>
-        <MudTextField @bind-Value="_objidInput" Label="Object ids (one per line, e.g. #847:1778518155494)"
-                      Lines="3" Variant="Variant.Outlined" />
-        <MudButton Class="mt-2" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_busy" OnClick="@ScanAsync">
-            Scan selection
-        </MudButton>
-    </MudCardContent>
-</MudCard>
+    @* ── Step 1: selection ──────────────────────────────────────────────── *@
+    <div class="pkg-card mb-4">
+        <div class="pkg-card-head"><span class="pkg-step">1</span> Select objects</div>
+        <div class="pkg-card-body">
+            <MudTextField @bind-Value="_objidInput" Label="Object ids (one per line, e.g. #847:1778518155494)"
+                          Lines="3" Variant="Variant.Outlined" />
+            <MudButton Class="mt-2 pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@ScanAsync">
+                Scan selection
+            </MudButton>
+        </div>
+    </div>
 
 @if (_scan is not null)
 {
     @* ── Step 2: objects, refs, attribute selection ─────────────────────── *@
-    <MudCard Class="mb-4">
-        <MudCardHeader><MudText Typo="Typo.h6">2 — Refs &amp; attributes</MudText></MudCardHeader>
-        <MudCardContent>
+    <div class="pkg-card mb-4">
+        <div class="pkg-card-head"><span class="pkg-step">2</span> Refs &amp; attributes</div>
+        <div class="pkg-card-body">
             <MudExpansionPanels MultiExpansion="true" Dense="true">
                 @foreach (var obj in _scan.Objects)
                 {
@@ -61,21 +65,19 @@
                     </MudExpansionPanel>
                 }
             </MudExpansionPanels>
-        </MudCardContent>
-    </MudCard>
+        </div>
+    </div>
 
     @* ── Step 3: external dbref classification ──────────────────────────── *@
     @if (_scan.ExternalDbrefs.Count > 0)
     {
-        <MudCard Class="mb-4">
-            <MudCardHeader>
-                <MudText Typo="Typo.h6">3 — Classify external references (@_scan.ExternalDbrefs.Count)</MudText>
-            </MudCardHeader>
-            <MudCardContent>
+        <div class="pkg-card mb-4">
+            <div class="pkg-card-head"><span class="pkg-step">3</span> Classify external references (@_scan.ExternalDbrefs.Count)</div>
+            <div class="pkg-card-body">
                 @foreach (var external in _scan.ExternalDbrefs)
                 {
                     var c = ClassificationFor(external.Dbref);
-                    <MudPaper Class="pa-3 mb-2" Outlined="true">
+                    <MudPaper Elevation="0" Class="pa-3 mb-2" Style="border:1px solid var(--border-soft);background:var(--surface-2);border-radius:var(--radius);">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudText><code>@external.Dbref</code></MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
@@ -111,14 +113,14 @@
                         </MudStack>
                     </MudPaper>
                 }
-            </MudCardContent>
-        </MudCard>
+            </div>
+        </div>
     }
 
     @* ── Step 4: metadata + export ──────────────────────────────────────── *@
-    <MudCard Class="mb-4">
-        <MudCardHeader><MudText Typo="Typo.h6">4 — Metadata &amp; export</MudText></MudCardHeader>
-        <MudCardContent>
+    <div class="pkg-card mb-4">
+        <div class="pkg-card-head"><span class="pkg-step">4</span> Metadata &amp; export</div>
+        <div class="pkg-card-body">
             <MudGrid Spacing="2">
                 <MudItem xs="12" md="4">
                     <MudTextField @bind-Value="_packageId" Label="Package id (lowercase, hyphens)"
@@ -137,12 +139,13 @@
                     <MudTextField @bind-Value="_description" Label="Description" Variant="Variant.Outlined" Margin="Margin.Dense" />
                 </MudItem>
             </MudGrid>
-            <MudButton Class="mt-3" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_busy" OnClick="@ExportAsync">
+            <MudButton Class="mt-3 pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@ExportAsync">
                 Export package.yaml
             </MudButton>
-        </MudCardContent>
-    </MudCard>
+        </div>
+    </div>
 }
+</div>
 
 <MudDialog @bind-Visible="_showExport" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
     <TitleContent><MudText Typo="Typo.h6">package.yaml</MudText></TitleContent>
@@ -160,6 +163,67 @@
         <MudButton OnClick="@(() => _showExport = false)">Close</MudButton>
     </DialogActions>
 </MudDialog>
+
+<style>
+    .pkg-header { margin-bottom: 24px; }
+    .pkg-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .pkg-title {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0 0 6px;
+    }
+    .pkg-desc {
+        color: var(--text-dim);
+        font-size: 14px;
+        margin: 0;
+        max-width: 760px;
+    }
+    .pkg-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+    }
+    .pkg-card-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-soft);
+        font-family: var(--font-display);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .pkg-step {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 99px;
+        background: rgba(var(--glow), 0.12);
+        border: 1px solid rgba(var(--glow), 0.25);
+        color: var(--accent);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .pkg-card-body { padding: 18px 20px; }
+    .pkg-btn-primary {
+        background: var(--accent) !important;
+        color: var(--accent-on) !important;
+    }
+</style>
 
 @code {
     private sealed class ExternalClassification

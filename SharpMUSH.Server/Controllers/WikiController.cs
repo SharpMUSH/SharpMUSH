@@ -106,9 +106,11 @@ public class WikiController(
 		};
 	}
 
-	/// <summary>True when the caller carries an authenticated identity. Anonymous
-	/// callers only see Published pages; drafts are reserved for logged-in users.</summary>
-	private bool IsAuthenticatedCaller => User.Identity?.IsAuthenticated == true;
+	/// <summary>True when the caller may see unpublished (draft) pages — i.e. holds the
+	/// <see cref="PortalPermission.WikiRead"/> scope. Anonymous callers and accounts without the
+	/// scope only see Published pages. (Player and above are granted wiki.read by default, so the
+	/// historical "any logged-in user sees drafts" behavior is preserved out of the box.)</summary>
+	private bool CanSeeUnpublished => User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiRead);
 
 	/// <summary>
 	/// The caller's character dbref from the JWT NameIdentifier claim. Never defaults to a
@@ -117,9 +119,18 @@ public class WikiController(
 	/// </summary>
 	private string? CallerDbref => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-	/// <summary>Filters out unpublished (draft) pages for anonymous callers.</summary>
-	private IEnumerable<WikiPage> FilterVisible(IEnumerable<WikiPage> pages) =>
-		IsAuthenticatedCaller ? pages : pages.Where(p => p.Published);
+	/// <summary>True when the caller is the original author of <paramref name="page"/>. Authors
+	/// always see their own drafts even without the <see cref="PortalPermission.WikiRead"/> scope.</summary>
+	private bool IsAuthor(WikiPage page) =>
+		CallerDbref is { Length: > 0 } me && string.Equals(page.AuthorDbref, me, StringComparison.Ordinal);
+
+	/// <summary>True when the caller may view <paramref name="page"/>: it is published, the caller
+	/// can see unpublished pages (wiki.read), or the caller authored it.</summary>
+	private bool CanSee(WikiPage page) => page.Published || CanSeeUnpublished || IsAuthor(page);
+
+	/// <summary>Filters out unpublished (draft) pages the caller may not see (not published, no
+	/// wiki.read scope, and not their own authored draft).</summary>
+	private IEnumerable<WikiPage> FilterVisible(IEnumerable<WikiPage> pages) => pages.Where(CanSee);
 
 	// ── Read endpoints ───────────────────────────────────────────────────────
 
@@ -133,7 +144,7 @@ public class WikiController(
 	{
 		var result = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		return result.Match<IActionResult>(
-			page => page.Published || IsAuthenticatedCaller ? Ok(ToDto(page)) : NotFound(),
+			page => CanSee(page) ? Ok(ToDto(page)) : NotFound(),
 			_ => NotFound());
 	}
 
@@ -146,7 +157,7 @@ public class WikiController(
 	{
 		var result = await wikiService.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character);
 		return result.Match<IActionResult>(
-			page => page.Published || IsAuthenticatedCaller ? Ok(ToDto(page)) : NotFound(),
+			page => CanSee(page) ? Ok(ToDto(page)) : NotFound(),
 			_ => NotFound());
 	}
 
@@ -186,7 +197,7 @@ public class WikiController(
 		// CountPagesAsync includes drafts, so only expose the total to authenticated callers.
 		// Emitting it for anonymous users would leak how many unpublished pages exist and
 		// would not match the published-only collection they receive.
-		if (IsAuthenticatedCaller)
+		if (CanSeeUnpublished)
 			Response.Headers["X-Total-Count"] = (await wikiService.CountPagesAsync(nsFilter)).ToString();
 		return Ok(FilterVisible(pages).Select(ToDto));
 	}
@@ -223,7 +234,7 @@ public class WikiController(
 		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
-		if (!lookup.AsT0.Published && !IsAuthenticatedCaller) return NotFound();
+		if (!CanSee(lookup.AsT0)) return NotFound();
 
 		var revisions = await wikiService.GetRevisionsAsync(lookup.AsT0.Id, skip, take);
 		return Ok(revisions.Select(ToDto));
@@ -239,7 +250,7 @@ public class WikiController(
 		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
 		if (lookup.IsT1) return NotFound();
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
-		if (!lookup.AsT0.Published && !IsAuthenticatedCaller) return NotFound();
+		if (!CanSee(lookup.AsT0)) return NotFound();
 
 		var result = await wikiService.GetRevisionAsync(lookup.AsT0.Id, number);
 		return result.Match<IActionResult>(
@@ -263,7 +274,7 @@ public class WikiController(
 	/// Creates a new wiki page. The slug is derived from the title.
 	/// </summary>
 	[HttpPost]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiCreate)]
 	public async Task<IActionResult> CreatePage([FromBody] CreatePageRequest request)
 	{
 		var authorDbref = CallerDbref;
@@ -289,7 +300,7 @@ public class WikiController(
 	/// ArangoDB-style IDs (e.g. "node_wiki_pages/1532") which contain a literal '/'.
 	/// </summary>
 	[HttpPut("{slug}")]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> UpdatePage(string slug, [FromBody] UpdatePageRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
 		var editorDbref = CallerDbref;
@@ -299,7 +310,7 @@ public class WikiController(
 		if (lookup.IsT1) return NotFound();
 
 		// Protected pages may only be edited by Wizard-level users.
-		if (lookup.AsT0.IsProtected && !User.IsInRole(nameof(PortalRole.Wizard)))
+		if (lookup.AsT0.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
 		var id = lookup.AsT0.Id;
@@ -324,7 +335,7 @@ public class WikiController(
 	/// a rollback can itself be rolled back.
 	/// </summary>
 	[HttpPost("{slug}/rollback")]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> RollbackPage(string slug, [FromBody] RollbackRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
 		var editorDbref = CallerDbref;
@@ -334,7 +345,7 @@ public class WikiController(
 		if (lookup.IsT1) return NotFound();
 
 		var page = lookup.AsT0;
-		if (page.IsProtected && !User.IsInRole(nameof(PortalRole.Wizard)))
+		if (page.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
 		var revisionLookup = await wikiService.GetRevisionAsync(page.Id, request.RevisionNumber);
@@ -375,7 +386,7 @@ public class WikiController(
 		{
 			var (ns, category, slug) = ParseRef(reference);
 			var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-			result[reference] = lookup.IsT0 && (lookup.AsT0.Published || IsAuthenticatedCaller);
+			result[reference] = lookup.IsT0 && CanSee(lookup.AsT0);
 		}
 
 		return Ok(result);
@@ -386,7 +397,7 @@ public class WikiController(
 	/// Deletes a wiki page and all its revisions, identified by slug.
 	/// </summary>
 	[HttpDelete("{slug}")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.WikiDelete)]
 	public async Task<IActionResult> DeletePage(string slug, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
 		var editorDbref = CallerDbref;
@@ -412,7 +423,7 @@ public class WikiController(
 	/// Sets or clears the protection flag on a wiki page, identified by slug.
 	/// </summary>
 	[HttpPut("{slug}/protection")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
 	public async Task<IActionResult> SetProtection(string slug, [FromBody] SetProtectionRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
 		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
@@ -434,7 +445,7 @@ public class WikiController(
 	/// Does not create a content revision.
 	/// </summary>
 	[HttpPut("{slug}/metadata")]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> SetMetadata(string slug, [FromBody] SetMetadataRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
 		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
@@ -442,7 +453,7 @@ public class WikiController(
 
 		// Protected pages may only be retagged/(un)published by Wizard-level users,
 		// mirroring the edit restriction in UpdatePage.
-		if (lookup.AsT0.IsProtected && !User.IsInRole(nameof(PortalRole.Wizard)))
+		if (lookup.AsT0.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
 		var result = await wikiService.SetMetadataAsync(
@@ -474,7 +485,7 @@ public class WikiController(
 	/// Sets or clears the protection flag on multiple pages at once.
 	/// </summary>
 	[HttpPost("batch/protect")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
 	public async Task<IActionResult> BatchProtect([FromBody] BatchProtectRequest request)
 	{
 		var succeeded = new List<string>();
@@ -504,7 +515,7 @@ public class WikiController(
 	/// Deletes multiple pages (and their revisions) at once.
 	/// </summary>
 	[HttpPost("batch/delete")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
 	public async Task<IActionResult> BatchDelete([FromBody] BatchDeleteRequest request)
 	{
 		var editorDbref = CallerDbref;
@@ -543,7 +554,7 @@ public class WikiController(
 	/// Called by the wiki edit handler after a page is saved.
 	/// </summary>
 	[HttpPost("invalidate-cache")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
 	public IActionResult InvalidateCache([FromBody] InvalidateCacheRequest request)
 	{
 		if (!string.IsNullOrWhiteSpace(request.Path))

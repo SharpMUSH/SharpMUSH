@@ -1,22 +1,279 @@
 @page "/wiki/{Ns}/{Category}/{Slug}/history"
-@* History is shown as a dialog from the wiki page view, not a separate route. *@
-@* Redirect to the wiki page so any direct links or bookmarks still work. *@
+@attribute [Authorize(Policy = "wiki.read")]
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject WikiService Wiki
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>History: @Slug — SharpMUSH</PageTitle>
+
+<div class="wikihist">
+    @* Header — prototype SectionTitle: back link + kicker + title + compare *@
+    <a class="wikihist-back" href="@($"/wiki/{Ns}/{Category}/{Slug}")">
+        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:14px;" /> @_displayTitle
+    </a>
+    <div class="wikihist-head">
+        <div>
+            <div class="wikihist-kicker">Revision history</div>
+            <h1 class="wikihist-title">@_displayTitle</h1>
+        </div>
+        @if (_oldRev.HasValue && _newRev.HasValue && _oldRev.Value != _newRev.Value)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       Href="@DiffHref()"
+                       StartIcon="@Icons.Material.Filled.CompareArrows">
+                Compare selected
+            </MudButton>
+        }
+    </div>
+    <p class="wikihist-intro">
+        Select an <strong>older</strong> and a <strong>newer</strong> revision, then compare. @_revisions.Count revisions in all.
+    </p>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        @for (var i = 0; i < 5; i++)
+        {
+            <MudSkeleton Height="52px" Class="mb-1" />
+        }
+    }
+    else if (_revisions.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No revision history found.</MudAlert>
+    }
+    else
+    {
+        @* Radio-pair compare header *@
+        <div style="display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px 80px;gap:4px;align-items:center;padding:6px 10px;border-bottom:2px solid var(--border);background:var(--surface-3);border-radius:var(--radius) var(--radius) 0 0;">
+            <MudText Class="section-kicker" Style="grid-column:1;text-align:center;">Old</MudText>
+            <MudText Class="section-kicker" Style="grid-column:2;text-align:center;">New</MudText>
+            <MudText Class="section-kicker" Style="grid-column:3;">Timestamp / Summary</MudText>
+            <MudText Class="section-kicker" Style="grid-column:4;">Author</MudText>
+            <MudText Class="section-kicker" Style="grid-column:5;">Size</MudText>
+            <MudText Class="section-kicker" Style="grid-column:6;text-align:center;">Actions</MudText>
+        </div>
+
+        <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);overflow:hidden;">
+            @for (var i = 0; i < _revisions.Count; i++)
+            {
+                var idx = i;
+                var rev = _revisions[i];
+                var prevRev = i < _revisions.Count - 1 ? _revisions[i + 1] : null;
+                var deltaBytes = prevRev is not null
+                    ? rev.MarkdownSource.Length - prevRev.MarkdownSource.Length
+                    : rev.MarkdownSource.Length;
+                var isCurrent = i == 0;
+                var altRow = i % 2 == 1;
+
+                <div style="@($"display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px;gap:4px;align-items:center;padding:8px 10px;background:{(altRow ? "var(--surface-3)" : "var(--surface)")};border-bottom:1px solid var(--border-soft);")"
+                     @key="rev.RevisionNumber">
+
+                    @* Old radio — disabled for newest revision *@
+                    <div style="display:flex;justify-content:center;">
+                        <input type="radio" name="rev-old"
+                               checked="@(_oldRev == rev.RevisionNumber)"
+                               disabled="@(isCurrent)"
+                               @onchange="@(() => SelectOldRev(rev.RevisionNumber))"
+                               style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer;" />
+                    </div>
+
+                    @* New radio — disabled for oldest revision *@
+                    <div style="display:flex;justify-content:center;">
+                        <input type="radio" name="rev-new"
+                               checked="@(_newRev == rev.RevisionNumber)"
+                               disabled="@(idx == _revisions.Count - 1)"
+                               @onchange="@(() => SelectNewRev(rev.RevisionNumber))"
+                               style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer;" />
+                    </div>
+
+                    @* Timestamp + summary *@
+                    <div style="min-width:0;">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <MudText Style="font-size:13px;font-weight:600;">
+                                @rev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                            </MudText>
+                            @if (isCurrent)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary"
+                                         Style="height:18px;font-size:10px;padding:0 5px;">current</MudChip>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(rev.EditSummary))
+                        {
+                            <MudText Style="font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                @rev.EditSummary
+                            </MudText>
+                        }
+                    </div>
+
+                    @* Author *@
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <MudAvatar Size="Size.Small"
+                                   Style="@($"width:24px;height:24px;font-size:11px;background:hsl({Math.Abs(rev.EditorDbref.GetHashCode()) % 360},40%,30%);color:#fff;")">
+                            @(rev.EditorDbref.Length > 0 ? rev.EditorDbref[0].ToString().ToUpper() : "?")
+                        </MudAvatar>
+                        <MudText Style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="@rev.EditorDbref">
+                            @rev.EditorDbref
+                        </MudText>
+                    </div>
+
+                    @* Size + delta *@
+                    <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start;">
+                        <MudText Style="font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">
+                            @rev.MarkdownSource.Length.ToString("N0") B
+                        </MudText>
+                        @if (deltaBytes != 0)
+                        {
+                            <MudChip T="string" Size="Size.Small"
+                                     Style="@($"height:16px;font-size:10px;padding:0 4px;font-family:'JetBrains Mono',monospace;background:{ByteDeltaBackground(deltaBytes)};color:{ByteDeltaForeground(deltaBytes)};")">
+                                @(deltaBytes > 0 ? "+" : "")@deltaBytes
+                            </MudChip>
+                        }
+                    </div>
+
+                    @* Actions *@
+                    <div style="display:flex;gap:4px;align-items:center;justify-content:center;">
+                        <MudTooltip Text="View this revision">
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
+                                           Href="@($"/wiki/{Ns}/{Category}/{Slug}?rev={rev.RevisionNumber}")" />
+                        </MudTooltip>
+                        @if (!isCurrent)
+                        {
+                            <MudTooltip Text="Restore to this revision">
+                                <MudIconButton Icon="@Icons.Material.Filled.Restore" Size="Size.Small"
+                                               Color="Color.Warning"
+                                               OnClick="@(() => RestoreAsync(rev))"
+                                               Disabled="_restoring" />
+                            </MudTooltip>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .wikihist {
+        padding: var(--cpad);
+    }
+    .wikihist-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+        text-decoration: none;
+        margin-bottom: 16px;
+    }
+    .wikihist-back:hover { color: var(--accent); }
+    .wikihist-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 8px;
+    }
+    .wikihist-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .wikihist-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+    .wikihist-intro {
+        margin: 0 0 20px;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+    }
+    .wikihist-intro strong { color: var(--text); }
+</style>
 
 @code {
-    [Parameter]
-    public required string Slug { get; set; }
+    [Parameter] public required string Slug { get; set; }
+    [Parameter] public required string Ns { get; set; }
+    [Parameter] public required string Category { get; set; }
 
-    [Parameter]
-    public required string Ns { get; set; }
+    private List<WikiRevisionInfo> _revisions = [];
+    private bool _loading = true;
+    private bool _restoring;
 
-    [Parameter]
-    public required string Category { get; set; }
+    private int? _oldRev;
+    private int? _newRev;
 
-    [Inject]
-    public required NavigationManager Nav { get; set; }
+    private string _displayTitle = "Page";
 
-    protected override void OnInitialized()
+    protected override async Task OnParametersSetAsync()
     {
-        Nav.NavigateTo($"/wiki/{Ns}/{Category}/{Slug}", replace: true);
+        _loading = true;
+        _displayTitle = string.IsNullOrWhiteSpace(Slug) ? "Page" : Slug.Replace('-', ' ');
+
+        var result = await Wiki.GetRevisionsAsync(Slug, ns: Ns, category: Category);
+        _revisions = [.. result];
+        _loading = false;
+
+        // Default radio selection: new = latest (rev 0 in list = highest number), old = second
+        if (_revisions.Count >= 2)
+        {
+            _newRev = _revisions[0].RevisionNumber;
+            _oldRev = _revisions[1].RevisionNumber;
+        }
     }
+
+    private void SelectOldRev(int revNum)
+    {
+        _oldRev = revNum;
+        if (_newRev.HasValue && _newRev.Value <= revNum)
+            _newRev = _revisions.FirstOrDefault(r => r.RevisionNumber > revNum)?.RevisionNumber;
+    }
+
+    private void SelectNewRev(int revNum)
+    {
+        _newRev = revNum;
+        if (_oldRev.HasValue && _oldRev.Value >= revNum)
+            _oldRev = _revisions.FirstOrDefault(r => r.RevisionNumber < revNum)?.RevisionNumber;
+    }
+
+    private string DiffHref() =>
+        $"/wiki/{Ns}/{Category}/{Slug}/diff?from={_oldRev}&to={_newRev}";
+
+    private async Task RestoreAsync(WikiRevisionInfo rev)
+    {
+        _restoring = true;
+        var result = await Wiki.RollbackAsync(Slug, rev.RevisionNumber, Ns, Category);
+        _restoring = false;
+        result.Switch(
+            _ =>
+            {
+                Snackbar.Add($"Restored to revision {rev.RevisionNumber}.", Severity.Success);
+                Nav.NavigateTo($"/wiki/{Ns}/{Category}/{Slug}");
+            },
+            err => Snackbar.Add($"Restore failed: {err}", Severity.Error)
+        );
+    }
+
+    private static string ByteDeltaBackground(int delta)
+    {
+        if (delta > 500)  return "rgba(0,200,100,0.18)";
+        if (delta > 0)    return "rgba(0,200,100,0.10)";
+        if (delta < -500) return "rgba(220,80,80,0.20)";
+        return "rgba(220,80,80,0.10)";
+    }
+
+    private static string ByteDeltaForeground(int delta) =>
+        delta >= 0 ? "#6cde9a" : "#e57373";
 }

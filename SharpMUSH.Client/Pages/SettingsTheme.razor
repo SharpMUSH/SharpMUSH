@@ -4,5 +4,63 @@
 
 <PageTitle>Theme — Settings — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Theme</MudText>
-<MudText Color="Color.Secondary">Theme preferences coming soon.</MudText>
+<div class="settings-page">
+    <header class="settings-header">
+        <div class="settings-kicker">@Loc["AppTitle"] · Settings</div>
+        <h1 class="settings-title">Theme</h1>
+    </header>
+
+    <section class="settings-card">
+        <div class="settings-card-section-label">Coming soon</div>
+        <p class="settings-card-text">Theme preferences are on the way.</p>
+    </section>
+</div>
+
+<style>
+    .settings-page {
+        padding: var(--cpad);
+    }
+
+    .settings-header {
+        margin-bottom: 24px;
+    }
+    .settings-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 10px;
+    }
+    .settings-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+
+    .settings-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        padding: 22px 24px;
+    }
+    .settings-card-section-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        margin-bottom: 12px;
+    }
+    .settings-card-text {
+        margin: 0;
+        font-family: var(--font-ui);
+        font-size: 14px;
+        color: var(--text-dim);
+        line-height: 1.6;
+    }
+</style>

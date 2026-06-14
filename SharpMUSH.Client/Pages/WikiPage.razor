@@ -1,21 +1,13 @@
 @page "/wiki/{Ns}/{Category}/{Slug}"
 @using SharpMUSH.Client.Components
-@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Slug</PageTitle>
+<PageTitle>@Slug — Wiki — SharpMUSH</PageTitle>
 
-@* Key forces a fresh WikiView (and page load) when navigating wiki-link to wiki-link. *@
+@* Article chrome (back link, category kicker, title, meta, TOC) lives in WikiDisplay. *@
 <WikiView @key="@($"{Ns}:{Category}:{Slug}")" Slug="@Slug" Namespace="@Ns" Category="@Category" Mode="WikiView.WikiMode.View" />
 
 @code {
-    [Parameter]
-    public required string Slug { get; set; }
-
-    /// <summary>Namespace segment: /wiki/{ns}/{category}/{slug} (e.g. "main", "help").</summary>
-    [Parameter]
-    public required string Ns { get; set; }
-
-    /// <summary>Category segment — part of the page's identity.</summary>
-    [Parameter]
-    public required string Category { get; set; }
+    [Parameter] public required string Slug { get; set; }
+    [Parameter] public required string Ns { get; set; }
+    [Parameter] public required string Category { get; set; }
 }

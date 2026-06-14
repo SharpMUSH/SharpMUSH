@@ -1,16 +1,176 @@
 @page "/login"
+@using SharpMUSH.Client.Services
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
+@inject AccountAuthService AccountAuth
+@inject ITerminalService Terminal
 
-<PageTitle>Log In — SharpMUSH</PageTitle>
+<PageTitle>Sign In — SharpMUSH</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="pa-4">
-    <MudText Typo="Typo.h4" Class="mb-4">Log In</MudText>
-    <MudText Color="Color.Secondary" Class="mb-4">
-        Use the connection panel to log in with your character credentials.
-        Account login is available from the <MudLink Href="/account">account page</MudLink>.
-    </MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick='() => Nav.NavigateTo("/")'>
-        Go to Home
-    </MudButton>
-</MudContainer>
+<div style="min-height:100vh;display:flex;align-items:stretch;background:var(--bg);">
+    <MudGrid Spacing="0" Style="width:100%;margin:0;">
+
+        @* ── Left hero column ── *@
+        <MudItem xs="12" sm="7" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);background:linear-gradient(135deg,#101113 0%,#16181b 100%);position:relative;overflow:hidden;">
+            <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%, rgba(var(--glow),0.08) 0%, transparent 60%);pointer-events:none;"></div>
+            <div style="max-width:420px;position:relative;z-index:1;">
+                <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;">
+                    <img src="assets/Logo.svg" alt="SharpMUSH" style="height:48px;opacity:0.95;" />
+                    <div>
+                        <MudText Typo="Typo.h4" Style="font-weight:700;line-height:1.15;">SharpMUSH</MudText>
+                        <MudText Style="font-size:13px;color:var(--text-dim);">A Modern MUSH Server</MudText>
+                    </div>
+                </div>
+                <MudText Typo="Typo.h5" Style="font-weight:600;margin-bottom:12px;line-height:1.3;">
+                    A living world awaits.
+                </MudText>
+                <MudText Style="color:var(--text-dim);line-height:1.65;margin-bottom:24px;">
+                    A text-based collaborative roleplay server built on the PennMUSH tradition —
+                    reimagined with modern infrastructure and an open-source heart.
+                </MudText>
+                <div style="display:flex;gap:20px;">
+                    <div style="text-align:center;">
+                        <MudText Style="font-size:22px;font-weight:700;color:var(--accent);">—</MudText>
+                        <MudText Style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;">Players</MudText>
+                    </div>
+                    <div style="text-align:center;">
+                        <MudText Style="font-size:22px;font-weight:700;color:var(--accent);">—</MudText>
+                        <MudText Style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;">Scenes</MudText>
+                    </div>
+                    <div style="text-align:center;">
+                        <MudText Style="font-size:22px;font-weight:700;color:var(--accent);">—</MudText>
+                        <MudText Style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;">Wiki Pages</MudText>
+                    </div>
+                </div>
+            </div>
+        </MudItem>
+
+        @* ── Right auth column ── *@
+        <MudItem xs="12" sm="5" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);">
+            <MudPaper Elevation="4" Style="width:100%;max-width:380px;padding:32px;border-radius:var(--radius-lg);background:var(--surface);border:1px solid var(--border);">
+
+                @* Toggle: Sign In / Register *@
+                <MudTabs @bind-ActivePanelIndex="_tabIndex" Elevation="0" Rounded="true" Centered="true" Class="mb-5">
+                    <MudTabPanel Text="Sign In">
+                        <div class="pa-0 pt-4">
+                            <MudTextField @bind-Value="_loginIdentifier" Label="Username or email"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
+                                          Disabled="_busy" OnKeyDown="OnKeyDown" />
+                            <MudTextField @bind-Value="_loginPassword" Label="Password"
+                                          InputType="InputType.Password"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                                          Disabled="_busy" OnKeyDown="OnKeyDown" />
+
+                            @if (_error is not null)
+                            {
+                                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@_error</MudAlert>
+                            }
+
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                                       Disabled="_busy" OnClick="LoginAsync"
+                                       Style="font-weight:600;font-size:15px;height:44px;">
+                                @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                                Connect
+                            </MudButton>
+                        </div>
+                    </MudTabPanel>
+
+                    <MudTabPanel Text="Register">
+                        <div class="pa-0 pt-4">
+                            <MudTextField @bind-Value="_regUsername" Label="Username"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
+                                          Disabled="_busy" />
+                            <MudTextField @bind-Value="_regEmail" Label="Email (optional)"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
+                                          Disabled="_busy" />
+                            <MudTextField @bind-Value="_regPassword" Label="Password"
+                                          InputType="InputType.Password"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                                          Disabled="_busy" />
+
+                            @if (_error is not null)
+                            {
+                                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@_error</MudAlert>
+                            }
+
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                                       Disabled="_busy" OnClick="RegisterAsync"
+                                       Style="font-weight:600;font-size:15px;height:44px;">
+                                @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                                Create Account
+                            </MudButton>
+                        </div>
+                    </MudTabPanel>
+                </MudTabs>
+
+                <MudDivider Class="my-3" />
+                <MudText Align="Align.Center" Style="font-size:13px;color:var(--text-faint);">
+                    Or connect directly via the
+                    <MudLink Href="/play" Style="color:var(--accent);">terminal</MudLink>
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</div>
+
+@code {
+    private int _tabIndex = 0;
+    private bool _busy;
+    private string? _error;
+
+    private string _loginIdentifier = string.Empty;
+    private string _loginPassword = string.Empty;
+
+    private string _regUsername = string.Empty;
+    private string _regEmail = string.Empty;
+    private string _regPassword = string.Empty;
+
+    private async Task LoginAsync()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_loginIdentifier) || string.IsNullOrWhiteSpace(_loginPassword))
+        {
+            _error = "Please enter your credentials.";
+            return;
+        }
+        _busy = true;
+        StateHasChanged();
+        var (success, error, _) = await AccountAuth.LoginAsync(_loginIdentifier, _loginPassword);
+        _busy = false;
+        if (success)
+            Nav.NavigateTo("/");
+        else
+            _error = error ?? "Login failed.";
+        StateHasChanged();
+    }
+
+    private async Task RegisterAsync()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_regUsername) || string.IsNullOrWhiteSpace(_regPassword))
+        {
+            _error = "Username and password are required.";
+            return;
+        }
+        _busy = true;
+        StateHasChanged();
+        var (success, error, _) = await AccountAuth.RegisterAsync(_regUsername, _regEmail, _regPassword);
+        _busy = false;
+        if (success)
+            Nav.NavigateTo("/");
+        else
+            _error = error ?? "Registration failed.";
+        StateHasChanged();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await LoginAsync();
+    }
+}

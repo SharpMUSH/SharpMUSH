@@ -114,6 +114,7 @@ public class WikiDisplayTests
 		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
+		authContext.SetPolicies("wiki.create"); // the Create-page block is gated on wiki.create
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
@@ -145,6 +146,7 @@ public class WikiDisplayTests
 		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
+		authContext.SetPolicies("wiki.edit"); // the Edit button is gated on wiki.edit
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
@@ -228,8 +230,8 @@ public class WikiDisplayTests
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
 
-		// Assert - Hero style should have different styling (background:inherit)
+		// Assert - the home slug renders in hero mode (centered, no article chrome)
 		var markup = cut.Markup;
-		await Assert.That(markup).Contains("background:inherit");
+		await Assert.That(markup).Contains("WikiContent--hero");
 	}
 }

@@ -94,7 +94,9 @@ public partial class MemgraphDatabase
 "CREATE INDEX ON :SysManagedAttribute(packageId)",
 "CREATE INDEX ON :SysManagedAttribute(objid)",
 "CREATE INDEX ON :SysRemote(name)",
-"CREATE INDEX ON :SysPackageRevision(packageId)"
+"CREATE INDEX ON :SysPackageRevision(packageId)",
+// Portal RBAC system data — custom roles and account→role assignments.
+"CREATE INDEX ON :SysRole(slug)"
 };
 
 			// DDL (CREATE INDEX) must run as auto-commit in Memgraph — explicit/managed

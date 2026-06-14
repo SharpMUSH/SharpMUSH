@@ -1,89 +1,83 @@
 @page "/admin/config/import"
+@layout ConfigLayout
+@attribute [Authorize(Policy = "config.admin")]
 @using SharpMUSH.Client.Services
 @inject AdminConfigService AdminConfigService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
 
-<div class="pa-4">
-	<MudText Typo="Typo.h4" GutterBottom="true">@Loc["ImportConfiguration"]</MudText>
-	<MudText Typo="Typo.body1" Class="mb-4">
-		@Loc["ImportConfigDescription"]
-	</MudText>
+<div class="config-section-page">
+	<div class="config-section-header">
+		<div>
+			<div class="config-kicker">Admin · server settings</div>
+			<h1 class="config-title">@Loc["ImportConfiguration"]</h1>
+			<p class="config-desc">@Loc["ImportConfigDescription"]</p>
+		</div>
+	</div>
 
-	<MudPaper Class="pa-4">
-		<MudCard Outlined="true" Style="min-height: 200px; border: 2px dashed #ccc;">
-        <MudCardContent>
-            <MudFileUpload T="IBrowserFile"
-                            Accept=".cnf,.conf,.txt"
-                            FilesChanged="OnFileSelected"
-                            MaximumFileCount="1"
-                            MaxFileSize="1048576" />
-				<div class="d-flex flex-column align-center justify-center" style="min-height: 150px;">
-					<MudIcon Icon="Icons.Material.Filled.CloudUpload" Size="Size.Large" />
-					<MudText Typo="Typo.h6">@Loc["DropFilesOrClick"]</MudText>
-					<MudText Typo="Typo.body2" Class="mt-2">
-						@Loc["SupportedFormatsConfig"]
-					</MudText>
-				</div>
-			</MudCardContent>
-		</MudCard>
-	</MudPaper>
+	<div class="config-field-card config-dropzone">
+		<MudFileUpload T="IBrowserFile"
+		               Accept=".cnf,.conf,.txt"
+		               FilesChanged="OnFileSelected"
+		               MaximumFileCount="1"
+		               MaxFileSize="1048576" />
+		<div class="config-dropzone-inner">
+			<MudIcon Icon="Icons.Material.Filled.CloudUpload" Size="Size.Large" />
+			<div class="config-dropzone-title">@Loc["DropFilesOrClick"]</div>
+			<div class="config-dropzone-sub">@Loc["SupportedFormatsConfig"]</div>
+		</div>
+	</div>
 
 	@if (_selectedFile != null)
 	{
-		<MudPaper Class="pa-4 mt-4">
-			<MudText Typo="Typo.h6" GutterBottom="true">@Loc["SelectedFile"]</MudText>
-			<MudStack Row="true" Spacing="2" Style="align-items: center;">
-				<MudIcon Icon="Icons.Material.Filled.Description" />
-				<MudText>@_selectedFile.Name</MudText>
-				<MudText Typo="Typo.caption">(@($"{_selectedFile.Size / 1024.0:F1}") KB)</MudText>
-			</MudStack>
+		<div class="config-field-card config-pad mt-4">
+			<div class="config-group-title">@Loc["SelectedFile"]</div>
+			<div class="config-file-row">
+				<MudIcon Icon="Icons.Material.Filled.Description" Style="font-size:18px;" />
+				<span class="config-list-name">@_selectedFile.Name</span>
+				<span class="config-file-size">(@($"{_selectedFile.Size / 1024.0:F1}") KB)</span>
+			</div>
 
 			@if (!string.IsNullOrEmpty(_fileContent))
 			{
-				<MudExpansionPanels Class="mt-4">
+				<MudExpansionPanels Class="config-preview mt-4">
 					<MudExpansionPanel MaxHeight="400">
 						<TitleContent>
-							<div style="display: flex; align-items: center;">
-								<MudIcon Icon="Icons.Material.Filled.Visibility" class="mr-3" />
-								<MudText>@Loc["PreviewFileContent"]</MudText>
+							<div style="display: flex; align-items: center; gap: 8px;">
+								<MudIcon Icon="Icons.Material.Filled.Visibility" Style="font-size:18px;" />
+								<span>@Loc["PreviewFileContent"]</span>
 							</div>
 						</TitleContent>
 						<ChildContent>
-							<MudTextField @bind-Value="_fileContent" 
-							              Lines="15" 
-							              Variant="Variant.Outlined" 
-							              ReadOnly="true" 
-							              Class="mono-font" />
+							<textarea class="config-input config-preview-text" rows="15" readonly>@_fileContent</textarea>
 						</ChildContent>
 					</MudExpansionPanel>
 				</MudExpansionPanels>
 			}
 
-			<MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-4">
-				<MudButton StartIcon="Icons.Material.Filled.Clear" 
-				           OnClick="ClearSelection">
+			<div class="config-actions mt-4">
+				<button type="button" class="config-ghost-btn" @onclick="ClearSelection">
+					<MudIcon Icon="Icons.Material.Filled.Clear" Style="font-size:16px;" />
 					@Loc["ClearSelection"]
-				</MudButton>
-				
-				<MudButton StartIcon="Icons.Material.Filled.Upload" 
-				           Color="Color.Primary" 
-				           Variant="Variant.Filled"
-				           OnClick="ImportConfiguration"
-				           Disabled="_isImporting">
+				</button>
+
+				<button type="button" class="config-primary-btn"
+				        @onclick="ImportConfiguration"
+				        disabled="@_isImporting">
 					@if (_isImporting)
 					{
-						<MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-						<MudText Class="ms-2">@Loc["Importing"]</MudText>
+						<MudProgressCircular Size="Size.Small" Indeterminate="true" />
+						<span>@Loc["Importing"]</span>
 					}
 					else
 					{
-						<MudText>@Loc["ImportConfiguration"]</MudText>
+						<MudIcon Icon="Icons.Material.Filled.Upload" Style="font-size:16px;" />
+						<span>@Loc["ImportConfiguration"]</span>
 					}
-				</MudButton>
-			</MudStack>
-		</MudPaper>
+				</button>
+			</div>
+		</div>
 	}
 </div>
 
@@ -146,7 +140,188 @@
 }
 
 <style>
-	.mono-font {
-		font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+	.config-section-header {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 16px;
+		margin-bottom: 20px;
+	}
+
+	.config-kicker {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: var(--accent);
+		margin-bottom: 6px;
+	}
+
+	.config-title {
+		margin: 0;
+		font-family: var(--font-display);
+		font-size: 26px;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		color: var(--text);
+	}
+
+	.config-desc {
+		margin: 6px 0 0;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		color: var(--text-dim);
+	}
+
+	.config-group-title {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--text);
+		margin: 0 0 8px 2px;
+	}
+
+	.config-field-card {
+		background: var(--surface);
+		border: 1px solid var(--border-soft);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow);
+		overflow: hidden;
+	}
+
+	.config-pad {
+		padding: 18px 22px;
+	}
+
+	.config-dropzone {
+		border: 2px dashed var(--border);
+		box-shadow: none;
+		padding: 18px 22px;
+		text-align: center;
+	}
+
+	.config-dropzone-inner {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		min-height: 130px;
+		color: var(--text-dim);
+	}
+
+	.config-dropzone-title {
+		font-family: var(--font-ui);
+		font-size: 15px;
+		font-weight: 600;
+		color: var(--text);
+	}
+
+	.config-dropzone-sub {
+		font-family: var(--font-ui);
+		font-size: 12.5px;
+		color: var(--text-faint);
+	}
+
+	.config-file-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		color: var(--text-dim);
+	}
+
+	.config-list-name {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--text);
+	}
+
+	.config-file-size {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--text-faint);
+	}
+
+	.config-input {
+		width: 100%;
+		padding: 9px 12px;
+		background: var(--surface-3);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		color: var(--text);
+		font-family: var(--font-mono);
+		font-size: 13px;
+		outline: none;
+		transition: border-color 0.12s;
+	}
+
+	.config-input:focus {
+		border-color: var(--accent);
+	}
+
+	.config-preview-text {
+		resize: vertical;
+		line-height: 1.5;
+	}
+
+	.config-actions {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.config-primary-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		flex-shrink: 0;
+		padding: 9px 16px;
+		border-radius: var(--radius);
+		border: none;
+		background: var(--accent);
+		color: var(--accent-on);
+		cursor: pointer;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 600;
+		transition: opacity 0.12s;
+	}
+
+	.config-primary-btn:hover:not(:disabled) {
+		opacity: 0.9;
+	}
+
+	.config-primary-btn:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.config-ghost-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 9px 16px;
+		border-radius: var(--radius);
+		border: 1px solid var(--border);
+		background: var(--surface-2);
+		color: var(--text-dim);
+		cursor: pointer;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 600;
+		transition: color 0.12s, border-color 0.12s;
+	}
+
+	.config-ghost-btn:hover {
+		color: var(--text);
+		border-color: rgba(var(--glow), 0.4);
+	}
+
+	.config-preview ::deep .mud-expand-panel {
+		background: var(--surface-2);
+		border: 1px solid var(--border-soft);
+		border-radius: var(--radius);
 	}
 </style>

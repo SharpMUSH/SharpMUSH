@@ -4,135 +4,109 @@ using SharpMUSH.Client.Layout;
 namespace SharpMUSH.Tests.Client.Components;
 
 /// <summary>
-/// Tests for the NavMenu component to verify navigation menu behavior.
-/// NavMenu defaults to collapsed (icon-only) mode; expanded mode is opt-in
-/// via <c>IsCollapsed="false"</c>.
+/// Tests for the redesigned (Phosphor) NavMenu sidebar. It defaults to collapsed (icon-only);
+/// expanded mode is opt-in via <c>IsCollapsed="false"</c>. Core links always render; admin
+/// destinations are permission-gated and only appear for an authorized user.
 /// </summary>
 public class NavMenuTests : MudBlazorTestContext
 {
-	private IRenderedComponent<NavMenu> RenderExpanded() =>
-		Render<NavMenu>(parameters => parameters.Add(p => p.IsCollapsed, false));
+	private IRenderedComponent<NavMenu> RenderCollapsed()
+	{
+		this.AddAuthorization(); // AuthorizeView requires an authentication state; unauthenticated by default
+		return Render<NavMenu>();
+	}
+
+	private IRenderedComponent<NavMenu> RenderExpanded()
+	{
+		this.AddAuthorization();
+		return Render<NavMenu>(parameters => parameters.Add(p => p.IsCollapsed, false));
+	}
 
 	// ── Default (collapsed) mode ─────────────────────────────────────────────
 
 	[Test]
-	public async Task NavMenu_Default_IsCollapsed_RendersIconOnlyLinks()
+	public async Task Collapsed_RendersCoreLinksWithoutText()
 	{
-		// Arrange & Act — no parameters: collapsed by default
-		var cut = Render<NavMenu>();
+		var cut = RenderCollapsed();
 
-		// Assert - Core links are present but render without text labels
-		var homeLink = cut.Find("a[href='/']");
-		var softcodeLink = cut.Find("a[href='/softcode']");
-		var accountLink = cut.Find("a[href='/account']");
-
-		await Assert.That(homeLink.TextContent.Trim()).IsEmpty();
-		await Assert.That(softcodeLink.TextContent.Trim()).IsEmpty();
-		await Assert.That(accountLink.TextContent.Trim()).IsEmpty();
+		// Core links are present but render as icons only (no text label) when collapsed.
+		// (Scope the Home link to the nav list — the logo also points at "/".)
+		await Assert.That(cut.Find("a.phosphor-nav-link[href='/']").TextContent.Trim()).IsEmpty();
+		await Assert.That(cut.Find("a[href='/softcode']").TextContent.Trim()).IsEmpty();
 	}
 
 	[Test]
-	public async Task NavMenu_Default_IsCollapsed_ShowsAdminLinksAsIconsWithoutGroup()
+	public async Task Collapsed_HidesBrandTitle()
 	{
-		// Arrange & Act
-		var cut = Render<NavMenu>();
+		var cut = RenderCollapsed();
 
-		// Assert - Collapsed mode renders the admin destinations as icon-only links
-		// (feature-equivalent with the expanded group) but without text labels.
-		var configLink = cut.Find("a[href='/admin/config']");
-		await Assert.That(configLink.TextContent.Trim()).IsEmpty();
-
-		// Every admin destination remains reachable when collapsed (the default mode).
-		await Assert.That(cut.FindAll("a[href='/admin/profiles']").Count).IsEqualTo(1);
-		await Assert.That(cut.FindAll("a[href='/admin/suggestions']").Count).IsEqualTo(1);
-		await Assert.That(cut.FindAll("a[href='/security']").Count).IsEqualTo(1);
-
-		// The expandable group header (h6 AdminPanel title) is not rendered when collapsed.
-		await Assert.That(cut.FindAll("h6").Count).IsEqualTo(0);
-	}
-
-	[Test]
-	public async Task NavMenu_Default_IsCollapsed_HidesAppTitle()
-	{
-		// Arrange & Act
-		var cut = Render<NavMenu>();
-
-		// Assert - The header block (AppTitle / AdminPanel) only renders expanded
-		await Assert.That(cut.FindAll("h6").Count).IsEqualTo(0);
+		// The brand/title block in the logo only renders when expanded.
+		await Assert.That(cut.FindAll(".phosphor-brand").Count).IsEqualTo(0);
 	}
 
 	// ── Expanded mode ────────────────────────────────────────────────────────
 
 	[Test]
-	public async Task NavMenu_Expanded_RendersAllNavigationLinks()
+	public async Task Expanded_RendersCoreNavigationLinks()
 	{
-		// Arrange & Act
 		var cut = RenderExpanded();
 
-		// Assert - Verify all expected navigation links are present
-		var homeLink = cut.Find("a[href='/']");
-		var softcodeLink = cut.Find("a[href='/softcode']");
-		var accountLink = cut.Find("a[href='/account']");
-
-		await Assert.That(homeLink).IsNotNull();
-		await Assert.That(softcodeLink).IsNotNull();
-		await Assert.That(accountLink).IsNotNull();
+		// The always-visible (ungated, non-character-scoped) destinations and the profile card.
+		// (The Home nav link is distinct from the logo, which also links to "/".)
+		await Assert.That(cut.FindAll("a.phosphor-nav-link[href='/']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/scenes']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/wiki']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/characters']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/softcode']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/help']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/account']").Count).IsEqualTo(1);
 	}
 
 	[Test]
-	public async Task NavMenu_Expanded_HomeLinkText_IsCorrect()
+	public async Task Expanded_HomeLinkText_IsCorrect()
 	{
-		// Arrange & Act
 		var cut = RenderExpanded();
-
-		// Assert
-		var homeLink = cut.Find("a[href='/']");
-		await Assert.That(homeLink.TextContent).Contains("Home");
+		await Assert.That(cut.Find("a.phosphor-nav-link[href='/']").TextContent).Contains("Home");
 	}
 
 	[Test]
-	public async Task NavMenu_Expanded_SoftcodeLinkText_IsCorrect()
+	public async Task Expanded_SoftcodeLinkText_IsCorrect()
 	{
-		// Arrange & Act
 		var cut = RenderExpanded();
-
-		// Assert
-		var softcodeLink = cut.Find("a[href='/softcode']");
-		await Assert.That(softcodeLink.TextContent).Contains("Softcode");
+		await Assert.That(cut.Find("a[href='/softcode']").TextContent).Contains("Softcode");
 	}
 
 	[Test]
-	public async Task NavMenu_Expanded_AccountLinkText_IsCorrect()
+	public async Task Expanded_ShowsBrandTitle()
 	{
-		// Arrange & Act
+		var cut = RenderExpanded();
+		await Assert.That(cut.FindAll(".phosphor-brand").Count).IsEqualTo(1);
+	}
+
+	// ── Admin links are permission-gated ─────────────────────────────────────
+
+	[Test]
+	public async Task AdminLinks_Hidden_WhenNotAuthorized()
+	{
+		// RenderExpanded adds an (unauthenticated) authorization context, so policy-gated
+		// admin destinations must not render.
 		var cut = RenderExpanded();
 
-		// Assert
-		var accountLink = cut.Find("a[href='/account']");
-		await Assert.That(accountLink.TextContent).Contains("My Account");
+		await Assert.That(cut.FindAll("a[href='/admin/config']").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("a[href='/admin/roles']").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("a[href='/admin/wiki']").Count).IsEqualTo(0);
 	}
 
 	[Test]
-	public async Task NavMenu_Expanded_SettingsGroupExists()
+	public async Task ConfigLink_Shown_WhenAuthorizedWithConfigAdmin()
 	{
-		// Arrange & Act
-		var cut = RenderExpanded();
+		var auth = this.AddAuthorization();
+		auth.SetAuthorized("admin");
+		auth.SetPolicies("config.admin");
 
-		// Assert - Verify Settings group with Config link exists
+		var cut = Render<NavMenu>(parameters => parameters.Add(p => p.IsCollapsed, false));
+
 		var configLink = cut.Find("a[href='/admin/config']");
-		await Assert.That(configLink).IsNotNull();
 		await Assert.That(configLink.TextContent).Contains("Config");
-	}
-
-	[Test]
-	public async Task NavMenu_Expanded_SecurityLinkExists()
-	{
-		// Arrange & Act
-		var cut = RenderExpanded();
-
-		// Assert
-		var securityLink = cut.Find("a[href='/security']");
-		await Assert.That(securityLink).IsNotNull();
-		await Assert.That(securityLink.TextContent).Contains("Security");
 	}
 }

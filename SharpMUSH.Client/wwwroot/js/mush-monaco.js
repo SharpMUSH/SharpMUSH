@@ -430,6 +430,25 @@
         },
     };
 
+    // ── Wiki editor: wrap the current textarea selection with markdown markup ──
+    // Mirrors the prototype WikiEditScreen toolbar. Dispatches an 'input' event so
+    // Blazor's @oninput binding picks up the new value, then restores the selection.
+    window.SharpMUSH.Wiki = {
+        wrap: function (id, before, after, block) {
+            var ta = document.getElementById(id);
+            if (!ta) return;
+            var s = ta.selectionStart, e = ta.selectionEnd;
+            var val = ta.value;
+            var sel = val.slice(s, e) || (block ? '' : 'text');
+            var pre = (block && s > 0 && val[s - 1] !== '\n') ? '\n' : '';
+            ta.value = val.slice(0, s) + pre + before + sel + after + val.slice(e);
+            ta.dispatchEvent(new Event('input', { bubbles: true }));
+            var pos = s + pre.length + before.length;
+            ta.focus();
+            ta.setSelectionRange(pos, pos + sel.length);
+        },
+    };
+
     // ── Help Drawer bridge ─────────────────────────────────────────────────────
     // Called by HelpDrawer.razor via JS interop to register a link interceptor on
     // the help content container. Also exposes window.SharpMUSH.Help.show(name)

@@ -4,65 +4,407 @@
 @using SharpMUSH.Library.Authorization
 @using SharpMUSH.Library.Models.Portal.Applications
 @using SharpMUSH.Library.Models.Portal.Widgets
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = nameof(PortalRole.Wizard))]
+@attribute [Authorize(Policy = "applications.admin")]
 @inject ApplicationRegistryClient Registry
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>Dynamic Applications</PageTitle>
+<PageTitle>Applications — Admin — SharpMUSH</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    <div class="d-flex justify-space-between align-center mb-4">
+<div class="appadmin">
+    @* ── Header ── *@
+    <div class="appadmin-head">
         <div>
-            <MudText Typo="Typo.h4">Dynamic Applications</MudText>
-            <MudText Typo="Typo.body2" Class="mud-text-secondary">
-                Link softcode-defined forms and views into the portal as pages or widgets (Area 21).
-            </MudText>
+            <div class="appadmin-kicker">Build · Custom widgets</div>
+            <h1 class="appadmin-title">Applications</h1>
         </div>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="@(() => Edit(null))">Register application</MudButton>
+        <div class="appadmin-actions">
+            <a class="aa-btn" href="/softcode">
+                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:14px;" /> Schema registry
+            </a>
+            <button type="button" class="aa-btn aa-btn--primary" @onclick="@(() => Edit(null))">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:14px;" /> New application
+            </button>
+        </div>
+    </div>
+
+    @* ── Stat tiles ── *@
+    <div class="appadmin-stats">
+        @foreach (var tile in new[]
+        {
+            (_apps.Count.ToString(),                                              "Applications", "registered",       Icons.Material.Filled.Apps,        "var(--accent)"),
+            (_apps.Count(a => a.KindEnum == ApplicationKind.Page).ToString(),     "Pages",        "full-screen apps",  Icons.Material.Filled.WebAsset,    "#6cde9a"),
+            (_apps.Count(a => a.KindEnum == ApplicationKind.Widget).ToString(),   "Widgets",      "dashboard zones",   Icons.Material.Filled.Dashboard,   "#5aa9ff"),
+            (_apps.Count(a => !string.IsNullOrEmpty(a.SchemaUrl)).ToString(),     "Schemas",      "softcode-defined",  Icons.Material.Filled.DataObject,  "#b39cff"),
+        })
+        {
+            var (val, label, sub, icon, color) = tile;
+            <div class="aa-stat">
+                <MudIcon Icon="@icon" Style="@($"font-size:22px;color:{color};")" />
+                <div>
+                    <div class="aa-stat-val" style="@($"color:{color};")">@(_loading ? "—" : val)</div>
+                    <div class="aa-stat-label">@label</div>
+                    <div class="aa-stat-sub">@sub</div>
+                </div>
+            </div>
+        }
     </div>
 
     @if (_loading)
     {
-        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
-    }
-    else if (_apps.Count == 0)
-    {
-        <MudAlert Severity="Severity.Info">No applications registered yet.</MudAlert>
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Style="height:2px;" />
     }
     else
     {
-        <MudTable Items="_apps" Hover="true" Dense="true">
-            <HeaderContent>
-                <MudTh>Slug</MudTh>
-                <MudTh>Name</MudTh>
-                <MudTh>Kind</MudTh>
-                <MudTh>Schema URL</MudTh>
-                <MudTh>Min role</MudTh>
-                <MudTh>Order</MudTh>
-                <MudTh></MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Slug"><code>@context.Slug</code></MudTd>
-                <MudTd DataLabel="Name">@context.DisplayName</MudTd>
-                <MudTd DataLabel="Kind">@context.Kind</MudTd>
-                <MudTd DataLabel="Schema URL"><code>@context.SchemaUrl</code></MudTd>
-                <MudTd DataLabel="Min role">@context.MinimumRole</MudTd>
-                <MudTd DataLabel="Order">@context.Order</MudTd>
-                <MudTd>
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => Edit(context))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                                   OnClick="@(() => Delete(context))" />
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
+        <div class="appadmin-grid">
+            @* ── List (master) ── *@
+            <div class="appadmin-list">
+                <div class="aa-search">
+                    <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:14px;color:var(--text-faint);" />
+                    <input value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)"
+                           placeholder="Search apps or schemas…" />
+                </div>
+
+                @if (Filtered.Count == 0)
+                {
+                    <div class="aa-empty-list">No applications match.</div>
+                }
+                @foreach (var app in Filtered)
+                {
+                    var a = app;
+                    var on = _selected?.Slug == a.Slug;
+                    <button type="button" class="aa-card @(on ? "aa-card--on" : "")" @onclick="@(() => _selected = a)">
+                        <div class="aa-card-top">
+                            <span class="aa-card-icon">
+                                <MudIcon Icon="@(a.Icon ?? Icons.Material.Filled.Apps)" Style="font-size:17px;" />
+                            </span>
+                            <div style="flex:1;min-width:0;">
+                                <div class="aa-card-name">@a.DisplayName</div>
+                                <div class="aa-card-sub">/apps/@a.Slug</div>
+                            </div>
+                            <span class="aa-kind" style="@($"background:{KindBackground(a.Kind)};color:{KindColor(a.Kind)};")">@a.Kind</span>
+                        </div>
+                    </button>
+                }
+            </div>
+
+            @* ── Detail ── *@
+            <div class="appadmin-detail">
+                @if (_selected is null)
+                {
+                    <div class="aa-empty-detail">
+                        <MudIcon Icon="@Icons.Material.Filled.Apps" Style="font-size:40px;color:var(--text-faint);opacity:0.4;" />
+                        <span>Select an application, or register a new one.</span>
+                        <button type="button" class="aa-btn aa-btn--primary" @onclick="@(() => Edit(null))">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:14px;" /> Register application
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="aa-detail-head">
+                        <span class="aa-detail-icon">
+                            <MudIcon Icon="@(_selected.Icon ?? Icons.Material.Filled.Apps)" Style="font-size:22px;" />
+                        </span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                <h2 class="aa-detail-name">@_selected.DisplayName</h2>
+                                <span class="aa-kind" style="@($"background:{KindBackground(_selected.Kind)};color:{KindColor(_selected.Kind)};")">@_selected.Kind</span>
+                                <span class="aa-role">@_selected.MinimumRole</span>
+                            </div>
+                            <div class="aa-detail-slug">/apps/@_selected.Slug</div>
+                        </div>
+                        <div class="aa-detail-headbtns">
+                            <button type="button" class="aa-icon-btn" title="Edit" @onclick="@(() => Edit(_selected))">
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:16px;" />
+                            </button>
+                            <button type="button" class="aa-icon-btn aa-icon-btn--danger" title="Remove" @onclick="@(() => Delete(_selected))">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:16px;" />
+                            </button>
+                        </div>
+                    </div>
+
+                    @* Meta grid *@
+                    <div class="aa-meta-grid">
+                        @foreach (var field in new (string Label, string Value)[]
+                        {
+                            ("Schema URL",    _selected.SchemaUrl),
+                            ("Data URL",      _selected.DataUrl ?? "—"),
+                            ("Submit Route",  _selected.SubmitRoute ?? "—"),
+                            ("Nav Placement", _selected.NavPlacement ?? "—"),
+                            ("Display Order", _selected.Order.ToString()),
+                            ("Min Role",      _selected.MinimumRole),
+                        })
+                        {
+                            <div class="aa-meta">
+                                <div class="aa-meta-label">@field.Label</div>
+                                <div class="aa-meta-val">@field.Value</div>
+                            </div>
+                        }
+                    </div>
+
+                    @* Zones *@
+                    @if (_selected.ZoneEnums.Count > 0)
+                    {
+                        <div class="aa-section">
+                            <div class="aa-section-label">Allowed Zones</div>
+                            <div class="aa-chips">
+                                @foreach (var zone in _selected.ZoneEnums)
+                                {
+                                    <span class="aa-zone">@zone</span>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @* Actions *@
+                    <div class="aa-section">
+                        <div class="aa-section-label">Actions</div>
+                        <div class="aa-actions">
+                            <a class="aa-btn aa-btn--primary" href="@($"/apps/{_selected.Slug}")">
+                                <MudIcon Icon="@Icons.Material.Filled.OpenInBrowser" Style="font-size:14px;" /> Open app
+                            </a>
+                            <a class="aa-btn" href="/softcode">
+                                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:14px;" /> Edit in Softcode
+                            </a>
+                            @if (!string.IsNullOrEmpty(_selected.SchemaUrl))
+                            {
+                                <a class="aa-btn" href="@_selected.SchemaUrl" target="_blank">
+                                    <MudIcon Icon="@Icons.Material.Filled.Link" Style="font-size:14px;" /> View schema
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
     }
-</MudContainer>
+</div>
+
+<style>
+    .appadmin { padding: var(--cpad); }
+
+    .appadmin-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+    .appadmin-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .appadmin-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+    .appadmin-actions { display: flex; gap: 10px; }
+
+    .aa-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 13px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+        color: var(--text);
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.12s;
+    }
+    .aa-btn:hover { border-color: rgba(var(--glow), 0.4); }
+    .aa-btn--primary {
+        background: var(--accent);
+        color: var(--accent-on);
+        border-color: transparent;
+        font-weight: 600;
+        box-shadow: 0 0 18px rgba(var(--glow), 0.25);
+    }
+    .aa-btn--primary:hover { filter: brightness(1.08); }
+
+    .appadmin-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+    .aa-stat {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 18px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-soft);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+    }
+    .aa-stat-val { font-size: 22px; font-weight: 700; line-height: 1.1; }
+    .aa-stat-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-top: 2px;
+    }
+    .aa-stat-sub { font-family: var(--font-ui); font-size: 11px; color: var(--text-faint); }
+
+    .appadmin-grid {
+        display: grid;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 16px;
+    }
+    @@media (max-width: 820px) {
+        .appadmin-grid { grid-template-columns: 1fr; }
+    }
+
+    /* List */
+    .appadmin-list { display: flex; flex-direction: column; gap: 8px; }
+    .aa-search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        margin-bottom: 4px;
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+    .aa-search:focus-within { border-color: var(--accent); }
+    .aa-search input {
+        flex: 1; min-width: 0; padding: 9px 0; background: transparent; border: none; outline: none;
+        color: var(--text); font-family: var(--font-ui); font-size: 12.5px;
+    }
+    .aa-search input::placeholder { color: var(--text-faint); }
+    .aa-empty-list { padding: 16px; color: var(--text-faint); font-size: 13px; text-align: center; }
+
+    .aa-card {
+        text-align: left;
+        padding: 14px;
+        cursor: pointer;
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-soft);
+        transition: border-color 0.12s, box-shadow 0.12s;
+    }
+    .aa-card:hover { border-color: rgba(var(--glow), 0.3); }
+    .aa-card--on {
+        border-color: rgba(var(--glow), 0.45);
+        box-shadow: 0 0 0 1px rgba(var(--glow), 0.25);
+    }
+    .aa-card-top { display: flex; align-items: center; gap: 11px; }
+    .aa-card-icon {
+        width: 34px; height: 34px; flex-shrink: 0; border-radius: var(--radius);
+        display: grid; place-items: center;
+        background: rgba(var(--glow), 0.10); border: 1px solid rgba(var(--glow), 0.22); color: var(--accent);
+    }
+    .aa-card-name {
+        font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--text);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .aa-card-sub { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); }
+    .aa-kind {
+        font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.04em; text-transform: uppercase;
+        padding: 2px 7px; border-radius: 99px; flex-shrink: 0;
+    }
+    .aa-role {
+        font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+        padding: 2px 7px; border-radius: 99px; color: var(--text-dim);
+        background: var(--surface-2); border: 1px solid var(--border);
+    }
+
+    /* Detail */
+    .appadmin-detail {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        align-self: start;
+    }
+    .aa-empty-detail {
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+        padding: 60px 20px; color: var(--text-faint); font-family: var(--font-ui); font-size: 14px;
+    }
+    .aa-detail-head {
+        display: flex; align-items: flex-start; gap: 14px; padding: 20px 22px;
+        border-bottom: 1px solid var(--border-soft);
+    }
+    .aa-detail-icon {
+        width: 46px; height: 46px; flex-shrink: 0; border-radius: var(--radius);
+        display: grid; place-items: center;
+        background: rgba(var(--glow), 0.10); border: 1px solid rgba(var(--glow), 0.22); color: var(--accent);
+    }
+    .aa-detail-name {
+        margin: 0; font-family: var(--font-display); font-size: 19px; font-weight: 600; color: var(--text);
+    }
+    .aa-detail-slug { font-family: var(--font-mono); font-size: 11.5px; color: var(--accent); margin-top: 3px; }
+    .aa-detail-headbtns { display: flex; gap: 4px; flex-shrink: 0; }
+    .aa-icon-btn {
+        width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius);
+        border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer;
+    }
+    .aa-icon-btn:hover { color: var(--text); border-color: rgba(var(--glow), 0.4); }
+    .aa-icon-btn--danger:hover { color: #e57373; border-color: rgba(229, 115, 115, 0.5); }
+
+    .aa-meta-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        border-bottom: 1px solid var(--border-soft);
+    }
+    @@media (max-width: 620px) {
+        .aa-meta-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .aa-meta { padding: 14px 18px; border-left: 1px solid var(--border-soft); min-width: 0; }
+    .aa-meta:nth-child(3n+1) { border-left: none; }
+    .aa-meta-label {
+        font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--text-faint); margin-bottom: 6px;
+    }
+    .aa-meta-val {
+        font-family: var(--font-mono); font-size: 13px; color: var(--text);
+        word-break: break-all;
+    }
+
+    .aa-section { padding: 18px 22px; border-bottom: 1px solid var(--border-soft); }
+    .aa-section:last-child { border-bottom: none; }
+    .aa-section-label {
+        font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--text-faint); margin-bottom: 10px;
+    }
+    .aa-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .aa-zone {
+        font-family: var(--font-mono); font-size: 11px; padding: 3px 9px; border-radius: 99px;
+        color: #5aa9ff; background: rgba(90, 169, 255, 0.12); border: 1px solid rgba(90, 169, 255, 0.3);
+    }
+    .aa-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+</style>
 
 @code {
     private bool _loading = true;
+    private string _search = string.Empty;
     private List<PortalApplication> _apps = [];
+    private PortalApplication? _selected;
+
+    private List<PortalApplication> Filtered =>
+        string.IsNullOrWhiteSpace(_search)
+            ? _apps
+            : _apps.Where(a =>
+                a.DisplayName.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || a.Slug.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || (a.SchemaUrl ?? string.Empty).Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -71,6 +413,9 @@
         _loading = true;
         _apps = (await Registry.ListAsync()).ToList();
         _loading = false;
+        _selected = _selected is not null
+            ? _apps.FirstOrDefault(a => a.Slug == _selected.Slug) ?? _apps.FirstOrDefault()
+            : _apps.FirstOrDefault();
     }
 
     private async Task Edit(PortalApplication? existing)
@@ -83,9 +428,7 @@
             existing is null ? "Register application" : $"Edit {existing.Slug}", parameters);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
-        {
             await LoadAsync();
-        }
     }
 
     private async Task Delete(PortalApplication app)
@@ -100,6 +443,7 @@
             if (await Registry.DeleteAsync(app.Slug))
             {
                 Snackbar.Add($"Removed {app.Slug}.", Severity.Success);
+                if (_selected?.Slug == app.Slug) _selected = null;
                 await LoadAsync();
             }
             else
@@ -108,4 +452,20 @@
             }
         }
     }
+
+    private static string KindBackground(string kind) => kind.ToUpperInvariant() switch
+    {
+        "PAGE"   => "rgba(0,200,100,0.12)",
+        "WIDGET" => "rgba(90,169,255,0.12)",
+        "FORM"   => "rgba(179,156,255,0.12)",
+        _        => "rgba(255,255,255,0.06)",
+    };
+
+    private static string KindColor(string kind) => kind.ToUpperInvariant() switch
+    {
+        "PAGE"   => "#6cde9a",
+        "WIDGET" => "#5aa9ff",
+        "FORM"   => "#b39cff",
+        _        => "var(--text-dim)",
+    };
 }

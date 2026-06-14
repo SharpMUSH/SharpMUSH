@@ -1,4 +1,5 @@
 @page "/admin/config/{category}"
+@attribute [Authorize(Policy = "config.admin")]
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Library.API
@@ -11,24 +12,24 @@
 <PageTitle>@CategoryTitle - Configuration</PageTitle>
 
 <div class="config-section-page">
-    @* Header *@
+    @* Header — prototype SectionTitle: kicker + title + actions *@
     <div class="config-section-header">
-        <div class="d-flex justify-space-between align-center">
-            <div>
-                <MudText Typo="Typo.h4">@CategoryTitle</MudText>
-                <MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">
-                    @_categoryMetadata?.Description
-                </MudText>
-            </div>
-            @if (!_loading && _categoryMetadata != null)
+        <div>
+            <div class="config-kicker">Admin · server settings</div>
+            <h1 class="config-title">@CategoryTitle</h1>
+            @if (!string.IsNullOrWhiteSpace(_categoryMetadata?.Description))
             {
-                <MudTooltip Text="@Loc["ResetToDefaults"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
-                                   Color="Color.Default"
-                                   OnClick="ResetToDefaults" />
-                </MudTooltip>
+                <p class="config-desc">@_categoryMetadata!.Description</p>
             }
         </div>
+        @if (!_loading && _categoryMetadata != null)
+        {
+            <MudTooltip Text="@Loc["ResetToDefaults"]">
+                <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
+                               Color="Color.Default"
+                               OnClick="ResetToDefaults" />
+            </MudTooltip>
+        }
     </div>
 
     @* Content *@
@@ -75,45 +76,29 @@
         }
         else if (!_categoryMetadata.Groups.Any())
         {
-            @* Fallback: Render all properties without grouping if Groups aren't defined yet *@
-            <MudCard Outlined="true" Class="mb-4">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">@string.Format(Loc["SettingsLabel"], CategoryTitle)</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudGrid>
-                        @foreach (var prop in _categoryProperties.Values.OrderBy(p => p.Name))
-                        {
-                            @RenderPropertyContent(prop)
-                        }
-                    </MudGrid>
-                </MudCardContent>
-            </MudCard>
+            @* Fallback: all properties in one flat card if groups aren't defined *@
+            <div class="config-field-card">
+                @foreach (var prop in _categoryProperties.Values.OrderBy(p => p.Name))
+                {
+                    @RenderFieldRow(prop)
+                }
+            </div>
         }
         else
         {
-            @* Render groups as cards *@
+            @* One flat field card per group, with a group title above *@
             @foreach (var group in _categoryMetadata.Groups.OrderBy(g => g.Order))
             {
                 var groupProperties = GetPropertiesInGroup(group.Name).OrderBy(p => p.Order).ToList();
-                
-                <MudCard Outlined="true" Class="mb-4">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <MudText Typo="Typo.h6">@group.DisplayName</MudText>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        <MudGrid>
-                            @foreach (var prop in groupProperties)
-                            {
-                                @RenderPropertyContent(prop)
-                            }
-                        </MudGrid>
-                    </MudCardContent>
-                </MudCard>
+                if (groupProperties.Count == 0) { continue; }
+
+                <div class="config-group-title">@group.DisplayName</div>
+                <div class="config-field-card mb-5">
+                    @foreach (var prop in groupProperties)
+                    {
+                        @RenderFieldRow(prop)
+                    }
+                </div>
             }
         }
     </div>
@@ -156,29 +141,55 @@
 
 <style>
     .config-section-page {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
+        display: block;
     }
 
     .config-section-header {
-        padding: 24px 32px;
-        background: var(--mud-palette-surface);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .config-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+
+    .config-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+
+    .config-desc {
+        margin: 6px 0 0;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
     }
 
     .config-section-content {
-        flex: 1;
-        overflow-y: auto;
-        padding: 32px;
+        padding: 0;
     }
 
     .save-bar {
         position: sticky;
         bottom: 0;
-        padding: 16px 32px;
-        background: var(--mud-palette-surface);
-        border-top: 2px solid var(--mud-palette-warning);
+        margin-top: 20px;
+        padding: 14px 18px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
         z-index: 10;
     }
 
@@ -198,31 +209,307 @@
         gap: 12px;
     }
 
-    .nullable-field-wrapper {
+    /* ── Group title above each flat field card ── */
+    .config-group-title {
+        font-family: var(--font-ui);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        margin: 0 0 8px 2px;
+    }
+
+    /* ── Flat field card ── */
+    .config-field-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .config-field-row {
+        padding: 18px 22px;
+    }
+
+    .config-field-row:not(:first-child) {
+        border-top: 1px solid var(--border-soft);
+    }
+
+    .config-field-row--inline {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+    }
+
+    .config-field-label {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .config-field-name {
+        font-family: var(--font-ui);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 3px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .config-field-help {
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        color: var(--text-dim);
+    }
+
+    .config-field-key {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-faint);
+        display: block;
+        margin-top: 2px;
+    }
+
+    .config-field-error {
+        font-family: var(--font-ui);
+        font-size: 12px;
+        color: var(--mud-palette-error, #e57373);
+        margin-top: 4px;
+    }
+
+    .config-changed {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--accent);
+        background: rgba(var(--glow), 0.12);
+        border: 1px solid rgba(var(--glow), 0.3);
+        border-radius: 99px;
+        padding: 1px 7px;
+    }
+
+    .config-field-control {
+        width: 230px;
+        flex-shrink: 0;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .config-field-row--stacked .config-field-label {
+        margin-bottom: 12px;
+    }
+
+    .config-field-control--full {
+        width: 100%;
+        display: block;
+    }
+
+    /* ── Toggle pill ── */
+    .config-toggle {
+        width: 46px;
+        height: 26px;
+        border-radius: 99px;
+        border: none;
+        cursor: pointer;
         position: relative;
+        background: var(--surface-2);
+        transition: background 0.15s;
+        margin-left: auto;
+        display: block;
+        padding: 0;
     }
 
-    .config-list-field {
-        margin-bottom: 8px;
+    .config-toggle--on {
+        background: var(--accent);
     }
 
+    .config-toggle-knob {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 20px;
+        height: 20px;
+        border-radius: 99px;
+        background: #888;
+        transition: left 0.15s, background 0.15s;
+    }
+
+    .config-toggle--on .config-toggle-knob {
+        left: 23px;
+        background: var(--accent-on);
+    }
+
+    .config-toggle:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* ── Select pills ── */
+    .config-pills {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .config-pill {
+        padding: 6px 11px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-family: var(--font-ui);
+        font-size: 12px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text-dim);
+        transition: all 0.12s;
+    }
+
+    .config-pill:hover {
+        border-color: rgba(var(--glow), 0.4);
+        color: var(--text);
+    }
+
+    .config-pill--on {
+        border-color: rgba(var(--glow), 0.4);
+        background: rgba(var(--glow), 0.12);
+        color: var(--accent);
+    }
+
+    /* ── Text / numeric input ── */
+    .config-input {
+        width: 100%;
+        padding: 9px 12px;
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.12s;
+    }
+
+    .config-input:focus {
+        border-color: var(--accent);
+    }
+
+    .config-input::placeholder {
+        color: var(--text-faint);
+    }
+
+    .config-input[readonly] {
+        opacity: 0.6;
+    }
+
+    /* ── Chip row (string list + dictionary values) ── */
     .config-chip-row {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
         align-items: center;
-        min-height: 32px;
+        min-height: 30px;
         margin-bottom: 8px;
     }
 
-    .config-dict-panels {
-        margin-bottom: 4px;
+    .config-empty {
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        color: var(--text-faint);
     }
 
-    .default-chip {
-        position: absolute;
-        right: 8px;
-        top: 4px;
+    .config-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        padding: 3px 5px 3px 9px;
+        border-radius: 99px;
+        background: var(--surface-2);
+        color: var(--text-dim);
+        border: 1px solid var(--border);
+    }
+
+    .config-chip--changed {
+        border-color: rgba(var(--glow), 0.3);
+        color: var(--accent);
+        background: rgba(var(--glow), 0.10);
+    }
+
+    .config-chip-x {
+        border: none;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font-size: 15px;
+        line-height: 1;
+        padding: 0 2px;
+        opacity: 0.7;
+    }
+
+    .config-chip-x:hover {
+        opacity: 1;
+    }
+
+    /* ── Dictionary editor ── */
+    .config-dict {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .config-dict-entry {
+        background: var(--surface-3);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
+        padding: 12px;
+    }
+
+    .config-dict-entry-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .config-icon-btn {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text-dim);
+        cursor: pointer;
+    }
+
+    .config-icon-btn--danger:hover {
+        color: var(--mud-palette-error, #e57373);
+        border-color: rgba(229, 115, 115, 0.5);
+    }
+
+    .config-add-btn {
+        align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 12px;
+        border-radius: var(--radius);
+        border: 1px dashed var(--border);
+        background: transparent;
+        color: var(--text-dim);
+        cursor: pointer;
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+    }
+
+    .config-add-btn:hover {
+        border-color: rgba(var(--glow), 0.4);
+        color: var(--accent);
     }
 
     @@media (max-width: 600px) {
@@ -349,246 +636,181 @@
         }
     }
 
-    private RenderFragment RenderPropertyContent(PropertyMetadata prop) => __builder =>
+    private RenderFragment RenderFieldRow(PropertyMetadata prop) => __builder =>
     {
-        var displayName = string.IsNullOrEmpty(prop.DisplayName) || 
+        var displayName = string.IsNullOrEmpty(prop.DisplayName) ||
                          prop.DisplayName.Contains('_') ||
                          prop.DisplayName == prop.Name
             ? FormatPropertyName(prop.DisplayName ?? prop.Name)
             : prop.DisplayName;
 
         var hasError = _validationErrors.TryGetValue(prop.Path, out var errorText);
-        
         var isChanged = IsPropertyChanged(prop.Path);
-        var isNullable = !prop.Required;
-            
-        if (prop.Component == "switch")
-        {
-            <MudItem xs="12">
-                <div class="d-flex align-center">
-                    <MudSwitch T="bool"
-                               Value="@GetBoolValue(prop)"
-                               ValueChanged="@(v => UpdateValue(prop, v))"
-                               Label="@displayName"
-                               Color="@(isChanged ? Color.Warning : Color.Secondary)" />
+        var stacked = prop.Component is "stringlist" or "dictionary";
+
+        <div class="config-field-row @(stacked ? "config-field-row--stacked" : "config-field-row--inline")">
+            <div class="config-field-label">
+                <div class="config-field-name">
+                    @displayName
                     @if (isChanged)
                     {
-                        <MudTooltip Text="@($"Default: {prop.DefaultValue}")">
-                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Warning" Class="ml-2" />
-                        </MudTooltip>
+                        <span class="config-changed" title="@($"Default: {prop.DefaultValue}")">changed</span>
                     }
                 </div>
-                <MudText Typo="Typo.caption" Class="mud-text-secondary ml-12">
-                    @prop.Description
-                    @if (!string.IsNullOrEmpty(prop.Tooltip))
-                    {
-                        <MudTooltip Text="@prop.Tooltip">
-                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="ml-1" Style="vertical-align: middle; cursor: help;" />
-                        </MudTooltip>
-                    }
-                </MudText>
-            </MudItem>
-        }
-        else if (prop.Component == "numeric")
-        {
-            <MudItem xs="12" md="6">
-                @if (prop.Type == "integer")
+                @if (!string.IsNullOrEmpty(prop.Description))
                 {
-                    var minVal = GetIntMin(prop);
-                    var maxVal = GetIntMax(prop);
-                    
-                    <MudNumericField T="int?"
-                                   Value="@GetNullableIntValue(prop)"
-                                   ValueChanged="@(v => UpdateValue(prop, v))"
-                                   Label="@displayName"
-                                   Variant="Variant.Outlined"
-                                   HelperText="@GetHelperText(prop)"
-                                   Error="@hasError"
-                                   ErrorText="@errorText"
-                                   Min="@(minVal ?? int.MinValue)"
-                                   Max="@(maxVal ?? int.MaxValue)"
-                                   Clearable="@isNullable"
-                                   Adornment="@(isChanged ? Adornment.End : Adornment.None)"
-                                   AdornmentIcon="@Icons.Material.Filled.Edit"
-                                   AdornmentColor="Color.Warning" />
+                    <div class="config-field-help">@prop.Description</div>
                 }
-                else
+                <code class="config-field-key">@prop.Path</code>
+                @if (hasError)
                 {
-                    <MudNumericField T="double?"
-                                   Value="@GetNullableDoubleValue(prop)"
-                                   ValueChanged="@(v => UpdateValue(prop, v))"
-                                   Label="@displayName"
-                                   Variant="Variant.Outlined"
-                                   HelperText="@GetHelperText(prop)"
-                                   Error="@hasError"
-                                   ErrorText="@errorText"
-                                   Clearable="@isNullable"
-                                   Adornment="@(isChanged ? Adornment.End : Adornment.None)"
-                                   AdornmentIcon="@Icons.Material.Filled.Edit"
-                                   AdornmentColor="Color.Warning" />
+                    <div class="config-field-error">@errorText</div>
                 }
-            </MudItem>
-        }
-        else if (prop.Component == "stringlist")
-        {
-            var items = GetStringListValue(prop);
-            <MudItem xs="12">
-                <MudField Label="@displayName" Variant="Variant.Outlined" Class="config-list-field">
-                    @if (!string.IsNullOrEmpty(prop.Description))
-                    {
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">@prop.Description</MudText>
-                    }
+            </div>
+            <div class="config-field-control @(stacked ? "config-field-control--full" : "")">
+                @if (prop.Component == "switch")
+                {
+                    var on = GetBoolValue(prop);
+                    <button type="button" class="config-toggle @(on ? "config-toggle--on" : "")"
+                            disabled="@prop.ReadOnly"
+                            @onclick="@(() => UpdateValue(prop, !on))">
+                        <span class="config-toggle-knob"></span>
+                    </button>
+                }
+                else if (prop.Component == "select" && prop.Options is { Count: > 0 })
+                {
+                    var current = GetStringValue(prop);
+                    <div class="config-pills">
+                        @foreach (var opt in prop.Options)
+                        {
+                            var option = opt;
+                            var selected = current == option.Key;
+                            <button type="button" class="config-pill @(selected ? "config-pill--on" : "")"
+                                    @onclick="@(() => UpdateValue(prop, option.Key))">
+                                @option.Value
+                            </button>
+                        }
+                    </div>
+                }
+                else if (prop.Component == "numeric")
+                {
+                    <input class="config-input" type="number" inputmode="numeric"
+                           value="@GetNumericString(prop)"
+                           min="@(GetIntMin(prop)?.ToString())"
+                           max="@(GetIntMax(prop)?.ToString())"
+                           readonly="@prop.ReadOnly"
+                           @onchange="@(e => UpdateNumeric(prop, e.Value?.ToString()))" />
+                }
+                else if (prop.Component == "stringlist")
+                {
+                    var items = GetStringListValue(prop);
                     <div class="config-chip-row">
                         @if (items.Count == 0)
                         {
-                            <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["NoItems"]</MudText>
+                            <span class="config-empty">@Loc["NoItems"]</span>
                         }
                         @for (var i = 0; i < items.Count; i++)
                         {
                             var index = i;
-                            <MudChip T="string"
-                                     Text="@items[index]"
-                                     Size="Size.Small"
-                                     Color="@(isChanged ? Color.Warning : Color.Primary)"
-                                     Variant="Variant.Filled"
-                                     OnClose="@(() => RemoveListItemAt(prop, index))" />
+                            <span class="config-chip @(isChanged ? "config-chip--changed" : "")">
+                                @items[index]
+                                <button type="button" class="config-chip-x" title="Remove"
+                                        @onclick="@(() => RemoveListItemAt(prop, index))">×</button>
+                            </span>
                         }
                     </div>
-                    <MudTextField T="string"
-                                  Value="@GetListDraft(prop)"
-                                  ValueChanged="@(v => SetListDraft(prop, v))"
-                                  Placeholder="@Loc["AddItem"]"
-                                  Variant="Variant.Text"
-                                  Margin="Margin.Dense"
-                                  Immediate="true"
-                                  Adornment="Adornment.End"
-                                  AdornmentIcon="@Icons.Material.Filled.Add"
-                                  OnAdornmentClick="@(() => CommitListDraft(prop))"
-                                  OnKeyDown="@(e => OnListDraftKeyDown(prop, e))" />
-                </MudField>
-            </MudItem>
-        }
-        else if (prop.Component == "dictionary")
-        {
-            var entries = GetDictDraft(prop);
-            <MudItem xs="12">
-                <MudField Label="@displayName" Variant="Variant.Outlined" Class="config-list-field">
-                    @if (!string.IsNullOrEmpty(prop.Description))
-                    {
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">@prop.Description</MudText>
-                    }
-                    @if (entries.Count == 0)
-                    {
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">@Loc["NoEntries"]</MudText>
-                    }
-                    else
-                    {
-                        <MudExpansionPanels MultiExpansion="true" Elevation="0" Class="config-dict-panels">
-                            @for (var e = 0; e < entries.Count; e++)
-                            {
-                                var entryIndex = e;
-                                var entry = entries[entryIndex];
-                                <MudExpansionPanel @key="@($"{prop.Path}-entry-{entryIndex}")">
-                                    <TitleContent>
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.Key" Size="Size.Small" Class="mr-2" />
-                                            <MudText Typo="Typo.body1">
-                                                @(string.IsNullOrWhiteSpace(entry.Key) ? Loc["NewEntry"].Value : entry.Key)
-                                            </MudText>
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text" Class="ml-2">
-                                                @entry.Values.Count
-                                            </MudChip>
-                                        </div>
-                                    </TitleContent>
-                                    <ChildContent>
-                                        <div class="d-flex align-center mb-3">
-                                            <MudTextField T="string"
-                                                          Value="@entry.Key"
-                                                          ValueChanged="@(v => UpdateDictKey(prop, entryIndex, v))"
-                                                          Label="@Loc["Key"]"
-                                                          Variant="Variant.Outlined"
-                                                          Margin="Margin.Dense"
-                                                          Class="flex-grow-1" />
-                                            <MudTooltip Text="@Loc["RemoveEntry"]">
-                                                <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline"
-                                                               Color="Color.Error"
-                                                               Size="Size.Small"
-                                                               Class="ml-1"
-                                                               OnClick="@(() => RemoveDictEntry(prop, entryIndex))" />
-                                            </MudTooltip>
-                                        </div>
-                                        <div class="config-chip-row">
-                                            @if (entry.Values.Count == 0)
-                                            {
-                                                <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["NoItems"]</MudText>
-                                            }
-                                            @for (var v = 0; v < entry.Values.Count; v++)
-                                            {
-                                                var valueIndex = v;
-                                                <MudChip T="string"
-                                                         Text="@entry.Values[valueIndex]"
-                                                         Size="Size.Small"
-                                                         Color="Color.Primary"
-                                                         Variant="Variant.Filled"
-                                                         OnClose="@(() => RemoveDictValueItem(prop, entryIndex, valueIndex))" />
-                                            }
-                                        </div>
-                                        <MudTextField T="string"
-                                                      Value="@entry.ValueDraft"
-                                                      ValueChanged="@(v => entry.ValueDraft = v)"
-                                                      Placeholder="@Loc["AddValue"]"
-                                                      Variant="Variant.Text"
-                                                      Margin="Margin.Dense"
-                                                      Immediate="true"
-                                                      Adornment="Adornment.End"
-                                                      AdornmentIcon="@Icons.Material.Filled.Add"
-                                                      OnAdornmentClick="@(() => CommitDictValueDraft(prop, entryIndex))"
-                                                      OnKeyDown="@(e => OnDictValueDraftKeyDown(prop, entryIndex, e))" />
-                                    </ChildContent>
-                                </MudExpansionPanel>
-                            }
-                        </MudExpansionPanels>
-                    }
-                    <MudButton StartIcon="@Icons.Material.Filled.Add"
-                               Variant="Variant.Text"
-                               Color="Color.Secondary"
-                               Size="Size.Small"
-                               Class="mt-2"
-                               OnClick="@(() => AddDictEntry(prop))">
-                        @Loc["AddEntry"]
-                    </MudButton>
-                </MudField>
-            </MudItem>
-        }
-        else if (prop.Component == "text")
-        {
-            <MudItem xs="12" md="6">
-                <MudTextField T="string"
-                            Value="@GetStringValue(prop)"
-                            ValueChanged="@(v => UpdateValue(prop, v))"
-                            Label="@displayName"
-                            Variant="Variant.Outlined"
-                            HelperText="@GetHelperText(prop)"
-                            Error="@hasError"
-                            ErrorText="@errorText"
-                            Clearable="@isNullable"
-                            Adornment="@(isChanged ? Adornment.End : Adornment.None)"
-                            AdornmentIcon="@Icons.Material.Filled.Edit"
-                            AdornmentColor="Color.Warning" />
-            </MudItem>
-        }
+                    <input class="config-input" placeholder="@Loc["AddItem"]"
+                           value="@GetListDraft(prop)"
+                           @oninput="@(e => SetListDraft(prop, e.Value?.ToString() ?? string.Empty))"
+                           @onkeydown="@(e => OnListDraftKeyDown(prop, e))" />
+                }
+                else if (prop.Component == "dictionary")
+                {
+                    var entries = GetDictDraft(prop);
+                    <div class="config-dict">
+                        @if (entries.Count == 0)
+                        {
+                            <span class="config-empty">@Loc["NoEntries"]</span>
+                        }
+                        @for (var e = 0; e < entries.Count; e++)
+                        {
+                            var entryIndex = e;
+                            var entry = entries[entryIndex];
+                            <div class="config-dict-entry" @key="@($"{prop.Path}-entry-{entryIndex}")">
+                                <div class="config-dict-entry-head">
+                                    <input class="config-input" placeholder="@Loc["Key"]"
+                                           value="@entry.Key"
+                                           @onchange="@(ev => UpdateDictKey(prop, entryIndex, ev.Value?.ToString() ?? string.Empty))" />
+                                    <button type="button" class="config-icon-btn config-icon-btn--danger"
+                                            title="@Loc["RemoveEntry"]"
+                                            @onclick="@(() => RemoveDictEntry(prop, entryIndex))">
+                                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:16px;" />
+                                    </button>
+                                </div>
+                                <div class="config-chip-row">
+                                    @if (entry.Values.Count == 0)
+                                    {
+                                        <span class="config-empty">@Loc["NoItems"]</span>
+                                    }
+                                    @for (var v = 0; v < entry.Values.Count; v++)
+                                    {
+                                        var valueIndex = v;
+                                        <span class="config-chip">
+                                            @entry.Values[valueIndex]
+                                            <button type="button" class="config-chip-x" title="Remove"
+                                                    @onclick="@(() => RemoveDictValueItem(prop, entryIndex, valueIndex))">×</button>
+                                        </span>
+                                    }
+                                </div>
+                                <input class="config-input" placeholder="@Loc["AddValue"]"
+                                       value="@entry.ValueDraft"
+                                       @oninput="@(ev => entry.ValueDraft = ev.Value?.ToString() ?? string.Empty)"
+                                       @onkeydown="@(ev => OnDictValueDraftKeyDown(prop, entryIndex, ev))" />
+                            </div>
+                        }
+                        <button type="button" class="config-add-btn" @onclick="@(() => AddDictEntry(prop))">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:15px;" /> @Loc["AddEntry"]
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    @* text (default) *@
+                    <input class="config-input" type="text"
+                           value="@GetStringValue(prop)"
+                           readonly="@prop.ReadOnly"
+                           @onchange="@(e => UpdateValue(prop, e.Value?.ToString()))" />
+                }
+            </div>
+        </div>
     };
 
-    private string GetHelperText(PropertyMetadata prop)
+    private string GetNumericString(PropertyMetadata prop)
     {
-        var parts = new List<string>();
-        if (!string.IsNullOrEmpty(prop.Description))
-            parts.Add(prop.Description);
-        if (prop.Min != null || prop.Max != null)
-            parts.Add($"Range: {prop.Min ?? "∞"}–{prop.Max ?? "∞"}");
-        if (!string.IsNullOrEmpty(prop.Tooltip))
-            parts.Add(prop.Tooltip);
-        return string.Join(" · ", parts);
+        if (prop.Type == "integer")
+            return GetNullableIntValue(prop)?.ToString() ?? string.Empty;
+        return GetNullableDoubleValue(prop)?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+    }
+
+    private void UpdateNumeric(PropertyMetadata prop, string? raw)
+    {
+        raw = raw?.Trim();
+        if (string.IsNullOrEmpty(raw))
+        {
+            UpdateValue(prop, prop.Required ? (prop.Type == "integer" ? 0 : 0.0) : null);
+            return;
+        }
+
+        if (prop.Type == "integer")
+        {
+            if (int.TryParse(raw, out var iv))
+                UpdateValue(prop, iv);
+        }
+        else if (double.TryParse(raw, System.Globalization.NumberStyles.Any,
+                     System.Globalization.CultureInfo.InvariantCulture, out var dv))
+        {
+            UpdateValue(prop, dv);
+        }
     }
 
     private bool IsPropertyChanged(string path)

@@ -52,7 +52,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		_logger.LogDebug("GetObjectAsync {Dbref}", dbref);
 		var infoCmd = RouteLiteral($"SHARP_INFO:{dbref}:[name({dbref})]:[type({dbref})]:[owner({dbref})]");
 		// edit() collapses actual newlines in values to @@NL@@ so SHARP_ATTR stays single-line.
-		var attrCmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##::[edit(get({dbref}/##),%r,@@NL@@)],%b,%r)");
+		var attrCmd = RouteExpr($"iter(lattr({dbref}/**),SHARP_ATTR:%i0::[edit(get({dbref}/%i0),%r,@@NL@@)],%b,%r)");
 
 		var infoLines = await terminal.SendCommandAsync(infoCmd);
 		var attrLines = await terminal.SendCommandAsync(attrCmd);
@@ -69,7 +69,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	{
 		// edit() replaces any actual newlines in the attribute value with @@NL@@ so the
 		// SHARP_ATTR marker stays on a single line — safe even when attrs contain %r output.
-		var cmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##::[edit(get({dbref}/##),%r,@@NL@@)],%b,%r)");
+		var cmd = RouteExpr($"iter(lattr({dbref}/**),SHARP_ATTR:%i0::[edit(get({dbref}/%i0),%r,@@NL@@)],%b,%r)");
 		var lines = await terminal.SendCommandAsync(cmd);
 		return ParseAttributes(lines);
 	}
@@ -156,8 +156,10 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	/// <summary>Search objects in the current location using lcon/lexits.</summary>
 	public async Task<List<MushSearchResult>> GetContentsAsync()
 	{
-		// before(##,:) strips the :creationTime suffix that DBRef.ToString() appends
-		var cmd = RouteExpr("iter(lcon(loc(me)) lexits(loc(me)),SHARP_OBJ:[before(##,:)]:[type(##)]:[name(##)],,%r)");
+		// %l = the executor's location; squish() collapses the gaps when any sub-list is
+		// empty. Includes room contents, its exits, and the room object (%l) itself.
+		// before(%i0,:) strips the :creationTime suffix that DBRef.ToString() appends.
+		var cmd = RouteExpr("iter(squish([lcon(%l)] [lexits(%l)] %l),SHARP_OBJ:[before(%i0,:)]:[type(%i0)]:[name(%i0)],,%r)");
 		var lines = await terminal.SendCommandAsync(cmd);
 		return ParseSearchResults(lines);
 	}
@@ -169,9 +171,9 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	/// </summary>
 	public async Task<List<MushSearchResult>> SearchAsync(string expression)
 	{
-		// before(##,:) strips the :creationTime suffix that DBRef.ToString() appends
+		// %i0 = current iter element; before(%i0,:) strips the :creationTime suffix.
 		// ,,%r uses default space iSep and newline oSep (3rd arg = iSep, 4th = oSep)
-		var cmd = RouteExpr($"iter({expression},SHARP_OBJ:[before(##,:)]:[type(##)]:[name(##)],,%r)");
+		var cmd = RouteExpr($"iter({expression},SHARP_OBJ:[before(%i0,:)]:[type(%i0)]:[name(%i0)],,%r)");
 		var lines = await terminal.SendCommandAsync(cmd);
 		return ParseSearchResults(lines);
 	}

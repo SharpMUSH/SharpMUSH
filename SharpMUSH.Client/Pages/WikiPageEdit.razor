@@ -1,6 +1,6 @@
 @page "/wiki/{Ns}/{Category}/{Slug}/edit"
 @using SharpMUSH.Client.Components
-@attribute [Authorize]
+@attribute [Authorize(Policy = "wiki.edit")]
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["WikiEdit"]: @Slug</PageTitle>

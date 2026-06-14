@@ -32,14 +32,15 @@ public class DebugAuthenticationHandler(
 
 	protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
 	{
-		var claims = new List<Claim>
-		{
-			new(ClaimTypes.Role, "Admin"),
-			// JwtService issues PortalRole names as role claims; mirror the highest
-			// portal role here so Wizard-gated endpoints (wiki delete/protection,
-			// admin APIs) work under debug auth too.
-			new(ClaimTypes.Role, nameof(Library.Authorization.PortalRole.Wizard)),
-		};
+		var claims = new List<Claim> { new(ClaimTypes.Role, "Admin") };
+		// The bootstrap account owns player #1 (God), the top of the hierarchy. Role
+		// checks are exact string matches, so emit a claim for every PortalRole — this
+		// way God- and Wizard-gated endpoints both authorize under debug auth.
+		claims.AddRange(Enum.GetNames<Library.Authorization.PortalRole>()
+			.Select(name => new Claim(ClaimTypes.Role, name)));
+		// #1 is God → grant every permission scope so the new policy-based gates authorize too.
+		claims.AddRange(Library.Authorization.PortalPermission.AllScopes
+			.Select(scope => new Claim(Library.Authorization.PortalPermission.ClaimType, scope)));
 
 		try
 		{

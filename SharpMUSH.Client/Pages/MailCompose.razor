@@ -8,29 +8,72 @@
 
 <PageTitle>Compose Mail — SharpMUSH</PageTitle>
 
-<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
-    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Href="/mail" />
-    <MudText Typo="Typo.h5">@Loc["ComposeMail"]</MudText>
-</MudStack>
+<div style="padding:var(--cpad);">
 
-<MudPaper Outlined="true" Class="pa-4" Style="max-width:720px;">
-    <MudTextField @bind-Value="_to" Label="@Loc["To"]" Variant="Variant.Outlined"
-                  Margin="Margin.Dense" Class="mb-3" Required="true" />
-    <MudTextField @bind-Value="_subject" Label="@Loc["Subject"]" Variant="Variant.Outlined"
-                  Margin="Margin.Dense" Class="mb-3" />
-    <MudTextField @bind-Value="_body" Label="@Loc["Message"]" Variant="Variant.Outlined"
-                  Lines="10" Margin="Margin.Dense" Class="mb-3" />
-    <MudCheckBox @bind-Value="_urgent" Label="@Loc["Urgent"]" Color="Color.Error" Class="mb-3" />
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Href="/mail"
+                       Style="color:var(--text-dim);" />
+        <div>
+            <div class="mc-kicker">@Loc["Mail"]</div>
+            <div class="mc-title">@Loc["ComposeMail"]</div>
+        </div>
+    </div>
 
-    <MudStack Row="true" Spacing="2">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.Send"
-                   OnClick="SendAsync" Disabled="_sending || string.IsNullOrWhiteSpace(_to)">
-            @Loc["Send"]
-        </MudButton>
-        <MudButton Variant="Variant.Text" Href="/mail" Disabled="_sending">@Loc["Cancel"]</MudButton>
-    </MudStack>
-</MudPaper>
+    <div class="mc-card">
+        <MudTextField @bind-Value="_to" Label="@Loc["To"]" Variant="Variant.Outlined"
+                      Margin="Margin.Dense" Class="mc-field mb-3" Required="true" />
+        <MudTextField @bind-Value="_subject" Label="@Loc["Subject"]" Variant="Variant.Outlined"
+                      Margin="Margin.Dense" Class="mc-field mb-3" />
+        <MudTextField @bind-Value="_body" Label="@Loc["Message"]" Variant="Variant.Outlined"
+                      Lines="10" Margin="Margin.Dense" Class="mc-field mb-3" />
+        <MudCheckBox @bind-Value="_urgent" Label="@Loc["Urgent"]" Color="Color.Error" Class="mb-4" />
+
+        <div style="display:flex;gap:10px;">
+            <MudButton Variant="Variant.Filled"
+                       Style="background:var(--accent);color:var(--accent-on);text-transform:none;font-weight:600;"
+                       StartIcon="@Icons.Material.Filled.Send"
+                       OnClick="SendAsync" Disabled="_sending || string.IsNullOrWhiteSpace(_to)">
+                @Loc["Send"]
+            </MudButton>
+            <MudButton Variant="Variant.Text" Href="/mail" Disabled="_sending"
+                       Style="color:var(--text-dim);text-transform:none;">@Loc["Cancel"]</MudButton>
+        </div>
+    </div>
+</div>
+
+<style>
+    .mc-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+    }
+    .mc-title {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 700;
+        line-height: 1.1;
+        color: var(--text);
+    }
+    .mc-card {
+        max-width: 720px;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        padding: 24px;
+    }
+    .mc-field .mud-input-control-input-container .mud-input.mud-input-outlined {
+        background: var(--surface-3);
+    }
+    .mc-field .mud-input-outlined-border {
+        border-color: var(--border) !important;
+    }
+    .mc-field.mud-input-control:focus-within .mud-input-outlined-border {
+        border-color: var(--accent) !important;
+    }
+</style>
 
 @code {
     [SupplyParameterFromQuery(Name = "to")] public string? ToQuery { get; set; }

@@ -1,16 +1,209 @@
 @page "/register"
+@using SharpMUSH.Client.Services
 @inject NavigationManager Nav
-@inject IStringLocalizer<SharedResource> Loc
+@inject AccountAuthService AccountAuth
 
-<PageTitle>Register — SharpMUSH</PageTitle>
+<PageTitle>Create Account — SharpMUSH</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="pa-4">
-    <MudText Typo="Typo.h4" Class="mb-4">Register</MudText>
-    <MudText Color="Color.Secondary" Class="mb-4">
-        Registration is handled through the game connection. Connect to the MU* and
-        follow the in-game prompts to create a character and link it to an account.
-    </MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick='() => Nav.NavigateTo("/play")'>
-        Connect and Play
-    </MudButton>
-</MudContainer>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:var(--cpad);position:relative;overflow:hidden;">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%, rgba(var(--glow),0.06) 0%, transparent 60%);pointer-events:none;"></div>
+
+    <div class="reg-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+            <img src="assets/Logo.svg" alt="SharpMUSH" style="height:40px;opacity:0.95;" />
+            <div>
+                <div class="reg-kicker">Create Account</div>
+                <div class="reg-title">SharpMUSH</div>
+            </div>
+        </div>
+
+        <div class="reg-field">
+            <label class="reg-label" for="reg-username">Username</label>
+            <input id="reg-username" class="reg-input" type="text" autocomplete="username"
+                   @bind="_regUsername" @bind:event="oninput" disabled="@_busy" />
+        </div>
+
+        <div class="reg-field">
+            <label class="reg-label" for="reg-email">Email <span class="reg-optional">(optional)</span></label>
+            <input id="reg-email" class="reg-input" type="email" autocomplete="email"
+                   @bind="_regEmail" @bind:event="oninput" disabled="@_busy" />
+        </div>
+
+        <div class="reg-field">
+            <label class="reg-label" for="reg-password">Password</label>
+            <input id="reg-password" class="reg-input" type="password" autocomplete="new-password"
+                   @bind="_regPassword" @bind:event="oninput" disabled="@_busy"
+                   @onkeydown="OnKeyDown" />
+        </div>
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@_error</MudAlert>
+        }
+
+        <button class="reg-btn" disabled="@_busy" @onclick="RegisterAsync">
+            @if (_busy)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" Style="color:var(--accent-on);" />
+            }
+            Create Account
+        </button>
+
+        <div class="reg-divider"></div>
+        <div class="reg-footer">
+            Already have an account?
+            <a class="reg-link" href="/login">Sign in</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .reg-card {
+        width: 100%;
+        max-width: 380px;
+        padding: 32px;
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+        position: relative;
+        z-index: 1;
+    }
+
+    .reg-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+    }
+
+    .reg-title {
+        font-family: var(--font-display);
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1.1;
+    }
+
+    .reg-field {
+        margin-bottom: 16px;
+    }
+
+    .reg-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+    }
+
+    .reg-optional {
+        color: var(--text-faint);
+        font-weight: 400;
+    }
+
+    .reg-input {
+        width: 100%;
+        box-sizing: border-box;
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-family: var(--font-ui);
+        font-size: 14px;
+        padding: 10px 12px;
+        outline: none;
+        transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .reg-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    .reg-input:disabled {
+        opacity: 0.6;
+    }
+
+    .reg-btn {
+        width: 100%;
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--accent);
+        color: var(--accent-on);
+        border: none;
+        border-radius: var(--radius);
+        font-family: var(--font-ui);
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: box-shadow 0.12s ease, opacity 0.12s ease;
+    }
+
+    .reg-btn:hover:not(:disabled) {
+        box-shadow: 0 0 14px rgba(var(--glow), 0.4);
+    }
+
+    .reg-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .reg-divider {
+        height: 1px;
+        background: var(--border-soft);
+        margin: 20px 0 14px;
+    }
+
+    .reg-footer {
+        text-align: center;
+        font-size: 13px;
+        color: var(--text-faint);
+    }
+
+    .reg-link {
+        color: var(--accent);
+        text-decoration: none;
+    }
+
+    .reg-link:hover {
+        text-decoration: underline;
+    }
+</style>
+
+@code {
+    private bool _busy;
+    private string? _error;
+
+    private string _regUsername = string.Empty;
+    private string _regEmail = string.Empty;
+    private string _regPassword = string.Empty;
+
+    private async Task RegisterAsync()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_regUsername) || string.IsNullOrWhiteSpace(_regPassword))
+        {
+            _error = "Username and password are required.";
+            return;
+        }
+        _busy = true;
+        StateHasChanged();
+        var (success, error, _) = await AccountAuth.RegisterAsync(_regUsername, _regEmail, _regPassword);
+        _busy = false;
+        if (success)
+            Nav.NavigateTo("/");
+        else
+            _error = error ?? "Registration failed.";
+        StateHasChanged();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await RegisterAsync();
+    }
+}

@@ -59,7 +59,7 @@ public partial class WikiAssetController(
 	/// types are accepted; SVGs are scanned for embedded scripting and rejected when unsafe.
 	/// </summary>
 	[HttpPost]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.MediaUpload)]
 	[RequestSizeLimit(10_485_760)]
 	public async Task<IActionResult> Upload(IFormFile file, CancellationToken ct)
 	{
@@ -127,7 +127,7 @@ public partial class WikiAssetController(
 	/// Lists asset metadata, newest first.
 	/// </summary>
 	[HttpGet]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.MediaAdmin)]
 	public async Task<IActionResult> List([FromQuery] int skip = 0, [FromQuery] int take = 100)
 	{
 		var assets = await assetService.ListAsync(skip, take);
@@ -141,7 +141,7 @@ public partial class WikiAssetController(
 	/// Deletes an asset and its metadata.
 	/// </summary>
 	[HttpDelete("{id}")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.MediaAdmin)]
 	public async Task<IActionResult> Delete(string id)
 	{
 		var result = await assetService.DeleteAsync(id);

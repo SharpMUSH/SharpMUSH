@@ -11,25 +11,37 @@
 
 <PageTitle>@(_app?.DisplayName ?? "Application")</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+<div class="app-page">
+    <header class="app-header">
+        <div class="app-kicker">Application</div>
+        <h1 class="app-title">@(_app?.DisplayName ?? "Application")</h1>
+    </header>
+
     @if (_loading)
     {
-        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+        <div class="app-card app-loading">
+            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+            <span class="app-loading-text">Loading application…</span>
+        </div>
     }
     else if (_app is null)
     {
-        <MudAlert Severity="Severity.Warning">No application is registered at <code>/apps/@Slug</code>.</MudAlert>
+        <div class="app-alert app-alert-warning">
+            No application is registered at <code>/apps/@Slug</code>.
+        </div>
     }
     else if (!_authorized)
     {
-        <MudAlert Severity="Severity.Error">You do not have access to this application.</MudAlert>
+        <div class="app-alert app-alert-error">
+            You do not have access to this application.
+        </div>
     }
     else if (_schema is null)
     {
-        <MudAlert Severity="Severity.Error">
+        <div class="app-alert app-alert-error">
             The application's schema could not be loaded. The softcode handler at
             <code>@_app.SchemaUrl</code> may be missing or returning invalid JSON.
-        </MudAlert>
+        </div>
     }
     else if (_schema.IsForm)
     {
@@ -39,7 +51,89 @@
     {
         <SchemaViewRenderer Document="_schema" Data="_data" />
     }
-</MudContainer>
+</div>
+
+<style>
+    .app-page {
+        padding: var(--cpad);
+        width: 100%;
+    }
+
+    .app-header {
+        margin-bottom: 22px;
+    }
+
+    .app-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 8px;
+    }
+
+    .app-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.15;
+        word-break: break-word;
+    }
+
+    .app-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        padding: 22px 26px;
+    }
+
+    .app-loading {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .app-loading-text {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        color: var(--text-dim);
+    }
+
+    .app-alert {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-left: 3px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 16px 20px;
+        color: var(--text);
+        font-family: var(--font-ui);
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .app-alert code {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        background: var(--surface-2);
+        border: 1px solid var(--border-soft);
+        border-radius: 4px;
+        padding: 1px 5px;
+        color: var(--text);
+    }
+
+    .app-alert-warning {
+        border-left-color: var(--accent);
+    }
+
+    .app-alert-error {
+        border-left-color: #e5484d;
+    }
+</style>
 
 @code {
     [Parameter] public string Slug { get; set; } = string.Empty;

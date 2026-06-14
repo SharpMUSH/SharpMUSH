@@ -88,13 +88,24 @@ public class JwtServiceTests
 		var store = Substitute.For<IRefreshTokenStore>();
 		var roleSvc = Substitute.For<IRoleDerivationService>();
 		var accountSvc = Substitute.For<IAccountService>();
+		var roleRegistry = Substitute.For<IRoleRegistryService>();
+		var permissionResolver = Substitute.For<IPermissionResolver>();
 		var mediator = Substitute.For<IMediator>();
 		var logger = NullLogger<JwtService>.Instance;
 
 		store.CreateTokenAsync(Arg.Any<string>(), Arg.Any<DBRef>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
 			.Returns(Task.FromResult("aabbccdd11223344aabbccdd11223344"));
 
-		return (new JwtService(options, store, roleSvc, accountSvc, mediator, logger), store, roleSvc, accountSvc, mediator);
+		// Default RBAC mocks: no custom roles, no assignments, no granted scopes, and no characters
+		// (so the account-level role derivation falls back to the active role passed in by the test).
+		roleRegistry.GetRolesAsync().Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
+		roleRegistry.GetRolesForAccountAsync(Arg.Any<string>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
+		permissionResolver.Resolve(Arg.Any<IEnumerable<SharpRole>>()).Returns(new HashSet<string>());
+		accountSvc.GetCharactersAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[]));
+
+		return (new JwtService(options, store, roleSvc, accountSvc, roleRegistry, permissionResolver, mediator, logger),
+			store, roleSvc, accountSvc, mediator);
 	}
 
 	// ── IssueTokensAsync ─────────────────────────────────────────────────────

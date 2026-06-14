@@ -8,6 +8,7 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -15,6 +16,7 @@ namespace SharpMUSH.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class ConfigurationController(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ISharpDatabase database,
@@ -40,7 +42,6 @@ public class ConfigurationController(
 	}
 
 	[HttpGet("export")]
-	[Authorize]
 	public ActionResult ExportConfiguration()
 	{
 		try
@@ -57,7 +58,6 @@ public class ConfigurationController(
 	}
 
 	[HttpPatch]
-	[Authorize]
 	public async Task<ActionResult<ConfigurationResponse>> UpdateConfiguration(
 		[FromBody] Dictionary<string, JsonElement> updates)
 	{

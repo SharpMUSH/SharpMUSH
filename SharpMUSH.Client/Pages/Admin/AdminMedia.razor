@@ -1,0 +1,323 @@
+@page "/admin/media"
+@attribute [Authorize(Policy = "media.admin")]
+@using SharpMUSH.Client.Services
+@using Microsoft.AspNetCore.Components.Forms
+@inject WikiAssetService AssetService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Image Library — Admin — SharpMUSH</PageTitle>
+
+<div style="padding:var(--cpad);">
+    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:4px;">Image Library</MudText>
+    <MudText Style="color:var(--text-dim);font-size:14px;margin-bottom:24px;">Manage uploaded media assets used across the wiki and portal.</MudText>
+
+    @* ── Stat tiles ── *@
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+        @foreach (var tile in new[] {
+            (_assets.Count.ToString(),                             "Total Assets",        Icons.Material.Filled.Image,        "var(--accent)"),
+            (FormatBytes(TotalSizeBytes),                          "Storage Used",        Icons.Material.Filled.Storage,      "#5aa9ff"),
+            (_assets.Count(a => AssetKind(a.ContentType) == "image").ToString(), "Images", Icons.Material.Filled.PhotoLibrary, "#6cde9a"),
+            (_assets.Count(a => AssetKind(a.ContentType) != "image").ToString(), "Other",  Icons.Material.Filled.Attachment,  "#b39cff"),
+        })
+        {
+            var (val, label, icon, color) = tile;
+            <MudPaper Elevation="0" Style="@($"padding:16px 18px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);")">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <MudIcon Icon="@icon" Style="@($"color:{color};font-size:22px;")" />
+                    <div>
+                        <MudText Style="@($"font-size:22px;font-weight:700;color:{color};line-height:1.1;")">
+                            @(_isLoading ? "—" : val)
+                        </MudText>
+                        <MudText Class="section-kicker" Style="opacity:0.7;">@label</MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        }
+    </div>
+
+    @* ── Toolbar ── *@
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        @* Kind filter pills *@
+        <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection"
+                    SelectedValue="_kindFilter"
+                    SelectedValueChanged="@(v => { _kindFilter = v ?? "all"; StateHasChanged(); })">
+            @foreach (var kind in new[] { "all", "image", "video", "document" })
+            {
+                <MudChip T="string" Value="@kind"
+                         Size="Size.Small"
+                         Style="@(_kindFilter == kind ? "border:1px solid var(--accent);color:var(--accent);background:rgba(var(--glow),0.08);" : "border:1px solid var(--border);")">
+                    @(char.ToUpper(kind[0]) + kind[1..])
+                </MudChip>
+            }
+        </MudChipSet>
+        <MudSpacer />
+        @* Grid / List toggle *@
+        <MudToggleGroup T="string" Value="_viewMode" ValueChanged="@(v => _viewMode = v ?? "grid")"
+                        Color="Color.Primary" Style="gap:0;">
+            <MudToggleItem Value="@("grid")" Text="Grid" />
+            <MudToggleItem Value="@("list")" Text="List" />
+        </MudToggleGroup>
+        @* Upload *@
+        <MudFileUpload T="IBrowserFile"
+                       Accept=".png,.jpg,.jpeg,.gif,.webp,.svg,.mp4,.webm,.pdf,.txt"
+                       FilesChanged="@OnFileSelected"
+                       MaximumFileCount="1"
+                       MaxFileSize="52428800"
+                       Disabled="_isUploading" />
+        @if (_isUploading)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+        }
+    </div>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        @for (var i = 0; i < 4; i++) { <MudSkeleton Height="80px" Class="mb-2" /> }
+    }
+    else if (FilteredAssets.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No assets found.</MudAlert>
+    }
+    else if (_viewMode == "grid")
+    {
+        @* Grid view *@
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+            @foreach (var asset in FilteredAssets)
+            {
+                var a = asset;
+                <MudPaper Elevation="0" Class="asset-card"
+                          Style="border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;background:var(--surface);position:relative;">
+                    @* Thumbnail / kind icon placeholder *@
+                    <div style="@($"height:120px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);overflow:hidden;")">
+                        @if (AssetKind(a.ContentType) == "image")
+                        {
+                            <img src="@a.Url" alt="@a.FileName"
+                                 style="width:100%;height:100%;object-fit:cover;" loading="lazy" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@KindIcon(AssetKind(a.ContentType))"
+                                     Style="font-size:48px;color:var(--text-faint);" />
+                        }
+                    </div>
+                    <div style="padding:8px 10px;">
+                        <MudText Style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);" title="@a.FileName">
+                            @a.FileName
+                        </MudText>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+                            <MudText Style="font-size:11px;color:var(--text-faint);">@FormatBytes(a.SizeBytes)</MudText>
+                            <div style="display:flex;gap:2px;">
+                                <MudTooltip Text="Copy URL">
+                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
+                                                   Style="padding:2px;min-width:0;"
+                                                   OnClick="@(() => CopyUrlAsync(a.Url))" />
+                                </MudTooltip>
+                                <MudTooltip Text="Delete">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   Style="padding:2px;min-width:0;"
+                                                   OnClick="@(() => ConfirmDeleteAsync(a))" />
+                                </MudTooltip>
+                            </div>
+                        </div>
+                    </div>
+                </MudPaper>
+            }
+        </div>
+    }
+    else
+    {
+        @* List view — MudDataGrid with mini thumbnail *@
+        <MudDataGrid T="WikiAssetInfo" Items="@FilteredAssets"
+                     Dense="true" Hover="true"
+                     Class="mush-dark-grid"
+                     Elevation="0">
+            <Columns>
+                <TemplateColumn Title="Preview" Sortable="false" CellStyle="width:48px;">
+                    <CellTemplate>
+                        @if (AssetKind(context.Item.ContentType) == "image")
+                        {
+                            <img src="@context.Item.Url" alt="" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@KindIcon(AssetKind(context.Item.ContentType))"
+                                     Style="font-size:20px;color:var(--text-faint);" />
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="File Name" Sortable="false">
+                    <CellTemplate>
+                        <MudText Style="font-size:13px;">@context.Item.FileName</MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Kind" Sortable="false" CellStyle="width:80px;">
+                    <CellTemplate>
+                        <MudChip T="string" Size="Size.Small"
+                                 Style="height:18px;font-size:10px;padding:0 5px;">
+                            @AssetKind(context.Item.ContentType)
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Size" Sortable="false" CellStyle="width:80px;">
+                    <CellTemplate>
+                        <MudText Style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text-faint);">
+                            @FormatBytes(context.Item.SizeBytes)
+                        </MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Uploaded" Sortable="false" CellStyle="width:130px;">
+                    <CellTemplate>
+                        <MudText Style="font-size:12px;color:var(--text-dim);">
+                            @context.Item.UploadedAt.ToLocalTime().ToString("MMM d, yyyy")
+                        </MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Uploader" Sortable="false">
+                    <CellTemplate>
+                        <MudText Style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text-dim);">
+                            @context.Item.UploaderDbref
+                        </MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Sortable="false" CellStyle="width:80px;">
+                    <CellTemplate>
+                        <div style="display:flex;gap:2px;">
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
+                                           title="Copy URL" OnClick="@(() => CopyUrlAsync(context.Item.Url))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                           Color="Color.Error" title="Delete"
+                                           OnClick="@(() => ConfirmDeleteAsync(context.Item))" />
+                        </div>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <NoRecordsContent>
+                <MudText Color="Color.Secondary">No assets found.</MudText>
+            </NoRecordsContent>
+        </MudDataGrid>
+    }
+</div>
+
+@* Delete confirmation *@
+<MudDialog @bind-Visible="_showDeleteConfirm">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete asset?</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>This will permanently delete <strong>@_deleteTarget?.FileName</strong>. Links to this asset will break.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDeleteConfirm = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="ExecuteDeleteAsync">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .asset-card { transition: border-color 0.15s; }
+    .asset-card:hover { border-color: var(--accent) !important; }
+</style>
+
+@code {
+    private List<WikiAssetInfo> _assets = [];
+    private bool _isLoading = true;
+    private bool _isUploading;
+    private string _kindFilter = "all";
+    private string _viewMode = "grid";
+    private bool _showDeleteConfirm;
+    private WikiAssetInfo? _deleteTarget;
+
+    private long TotalSizeBytes => _assets.Sum(a => a.SizeBytes);
+
+    private List<WikiAssetInfo> FilteredAssets => _kindFilter == "all"
+        ? _assets
+        : _assets.Where(a => AssetKind(a.ContentType) == _kindFilter).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _assets = [.. await AssetService.ListAsync(skip: 0, take: 500)];
+        _isLoading = false;
+    }
+
+    private async Task OnFileSelected(IBrowserFile file)
+    {
+        _isUploading = true;
+        try
+        {
+            await using var stream = file.OpenReadStream(maxAllowedSize: 52428800);
+            var result = await AssetService.UploadAsync(stream, file.Name, file.ContentType);
+            result.Switch(
+                info =>
+                {
+                    _assets.Insert(0, new WikiAssetInfo(info.Id, info.FileName, info.Url,
+                        info.ContentType, info.SizeBytes, string.Empty, "me", DateTimeOffset.UtcNow));
+                    Snackbar.Add($"Uploaded {info.FileName}.", Severity.Success);
+                },
+                err => Snackbar.Add($"Upload failed: {err}", Severity.Error)
+            );
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Upload error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isUploading = false;
+        }
+    }
+
+    private void ConfirmDeleteAsync(WikiAssetInfo asset)
+    {
+        _deleteTarget = asset;
+        _showDeleteConfirm = true;
+    }
+
+    private async Task ExecuteDeleteAsync()
+    {
+        if (_deleteTarget is null) return;
+        var target = _deleteTarget;
+        _showDeleteConfirm = false;
+        _deleteTarget = null;
+        var ok = await AssetService.DeleteAsync(target.Id);
+        if (ok)
+        {
+            _assets.RemoveAll(a => a.Id == target.Id);
+            Snackbar.Add($"Deleted {target.FileName}.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add($"Could not delete {target.FileName}.", Severity.Error);
+        }
+    }
+
+    private async Task CopyUrlAsync(string url)
+    {
+        await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", url);
+        Snackbar.Add("URL copied.", Severity.Info);
+    }
+
+    private static string AssetKind(string contentType) => contentType switch
+    {
+        var t when t.StartsWith("image/", StringComparison.OrdinalIgnoreCase) => "image",
+        var t when t.StartsWith("video/", StringComparison.OrdinalIgnoreCase) => "video",
+        _ => "document",
+    };
+
+    private static string KindIcon(string kind) => kind switch
+    {
+        "image"    => Icons.Material.Filled.Image,
+        "video"    => Icons.Material.Filled.Videocam,
+        "document" => Icons.Material.Filled.InsertDriveFile,
+        _          => Icons.Material.Filled.Attachment,
+    };
+
+    private static string FormatBytes(long bytes) => bytes switch
+    {
+        < 1024              => $"{bytes} B",
+        < 1024 * 1024       => $"{bytes / 1024.0:F1} KB",
+        < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
+        _                   => $"{bytes / (1024.0 * 1024 * 1024):F1} GB",
+    };
+}
