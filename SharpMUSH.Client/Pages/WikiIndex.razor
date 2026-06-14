@@ -4,108 +4,319 @@
 @inject WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["WikiIndex"]</PageTitle>
+<PageTitle>@Loc["Wiki"] — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4">@Loc["WikiIndex"]</MudText>
-<WikiView Slug="wiki-index" Mode="WikiView.WikiMode.View" />
+<div class="wiki-index">
+    @* ── Hero ── *@
+    <div class="wiki-hero">
+        <div class="wiki-hero-glow"></div>
+        <div class="wiki-hero-body">
+            <div class="wiki-hero-kicker">@Loc["AppTitle"] · World Wiki</div>
+            <h1 class="wiki-hero-title">Everything you need to play</h1>
+            <p class="wiki-hero-blurb">
+                Lore, policy, and getting-started guides — collaboratively edited by staff and players.
+                No account needed to read.
+            </p>
+            <div class="wiki-hero-search">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:16px;color:var(--text-faint);" />
+                <input placeholder="Search the wiki…" value="@_search"
+                       @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
+            </div>
+        </div>
+    </div>
 
-<MudGrid Class="mt-4">
-    <MudItem xs="12" md="6">
-        <MudPaper id="recent-changes" Class="pa-4" Elevation="1">
-            <MudText Typo="Typo.h6" Class="mb-2">
-                <MudIcon Icon="@Icons.Material.Filled.Update" Size="Size.Small" Class="mr-1" />
-                @Loc["WikiRecentChanges"]
-            </MudText>
-            @if (_recentLoading)
+    @if (_loading)
+    {
+        <div class="wiki-cat-grid">
+            @for (var i = 0; i < 4; i++)
             {
-                <MudProgressLinear Indeterminate="true" />
+                <div class="wiki-skeleton"></div>
             }
-            else if (_recent.Count == 0)
+        </div>
+    }
+    else if (FilteredGroups.Count == 0)
+    {
+        <div class="wiki-empty">
+            @(string.IsNullOrWhiteSpace(_search) ? "No wiki pages yet." : $"No pages match “{_search}”.")
+        </div>
+    }
+    else
+    {
+        <div class="wiki-cat-grid">
+            @foreach (var group in FilteredGroups)
             {
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WikiNoRecentChanges"]</MudText>
+                <div class="wiki-cat">
+                    <div class="wiki-cat-head">
+                        <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:16px;color:var(--accent);" />
+                        <h3 class="wiki-cat-title">@group.Key</h3>
+                        <span class="wiki-cat-count">@group.Count()</span>
+                    </div>
+                    <div class="wiki-cat-list">
+                        @foreach (var pg in group)
+                        {
+                            <a class="wiki-page-card" href="@PageHref(pg)">
+                                <div class="wiki-page-main">
+                                    <div class="wiki-page-titlerow">
+                                        <span class="wiki-page-title">@pg.Title</span>
+                                        @if (pg.IsProtected)
+                                        {
+                                            <span class="wiki-lock"><MudIcon Icon="@Icons.Material.Filled.Lock" Style="font-size:10px;" /> locked</span>
+                                        }
+                                        @if (!pg.Published)
+                                        {
+                                            <span class="wiki-draft">draft</span>
+                                        }
+                                    </div>
+                                    <div class="wiki-page-meta">@pg.Namespace · updated @pg.UpdatedAt.LocalDateTime.ToString("MMM d, yyyy")</div>
+                                </div>
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="wiki-page-arrow" />
+                            </a>
+                        }
+                    </div>
+                </div>
             }
-            else
-            {
-                <MudList T="WikiPageSummary" Dense="true">
-                    @foreach (var entry in _recent)
-                    {
-                        <MudListItem T="WikiPageSummary" Href="@PageHref(entry)">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudText Typo="Typo.body1">@entry.Title</MudText>
-                                <MudSpacer />
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">r@(entry.RevisionNumber)</MudChip>
-                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                                    @entry.UpdatedAt.LocalDateTime.ToString("g")
-                                </MudText>
-                            </MudStack>
-                        </MudListItem>
-                    }
-                </MudList>
-            }
-        </MudPaper>
-    </MudItem>
+        </div>
+    }
+</div>
 
-    <MudItem xs="12" md="6">
-        <MudPaper Class="pa-4" Elevation="1">
-            <MudText Typo="Typo.h6" Class="mb-2">
-                <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Small" Class="mr-1" />
-                @Loc["WikiBrowseByNamespace"]
-            </MudText>
-            <MudTabs Elevation="0" ApplyEffectsToContainer="true" ActivePanelIndexChanged="OnNamespaceTabChanged">
-                @foreach (var ns in Namespaces)
-                {
-                    <MudTabPanel Text="@ns" />
-                }
-            </MudTabs>
-            @if (_namespaceLoading)
-            {
-                <MudProgressLinear Indeterminate="true" Class="mt-2" />
-            }
-            else if (_namespacePages.Count == 0)
-            {
-                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">@Loc["WikiNamespaceEmpty"]</MudText>
-            }
-            else
-            {
-                <MudList T="WikiPageSummary" Dense="true">
-                    @foreach (var entry in _namespacePages)
-                    {
-                        <MudListItem T="WikiPageSummary" Href="@PageHref(entry)">
-                            <MudText Typo="Typo.body1">@entry.Title</MudText>
-                        </MudListItem>
-                    }
-                </MudList>
-            }
-        </MudPaper>
-    </MudItem>
-</MudGrid>
+<style>
+    .wiki-index {
+        padding: var(--cpad);
+    }
+
+    /* ── Hero ── */
+    .wiki-hero {
+        position: relative;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        margin-bottom: 24px;
+        border: 1px solid var(--border-soft);
+        background: var(--surface);
+    }
+    .wiki-hero-glow {
+        position: absolute;
+        inset: 0;
+        opacity: 0.6;
+        background: radial-gradient(70% 130% at 80% 0%, rgba(var(--glow), 0.12), transparent 60%);
+    }
+    .wiki-hero-body {
+        position: relative;
+        padding: 34px 32px;
+    }
+    .wiki-hero-kicker {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 12px;
+    }
+    .wiki-hero-title {
+        margin: 0 0 10px;
+        font-family: var(--font-display);
+        font-size: 30px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+    .wiki-hero-blurb {
+        margin: 0 0 18px;
+        max-width: 560px;
+        font-family: var(--font-ui);
+        font-size: 14.5px;
+        color: var(--text-dim);
+        line-height: 1.6;
+    }
+    .wiki-hero-search {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 14px;
+        max-width: 420px;
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        transition: border-color 0.14s;
+    }
+    .wiki-hero-search:focus-within {
+        border-color: var(--accent);
+    }
+    .wiki-hero-search input {
+        flex: 1;
+        min-width: 0;
+        padding: 11px 0;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text);
+        font-family: var(--font-ui);
+        font-size: 13.5px;
+    }
+    .wiki-hero-search input::placeholder {
+        color: var(--text-faint);
+    }
+
+    /* ── Category grid ── */
+    .wiki-cat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 22px;
+    }
+
+    .wiki-cat-head {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 12px;
+    }
+    .wiki-cat-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: var(--text);
+        flex: 1;
+    }
+    .wiki-cat-count {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-faint);
+    }
+    .wiki-cat-list {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+    }
+
+    /* ── Page card ── */
+    .wiki-page-card {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 15px;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        text-decoration: none;
+        cursor: pointer;
+        transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+    .wiki-page-card:hover {
+        border-color: rgba(var(--glow), 0.4);
+        transform: translateY(-2px);
+    }
+    .wiki-page-main {
+        min-width: 0;
+    }
+    .wiki-page-titlerow {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 3px;
+        flex-wrap: wrap;
+    }
+    .wiki-page-title {
+        font-family: var(--font-display);
+        font-size: 14.5px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .wiki-lock {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-family: var(--font-mono);
+        font-size: 9.5px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        padding: 1px 6px 1px 4px;
+        border-radius: 99px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+    }
+    .wiki-draft {
+        font-family: var(--font-mono);
+        font-size: 9.5px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #d9a23a;
+        padding: 1px 6px;
+        border-radius: 99px;
+        background: rgba(217, 162, 58, 0.12);
+        border: 1px solid rgba(217, 162, 58, 0.3);
+    }
+    .wiki-page-meta {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--text-faint);
+    }
+    .wiki-page-arrow {
+        font-size: 15px !important;
+        color: var(--text-faint) !important;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .wiki-skeleton {
+        height: 180px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-soft);
+        background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%);
+        background-size: 200% 100%;
+        animation: wiki-shimmer 1.3s ease-in-out infinite;
+    }
+    @@keyframes wiki-shimmer { to { background-position: -200% 0; } }
+
+    .wiki-empty {
+        font-family: var(--font-ui);
+        font-size: 14px;
+        color: var(--text-faint);
+        padding: 30px;
+        text-align: center;
+        background: var(--surface);
+        border: 1px dashed var(--border);
+        border-radius: var(--radius-lg);
+    }
+</style>
 
 @code {
-    private static readonly string[] Namespaces = ["Main", "Help", "Character", "System"];
-
-    private bool _recentLoading = true;
-    private bool _namespaceLoading = true;
-    private IReadOnlyList<WikiPageSummary> _recent = [];
-    private IReadOnlyList<WikiPageSummary> _namespacePages = [];
+    private bool _loading = true;
+    private string _search = string.Empty;
+    private IReadOnlyList<WikiPageSummary> _pages = [];
 
     protected override async Task OnInitializedAsync()
     {
-        var recentTask = Wiki.GetRecentChangesAsync().AsTask();
-        var namespaceTask = Wiki.GetNamespacePagesAsync(Namespaces[0]).AsTask();
-        await Task.WhenAll(recentTask, namespaceTask);
-
-        _recent = recentTask.Result;
-        _namespacePages = namespaceTask.Result;
-        _recentLoading = false;
-        _namespaceLoading = false;
+        var (items, _) = await Wiki.GetAllPagesAsync(skip: 0, take: 500);
+        _pages = items;
+        _loading = false;
     }
 
-    private async Task OnNamespaceTabChanged(int index)
+    private IReadOnlyList<IGrouping<string, WikiPageSummary>> FilteredGroups
     {
-        _namespaceLoading = true;
-        _namespacePages = await Wiki.GetNamespacePagesAsync(Namespaces[index]);
-        _namespaceLoading = false;
+        get
+        {
+            var q = _pages.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_search))
+                q = q.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                                 || (p.Category ?? string.Empty).Contains(_search, StringComparison.OrdinalIgnoreCase));
+
+            return q
+                .GroupBy(p => CategoryLabel(p.Category))
+                .OrderBy(g => g.Key == "General" ? 1 : 0)
+                .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
     }
+
+    private static string CategoryLabel(string? category)
+        => string.IsNullOrWhiteSpace(category) ? "General" : Capitalize(category.Trim());
+
+    private static string Capitalize(string s)
+        => s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..];
 
     private static string PageHref(WikiPageSummary page) =>
         $"/wiki/{page.Namespace.ToLowerInvariant()}/{(page.Category ?? "general")}/{page.Slug}";

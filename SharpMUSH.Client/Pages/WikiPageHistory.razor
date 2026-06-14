@@ -9,25 +9,29 @@
 
 <PageTitle>History: @Slug — SharpMUSH</PageTitle>
 
-@* Breadcrumb header *@
-<div style="padding:8px var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-    <MudBreadcrumbs Items="_crumbs" Separator="›" Style="padding:0;font-size:13px;" />
-    <MudSpacer />
-    @if (_oldRev.HasValue && _newRev.HasValue && _oldRev.Value != _newRev.Value)
-    {
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                   Href="@DiffHref()"
-                   StartIcon="@Icons.Material.Filled.CompareArrows">
-            Compare
-        </MudButton>
-    }
-    <MudButton Variant="Variant.Text" Size="Size.Small"
-               Href="@($"/wiki/{Ns}/{Category}/{Slug}")">
-        ← Page
-    </MudButton>
-</div>
+<div class="wikihist">
+    @* Header — prototype SectionTitle: back link + kicker + title + compare *@
+    <a class="wikihist-back" href="@($"/wiki/{Ns}/{Category}/{Slug}")">
+        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:14px;" /> @_displayTitle
+    </a>
+    <div class="wikihist-head">
+        <div>
+            <div class="wikihist-kicker">Revision history</div>
+            <h1 class="wikihist-title">@_displayTitle</h1>
+        </div>
+        @if (_oldRev.HasValue && _newRev.HasValue && _oldRev.Value != _newRev.Value)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       Href="@DiffHref()"
+                       StartIcon="@Icons.Material.Filled.CompareArrows">
+                Compare selected
+            </MudButton>
+        }
+    </div>
+    <p class="wikihist-intro">
+        Select an <strong>older</strong> and a <strong>newer</strong> revision, then compare. @_revisions.Count revisions in all.
+    </p>
 
-<div style="padding:var(--cpad);">
     @if (_loading)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
@@ -152,6 +156,53 @@
     }
 </div>
 
+<style>
+    .wikihist {
+        padding: var(--cpad);
+    }
+    .wikihist-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+        text-decoration: none;
+        margin-bottom: 16px;
+    }
+    .wikihist-back:hover { color: var(--accent); }
+    .wikihist-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 8px;
+    }
+    .wikihist-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .wikihist-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+    .wikihist-intro {
+        margin: 0 0 20px;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+    }
+    .wikihist-intro strong { color: var(--text); }
+</style>
+
 @code {
     [Parameter] public required string Slug { get; set; }
     [Parameter] public required string Ns { get; set; }
@@ -164,18 +215,12 @@
     private int? _oldRev;
     private int? _newRev;
 
-    private List<BreadcrumbItem> _crumbs = [];
+    private string _displayTitle = "Page";
 
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
-        var displayTitle = string.IsNullOrWhiteSpace(Slug) ? "Page" : Slug.Replace('-', ' ');
-        _crumbs =
-        [
-            new("Wiki", $"/wiki/{Ns}/{Category}"),
-            new(displayTitle, $"/wiki/{Ns}/{Category}/{Slug}"),
-            new("History", null, disabled: true),
-        ];
+        _displayTitle = string.IsNullOrWhiteSpace(Slug) ? "Page" : Slug.Replace('-', ' ');
 
         var result = await Wiki.GetRevisionsAsync(Slug, ns: Ns, category: Category);
         _revisions = [.. result];

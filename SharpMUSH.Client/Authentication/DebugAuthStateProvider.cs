@@ -40,6 +40,10 @@ public class DebugAuthStateProvider(AccountAuthService accountAuth) : Authentica
 				new(ClaimTypes.NameIdentifier, _cached.AccountId),
 				new(ClaimTypes.Name, _cached.AccountUsername ?? "admin"),
 				new(ClaimTypes.Role, "Admin"),
+				// The admin pages gate on [Authorize(Roles = "Wizard")]; the bootstrap
+				// account is the top-level admin, so grant Wizard in dev. Mirrors the
+				// server-side DebugAuthenticationHandler, which emits both roles.
+				new(ClaimTypes.Role, "Wizard"),
 				// Match the custom claims emitted by JwtService / DebugAuthenticationHandler
 				// so component logic that inspects character_key or character_name works.
 				new("character_key", "1"),
@@ -55,6 +59,7 @@ public class DebugAuthStateProvider(AccountAuthService accountAuth) : Authentica
 				new(ClaimTypes.Name, "DebugAdmin"),
 				new(ClaimTypes.NameIdentifier, "debug-bootstrap-pending"),
 				new(ClaimTypes.Role, "Admin"),
+				new(ClaimTypes.Role, "Wizard"),
 			];
 		}
 

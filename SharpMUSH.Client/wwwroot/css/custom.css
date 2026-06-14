@@ -25,6 +25,60 @@
 	--mud-palette-navbar-gradient: linear-gradient(90deg, #101113 0%, #0d0e10 100%);
 }
 
+/* ── Not Authorized — centered, designed panel ── */
+.not-authorized {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 60vh;
+	padding: var(--cpad);
+}
+.not-authorized-card {
+	max-width: 420px;
+	text-align: center;
+}
+.not-authorized-icon {
+	width: 64px;
+	height: 64px;
+	margin: 0 auto 18px;
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	background: rgba(var(--glow), 0.08);
+	border: 1px solid rgba(var(--glow), 0.2);
+	color: var(--accent);
+}
+.not-authorized-card h1 {
+	margin: 0 0 8px;
+	font-family: var(--font-display);
+	font-size: 24px;
+	font-weight: 600;
+	color: var(--text);
+}
+.not-authorized-card p {
+	margin: 0 0 20px;
+	font-family: var(--font-ui);
+	font-size: 14px;
+	color: var(--text-dim);
+}
+.not-authorized-home {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 9px 16px;
+	border-radius: var(--radius);
+	background: var(--accent);
+	color: var(--accent-on);
+	text-decoration: none;
+	font-family: var(--font-ui);
+	font-size: 13px;
+	font-weight: 600;
+	transition: filter 0.12s;
+}
+.not-authorized-home:hover {
+	filter: brightness(1.08);
+}
+
 /* ── Section kicker (mono uppercase labels — stat tiles, panel headers, meta fields) ── */
 .section-kicker {
 	font-family: 'JetBrains Mono', monospace;
@@ -246,9 +300,9 @@ body {
 	height: 300px;
 	display: flex;
 	flex-direction: column;
-	background: #0d0e10;
+	background: var(--surface);
 	border-top: 1px solid var(--border);
-	box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+	box-shadow: 0 -10px 40px rgba(0,0,0,0.4);
 	z-index: 10;
 }
 .phosphor-terminal-header {
@@ -571,18 +625,106 @@ body {
 }
 
 .terminal-line {
-    line-height: 1.45;
-    padding: 0 2px;
+    line-height: 1.6;
+    padding: 1px 0;
 }
 
+/* Sent (echoed) commands — dim cyan, prefixed with an accent caret in markup */
 .terminal-sent {
-    color: #88c0d0;
+    color: #7fb0c4;
     opacity: 0.85;
 }
 
+/* System/diagnostic lines — accent-dim, matches the prototype terminal */
 .terminal-system {
-    color: #a3be8c;
-    font-style: italic;
+    color: var(--accent-dim);
+}
+
+/* ── Terminal input bar (prototype MushTerminal form) ── */
+.sharp-terminal-connbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--surface);
+    border-top: 1px solid var(--border-soft);
+}
+
+.sharp-terminal-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-top: 1px solid var(--border-soft);
+}
+
+.term-prompt {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.term-input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    caret-color: var(--accent);
+}
+
+.term-input::placeholder {
+    color: var(--text-faint);
+}
+
+.term-input:disabled {
+    opacity: 0.5;
+}
+
+.term-send,
+.term-clear {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.14s;
+}
+
+.term-send {
+    background: rgba(var(--glow), 0.12);
+    border: 1px solid rgba(var(--glow), 0.25);
+    color: var(--accent);
+}
+
+.term-send:hover:not(:disabled) {
+    background: rgba(var(--glow), 0.2);
+}
+
+.term-send:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.term-clear {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-faint);
+}
+
+.term-clear:hover {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--surface-2);
 }
 
 /* ── MarkupString (MString) non-color attributes ──

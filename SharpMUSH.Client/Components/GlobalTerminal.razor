@@ -10,11 +10,11 @@
 @inject IWebAssemblyHostEnvironment HostEnv
 @implements IAsyncDisposable
 
-<div class="sharp-terminal-container" style="background:#111;color:#ccc;font-family:monospace;font-size:13px;">
+<div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:13.5px;">
 
     @* Output area *@
     <div id="@_outputId"
-         style="flex:1;min-height:0;overflow-y:auto;padding:6px 10px;white-space:pre-wrap;word-break:break-all;">
+         style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
         @foreach (var line in _displayLines)
         {
             <div class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
@@ -23,7 +23,7 @@
     </div>
 
     @* Connection bar *@
-    <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;background:#1a1a1a;border-top:1px solid #333;">
+    <div class="sharp-terminal-connbar">
         <MudChip T="string"
                  Size="Size.Small"
                  Color="@(_connected ? Color.Success : Color.Error)"
@@ -58,7 +58,7 @@
     @* Collapsible login settings panel *@
     @if (_showLoginPanel && !_connected)
     {
-        <div style="padding:6px 10px;background:#1a1a1a;border-top:1px solid #333;">
+        <div style="padding:6px 10px;background:var(--surface);border-top:1px solid var(--border-soft);">
             @if (_showCharacterPicker)
             {
                 @* Account flow — character picker *@
@@ -163,21 +163,21 @@
         </div>
     }
 
-    @* Input bar *@
-    <div style="display:flex;gap:6px;padding:4px 8px;background:#1a1a1a;border-top:1px solid #333;">
-        <MudTextField @bind-Value="_input"
-                      Placeholder="Enter command..."
-                      Variant="Variant.Outlined"
-                      Margin="Margin.Dense"
-                      Style="flex:1;font-family:monospace;font-size:13px;"
-                      Disabled="@(!_connected)"
-                      OnKeyDown="OnInputKeyDown" />
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                   Disabled="@(!_connected)" OnClick="SendAsync">Send</MudButton>
-        <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
-                   OnClick="ClearAsync" title="Clear terminal">
-            <MudIcon Icon="@Icons.Material.Filled.ClearAll" Size="Size.Small" />
-        </MudButton>
+    @* Input bar — prototype MushTerminal form: accent caret + bare input + send *@
+    <div class="sharp-terminal-input">
+        <span class="term-prompt">›</span>
+        <input class="term-input"
+               value="@_input"
+               @oninput="@(e => _input = e.Value?.ToString() ?? string.Empty)"
+               @onkeydown="OnInputKeyDown"
+               disabled="@(!_connected)"
+               placeholder="say hello   ·   pose waves   ·   look   ·   who" />
+        <button type="button" class="term-send" @onclick="SendAsync" disabled="@(!_connected)" title="Send">
+            <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:14px;" />
+        </button>
+        <button type="button" class="term-clear" @onclick="ClearAsync" title="Clear terminal">
+            <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:15px;" />
+        </button>
     </div>
 </div>
 

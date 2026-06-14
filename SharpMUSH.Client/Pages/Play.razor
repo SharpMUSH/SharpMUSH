@@ -4,80 +4,195 @@
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject IPlayTerminalService PlayTerminal
-@inject ITerminalService Terminal
+@implements IDisposable
 
 <PageTitle>Play — SharpMUSH</PageTitle>
 
-<div style="display:flex;height:calc(100vh - 64px);overflow:hidden;">
+<div class="play-shell">
 
-    @* Main terminal area *@
-    <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);">
-        @* Terminal header *@
-        <div style="padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:12px;flex-shrink:0;">
-            <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" Color="Color.Primary" />
-            <MudText Style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;">PLAY TERMINAL</MudText>
-            <MudSpacer />
-            @* Connection status dot *@
-            <span title="@(PlayTerminal.IsConnected ? "Connected" : "Disconnected")"
-                  style="@($"width:8px;height:8px;border-radius:50%;background:{(PlayTerminal.IsConnected ? "var(--accent)" : "var(--text-faint)")};box-shadow:{(PlayTerminal.IsConnected ? "0 0 6px rgba(var(--glow),0.7)" : "none")};display:inline-block;")">
+    @* ── Main terminal pane (rounded card) ── *@
+    <div class="play-term">
+        <div class="play-term-header">
+            <span class="play-dot @(PlayTerminal.IsConnected ? "play-dot--on" : "")"></span>
+            <span class="play-char">@(PlayTerminal.ConnectedPlayerName ?? "Play Terminal")</span>
+            <span class="play-loc">@(PlayTerminal.IsConnected ? "in play" : "not connected")</span>
+            <div style="flex:1;"></div>
+            <span class="play-conn @(PlayTerminal.IsConnected ? "play-conn--on" : "")">
+                ● @(PlayTerminal.IsConnected ? "connected" : "disconnected")
             </span>
         </div>
-        @* Terminal body *@
-        <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+        <div style="flex:1;min-height:0;">
             <GlobalTerminal TerminalOverride="PlayTerminal" ShowDiagnostics="false" />
         </div>
     </div>
 
-    @* Side panel (270px) *@
-    <div style="width:270px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--surface);">
-
-        @* Here *@
-        <div style="border-bottom:1px solid var(--border-soft);">
-            <div style="padding:10px 14px 6px;">
-                <MudText Class="section-kicker">Here</MudText>
-            </div>
-            <div style="padding:0 10px 10px;">
-                <MudText Style="font-size:12px;color:var(--text-faint);padding:4px 4px;">— Connect to see who's here —</MudText>
-            </div>
+    @* ── Side panel: stacked cards ── *@
+    <div class="play-side">
+        <div class="play-card">
+            <div class="play-fieldlabel">Here</div>
+            <div class="play-empty">— Connect to see who's here —</div>
         </div>
 
-        @* Exits *@
-        <div style="border-bottom:1px solid var(--border-soft);">
-            <div style="padding:10px 14px 6px;">
-                <MudText Class="section-kicker">Exits</MudText>
-            </div>
-            <div style="padding:0 10px 10px;">
-                <MudText Style="font-size:12px;color:var(--text-faint);padding:4px 4px;">— No exits available —</MudText>
-            </div>
+        <div class="play-card">
+            <div class="play-fieldlabel">Exits</div>
+            <div class="play-empty">— No exits available —</div>
         </div>
 
-        @* Quick Actions *@
-        <div>
-            <div style="padding:10px 14px 6px;">
-                <MudText Class="section-kicker">Quick Actions</MudText>
-            </div>
-            <div style="padding:0 10px 14px;display:flex;flex-direction:column;gap:4px;">
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
-                           Style="justify-content:flex-start;font-size:12px;border-color:var(--border);"
-                           StartIcon="@Icons.Material.Filled.People">
-                    @Loc["Characters"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
-                           Style="justify-content:flex-start;font-size:12px;border-color:var(--border);"
-                           StartIcon="@Icons.Material.Filled.Mail" Href="/mail">
-                    @Loc["Mail"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
-                           Style="justify-content:flex-start;font-size:12px;border-color:var(--border);"
-                           StartIcon="@Icons.Material.Filled.Movie" Href="/scenes">
-                    @Loc["SceneArchive"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
-                           Style="justify-content:flex-start;font-size:12px;border-color:var(--border);"
-                           StartIcon="@Icons.Material.Filled.Help" Href="/help">
-                    @Loc["Help"]
-                </MudButton>
+        <div class="play-card">
+            <div class="play-fieldlabel">Quick actions</div>
+            <div class="play-actions">
+                <a class="play-action" href="/characters">
+                    <MudIcon Icon="@Icons.Material.Filled.People" Class="play-action-icon" /> @Loc["Characters"]
+                </a>
+                <a class="play-action" href="/mail">
+                    <MudIcon Icon="@Icons.Material.Filled.Mail" Class="play-action-icon" /> @Loc["Mail"]
+                </a>
+                <a class="play-action" href="/scenes">
+                    <MudIcon Icon="@Icons.Material.Filled.Movie" Class="play-action-icon" /> @Loc["SceneArchive"]
+                </a>
+                <a class="play-action" href="/help">
+                    <MudIcon Icon="@Icons.Material.Filled.Help" Class="play-action-icon" /> @Loc["Help"]
+                </a>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .play-shell {
+        display: grid;
+        grid-template-columns: 1fr 270px;
+        gap: 16px;
+        padding: var(--cpad);
+        height: 100%;
+        overflow: hidden;
+    }
+
+    /* Terminal card */
+    .play-term {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+    }
+
+    .play-term-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 16px;
+        background: var(--surface-3);
+        border-bottom: 1px solid var(--border-soft);
+        flex-shrink: 0;
+    }
+
+    .play-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 99px;
+        background: var(--text-faint);
+        flex-shrink: 0;
+    }
+    .play-dot--on {
+        background: var(--accent);
+        box-shadow: 0 0 8px rgba(var(--glow), 0.9);
+    }
+
+    .play-char {
+        font-family: var(--font-mono);
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .play-loc {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--text-faint);
+    }
+    .play-conn {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-faint);
+    }
+    .play-conn--on {
+        color: var(--accent);
+    }
+
+    /* Side panel */
+    .play-side {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    .play-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        padding: 15px;
+    }
+
+    .play-fieldlabel {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        margin-bottom: 10px;
+    }
+
+    .play-empty {
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        color: var(--text-faint);
+    }
+
+    .play-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .play-action {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border-soft);
+        background: var(--surface-2);
+        color: var(--text-dim);
+        font-family: var(--font-ui);
+        font-size: 13px;
+        text-align: left;
+        text-decoration: none;
+        cursor: pointer;
+        transition: border-color 0.12s, color 0.12s;
+    }
+    .play-action:hover {
+        border-color: rgba(var(--glow), 0.4);
+        color: var(--text);
+    }
+    .play-action-icon {
+        font-size: 15px !important;
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+        color: var(--accent) !important;
+    }
+</style>
+
+@code {
+    protected override void OnInitialized()
+        => PlayTerminal.ConnectionStateChanged += OnConnectionChanged;
+
+    private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+        => PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
+}

@@ -12,7 +12,18 @@
                         }
                         else
                         {
-                            <p role="alert">@Loc["NotAuthorized"]</p>
+                            <div class="not-authorized" role="alert">
+                                <div class="not-authorized-card">
+                                    <div class="not-authorized-icon">
+                                        <MudIcon Icon="@Icons.Material.Filled.Lock" Style="font-size:30px;" />
+                                    </div>
+                                    <h1>@Loc["NotAuthorized"]</h1>
+                                    <p>You don't have permission to view this page.</p>
+                                    <a class="not-authorized-home" href="/">
+                                        <MudIcon Icon="@Icons.Material.Filled.Home" Style="font-size:15px;" /> Back to home
+                                    </a>
+                                </div>
+                            </div>
                         }
                     </NotAuthorized>
                 </AuthorizeRouteView>

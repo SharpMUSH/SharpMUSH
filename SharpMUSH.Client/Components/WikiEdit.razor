@@ -1,100 +1,357 @@
-﻿@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Library.Services
 @inject IJSRuntime JsRuntime
+@inject WikiMarkdigPipeline Pipeline
 
-<MudPaper>
-    @if (Article is not null)
-    {
-        <MarkdownEditor @bind-Value="@Article.Content"
-                        ValueHTMLChanged="@OnMarkdownValueHTMLChanged"
-                        MaxHeight="75vh"
-                        Theme="material" />
-    }
-</MudPaper>
 @if (Article is not null)
 {
-    <MudPaper Class="pa-3 mt-2">
-        <MudStack Spacing="2">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudTextField @bind-Value="Article.Category"
-                              Label="Category"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              HelperText="Optional grouping, e.g. lore or rules" />
-                <MudTextField Value="@_tagEntry"
-                              ValueChanged="@((string v) => _tagEntry = v)"
-                              Label="Tags"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              HelperText="Press Enter or the + to add a tag"
-                              Adornment="Adornment.End"
-                              AdornmentIcon="@Icons.Material.Filled.Add"
-                              OnAdornmentClick="@AddTag"
-                              OnKeyDown="@OnTagKeyDown"
-                              Immediate="true" />
-                <MudSwitch T="bool" @bind-Value="Article.Published"
-                           Color="Color.Success"
-                           Label="Published" />
-            </MudStack>
-            @if (Article.Tags.Count > 0)
+    <div class="wiki-edit">
+        @* ── Header ── *@
+        <div class="wiki-edit-header">
+            <button type="button" class="wiki-edit-cancel" @onclick="OnCancel">
+                <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:15px;" /> Cancel
+            </button>
+            <div style="flex:1;"></div>
+            <span class="wiki-edit-mode">
+                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:14px;color:var(--accent);" /> editing · live preview
+            </span>
+        </div>
+
+        @* ── Title + category ── *@
+        <div class="wiki-edit-titlerow">
+            <input class="wiki-edit-title" value="@Article.Title"
+                   @oninput="@(e => Article.Title = e.Value?.ToString() ?? string.Empty)"
+                   placeholder="Page title" />
+            <div class="wiki-edit-cat">
+                <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:14px;color:var(--text-faint);" />
+                <input value="@Article.Category"
+                       @oninput="@(e => Article.Category = e.Value?.ToString())"
+                       placeholder="category" />
+            </div>
+        </div>
+
+        @* ── Toolbar ── *@
+        <div class="wiki-edit-toolbar">
+            <button type="button" title="Bold" @onclick="@(() => Wrap("**", "**", false))"><b>B</b></button>
+            <button type="button" title="Italic" @onclick="@(() => Wrap("*", "*", false))"><i>I</i></button>
+            <button type="button" title="Heading" @onclick="@(() => Wrap("## ", "", true))"><b>H</b></button>
+            <button type="button" title="List item" @onclick="@(() => Wrap("- ", "", true))">
+                <MudIcon Icon="@Icons.Material.Filled.FormatListBulleted" Style="font-size:15px;" />
+            </button>
+            <button type="button" title="Quote" @onclick="@(() => Wrap("> ", "", true))">
+                <MudIcon Icon="@Icons.Material.Filled.FormatQuote" Style="font-size:15px;" />
+            </button>
+            <button type="button" title="Link" @onclick="@(() => Wrap("[", "](https://)", false))">
+                <MudIcon Icon="@Icons.Material.Filled.Link" Style="font-size:15px;" />
+            </button>
+            <div class="wiki-edit-tooldiv"></div>
+            <button type="button" title="Insert image" @onclick="@(() => _showAssetPicker = !_showAssetPicker)">
+                <MudIcon Icon="@Icons.Material.Filled.Image" Style="font-size:15px;" />
+            </button>
+            <div style="flex:1;"></div>
+            <span class="wiki-edit-md">Markdown</span>
+        </div>
+
+        @if (_showAssetPicker)
+        {
+            <div class="wiki-edit-assets">
+                <WikiAssetPicker OnAssetSelected="@InsertAssetMarkdown" />
+            </div>
+        }
+
+        @* ── Split editor / preview ── *@
+        <div class="wiki-edit-split">
+            <textarea id="@_taId" class="wiki-edit-textarea" spellcheck="false"
+                      value="@Article.Content"
+                      @oninput="@(e => Article.Content = e.Value?.ToString() ?? string.Empty)"></textarea>
+            <div class="wiki-edit-preview WikiContent">
+                <div class="mud-card-content">
+                    @((MarkupString)Pipeline.RenderToHtml(Article.Content))
+                </div>
+            </div>
+        </div>
+
+        @* ── Tags + published ── *@
+        <div class="wiki-edit-tags">
+            <span class="wiki-edit-taglabel">Tags</span>
+            @foreach (var tag in Article.Tags)
             {
-                <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap;">
-                    @foreach (var tag in Article.Tags)
-                    {
-                        <MudChip T="string" Text="@tag"
-                                 Size="Size.Small"
-                                 Color="Color.Info"
-                                 Variant="Variant.Outlined"
-                                 OnClose="@(() => RemoveTag(tag))" />
-                    }
-                </MudStack>
+                var t = tag;
+                <span class="wiki-edit-tag">@t
+                    <button type="button" @onclick="@(() => RemoveTag(t))">×</button>
+                </span>
             }
-        </MudStack>
-    </MudPaper>
+            <input class="wiki-edit-taginput" value="@_tagEntry"
+                   @oninput="@(e => _tagEntry = e.Value?.ToString() ?? string.Empty)"
+                   @onkeydown="OnTagKeyDown" placeholder="add tag…" />
+            <div style="flex:1;"></div>
+            <label class="wiki-edit-pub">
+                <input type="checkbox" checked="@Article.Published"
+                       @onchange="@(e => Article.Published = (bool)(e.Value ?? false))" />
+                Published
+            </label>
+        </div>
+
+        @* ── Save bar ── *@
+        <div class="wiki-edit-savebar">
+            <div class="wiki-edit-summary">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:14px;color:var(--text-faint);" />
+                <input value="@_summary" @oninput="@(e => _summary = e.Value?.ToString() ?? string.Empty)"
+                       placeholder="Summarize your change (e.g. 'fixed a typo')…" />
+            </div>
+            <button type="button" class="wiki-edit-minor" @onclick="@(() => _minor = !_minor)">
+                <span class="wiki-edit-check @(_minor ? "on" : "")">
+                    @if (_minor) { <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:11px;color:var(--accent-on);" /> }
+                </span>
+                Minor edit
+            </button>
+            <span class="wiki-edit-delta" style="@(ByteDelta >= 0 ? "color:var(--accent);" : "color:#e57373;")">
+                @(ByteDelta >= 0 ? "+" : "")@ByteDelta bytes
+            </span>
+            <div class="wiki-edit-savediv"></div>
+            <button type="button" class="wiki-btn" @onclick="OnCancel" disabled="@_saving">Discard</button>
+            <button type="button" class="wiki-edit-publish" @onclick="HandleSave" disabled="@_saving">
+                <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:14px;" />
+                @(_saving ? "Saving…" : "Publish changes")
+            </button>
+        </div>
+
+        @if (_errorMessage is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-2">@_errorMessage</MudAlert>
+        }
+
+        <div class="wiki-edit-foot">
+            <span>Changes publish immediately and appear for everyone.</span>
+            <a href="/wiki/help/general/markdown_guide" target="_blank">Formatting help</a>
+        </div>
+    </div>
 }
-<MudStack Row="true" Class="mt-2">
-    <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
-               StartIcon="@Icons.Material.Filled.Save"
-               Style="text-transform: none;"
-               Disabled="@_saving"
-               OnClick="@HandleSave">
-        @(_saving ? "Saving…" : "Save")
-    </MudButton>
-    <MudButton Variant="Variant.Outlined"
-               Color="Color.Secondary"
-               StartIcon="@Icons.Material.Filled.Image"
-               Style="text-transform: none;"
-               Disabled="@_saving"
-               OnClick="@(() => _showAssetPicker = !_showAssetPicker)">
-        Insert image
-    </MudButton>
-    <MudButton Variant="Variant.Text"
-               Color="Color.Default"
-               Style="text-transform: none;"
-               Disabled="@_saving"
-               OnClick="@OnCancel">
-        Cancel
-    </MudButton>
-    @if (_errorMessage is not null)
-    {
-        <MudAlert Severity="Severity.Error" Class="ml-2">@_errorMessage</MudAlert>
+
+<style>
+    .wiki-edit {
+        padding: var(--cpad);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
     }
-    <MudSpacer />
-    <MudLink Href="/wiki/help/general/markdown_guide"
-             Target="_blank"
-             Class="align-self-center"
-             Typo="Typo.body2">
-        <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small" Class="mr-1" Style="vertical-align: text-bottom;" />
-        Formatting help
-    </MudLink>
-</MudStack>
-@if (_showAssetPicker)
-{
-    <MudPaper Class="pa-3 mt-2">
-        <MudText Typo="Typo.subtitle2" Class="mb-2">Pick an uploaded image to insert</MudText>
-        <WikiAssetPicker OnAssetSelected="@InsertAssetMarkdown" />
-    </MudPaper>
-}
+
+    .wiki-edit-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 14px;
+    }
+    .wiki-edit-cancel {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-dim);
+        font-family: var(--font-ui);
+        font-size: 13px;
+    }
+    .wiki-edit-cancel:hover { color: var(--text); }
+    .wiki-edit-mode {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--text-faint);
+    }
+
+    .wiki-edit-titlerow { display: flex; gap: 12px; margin-bottom: 12px; }
+    .wiki-edit-title {
+        flex: 1;
+        min-width: 0;
+        padding: 12px 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-family: var(--font-display);
+        font-size: 22px;
+        font-weight: 600;
+        outline: none;
+    }
+    .wiki-edit-title:focus { border-color: var(--accent); }
+    .wiki-edit-cat {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 14px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+    .wiki-edit-cat:focus-within { border-color: var(--accent); }
+    .wiki-edit-cat input {
+        background: transparent; border: none; outline: none; color: var(--text);
+        font-family: var(--font-ui); font-size: 13px; width: 130px;
+    }
+    .wiki-edit-cat input::placeholder { color: var(--text-faint); }
+
+    .wiki-edit-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 7px 10px;
+        background: var(--surface-3);
+        border: 1px solid var(--border-soft);
+        border-bottom: none;
+        border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .wiki-edit-toolbar > button {
+        width: 32px; height: 32px; display: grid; place-items: center;
+        border: none; background: transparent; color: var(--text-dim); cursor: pointer;
+        border-radius: var(--radius); font-family: var(--font-mono); font-size: 13px;
+    }
+    .wiki-edit-toolbar > button:hover { background: var(--surface-2); color: var(--text); }
+    .wiki-edit-tooldiv { width: 1px; height: 20px; background: var(--border); margin: 0 6px; }
+    .wiki-edit-md { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
+
+    .wiki-edit-assets {
+        padding: 12px;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-bottom: none;
+    }
+
+    .wiki-edit-split {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        border: 1px solid var(--border-soft);
+        border-radius: 0 0 var(--radius) var(--radius);
+        overflow: hidden;
+    }
+    .wiki-edit-textarea {
+        resize: none;
+        border: none;
+        outline: none;
+        padding: 20px 22px;
+        background: var(--surface-3);
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 13.5px;
+        line-height: 1.7;
+        caret-color: var(--accent);
+        border-right: 1px solid var(--border-soft);
+    }
+    .wiki-edit-preview {
+        overflow-y: auto;
+        padding: 20px 24px;
+        background: var(--surface);
+    }
+
+    .wiki-edit-tags {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 12px;
+    }
+    .wiki-edit-taglabel {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+    }
+    .wiki-edit-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        padding: 3px 5px 3px 9px;
+        border-radius: 99px;
+        background: var(--surface-2);
+        color: var(--text-dim);
+        border: 1px solid var(--border);
+    }
+    .wiki-edit-tag button {
+        border: none; background: transparent; color: inherit; cursor: pointer;
+        font-size: 14px; line-height: 1; padding: 0 2px; opacity: 0.7;
+    }
+    .wiki-edit-tag button:hover { opacity: 1; }
+    .wiki-edit-taginput {
+        background: transparent; border: none; outline: none; color: var(--text);
+        font-family: var(--font-ui); font-size: 12.5px; width: 100px;
+    }
+    .wiki-edit-taginput::placeholder { color: var(--text-faint); }
+    .wiki-edit-pub {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-family: var(--font-ui); font-size: 12.5px; color: var(--text-dim); cursor: pointer;
+    }
+
+    .wiki-edit-savebar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 12px;
+        padding: 12px 16px;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
+    }
+    .wiki-edit-summary {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 12px;
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+    .wiki-edit-summary:focus-within { border-color: var(--accent); }
+    .wiki-edit-summary input {
+        flex: 1; min-width: 0; padding: 9px 0; background: transparent; border: none; outline: none;
+        color: var(--text); font-family: var(--font-ui); font-size: 13px;
+    }
+    .wiki-edit-summary input::placeholder { color: var(--text-faint); }
+    .wiki-edit-minor {
+        display: flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer;
+        font-family: var(--font-ui); font-size: 12.5px; color: var(--text-dim); white-space: nowrap;
+    }
+    .wiki-edit-check {
+        width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border);
+        display: grid; place-items: center;
+    }
+    .wiki-edit-check.on { border-color: var(--accent); background: var(--accent); }
+    .wiki-edit-delta { font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
+    .wiki-edit-savediv { width: 1px; height: 24px; background: var(--border); }
+    .wiki-edit-publish {
+        display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius);
+        border: none; cursor: pointer; background: var(--accent); color: var(--accent-on);
+        font-family: var(--font-ui); font-size: 12.5px; font-weight: 600;
+        box-shadow: 0 0 18px rgba(var(--glow), 0.25);
+    }
+    .wiki-edit-publish:hover:not(:disabled) { filter: brightness(1.08); }
+    .wiki-edit-publish:disabled { opacity: 0.6; cursor: default; }
+
+    .wiki-edit-foot {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-faint);
+    }
+    .wiki-edit-foot a { color: var(--accent); text-decoration: none; }
+    .wiki-edit-foot a:hover { text-decoration: underline; }
+
+    @@media (max-width: 760px) {
+        .wiki-edit-split { grid-template-columns: 1fr; }
+        .wiki-edit-preview { display: none; }
+    }
+</style>
 
 @code {
     [Parameter] public required WikiArticle? Article { get; set; }
@@ -102,24 +359,34 @@
     /// <summary>Invoked after a successful save with the updated article.</summary>
     [Parameter] public EventCallback<WikiArticle> OnSaved { get; set; }
 
-    /// <summary>Invoked when the user clicks Cancel.</summary>
+    /// <summary>Invoked when the user clicks Cancel/Discard.</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
 
+    private readonly string _taId = $"wiki-edit-ta-{Guid.NewGuid():N}";
     private bool _saving;
     private bool _showAssetPicker;
     private string? _errorMessage;
     private string _tagEntry = string.Empty;
+    private string _summary = string.Empty;
+    private bool _minor;
+    private int _initialBytes;
 
-    private MarkupString _markdownHtml;
+    protected override void OnParametersSet()
+        => _initialBytes = Article is null ? 0 : System.Text.Encoding.UTF8.GetByteCount(Article.Content);
+
+    private int ByteDelta => Article is null
+        ? 0
+        : System.Text.Encoding.UTF8.GetByteCount(Article.Content) - _initialBytes;
+
+    private async Task Wrap(string before, string after, bool block)
+        => await JsRuntime.InvokeVoidAsync("SharpMUSH.Wiki.wrap", _taId, before, after, block);
 
     private void AddTag()
     {
         if (Article is null) return;
         var tag = _tagEntry.Trim().ToLowerInvariant();
         if (tag.Length > 0 && !Article.Tags.Contains(tag))
-        {
             Article.Tags.Add(tag);
-        }
         _tagEntry = string.Empty;
     }
 
@@ -127,28 +394,15 @@
 
     private void OnTagKeyDown(KeyboardEventArgs args)
     {
-        if (args.Key == "Enter")
-        {
-            AddTag();
-        }
+        if (args.Key == "Enter") AddTag();
     }
 
-    /// <summary>
-    /// Appends the picked asset's markdown snippet to the document. The editor binds
-    /// Value two-way, so updating Content re-renders it with the new image line.
-    /// </summary>
     private void InsertAssetMarkdown(string snippet)
     {
         if (Article is null) return;
         var separator = Article.Content.Length == 0 || Article.Content.EndsWith('\n') ? "\n" : "\n\n";
         Article.Content += $"{separator}{snippet}\n";
         _showAssetPicker = false;
-    }
-
-    private Task OnMarkdownValueHTMLChanged(string value)
-    {
-        _markdownHtml = (MarkupString)value;
-        return Task.CompletedTask;
     }
 
     private async Task HandleSave()
@@ -162,7 +416,6 @@
         }
         catch (Exception ex)
         {
-            // Surface the failure instead of leaving the editor stuck with disabled buttons.
             _errorMessage = ex.Message;
         }
         finally

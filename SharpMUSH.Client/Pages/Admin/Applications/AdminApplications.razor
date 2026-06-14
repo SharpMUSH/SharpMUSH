@@ -9,176 +9,402 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>Dynamic Applications — Admin — SharpMUSH</PageTitle>
+<PageTitle>Applications — Admin — SharpMUSH</PageTitle>
 
-<div style="display:flex;height:calc(100vh - 64px);overflow:hidden;">
-
-    @* ── Left: App list ──────────────────────────────────────────── *@
-    <div style="width:280px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);overflow:hidden;">
-        <div style="padding:12px 14px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:8px;flex-shrink:0;">
-            <MudText Class="section-kicker" Style="flex:1;">Applications</MudText>
-            <MudTooltip Text="Register new application">
-                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
-                               Color="Color.Primary" OnClick="@(() => Edit(null))" />
-            </MudTooltip>
+<div class="appadmin">
+    @* ── Header ── *@
+    <div class="appadmin-head">
+        <div>
+            <div class="appadmin-kicker">Build · Custom widgets</div>
+            <h1 class="appadmin-title">Applications</h1>
         </div>
-
-        @if (_loading)
-        {
-            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Style="height:2px;flex-shrink:0;" />
-        }
-
-        <div style="flex:1;overflow-y:auto;">
-            @if (!_loading && _apps.Count == 0)
-            {
-                <div style="padding:16px 14px;color:var(--text-faint);font-size:13px;">
-                    No applications registered yet.
-                </div>
-            }
-            @foreach (var app in _apps)
-            {
-                var a = app;
-                var isActive = _selected?.Slug == a.Slug;
-                <div style="@($"display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-soft);background:{(isActive ? "rgba(var(--glow),0.08)" : "transparent")};border-left:{(isActive ? "2px solid var(--accent)" : "2px solid transparent")}")"
-                     @onclick="@(() => _selected = a)">
-                    <MudIcon Icon="@(a.Icon ?? Icons.Material.Filled.Apps)"
-                             Style="@($"font-size:20px;color:{(isActive ? "var(--accent)" : "var(--text-dim)")};flex-shrink:0;")" />
-                    <div style="min-width:0;flex:1;">
-                        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                            @a.DisplayName
-                        </div>
-                        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                            @a.Slug
-                        </div>
-                    </div>
-                    <MudChip T="string" Size="Size.Small"
-                             Style="@($"height:16px;font-size:9px;padding:0 4px;background:{KindBackground(a.Kind)};color:{KindColor(a.Kind)};flex-shrink:0;")">
-                        @a.Kind
-                    </MudChip>
-                </div>
-            }
+        <div class="appadmin-actions">
+            <a class="aa-btn" href="/softcode">
+                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:14px;" /> Schema registry
+            </a>
+            <button type="button" class="aa-btn aa-btn--primary" @onclick="@(() => Edit(null))">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:14px;" /> New application
+            </button>
         </div>
     </div>
 
-    @* ── Right: Detail panel ──────────────────────────────────────── *@
-    <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);">
-        @if (_selected is null)
+    @* ── Stat tiles ── *@
+    <div class="appadmin-stats">
+        @foreach (var tile in new[]
         {
-            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-faint);font-size:14px;flex-direction:column;gap:12px;">
-                <MudIcon Icon="@Icons.Material.Filled.Apps" Style="font-size:40px;color:var(--text-faint);opacity:0.4;" />
-                Select an application, or register a new one.
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="@(() => Edit(null))">
-                    Register application
-                </MudButton>
+            (_apps.Count.ToString(),                                              "Applications", "registered",       Icons.Material.Filled.Apps,        "var(--accent)"),
+            (_apps.Count(a => a.KindEnum == ApplicationKind.Page).ToString(),     "Pages",        "full-screen apps",  Icons.Material.Filled.WebAsset,    "#6cde9a"),
+            (_apps.Count(a => a.KindEnum == ApplicationKind.Widget).ToString(),   "Widgets",      "dashboard zones",   Icons.Material.Filled.Dashboard,   "#5aa9ff"),
+            (_apps.Count(a => !string.IsNullOrEmpty(a.SchemaUrl)).ToString(),     "Schemas",      "softcode-defined",  Icons.Material.Filled.DataObject,  "#b39cff"),
+        })
+        {
+            var (val, label, sub, icon, color) = tile;
+            <div class="aa-stat">
+                <MudIcon Icon="@icon" Style="@($"font-size:22px;color:{color};")" />
+                <div>
+                    <div class="aa-stat-val" style="@($"color:{color};")">@(_loading ? "—" : val)</div>
+                    <div class="aa-stat-label">@label</div>
+                    <div class="aa-stat-sub">@sub</div>
+                </div>
             </div>
         }
-        else
-        {
-            @* Detail header *@
-            <div style="padding:16px var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:flex-start;gap:14px;flex-shrink:0;">
-                <MudIcon Icon="@(_selected.Icon ?? Icons.Material.Filled.Apps)"
-                         Style="font-size:28px;color:var(--accent);margin-top:2px;" />
-                <div style="flex:1;min-width:0;">
-                    <MudText Style="font-size:18px;font-weight:700;margin-bottom:2px;">@_selected.DisplayName</MudText>
-                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                        <MudText Style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent);">/apps/@_selected.Slug</MudText>
-                        <MudChip T="string" Size="Size.Small"
-                                 Style="@($"height:18px;font-size:10px;padding:0 5px;background:{KindBackground(_selected.Kind)};color:{KindColor(_selected.Kind)};")">
-                            @_selected.Kind
-                        </MudChip>
-                        <MudChip T="string" Size="Size.Small"
-                                 Style="height:18px;font-size:10px;padding:0 5px;border:1px solid var(--border);">
-                            @_selected.MinimumRole
-                        </MudChip>
-                    </div>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Style="height:2px;" />
+    }
+    else
+    {
+        <div class="appadmin-grid">
+            @* ── List (master) ── *@
+            <div class="appadmin-list">
+                <div class="aa-search">
+                    <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:14px;color:var(--text-faint);" />
+                    <input value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)"
+                           placeholder="Search apps or schemas…" />
                 </div>
-                <div style="display:flex;gap:6px;flex-shrink:0;">
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Edit"
-                               OnClick="@(() => Edit(_selected))">
-                        Edit
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Delete"
-                               OnClick="@(() => Delete(_selected))">
-                        Remove
-                    </MudButton>
-                </div>
+
+                @if (Filtered.Count == 0)
+                {
+                    <div class="aa-empty-list">No applications match.</div>
+                }
+                @foreach (var app in Filtered)
+                {
+                    var a = app;
+                    var on = _selected?.Slug == a.Slug;
+                    <button type="button" class="aa-card @(on ? "aa-card--on" : "")" @onclick="@(() => _selected = a)">
+                        <div class="aa-card-top">
+                            <span class="aa-card-icon">
+                                <MudIcon Icon="@(a.Icon ?? Icons.Material.Filled.Apps)" Style="font-size:17px;" />
+                            </span>
+                            <div style="flex:1;min-width:0;">
+                                <div class="aa-card-name">@a.DisplayName</div>
+                                <div class="aa-card-sub">/apps/@a.Slug</div>
+                            </div>
+                            <span class="aa-kind" style="@($"background:{KindBackground(a.Kind)};color:{KindColor(a.Kind)};")">@a.Kind</span>
+                        </div>
+                    </button>
+                }
             </div>
 
-            @* Meta fields *@
-            <div style="padding:20px var(--cpad);overflow-y:auto;flex:1;">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
-                    @foreach (var field in new (string Label, string Value)[] {
-                        ("Schema URL", _selected.SchemaUrl),
-                        ("Data URL",   _selected.DataUrl ?? "—"),
-                        ("Submit Route", _selected.SubmitRoute ?? "—"),
-                        ("Nav Placement", _selected.NavPlacement ?? "—"),
-                        ("Display Order", _selected.Order.ToString()),
-                        ("Zones", _selected.Zones.Length > 0 ? string.Join(", ", _selected.Zones) : "—"),
-                    })
+            @* ── Detail ── *@
+            <div class="appadmin-detail">
+                @if (_selected is null)
+                {
+                    <div class="aa-empty-detail">
+                        <MudIcon Icon="@Icons.Material.Filled.Apps" Style="font-size:40px;color:var(--text-faint);opacity:0.4;" />
+                        <span>Select an application, or register a new one.</span>
+                        <button type="button" class="aa-btn aa-btn--primary" @onclick="@(() => Edit(null))">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:14px;" /> Register application
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="aa-detail-head">
+                        <span class="aa-detail-icon">
+                            <MudIcon Icon="@(_selected.Icon ?? Icons.Material.Filled.Apps)" Style="font-size:22px;" />
+                        </span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                <h2 class="aa-detail-name">@_selected.DisplayName</h2>
+                                <span class="aa-kind" style="@($"background:{KindBackground(_selected.Kind)};color:{KindColor(_selected.Kind)};")">@_selected.Kind</span>
+                                <span class="aa-role">@_selected.MinimumRole</span>
+                            </div>
+                            <div class="aa-detail-slug">/apps/@_selected.Slug</div>
+                        </div>
+                        <div class="aa-detail-headbtns">
+                            <button type="button" class="aa-icon-btn" title="Edit" @onclick="@(() => Edit(_selected))">
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:16px;" />
+                            </button>
+                            <button type="button" class="aa-icon-btn aa-icon-btn--danger" title="Remove" @onclick="@(() => Delete(_selected))">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:16px;" />
+                            </button>
+                        </div>
+                    </div>
+
+                    @* Meta grid *@
+                    <div class="aa-meta-grid">
+                        @foreach (var field in new (string Label, string Value)[]
+                        {
+                            ("Schema URL",    _selected.SchemaUrl),
+                            ("Data URL",      _selected.DataUrl ?? "—"),
+                            ("Submit Route",  _selected.SubmitRoute ?? "—"),
+                            ("Nav Placement", _selected.NavPlacement ?? "—"),
+                            ("Display Order", _selected.Order.ToString()),
+                            ("Min Role",      _selected.MinimumRole),
+                        })
+                        {
+                            <div class="aa-meta">
+                                <div class="aa-meta-label">@field.Label</div>
+                                <div class="aa-meta-val">@field.Value</div>
+                            </div>
+                        }
+                    </div>
+
+                    @* Zones *@
+                    @if (_selected.ZoneEnums.Count > 0)
                     {
-                        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;">
-                            <MudText Class="section-kicker" Style="opacity:0.7;margin-bottom:4px;">@field.Label</MudText>
-                            <MudText Style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text);word-break:break-all;">
-                                @field.Value
-                            </MudText>
+                        <div class="aa-section">
+                            <div class="aa-section-label">Allowed Zones</div>
+                            <div class="aa-chips">
+                                @foreach (var zone in _selected.ZoneEnums)
+                                {
+                                    <span class="aa-zone">@zone</span>
+                                }
+                            </div>
                         </div>
                     }
-                </div>
 
-                @* Zones as chips *@
-                @if (_selected.ZoneEnums.Count > 0)
-                {
-                    <div style="margin-bottom:20px;">
-                        <MudText Class="section-kicker" Style="margin-bottom:8px;">Allowed Zones</MudText>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                            @foreach (var zone in _selected.ZoneEnums)
+                    @* Actions *@
+                    <div class="aa-section">
+                        <div class="aa-section-label">Actions</div>
+                        <div class="aa-actions">
+                            <a class="aa-btn aa-btn--primary" href="@($"/apps/{_selected.Slug}")">
+                                <MudIcon Icon="@Icons.Material.Filled.OpenInBrowser" Style="font-size:14px;" /> Open app
+                            </a>
+                            <a class="aa-btn" href="/softcode">
+                                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:14px;" /> Edit in Softcode
+                            </a>
+                            @if (!string.IsNullOrEmpty(_selected.SchemaUrl))
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Info"
-                                         Style="height:20px;font-size:11px;padding:0 6px;">
-                                    @zone
-                                </MudChip>
+                                <a class="aa-btn" href="@_selected.SchemaUrl" target="_blank">
+                                    <MudIcon Icon="@Icons.Material.Filled.Link" Style="font-size:14px;" /> View schema
+                                </a>
                             }
                         </div>
                     </div>
                 }
-
-                @* Quick-launch actions *@
-                <div>
-                    <MudText Class="section-kicker" Style="margin-bottom:8px;">Actions</MudText>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.OpenInBrowser"
-                                   Href="@($"/apps/{_selected.Slug}")">
-                            Open App
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.Code"
-                                   Href="@("/softcode")">
-                            Edit in Softcode
-                        </MudButton>
-                        @if (!string.IsNullOrEmpty(_selected.SchemaUrl))
-                        {
-                            <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                                       StartIcon="@Icons.Material.Filled.Link"
-                                       Href="@_selected.SchemaUrl" Target="_blank">
-                                View Schema
-                            </MudButton>
-                        }
-                    </div>
-                </div>
             </div>
-        }
-    </div>
+        </div>
+    }
 </div>
+
+<style>
+    .appadmin { padding: var(--cpad); }
+
+    .appadmin-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+    .appadmin-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .appadmin-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+    .appadmin-actions { display: flex; gap: 10px; }
+
+    .aa-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 13px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+        color: var(--text);
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.12s;
+    }
+    .aa-btn:hover { border-color: rgba(var(--glow), 0.4); }
+    .aa-btn--primary {
+        background: var(--accent);
+        color: var(--accent-on);
+        border-color: transparent;
+        font-weight: 600;
+        box-shadow: 0 0 18px rgba(var(--glow), 0.25);
+    }
+    .aa-btn--primary:hover { filter: brightness(1.08); }
+
+    .appadmin-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+    .aa-stat {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 18px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-soft);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+    }
+    .aa-stat-val { font-size: 22px; font-weight: 700; line-height: 1.1; }
+    .aa-stat-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-top: 2px;
+    }
+    .aa-stat-sub { font-family: var(--font-ui); font-size: 11px; color: var(--text-faint); }
+
+    .appadmin-grid {
+        display: grid;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 16px;
+    }
+    @@media (max-width: 820px) {
+        .appadmin-grid { grid-template-columns: 1fr; }
+    }
+
+    /* List */
+    .appadmin-list { display: flex; flex-direction: column; gap: 8px; }
+    .aa-search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        margin-bottom: 4px;
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+    .aa-search:focus-within { border-color: var(--accent); }
+    .aa-search input {
+        flex: 1; min-width: 0; padding: 9px 0; background: transparent; border: none; outline: none;
+        color: var(--text); font-family: var(--font-ui); font-size: 12.5px;
+    }
+    .aa-search input::placeholder { color: var(--text-faint); }
+    .aa-empty-list { padding: 16px; color: var(--text-faint); font-size: 13px; text-align: center; }
+
+    .aa-card {
+        text-align: left;
+        padding: 14px;
+        cursor: pointer;
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-soft);
+        transition: border-color 0.12s, box-shadow 0.12s;
+    }
+    .aa-card:hover { border-color: rgba(var(--glow), 0.3); }
+    .aa-card--on {
+        border-color: rgba(var(--glow), 0.45);
+        box-shadow: 0 0 0 1px rgba(var(--glow), 0.25);
+    }
+    .aa-card-top { display: flex; align-items: center; gap: 11px; }
+    .aa-card-icon {
+        width: 34px; height: 34px; flex-shrink: 0; border-radius: var(--radius);
+        display: grid; place-items: center;
+        background: rgba(var(--glow), 0.10); border: 1px solid rgba(var(--glow), 0.22); color: var(--accent);
+    }
+    .aa-card-name {
+        font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--text);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .aa-card-sub { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); }
+    .aa-kind {
+        font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.04em; text-transform: uppercase;
+        padding: 2px 7px; border-radius: 99px; flex-shrink: 0;
+    }
+    .aa-role {
+        font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+        padding: 2px 7px; border-radius: 99px; color: var(--text-dim);
+        background: var(--surface-2); border: 1px solid var(--border);
+    }
+
+    /* Detail */
+    .appadmin-detail {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        align-self: start;
+    }
+    .aa-empty-detail {
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+        padding: 60px 20px; color: var(--text-faint); font-family: var(--font-ui); font-size: 14px;
+    }
+    .aa-detail-head {
+        display: flex; align-items: flex-start; gap: 14px; padding: 20px 22px;
+        border-bottom: 1px solid var(--border-soft);
+    }
+    .aa-detail-icon {
+        width: 46px; height: 46px; flex-shrink: 0; border-radius: var(--radius);
+        display: grid; place-items: center;
+        background: rgba(var(--glow), 0.10); border: 1px solid rgba(var(--glow), 0.22); color: var(--accent);
+    }
+    .aa-detail-name {
+        margin: 0; font-family: var(--font-display); font-size: 19px; font-weight: 600; color: var(--text);
+    }
+    .aa-detail-slug { font-family: var(--font-mono); font-size: 11.5px; color: var(--accent); margin-top: 3px; }
+    .aa-detail-headbtns { display: flex; gap: 4px; flex-shrink: 0; }
+    .aa-icon-btn {
+        width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius);
+        border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer;
+    }
+    .aa-icon-btn:hover { color: var(--text); border-color: rgba(var(--glow), 0.4); }
+    .aa-icon-btn--danger:hover { color: #e57373; border-color: rgba(229, 115, 115, 0.5); }
+
+    .aa-meta-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        border-bottom: 1px solid var(--border-soft);
+    }
+    @@media (max-width: 620px) {
+        .aa-meta-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .aa-meta { padding: 14px 18px; border-left: 1px solid var(--border-soft); min-width: 0; }
+    .aa-meta:nth-child(3n+1) { border-left: none; }
+    .aa-meta-label {
+        font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--text-faint); margin-bottom: 6px;
+    }
+    .aa-meta-val {
+        font-family: var(--font-mono); font-size: 13px; color: var(--text);
+        word-break: break-all;
+    }
+
+    .aa-section { padding: 18px 22px; border-bottom: 1px solid var(--border-soft); }
+    .aa-section:last-child { border-bottom: none; }
+    .aa-section-label {
+        font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--text-faint); margin-bottom: 10px;
+    }
+    .aa-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .aa-zone {
+        font-family: var(--font-mono); font-size: 11px; padding: 3px 9px; border-radius: 99px;
+        color: #5aa9ff; background: rgba(90, 169, 255, 0.12); border: 1px solid rgba(90, 169, 255, 0.3);
+    }
+    .aa-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+</style>
 
 @code {
     private bool _loading = true;
+    private string _search = string.Empty;
     private List<PortalApplication> _apps = [];
     private PortalApplication? _selected;
+
+    private List<PortalApplication> Filtered =>
+        string.IsNullOrWhiteSpace(_search)
+            ? _apps
+            : _apps.Where(a =>
+                a.DisplayName.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || a.Slug.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || (a.SchemaUrl ?? string.Empty).Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -187,10 +413,9 @@
         _loading = true;
         _apps = (await Registry.ListAsync()).ToList();
         _loading = false;
-        if (_selected is not null)
-            _selected = _apps.FirstOrDefault(a => a.Slug == _selected.Slug) ?? _apps.FirstOrDefault();
-        else
-            _selected = _apps.FirstOrDefault();
+        _selected = _selected is not null
+            ? _apps.FirstOrDefault(a => a.Slug == _selected.Slug) ?? _apps.FirstOrDefault()
+            : _apps.FirstOrDefault();
     }
 
     private async Task Edit(PortalApplication? existing)

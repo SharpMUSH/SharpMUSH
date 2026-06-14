@@ -186,13 +186,15 @@ public class WikiPageRouteTests : BunitContext
     }
 
     [TUnit.Core.Test]
-    public async Task WikiIndex_RendersWikiViewWithWikiIndexSlug()
+    public async Task WikiIndex_RendersHeroAndCategoryGrid()
     {
+        // The redesigned index is a static hero + auto-generated category grid
+        // (sourced from WikiService.GetAllPagesAsync), not an embedded editable
+        // "wiki-index" article.
         var cut = Render<SharpMUSH.Client.Pages.WikiIndex>();
 
-        var wikiView = cut.FindComponent<WikiView>();
-        await Assert.That(wikiView).IsNotNull();
-        await Assert.That(wikiView.Instance.Slug).IsEqualTo("wiki-index");
+        await Assert.That(cut.Markup).Contains("Everything you need to play");
+        await Assert.That(cut.Markup).Contains("wiki-hero");
     }
 
     [TUnit.Core.Test]

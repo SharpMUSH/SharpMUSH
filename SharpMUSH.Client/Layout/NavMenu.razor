@@ -38,7 +38,6 @@
                 @NavItem("/play", Icons.Material.Filled.SportsEsports, Loc["Play"])
             }
             @NavItem("/scenes", Icons.Material.Filled.Movie, Loc["SceneArchive"])
-            @NavItem("/characters", Icons.Material.Filled.Groups, Loc["Characters"])
             @if (_characterActive)
             {
                 @NavItem("/mail", Icons.Material.Filled.Mail, Loc["Mail"])
@@ -49,6 +48,7 @@
         <div class="nav-group">
             <div class="nav-group-label">World</div>
             @NavItem("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
+            @NavItem("/characters", Icons.Material.Filled.Groups, Loc["Characters"])
         </div>
 
         @* BUILD *@
@@ -56,14 +56,23 @@
             <div class="nav-group-label">Build</div>
             @NavItem("/softcode", Icons.Material.Filled.Code, Loc["SoftcodeEditor"])
             <ApplicationNavLinks IsCollapsed="IsCollapsed" />
-            @NavItem("/admin/packages", Icons.Material.Filled.Inventory2, "Packages")
+            <AuthorizeView Roles="Wizard">
+                <Authorized>@NavItem("/admin/applications", Icons.Material.Filled.Apps, "Applications")</Authorized>
+            </AuthorizeView>
+            <AuthorizeView Roles="Wizard">
+                <Authorized>@NavItem("/admin/packages", Icons.Material.Filled.Inventory2, "Packages")</Authorized>
+            </AuthorizeView>
         </div>
 
         @* MANAGE *@
         <div class="nav-group">
             <div class="nav-group-label">Manage</div>
-            @NavItem("/admin/wiki", Icons.Material.Filled.AdminPanelSettings, "Wiki Admin")
-            @NavItem("/admin/media", Icons.Material.Filled.PermMedia, "Image Library")
+            <AuthorizeView Roles="Wizard">
+                <Authorized>@NavItem("/admin/wiki", Icons.Material.Filled.AdminPanelSettings, "Wiki Admin")</Authorized>
+            </AuthorizeView>
+            <AuthorizeView Roles="Wizard">
+                <Authorized>@NavItem("/admin/media", Icons.Material.Filled.PermMedia, "Image Library")</Authorized>
+            </AuthorizeView>
             @NavItem("/admin/config", Icons.Material.Filled.Tune, Loc["Config"])
             @NavItem("/help", Icons.Material.Filled.Help, Loc["Help"])
         </div>
