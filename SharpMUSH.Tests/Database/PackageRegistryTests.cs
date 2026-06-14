@@ -108,6 +108,32 @@ public class PackageRegistryTests
 	}
 
 	[Test, NotInParallel]
+	public async Task ManagedStructures_UpsertGetReplaceRemove_ClearedOnUninstall()
+	{
+		await Registry.UpsertInstalledPackageAsync(SamplePackage("struct-pkg"));
+		const string json = """{"flags":["no_command","dark"],"powers":["pueblo"],"locks":{"use":"=#1"},"attributeFlags":{"FN_X":["veiled"]}}""";
+		await Registry.UpsertManagedStructureAsync(new ManagedStructureRecord("struct-pkg", "#900:123", json, "1.2.0"));
+		await Registry.UpsertManagedStructureAsync(new ManagedStructureRecord("struct-pkg", "#901:123", "{}", "1.2.0"));
+
+		var fetched = await Registry.GetManagedStructuresAsync("struct-pkg");
+		await Assert.That(fetched.Count).IsEqualTo(2);
+		await Assert.That(fetched.First(s => s.Objid == "#900:123").StructureJson).IsEqualTo(json);
+
+		// Upsert on (package, objid) replaces the JSON payload.
+		await Registry.UpsertManagedStructureAsync(new ManagedStructureRecord("struct-pkg", "#900:123", "{}", "1.3.0"));
+		var replaced = await Registry.GetManagedStructuresAsync("struct-pkg");
+		await Assert.That(replaced.First(s => s.Objid == "#900:123").StructureJson).IsEqualTo("{}");
+		await Assert.That(replaced.First(s => s.Objid == "#900:123").BaselineVersion).IsEqualTo("1.3.0");
+
+		await Registry.RemoveManagedStructureAsync("struct-pkg", "#901:123");
+		await Assert.That((await Registry.GetManagedStructuresAsync("struct-pkg")).Count).IsEqualTo(1);
+
+		// RemoveInstalledPackage cascades to structure baselines.
+		await Registry.RemoveInstalledPackageAsync("struct-pkg");
+		await Assert.That((await Registry.GetManagedStructuresAsync("struct-pkg")).Count).IsEqualTo(0);
+	}
+
+	[Test, NotInParallel]
 	public async Task Dependencies_SetGetDependents_ReplaceSemantics()
 	{
 		await Registry.UpsertInstalledPackageAsync(SamplePackage("dep-core"));

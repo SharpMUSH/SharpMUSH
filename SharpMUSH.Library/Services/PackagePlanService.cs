@@ -21,6 +21,7 @@ public partial class PackagePlanService : IPackagePlanService
 		var dependencyIssues = CheckDependenciesAndConflicts(inputs);
 		var (objects, objidByRef, deletedObjids) = ClassifyObjects(inputs, notes);
 		var attributes = ClassifyAttributes(inputs, objidByRef, deletedObjids, notes);
+		var structure = ClassifyStructure(inputs, objidByRef, deletedObjids, notes);
 		var collisions = DetectCommandCollisions(inputs);
 
 		// Application packages (kind: application) carry no objects; surface the
@@ -38,6 +39,7 @@ public partial class PackagePlanService : IPackagePlanService
 			inputs.Installed is null ? PackageRevisionKind.Install : PackageRevisionKind.Upgrade,
 			objects,
 			attributes,
+			structure,
 			dependencyIssues,
 			collisions,
 			notes);
@@ -345,6 +347,206 @@ public partial class PackagePlanService : IPackagePlanService
 			(true, false) => Make(PackageAttributeAction.KeepLocal),
 			(true, true) when liveValue == newValue => Make(PackageAttributeAction.NoChange),
 			(true, true) => Make(PackageAttributeAction.Conflict, PackageConflictKind.ModifyModify)
+		};
+	}
+
+	// ── Object structure: flags, powers, locks, attribute flags ─────────────
+	// Full three-way merge (decision 20.7, extended). Binary elements
+	// (flags/powers/attribute flags) resolve deterministically and never
+	// conflict; value-typed locks reuse the attribute conflict model. Only
+	// elements the package manages now or managed at the last apply are
+	// considered — admin-added extras are left untouched and unmentioned.
+
+	private static List<PackageStructureChange> ClassifyStructure(
+		PackagePlanInputs inputs,
+		Dictionary<string, string> objidByRef,
+		HashSet<string> deletedObjids,
+		List<string> notes)
+	{
+		var changes = new List<PackageStructureChange>();
+		var baselines = inputs.StructureBaselines ?? new Dictionary<string, PackageStructureBaseline>();
+		var unresolvedLocks = 0;
+
+		string? Resolve(PackageRef reference) => reference switch
+		{
+			{ Kind: PackageRefKind.Internal, Package: not null } =>
+				inputs.CrossPackageObjids.GetValueOrDefault($"{reference.Package}/{reference.Name}"),
+			{ Kind: PackageRefKind.Internal } => objidByRef.GetValueOrDefault(reference.Name),
+			{ Kind: PackageRefKind.WellKnown } => inputs.WellKnownObjids.GetValueOrDefault(reference.Name),
+			{ Kind: PackageRefKind.Configure } => inputs.ConfigureAnswers.GetValueOrDefault(reference.Name),
+			_ => null
+		};
+
+		foreach (var obj in inputs.Manifest.Objects)
+		{
+			var objid = objidByRef.GetValueOrDefault(obj.Ref);
+			if (objid is not null && deletedObjids.Contains(objid))
+			{
+				continue;
+			}
+
+			var live = objid is not null ? inputs.Live.Objects.GetValueOrDefault(objid) : null;
+			var baseline = objid is not null ? baselines.GetValueOrDefault(objid) : null;
+			var existing = live is { Exists: true };
+
+			var liveFlags = (existing ? live!.Flags : null) ?? Array.Empty<string>();
+			var livePowers = (existing ? live!.Powers : null) ?? Array.Empty<string>();
+
+			// Object-level flags and powers (attach objects declare none).
+			ClassifySet(obj.Ref, objid, PackageStructureKind.ObjectFlag, attribute: null,
+				baseline?.Flags ?? Array.Empty<string>(), liveFlags, obj.Flags, changes);
+			ClassifySet(obj.Ref, objid, PackageStructureKind.ObjectPower, attribute: null,
+				baseline?.Powers ?? Array.Empty<string>(), livePowers, obj.Powers, changes);
+
+			// Per-attribute flags (created objects, attach objects, and existing objects alike).
+			var baseAttrFlags = baseline?.AttributeFlags
+				?? new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+			var liveAttrFlags = existing ? live!.AttributeFlags : null;
+			foreach (var (attrName, attrSpec) in obj.Attributes)
+			{
+				ClassifySet(obj.Ref, objid, PackageStructureKind.AttributeFlag, attrName,
+					baseAttrFlags.GetValueOrDefault(attrName) ?? [],
+					liveAttrFlags?.GetValueOrDefault(attrName) ?? [],
+					attrSpec.Flags, changes);
+			}
+
+			// Locks (value-typed; refs resolved directly, not via PM`REFS).
+			var baseLocks = baseline?.Locks ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+			var liveLocks = (existing ? live!.Locks : null)
+				?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+			var lockTypes = new HashSet<string>(baseLocks.Keys, StringComparer.OrdinalIgnoreCase);
+			lockTypes.UnionWith(obj.Locks.Keys);
+			foreach (var lockType in lockTypes.OrderBy(t => t, StringComparer.Ordinal))
+			{
+				string? newValue = null;
+				var requiresApply = false;
+				if (obj.Locks.TryGetValue(lockType, out var rawNew))
+				{
+					newValue = PackageRefSubstitution.Substitute(rawNew, Resolve, out var unresolved);
+					if (unresolved.Count > 0)
+					{
+						requiresApply = true;
+						unresolvedLocks++;
+					}
+				}
+
+				var baseValue = baseLocks.GetValueOrDefault(lockType);
+				var liveValue = liveLocks.GetValueOrDefault(lockType);
+				var (action, conflict) = ClassifyLock(baseValue, liveValue, newValue, requiresApply);
+				changes.Add(new PackageStructureChange(
+					obj.Ref, objid, PackageStructureKind.Lock, lockType, action,
+					Attribute: null, Conflict: conflict,
+					BaseValue: baseValue, LiveValue: liveValue, NewValue: newValue,
+					RequiresApplyResolution: requiresApply));
+			}
+		}
+
+		if (unresolvedLocks > 0)
+		{
+			notes.Add($"{unresolvedLocks} lock value{(unresolvedLocks == 1 ? "" : "s")} resolve at apply time (new objects or unanswered configure prompts).");
+		}
+
+		return changes;
+	}
+
+	/// <summary>
+	/// Three-way merge of a set-valued structure element (flags/powers/attribute
+	/// flags). Iterates only elements the package manages now or managed before;
+	/// binary presence resolves deterministically (never a conflict).
+	/// </summary>
+	private static void ClassifySet(
+		string targetRef, string? objid, PackageStructureKind kind, string? attribute,
+		IReadOnlyList<string> baseline, IReadOnlyList<string> live, IReadOnlyList<string> @new,
+		List<PackageStructureChange> changes)
+	{
+		var baseSet = new HashSet<string>(baseline, StringComparer.OrdinalIgnoreCase);
+		var liveSet = new HashSet<string>(live, StringComparer.OrdinalIgnoreCase);
+		var newSet = new HashSet<string>(@new, StringComparer.OrdinalIgnoreCase);
+
+		// Canonical element name → display spelling; prefer the manifest spelling.
+		var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var n in @new)
+		{
+			names[n] = n;
+		}
+
+		foreach (var n in baseline)
+		{
+			names.TryAdd(n, n);
+		}
+
+		foreach (var element in names.Values.OrderBy(n => n, StringComparer.Ordinal))
+		{
+			var action = ClassifyPresence(baseSet.Contains(element), liveSet.Contains(element), newSet.Contains(element));
+			changes.Add(new PackageStructureChange(targetRef, objid, kind, element, action, attribute));
+		}
+	}
+
+	/// <summary>Binary-presence three-way table (no conflicts possible).</summary>
+	private static PackageStructureAction ClassifyPresence(bool inBaseline, bool inLive, bool inNew)
+	{
+		if (!inBaseline)
+		{
+			// Only iterated for elements in baseline ∪ new, so here inNew is true.
+			return inLive ? PackageStructureAction.Adopt : PackageStructureAction.Add;
+		}
+
+		return (inNew, inLive) switch
+		{
+			(true, true) => PackageStructureAction.NoChange,
+			(true, false) => PackageStructureAction.KeepLocal,    // admin removed it; package still declares it
+			(false, true) => PackageStructureAction.Remove,       // package dropped it; admin still has it
+			(false, false) => PackageStructureAction.RemoveBaseline
+		};
+	}
+
+	/// <summary>Value-typed (lock) three-way table — the attribute truth table, mapped to structure actions.</summary>
+	private static (PackageStructureAction Action, PackageConflictKind? Conflict) ClassifyLock(
+		string? baseValue, string? liveValue, string? newValue, bool requiresApply)
+	{
+		// Lock dropped from the manifest (only reached for a baseline key absent from new).
+		if (newValue is null)
+		{
+			return liveValue switch
+			{
+				null => (PackageStructureAction.RemoveBaseline, null),
+				_ when liveValue == baseValue => (PackageStructureAction.Remove, null),
+				_ => (PackageStructureAction.Conflict, PackageConflictKind.ModifyDelete)
+			};
+		}
+
+		// A still-unresolved ref means we cannot compare yet — set it at apply.
+		if (requiresApply)
+		{
+			return (PackageStructureAction.Add, null);
+		}
+
+		if (baseValue is null)
+		{
+			return liveValue switch
+			{
+				null => (PackageStructureAction.Add, null),
+				_ when liveValue == newValue => (PackageStructureAction.Adopt, null),
+				_ => (PackageStructureAction.Conflict, PackageConflictKind.AddAdd)
+			};
+		}
+
+		if (liveValue is null)
+		{
+			return baseValue == newValue
+				? (PackageStructureAction.KeepLocal, null)
+				: (PackageStructureAction.Conflict, PackageConflictKind.DeleteModify);
+		}
+
+		var userChanged = liveValue != baseValue;
+		var packageChanged = newValue != baseValue;
+		return (userChanged, packageChanged) switch
+		{
+			(false, false) => (PackageStructureAction.NoChange, null),
+			(false, true) => (PackageStructureAction.Add, null),        // package changed the lock; admin didn't
+			(true, false) => (PackageStructureAction.KeepLocal, null),  // admin changed the lock; package didn't
+			(true, true) when liveValue == newValue => (PackageStructureAction.NoChange, null),
+			(true, true) => (PackageStructureAction.Conflict, PackageConflictKind.ModifyModify)
 		};
 	}
 

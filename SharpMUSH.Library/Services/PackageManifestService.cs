@@ -41,12 +41,13 @@ public partial class PackageManifestService : IPackageManifestService
 
 	private static readonly IReadOnlySet<string> KnownObjectKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
-		"ref", "type", "name", "target", "parent", "location", "destination", "previous_refs", "flags", "locks", "attributes"
+		"ref", "type", "name", "target", "parent", "location", "destination", "previous_refs",
+		"flags", "powers", "locks", "attributes"
 	};
 
 	private static readonly IReadOnlySet<string> AttachForbiddenKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
-		"type", "name", "parent", "location", "destination", "previous_refs", "flags", "locks"
+		"type", "name", "parent", "location", "destination", "previous_refs", "flags", "powers", "locks"
 	};
 
 	private const int MaxPackageIdLength = 64;
@@ -1018,11 +1019,13 @@ public partial class PackageManifestService : IPackageManifestService
 			}
 
 			var flags = ReadStringList(obj, "flags", issues);
+			var powers = ReadStringList(obj, "powers", issues);
 			var locks = ReadStringMap(obj, "locks", path, issues);
 			var attributes = ReadAttributes(obj, path, issues);
 
 			objects.Add(new PackageObjectSpec(
-				refName, type, objectName.Trim(), null, parent, location, destination, previousRefs, flags, locks, attributes));
+				refName, type, objectName.Trim(), null, parent, location, destination, previousRefs,
+				flags, powers, locks, attributes));
 		}
 
 		return objects;
@@ -1073,7 +1076,7 @@ public partial class PackageManifestService : IPackageManifestService
 		}
 
 		return new PackageObjectSpec(
-			refName, PackageObjectType.Thing, "", target, null, null, null, [], [],
+			refName, PackageObjectType.Thing, "", target, null, null, null, [], [], [],
 			new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), attributes);
 	}
 

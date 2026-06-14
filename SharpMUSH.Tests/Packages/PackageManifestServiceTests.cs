@@ -757,6 +757,71 @@ public class PackageManifestServiceTests
 		await Assert.That(bad.IsT1).IsTrue();
 	}
 
+	[Test]
+	public async Task ObjectFlagsAndLocks_Parse()
+	{
+		var result = _service.ParseManifest(MinimalManifest(
+			objectExtras: "    flags: [no_command, dark]\n    locks:\n      use: \"{{a}}\"\n      page: \"=#1\""));
+
+		await Assert.That(result.IsT0).IsTrue();
+		var obj = result.AsT0.Manifest.Objects.Single();
+		await Assert.That(obj.Flags.ToArray()).IsEquivalentTo((string[])["no_command", "dark"]);
+		await Assert.That(obj.Locks["use"]).IsEqualTo("{{a}}");
+		await Assert.That(obj.Locks["page"]).IsEqualTo("=#1");
+	}
+
+	[Test]
+	public async Task AttributeFlags_ParseFromMappingForm_ShorthandHasNone()
+	{
+		// Attribute flags are supported only via the mapping form (value: + flags:);
+		// the bare-string shorthand carries no flags.
+		var result = _service.ParseManifest(MinimalManifest(attributes:
+			"""
+			      WITH_FLAGS:
+			        value: |-
+			          think hi
+			        flags: [no_command, veiled]
+			      SHORTHAND: "plain value"
+			"""));
+
+		await Assert.That(result.IsT0).IsTrue();
+		var attrs = result.AsT0.Manifest.Objects.Single().Attributes;
+		await Assert.That(attrs["WITH_FLAGS"].Flags.ToArray()).IsEquivalentTo((string[])["no_command", "veiled"]);
+		await Assert.That(attrs["SHORTHAND"].Flags.Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task ObjectPowers_Parse()
+	{
+		var result = _service.ParseManifest(MinimalManifest(objectExtras: "    powers: [pueblo, idle]"));
+
+		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.AsT0.Manifest.Objects.Single().Powers.ToArray())
+			.IsEquivalentTo((string[])["pueblo", "idle"]);
+	}
+
+	[Test]
+	public async Task AttachObject_RejectsPowers()
+	{
+		// Attach objects manage attributes only — object-level powers (like flags
+		// and locks) are creation-only and rejected.
+		var result = _service.ParseManifest(
+			"""
+			package: hooks
+			version: "1.0"
+			objects:
+			  - ref: handler
+			    target: "{{$http_handler}}"
+			    powers: [pueblo]
+			    attributes:
+			      GET: |-
+			        think hi
+			""");
+
+		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.AsT1.Errors.Any(e => e.Path == "objects[0].powers")).IsTrue();
+	}
+
 	#endregion
 
 	#region Index

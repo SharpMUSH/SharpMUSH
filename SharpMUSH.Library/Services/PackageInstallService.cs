@@ -67,13 +67,40 @@ public class PackageInstallService(
 			}
 		}
 
+		var structureBaselines = DeserializeStructureBaselines(await registry.GetManagedStructuresAsync(manifest.Name));
+
 		var wellKnown = await BuildWellKnownMapAsync(cancellationToken);
 		var live = await GatherLiveStateAsync(
 			manifest, installedObjects, baselines, wellKnown, configureAnswers, crossPackageObjids, cancellationToken);
 
 		return new PackagePlanInputs(
 			manifest, installed, installedObjects, baselines, allInstalled, otherManaged, live,
-			wellKnown, configureAnswers, crossPackageObjids);
+			wellKnown, configureAnswers, crossPackageObjids, structureBaselines);
+	}
+
+	/// <summary>
+	/// Deserializes persisted structure baselines into the plan engine's input
+	/// map, normalizing lock-type and attribute keys to case-insensitive so the
+	/// three-way merge lines up regardless of stored casing.
+	/// </summary>
+	private static IReadOnlyDictionary<string, PackageStructureBaseline> DeserializeStructureBaselines(
+		IReadOnlyList<ManagedStructureRecord> records)
+	{
+		var result = new Dictionary<string, PackageStructureBaseline>(StringComparer.Ordinal);
+		foreach (var record in records)
+		{
+			var parsed = JsonSerializer.Deserialize<PackageStructureBaseline>(record.StructureJson, SnapshotJson);
+			result[record.Objid] = parsed is null
+				? PackageStructureBaseline.Empty
+				: parsed with
+				{
+					Locks = new Dictionary<string, string>(parsed.Locks, StringComparer.OrdinalIgnoreCase),
+					AttributeFlags = parsed.AttributeFlags.ToDictionary(
+						kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase)
+				};
+		}
+
+		return result;
 	}
 
 	private async Task<LivePackageState> GatherLiveStateAsync(
@@ -193,6 +220,7 @@ public class PackageInstallService(
 
 		var known = node.Known();
 		var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		var attributeFlags = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
 		foreach (var attribute in attributes)
 		{
 			var leaf = await database
@@ -201,13 +229,21 @@ public class PackageInstallService(
 			if (leaf is not null)
 			{
 				values[attribute] = leaf.Value.ToPlainText();
+				attributeFlags[attribute] = leaf.Flags.Select(f => f.Name).ToList();
 			}
 		}
 
 		var hasContents = checkContents
 			&& await database.GetContentsAsync(dbref.Value, cancellationToken).AnyAsync(cancellationToken);
 
-		return new LiveObjectState(objid, true, known.Object().Name, values, hasContents);
+		// Full live object structure for the three-way structure merge.
+		var sharpObject = known.Object();
+		var flags = await sharpObject.Flags.Value.Select(f => f.Name).ToListAsync(cancellationToken);
+		var powers = await sharpObject.Powers.Value.Select(p => p.Name).ToListAsync(cancellationToken);
+		var locks = sharpObject.Locks.ToDictionary(
+			kv => kv.Key, kv => kv.Value.LockString, StringComparer.OrdinalIgnoreCase);
+
+		return new LiveObjectState(objid, true, sharpObject.Name, values, hasContents, flags, powers, locks, attributeFlags);
 	}
 
 	private async Task<IReadOnlyDictionary<string, string>> BuildWellKnownMapAsync(CancellationToken cancellationToken)
@@ -270,11 +306,15 @@ public class PackageInstallService(
 		var undecided = changeset.Attributes
 			.Where(a => a.Action == PackageAttributeAction.Conflict
 				&& !decisions.ContainsKey(DecisionKey(a.TargetRef, a.Attribute)))
+			.Select(a => $"{a.TargetRef}/{a.Attribute}")
+			.Concat(changeset.Structure
+				.Where(s => s.Action == PackageStructureAction.Conflict
+					&& !decisions.ContainsKey(DecisionKey(s.TargetRef, LockDecisionAttribute(s.Element))))
+				.Select(s => $"{s.TargetRef}/lock:{s.Element}"))
 			.ToList();
 		if (undecided.Count > 0)
 		{
-			return new Error<string>(
-				$"Unresolved conflicts: {string.Join(", ", undecided.Select(a => $"{a.TargetRef}/{a.Attribute}"))}");
+			return new Error<string>($"Unresolved conflicts: {string.Join(", ", undecided)}");
 		}
 
 		var notes = new List<string>(changeset.Notes);
@@ -328,11 +368,11 @@ public class PackageInstallService(
 			created[change.Ref] = createdRef.AsT0;
 		}
 
-		// Pass 2: exits link, parents, names, flags, locks.
+		// Pass 2: exits link, parents, name updates (flags/locks/powers come later).
 		foreach (var spec in manifest.Objects)
 		{
 			var error = await ApplyObjectWiringAsync(
-				spec, objidByRef[spec.Ref], created.ContainsKey(spec.Ref), changeset, Resolve, notes, cancellationToken);
+				spec, objidByRef[spec.Ref], created.ContainsKey(spec.Ref), changeset, Resolve, cancellationToken);
 			if (error is not null)
 			{
 				return new Error<string>(error);
@@ -381,11 +421,41 @@ public class PackageInstallService(
 			{
 				return new Error<string>(error);
 			}
+		}
 
-			if (attrSpec is not null && attrSpec.Flags.Count > 0
-				&& change.Action is not (PackageAttributeAction.Delete or PackageAttributeAction.RemoveBaseline))
+		// Pass 3.5: object structure (flags, powers, locks, attribute flags) per
+		// the three-way merge — add/remove/keep-local/conflict, never additive.
+		foreach (var change in changeset.Structure)
+		{
+			var objid = change.Objid ?? objidByRef.GetValueOrDefault(change.TargetRef);
+			if (objid is null)
 			{
-				await ApplyAttributeFlagsAsync(objid, change.Attribute, attrSpec.Flags, notes, cancellationToken);
+				return new Error<string>($"Internal error: no objid for structure target '{change.TargetRef}'.");
+			}
+
+			// Lock values resolve at apply time (refs to objects created this apply
+			// only get dbrefs now), exactly like attribute code — never trust the
+			// plan-time NewValue for a lock write.
+			var effective = change;
+			if (change.Kind == PackageStructureKind.Lock
+				&& change.Action is PackageStructureAction.Add or PackageStructureAction.Conflict
+				&& manifestByRef.TryGetValue(change.TargetRef, out var lockSpec)
+				&& lockSpec.Locks.TryGetValue(change.Element, out var rawLock))
+			{
+				var resolvedLock = PackageRefSubstitution.Substitute(rawLock, Resolve, out var unresolved);
+				if (unresolved.Count > 0)
+				{
+					return new Error<string>(
+						$"{change.TargetRef}/lock:{change.Element}: ref {unresolved[0]} is unresolved — answer its configure prompt before applying.");
+				}
+
+				effective = change with { NewValue = resolvedLock };
+			}
+
+			var error = await ApplyStructureChangeAsync(effective, objid, decisions, notes, cancellationToken);
+			if (error is not null)
+			{
+				return new Error<string>(error);
 			}
 		}
 
@@ -394,6 +464,7 @@ public class PackageInstallService(
 		{
 			await MarkGoingAsync(change.Objid!, notes, cancellationToken);
 			await registry.RemovePackageObjectAsync(manifest.Name, change.Ref);
+			await registry.RemoveManagedStructureAsync(manifest.Name, change.Objid!);
 		}
 
 		// Pass 5: registry — objects, renames, dependencies, package record, revision.
@@ -409,6 +480,27 @@ public class PackageInstallService(
 		{
 			await registry.UpsertPackageObjectAsync(new PackageObjectRecord(
 				manifest.Name, spec.Ref, objidByRef[spec.Ref], spec.Type.ToString().ToLowerInvariant()));
+		}
+
+		// Persist the object-structure baseline (= the resolved manifest structure)
+		// for every managed object — including attach objects, which own attribute
+		// flags — and capture it for the rollback snapshot. Objects with no managed
+		// structure carry no row (their baseline is cleared if one lingered).
+		var structureSnapshot = new List<PackageRevisionSnapshotStructure>();
+		foreach (var spec in manifest.Objects)
+		{
+			var structObjid = objidByRef[spec.Ref];
+			var resolved = BuildResolvedStructure(spec, Resolve);
+			if (resolved is null)
+			{
+				await registry.RemoveManagedStructureAsync(manifest.Name, structObjid);
+				continue;
+			}
+
+			await registry.UpsertManagedStructureAsync(new ManagedStructureRecord(
+				manifest.Name, structObjid, JsonSerializer.Serialize(resolved, SnapshotJson), manifest.Version.ToString()));
+			structureSnapshot.Add(new PackageRevisionSnapshotStructure(
+				structObjid, resolved.Flags, resolved.Powers, resolved.Locks, resolved.AttributeFlags));
 		}
 
 		// The package record must exist BEFORE its dependency edges: graph
@@ -429,7 +521,8 @@ public class PackageInstallService(
 			manifest.Objects
 				.Select(o => new PackageRevisionSnapshotObject(o.Ref, objidByRef[o.Ref], o.Type.ToString().ToLowerInvariant()))
 				.ToList(),
-			finalValues.Select(kv => new PackageRevisionSnapshotAttribute(kv.Key.Objid, kv.Key.Attribute, kv.Value)).ToList());
+			finalValues.Select(kv => new PackageRevisionSnapshotAttribute(kv.Key.Objid, kv.Key.Attribute, kv.Value)).ToList(),
+			structureSnapshot);
 
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
 			manifest.Name, revision,
@@ -553,7 +646,6 @@ public class PackageInstallService(
 		bool isNew,
 		PackageChangeset changeset,
 		Func<PackageRef, string?> resolve,
-		List<string> notes,
 		CancellationToken cancellationToken)
 	{
 		var node = await GetKnownAsync(objid, cancellationToken);
@@ -596,28 +688,8 @@ public class PackageInstallService(
 			await database.SetObjectParent(node, parentNode, cancellationToken);
 		}
 
-		// Flags.
-		foreach (var flagName in spec.Flags)
-		{
-			var flag = await database.GetObjectFlagAsync(flagName.ToUpperInvariant(), cancellationToken)
-				?? await database.GetObjectFlagAsync(flagName, cancellationToken);
-			if (flag is null)
-			{
-				notes.Add($"Object {{{{{spec.Ref}}}}}: unknown flag '{flagName}' skipped.");
-				continue;
-			}
-
-			await database.SetObjectFlagAsync(node, flag, cancellationToken);
-		}
-
-		// Locks (values may contain refs).
-		foreach (var (lockName, lockValue) in spec.Locks)
-		{
-			var resolved = SubstituteFully(lockValue, resolve, spec.Ref, $"lock:{lockName}", notes);
-			await database.SetLockAsync(node.Object(), lockName, new SharpLockData { LockString = resolved },
-				cancellationToken);
-		}
-
+		// Object flags, powers, locks, and attribute flags are applied in the
+		// dedicated structure pass (three-way merge), not here.
 		return null;
 	}
 
@@ -732,26 +804,175 @@ public class PackageInstallService(
 		}
 	}
 
-	private async Task ApplyAttributeFlagsAsync(
-		string objid, string attribute, IReadOnlyList<string> flags, List<string> notes, CancellationToken cancellationToken)
+	// ── Object structure application (flags/powers/locks/attribute flags) ────
+
+	/// <summary>Synthetic decision-attribute namespacing a lock conflict so it cannot collide with a real attribute name.</summary>
+	private static string LockDecisionAttribute(string lockType) => $"@LOCK`{lockType}";
+
+	/// <summary>The resolved structure a package declares on one object — the baseline it writes on apply.</summary>
+	private static PackageStructureBaseline? BuildResolvedStructure(PackageObjectSpec spec, Func<PackageRef, string?> resolve)
+	{
+		var locks = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var (lockType, raw) in spec.Locks)
+		{
+			locks[lockType] = PackageRefSubstitution.Substitute(raw, resolve, out _);
+		}
+
+		var attributeFlags = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+		foreach (var (attrName, attrSpec) in spec.Attributes)
+		{
+			if (attrSpec.Flags.Count > 0)
+			{
+				attributeFlags[attrName] = attrSpec.Flags;
+			}
+		}
+
+		if (spec.Flags.Count == 0 && spec.Powers.Count == 0 && locks.Count == 0 && attributeFlags.Count == 0)
+		{
+			return null;
+		}
+
+		return new PackageStructureBaseline(spec.Flags, spec.Powers, locks, attributeFlags);
+	}
+
+	private async Task<string?> ApplyStructureChangeAsync(
+		PackageStructureChange change, string objid,
+		Dictionary<string, PackageConflictDecision> decisions, List<string> notes, CancellationToken cancellationToken)
 	{
 		var node = await GetKnownAsync(objid, cancellationToken);
 		if (node is null)
 		{
-			return;
+			return $"Internal error: object {objid} for structure '{change.Element}' vanished during apply.";
 		}
 
-		foreach (var flagName in flags)
+		switch (change.Kind)
 		{
-			var flag = await database.GetAttributeFlagAsync(flagName.ToUpperInvariant(), cancellationToken)
-				?? await database.GetAttributeFlagAsync(flagName, cancellationToken);
-			if (flag is null)
+			case PackageStructureKind.ObjectFlag:
+				if (change.Action is PackageStructureAction.Add or PackageStructureAction.Remove)
+				{
+					var flag = await database.GetObjectFlagAsync(change.Element.ToUpperInvariant(), cancellationToken)
+						?? await database.GetObjectFlagAsync(change.Element, cancellationToken);
+					if (flag is null)
+					{
+						notes.Add($"{change.TargetRef}: unknown flag '{change.Element}' skipped.");
+					}
+					else if (change.Action == PackageStructureAction.Add)
+					{
+						await database.SetObjectFlagAsync(node, flag, cancellationToken);
+					}
+					else
+					{
+						await database.UnsetObjectFlagAsync(node, flag, cancellationToken);
+					}
+				}
+
+				return null;
+
+			case PackageStructureKind.ObjectPower:
+				if (change.Action is PackageStructureAction.Add or PackageStructureAction.Remove)
+				{
+					var power = await database.GetPowerAsync(change.Element.ToUpperInvariant(), cancellationToken)
+						?? await database.GetPowerAsync(change.Element, cancellationToken);
+					if (power is null)
+					{
+						notes.Add($"{change.TargetRef}: unknown power '{change.Element}' skipped.");
+					}
+					else if (change.Action == PackageStructureAction.Add)
+					{
+						await database.SetObjectPowerAsync(node, power, cancellationToken);
+					}
+					else
+					{
+						await database.UnsetObjectPowerAsync(node, power, cancellationToken);
+					}
+				}
+
+				return null;
+
+			case PackageStructureKind.AttributeFlag:
+				if (change.Action is PackageStructureAction.Add or PackageStructureAction.Remove)
+				{
+					var flag = await database.GetAttributeFlagAsync(change.Element.ToUpperInvariant(), cancellationToken)
+						?? await database.GetAttributeFlagAsync(change.Element, cancellationToken);
+					var path = change.Attribute!.Split('`');
+					if (flag is null)
+					{
+						notes.Add($"{change.TargetRef}/{change.Attribute}: unknown attribute flag '{change.Element}' skipped.");
+					}
+					else if (change.Action == PackageStructureAction.Add)
+					{
+						// Only flag an attribute that actually exists after apply — a
+						// flag the package adds to an attribute the admin deleted locally
+						// has nothing to land on.
+						var dbref = ParseObjid(objid);
+						var exists = dbref is not null && await database
+							.GetAttributeAsync(dbref.Value, path, cancellationToken)
+							.AnyAsync(cancellationToken);
+						if (exists)
+						{
+							await database.SetAttributeFlagAsync(node.Object(), path, flag, cancellationToken);
+						}
+						else
+						{
+							notes.Add($"{change.TargetRef}/{change.Attribute}: flag '{change.Element}' skipped (attribute not present).");
+						}
+					}
+					else
+					{
+						await database.UnsetAttributeFlagAsync(node.Object(), path, flag, cancellationToken);
+					}
+				}
+
+				return null;
+
+			case PackageStructureKind.Lock:
+				return await ApplyLockChangeAsync(node, change, decisions, cancellationToken);
+
+			default:
+				return null;
+		}
+	}
+
+	private async Task<string?> ApplyLockChangeAsync(
+		AnySharpObject node, PackageStructureChange change,
+		Dictionary<string, PackageConflictDecision> decisions, CancellationToken cancellationToken)
+	{
+		async Task SetAsync(string value) =>
+			await database.SetLockAsync(node.Object(), change.Element, new SharpLockData { LockString = value }, cancellationToken);
+
+		switch (change.Action)
+		{
+			case PackageStructureAction.Add:
+				await SetAsync(change.NewValue ?? "");
+				return null;
+
+			case PackageStructureAction.Remove:
+				await database.UnsetLockAsync(node.Object(), change.Element, cancellationToken);
+				return null;
+
+			case PackageStructureAction.Conflict:
 			{
-				notes.Add($"{objid}/{attribute}: unknown attribute flag '{flagName}' skipped.");
-				continue;
+				var decision = decisions[DecisionKey(change.TargetRef, LockDecisionAttribute(change.Element))];
+				switch (decision.Resolution)
+				{
+					case PackageConflictResolution.TakeTheirs when change.Conflict == PackageConflictKind.ModifyDelete:
+						await database.UnsetLockAsync(node.Object(), change.Element, cancellationToken);
+						return null;
+					case PackageConflictResolution.TakeTheirs:
+						await SetAsync(change.NewValue ?? "");
+						return null;
+					case PackageConflictResolution.UseCustom when decision.CustomValue is not null:
+						await SetAsync(decision.CustomValue);
+						return null;
+					case PackageConflictResolution.UseCustom:
+						return $"Lock conflict {change.TargetRef}/{change.Element}: UseCustom requires a value.";
+					default: // KeepMine — leave the live lock untouched.
+						return null;
+				}
 			}
 
-			await database.SetAttributeFlagAsync(node.Object(), attribute.Split('`'), flag, cancellationToken);
+			default: // Adopt / NoChange / KeepLocal / RemoveBaseline — no write.
+				return null;
 		}
 	}
 
@@ -890,6 +1111,8 @@ public class PackageInstallService(
 			notes.Add($"Removed {managed.Objid}/{managed.Attribute} (not present in revision {revision}).");
 		}
 
+		await RestoreStructureAsync(packageId, snapshot, notes, cancellationToken);
+
 		var installed = installedResult.AsT0;
 		var newRevision = installed.CurrentRevision + 1;
 		await registry.UpsertInstalledPackageAsync(installed with
@@ -906,6 +1129,111 @@ public class PackageInstallService(
 		});
 
 		return new PackageRollbackResult(newRevision, revision, notes);
+	}
+
+	/// <summary>
+	/// Reconciles each object's package-managed structure to a revision snapshot
+	/// (rollback): sets the snapshot's flags/powers/locks/attribute flags and
+	/// unsets package-managed elements absent from it. Scoped to elements the
+	/// package set, so admin-added extras are never disturbed.
+	/// </summary>
+	private async Task RestoreStructureAsync(
+		string packageId, PackageRevisionSnapshot snapshot, List<string> notes, CancellationToken cancellationToken)
+	{
+		var noDecisions = new Dictionary<string, PackageConflictDecision>(StringComparer.Ordinal);
+		var target = (snapshot.Structure ?? []).ToDictionary(s => s.Objid, StringComparer.Ordinal);
+		var current = DeserializeStructureBaselines(await registry.GetManagedStructuresAsync(packageId));
+
+		foreach (var objid in target.Keys.Union(current.Keys, StringComparer.Ordinal).ToList())
+		{
+			if (await GetKnownAsync(objid, cancellationToken) is null)
+			{
+				notes.Add($"Skipped structure for {objid}: object no longer exists.");
+				continue;
+			}
+
+			var want = target.GetValueOrDefault(objid);
+			var have = current.GetValueOrDefault(objid) ?? PackageStructureBaseline.Empty;
+
+			foreach (var change in StructureRollbackChanges(objid, have, want))
+			{
+				var error = await ApplyStructureChangeAsync(change, objid, noDecisions, notes, cancellationToken);
+				if (error is not null)
+				{
+					notes.Add(error);
+				}
+			}
+
+			if (want is null)
+			{
+				await registry.RemoveManagedStructureAsync(packageId, objid);
+			}
+			else
+			{
+				var baseline = new PackageStructureBaseline(want.Flags, want.Powers, want.Locks, want.AttributeFlags);
+				await registry.UpsertManagedStructureAsync(new ManagedStructureRecord(
+					packageId, objid, JsonSerializer.Serialize(baseline, SnapshotJson), snapshot.Version));
+			}
+		}
+	}
+
+	/// <summary>Synthesizes the add/remove structure changes that move <paramref name="have"/> to <paramref name="want"/>.</summary>
+	private static IEnumerable<PackageStructureChange> StructureRollbackChanges(
+		string objid, PackageStructureBaseline have, PackageRevisionSnapshotStructure? want)
+	{
+		var wantFlags = want?.Flags ?? Array.Empty<string>();
+		var wantPowers = want?.Powers ?? Array.Empty<string>();
+		var wantLocks = want?.Locks ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		var wantAttrFlags = want?.AttributeFlags ?? new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+
+		IEnumerable<PackageStructureChange> Set(PackageStructureKind kind, string? attribute,
+			IReadOnlyList<string> haveSet, IReadOnlyList<string> wantSet)
+		{
+			var wantHash = new HashSet<string>(wantSet, StringComparer.OrdinalIgnoreCase);
+			foreach (var element in wantSet)
+			{
+				yield return new PackageStructureChange(objid, objid, kind, element, PackageStructureAction.Add, attribute);
+			}
+
+			foreach (var element in haveSet.Where(e => !wantHash.Contains(e)))
+			{
+				yield return new PackageStructureChange(objid, objid, kind, element, PackageStructureAction.Remove, attribute);
+			}
+		}
+
+		foreach (var change in Set(PackageStructureKind.ObjectFlag, null, have.Flags, wantFlags))
+		{
+			yield return change;
+		}
+
+		foreach (var change in Set(PackageStructureKind.ObjectPower, null, have.Powers, wantPowers))
+		{
+			yield return change;
+		}
+
+		var attrNames = new HashSet<string>(have.AttributeFlags.Keys, StringComparer.OrdinalIgnoreCase);
+		attrNames.UnionWith(wantAttrFlags.Keys);
+		foreach (var attr in attrNames)
+		{
+			var changes = Set(PackageStructureKind.AttributeFlag, attr,
+				have.AttributeFlags.GetValueOrDefault(attr) ?? [], wantAttrFlags.GetValueOrDefault(attr) ?? []);
+			foreach (var change in changes)
+			{
+				yield return change;
+			}
+		}
+
+		foreach (var (lockType, value) in wantLocks)
+		{
+			yield return new PackageStructureChange(
+				objid, objid, PackageStructureKind.Lock, lockType, PackageStructureAction.Add, NewValue: value);
+		}
+
+		foreach (var lockType in have.Locks.Keys.Where(k => !wantLocks.ContainsKey(k)))
+		{
+			yield return new PackageStructureChange(
+				objid, objid, PackageStructureKind.Lock, lockType, PackageStructureAction.Remove);
+		}
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────────────────
@@ -975,18 +1303,6 @@ public class PackageInstallService(
 	}
 
 	private static AnySharpContainer ToContainer(SharpPlayer player) => player;
-
-	private static string SubstituteFully(
-		string value, Func<PackageRef, string?> resolve, string targetRef, string context, List<string> notes)
-	{
-		var substituted = PackageRefSubstitution.Substitute(value, resolve, out var unresolved);
-		foreach (var reference in unresolved)
-		{
-			notes.Add($"{targetRef}/{context}: ref {reference} could not be resolved; left verbatim.");
-		}
-
-		return substituted;
-	}
 
 	private static string? ResolveConfigure(
 		PackageManifest manifest, IReadOnlyDictionary<string, string> answers, string key)

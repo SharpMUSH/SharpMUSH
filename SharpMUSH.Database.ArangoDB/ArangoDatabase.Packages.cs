@@ -40,6 +40,14 @@ public partial class ArangoDatabase : IPackageRegistryService
 		public string BaselineVersion { get; set; } = "";
 	}
 
+	private class ManagedStructureDbDoc
+	{
+		public string PackageId { get; set; } = "";
+		public string Objid { get; set; } = "";
+		public string StructureJson { get; set; } = "";
+		public string BaselineVersion { get; set; } = "";
+	}
+
 	private class PackageDependencyDbDoc
 	{
 		public string PackageId { get; set; } = "";
@@ -136,7 +144,8 @@ public partial class ArangoDatabase : IPackageRegistryService
 	public async Task RemoveInstalledPackageAsync(string packageId)
 	{
 		foreach (var collection in (string[])
-			[DatabaseConstants.PackageObjects, DatabaseConstants.ManagedAttributes, DatabaseConstants.PackageRevisions])
+			[DatabaseConstants.PackageObjects, DatabaseConstants.ManagedAttributes,
+				DatabaseConstants.ManagedStructures, DatabaseConstants.PackageRevisions])
 		{
 			await arangoDb.Query.ExecuteAsync<object>(handle,
 				"FOR d IN @@c FILTER d.PackageId == @id REMOVE d IN @@c",
@@ -274,6 +283,56 @@ public partial class ArangoDatabase : IPackageRegistryService
 				{ "id", packageId },
 				{ "objid", objid },
 				{ "attr", attribute }
+			});
+	}
+
+	// ── Managed object structure ────────────────────────────────────────────
+
+	public async Task UpsertManagedStructureAsync(ManagedStructureRecord record)
+	{
+		await arangoDb.Query.ExecuteAsync<object>(handle,
+			"UPSERT { PackageId: @pkg, Objid: @objid } INSERT @doc REPLACE @doc IN @@c",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.ManagedStructures },
+				{ "pkg", record.PackageId },
+				{ "objid", record.Objid },
+				{
+					"doc", new Dictionary<string, object>
+					{
+						["PackageId"] = record.PackageId,
+						["Objid"] = record.Objid,
+						["StructureJson"] = record.StructureJson,
+						["BaselineVersion"] = record.BaselineVersion
+					}
+				}
+			});
+	}
+
+	public async Task<IReadOnlyList<ManagedStructureRecord>> GetManagedStructuresAsync(string packageId)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<ManagedStructureDbDoc>(handle,
+			"FOR d IN @@c FILTER d.PackageId == @id SORT d.Objid RETURN d",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.ManagedStructures },
+				{ "id", packageId }
+			});
+
+		return result
+			.Select(d => new ManagedStructureRecord(d.PackageId, d.Objid, d.StructureJson, d.BaselineVersion))
+			.ToList();
+	}
+
+	public async Task RemoveManagedStructureAsync(string packageId, string objid)
+	{
+		await arangoDb.Query.ExecuteAsync<object>(handle,
+			"FOR d IN @@c FILTER d.PackageId == @id AND d.Objid == @objid REMOVE d IN @@c",
+			bindVars: new Dictionary<string, object>
+			{
+				{ "@c", DatabaseConstants.ManagedStructures },
+				{ "id", packageId },
+				{ "objid", objid }
 			});
 	}
 
