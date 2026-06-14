@@ -90,10 +90,13 @@ public partial class SurrealDatabase : IRoleRegistryService
 			["accountId"] = new StringRecordId(key),
 			["slug"] = roleSlug
 		};
-		// Idempotent: remove any existing assignment first, then relate.
+		// Filter by out.slug (a field compare — avoids escaping the role record id), and resolve
+		// the RELATE target via a subquery so it's a real (escaped) record id, mirroring how
+		// account_owns_character relates to the player id from a subquery. Idempotent.
 		await ExecuteAsync("""
-			DELETE account_has_role WHERE in = $accountId AND out = type::thing('role', $slug);
-			RELATE $accountId->account_has_role->type::thing('role', $slug)
+			LET $r = (SELECT id FROM role WHERE slug = $slug)[0].id;
+			DELETE account_has_role WHERE in = $accountId AND out.slug = $slug;
+			RELATE $accountId->account_has_role->$r
 			""", parameters);
 	}
 
@@ -106,7 +109,7 @@ public partial class SurrealDatabase : IRoleRegistryService
 			["slug"] = roleSlug
 		};
 		await ExecuteAsync("""
-			DELETE account_has_role WHERE in = $accountId AND out = type::thing('role', $slug)
+			DELETE account_has_role WHERE in = $accountId AND out.slug = $slug
 			""", parameters);
 	}
 
@@ -125,7 +128,7 @@ public partial class SurrealDatabase : IRoleRegistryService
 	{
 		var parameters = new Dictionary<string, object?> { ["slug"] = roleSlug };
 		var response = await ExecuteAsync("""
-			SELECT in.id AS id FROM account_has_role WHERE out = type::thing('role', $slug)
+			SELECT in.id AS id FROM account_has_role WHERE out.slug = $slug
 			""", parameters);
 		var results = response.GetValue<List<RoleAccountRefRecord>>(0) ?? [];
 		return results.Select(r => NormalizeAccountId(r.Id)).ToList();
