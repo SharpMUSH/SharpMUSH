@@ -68,6 +68,9 @@
         <div class="nav-group">
             <div class="nav-group-label">Manage</div>
             <AuthorizeView Roles="Wizard">
+                <Authorized>@NavItem("/admin", Icons.Material.Filled.Dashboard, "Admin", NavLinkMatch.All)</Authorized>
+            </AuthorizeView>
+            <AuthorizeView Roles="Wizard">
                 <Authorized>@NavItem("/admin/wiki", Icons.Material.Filled.AdminPanelSettings, "Wiki Admin")</Authorized>
             </AuthorizeView>
             <AuthorizeView Roles="Wizard">
