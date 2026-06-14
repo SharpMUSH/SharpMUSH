@@ -59,7 +59,7 @@ public partial class WikiAssetController(
 	/// types are accepted; SVGs are scanned for embedded scripting and rejected when unsafe.
 	/// </summary>
 	[HttpPost]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.MediaUpload)]
 	[RequestSizeLimit(10_485_760)]
 	public async Task<IActionResult> Upload(IFormFile file, CancellationToken ct)
 	{

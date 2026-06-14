@@ -97,4 +97,48 @@ public class PermissionResolverTests
 		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsTrue();
 		await Assert.That(granted.Contains(PortalPermission.ServerAdmin)).IsFalse();
 	}
+
+	[Test]
+	public async ValueTask BuiltInPlayer_GrantsContributorScopesOnly()
+	{
+		var player = BuiltInRoles.All.Single(r => r.Slug == "player");
+		var granted = Resolver.Resolve([player]);
+
+		// Contributor: read drafts, create/edit pages, upload images.
+		await Assert.That(granted.Contains(PortalPermission.WikiRead)).IsTrue();
+		await Assert.That(granted.Contains(PortalPermission.WikiCreate)).IsTrue();
+		await Assert.That(granted.Contains(PortalPermission.WikiEdit)).IsTrue();
+		await Assert.That(granted.Contains(PortalPermission.MediaUpload)).IsTrue();
+
+		// But not delete, moderation, or any admin scope.
+		await Assert.That(granted.Contains(PortalPermission.WikiDelete)).IsFalse();
+		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsFalse();
+		await Assert.That(granted.Contains(PortalPermission.PlayersView)).IsFalse();
+		await Assert.That(granted.Contains(PortalPermission.MediaAdmin)).IsFalse();
+	}
+
+	[Test]
+	public async ValueTask Expand_UmbrellaScopes_ImplyFinerScopes()
+	{
+		var wiki = PortalPermission.Expand([PortalPermission.WikiAdmin]);
+		await Assert.That(wiki.Contains(PortalPermission.WikiRead)).IsTrue();
+		await Assert.That(wiki.Contains(PortalPermission.WikiCreate)).IsTrue();
+		await Assert.That(wiki.Contains(PortalPermission.WikiEdit)).IsTrue();
+		await Assert.That(wiki.Contains(PortalPermission.WikiDelete)).IsTrue();
+
+		var media = PortalPermission.Expand([PortalPermission.MediaAdmin]);
+		await Assert.That(media.Contains(PortalPermission.MediaUpload)).IsTrue();
+
+		var players = PortalPermission.Expand([PortalPermission.PlayersModerate]);
+		await Assert.That(players.Contains(PortalPermission.PlayersView)).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask Expand_NonUmbrellaScope_IsUnchanged()
+	{
+		var expanded = PortalPermission.Expand([PortalPermission.WikiCreate]);
+		await Assert.That(expanded.Count).IsEqualTo(1);
+		await Assert.That(expanded.Contains(PortalPermission.WikiCreate)).IsTrue();
+		await Assert.That(expanded.Contains(PortalPermission.WikiEdit)).IsFalse();
+	}
 }

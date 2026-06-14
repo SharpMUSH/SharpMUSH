@@ -13,7 +13,7 @@
     <div class="wiki-article">
         <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:14px;" /> Wiki</a>
         <MudAlert Severity="@Severity.Info" Variant="Variant.Outlined" Class="mt-2">
-            <AuthorizeView>
+            <AuthorizeView Policy="wiki.create">
                 <Authorized>
                     <MudText>@Loc["WikiPageNotExist"]</MudText>
                     <MudButton EndIcon="@Icons.Material.Filled.Create" Color="Color.Primary" Ripple="true"
@@ -54,7 +54,7 @@ else
                     <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:13px;" /> anyone can edit
                 </span>
                 <div style="flex:1;"></div>
-                <AuthorizeView>
+                <AuthorizeView Policy="wiki.edit">
                     <Authorized>
                         <button type="button" class="wiki-btn wiki-btn--solid" @onclick="ActivateEditMode">
                             <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:14px;" /> Edit

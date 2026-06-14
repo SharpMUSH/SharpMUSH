@@ -67,7 +67,7 @@
         @* MANAGE *@
         <div class="nav-group">
             <div class="nav-group-label">Manage</div>
-            <AuthorizeView Policy="players.admin">
+            <AuthorizeView Policy="players.view">
                 <Authorized>@NavItem("/admin", Icons.Material.Filled.Dashboard, "Admin", NavLinkMatch.All)</Authorized>
             </AuthorizeView>
             <AuthorizeView Policy="roles.admin">

@@ -154,7 +154,9 @@ public class JwtService(
 		foreach (var assigned in await roleRegistry.GetRolesForAccountAsync(account.Id!))
 			effective[assigned.Slug] = assigned;
 
-		return permissionResolver.Resolve(effective.Values);
+		// Expand umbrella scopes (e.g. wiki.admin ⇒ wiki.read/create/edit/delete) so the finer
+		// gates authorize for holders of the coarser scope without per-gate "or admin" checks.
+		return PortalPermission.Expand(permissionResolver.Resolve(effective.Values));
 	}
 
 	private string BuildAccessToken(SharpAccount account, SharpPlayer character, PortalRole role,
