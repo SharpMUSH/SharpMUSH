@@ -685,7 +685,7 @@
             _editing.IsSystem,
             new Dictionary<string, string>(_editPerms),
             _editing.CreatedAt,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
         var (ok, error) = await Roles.UpsertAsync(model);
         _saving = false;

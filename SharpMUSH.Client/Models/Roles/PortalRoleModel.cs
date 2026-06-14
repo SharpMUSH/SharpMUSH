@@ -12,5 +12,5 @@ public sealed record PortalRoleModel(
 	int Priority,
 	bool IsSystem,
 	Dictionary<string, string> Permissions,
-	DateTimeOffset CreatedAt,
-	DateTimeOffset UpdatedAt);
+	long CreatedAt,
+	long UpdatedAt);

@@ -77,8 +77,8 @@
             _priority,
             IsSystem: false,
             Permissions: new Dictionary<string, string>(),
-            CreatedAt: Existing?.CreatedAt ?? DateTimeOffset.UtcNow,
-            UpdatedAt: DateTimeOffset.UtcNow);
+            CreatedAt: Existing?.CreatedAt ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            UpdatedAt: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
         var (ok, error) = await Roles.UpsertAsync(model);
         _saving = false;
