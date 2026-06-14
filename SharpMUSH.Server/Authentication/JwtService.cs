@@ -39,8 +39,14 @@ public class JwtService(
 		PortalRole role,
 		CancellationToken ct = default)
 	{
-		var scopes = await ComputeGrantedScopesAsync(account, role);
-		var accessToken = BuildAccessToken(account, character, role, scopes, out var expiresIn);
+		// The portal role is ACCOUNT-level: the highest flag-derived role across every character
+		// the account owns (one Wizard character makes the whole account Wizard-privileged), not
+		// just the active one. Characters are resolved by stable dbref/key — never by (renamable)
+		// name. The character_* claims below are display context only and refresh with the token.
+		var effectiveRole = await ComputeAccountRoleAsync(account, role, ct);
+
+		var scopes = await ComputeGrantedScopesAsync(account, effectiveRole);
+		var accessToken = BuildAccessToken(account, character, effectiveRole, scopes, out var expiresIn);
 
 		var charRef = new DBRef(character.Object.Key, character.Object.CreationTime);
 		var refreshTtl = TimeSpan.FromDays(_opts.RefreshTokenLifetimeDays);
@@ -48,9 +54,9 @@ public class JwtService(
 
 		logger.LogInformation(
 			"JWT issued for account {AccountId}, character #{Key}, role {Role}",
-			account.Id, character.Object.Key, role);
+			account.Id, character.Object.Key, effectiveRole);
 
-		return new JwtTokenResult(accessToken, refreshToken, expiresIn, role);
+		return new JwtTokenResult(accessToken, refreshToken, expiresIn, effectiveRole);
 	}
 
 	/// <inheritdoc />
@@ -102,6 +108,36 @@ public class JwtService(
 	// secret. The token is signed (HMAC-SHA256) and transmitted only over TLS.
 	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
 		Justification = "JWT sub/unique_name claims are standard bearer-token identifiers, not secret data.")]
+	/// <summary>
+	/// The account-level flag-derived role: the highest <see cref="PortalRole"/> across every
+	/// character the account owns (so a Wizard on any character lifts the whole account). Falls
+	/// back to the active <paramref name="activeRole"/> if the character list can't be loaded.
+	/// Characters are resolved by stable key/dbref, so character renames never affect the result.
+	/// </summary>
+	private async Task<PortalRole> ComputeAccountRoleAsync(SharpAccount account, PortalRole activeRole, CancellationToken ct)
+	{
+		try
+		{
+			var characters = await accountService.GetCharactersAsync(account.Id!, ct);
+			if (characters.Count == 0)
+				return activeRole;
+
+			var perCharacter = new List<(int, IEnumerable<SharpObjectFlag>)>(characters.Count);
+			foreach (var c in characters)
+				perCharacter.Add((c.Object.Key, await c.Object.Flags.Value.ToListAsync(ct)));
+
+			var accountRole = roleDerivation.DeriveAccountRole(perCharacter);
+			return accountRole > activeRole ? accountRole : activeRole;
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex,
+				"Could not derive account-level role for account {AccountId}; using the active character's role.",
+				account.Id);
+			return activeRole;
+		}
+	}
+
 	/// <summary>
 	/// Computes the granted permission scopes for an account: the account's effective roles are
 	/// the (current, possibly admin-edited) built-in role for its flag-derived <paramref name="role"/>
