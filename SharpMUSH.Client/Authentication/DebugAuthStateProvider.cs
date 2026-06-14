@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
+using System.Linq;
 using System.Security.Claims;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Authorization;
 
 namespace SharpMUSH.Client.Authentication;
 
@@ -26,6 +28,12 @@ public class DebugAuthStateProvider(AccountAuthService accountAuth) : Authentica
 	/// Cached on first successful server round-trip.
 	private AccountAuthService.DebugOttResponse? _cached;
 
+	/// <summary>One role claim per <see cref="PortalRole"/> name. The bootstrap account
+	/// owns player #1 (God), the top of the hierarchy; since role checks are exact string
+	/// matches, the principal needs a claim for every gated role (Wizard, God, …).</summary>
+	private static readonly Claim[] DebugRoleClaims =
+		Enum.GetNames<PortalRole>().Select(name => new Claim(ClaimTypes.Role, name)).ToArray();
+
 	public override async Task<AuthenticationState> GetAuthenticationStateAsync()
 	{
 		if (_cached is null)
@@ -40,10 +48,11 @@ public class DebugAuthStateProvider(AccountAuthService accountAuth) : Authentica
 				new(ClaimTypes.NameIdentifier, _cached.AccountId),
 				new(ClaimTypes.Name, _cached.AccountUsername ?? "admin"),
 				new(ClaimTypes.Role, "Admin"),
-				// The admin pages gate on [Authorize(Roles = "Wizard")]; the bootstrap
-				// account is the top-level admin, so grant Wizard in dev. Mirrors the
-				// server-side DebugAuthenticationHandler, which emits both roles.
-				new(ClaimTypes.Role, "Wizard"),
+				// The bootstrap account owns player #1 (God) — the top of the role
+				// hierarchy. Role checks are EXACT string matches, so [Authorize(Roles="God")]
+				// and [Authorize(Roles="Wizard")] each need their own claim. Grant every
+				// PortalRole in dev. Mirrors the server-side DebugAuthenticationHandler.
+				.. DebugRoleClaims,
 				// Match the custom claims emitted by JwtService / DebugAuthenticationHandler
 				// so component logic that inspects character_key or character_name works.
 				new("character_key", "1"),
@@ -59,7 +68,7 @@ public class DebugAuthStateProvider(AccountAuthService accountAuth) : Authentica
 				new(ClaimTypes.Name, "DebugAdmin"),
 				new(ClaimTypes.NameIdentifier, "debug-bootstrap-pending"),
 				new(ClaimTypes.Role, "Admin"),
-				new(ClaimTypes.Role, "Wizard"),
+				.. DebugRoleClaims,
 			];
 		}
 
