@@ -1,5 +1,5 @@
 @page "/admin/media"
-@attribute [Authorize(Roles = "Wizard")]
+@attribute [Authorize(Policy = "media.admin")]
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Forms
 @inject WikiAssetService AssetService

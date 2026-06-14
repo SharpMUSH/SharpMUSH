@@ -1,5 +1,5 @@
 @page "/admin/wiki/assets"
-@attribute [Authorize(Roles = "Wizard")]
+@attribute [Authorize(Policy = "media.admin")]
 @using SharpMUSH.Client.Services
 @inject WikiAssetService AssetService
 @inject ISnackbar Snackbar

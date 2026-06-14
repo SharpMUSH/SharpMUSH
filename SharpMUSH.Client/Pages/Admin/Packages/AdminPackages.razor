@@ -1,5 +1,5 @@
 @page "/admin/packages"
-@attribute [Authorize(Roles = "Wizard")]
+@attribute [Authorize(Policy = "packages.admin")]
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.API
 @using SharpMUSH.Library.Models.Packages

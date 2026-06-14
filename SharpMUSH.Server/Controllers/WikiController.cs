@@ -299,7 +299,7 @@ public class WikiController(
 		if (lookup.IsT1) return NotFound();
 
 		// Protected pages may only be edited by Wizard-level users.
-		if (lookup.AsT0.IsProtected && !User.IsInRole(nameof(PortalRole.Wizard)))
+		if (lookup.AsT0.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
 		var id = lookup.AsT0.Id;
@@ -334,7 +334,7 @@ public class WikiController(
 		if (lookup.IsT1) return NotFound();
 
 		var page = lookup.AsT0;
-		if (page.IsProtected && !User.IsInRole(nameof(PortalRole.Wizard)))
+		if (page.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
 		var revisionLookup = await wikiService.GetRevisionAsync(page.Id, request.RevisionNumber);
@@ -386,7 +386,7 @@ public class WikiController(
 	/// Deletes a wiki page and all its revisions, identified by slug.
 	/// </summary>
 	[HttpDelete("{slug}")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
 	public async Task<IActionResult> DeletePage(string slug, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
 		var editorDbref = CallerDbref;
@@ -412,7 +412,7 @@ public class WikiController(
 	/// Sets or clears the protection flag on a wiki page, identified by slug.
 	/// </summary>
 	[HttpPut("{slug}/protection")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
 	public async Task<IActionResult> SetProtection(string slug, [FromBody] SetProtectionRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
 		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
@@ -442,7 +442,7 @@ public class WikiController(
 
 		// Protected pages may only be retagged/(un)published by Wizard-level users,
 		// mirroring the edit restriction in UpdatePage.
-		if (lookup.AsT0.IsProtected && !User.IsInRole(nameof(PortalRole.Wizard)))
+		if (lookup.AsT0.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
 		var result = await wikiService.SetMetadataAsync(
@@ -474,7 +474,7 @@ public class WikiController(
 	/// Sets or clears the protection flag on multiple pages at once.
 	/// </summary>
 	[HttpPost("batch/protect")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
 	public async Task<IActionResult> BatchProtect([FromBody] BatchProtectRequest request)
 	{
 		var succeeded = new List<string>();
@@ -504,7 +504,7 @@ public class WikiController(
 	/// Deletes multiple pages (and their revisions) at once.
 	/// </summary>
 	[HttpPost("batch/delete")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
 	public async Task<IActionResult> BatchDelete([FromBody] BatchDeleteRequest request)
 	{
 		var editorDbref = CallerDbref;
@@ -543,7 +543,7 @@ public class WikiController(
 	/// Called by the wiki edit handler after a page is saved.
 	/// </summary>
 	[HttpPost("invalidate-cache")]
-	[Authorize(Roles = nameof(PortalRole.Wizard))]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
 	public IActionResult InvalidateCache([FromBody] InvalidateCacheRequest request)
 	{
 		if (!string.IsNullOrWhiteSpace(request.Path))

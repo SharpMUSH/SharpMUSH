@@ -1,5 +1,5 @@
 @page "/admin/layout"
-@attribute [Authorize(Roles = "Wizard")]
+@attribute [Authorize(Policy = "layout.admin")]
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>Layout — Admin — SharpMUSH</PageTitle>

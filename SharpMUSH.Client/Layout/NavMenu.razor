@@ -56,10 +56,10 @@
             <div class="nav-group-label">Build</div>
             @NavItem("/softcode", Icons.Material.Filled.Code, Loc["SoftcodeEditor"])
             <ApplicationNavLinks IsCollapsed="IsCollapsed" />
-            <AuthorizeView Roles="Wizard">
+            <AuthorizeView Policy="applications.admin">
                 <Authorized>@NavItem("/admin/applications", Icons.Material.Filled.Apps, "Applications")</Authorized>
             </AuthorizeView>
-            <AuthorizeView Roles="Wizard">
+            <AuthorizeView Policy="packages.admin">
                 <Authorized>@NavItem("/admin/packages", Icons.Material.Filled.Inventory2, "Packages")</Authorized>
             </AuthorizeView>
         </div>
@@ -67,13 +67,13 @@
         @* MANAGE *@
         <div class="nav-group">
             <div class="nav-group-label">Manage</div>
-            <AuthorizeView Roles="Wizard">
+            <AuthorizeView Policy="players.admin">
                 <Authorized>@NavItem("/admin", Icons.Material.Filled.Dashboard, "Admin", NavLinkMatch.All)</Authorized>
             </AuthorizeView>
-            <AuthorizeView Roles="Wizard">
+            <AuthorizeView Policy="wiki.admin">
                 <Authorized>@NavItem("/admin/wiki", Icons.Material.Filled.AdminPanelSettings, "Wiki Admin")</Authorized>
             </AuthorizeView>
-            <AuthorizeView Roles="Wizard">
+            <AuthorizeView Policy="media.admin">
                 <Authorized>@NavItem("/admin/media", Icons.Material.Filled.PermMedia, "Image Library")</Authorized>
             </AuthorizeView>
             @NavItem("/admin/config", Icons.Material.Filled.Tune, Loc["Config"])

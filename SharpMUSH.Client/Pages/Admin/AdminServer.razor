@@ -1,5 +1,5 @@
 @page "/admin/server"
-@attribute [Authorize(Roles = "God")]
+@attribute [Authorize(Policy = "server.admin")]
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>Server Settings — Admin — SharpMUSH</PageTitle>

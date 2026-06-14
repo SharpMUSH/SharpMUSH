@@ -4,7 +4,7 @@
 @using SharpMUSH.Library.Authorization
 @using SharpMUSH.Library.Models.Portal.Applications
 @using SharpMUSH.Library.Models.Portal.Widgets
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = nameof(PortalRole.Wizard))]
+@attribute [Authorize(Policy = "applications.admin")]
 @inject ApplicationRegistryClient Registry
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService

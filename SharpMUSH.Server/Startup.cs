@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Core.Arango;
 using Mediator;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -486,6 +487,10 @@ public class Startup(
 		services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 
 		services.AddAuthorization();
+		// Permission-policy plumbing: resolves [Authorize(Policy = PortalPermission.X)] gates against
+		// the per-scope "perm" claims carried in the JWT.
+		services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+		services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 		services.AddRazorPages();
 		services.AddControllers();
 		services.AddQuartzHostedService();
