@@ -1,5 +1,6 @@
 @page "/admin/config/restrictions"
 @layout ConfigLayout
+@attribute [Authorize(Policy = "config.admin")]
 @using SharpMUSH.Client.Services
 @inject RestrictionsService RestrictionsService
 @inject ISnackbar Snackbar

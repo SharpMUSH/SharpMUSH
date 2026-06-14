@@ -1,5 +1,6 @@
 @page "/admin/config/bannednames"
 @layout ConfigLayout
+@attribute [Authorize(Policy = "config.admin")]
 @using SharpMUSH.Client.Services
 @inject BannedNamesService BannedNamesService
 @inject ISnackbar Snackbar

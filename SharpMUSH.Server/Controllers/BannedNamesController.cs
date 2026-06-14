@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Helpers;
@@ -10,6 +12,7 @@ namespace SharpMUSH.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class BannedNamesController(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ISharpDatabase database,

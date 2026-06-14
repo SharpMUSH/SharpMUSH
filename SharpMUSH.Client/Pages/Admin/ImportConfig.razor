@@ -1,5 +1,6 @@
 @page "/admin/config/import"
 @layout ConfigLayout
+@attribute [Authorize(Policy = "config.admin")]
 @using SharpMUSH.Client.Services
 @inject AdminConfigService AdminConfigService
 @inject IJSRuntime JSRuntime

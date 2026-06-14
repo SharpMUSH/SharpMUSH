@@ -79,7 +79,9 @@
             <AuthorizeView Policy="media.admin">
                 <Authorized>@NavItem("/admin/media", Icons.Material.Filled.PermMedia, "Image Library")</Authorized>
             </AuthorizeView>
-            @NavItem("/admin/config", Icons.Material.Filled.Tune, Loc["Config"])
+            <AuthorizeView Policy="config.admin">
+                <Authorized>@NavItem("/admin/config", Icons.Material.Filled.Tune, Loc["Config"])</Authorized>
+            </AuthorizeView>
             @NavItem("/help", Icons.Material.Filled.Help, Loc["Help"])
         </div>
     </nav>
