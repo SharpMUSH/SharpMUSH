@@ -52,7 +52,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		_logger.LogDebug("GetObjectAsync {Dbref}", dbref);
 		var infoCmd = RouteLiteral($"SHARP_INFO:{dbref}:[name({dbref})]:[type({dbref})]:[owner({dbref})]");
 		// edit() collapses actual newlines in values to @@NL@@ so SHARP_ATTR stays single-line.
-		var attrCmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##::[edit(get({dbref}/##),%r,@@NL@@)],%b,%r)");
+		var attrCmd = RouteExpr($"iter(lattr({dbref}/**),SHARP_ATTR:##::[edit(get({dbref}/##),%r,@@NL@@)],%b,%r)");
 
 		var infoLines = await terminal.SendCommandAsync(infoCmd);
 		var attrLines = await terminal.SendCommandAsync(attrCmd);
@@ -69,7 +69,7 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	{
 		// edit() replaces any actual newlines in the attribute value with @@NL@@ so the
 		// SHARP_ATTR marker stays on a single line — safe even when attrs contain %r output.
-		var cmd = RouteExpr($"iter(lattr({dbref}),SHARP_ATTR:##::[edit(get({dbref}/##),%r,@@NL@@)],%b,%r)");
+		var cmd = RouteExpr($"iter(lattr({dbref}/**),SHARP_ATTR:##::[edit(get({dbref}/##),%r,@@NL@@)],%b,%r)");
 		var lines = await terminal.SendCommandAsync(cmd);
 		return ParseAttributes(lines);
 	}

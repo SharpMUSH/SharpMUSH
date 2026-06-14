@@ -1,0 +1,285 @@
+@page "/wiki/{Ns}/{Category}/{Slug}/diff"
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@using OneOf
+@inject WikiService Wiki
+@inject IStringLocalizer<SharedResource> Loc
+@inject NavigationManager Nav
+
+<PageTitle>Diff: @Slug — SharpMUSH</PageTitle>
+
+@* Header *@
+<div style="padding:8px var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+    <MudBreadcrumbs Items="_crumbs" Separator="›" Style="padding:0;font-size:13px;" />
+    <MudSpacer />
+    <MudToggleGroup T="string" Value="_mode" ValueChanged="@(v => _mode = v ?? "unified")"
+                    Color="Color.Primary" Style="gap:0;">
+        <MudToggleItem Value="@("unified")" Text="Unified" />
+        <MudToggleItem Value="@("split")" Text="Split" />
+    </MudToggleGroup>
+    <MudButton Variant="Variant.Text" Size="Size.Small"
+               Href="@($"/wiki/{Ns}/{Category}/{Slug}/history")">
+        ← History
+    </MudButton>
+</div>
+
+<div style="padding:var(--cpad);">
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        @for (var i = 0; i < 6; i++) { <MudSkeleton Height="22px" Class="mb-1" /> }
+    }
+    else if (_fromRev is null || _toRev is null)
+    {
+        <MudAlert Severity="Severity.Warning">Could not load one or both revisions. Check your revision numbers.</MudAlert>
+    }
+    else
+    {
+        @* Stat bar *@
+        <div style="display:flex;align-items:center;gap:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:18px;">
+            <MudText Style="font-size:13px;font-weight:600;">
+                Rev @_fromRev.RevisionNumber
+                <span style="color:var(--text-faint);font-weight:400;margin:0 8px;">→</span>
+                Rev @_toRev.RevisionNumber
+            </MudText>
+            <MudText Style="font-size:12px;color:var(--text-dim);">@_fromRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm") → @_toRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudText>
+            <MudSpacer />
+            <MudChip T="string" Size="Size.Small"
+                     Style="@($"height:20px;font-size:11px;padding:0 7px;background:rgba(0,200,100,0.15);color:#6cde9a;font-family:'JetBrains Mono',monospace;")">
+                +@_addedCount
+            </MudChip>
+            <MudChip T="string" Size="Size.Small"
+                     Style="height:20px;font-size:11px;padding:0 7px;background:rgba(220,80,80,0.15);color:#e57373;font-family:'JetBrains Mono',monospace;">
+                -@_removedCount
+            </MudChip>
+        </div>
+
+        @if (_mode == "split")
+        {
+            @* Side-by-side *@
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <div style="padding:6px 10px;background:rgba(220,80,80,0.12);border-bottom:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;">
+                        <MudText Class="section-kicker">Rev @_fromRev.RevisionNumber — Old</MudText>
+                    </div>
+                    <pre class="wiki-diff-pane">@_fromRev.MarkdownSource</pre>
+                </div>
+                <div>
+                    <div style="padding:6px 10px;background:rgba(0,200,100,0.10);border-bottom:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;">
+                        <MudText Class="section-kicker">Rev @_toRev.RevisionNumber — New</MudText>
+                    </div>
+                    <pre class="wiki-diff-pane">@_toRev.MarkdownSource</pre>
+                </div>
+            </div>
+        }
+        else
+        {
+            @* Unified diff *@
+            <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+                @foreach (var hunk in _hunks)
+                {
+                    @if (hunk.Kind == DiffLineKind.Header)
+                    {
+                        <div class="wiki-diff-line wiki-diff-line--header">@hunk.Text</div>
+                    }
+                    else if (hunk.Kind == DiffLineKind.Added)
+                    {
+                        <div class="wiki-diff-line wiki-diff-line--added">+&nbsp;@hunk.Text</div>
+                    }
+                    else if (hunk.Kind == DiffLineKind.Removed)
+                    {
+                        <div class="wiki-diff-line wiki-diff-line--removed">-&nbsp;@hunk.Text</div>
+                    }
+                    else
+                    {
+                        <div class="wiki-diff-line wiki-diff-line--context">&nbsp;&nbsp;@hunk.Text</div>
+                    }
+                }
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .wiki-diff-line {
+        display: block;
+        padding: 1px 12px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12.5px;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    .wiki-diff-line--header  { background: rgba(90,169,255,0.10); color: var(--text-dim); }
+    .wiki-diff-line--added   { background: rgba(0,200,100,0.12); color: #6cde9a; }
+    .wiki-diff-line--removed { background: rgba(220,80,80,0.13); color: #e57373; }
+    .wiki-diff-line--context { background: transparent; color: var(--text-dim); }
+    .wiki-diff-pane {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-top: none;
+        border-radius: 0 0 var(--radius) var(--radius);
+        padding: 12px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12.5px;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        word-break: break-all;
+        margin: 0;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+</style>
+
+@code {
+    [Parameter] public required string Slug { get; set; }
+    [Parameter] public required string Ns { get; set; }
+    [Parameter] public required string Category { get; set; }
+
+    [SupplyParameterFromQuery(Name = "from")]
+    public int? FromRev { get; set; }
+
+    [SupplyParameterFromQuery(Name = "to")]
+    public int? ToRev { get; set; }
+
+    private string _mode = "unified";
+    private WikiRevisionInfo? _fromRev;
+    private WikiRevisionInfo? _toRev;
+    private bool _loading = true;
+    private List<DiffLine> _hunks = [];
+    private int _addedCount;
+    private int _removedCount;
+    private List<BreadcrumbItem> _crumbs = [];
+
+    private enum DiffLineKind { Header, Added, Removed, Context }
+    private record DiffLine(DiffLineKind Kind, string Text);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        var displayTitle = string.IsNullOrWhiteSpace(Slug) ? "Page" : Slug.Replace('-', ' ');
+        _crumbs =
+        [
+            new("Wiki", $"/wiki/{Ns}/{Category}"),
+            new(displayTitle, $"/wiki/{Ns}/{Category}/{Slug}"),
+            new("History", $"/wiki/{Ns}/{Category}/{Slug}/history"),
+            new("Diff", null, disabled: true),
+        ];
+
+        if (FromRev.HasValue && ToRev.HasValue)
+        {
+            var fromTask = Wiki.GetRevisionAsync(Slug, FromRev.Value, Ns, Category);
+            var toTask   = Wiki.GetRevisionAsync(Slug, ToRev.Value, Ns, Category);
+            await Task.WhenAll(fromTask.AsTask(), toTask.AsTask());
+            var fromResult = await fromTask;
+            var toResult   = await toTask;
+            _fromRev = fromResult.IsT0 ? fromResult.AsT0 : null;
+            _toRev   = toResult.IsT0   ? toResult.AsT0   : null;
+        }
+
+        if (_fromRev is not null && _toRev is not null)
+            ComputeDiff();
+
+        _loading = false;
+    }
+
+    private void ComputeDiff()
+    {
+        var oldLines = _fromRev!.MarkdownSource.Split('\n');
+        var newLines = _toRev!.MarkdownSource.Split('\n');
+        _hunks = [];
+        _addedCount = 0;
+        _removedCount = 0;
+
+        // Simple LCS-based unified diff — context = 3 lines
+        var dp = ComputeLcs(oldLines, newLines);
+        var changes = BuildChanges(oldLines, newLines, dp);
+
+        const int ctx = 3;
+        var inHunk = false;
+        var oldIdx = 0;
+        var newIdx = 0;
+
+        for (var i = 0; i < changes.Count; i++)
+        {
+            var ch = changes[i];
+            if (ch.Kind == DiffLineKind.Context)
+            {
+                // Determine if we're near a change
+                var nearChange = false;
+                for (var j = Math.Max(0, i - ctx); j <= Math.Min(changes.Count - 1, i + ctx); j++)
+                    if (changes[j].Kind != DiffLineKind.Context) { nearChange = true; break; }
+
+                if (nearChange)
+                {
+                    if (!inHunk)
+                    {
+                        _hunks.Add(new DiffLine(DiffLineKind.Header, $"@@ -{oldIdx + 1} +{newIdx + 1} @@"));
+                        inHunk = true;
+                    }
+                    _hunks.Add(ch);
+                }
+                else { inHunk = false; }
+                oldIdx++; newIdx++;
+            }
+            else if (ch.Kind == DiffLineKind.Removed)
+            {
+                if (!inHunk)
+                {
+                    _hunks.Add(new DiffLine(DiffLineKind.Header, $"@@ -{oldIdx + 1} +{newIdx + 1} @@"));
+                    inHunk = true;
+                }
+                _hunks.Add(ch);
+                _removedCount++;
+                oldIdx++;
+            }
+            else
+            {
+                if (!inHunk)
+                {
+                    _hunks.Add(new DiffLine(DiffLineKind.Header, $"@@ -{oldIdx + 1} +{newIdx + 1} @@"));
+                    inHunk = true;
+                }
+                _hunks.Add(ch);
+                _addedCount++;
+                newIdx++;
+            }
+        }
+    }
+
+    private static List<DiffLine> BuildChanges(string[] old, string[] nw, int[,] dp)
+    {
+        var result = new List<DiffLine>();
+        BuildHelper(old, nw, dp, old.Length, nw.Length, result);
+        return result;
+    }
+
+    private static void BuildHelper(string[] old, string[] nw, int[,] dp, int i, int j, List<DiffLine> acc)
+    {
+        if (i == 0 && j == 0) return;
+        if (i > 0 && j > 0 && old[i - 1] == nw[j - 1])
+        {
+            BuildHelper(old, nw, dp, i - 1, j - 1, acc);
+            acc.Add(new DiffLine(DiffLineKind.Context, old[i - 1]));
+        }
+        else if (j > 0 && (i == 0 || dp[i, j - 1] >= dp[i - 1, j]))
+        {
+            BuildHelper(old, nw, dp, i, j - 1, acc);
+            acc.Add(new DiffLine(DiffLineKind.Added, nw[j - 1]));
+        }
+        else
+        {
+            BuildHelper(old, nw, dp, i - 1, j, acc);
+            acc.Add(new DiffLine(DiffLineKind.Removed, old[i - 1]));
+        }
+    }
+
+    private static int[,] ComputeLcs(string[] a, string[] b)
+    {
+        var dp = new int[a.Length + 1, b.Length + 1];
+        for (var i = 1; i <= a.Length; i++)
+            for (var j = 1; j <= b.Length; j++)
+                dp[i, j] = a[i - 1] == b[j - 1] ? dp[i - 1, j - 1] + 1 : Math.Max(dp[i - 1, j], dp[i, j - 1]);
+        return dp;
+    }
+}

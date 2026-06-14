@@ -1,104 +1,152 @@
-@* NavMenu with support for collapsed (icon-only) mode *@
+@* NavMenu — Phosphor Refined sidebar: logo · Play/World/Build/Manage groups · profile card *@
 @using SharpMUSH.Client.Services
+@using Microsoft.AspNetCore.Components.Routing
 @inject IStringLocalizer<SharedResource> Loc
 @inject ITerminalService Terminal
+@inject AccountAuthService AccountAuth
 @implements IDisposable
 
-<MudPaper Width="@(IsCollapsed ? "60px" : "250px")" Class="py-3" Elevation="0">
-    <MudNavMenu>
+<div class="phosphor-sidebar @(IsCollapsed ? "phosphor-sidebar--collapsed" : "")">
+
+    @* ── Logo / brand ── *@
+    <a href="/" class="phosphor-logo">
+        <svg width="26" height="26" viewBox="0 0 512 512" class="phosphor-logo-mark">
+            <g fill="var(--accent)">
+                <path d="m345.16-0.31-88.2 163.24-88.13-163.1-167.67 252.72 87.98 234.7-1.24-233.41 64.74-117.99 104.11 196.48 0.27-0.37 0.51 0.0 104.11-196.48 64.74 117.99-1.25 233.41 87.98-234.7z" />
+                <path d="m143.1 228.96 65.57 113.27v170.77l-65.99-166.48z" />
+                <path d="m370.64 227.45-65.57 113.27v170.77l65.99-166.48z" />
+            </g>
+        </svg>
         @if (!IsCollapsed)
         {
-            <MudText Typo="Typo.h6" Class="px-4">@Loc["AppTitle"]</MudText>
-            <MudText Typo="Typo.body2" Class="px-4">@Loc["AdminPanel"]</MudText>
-            <MudDivider Class="my-2"/>
+            <div style="line-height:1.1;overflow:hidden;">
+                <div class="phosphor-brand">@Loc["AppTitle"]</div>
+                <div class="phosphor-brand-tag">GAME&nbsp;NAME</div>
+            </div>
         }
+    </a>
 
-        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["Home"]</text> }
-        </MudNavLink>
+    @* ── Nav groups ── *@
+    <nav class="phosphor-nav">
 
-        <MudNavLink Href="/characters" Icon="@Icons.Material.Filled.Groups" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["Characters"]</text> }
-        </MudNavLink>
+        @* PLAY *@
+        <div class="nav-group">
+            <div class="nav-group-label">Play</div>
+            @NavItem("/", Icons.Material.Filled.Home, Loc["Home"], NavLinkMatch.All)
+            @if (_characterActive)
+            {
+                @NavItem("/play", Icons.Material.Filled.SportsEsports, Loc["Play"])
+            }
+            @NavItem("/scenes", Icons.Material.Filled.Movie, Loc["SceneArchive"])
+            @NavItem("/characters", Icons.Material.Filled.Groups, Loc["Characters"])
+            @if (_characterActive)
+            {
+                @NavItem("/mail", Icons.Material.Filled.Mail, Loc["Mail"])
+            }
+        </div>
 
-        <MudNavLink Href="/wiki" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.MenuBook" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["Wiki"]</text> }
-        </MudNavLink>
+        @* WORLD *@
+        <div class="nav-group">
+            <div class="nav-group-label">World</div>
+            @NavItem("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
+        </div>
 
-        <MudNavLink Href="/wiki#recent-changes" Icon="@Icons.Material.Filled.Update" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["RecentChanges"]</text> }
-        </MudNavLink>
+        @* BUILD *@
+        <div class="nav-group">
+            <div class="nav-group-label">Build</div>
+            @NavItem("/softcode", Icons.Material.Filled.Code, Loc["SoftcodeEditor"])
+            <ApplicationNavLinks IsCollapsed="IsCollapsed" />
+            @NavItem("/admin/packages", Icons.Material.Filled.Inventory2, "Packages")
+        </div>
 
-        <MudNavLink Href="/scenes" Icon="@Icons.Material.Filled.Movie" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["SceneArchive"]</text> }
-        </MudNavLink>
+        @* MANAGE *@
+        <div class="nav-group">
+            <div class="nav-group-label">Manage</div>
+            @NavItem("/admin/wiki", Icons.Material.Filled.AdminPanelSettings, "Wiki Admin")
+            @NavItem("/admin/media", Icons.Material.Filled.PermMedia, "Image Library")
+            @NavItem("/admin/config", Icons.Material.Filled.Tune, Loc["Config"])
+            @NavItem("/help", Icons.Material.Filled.Help, Loc["Help"])
+        </div>
+    </nav>
 
-        @* Play and Mail are character-scoped: only meaningful once a character is active
-           (selected/connected), so they are hidden at the account level. *@
-        @if (_characterActive)
-        {
-            <MudNavLink Href="/mail" Icon="@Icons.Material.Filled.Mail" IconColor="Color.Secondary">
-                @if (!IsCollapsed) { <text>@Loc["Mail"]</text> }
-            </MudNavLink>
-
-            <MudNavLink Href="/play" Icon="@Icons.Material.Filled.SportsEsports" IconColor="Color.Secondary">
-                @if (!IsCollapsed) { <text>@Loc["Play"]</text> }
-            </MudNavLink>
-        }
-
-        <MudNavLink Href="/softcode" Icon="@Icons.Material.Filled.Code" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["SoftcodeEditor"]</text> }
-        </MudNavLink>
-
-        <MudNavLink Href="/help" Icon="@Icons.Material.Filled.Help" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["Help"]</text> }
-        </MudNavLink>
-
-        @* Registered full-page Dynamic Applications (Area 21), role-filtered. *@
-        <ApplicationNavLinks IsCollapsed="IsCollapsed" />
-
-        <MudDivider Class="my-2"/>
-
-        <MudNavLink Href="/account" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["MyAccount"]</text> }
-        </MudNavLink>
-
-        <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary">
-            @if (!IsCollapsed) { <text>@Loc["Settings"]</text> }
-        </MudNavLink>
-
-        @if (!IsCollapsed)
-        {
-            <MudNavGroup Title="@Loc["AdminPanel"].Value" Icon="@Icons.Material.Filled.AdminPanelSettings" IconColor="Color.Secondary" Expanded="false">
-                <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Tune">@Loc["Config"]</MudNavLink>
-                <MudNavLink Href="/admin/packages" Icon="@Icons.Material.Filled.Inventory2">Packages</MudNavLink>
-                <MudNavLink Href="/admin/applications" Icon="@Icons.Material.Filled.Apps">Applications</MudNavLink>
-                <MudNavLink Href="/admin/profiles" Icon="@Icons.Material.Filled.Badge">@Loc["ProfileHandler"]</MudNavLink>
-                <MudNavLink Href="/admin/suggestions" Icon="@Icons.Material.Filled.Lightbulb">@Loc["Suggestions"]</MudNavLink>
-                <MudNavLink Href="/security" Icon="@Icons.Material.Filled.Security">@Loc["Security"]</MudNavLink>
-            </MudNavGroup>
-        }
-        else
-        {
-            @* Collapsed mode is the default, so it must stay feature-equivalent with the
-               expanded admin group: every destination remains reachable as an icon. *@
-            <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Tune" IconColor="Color.Secondary" />
-            <MudNavLink Href="/admin/packages" Icon="@Icons.Material.Filled.Inventory2" IconColor="Color.Secondary" />
-            <MudNavLink Href="/admin/applications" Icon="@Icons.Material.Filled.Apps" IconColor="Color.Secondary" />
-            <MudNavLink Href="/admin/profiles" Icon="@Icons.Material.Filled.Badge" IconColor="Color.Secondary" />
-            <MudNavLink Href="/admin/suggestions" Icon="@Icons.Material.Filled.Lightbulb" IconColor="Color.Secondary" />
-            <MudNavLink Href="/security" Icon="@Icons.Material.Filled.Security" IconColor="Color.Secondary" />
-        }
-    </MudNavMenu>
-</MudPaper>
+    @* ── Bottom profile card ── *@
+    <div class="phosphor-profile-wrap">
+        <a href="/account" class="phosphor-profile-card" title="@DisplayName">
+            <div class="phosphor-avatar-wrap">
+                <div class="phosphor-avatar"
+                     style="@($"background:linear-gradient(140deg,hsl({AvatarHue} 38% 32%),hsl({AvatarHue} 32% 22%));color:hsl({AvatarHue} 45% 82%);")">
+                    @AvatarInitial
+                </div>
+                <span class="phosphor-avatar-dot @(_characterActive ? "phosphor-avatar-dot--online" : "phosphor-avatar-dot--offline")"></span>
+            </div>
+            @if (!IsCollapsed)
+            {
+                <div style="text-align:left;line-height:1.2;overflow:hidden;">
+                    <div class="phosphor-profile-name">@DisplayName</div>
+                    <div class="phosphor-profile-sub">@UserTag · @(_characterActive ? "online" : "offline")</div>
+                </div>
+            }
+        </a>
+    </div>
+</div>
 
 @code {
     [Parameter]
     public bool IsCollapsed { get; set; } = true;
 
-    // A character is "active" once the game terminal is connected (i.e. the user has selected /
-    // logged in as a character). Account-level visitors have no character, so Play/Mail stay hidden.
     private bool _characterActive;
+
+    // Avatar hue palette mirrors the prototype's AV_HUES.
+    private static readonly int[] AvHues = [168, 28, 264, 210, 340, 130, 50];
+
+    private RenderFragment NavItem(string href, string icon, string label, NavLinkMatch match = NavLinkMatch.Prefix) =>
+        @<NavLink class="phosphor-nav-link" href="@href" Match="match">
+            <MudIcon Icon="@icon" Class="phosphor-nav-icon" />
+            @if (!IsCollapsed)
+            {
+                <span class="phosphor-nav-text">@label</span>
+            }
+        </NavLink>;
+
+    private string AvatarInitial
+    {
+        get
+        {
+            var ch = AccountAuth.Characters.FirstOrDefault();
+            if (ch is not null && ch.Name.Length > 0)
+                return ch.Name[0].ToString().ToUpper();
+            var user = AccountAuth.Username;
+            return !string.IsNullOrEmpty(user) ? user[0].ToString().ToUpper() : "?";
+        }
+    }
+
+    private int AvatarHue
+    {
+        get
+        {
+            var name = DisplayName;
+            var code = name.Length > 0 ? name[0] : 'A';
+            return AvHues[code % AvHues.Length];
+        }
+    }
+
+    private string DisplayName
+    {
+        get
+        {
+            var ch = AccountAuth.Characters.FirstOrDefault();
+            return ch?.Name ?? AccountAuth.Username ?? "DebugAdmin";
+        }
+    }
+
+    private string UserTag
+    {
+        get
+        {
+            var ch = AccountAuth.Characters.FirstOrDefault();
+            return ch is not null ? $"#{ch.DbrefNumber}" : "account";
+        }
+    }
 
     protected override void OnInitialized()
     {

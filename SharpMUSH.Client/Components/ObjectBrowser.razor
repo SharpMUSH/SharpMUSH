@@ -3,85 +3,115 @@
 @inject MushQueryService QueryService
 @inject ITerminalService Terminal
 
-<div style="display:flex;flex-direction:column;height:100%;gap:4px;">
+<div style="display:flex;flex-direction:column;height:100%;min-height:0;">
 
-    @* Search tabs *@
-    <MudTabs Elevation="0" @bind-ActivePanelIndex="_activeTab" TabPanelsClass="pa-0">
+    @* Mode selector — Mine / Search / Here *@
+    <div class="ob-modes">
+        <button type="button" class="ob-mode @(_activeTab == 0 ? "ob-mode--on" : "")"
+                @onclick="LoadMyObjectsAsync" disabled="@_loading">
+            <MudIcon Icon="@Icons.Material.Filled.Person" Style="font-size:14px;" /> Mine
+        </button>
+        <button type="button" class="ob-mode @(_activeTab == 1 ? "ob-mode--on" : "")"
+                @onclick="@(() => _activeTab = 1)">
+            <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:14px;" /> Search
+        </button>
+        <button type="button" class="ob-mode @(_activeTab == 2 ? "ob-mode--on" : "")"
+                @onclick="LoadHereAsync" disabled="@_loading">
+            <MudIcon Icon="@Icons.Material.Filled.Home" Style="font-size:14px;" /> Here
+        </button>
+    </div>
 
-        <MudTabPanel Text="My Objects" Icon="@Icons.Material.Filled.Person">
-            <div style="padding:8px 0;">
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadMyObjectsAsync"
-                           Disabled="@_loading">
-                    @(_loading ? "Loading…" : "Refresh")
-                </MudButton>
+    @* Search expression (Search mode only) *@
+    @if (_activeTab == 1)
+    {
+        <div class="ob-searchwrap">
+            <div class="ob-search">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:14px;color:var(--text-faint);" />
+                <input value="@_searchExpr" @oninput="@(e => _searchExpr = e.Value?.ToString() ?? string.Empty)"
+                       @onkeydown="OnSearchExprKeyDown"
+                       placeholder="lsearch(me, type, thing)" class="ob-search-input" />
+                <button type="button" class="ob-go" @onclick="SearchAsync" disabled="@_loading">Go</button>
             </div>
-        </MudTabPanel>
-
-        <MudTabPanel Text="Search" Icon="@Icons.Material.Filled.Search">
-            <div style="display:flex;flex-direction:column;gap:4px;padding:8px 0;">
-                <MudTextField @bind-Value="_searchExpr"
-                              Placeholder="lsearch(me, type, thing)"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Style="flex:1;" />
-                <MudText Typo="Typo.caption" Style="color:#888;">
-                    Examples: <code>lsearch(me)</code> · <code>lsearch(me, type, room)</code> · <code>lcon(loc(me))</code>
-                </MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                           OnClick="SearchAsync" Disabled="@_loading">Go</MudButton>
-            </div>
-        </MudTabPanel>
-
-        <MudTabPanel Text="Here" Icon="@Icons.Material.Filled.Home">
-            <div style="padding:8px 0;">
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadHereAsync"
-                           Disabled="@_loading">
-                    @(_loading ? "Loading…" : "Refresh")
-                </MudButton>
-            </div>
-        </MudTabPanel>
-
-    </MudTabs>
+            <span class="ob-hint">e.g. <code>lsearch(me)</code> · <code>lsearch(me, type, room)</code> · <code>lcon(loc(me))</code></span>
+        </div>
+    }
 
     @if (!string.IsNullOrEmpty(_error))
     {
-        <MudAlert Severity="Severity.Warning" Dense="true">@_error</MudAlert>
+        <div class="ob-error">@_error</div>
     }
 
-    @* Object tree *@
-    <div style="flex:1;overflow-y:auto;">
+    @* Object list — flat, grouped by type *@
+    <div style="flex:1;overflow-y:auto;min-height:0;padding:6px;">
         @if (_loading)
         {
             <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
         }
-
-        @if (_groups.Count == 0 && !_loading)
+        else if (_groups.Count == 0)
         {
-            <MudText Typo="Typo.body2" Class="pa-2" Color="Color.Secondary">
-                No objects found.
-            </MudText>
+            <div class="ob-empty">No objects found.</div>
         }
-
-        <MudTreeView T="MushSearchResult" Dense="true" Hover="true">
+        else
+        {
             @foreach (var (typeName, items) in _groups)
             {
-                <MudTreeViewItem Value="@((MushSearchResult?)null)" Text="@($"{typeName} ({items.Count})")"
-                                 Icon="@GetTypeIcon(typeName)" Expanded="true">
-                    @foreach (var item in items)
-                    {
-                        <MudTreeViewItem Value="@item"
-                                         Text="@($"{item.Name} (#{item.Dbref})")"
-                                         Icon="@Icons.Material.Filled.DataObject"
-                                         OnClick="@(() => SelectObject(item))"
-                                         Style="@(_selectedDbref == item.Dbref ? "background:rgba(0,245,183,0.08)" : "")" />
-                    }
-                </MudTreeViewItem>
+                <div class="ob-group-label">@typeName · @items.Count</div>
+                @foreach (var item in items)
+                {
+                    var it = item;
+                    var on = _selectedDbref == it.Dbref;
+                    <button type="button" class="ob-item @(on ? "ob-item--on" : "")" @onclick="@(() => SelectObject(it))">
+                        <MudIcon Icon="@GetTypeIcon(typeName)"
+                                 Style="@($"font-size:15px;flex-shrink:0;color:{(on ? "var(--accent)" : "var(--text-faint)")};")" />
+                        <span class="ob-item-name">@it.Name</span>
+                        <span class="ob-item-ref">#@it.Dbref</span>
+                    </button>
+                }
             }
-        </MudTreeView>
+        }
     </div>
 </div>
+
+<style>
+    .ob-modes { display: flex; gap: 4px; padding: 8px 8px 6px; }
+    .ob-mode {
+        flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 6px 4px;
+        border-radius: var(--radius); cursor: pointer; border: 1px solid var(--border); background: transparent;
+        color: var(--text-dim); font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; transition: all 0.12s;
+    }
+    .ob-mode:hover:not(:disabled) { color: var(--text); border-color: rgba(var(--glow), 0.3); }
+    .ob-mode--on { background: rgba(var(--glow), 0.12); border-color: rgba(var(--glow), 0.4); color: var(--accent); font-weight: 600; }
+    .ob-mode:disabled { opacity: 0.5; cursor: default; }
+
+    .ob-searchwrap { display: flex; flex-direction: column; gap: 5px; padding: 0 8px 6px; }
+    .ob-search { display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--surface-3);
+        border: 1px solid var(--border); border-radius: var(--radius); }
+    .ob-search:focus-within { border-color: var(--accent); }
+    .ob-search-input { flex: 1; min-width: 0; padding: 8px 0; background: transparent; border: none; outline: none;
+        color: var(--text); font-family: var(--font-mono); font-size: 12px; }
+    .ob-search-input::placeholder { color: var(--text-faint); }
+    .ob-go { flex-shrink: 0; padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(var(--glow), 0.3);
+        background: rgba(var(--glow), 0.10); color: var(--accent); cursor: pointer; font-family: var(--font-ui);
+        font-size: 11.5px; font-weight: 600; }
+    .ob-go:hover:not(:disabled) { background: rgba(var(--glow), 0.18); }
+    .ob-hint { font-family: var(--font-mono); font-size: 10px; color: var(--text-faint); line-height: 1.4; }
+    .ob-hint code { background: var(--surface-2); border-radius: 3px; padding: 0 3px; }
+
+    .ob-error { margin: 0 8px 6px; padding: 6px 10px; border-radius: var(--radius); font-size: 11.5px;
+        color: #e0b050; background: rgba(217, 162, 58, 0.12); border: 1px solid rgba(217, 162, 58, 0.3); }
+    .ob-empty { padding: 14px; text-align: center; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-faint); }
+
+    .ob-group-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--text-faint); padding: 8px 8px 4px; }
+    .ob-item { width: 100%; text-align: left; display: flex; align-items: center; gap: 9px; padding: 7px 9px;
+        border-radius: var(--radius); cursor: pointer; border: none; background: transparent; margin-bottom: 2px; transition: background 0.12s; }
+    .ob-item:hover { background: var(--surface-2); }
+    .ob-item--on { background: rgba(var(--glow), 0.10); box-shadow: inset 2px 0 0 var(--accent); }
+    .ob-item-name { flex: 1; min-width: 0; font-family: var(--font-ui); font-size: 13px; color: var(--text-dim);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ob-item--on .ob-item-name { color: var(--text); font-weight: 600; }
+    .ob-item-ref { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); flex-shrink: 0; }
+</style>
 
 @code {
     [Parameter] public EventCallback<int> OnObjectSelected { get; set; }
@@ -131,6 +161,11 @@
     {
         if (string.IsNullOrWhiteSpace(_searchExpr)) return;
         await FetchResultsAsync(() => QueryService.SearchAsync(_searchExpr));
+    }
+
+    private async Task OnSearchExprKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SearchAsync();
     }
 
     private async Task LoadHereAsync()

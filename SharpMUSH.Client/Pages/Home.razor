@@ -1,7 +1,192 @@
-﻿@page "/"
-@using SharpMUSH.Client.Components
+@page "/"
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Client.Models
 @inject IStringLocalizer<SharedResource> Loc
+@inject ISceneService SceneService
+@inject CharacterDirectoryService CharacterDirectory
+@inject WikiService WikiService
 
-<PageTitle>@Loc["Home"]</PageTitle>
+<PageTitle>@Loc["Home"] — SharpMUSH</PageTitle>
 
-<WikiView Slug="home"/>
+<div style="padding:var(--cpad);">
+
+    @* ── Stat tiles ── *@
+    <MudGrid Spacing="3" Class="mb-5">
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+                <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">Players Online</MudText>
+                <MudText Style="font-size:28px;font-weight:700;color:var(--accent);line-height:1.2;margin-top:4px;">@(_characters?.Count.ToString() ?? "—")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+                <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">Active Scenes</MudText>
+                <MudText Style="font-size:28px;font-weight:700;color:var(--accent);line-height:1.2;margin-top:4px;">@(_activeScenes?.Count.ToString() ?? "—")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+                <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">Recent Changes</MudText>
+                <MudText Style="font-size:28px;font-weight:700;color:var(--accent);line-height:1.2;margin-top:4px;">@(_recentChanges?.Count.ToString() ?? "—")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+                <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">Characters</MudText>
+                <MudText Style="font-size:28px;font-weight:700;color:var(--accent);line-height:1.2;margin-top:4px;">@(_characters?.Count.ToString() ?? "—")</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    @* ── Main content: 1.6fr / 1fr split ── *@
+    <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:24px;">
+
+        @* Left column *@
+        <div style="display:flex;flex-direction:column;gap:16px;">
+
+            @* Live scene hero — show the most recent active scene *@
+            @if (_loading)
+            {
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="160px" Style="border-radius:var(--radius);" />
+            }
+            else if (_activeScenes is { Count: > 0 })
+            {
+                var scene = _activeScenes[0];
+                <MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);position:relative;overflow:hidden;">
+                    <div style="position:absolute;top:0;right:0;bottom:0;width:4px;background:var(--accent);border-radius:0 var(--radius) var(--radius) 0;"></div>
+                    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:8px;">
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Style="font-size:10px;letter-spacing:0.08em;height:20px;">LIVE</MudChip>
+                        <MudText Typo="Typo.h6" Style="font-weight:600;line-height:1.2;">@(string.IsNullOrWhiteSpace(scene.Title) ? "Untitled Scene" : scene.Title)</MudText>
+                    </div>
+                    <MudText Style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">
+                        <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:4px;" />
+                        @scene.RoomName — @scene.ParticipantDbrefs.Count participant(s)
+                    </MudText>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Href="@($"/scenes/{scene.Id}")"
+                               Style="border-color:var(--accent);color:var(--accent);">
+                        Join Scene
+                    </MudButton>
+                </MudPaper>
+            }
+            else
+            {
+                <MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+                    <MudText Style="color:var(--text-dim);">No active scenes right now.</MudText>
+                    <MudButton Variant="Variant.Text" Href="/scenes" Color="Color.Primary" Size="Size.Small" Class="mt-1">Browse archive</MudButton>
+                </MudPaper>
+            }
+
+            @* Recent wiki activity *@
+            <MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+                <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Recent Wiki Activity</MudText>
+                @if (_loading)
+                {
+                    @for (var i = 0; i < 4; i++)
+                    {
+                        <MudSkeleton Height="32px" Class="mb-1" />
+                    }
+                }
+                else if (_recentChanges is { Count: > 0 })
+                {
+                    @foreach (var wp in _recentChanges.Take(6))
+                    {
+                        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-soft);">
+                            <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(wp.Title.GetHashCode()) % 360},55%,35%);font-size:11px;width:26px;height:26px;")">
+                                @(wp.Title.Length > 0 ? wp.Title[0].ToString().ToUpper() : "W")
+                            </MudAvatar>
+                            <div style="flex:1;min-width:0;">
+                                <MudLink Href="@($"/wiki/{wp.Namespace}/{wp.Category}/{wp.Slug}")" Style="color:var(--text);font-size:13px;font-weight:500;">@wp.Title</MudLink>
+                                <MudText Style="font-size:11px;color:var(--text-faint);">@wp.UpdatedAt.ToLocalTime().ToString("MMM d")</MudText>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <MudText Style="color:var(--text-faint);font-size:13px;">No recent wiki activity.</MudText>
+                }
+            </MudPaper>
+        </div>
+
+        @* Right column *@
+        <div style="display:flex;flex-direction:column;gap:16px;">
+
+            @* Who's online *@
+            <MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+                <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Characters</MudText>
+                @if (_loading)
+                {
+                    @for (var i = 0; i < 4; i++) { <MudSkeleton Height="32px" Class="mb-1" /> }
+                }
+                else if (_characters is { Count: > 0 })
+                {
+                    @foreach (var c in _characters.Take(8))
+                    {
+                        <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border-soft);">
+                            <div style="position:relative;">
+                                <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(c.Name.GetHashCode()) % 360},55%,35%);font-size:11px;width:28px;height:28px;")">
+                                    @c.Name[0].ToString().ToUpper()
+                                </MudAvatar>
+                                <span style="position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:50%;background:var(--text-faint);border:2px solid var(--surface);"></span>
+                            </div>
+                            <MudLink Href="@($"/characters/{c.Objid}")" Style="color:var(--text);font-size:13px;">@c.Name</MudLink>
+                        </div>
+                    }
+                    @if (_characters.Count > 8)
+                    {
+                        <MudButton Variant="Variant.Text" Href="/characters" Size="Size.Small" Color="Color.Primary" Class="mt-1">
+                            View all @_characters.Count →
+                        </MudButton>
+                    }
+                }
+                else
+                {
+                    <MudText Style="color:var(--text-faint);font-size:13px;">No characters found.</MudText>
+                }
+            </MudPaper>
+
+            @* New here? quickstart *@
+            <MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+                <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">New Here?</MudText>
+                <MudText Style="font-size:13px;color:var(--text-dim);margin-bottom:14px;line-height:1.55;">
+                    Get started by reading the wiki, browsing characters, or jumping into a scene.
+                </MudText>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <MudButton Variant="Variant.Outlined" Href="/wiki" FullWidth="true" Size="Size.Small"
+                               Style="justify-content:flex-start;border-color:var(--border);color:var(--text);">
+                        <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" Class="mr-2" /> Read the Wiki
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Href="/characters" FullWidth="true" Size="Size.Small"
+                               Style="justify-content:flex-start;border-color:var(--border);color:var(--text);">
+                        <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" Class="mr-2" /> Browse Characters
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Href="/scenes" FullWidth="true" Size="Size.Small"
+                               Style="justify-content:flex-start;border-color:var(--border);color:var(--text);">
+                        <MudIcon Icon="@Icons.Material.Filled.Movie" Size="Size.Small" Class="mr-2" /> Browse Scenes
+                    </MudButton>
+                </div>
+            </MudPaper>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _loading = true;
+    private IReadOnlyList<SceneArchive>? _activeScenes;
+    private IReadOnlyList<WikiPageSummary>? _recentChanges;
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary>? _characters;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var scenesTask = SceneService.GetActiveScenesAsync();
+        var recentTask = WikiService.GetRecentChangesAsync(10);
+        var charsTask  = CharacterDirectory.ListAsync();
+
+        await Task.WhenAll(scenesTask, recentTask.AsTask(), charsTask);
+
+        _activeScenes   = await scenesTask;
+        _recentChanges  = await recentTask;
+        _characters     = await charsTask;
+        _loading = false;
+    }
+}

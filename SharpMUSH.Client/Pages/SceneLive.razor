@@ -10,61 +10,82 @@
 
 @if (_loading)
 {
-    <MudProgressLinear Indeterminate="true" />
+    <div style="padding:var(--cpad);">
+        <MudProgressLinear Indeterminate="true" />
+    </div>
 }
 else if (_notFound)
 {
-    <MudAlert Severity="Severity.Warning">@Loc["SceneNotFound"]</MudAlert>
-    <MudButton Href="/scenes/active" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
-        @Loc["BackToActiveScenes"]
-    </MudButton>
+    <div style="padding:var(--cpad);">
+        <MudAlert Severity="Severity.Warning">@Loc["SceneNotFound"]</MudAlert>
+        <MudButton Href="/scenes" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
+            @Loc["BackToActiveScenes"]
+        </MudButton>
+    </div>
 }
 else
 {
-    <MudText Typo="Typo.h5" Class="mb-1">
-        @(string.IsNullOrWhiteSpace(_scene!.Title) ? Loc["LiveScene"] : _scene.Title)
-        <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="ml-2">Live</MudChip>
-    </MudText>
-    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
-        @_scene!.RoomName · @_scene!.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-    </MudText>
+    <div style="display:flex;flex-direction:column;height:calc(100vh - 64px);">
 
-    @if (!Hub.IsConnected)
-    {
-        <MudAlert Severity="Severity.Warning" Class="mb-3">
-            @Loc["HubNotConnected"]
-        </MudAlert>
-    }
+        @* Scene header bar *@
+        <div style="padding:12px var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+            <MudChip T="string" Color="Color.Success" Size="Size.Small"
+                     Style="font-size:10px;letter-spacing:0.06em;height:20px;padding:0 7px;">LIVE</MudChip>
+            <MudText Style="font-size:15px;font-weight:600;">
+                @(string.IsNullOrWhiteSpace(_scene!.Title) ? Loc["LiveScene"].ToString() : _scene!.Title)
+            </MudText>
+            <MudText Style="font-size:12px;color:var(--text-dim);margin-left:4px;">
+                <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:2px;" />
+                @_scene!.RoomName
+            </MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Text" Size="Size.Small"
+                       Color="Color.Default" Href="@($"/scenes/{Id}")">
+                View Archive
+            </MudButton>
+        </div>
 
-    <div class="scene-log scene-log--live" @ref="_logContainer">
-        @if (_messages.Count == 0 && _liveLines.Count == 0)
+        @if (!Hub.IsConnected)
         {
-            <MudText Color="Color.Secondary" Typo="Typo.body2">@Loc["WaitingForActivity"]</MudText>
+            <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
+                @Loc["HubNotConnected"]
+            </MudAlert>
         }
 
-        @* Archived lines loaded on open *@
-        @foreach (var msg in _messages)
-        {
-            <div class="scene-line scene-line--@msg.MessageType.ToString().ToLowerInvariant() scene-line--archived">
-                @((MarkupString)msg.RenderedHtml)
+        @* Transcript — scrollable *@
+        <div class="scene-log scene-log--live" @ref="_logContainer" style="flex:1;min-height:0;padding:16px var(--cpad);">
+            @if (_messages.Count == 0 && _liveLines.Count == 0)
+            {
+                <MudText Style="color:var(--text-faint);font-style:italic;">@Loc["WaitingForActivity"]</MudText>
+            }
+            @foreach (var msg in _messages)
+            {
+                <div class="scene-line scene-line--@msg.MessageType.ToString().ToLowerInvariant() scene-line--archived">
+                    @((MarkupString)msg.RenderedHtml)
+                </div>
+            }
+            @foreach (var line in _liveLines)
+            {
+                <div class="scene-line scene-line--live">
+                    @((MarkupString)line)
+                </div>
+            }
+        </div>
+
+        @* Compose bar *@
+        <div style="padding:10px var(--cpad);border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:flex-end;gap:8px;flex-shrink:0;">
+            <MudTextField @bind-Value="_composeText" Placeholder="Pose, say, or narrate…"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Lines="2" MaxLines="4"
+                          Style="flex:1;background:var(--surface-2);"
+                          OnKeyDown="OnComposeKeyDown" />
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary"
+                               Size="Size.Medium" Variant="Variant.Filled"
+                               OnClick="SendPoseAsync" Disabled="string.IsNullOrWhiteSpace(_composeText)" />
             </div>
-        }
-
-        @* New lines received via SignalR *@
-        @foreach (var line in _liveLines)
-        {
-            <div class="scene-line scene-line--live">
-                @((MarkupString)line)
-            </div>
-        }
+        </div>
     </div>
-
-    <MudButton Href="@($"/scenes/{Id}")"
-               Color="Color.Default"
-               Variant="Variant.Text"
-               Class="mt-3">
-        @Loc["ViewArchive"]
-    </MudButton>
 }
 
 @code {
@@ -73,15 +94,11 @@ else
 
     private SceneArchive? _scene;
     private List<SceneMessage> _messages = [];
-
-    /// <summary>Lines that arrived via SignalR after the page opened, pre-rendered as HTML.</summary>
     private readonly List<string> _liveLines = [];
-
     private bool _loading = true;
     private bool _notFound;
     private ElementReference _logContainer;
-
-    // ── Lifecycle ────────────────────────────────────────────────────────────
+    private string _composeText = string.Empty;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -100,8 +117,6 @@ else
         }
 
         _scene = sceneResult.AsT0;
-
-        // Load the last 50 messages as context
         var msgResult = await SceneService.GetRecentMessagesAsync(Id, count: 50);
         if (msgResult.IsT0)
             _messages = [..msgResult.AsT0];
@@ -114,26 +129,29 @@ else
         Hub.OnRoomEventReceived += HandleRoomEvent;
     }
 
-    public void Dispose()
-    {
-        Hub.OnRoomEventReceived -= HandleRoomEvent;
-    }
+    public void Dispose() => Hub.OnRoomEventReceived -= HandleRoomEvent;
 
-    // ── SignalR handler ───────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Called when a <see cref="RoomEventMessage"/> arrives on the hub.
-    /// The <c>Content</c> field already carries pre-rendered HTML produced
-    /// by the game server's HtmlStrategy pipeline.
-    /// We only show events for the room this scene is taking place in.
-    /// </summary>
     private void HandleRoomEvent(RoomEventMessage msg)
     {
         if (_scene is null) return;
         if (!string.Equals(msg.RoomDbref, _scene.RoomDbref, StringComparison.Ordinal)) return;
-
-        // Content from the server is already HTML-rendered via HtmlStrategy
         _liveLines.Add(msg.Content);
         InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SendPoseAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_composeText)) return;
+        var text = _composeText;
+        _composeText = string.Empty;
+        // Pose via the scene service (stub — actual sending goes through the game terminal command)
+        await SceneService.PostMessageAsync(Id, "portal", "Portal", text, text, SceneMessageType.Pose);
+        StateHasChanged();
+    }
+
+    private async Task OnComposeKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+            await SendPoseAsync();
     }
 }

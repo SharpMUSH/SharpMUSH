@@ -1,12 +1,363 @@
 @page "/characters"
-@using SharpMUSH.Client.Components.Widgets
+@using SharpMUSH.Client.Services
+@inject CharacterDirectoryService Directory
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["Characters"]</PageTitle>
+<PageTitle>@Loc["Characters"] — SharpMUSH</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    @* The directory is a registered portal widget (CharacterDirectory), so it can also be
-       dropped into any content zone via the layout editor. Who is listed is the game's call:
-       the FN`CHARVIS softcode filters MUSH-side (guests hidden by default). *@
-    <CharacterDirectoryWidget />
-</MudContainer>
+<div class="char-page">
+    @* Header — prototype SectionTitle: kicker count + title *@
+    <div class="char-header">
+        <div>
+            <div class="char-kicker">@HeaderKicker</div>
+            <h1 class="char-title">@Loc["Characters"]</h1>
+        </div>
+        <div class="char-search">
+            <span class="char-search-icon">⌕</span>
+            <input type="search" placeholder="@Loc["SearchCharacters"]"
+                   value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
+        </div>
+    </div>
+
+    @* Filter pills — categories sourced from the game (FN`CHARCAT); opaque to the portal *@
+    @if (!_loading && _categories.Count > 0)
+    {
+        <div class="char-pills">
+            <button type="button" class="char-pill @(_selectedCategory is null ? "char-pill--on" : "")"
+                    @onclick="@(() => _selectedCategory = null)">@Loc["All"]</button>
+            @foreach (var cat in _categories)
+            {
+                var c = cat;
+                <button type="button" class="char-pill @(_selectedCategory == c ? "char-pill--on" : "")"
+                        @onclick="@(() => _selectedCategory = c)">@(c.Length == 0 ? "Other" : c)</button>
+            }
+        </div>
+    }
+
+    @if (_loading)
+    {
+        <div class="char-grid">
+            @for (var i = 0; i < 8; i++)
+            {
+                <div class="char-skeleton"></div>
+            }
+        </div>
+    }
+    else if (Filtered.Count == 0)
+    {
+        <div class="char-empty">@Loc["NoCharactersFound"]</div>
+    }
+    else
+    {
+        <div class="char-grid">
+            @foreach (var character in Filtered)
+            {
+                var ch = character;
+                var hue = AvatarHue(ch.Name);
+                <a class="char-card" href="@($"/character/{Uri.EscapeDataString(ch.Name)}")">
+                    <div class="char-card-top">
+                        <div class="char-avatar"
+                             style="@($"background:linear-gradient(140deg,hsl({hue} 40% 34%),hsl({hue} 34% 24%));color:hsl({hue} 45% 84%);")">
+                            @Initials(ch.Name)
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="char-name">@ch.Name</div>
+                            <div class="char-dbref">@ch.Dbref</div>
+                        </div>
+                    </div>
+                    <div class="char-card-foot">
+                        @if (!string.IsNullOrWhiteSpace(ch.Category))
+                        {
+                            <span class="char-chip">@ch.Category</span>
+                        }
+                        else
+                        {
+                            <span></span>
+                        }
+                        <span class="char-joined">@Loc["Joined"] @ch.CreatedAt.ToLocalTime().ToString("MMM yyyy")</span>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .char-page {
+        padding: var(--cpad);
+        max-width: 1180px;
+    }
+
+    .char-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+    .char-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+
+    .char-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+
+    /* Search box — matches the topbar search */
+    .char-search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 260px;
+        max-width: 100%;
+        height: 36px;
+        padding: 0 12px;
+        background: var(--surface-2);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
+        color: var(--text-faint);
+        transition: border-color 0.14s;
+    }
+
+    .char-search:focus-within {
+        border-color: var(--accent);
+    }
+
+    .char-search-icon {
+        font-size: 15px;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    .char-search input {
+        flex: 1;
+        min-width: 0;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text);
+        font-family: var(--font-ui);
+        font-size: 13px;
+    }
+
+    .char-search input::placeholder {
+        color: var(--text-faint);
+    }
+
+    .char-search input::-webkit-search-cancel-button {
+        display: none;
+    }
+
+    /* Filter pills */
+    .char-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    .char-pill {
+        padding: 7px 14px;
+        border-radius: 99px;
+        cursor: pointer;
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        font-weight: 500;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text-dim);
+        transition: all 0.12s;
+    }
+
+    .char-pill:hover {
+        border-color: rgba(var(--glow), 0.4);
+        color: var(--text);
+    }
+
+    .char-pill--on {
+        border-color: rgba(var(--glow), 0.4);
+        background: rgba(var(--glow), 0.12);
+        color: var(--accent);
+    }
+
+    /* Card grid */
+    .char-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 14px;
+    }
+
+    .char-card {
+        display: block;
+        padding: 16px;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        text-decoration: none;
+        cursor: pointer;
+        transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .char-card:hover {
+        border-color: rgba(var(--glow), 0.4);
+        transform: translateY(-2px);
+    }
+
+    .char-card-top {
+        display: flex;
+        gap: 13px;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+
+    .char-avatar {
+        width: 46px;
+        height: 46px;
+        flex-shrink: 0;
+        border-radius: var(--radius);
+        display: grid;
+        place-items: center;
+        font-family: var(--font-ui);
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .char-name {
+        font-family: var(--font-display);
+        font-size: 15.5px;
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .char-dbref {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--accent);
+        margin-top: 2px;
+    }
+
+    .char-card-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .char-chip {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.02em;
+        padding: 2px 8px;
+        border-radius: 99px;
+        background: var(--surface-2);
+        color: var(--text-dim);
+        border: 1px solid var(--border);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 60%;
+    }
+
+    .char-joined {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-faint);
+        white-space: nowrap;
+    }
+
+    /* Skeleton + empty */
+    .char-skeleton {
+        height: 132px;
+        border-radius: var(--radius-lg);
+        background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%);
+        background-size: 200% 100%;
+        animation: char-shimmer 1.3s ease-in-out infinite;
+        border: 1px solid var(--border-soft);
+    }
+
+    @@keyframes char-shimmer {
+        to { background-position: -200% 0; }
+    }
+
+    .char-empty {
+        font-family: var(--font-ui);
+        font-size: 14px;
+        color: var(--text-faint);
+        padding: 24px;
+        text-align: center;
+        background: var(--surface);
+        border: 1px dashed var(--border);
+        border-radius: var(--radius-lg);
+    }
+</style>
+
+@code {
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _all = [];
+    private bool _loading = true;
+    private string _search = string.Empty;
+    private string? _selectedCategory;
+    private List<string> _categories = [];
+
+    private static readonly int[] AvHues = [168, 28, 264, 210, 340, 130, 50];
+
+    private string HeaderKicker =>
+        _loading ? "loading…" : $"{_all.Count} {(_all.Count == 1 ? "character" : "characters")} registered";
+
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> Filtered
+    {
+        get
+        {
+            var results = _all.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_search))
+                results = results.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
+            if (_selectedCategory is not null)
+                results = results.Where(c => (c.Category?.Trim() ?? string.Empty) == _selectedCategory);
+            return results.ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _all = await Directory.ListAsync();
+        _categories = _all
+            .Select(c => c.Category?.Trim() ?? string.Empty)
+            .Distinct()
+            .OrderBy(c => c.Length == 0 ? 1 : 0)
+            .ThenBy(c => c, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        _loading = false;
+    }
+
+    // Hue from the name's first character, mirroring the prototype's AV_HUES avatar palette.
+    private static int AvatarHue(string name)
+    {
+        var code = name.Length > 0 ? name[0] : 'A';
+        return AvHues[code % AvHues.Length];
+    }
+
+    private static string Initials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0][0].ToString().ToUpperInvariant();
+        return (parts[0][0].ToString() + parts[1][0]).ToUpperInvariant();
+    }
+}

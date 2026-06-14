@@ -1,6 +1,7 @@
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Models.Portal.Applications
+@using Microsoft.AspNetCore.Components.Routing
 @inject ApplicationRegistryClient Registry
 
 @* Dynamic nav links for registered full-page applications the current user may access. Page apps
@@ -8,14 +9,14 @@
 
 @foreach (var app in _apps)
 {
-    <MudNavLink Href="@($"/apps/{app.Slug}")"
-                Icon="@(string.IsNullOrWhiteSpace(app.Icon) ? Icons.Material.Filled.Apps : app.Icon)"
-                IconColor="Color.Secondary">
+    <NavLink class="phosphor-nav-link" href="@($"/apps/{app.Slug}")" Match="NavLinkMatch.Prefix">
+        <MudIcon Icon="@(string.IsNullOrWhiteSpace(app.Icon) ? Icons.Material.Filled.Apps : app.Icon)"
+                 Class="phosphor-nav-icon" />
         @if (!IsCollapsed)
         {
-            <text>@app.DisplayName</text>
+            <span class="phosphor-nav-text">@app.DisplayName</span>
         }
-    </MudNavLink>
+    </NavLink>
 }
 
 @code {

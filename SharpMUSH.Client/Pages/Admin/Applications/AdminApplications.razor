@@ -9,60 +9,176 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>Dynamic Applications</PageTitle>
+<PageTitle>Dynamic Applications — Admin — SharpMUSH</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    <div class="d-flex justify-space-between align-center mb-4">
-        <div>
-            <MudText Typo="Typo.h4">Dynamic Applications</MudText>
-            <MudText Typo="Typo.body2" Class="mud-text-secondary">
-                Link softcode-defined forms and views into the portal as pages or widgets (Area 21).
-            </MudText>
+<div style="display:flex;height:calc(100vh - 64px);overflow:hidden;">
+
+    @* ── Left: App list ──────────────────────────────────────────── *@
+    <div style="width:280px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);overflow:hidden;">
+        <div style="padding:12px 14px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <MudText Class="section-kicker" Style="flex:1;">Applications</MudText>
+            <MudTooltip Text="Register new application">
+                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                               Color="Color.Primary" OnClick="@(() => Edit(null))" />
+            </MudTooltip>
         </div>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="@(() => Edit(null))">Register application</MudButton>
+
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Style="height:2px;flex-shrink:0;" />
+        }
+
+        <div style="flex:1;overflow-y:auto;">
+            @if (!_loading && _apps.Count == 0)
+            {
+                <div style="padding:16px 14px;color:var(--text-faint);font-size:13px;">
+                    No applications registered yet.
+                </div>
+            }
+            @foreach (var app in _apps)
+            {
+                var a = app;
+                var isActive = _selected?.Slug == a.Slug;
+                <div style="@($"display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-soft);background:{(isActive ? "rgba(var(--glow),0.08)" : "transparent")};border-left:{(isActive ? "2px solid var(--accent)" : "2px solid transparent")}")"
+                     @onclick="@(() => _selected = a)">
+                    <MudIcon Icon="@(a.Icon ?? Icons.Material.Filled.Apps)"
+                             Style="@($"font-size:20px;color:{(isActive ? "var(--accent)" : "var(--text-dim)")};flex-shrink:0;")" />
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            @a.DisplayName
+                        </div>
+                        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            @a.Slug
+                        </div>
+                    </div>
+                    <MudChip T="string" Size="Size.Small"
+                             Style="@($"height:16px;font-size:9px;padding:0 4px;background:{KindBackground(a.Kind)};color:{KindColor(a.Kind)};flex-shrink:0;")">
+                        @a.Kind
+                    </MudChip>
+                </div>
+            }
+        </div>
     </div>
 
-    @if (_loading)
-    {
-        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
-    }
-    else if (_apps.Count == 0)
-    {
-        <MudAlert Severity="Severity.Info">No applications registered yet.</MudAlert>
-    }
-    else
-    {
-        <MudTable Items="_apps" Hover="true" Dense="true">
-            <HeaderContent>
-                <MudTh>Slug</MudTh>
-                <MudTh>Name</MudTh>
-                <MudTh>Kind</MudTh>
-                <MudTh>Schema URL</MudTh>
-                <MudTh>Min role</MudTh>
-                <MudTh>Order</MudTh>
-                <MudTh></MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Slug"><code>@context.Slug</code></MudTd>
-                <MudTd DataLabel="Name">@context.DisplayName</MudTd>
-                <MudTd DataLabel="Kind">@context.Kind</MudTd>
-                <MudTd DataLabel="Schema URL"><code>@context.SchemaUrl</code></MudTd>
-                <MudTd DataLabel="Min role">@context.MinimumRole</MudTd>
-                <MudTd DataLabel="Order">@context.Order</MudTd>
-                <MudTd>
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => Edit(context))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
-                                   OnClick="@(() => Delete(context))" />
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-    }
-</MudContainer>
+    @* ── Right: Detail panel ──────────────────────────────────────── *@
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);">
+        @if (_selected is null)
+        {
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-faint);font-size:14px;flex-direction:column;gap:12px;">
+                <MudIcon Icon="@Icons.Material.Filled.Apps" Style="font-size:40px;color:var(--text-faint);opacity:0.4;" />
+                Select an application, or register a new one.
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@(() => Edit(null))">
+                    Register application
+                </MudButton>
+            </div>
+        }
+        else
+        {
+            @* Detail header *@
+            <div style="padding:16px var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:flex-start;gap:14px;flex-shrink:0;">
+                <MudIcon Icon="@(_selected.Icon ?? Icons.Material.Filled.Apps)"
+                         Style="font-size:28px;color:var(--accent);margin-top:2px;" />
+                <div style="flex:1;min-width:0;">
+                    <MudText Style="font-size:18px;font-weight:700;margin-bottom:2px;">@_selected.DisplayName</MudText>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <MudText Style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent);">/apps/@_selected.Slug</MudText>
+                        <MudChip T="string" Size="Size.Small"
+                                 Style="@($"height:18px;font-size:10px;padding:0 5px;background:{KindBackground(_selected.Kind)};color:{KindColor(_selected.Kind)};")">
+                            @_selected.Kind
+                        </MudChip>
+                        <MudChip T="string" Size="Size.Small"
+                                 Style="height:18px;font-size:10px;padding:0 5px;border:1px solid var(--border);">
+                            @_selected.MinimumRole
+                        </MudChip>
+                    </div>
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Edit"
+                               OnClick="@(() => Edit(_selected))">
+                        Edit
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Delete"
+                               OnClick="@(() => Delete(_selected))">
+                        Remove
+                    </MudButton>
+                </div>
+            </div>
+
+            @* Meta fields *@
+            <div style="padding:20px var(--cpad);overflow-y:auto;flex:1;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+                    @foreach (var field in new (string Label, string Value)[] {
+                        ("Schema URL", _selected.SchemaUrl),
+                        ("Data URL",   _selected.DataUrl ?? "—"),
+                        ("Submit Route", _selected.SubmitRoute ?? "—"),
+                        ("Nav Placement", _selected.NavPlacement ?? "—"),
+                        ("Display Order", _selected.Order.ToString()),
+                        ("Zones", _selected.Zones.Length > 0 ? string.Join(", ", _selected.Zones) : "—"),
+                    })
+                    {
+                        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;">
+                            <MudText Class="section-kicker" Style="opacity:0.7;margin-bottom:4px;">@field.Label</MudText>
+                            <MudText Style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text);word-break:break-all;">
+                                @field.Value
+                            </MudText>
+                        </div>
+                    }
+                </div>
+
+                @* Zones as chips *@
+                @if (_selected.ZoneEnums.Count > 0)
+                {
+                    <div style="margin-bottom:20px;">
+                        <MudText Class="section-kicker" Style="margin-bottom:8px;">Allowed Zones</MudText>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            @foreach (var zone in _selected.ZoneEnums)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info"
+                                         Style="height:20px;font-size:11px;padding:0 6px;">
+                                    @zone
+                                </MudChip>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @* Quick-launch actions *@
+                <div>
+                    <MudText Class="section-kicker" Style="margin-bottom:8px;">Actions</MudText>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.OpenInBrowser"
+                                   Href="@($"/apps/{_selected.Slug}")">
+                            Open App
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Code"
+                                   Href="@("/softcode")">
+                            Edit in Softcode
+                        </MudButton>
+                        @if (!string.IsNullOrEmpty(_selected.SchemaUrl))
+                        {
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Link"
+                                       Href="@_selected.SchemaUrl" Target="_blank">
+                                View Schema
+                            </MudButton>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
 
 @code {
     private bool _loading = true;
     private List<PortalApplication> _apps = [];
+    private PortalApplication? _selected;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -71,6 +187,10 @@
         _loading = true;
         _apps = (await Registry.ListAsync()).ToList();
         _loading = false;
+        if (_selected is not null)
+            _selected = _apps.FirstOrDefault(a => a.Slug == _selected.Slug) ?? _apps.FirstOrDefault();
+        else
+            _selected = _apps.FirstOrDefault();
     }
 
     private async Task Edit(PortalApplication? existing)
@@ -83,9 +203,7 @@
             existing is null ? "Register application" : $"Edit {existing.Slug}", parameters);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
-        {
             await LoadAsync();
-        }
     }
 
     private async Task Delete(PortalApplication app)
@@ -100,6 +218,7 @@
             if (await Registry.DeleteAsync(app.Slug))
             {
                 Snackbar.Add($"Removed {app.Slug}.", Severity.Success);
+                if (_selected?.Slug == app.Slug) _selected = null;
                 await LoadAsync();
             }
             else
@@ -108,4 +227,20 @@
             }
         }
     }
+
+    private static string KindBackground(string kind) => kind.ToUpperInvariant() switch
+    {
+        "PAGE"   => "rgba(0,200,100,0.12)",
+        "WIDGET" => "rgba(90,169,255,0.12)",
+        "FORM"   => "rgba(179,156,255,0.12)",
+        _        => "rgba(255,255,255,0.06)",
+    };
+
+    private static string KindColor(string kind) => kind.ToUpperInvariant() switch
+    {
+        "PAGE"   => "#6cde9a",
+        "WIDGET" => "#5aa9ff",
+        "FORM"   => "#b39cff",
+        _        => "var(--text-dim)",
+    };
 }

@@ -4,15 +4,80 @@
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject IPlayTerminalService PlayTerminal
+@inject ITerminalService Terminal
 
 <PageTitle>Play — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">@Loc["Play"]</MudText>
+<div style="display:flex;height:calc(100vh - 64px);overflow:hidden;">
 
-@* The player-interaction terminal. This is a dedicated connection (IPlayTerminalService),
-   separate from the command/softcode terminal in the docked drawer. As a singleton it stays
-   connected across navigation. *@
-<MudPaper Outlined="true" Class="pa-0" Style="height:70vh;display:flex;flex-direction:column;overflow:hidden;">
-    @* Player-facing terminal: suppress the connection [DBG] diagnostics. *@
-    <GlobalTerminal TerminalOverride="PlayTerminal" ShowDiagnostics="false" />
-</MudPaper>
+    @* Main terminal area *@
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);">
+        @* Terminal header *@
+        <div style="padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+            <MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Small" Color="Color.Primary" />
+            <MudText Style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;">PLAY TERMINAL</MudText>
+            <MudSpacer />
+            @* Connection status dot *@
+            <span title="@(PlayTerminal.IsConnected ? "Connected" : "Disconnected")"
+                  style="@($"width:8px;height:8px;border-radius:50%;background:{(PlayTerminal.IsConnected ? "var(--accent)" : "var(--text-faint)")};box-shadow:{(PlayTerminal.IsConnected ? "0 0 6px rgba(var(--glow),0.7)" : "none")};display:inline-block;")">
+            </span>
+        </div>
+        @* Terminal body *@
+        <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
+            <GlobalTerminal TerminalOverride="PlayTerminal" ShowDiagnostics="false" />
+        </div>
+    </div>
+
+    @* Side panel (270px) *@
+    <div style="width:270px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--surface);">
+
+        @* Here *@
+        <div style="border-bottom:1px solid var(--border-soft);">
+            <div style="padding:10px 14px 6px;">
+                <MudText Class="section-kicker">Here</MudText>
+            </div>
+            <div style="padding:0 10px 10px;">
+                <MudText Style="font-size:12px;color:var(--text-faint);padding:4px 4px;">— Connect to see who's here —</MudText>
+            </div>
+        </div>
+
+        @* Exits *@
+        <div style="border-bottom:1px solid var(--border-soft);">
+            <div style="padding:10px 14px 6px;">
+                <MudText Class="section-kicker">Exits</MudText>
+            </div>
+            <div style="padding:0 10px 10px;">
+                <MudText Style="font-size:12px;color:var(--text-faint);padding:4px 4px;">— No exits available —</MudText>
+            </div>
+        </div>
+
+        @* Quick Actions *@
+        <div>
+            <div style="padding:10px 14px 6px;">
+                <MudText Class="section-kicker">Quick Actions</MudText>
+            </div>
+            <div style="padding:0 10px 14px;display:flex;flex-direction:column;gap:4px;">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
+                           Style="justify-content:flex-start;font-size:12px;border-color:var(--border);"
+                           StartIcon="@Icons.Material.Filled.People">
+                    @Loc["Characters"]
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
+                           Style="justify-content:flex-start;font-size:12px;border-color:var(--border);"
+                           StartIcon="@Icons.Material.Filled.Mail" Href="/mail">
+                    @Loc["Mail"]
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
+                           Style="justify-content:flex-start;font-size:12px;border-color:var(--border);"
+                           StartIcon="@Icons.Material.Filled.Movie" Href="/scenes">
+                    @Loc["SceneArchive"]
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
+                           Style="justify-content:flex-start;font-size:12px;border-color:var(--border);"
+                           StartIcon="@Icons.Material.Filled.Help" Href="/help">
+                    @Loc["Help"]
+                </MudButton>
+            </div>
+        </div>
+    </div>
+</div>

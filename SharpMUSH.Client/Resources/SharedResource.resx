@@ -837,6 +837,15 @@
   <data name="ExportConfiguration" xml:space="preserve">
     <value>Export Configuration</value>
   </data>
+  <data name="Maintenance" xml:space="preserve">
+    <value>Maintenance</value>
+  </data>
+  <data name="Import" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="Export" xml:space="preserve">
+    <value>Export</value>
+  </data>
   <data name="ExportFailed" xml:space="preserve">
     <value>Failed to export configuration</value>
   </data>
@@ -1048,6 +1057,12 @@
   </data>
   <data name="Characters" xml:space="preserve">
     <value>Characters</value>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="Joined" xml:space="preserve">
+    <value>joined</value>
   </data>
   <data name="Wiki" xml:space="preserve">
     <value>Wiki</value>

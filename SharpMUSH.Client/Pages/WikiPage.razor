@@ -2,20 +2,36 @@
 @using SharpMUSH.Client.Components
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Slug</PageTitle>
+<PageTitle>@Slug — Wiki — SharpMUSH</PageTitle>
 
-@* Key forces a fresh WikiView (and page load) when navigating wiki-link to wiki-link. *@
+@* Breadcrumb strip above the wiki content *@
+<div style="padding:8px var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+    <MudBreadcrumbs Items="_crumbs" Separator="›" Style="padding:0;font-size:13px;" />
+    <MudSpacer />
+    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Default"
+               StartIcon="@Icons.Material.Filled.History"
+               Href="@($"/wiki/{Ns}/{Category}/{Slug}/history")">
+        History
+    </MudButton>
+</div>
+
 <WikiView @key="@($"{Ns}:{Category}:{Slug}")" Slug="@Slug" Namespace="@Ns" Category="@Category" Mode="WikiView.WikiMode.View" />
 
 @code {
-    [Parameter]
-    public required string Slug { get; set; }
+    [Parameter] public required string Slug { get; set; }
+    [Parameter] public required string Ns { get; set; }
+    [Parameter] public required string Category { get; set; }
 
-    /// <summary>Namespace segment: /wiki/{ns}/{category}/{slug} (e.g. "main", "help").</summary>
-    [Parameter]
-    public required string Ns { get; set; }
+    private List<BreadcrumbItem> _crumbs = [];
 
-    /// <summary>Category segment — part of the page's identity.</summary>
-    [Parameter]
-    public required string Category { get; set; }
+    protected override void OnParametersSet()
+    {
+        var title = string.IsNullOrWhiteSpace(Slug) ? "Page" : Slug.Replace('-', ' ');
+        _crumbs =
+        [
+            new("Wiki", $"/wiki/{Ns}/{Category}"),
+            new(Category, null, disabled: true),
+            new(title, null, disabled: true),
+        ];
+    }
 }
