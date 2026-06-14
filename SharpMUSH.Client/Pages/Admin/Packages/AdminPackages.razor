@@ -54,6 +54,29 @@
         }
     </div>
 
+    @* ── Tabs + search ── *@
+    @if (_installed is not null)
+    {
+        var installedCount = _installed.Count;
+        var updateCount = _installed.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable);
+        <div class="pkg-tabs">
+            <button class="pkg-tab @(_tab == PkgTab.Installed ? "active" : "")" @onclick="@(() => _tab = PkgTab.Installed)">
+                Installed
+                <span class="pkg-tab-count">@installedCount</span>
+            </button>
+            <button class="pkg-tab @(_tab == PkgTab.Updates ? "active" : "")" @onclick="@(() => _tab = PkgTab.Updates)">
+                Updates
+                <span class="pkg-tab-count">@updateCount</span>
+            </button>
+            <div style="flex:1;"></div>
+            <div class="pkg-search">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:16px;color:var(--text-faint);" />
+                <input type="text" placeholder="Search packages…" value="@_search"
+                       @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
+            </div>
+        </div>
+    }
+
     @* ── Installed list ── *@
     @if (_installed is null)
     {
@@ -68,8 +91,15 @@
     }
     else
     {
+        var visible = FilteredPackages().ToList();
+        if (visible.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                @(_tab == PkgTab.Updates ? "No packages have an update available." : "No packages match your search.")
+            </MudAlert>
+        }
         <div style="display:flex;flex-direction:column;gap:8px;">
-            @foreach (var pkg in _installed)
+            @foreach (var pkg in visible)
             {
                 var p = pkg;
                 _updates.TryGetValue(p.Package.Id, out var update);
@@ -232,12 +262,100 @@
 <style>
     .pkg-row { transition: border-color 0.12s; }
     .pkg-row:hover { border-color: var(--accent) !important; }
+
+    .pkg-tabs {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--border-soft);
+    }
+
+    .pkg-tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        cursor: pointer;
+        font-family: var(--font-ui);
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text-dim);
+        transition: color 0.12s, border-color 0.12s;
+    }
+
+    .pkg-tab:hover { color: var(--text); }
+
+    .pkg-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+    }
+
+    .pkg-tab-count {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-faint);
+        padding: 0 6px;
+        border-radius: 99px;
+        background: var(--surface-2);
+    }
+
+    .pkg-tab.active .pkg-tab-count {
+        color: var(--accent);
+        background: rgba(var(--glow), 0.12);
+    }
+
+    .pkg-search {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 10px;
+        margin-bottom: 6px;
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        transition: border-color 0.12s;
+    }
+
+    .pkg-search:focus-within { border-color: var(--accent); }
+
+    .pkg-search input {
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text);
+        font-family: var(--font-ui);
+        font-size: 13px;
+        width: 200px;
+    }
+
+    .pkg-search input::placeholder { color: var(--text-faint); }
 </style>
 
 @code {
+    private enum PkgTab { Installed, Updates }
+
     private IReadOnlyList<InstalledPackageDto>? _installed;
     private readonly Dictionary<string, PackageUpdateInfo> _updates = new();
     private bool _busy;
+
+    private PkgTab _tab = PkgTab.Installed;
+    private string _search = string.Empty;
+
+    private IEnumerable<InstalledPackageDto> FilteredPackages()
+    {
+        if (_installed is null) return [];
+        IEnumerable<InstalledPackageDto> rows = _installed;
+        if (_tab == PkgTab.Updates)
+            rows = rows.Where(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable);
+        if (!string.IsNullOrWhiteSpace(_search))
+            rows = rows.Where(p => p.Package.Id.Contains(_search, StringComparison.OrdinalIgnoreCase));
+        return rows;
+    }
 
     private bool _showHistory;
     private string? _historyPackage;

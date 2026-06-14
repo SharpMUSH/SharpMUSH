@@ -8,65 +8,65 @@
 
 <PageTitle>Browse Packages — Admin — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-2">Browse Packages</MudText>
-<MudText Color="Color.Secondary" Class="mb-4">
-    Refreshes the remote's repo cache and lists its packages. Versions come from release tags;
-    the branch tip is the dev channel.
-</MudText>
+<div style="padding:var(--cpad);">
+    <div class="pkg-header">
+        <div class="pkg-kicker">Build · Package registry</div>
+        <h1 class="pkg-title">Browse Packages</h1>
+        <p class="pkg-desc">
+            Refreshes the remote's repo cache and lists its packages. Versions come from release tags;
+            the branch tip is the dev channel.
+        </p>
+    </div>
 
-<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
-    <MudSelect T="string" @bind-Value="_selectedRemote" Label="Remote" Variant="Variant.Outlined"
-               Margin="Margin.Dense" Style="max-width: 320px">
-        @foreach (var remote in _remotes ?? [])
+    <div class="pkg-toolbar mb-4">
+        <MudSelect T="string" @bind-Value="_selectedRemote" Label="Remote" Variant="Variant.Outlined"
+                   Margin="Margin.Dense" Style="max-width: 320px">
+            @foreach (var remote in _remotes ?? [])
+            {
+                <MudSelectItem Value="@remote.Name">@remote.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Disabled="@(_busy || string.IsNullOrEmpty(_selectedRemote))"
+                   OnClick="@BrowseAsync">Refresh &amp; browse</MudButton>
+        @if (_remoteRecord is not null)
         {
-            <MudSelectItem Value="@remote.Name">@remote.Name</MudSelectItem>
+            <TrustBadge Trust="@_remoteRecord.Trust" />
         }
-    </MudSelect>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || string.IsNullOrEmpty(_selectedRemote))"
-               OnClick="@BrowseAsync">Refresh &amp; browse</MudButton>
-    @if (_remoteRecord is not null)
+    </div>
+
+    @if (_remoteRecord is { Trust: PackageRemoteTrust.Unknown })
     {
-        <TrustBadge Trust="@_remoteRecord.Trust" />
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            This source has not been reviewed. Inspect all code on the review screen before applying.
+        </MudAlert>
     }
-</MudStack>
 
-@if (_remoteRecord is { Trust: PackageRemoteTrust.Unknown })
-{
-    <MudAlert Severity="Severity.Warning" Class="mb-4">
-        This source has not been reviewed. Inspect all code on the review screen before applying.
-    </MudAlert>
-}
+    @if (_busy)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
 
-@if (_busy)
-{
-    <MudProgressLinear Indeterminate="true" />
-}
-
-@if (_snapshot is not null)
-{
-    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-        @_snapshot.Url at @_snapshot.HeadCommit[..Math.Min(10, _snapshot.HeadCommit.Length)]
-    </MudText>
-    <MudGrid>
-        @foreach (var entry in _snapshot.Packages)
-        {
-            <MudItem xs="12" md="6">
-                <MudCard>
-                    <MudCardHeader>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Class="w-100">
-                            <MudText Typo="Typo.h6">@(entry.PackageId ?? entry.Path)</MudText>
-                            <MudSpacer />
-                            <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="README"
-                                           OnClick="@(() => ShowReadmeAsync(entry))" />
-                        </MudStack>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        <MudText Typo="Typo.body2" Class="mb-2">@(entry.Description ?? "(no description)")</MudText>
+    @if (_snapshot is not null)
+    {
+        <div class="pkg-snapshot-meta mb-2">
+            @_snapshot.Url at @_snapshot.HeadCommit[..Math.Min(10, _snapshot.HeadCommit.Length)]
+        </div>
+        <div class="pkg-grid">
+            @foreach (var entry in _snapshot.Packages)
+            {
+                <div class="pkg-card">
+                    <div class="pkg-card-head">
+                        <span style="flex:1;min-width:0;">@(entry.PackageId ?? entry.Path)</span>
+                        <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="README"
+                                       OnClick="@(() => ShowReadmeAsync(entry))" />
+                    </div>
+                    <div class="pkg-card-body">
+                        <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">@(entry.Description ?? "(no description)")</div>
                         @if (entry.PackageId is null)
                         {
-                            <MudAlert Severity="Severity.Warning" Dense="true">Manifest at the tip did not parse.</MudAlert>
+                            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">Manifest at the tip did not parse.</MudAlert>
                         }
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
+                        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
                             <MudSelect T="string" Value="@SelectedVersion(entry)" ValueChanged="@(v => _selectedVersions[entry.Path] = v)"
                                        Label="Version" Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 220px">
                                 @foreach (var version in entry.Versions)
@@ -75,21 +75,21 @@
                                 }
                                 <MudSelectItem Value="@DevChannel">dev channel (@(entry.Version ?? "tip"))</MudSelectItem>
                             </MudSelect>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                            <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Size="Size.Small"
                                        OnClick="@(() => GoToReview(entry))">Review install</MudButton>
-                        </MudStack>
+                        </div>
                         @if (entry.Versions.Count == 0)
                         {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            <div style="font-size:12px;color:var(--text-faint);margin-top:8px;">
                                 No release tags — only the dev channel is available.
-                            </MudText>
+                            </div>
                         }
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        }
-    </MudGrid>
-}
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
 
 <MudDialog @bind-Visible="_showReadme" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
     <TitleContent><MudText Typo="Typo.h6">@_readmeTitle</MudText></TitleContent>
@@ -107,6 +107,70 @@
         <MudButton OnClick="@(() => _showReadme = false)">Close</MudButton>
     </DialogActions>
 </MudDialog>
+
+<style>
+    .pkg-header { margin-bottom: 24px; }
+    .pkg-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .pkg-title {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0 0 6px;
+    }
+    .pkg-desc {
+        color: var(--text-dim);
+        font-size: 14px;
+        margin: 0;
+        max-width: 760px;
+    }
+    .pkg-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .pkg-snapshot-meta {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text-faint);
+    }
+    .pkg-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        gap: 16px;
+    }
+    .pkg-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+    }
+    .pkg-card-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border-soft);
+        font-family: var(--font-display);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .pkg-card-body { padding: 16px 18px; }
+    .pkg-btn-primary {
+        background: var(--accent) !important;
+        color: var(--accent-on) !important;
+    }
+</style>
 
 @code {
     private const string DevChannel = "__dev__";

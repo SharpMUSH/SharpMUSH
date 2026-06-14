@@ -5,14 +5,121 @@
 
 <PageTitle>Settings — SharpMUSH</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="pa-4">
-    <MudText Typo="Typo.h4" Class="mb-4">Settings</MudText>
-    <MudList T="string">
-        <MudListItem Text="Account" Icon="@Icons.Material.Filled.ManageAccounts"
-                     OnClick='() => Nav.NavigateTo("/account")' />
-        <MudListItem Text="Characters" Icon="@Icons.Material.Filled.People"
-                     OnClick='() => Nav.NavigateTo("/settings/characters")' />
-        <MudListItem Text="Theme" Icon="@Icons.Material.Filled.Palette"
-                     OnClick='() => Nav.NavigateTo("/settings/theme")' />
-    </MudList>
-</MudContainer>
+<div class="settings-page">
+    <header class="settings-header">
+        <div class="settings-kicker">@Loc["AppTitle"] · Settings</div>
+        <h1 class="settings-title">Settings</h1>
+    </header>
+
+    <div class="settings-nav">
+        <button type="button" class="settings-nav-item" @onclick='() => Nav.NavigateTo("/account")'>
+            <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Class="settings-nav-icon" />
+            <div class="settings-nav-body">
+                <span class="settings-nav-label">Account</span>
+                <span class="settings-nav-desc">Email, password, and login security</span>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="settings-nav-arrow" />
+        </button>
+
+        <button type="button" class="settings-nav-item" @onclick='() => Nav.NavigateTo("/settings/characters")'>
+            <MudIcon Icon="@Icons.Material.Filled.People" Class="settings-nav-icon" />
+            <div class="settings-nav-body">
+                <span class="settings-nav-label">Characters</span>
+                <span class="settings-nav-desc">Manage characters linked to your account</span>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="settings-nav-arrow" />
+        </button>
+
+        <button type="button" class="settings-nav-item" @onclick='() => Nav.NavigateTo("/settings/theme")'>
+            <MudIcon Icon="@Icons.Material.Filled.Palette" Class="settings-nav-icon" />
+            <div class="settings-nav-body">
+                <span class="settings-nav-label">Theme</span>
+                <span class="settings-nav-desc">Appearance and accent preferences</span>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="settings-nav-arrow" />
+        </button>
+    </div>
+</div>
+
+<style>
+    .settings-page {
+        padding: var(--cpad);
+    }
+
+    .settings-header {
+        margin-bottom: 24px;
+    }
+    .settings-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 10px;
+    }
+    .settings-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+
+    .settings-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .settings-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+        text-align: left;
+        padding: 16px 18px;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        cursor: pointer;
+        transition: border-color 0.12s ease, background 0.12s ease;
+    }
+    .settings-nav-item:hover {
+        border-color: var(--accent);
+        background: var(--surface-2);
+    }
+    .settings-nav-icon {
+        font-size: 22px !important;
+        color: var(--accent);
+        flex-shrink: 0;
+    }
+    .settings-nav-body {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        flex: 1;
+        min-width: 0;
+    }
+    .settings-nav-label {
+        font-family: var(--font-ui);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .settings-nav-desc {
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        color: var(--text-dim);
+    }
+    .settings-nav-arrow {
+        font-size: 18px !important;
+        color: var(--text-faint);
+        flex-shrink: 0;
+        transition: color 0.12s ease, transform 0.12s ease;
+    }
+    .settings-nav-item:hover .settings-nav-arrow {
+        color: var(--accent);
+        transform: translateX(2px);
+    }
+</style>

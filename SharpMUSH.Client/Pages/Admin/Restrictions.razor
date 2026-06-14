@@ -7,11 +7,14 @@
 
 <PageTitle>@Loc["Restrictions"] - @Loc["Configuration"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
-    <MudText Typo="Typo.h4" GutterBottom="true">@Loc["CommandAndFunctionRestrictions"]</MudText>
-    <MudText Typo="Typo.body1" Class="mb-4">
-        @Loc["RestrictionsDescription"]
-    </MudText>
+<div class="config-section-page">
+    <div class="config-section-header">
+        <div>
+            <div class="config-kicker">Admin · server settings</div>
+            <h1 class="config-title">@Loc["CommandAndFunctionRestrictions"]</h1>
+            <p class="config-desc">@Loc["RestrictionsDescription"]</p>
+        </div>
+    </div>
 
     @if (_loading)
     {
@@ -19,133 +22,119 @@
     }
     else
     {
-        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
+        <MudTabs Elevation="0" Rounded="false" ApplyEffectsToContainer="true" Class="config-tabs mb-4">
             <MudTabPanel Text="@Loc["CommandRestrictions"].Value" Icon="@Icons.Material.Filled.Terminal">
-                <MudPaper Class="pa-4 mb-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["AddCommandRestriction"]</MudText>
-                    <MudGrid>
-                        <MudItem xs="12" md="5">
-                            <MudTextField @bind-Value="_newCommandName" 
-                                          Label="@Loc["CommandName"].Value" 
-                                          Variant="Variant.Outlined"
-                                          HelperText="@Loc["CommandNameHelper"].Value" />
-                        </MudItem>
-                        <MudItem xs="12" md="5">
-                            <MudTextField @bind-Value="_newCommandRestrictionsText" 
-                                          Label="@Loc["RestrictionsLabel"].Value" 
-                                          Variant="Variant.Outlined"
-                                          HelperText="@Loc["RestrictionsHelper"].Value" />
-                        </MudItem>
-                        <MudItem xs="12" md="2">
-                            <MudButton Variant="Variant.Filled" 
-                                       Color="Color.Primary" 
-                                       OnClick="AddCommandRestriction"
-                                       Disabled="string.IsNullOrWhiteSpace(_newCommandName) || string.IsNullOrWhiteSpace(_newCommandRestrictionsText)"
-                                       FullWidth="true"
-                                       StartIcon="@Icons.Material.Filled.Add">
+                <div class="config-tab-body">
+                    <div class="config-group-title">@Loc["AddCommandRestriction"]</div>
+                    <div class="config-field-card config-pad mb-5">
+                        <div class="config-add-fields">
+                            <div class="config-add-field">
+                                <label class="config-field-label-text">@Loc["CommandName"]</label>
+                                <input class="config-input" placeholder="@Loc["CommandNameHelper"].Value"
+                                       value="@_newCommandName"
+                                       @oninput="@(e => _newCommandName = e.Value?.ToString() ?? string.Empty)" />
+                            </div>
+                            <div class="config-add-field">
+                                <label class="config-field-label-text">@Loc["RestrictionsLabel"]</label>
+                                <input class="config-input" placeholder="@Loc["RestrictionsHelper"].Value"
+                                       value="@_newCommandRestrictionsText"
+                                       @oninput="@(e => _newCommandRestrictionsText = e.Value?.ToString() ?? string.Empty)" />
+                            </div>
+                            <button type="button" class="config-primary-btn"
+                                    @onclick="AddCommandRestriction"
+                                    disabled="@(string.IsNullOrWhiteSpace(_newCommandName) || string.IsNullOrWhiteSpace(_newCommandRestrictionsText))">
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:16px;" />
                                 @Loc["Add"]
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
-                </MudPaper>
+                            </button>
+                        </div>
+                    </div>
 
-                <MudPaper Class="pa-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["ConfiguredCommandRestrictions"]</MudText>
-                    
+                    <div class="config-group-title">@Loc["ConfiguredCommandRestrictions"]</div>
                     @if (_commandRestrictions == null || !_commandRestrictions.Any())
                     {
-                        <MudAlert Severity="Severity.Info">@Loc["NoCommandRestrictions"]</MudAlert>
+                        <div class="config-field-card config-pad">
+                            <span class="config-empty">@Loc["NoCommandRestrictions"]</span>
+                        </div>
                     }
                     else
                     {
-                        <MudList T="string">
+                        <div class="config-field-card">
                             @foreach (var restriction in _commandRestrictions.OrderBy(r => r.Key))
                             {
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center" style="width: 100%">
-                                        <div>
-                                            <MudText Typo="Typo.body1"><strong>@restriction.Key</strong></MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                @string.Join(", ", restriction.Value)
-                                            </MudText>
-                                        </div>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                                       Color="Color.Error" 
-                                                       Size="Size.Small"
-                                                       OnClick="@(() => DeleteCommandRestriction(restriction.Key))" />
+                                <div class="config-list-row">
+                                    <div class="config-list-text">
+                                        <span class="config-list-name">@restriction.Key</span>
+                                        <span class="config-list-sub">@string.Join(", ", restriction.Value)</span>
                                     </div>
-                                </MudListItem>
-                                <MudDivider />
+                                    <button type="button" class="config-icon-btn config-icon-btn--danger"
+                                            title="@Loc["Delete"]"
+                                            @onclick="@(() => DeleteCommandRestriction(restriction.Key))">
+                                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:16px;" />
+                                    </button>
+                                </div>
                             }
-                        </MudList>
+                        </div>
                     }
-                </MudPaper>
+                </div>
             </MudTabPanel>
 
             <MudTabPanel Text="@Loc["FunctionRestrictions"].Value" Icon="@Icons.Material.Filled.Functions">
-                <MudPaper Class="pa-4 mb-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["AddFunctionRestriction"]</MudText>
-                    <MudGrid>
-                        <MudItem xs="12" md="5">
-                            <MudTextField @bind-Value="_newFunctionName" 
-                                          Label="@Loc["FunctionName"].Value" 
-                                          Variant="Variant.Outlined"
-                                          HelperText="@Loc["FunctionNameHelper"].Value" />
-                        </MudItem>
-                        <MudItem xs="12" md="5">
-                            <MudTextField @bind-Value="_newFunctionRestrictionsText" 
-                                          Label="@Loc["RestrictionsLabel"].Value" 
-                                          Variant="Variant.Outlined"
-                                          HelperText="@Loc["RestrictionsBuilderHelper"].Value" />
-                        </MudItem>
-                        <MudItem xs="12" md="2">
-                            <MudButton Variant="Variant.Filled" 
-                                       Color="Color.Primary" 
-                                       OnClick="AddFunctionRestriction"
-                                       Disabled="string.IsNullOrWhiteSpace(_newFunctionName) || string.IsNullOrWhiteSpace(_newFunctionRestrictionsText)"
-                                       FullWidth="true"
-                                       StartIcon="@Icons.Material.Filled.Add">
+                <div class="config-tab-body">
+                    <div class="config-group-title">@Loc["AddFunctionRestriction"]</div>
+                    <div class="config-field-card config-pad mb-5">
+                        <div class="config-add-fields">
+                            <div class="config-add-field">
+                                <label class="config-field-label-text">@Loc["FunctionName"]</label>
+                                <input class="config-input" placeholder="@Loc["FunctionNameHelper"].Value"
+                                       value="@_newFunctionName"
+                                       @oninput="@(e => _newFunctionName = e.Value?.ToString() ?? string.Empty)" />
+                            </div>
+                            <div class="config-add-field">
+                                <label class="config-field-label-text">@Loc["RestrictionsLabel"]</label>
+                                <input class="config-input" placeholder="@Loc["RestrictionsBuilderHelper"].Value"
+                                       value="@_newFunctionRestrictionsText"
+                                       @oninput="@(e => _newFunctionRestrictionsText = e.Value?.ToString() ?? string.Empty)" />
+                            </div>
+                            <button type="button" class="config-primary-btn"
+                                    @onclick="AddFunctionRestriction"
+                                    disabled="@(string.IsNullOrWhiteSpace(_newFunctionName) || string.IsNullOrWhiteSpace(_newFunctionRestrictionsText))">
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:16px;" />
                                 @Loc["Add"]
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
-                </MudPaper>
+                            </button>
+                        </div>
+                    </div>
 
-                <MudPaper Class="pa-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["ConfiguredFunctionRestrictions"]</MudText>
-                    
+                    <div class="config-group-title">@Loc["ConfiguredFunctionRestrictions"]</div>
                     @if (_functionRestrictions == null || !_functionRestrictions.Any())
                     {
-                        <MudAlert Severity="Severity.Info">@Loc["NoFunctionRestrictions"]</MudAlert>
+                        <div class="config-field-card config-pad">
+                            <span class="config-empty">@Loc["NoFunctionRestrictions"]</span>
+                        </div>
                     }
                     else
                     {
-                        <MudList T="string">
+                        <div class="config-field-card">
                             @foreach (var restriction in _functionRestrictions.OrderBy(r => r.Key))
                             {
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center" style="width: 100%">
-                                        <div>
-                                            <MudText Typo="Typo.body1"><strong>@restriction.Key</strong></MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                @string.Join(", ", restriction.Value)
-                                            </MudText>
-                                        </div>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                                       Color="Color.Error" 
-                                                       Size="Size.Small"
-                                                       OnClick="@(() => DeleteFunctionRestriction(restriction.Key))" />
+                                <div class="config-list-row">
+                                    <div class="config-list-text">
+                                        <span class="config-list-name">@restriction.Key</span>
+                                        <span class="config-list-sub">@string.Join(", ", restriction.Value)</span>
                                     </div>
-                                </MudListItem>
-                                <MudDivider />
+                                    <button type="button" class="config-icon-btn config-icon-btn--danger"
+                                            title="@Loc["Delete"]"
+                                            @onclick="@(() => DeleteFunctionRestriction(restriction.Key))">
+                                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:16px;" />
+                                    </button>
+                                </div>
                             }
-                        </MudList>
+                        </div>
                     }
-                </MudPaper>
+                </div>
             </MudTabPanel>
         </MudTabs>
     }
-</MudContainer>
+</div>
 
 @code {
     private bool _loading = true;
@@ -303,3 +292,214 @@
         }
     }
 }
+
+<style>
+    .config-section-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .config-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+
+    .config-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+
+    .config-desc {
+        margin: 6px 0 0;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+    }
+
+    .config-tab-body {
+        padding-top: 18px;
+    }
+
+    .config-group-title {
+        font-family: var(--font-ui);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        margin: 0 0 8px 2px;
+    }
+
+    .config-field-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .config-pad {
+        padding: 18px 22px;
+    }
+
+    .config-add-fields {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+    }
+
+    .config-add-field {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .config-field-label-text {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        margin-bottom: 6px;
+    }
+
+    .config-input {
+        width: 100%;
+        padding: 9px 12px;
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.12s;
+    }
+
+    .config-input:focus {
+        border-color: var(--accent);
+    }
+
+    .config-input::placeholder {
+        color: var(--text-faint);
+    }
+
+    .config-primary-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+        padding: 9px 16px;
+        border-radius: var(--radius);
+        border: none;
+        background: var(--accent);
+        color: var(--accent-on);
+        cursor: pointer;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        font-weight: 600;
+        transition: opacity 0.12s;
+    }
+
+    .config-primary-btn:hover:not(:disabled) {
+        opacity: 0.9;
+    }
+
+    .config-primary-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .config-list-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 22px;
+    }
+
+    .config-list-row:not(:first-child) {
+        border-top: 1px solid var(--border-soft);
+    }
+
+    .config-list-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .config-list-name {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .config-list-sub {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text-dim);
+    }
+
+    .config-empty {
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        color: var(--text-faint);
+    }
+
+    .config-icon-btn {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text-dim);
+        cursor: pointer;
+    }
+
+    .config-icon-btn--danger:hover {
+        color: var(--mud-palette-error, #e57373);
+        border-color: rgba(229, 115, 115, 0.5);
+    }
+
+    /* Tab strip restyle toward Phosphor tokens */
+    .config-tabs ::deep .mud-tabs-toolbar {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+
+    .config-tabs ::deep .mud-tab {
+        color: var(--text-dim);
+        text-transform: none;
+        font-family: var(--font-ui);
+    }
+
+    .config-tabs ::deep .mud-tab.mud-tab-active {
+        color: var(--accent);
+    }
+
+    .config-tabs ::deep .mud-tab-slider {
+        background: var(--accent) !important;
+    }
+
+    @@media (max-width: 700px) {
+        .config-add-fields {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+</style>

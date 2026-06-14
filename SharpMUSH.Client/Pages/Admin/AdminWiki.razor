@@ -9,30 +9,30 @@
 <PageTitle>@Loc["WikiAdmin"] — Admin — SharpMUSH</PageTitle>
 
 <div style="padding:var(--cpad);">
-    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:4px;">@Loc["WikiAdmin"]</MudText>
-    <MudText Style="color:var(--text-dim);font-size:14px;margin-bottom:24px;">@Loc["WikiAdminDescription"]</MudText>
+    @* Header — prototype SectionTitle: kicker + title *@
+    <div class="adminwiki-head">
+        <div class="adminwiki-kicker">Staff · Wiki</div>
+        <h1 class="adminwiki-title">@Loc["WikiAdmin"]</h1>
+        <p class="adminwiki-intro">@Loc["WikiAdminDescription"]</p>
+    </div>
 
     @* ── Stat tiles ── *@
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+    <div class="adminwiki-stats">
         @foreach (var tile in new[] {
-            (_totalPages, "Total Pages",    Icons.Material.Filled.Article,     "var(--accent)"),
-            (_published,  "Published",      Icons.Material.Filled.Visibility,  "#6cde9a"),
-            (_drafts,     "Drafts",         Icons.Material.Filled.EditNote,    "#d9a23a"),
-            (_protected_, "Protected",      Icons.Material.Filled.Lock,        "#b39cff"),
+            (_totalPages, "Total pages", Icons.Material.Filled.Article,    false),
+            (_published,  "Published",   Icons.Material.Filled.Visibility, false),
+            (_drafts,     "Drafts",      Icons.Material.Filled.EditNote,   true),
+            (_protected_, "Protected",   Icons.Material.Filled.Lock,       true),
         })
         {
-            var (val, label, icon, color) = tile;
-            <MudPaper Elevation="0" Style="@($"padding:16px 18px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);")">
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <MudIcon Icon="@icon" Style="@($"color:{color};font-size:22px;")" />
-                    <div>
-                        <MudText Style="@($"font-size:22px;font-weight:700;color:{color};line-height:1.1;")">
-                            @(_statsLoaded ? val.ToString() : "—")
-                        </MudText>
-                        <MudText Class="section-kicker" Style="opacity:0.7;">@label</MudText>
-                    </div>
+            var (val, label, icon, warn) = tile;
+            <div class="adminwiki-stat">
+                <div class="adminwiki-stat-top">
+                    <span class="adminwiki-stat-label">@label</span>
+                    <MudIcon Icon="@icon" Style="@($"font-size:14px;color:{(warn ? "#d9a23a" : "var(--accent)")};")" />
                 </div>
-            </MudPaper>
+                <div class="adminwiki-stat-value">@(_statsLoaded ? val.ToString() : "—")</div>
+            </div>
         }
     </div>
 
@@ -222,6 +222,67 @@
         </MudButton>
     </DialogActions>
 </MudDialog>
+
+<style>
+    .adminwiki-head {
+        margin-bottom: 20px;
+    }
+    .adminwiki-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .adminwiki-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+    .adminwiki-intro {
+        margin: 8px 0 0;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+    }
+    .adminwiki-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+    .adminwiki-stat {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        padding: 14px 16px;
+    }
+    .adminwiki-stat-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+    .adminwiki-stat-label {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+    }
+    .adminwiki-stat-value {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.02em;
+        line-height: 1;
+    }
+</style>
 
 @code {
     private MudDataGrid<WikiPageSummary>? _grid;

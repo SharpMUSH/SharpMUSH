@@ -8,17 +8,21 @@
 
 <PageTitle>Package Remotes — Admin — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-2">Package Remotes</MudText>
-<MudText Color="Color.Secondary" Class="mb-4">
-    Git repos this game installs packages from. Trust levels are your call —
-    community listings below are curated in the official repo, never self-declared.
-</MudText>
+<div style="padding:var(--cpad);">
+    <div class="pkg-header">
+        <div class="pkg-kicker">Build · Package sources</div>
+        <h1 class="pkg-title">Package Remotes</h1>
+        <p class="pkg-desc">
+            Git repos this game installs packages from. Trust levels are your call —
+            community listings below are curated in the official repo, never self-declared.
+        </p>
+    </div>
 
-<MudGrid>
-    <MudItem xs="12" md="7">
-        <MudCard>
-            <MudCardHeader><MudText Typo="Typo.h6">Configured remotes</MudText></MudCardHeader>
-            <MudCardContent>
+<div class="pkg-cols">
+    <div>
+        <div class="pkg-card">
+            <div class="pkg-card-head">Configured remotes</div>
+            <div class="pkg-card-body">
                 @if (_remotes is null)
                 {
                     <MudProgressLinear Indeterminate="true" />
@@ -57,25 +61,22 @@
                         </MudSelect>
                         <MudTextField @bind-Value="_newBranch" Label="Branch (optional)" Variant="Variant.Outlined" Margin="Margin.Dense" />
                     </MudStack>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_busy" OnClick="@AddRemoteAsync">
+                    <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@AddRemoteAsync">
                         Add remote
                     </MudButton>
                 </MudStack>
-            </MudCardContent>
-        </MudCard>
-    </MudItem>
+            </div>
+        </div>
+    </div>
 
-    <MudItem xs="12" md="5">
-        <MudCard>
-            <MudCardHeader>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Class="w-100">
-                    <MudText Typo="Typo.h6">Community directory</MudText>
-                    <MudSpacer />
-                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Disabled="@_busy"
-                                   OnClick="@LoadCommunityAsync" />
-                </MudStack>
-            </MudCardHeader>
-            <MudCardContent>
+    <div>
+        <div class="pkg-card">
+            <div class="pkg-card-head">
+                <span style="flex:1;">Community directory</span>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Disabled="@_busy"
+                               OnClick="@LoadCommunityAsync" />
+            </div>
+            <div class="pkg-card-body">
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
                     Accepted community repos, curated in the official packages repo.
                 </MudText>
@@ -87,7 +88,7 @@
                 {
                     @foreach (var entry in _community.Listings)
                     {
-                        <MudPaper Class="pa-3 mb-2" Outlined="true">
+                        <MudPaper Elevation="0" Class="pa-3 mb-2" Style="border:1px solid var(--border-soft);background:var(--surface-2);border-radius:var(--radius);">
                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                 <MudText Typo="Typo.subtitle1">@entry.Listing.Name</MudText>
                                 <TrustBadge Trust="PackageRemoteTrust.Community" />
@@ -117,10 +118,11 @@
                         <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-1">@error</MudAlert>
                     }
                 }
-            </MudCardContent>
-        </MudCard>
-    </MudItem>
-</MudGrid>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
 
 <MudDialog @bind-Visible="_showReadme" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
     <TitleContent><MudText Typo="Typo.h6">@_readmeTitle</MudText></TitleContent>
@@ -138,6 +140,63 @@
         <MudButton OnClick="@(() => _showReadme = false)">Close</MudButton>
     </DialogActions>
 </MudDialog>
+
+<style>
+    .pkg-header { margin-bottom: 24px; }
+    .pkg-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .pkg-title {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0 0 6px;
+    }
+    .pkg-desc {
+        color: var(--text-dim);
+        font-size: 14px;
+        margin: 0;
+        max-width: 760px;
+    }
+    .pkg-cols {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 16px;
+        align-items: start;
+    }
+    @@media (max-width: 960px) {
+        .pkg-cols { grid-template-columns: 1fr; }
+    }
+    .pkg-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+    }
+    .pkg-card-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border-soft);
+        font-family: var(--font-display);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .pkg-card-body { padding: 16px 18px; }
+    .pkg-btn-primary {
+        background: var(--accent) !important;
+        color: var(--accent-on) !important;
+    }
+</style>
 
 @code {
     private IReadOnlyList<PackageRemoteRecord>? _remotes;

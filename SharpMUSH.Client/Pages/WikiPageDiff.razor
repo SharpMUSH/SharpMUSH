@@ -8,22 +8,30 @@
 
 <PageTitle>Diff: @Slug — SharpMUSH</PageTitle>
 
-@* Header *@
-<div style="padding:8px var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-    <MudBreadcrumbs Items="_crumbs" Separator="›" Style="padding:0;font-size:13px;" />
-    <MudSpacer />
-    <MudToggleGroup T="string" Value="_mode" ValueChanged="@(v => _mode = v ?? "unified")"
-                    Color="Color.Primary" Style="gap:0;">
-        <MudToggleItem Value="@("unified")" Text="Unified" />
-        <MudToggleItem Value="@("split")" Text="Split" />
-    </MudToggleGroup>
-    <MudButton Variant="Variant.Text" Size="Size.Small"
-               Href="@($"/wiki/{Ns}/{Category}/{Slug}/history")">
-        ← History
-    </MudButton>
-</div>
+<div class="wikidiff">
+    @* Header — prototype SectionTitle: back link + kicker + title + mode toggle *@
+    <a class="wikidiff-back" href="@($"/wiki/{Ns}/{Category}/{Slug}/history")">
+        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:14px;" /> Revision history
+    </a>
+    <div class="wikidiff-head">
+        <div>
+            <div class="wikidiff-kicker">Comparing revisions</div>
+            <h1 class="wikidiff-title">@_displayTitle</h1>
+        </div>
+        <div class="wikidiff-toggle">
+            <button type="button"
+                    class="@($"wikidiff-toggle-btn{(_mode == "unified" ? " active" : "")}")"
+                    @onclick="@(() => _mode = "unified")">
+                Unified
+            </button>
+            <button type="button"
+                    class="@($"wikidiff-toggle-btn{(_mode == "split" ? " active" : "")}")"
+                    @onclick="@(() => _mode = "split")">
+                Side by side
+            </button>
+        </div>
+    </div>
 
-<div style="padding:var(--cpad);">
     @if (_loading)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
@@ -35,64 +43,76 @@
     }
     else
     {
-        @* Stat bar *@
-        <div style="display:flex;align-items:center;gap:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:18px;">
-            <MudText Style="font-size:13px;font-weight:600;">
-                Rev @_fromRev.RevisionNumber
-                <span style="color:var(--text-faint);font-weight:400;margin:0 8px;">→</span>
-                Rev @_toRev.RevisionNumber
-            </MudText>
-            <MudText Style="font-size:12px;color:var(--text-dim);">@_fromRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm") → @_toRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudText>
-            <MudSpacer />
-            <MudChip T="string" Size="Size.Small"
-                     Style="@($"height:20px;font-size:11px;padding:0 7px;background:rgba(0,200,100,0.15);color:#6cde9a;font-family:'JetBrains Mono',monospace;")">
-                +@_addedCount
-            </MudChip>
-            <MudChip T="string" Size="Size.Small"
-                     Style="height:20px;font-size:11px;padding:0 7px;background:rgba(220,80,80,0.15);color:#e57373;font-family:'JetBrains Mono',monospace;">
-                -@_removedCount
-            </MudChip>
+        @* Rev summary cards *@
+        <div class="wikidiff-revbar">
+            <div class="wikidiff-revcard">
+                <div class="wikidiff-revdate">@_fromRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                <div class="wikidiff-revmeta">@_fromRev.EditorDbref · rev #@_fromRev.RevisionNumber</div>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="font-size:16px;color:var(--text-faint);flex-shrink:0;" />
+            <div class="wikidiff-revcard wikidiff-revcard--new">
+                <div class="wikidiff-revdate">@_toRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                <div class="wikidiff-revmeta">@_toRev.EditorDbref · rev #@_toRev.RevisionNumber</div>
+            </div>
+        </div>
+
+        @* Stat line *@
+        <div class="wikidiff-stats">
+            <span class="wikidiff-stat-add">+@_addedCount added</span>
+            <span class="wikidiff-stat-del">−@_removedCount removed</span>
+            @if (!string.IsNullOrWhiteSpace(_toRev.EditSummary))
+            {
+                <span class="wikidiff-stat-sum">· Summary: <span style="font-style:italic;">@_toRev.EditSummary</span></span>
+            }
         </div>
 
         @if (_mode == "split")
         {
             @* Side-by-side *@
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div>
-                    <div style="padding:6px 10px;background:rgba(220,80,80,0.12);border-bottom:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;">
-                        <MudText Class="section-kicker">Rev @_fromRev.RevisionNumber — Old</MudText>
-                    </div>
-                    <pre class="wiki-diff-pane">@_fromRev.MarkdownSource</pre>
+            <div class="wikidiff-body wikidiff-split">
+                <div class="wikidiff-split-col">
+                    <div class="wikidiff-split-head wikidiff-split-head--old">Rev @_fromRev.RevisionNumber — Old</div>
+                    <pre class="wikidiff-pane">@_fromRev.MarkdownSource</pre>
                 </div>
-                <div>
-                    <div style="padding:6px 10px;background:rgba(0,200,100,0.10);border-bottom:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;">
-                        <MudText Class="section-kicker">Rev @_toRev.RevisionNumber — New</MudText>
-                    </div>
-                    <pre class="wiki-diff-pane">@_toRev.MarkdownSource</pre>
+                <div class="wikidiff-split-col">
+                    <div class="wikidiff-split-head wikidiff-split-head--new">Rev @_toRev.RevisionNumber — New</div>
+                    <pre class="wikidiff-pane">@_toRev.MarkdownSource</pre>
                 </div>
             </div>
         }
         else
         {
             @* Unified diff *@
-            <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+            <div class="wikidiff-body">
                 @foreach (var hunk in _hunks)
                 {
                     @if (hunk.Kind == DiffLineKind.Header)
                     {
-                        <div class="wiki-diff-line wiki-diff-line--header">@hunk.Text</div>
+                        <div class="wikidiff-hunk">
+                            <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:13px;color:var(--accent);" />
+                            <span>@@@@ @hunk.Text @@@@</span>
+                        </div>
                     }
                     else if (hunk.Kind == DiffLineKind.Added)
                     {
-                        <div class="wiki-diff-line wiki-diff-line--added">+&nbsp;@hunk.Text</div>
+                        <div class="wikidiff-line wikidiff-line--add">
+                            <span class="wikidiff-gutter wikidiff-gutter--add">+</span>
+                            <span class="wikidiff-text">@(string.IsNullOrEmpty(hunk.Text) ? " " : hunk.Text)</span>
+                        </div>
                     }
                     else if (hunk.Kind == DiffLineKind.Removed)
                     {
-                        <div class="wiki-diff-line wiki-diff-line--removed">-&nbsp;@hunk.Text</div>
+                        <div class="wikidiff-line wikidiff-line--del">
+                            <span class="wikidiff-gutter wikidiff-gutter--del">−</span>
+                            <span class="wikidiff-text">@(string.IsNullOrEmpty(hunk.Text) ? " " : hunk.Text)</span>
+                        </div>
                     }
                     else
                     {
-                        <div class="wiki-diff-line wiki-diff-line--context">&nbsp;&nbsp;@hunk.Text</div>
+                        <div class="wikidiff-line wikidiff-line--ctx">
+                            <span class="wikidiff-gutter">&nbsp;</span>
+                            <span class="wikidiff-text">@(string.IsNullOrEmpty(hunk.Text) ? " " : hunk.Text)</span>
+                        </div>
                     }
                 }
             </div>
@@ -101,33 +121,209 @@
 </div>
 
 <style>
-    .wiki-diff-line {
-        display: block;
-        padding: 1px 12px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 12.5px;
-        line-height: 1.7;
-        white-space: pre-wrap;
-        word-break: break-all;
+    .wikidiff {
+        padding: var(--cpad);
     }
-    .wiki-diff-line--header  { background: rgba(90,169,255,0.10); color: var(--text-dim); }
-    .wiki-diff-line--added   { background: rgba(0,200,100,0.12); color: #6cde9a; }
-    .wiki-diff-line--removed { background: rgba(220,80,80,0.13); color: #e57373; }
-    .wiki-diff-line--context { background: transparent; color: var(--text-dim); }
-    .wiki-diff-pane {
+    .wikidiff-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+        text-decoration: none;
+        margin-bottom: 16px;
+    }
+    .wikidiff-back:hover { color: var(--accent); }
+    .wikidiff-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+    .wikidiff-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .wikidiff-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+
+    /* Unified / Side-by-side pill segment */
+    .wikidiff-toggle {
+        display: flex;
+        gap: 4px;
+        padding: 3px;
         background: var(--surface);
-        border: 1px solid var(--border);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
+        flex-shrink: 0;
+    }
+    .wikidiff-toggle-btn {
+        padding: 6px 12px;
+        border-radius: var(--radius);
+        border: none;
+        cursor: pointer;
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        font-weight: 600;
+        background: transparent;
+        color: var(--text-dim);
+    }
+    .wikidiff-toggle-btn.active {
+        background: rgba(var(--glow), 0.12);
+        color: var(--accent);
+    }
+
+    /* Rev summary cards */
+    .wikidiff-revbar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 14px;
+    }
+    .wikidiff-revcard {
+        flex: 1;
+        min-width: 0;
+        padding: 11px 14px;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
+    }
+    .wikidiff-revcard--new {
+        border-color: rgba(var(--glow), 0.3);
+    }
+    .wikidiff-revdate {
+        font-family: var(--font-ui);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .wikidiff-revmeta {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-faint);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Stat line */
+    .wikidiff-stats {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 12px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        flex-wrap: wrap;
+    }
+    .wikidiff-stat-add { color: var(--accent); }
+    .wikidiff-stat-del { color: #e57373; }
+    .wikidiff-stat-sum { color: var(--text-faint); }
+
+    /* Diff body */
+    .wikidiff-body {
+        background: var(--surface-3);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        line-height: 1.65;
+    }
+    .wikidiff-line {
+        display: flex;
+        border-left: 2px solid transparent;
+    }
+    .wikidiff-line--add {
+        background: rgba(var(--glow), 0.07);
+        border-left-color: var(--accent);
+    }
+    .wikidiff-line--del {
+        background: rgba(229, 115, 115, 0.08);
+        border-left-color: #e57373;
+    }
+    .wikidiff-line--ctx { background: transparent; }
+    .wikidiff-gutter {
+        width: 26px;
+        flex-shrink: 0;
+        text-align: center;
+        user-select: none;
+        border-right: 1px solid var(--border-soft);
+        padding: 2px 0;
+        color: var(--text-faint);
+    }
+    .wikidiff-gutter--add { color: var(--accent); }
+    .wikidiff-gutter--del { color: #e57373; }
+    .wikidiff-line--ctx .wikidiff-text { color: var(--text-dim); }
+    .wikidiff-line--del .wikidiff-text { color: var(--text-dim); }
+    .wikidiff-text {
+        padding: 2px 14px;
+        color: var(--text);
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .wikidiff-hunk {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        background: var(--surface-2);
+        border-top: 1px solid var(--border-soft);
+        border-bottom: 1px solid var(--border-soft);
+        color: var(--text-faint);
+        font-size: 11.5px;
+    }
+
+    /* Split view */
+    .wikidiff-split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        overflow: visible;
+    }
+    .wikidiff-split-col { min-width: 0; }
+    .wikidiff-split-head {
+        padding: 6px 12px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        border: 1px solid var(--border-soft);
+        border-bottom: none;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+    .wikidiff-split-head--old { background: rgba(229, 115, 115, 0.08); }
+    .wikidiff-split-head--new { background: rgba(var(--glow), 0.07); }
+    .wikidiff-pane {
+        background: var(--surface-3);
+        border: 1px solid var(--border-soft);
         border-top: none;
-        border-radius: 0 0 var(--radius) var(--radius);
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
         padding: 12px;
-        font-family: 'JetBrains Mono', monospace;
+        font-family: var(--font-mono);
         font-size: 12.5px;
         line-height: 1.7;
         white-space: pre-wrap;
-        word-break: break-all;
+        word-break: break-word;
         margin: 0;
         max-height: 70vh;
         overflow-y: auto;
+        color: var(--text);
     }
 </style>
 
@@ -149,7 +345,7 @@
     private List<DiffLine> _hunks = [];
     private int _addedCount;
     private int _removedCount;
-    private List<BreadcrumbItem> _crumbs = [];
+    private string _displayTitle = "Page";
 
     private enum DiffLineKind { Header, Added, Removed, Context }
     private record DiffLine(DiffLineKind Kind, string Text);
@@ -157,14 +353,7 @@
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
-        var displayTitle = string.IsNullOrWhiteSpace(Slug) ? "Page" : Slug.Replace('-', ' ');
-        _crumbs =
-        [
-            new("Wiki", $"/wiki/{Ns}/{Category}"),
-            new(displayTitle, $"/wiki/{Ns}/{Category}/{Slug}"),
-            new("History", $"/wiki/{Ns}/{Category}/{Slug}/history"),
-            new("Diff", null, disabled: true),
-        ];
+        _displayTitle = string.IsNullOrWhiteSpace(Slug) ? "Page" : Slug.Replace('-', ' ');
 
         if (FromRev.HasValue && ToRev.HasValue)
         {
@@ -214,7 +403,7 @@
                 {
                     if (!inHunk)
                     {
-                        _hunks.Add(new DiffLine(DiffLineKind.Header, $"@@ -{oldIdx + 1} +{newIdx + 1} @@"));
+                        _hunks.Add(new DiffLine(DiffLineKind.Header, $"-{oldIdx + 1} +{newIdx + 1}"));
                         inHunk = true;
                     }
                     _hunks.Add(ch);
@@ -226,7 +415,7 @@
             {
                 if (!inHunk)
                 {
-                    _hunks.Add(new DiffLine(DiffLineKind.Header, $"@@ -{oldIdx + 1} +{newIdx + 1} @@"));
+                    _hunks.Add(new DiffLine(DiffLineKind.Header, $"-{oldIdx + 1} +{newIdx + 1}"));
                     inHunk = true;
                 }
                 _hunks.Add(ch);
@@ -237,7 +426,7 @@
             {
                 if (!inHunk)
                 {
-                    _hunks.Add(new DiffLine(DiffLineKind.Header, $"@@ -{oldIdx + 1} +{newIdx + 1} @@"));
+                    _hunks.Add(new DiffLine(DiffLineKind.Header, $"-{oldIdx + 1} +{newIdx + 1}"));
                     inHunk = true;
                 }
                 _hunks.Add(ch);

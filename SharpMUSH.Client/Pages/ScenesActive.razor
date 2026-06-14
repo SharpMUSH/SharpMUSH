@@ -4,59 +4,129 @@
 
 <PageTitle>@Loc["ActiveScenes"] — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">@Loc["ActiveScenes"]</MudText>
+<div style="padding:var(--cpad);">
 
-@if (_loading)
-{
-    <MudProgressLinear Indeterminate="true" Class="mb-4" />
-}
-else if (_scenes.Count == 0)
-{
-    <MudAlert Severity="Severity.Info">@Loc["NoActiveScenesRunning"]</MudAlert>
-}
-else
-{
-    <MudGrid Spacing="3">
-        @foreach (var scene in _scenes)
-        {
-            <MudItem xs="12" sm="6" md="4">
-                <MudCard Outlined="true">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <MudText Typo="Typo.h6">
-                                @(string.IsNullOrWhiteSpace(scene.Title) ? Loc["Untitled"] : scene.Title)
-                            </MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+    <div class="sa-kicker">@Loc["Scenes"]</div>
+    <div class="sa-title" style="margin-bottom:4px;">@Loc["ActiveScenes"]</div>
+    <div style="color:var(--text-dim);font-size:14px;margin-bottom:24px;">Sessions running right now.</div>
+
+    @if (_loading)
+    {
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            @for (var i = 0; i < 4; i++)
+            {
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="72px" Style="border-radius:var(--radius);" />
+            }
+        </div>
+    }
+    else if (_scenes.Count == 0)
+    {
+        <div class="sa-empty">@Loc["NoActiveScenesRunning"]</div>
+    }
+    else
+    {
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            @foreach (var scene in _scenes)
+            {
+                <div class="sa-card">
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+                            <span class="sa-live"><span class="sa-live-dot"></span>LIVE</span>
+                            <span style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                @(string.IsNullOrWhiteSpace(scene.Title) ? Loc["Untitled"].ToString() : scene.Title)
+                            </span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:14px;">
+                            <span style="font-size:12px;color:var(--text-dim);">
+                                <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:2px;font-size:13px;" />
                                 @scene.RoomName
-                            </MudText>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        <MudText Typo="Typo.body2">
-                            @Loc["StartedAt"]: @scene.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-                        </MudText>
-                        <MudText Typo="Typo.body2">
-                            @Loc["Participants"]: @scene.ParticipantDbrefs.Count
-                        </MudText>
-                    </MudCardContent>
-                    <MudCardActions>
-                        <MudButton Variant="Variant.Text"
-                                   Color="Color.Primary"
+                            </span>
+                            <span style="font-size:12px;color:var(--text-faint);">
+                                <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Style="vertical-align:middle;margin-right:2px;font-size:13px;" />
+                                @scene.ParticipantDbrefs.Count
+                            </span>
+                            <span style="font-size:12px;color:var(--text-faint);">
+                                @Loc["StartedAt"]: @scene.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                            </span>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-shrink:0;">
+                        <MudButton Variant="Variant.Text" Size="Size.Small"
+                                   Style="color:var(--text-dim);text-transform:none;"
                                    Href="@($"/scenes/{scene.Id}")">
                             @Loc["ViewLog"]
                         </MudButton>
-                        <MudButton Variant="Variant.Text"
-                                   Color="Color.Secondary"
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                   Style="border-color:var(--accent);color:var(--accent);text-transform:none;"
                                    Href="@($"/scenes/{scene.Id}/live")"
                                    Disabled="!scene.IsPublic">
                             @Loc["WatchLive"]
                         </MudButton>
-                    </MudCardActions>
-                </MudCard>
-            </MudItem>
-        }
-    </MudGrid>
-}
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .sa-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+    }
+    .sa-title {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 700;
+        line-height: 1.1;
+        color: var(--text);
+    }
+    .sa-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 14px 18px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-soft);
+        background: var(--surface);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        transition: border-color 0.12s, background 0.12s;
+    }
+    .sa-card:hover {
+        border-color: var(--accent);
+        background: var(--surface-2);
+    }
+    .sa-live {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        color: var(--accent);
+        border: 1px solid rgba(var(--glow),0.3);
+        border-radius: 999px;
+        padding: 1px 7px;
+    }
+    .sa-live-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 6px rgba(var(--glow),0.6);
+    }
+    .sa-empty {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        padding: 16px 20px;
+        color: var(--text-dim);
+        font-size: 13px;
+    }
+</style>
 
 @code {
     private List<SceneArchive> _scenes = [];

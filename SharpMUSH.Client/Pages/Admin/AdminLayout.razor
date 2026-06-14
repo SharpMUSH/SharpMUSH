@@ -4,5 +4,75 @@
 
 <PageTitle>Layout — Admin — SharpMUSH</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Layout Editor</MudText>
-<MudText Color="Color.Secondary">Widget layout editor coming soon.</MudText>
+<div class="adminlayout-page">
+    <header class="adminlayout-header">
+        <div class="adminlayout-kicker">Admin · Layout</div>
+        <h1 class="adminlayout-title">Layout Editor</h1>
+    </header>
+
+    <div class="adminlayout-card">
+        <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="adminlayout-card-icon" />
+        <div class="adminlayout-card-body">
+            <span class="adminlayout-card-label">Widget layout editor</span>
+            <span class="adminlayout-card-desc">Drag-and-drop widget layout configuration is coming soon.</span>
+        </div>
+    </div>
+</div>
+
+<style>
+    .adminlayout-page {
+        padding: var(--cpad);
+    }
+
+    .adminlayout-header {
+        margin-bottom: 24px;
+    }
+    .adminlayout-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 10px;
+    }
+    .adminlayout-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--text);
+    }
+
+    .adminlayout-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 18px 20px;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+    }
+    .adminlayout-card-icon {
+        font-size: 24px !important;
+        color: var(--accent);
+        flex-shrink: 0;
+    }
+    .adminlayout-card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .adminlayout-card-label {
+        font-family: var(--font-ui);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .adminlayout-card-desc {
+        font-family: var(--font-ui);
+        font-size: 12.5px;
+        color: var(--text-dim);
+    }
+</style>

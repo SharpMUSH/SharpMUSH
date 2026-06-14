@@ -7,78 +7,85 @@
 
 <PageTitle>@Loc["SuggestionManagement"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+<div style="padding:var(--cpad);">
+    <div class="ph-header">
+        <div class="ph-kicker">Administration · Spellcheck</div>
+        <div class="ph-header-row">
+            <h1 class="ph-title">@Loc["SuggestionManagement"]</h1>
+            <div class="ph-header-actions">
+                <MudButton Variant="Variant.Filled"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="ShowAddCategoryDialog"
+                           Style="background:var(--accent);color:var(--accent-on);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;">
+                    @Loc["AddCategory"]
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="LoadSuggestionsAsync"
+                           Style="border-color:var(--border);color:var(--text-dim);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;">
+                    @Loc["Refresh"]
+                </MudButton>
+            </div>
+        </div>
+        <p class="ph-subtitle">@Loc["SuggestionsDescription"]</p>
+    </div>
+
     <MudStack Spacing="4">
-        <MudCard>
-            <MudCardHeader>
-                <CardHeaderContent>
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <MudIcon Icon="@Icons.Material.Filled.Spellcheck" Style="color: var(--mud-palette-primary);" />
-                        <MudText Typo="Typo.h5">@Loc["SuggestionManagement"]</MudText>
-                    </div>
-                </CardHeaderContent>
-                <CardHeaderActions>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
-                               StartIcon="@Icons.Material.Filled.Add"
-                               OnClick="ShowAddCategoryDialog">
-                        @Loc["AddCategory"]
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined" 
-                               Color="Color.Secondary" 
-                               StartIcon="@Icons.Material.Filled.Refresh"
-                               OnClick="LoadSuggestionsAsync">
-                        @Loc["Refresh"]
-                    </MudButton>
-                </CardHeaderActions>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudText Typo="Typo.body2" Class="mb-4">
-                    @Loc["SuggestionsDescription"]
-                </MudText>
-                
-                @if (_isLoading)
-                {
-                    <div class="d-flex justify-center pa-4">
-                        <MudProgressCircular Indeterminate="true" />
-                    </div>
-                }
-                else if (_categories == null || !_categories.Any())
-                {
-                    <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Info">
-                        @Loc["NoSuggestionCategories"]
-                    </MudAlert>
-                }
-            </MudCardContent>
-        </MudCard>
+        @if (_isLoading)
+        {
+            <div class="d-flex justify-center pa-4">
+                <MudProgressCircular Indeterminate="true" Style="color:var(--accent);" />
+            </div>
+        }
+        else if (_categories == null || !_categories.Any())
+        {
+            <div class="ph-empty">
+                <MudIcon Icon="@Icons.Material.Filled.Spellcheck" Class="ph-empty-icon" />
+                <div class="ph-empty-text">@Loc["NoSuggestionCategories"]</div>
+            </div>
+        }
 
         @if (_categories != null && _categories.Any())
         {
-            <MudCard>
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">@string.Format(Loc["CategoriesCount"], _categories.Count)</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
+            <div class="ph-tiles">
+                <div class="ph-tile">
+                    <div class="ph-tile-icon"><MudIcon Icon="@Icons.Material.Filled.Category" /></div>
+                    <div class="ph-tile-value">@_categories.Count</div>
+                    <div class="ph-tile-label">@Loc["Categories"]</div>
+                </div>
+                <div class="ph-tile">
+                    <div class="ph-tile-icon" style="color:#6cde9a;background:rgba(108,222,154,0.12);"><MudIcon Icon="@Icons.Material.Filled.TextFields" /></div>
+                    <div class="ph-tile-value">@_categories.Sum(c => c.Value.Count)</div>
+                    <div class="ph-tile-label">@Loc["TotalWords"]</div>
+                </div>
+                <div class="ph-tile">
+                    <div class="ph-tile-icon" style="color:#5aa9ff;background:rgba(90,169,255,0.12);"><MudIcon Icon="@Icons.Material.Filled.TrendingUp" /></div>
+                    <div class="ph-tile-value">@(_categories.Any() ? Math.Round(_categories.Average(c => c.Value.Count), 1) : 0)</div>
+                    <div class="ph-tile-label">@Loc["AvgWordsPerCategory"]</div>
+                </div>
+            </div>
+
+            <div class="ph-card" style="padding:0;overflow:hidden;">
+                <div class="ph-card-head">@string.Format(Loc["CategoriesCount"], _categories.Count)</div>
+                <div style="padding:8px 12px;">
                     <MudExpansionPanels Elevation="0">
                         @foreach (var category in _categories.OrderBy(c => c.Key))
                         {
                             <MudExpansionPanel>
                                 <TitleContent>
                                     <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-                                        <MudIcon Icon="@Icons.Material.Filled.Category" />
-                                        <MudText Typo="Typo.h6">@category.Key</MudText>
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@string.Format(Loc["WordsCount"].Value, category.Value.Count)"></MudChip>
+                                        <MudIcon Icon="@Icons.Material.Filled.Category" Style="color:var(--accent);" />
+                                        <span style="font-family:var(--font-display);font-weight:600;color:var(--text);">@category.Key</span>
+                                        <span class="ph-chip ph-chip-info">@string.Format(Loc["WordsCount"].Value, category.Value.Count)</span>
                                         <MudSpacer />
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                                       Color="Color.Error"
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                        Size="Size.Small"
+                                                       Style="color:#e57373;"
                                                        OnClick="@(async () => await DeleteCategoryAsync(category.Key))" />
                                     </div>
                                 </TitleContent>
                                 <ChildContent>
-                                    <MudPaper Outlined="true" Class="pa-3">
+                                    <div class="ph-panel-inner">
                                         <MudStack Spacing="3">
                                             <!-- Add Word Form -->
                                             <MudStack Row="true" AlignItems="AlignItems.Center">
@@ -91,29 +98,29 @@
                                                               OnAdornmentClick="@(async () => await AddWordAsync(category.Key))"
                                                               FullWidth="true" />
                                                  <MudButton Variant="Variant.Filled"
-                                                           Color="Color.Primary"
                                                            StartIcon="@Icons.Material.Filled.Add"
-                                                           OnClick="@(async () => await AddWordAsync(category.Key))">
+                                                           OnClick="@(async () => await AddWordAsync(category.Key))"
+                                                           Style="background:var(--accent);color:var(--accent-on);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;">
                                                     @Loc["Add"]
                                                 </MudButton>
                                             </MudStack>
 
                                             <!-- Word List -->
-                                            <MudText Typo="Typo.subtitle2" Class="mt-2">@Loc["Words"]</MudText>
+                                            <div class="ph-words-label">@Loc["Words"]</div>
                                             @if (category.Value.Any())
                                             {
-                                                <MudPaper Outlined="true" Class="pa-2" Style="max-height: 400px; overflow-y: auto;">
+                                                <div class="ph-words-box">
                                                     <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap;">
                                                         @foreach (var word in category.Value.OrderBy(w => w))
                                                         {
-                                                            <MudChip T="string" Text="@word" 
-                                                                     Color="Color.Primary" 
+                                                            <MudChip T="string" Text="@word"
                                                                      Variant="Variant.Outlined"
                                                                      Size="Size.Small"
+                                                                     Style="font-family:var(--font-mono);border-color:rgba(var(--glow),0.3);color:var(--accent);border-radius:99px;"
                                                                      OnClose="@(async () => await DeleteWordAsync(category.Key, word))" />
                                                         }
                                                     </MudStack>
-                                                </MudPaper>
+                                                </div>
                                             }
                                             else
                                             {
@@ -122,59 +129,16 @@
                                                 </MudAlert>
                                             }
                                         </MudStack>
-                                    </MudPaper>
+                                    </div>
                                 </ChildContent>
                             </MudExpansionPanel>
                         }
                     </MudExpansionPanels>
-                </MudCardContent>
-            </MudCard>
-        }
-
-        <!-- Statistics Card -->
-        @if (_categories != null && _categories.Any())
-        {
-            <MudCard>
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">@Loc["Statistics"]</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudGrid>
-                        <MudItem xs="12" md="4">
-                            <MudPaper Outlined="true" Class="pa-4">
-                                <MudStack AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Large" Color="Color.Primary" />
-                                    <MudText Typo="Typo.h4">@_categories.Count</MudText>
-                                    <MudText Typo="Typo.body2">@Loc["Categories"]</MudText>
-                                </MudStack>
-                            </MudPaper>
-                        </MudItem>
-                        <MudItem xs="12" md="4">
-                            <MudPaper Outlined="true" Class="pa-4">
-                                <MudStack AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.TextFields" Size="Size.Large" Color="Color.Success" />
-                                    <MudText Typo="Typo.h4">@_categories.Sum(c => c.Value.Count)</MudText>
-                                    <MudText Typo="Typo.body2">@Loc["TotalWords"]</MudText>
-                                </MudStack>
-                            </MudPaper>
-                        </MudItem>
-                        <MudItem xs="12" md="4">
-                            <MudPaper Outlined="true" Class="pa-4">
-                                <MudStack AlignItems="AlignItems.Center">
-                                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" Color="Color.Info" />
-                                    <MudText Typo="Typo.h4">@(_categories.Any() ? Math.Round(_categories.Average(c => c.Value.Count), 1) : 0)</MudText>
-                                    <MudText Typo="Typo.body2">@Loc["AvgWordsPerCategory"]</MudText>
-                                </MudStack>
-                            </MudPaper>
-                        </MudItem>
-                    </MudGrid>
-                </MudCardContent>
-            </MudCard>
+                </div>
+            </div>
         }
     </MudStack>
-</MudContainer>
+</div>
 
 <!-- Add Category Dialog -->
 <MudDialog @bind-Visible="_showAddCategoryDialog">
@@ -186,10 +150,10 @@
                       HelperText="@Loc["CategoryNameHelper"].Value" />
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="@(() => _showAddCategoryDialog = false)">@Loc["Cancel"]</MudButton>
-        <MudButton Color="Color.Primary" 
-                   Variant="Variant.Filled" 
-                   OnClick="AddCategoryAsync">
+        <MudButton OnClick="@(() => _showAddCategoryDialog = false)" Style="color:var(--text-dim);">@Loc["Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   OnClick="AddCategoryAsync"
+                   Style="background:var(--accent);color:var(--accent-on);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.06em;">
             @Loc["Create"]
         </MudButton>
     </DialogActions>
@@ -350,3 +314,154 @@
         public Dictionary<string, HashSet<string>>? Categories { get; set; }
     }
 }
+
+<style>
+    .ph-header { margin-bottom: 24px; }
+    .ph-header-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .ph-header-actions {
+        display: flex;
+        gap: 8px;
+        margin-left: auto;
+    }
+    .ph-kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .ph-title {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 600;
+        color: var(--text);
+        margin: 0;
+    }
+    .ph-subtitle {
+        font-size: 13px;
+        color: var(--text-dim);
+        margin: 12px 0 0;
+        line-height: 1.6;
+    }
+
+    .ph-tiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+    }
+    .ph-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 18px 20px;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+    }
+    .ph-tile-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius);
+        background: rgba(var(--glow), 0.12);
+        color: var(--accent);
+    }
+    .ph-tile-value {
+        font-family: var(--font-display);
+        font-size: 30px;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.1;
+    }
+    .ph-tile-label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+    }
+
+    .ph-card {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+    }
+    .ph-card-head {
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border-soft);
+        font-family: var(--font-display);
+        font-weight: 600;
+        color: var(--text);
+        background: var(--surface-3);
+    }
+
+    .ph-panel-inner {
+        padding: 14px;
+        background: var(--surface-2);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
+    }
+    .ph-words-label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-top: 6px;
+    }
+    .ph-words-box {
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 10px;
+        background: var(--surface-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+
+    .ph-chip {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        padding: 2px 10px;
+        border-radius: 99px;
+        border: 1px solid transparent;
+    }
+    .ph-chip-info {
+        color: #5aa9ff;
+        background: rgba(90, 169, 255, 0.12);
+        border-color: rgba(90, 169, 255, 0.35);
+    }
+
+    .ph-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 56px 24px;
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+    }
+    .ph-empty-icon {
+        font-size: 40px;
+        color: var(--text-faint);
+    }
+    .ph-empty-text {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        color: var(--text-dim);
+    }
+</style>
