@@ -1,0 +1,259 @@
+{
+  "analysis_date": "2025-12-05",
+  "overall_status": {
+    "feature_completion": "95.4%",
+    "behavioral_parity": "70-75%",
+    "remaining_commands": 12,
+    "remaining_functions": 0,
+    "total_todos": 303,
+    "critical_todos": 5
+  },
+  "behavioral_systems_issues": [
+    {
+      "number": 1,
+      "title": "Implement PennMUSH Queue Behavior: Priority, Chunking, and WAIT/INDEPENDENT Separation",
+      "category": "Queue System",
+      "priority": "HIGH",
+      "labels": ["enhancement", "pennmush-compatibility", "performance", "queue-system"],
+      "description": "## Overview\n\nSharpMUSH has a working task scheduler but is missing key PennMUSH queue behaviors that affect performance and compatibility.\n\n## Missing Features\n\n1. **Queue Priority System** - Different priorities for player vs object vs system commands\n2. **Queue Chunking** - `queue_chunk` config: how many commands run before checking sockets\n3. **WAIT vs INDEPENDENT Queues** - Distinction between queue types\n4. **Queue Entry Limits** - Max entries per object/player\n5. **Queue Cost/Quota** - Queue entries should cost quota\n6. **Break Propagation** - Proper handling of @break across queue contexts\n7. **SETQ in Queued Context** - Q-register behavior in queued vs immediate execution\n\n## Implementation Notes\n\n- TaskQueueType enum exists but not fully utilized (TaskScheduler.cs:48-68)\n- Queue infrastructure is solid, needs behavioral layers\n- See PennMUSH documentation reference in penntop.md about queue_chunk\n\n## Testing Requirements\n\n- Benchmark queue processing performance\n- Test queue priority ordering\n- Verify quota costs are applied\n- Test SETQ behavior in queued vs immediate context\n- Test @break propagation through queues\n\n## Related Files\n\n- SharpMUSH.Library/Services/TaskScheduler.cs\n- SharpMUSH.Library/Services/Interfaces/ITaskScheduler.cs\n- SharpMUSH.Implementation/Functions/InformationFunctions.cs\n- SharpMUSH.Implementation/Commands/GeneralCommands.cs\n\n## Estimated Effort\n\n40-60 hours\n\n## Acceptance Criteria\n\n- [ ] Queue priority system implemented and working\n- [ ] queue_chunk configuration option added and functional\n- [ ] WAIT and INDEPENDENT queues separated\n- [ ] Queue limits enforced per object/player\n- [ ] Queue operations cost quota appropriately\n- [ ] @break propagation works correctly\n- [ ] SETQ behavior matches PennMUSH in all contexts\n- [ ] Comprehensive tests added\n- [ ] Performance benchmarks show no regression"
+    },
+    {
+      "number": 2,
+      "title": "Implement Zone System Infrastructure",
+      "category": "Zone System",
+      "priority": "HIGH",
+      "labels": ["enhancement", "pennmush-compatibility", "architecture", "zone-system"],
+      "description": "## Overview\n\nZones are a cross-cutting PennMUSH feature affecting permissions, inheritance, emission, matching, and locks. Currently 19 TODOs reference zone functionality.\n\n## Missing Features\n\n1. **Zone Master Controls** - Zone masters controlling objects in their zone\n2. **Zone Inheritance** - Attribute inheritance from zones\n3. **Zone Emission** - @zemit, @nszemit commands\n4. **Zone Object Retrieval** - zone() function returning correct zone\n5. **Zone Matching** - Match functions checking zone visibility\n6. **Zone Lock Evaluation** - Lock inheritance and evaluation through zones\n\n## Architecture Requirements\n\n```\n1. Zone parent tracking in database\n2. Zone attribute inheritance walker\n3. Zone permission checking service\n4. Zone-based locate/match algorithms\n5. Zone emission notification system\n6. Zone lock evaluation integration\n```\n\n## Implementation Notes\n\n- Affects PermissionService, LocateService, AttributeService, LockService\n- 19 TODOs across multiple files\n- Cross-cutting concern requiring phased implementation\n\n## Testing Requirements\n\n- Test zone master permissions\n- Test attribute inheritance from zones\n- Test zone emission to all zone members\n- Test zone() function accuracy\n- Test zone-based matching and locating\n- Test zone lock inheritance\n\n## Related Files\n\n- SharpMUSH.Library/Services/PermissionService.cs\n- SharpMUSH.Library/Services/LocateService.cs\n- SharpMUSH.Library/Services/AttributeService.cs\n- SharpMUSH.Implementation/Functions/DbrefFunctions.cs\n- SharpMUSH.Implementation/Functions/AttributeFunctions.cs\n- SharpMUSH.Implementation/Functions/ConnectionFunctions.cs\n- SharpMUSH.Implementation/Functions/CommunicationFunctions.cs\n- SharpMUSH.Implementation/Commands/GeneralCommands.cs\n\n## Estimated Effort\n\n80-120 hours\n\n## Acceptance Criteria\n\n- [ ] Zone master permissions fully functional\n- [ ] Zone attribute inheritance working\n- [ ] Zone emission commands working (@zemit, @nszemit)\n- [ ] zone() function returns correct zone\n- [ ] Zone-based matching integrated\n- [ ] Zone locks evaluated correctly\n- [ ] All 19 zone TODOs resolved\n- [ ] Comprehensive test coverage\n- [ ] Documentation updated"
+    },
+    {
+      "number": 3,
+      "title": "Fix CommandDiscoveryService Performance Issue (SEVERE)",
+      "category": "Performance",
+      "priority": "CRITICAL",
+      "labels": ["bug", "performance", "critical", "optimization"],
+      "description": "## Overview\n\n**SEVERITY: CRITICAL PERFORMANCE ISSUE**\n\nCommandDiscoveryService currently scans all attributes on every command match, causing O(n) performance degradation that scales with database size.\n\n## Problem\n\n```\nLocation: CommandDiscoveryService.cs:37\nCurrent Behavior:\n- Scans every attribute on every object for $command matches\n- Performs conversions repeatedly\n- No caching mechanism\n- Performance degrades linearly with database size\n```\n\n## Required Solution\n\n1. Build command index at startup\n2. Cache compiled $command patterns\n3. Invalidate cache only when $commands change\n4. Use hash-based lookup instead of full scan\n5. Implement incremental index updates\n\n## Performance Impact\n\n- **Current**: O(n) where n = total attributes in database\n- **Target**: O(1) hash lookup with cache\n- **Expected Improvement**: 100-1000x speedup depending on database size\n\n## Implementation Approach\n\n```csharp\n1. Create CommandIndex service\n2. Scan and index $commands at startup\n3. Monitor attribute changes for $commands\n4. Invalidate and rebuild index entries on change\n5. Use hash map for O(1) lookups\n```\n\n## Testing Requirements\n\n- Benchmark before/after with various database sizes\n- Test cache invalidation on attribute changes\n- Test concurrent access to command index\n- Verify correctness of pattern matching\n- Memory usage profiling\n\n## Related Files\n\n- SharpMUSH.Library/Services/Interfaces/ICommandDiscoveryService.cs\n- SharpMUSH.Implementation/Services/CommandDiscoveryService.cs (assumed)\n\n## Estimated Effort\n\n40-60 hours\n\n## Acceptance Criteria\n\n- [ ] Command discovery uses indexed lookup\n- [ ] Performance improved by >100x for large databases\n- [ ] Cache invalidation working correctly\n- [ ] Memory usage acceptable\n- [ ] All existing $command patterns still work\n- [ ] Comprehensive benchmarks showing improvement\n- [ ] Unit tests for edge cases\n- [ ] Documentation updated"
+    },
+    {
+      "number": 4,
+      "title": "Implement Attribute Pattern Modes and Fix Parent Chain Walking",
+      "category": "Attribute System",
+      "priority": "HIGH",
+      "labels": ["enhancement", "pennmush-compatibility", "attributes"],
+      "description": "## Overview\n\nAttribute pattern matching and parent chain walking are incomplete, affecting attribute operations like @set obj/attr* and inheritance.\n\n## Missing Features\n\n1. **Pattern Mode Support** - Attribute patterns like obj/attr* don't work correctly\n2. **Tree Traversal** - Hierarchical attributes (obj/parent`child) broken\n3. **Parent Chain Walking** - Attribute inheritance doesn't follow proper hierarchy\n4. **Wildcard Operations** - Bulk operations on attr* patterns unreliable\n\n## TODO Locations\n\n- AttributeService.cs:354, 371 - \"// TODO: Implement Pattern Modes\"\n- AttributeService.cs (3 instances) - \"// TODO: This code doesn't quite look right. It does not correctly walk the parent chain.\"\n- ArangoDatabase.cs (2 instances) - \"// TODO: This is a lazy implementation and does not appropriately support the ` section of pattern matching for attribute trees.\"\n- UtilityFunctions.cs - Tree structure handling marked as incorrect\n\n## PennMUSH Expected Behavior\n\n```\nobj/attr - Direct attribute\nobj/parent`child - Hierarchical attribute\nobj/attr* - Wildcard match (all attributes starting with 'attr')\nInherit from parent objects\nInherit from zones\nPattern-based bulk operations\n```\n\n## Implementation Notes\n\n- AttributeService has infrastructure but incomplete implementation\n- Database layer needs tree traversal support\n- Parent chain walking affects permission checks and attribute lookups\n\n## Testing Requirements\n\n- Test direct attribute access (obj/attr)\n- Test hierarchical attributes (obj/parent`child)\n- Test wildcard patterns (obj/attr*)\n- Test parent object inheritance\n- Test zone inheritance integration\n- Test bulk operations on patterns\n- Test edge cases (circular parents, missing attributes, etc.)\n\n## Related Files\n\n- SharpMUSH.Library/Services/AttributeService.cs\n- SharpMUSH.Library/Services/Interfaces/IAttributeService.cs\n- SharpMUSH.Database.ArangoDB/ArangoDatabase.cs\n- SharpMUSH.Implementation/Functions/UtilityFunctions.cs\n\n## Estimated Effort\n\n60-80 hours\n\n## Acceptance Criteria\n\n- [ ] Pattern modes fully implemented\n- [ ] Parent chain walking correct\n- [ ] Tree traversal supports ` notation\n- [ ] Wildcard patterns work correctly\n- [ ] Attribute inheritance from parents works\n- [ ] Zone attribute inheritance works (after zone system)\n- [ ] All attribute TODOs resolved\n- [ ] Comprehensive test coverage\n- [ ] Performance acceptable for large attribute sets"
+    },
+    {
+      "number": 5,
+      "title": "Implement Hook System (Replace Placeholder)",
+      "category": "Hook System",
+      "priority": "MEDIUM",
+      "labels": ["enhancement", "pennmush-compatibility", "hooks"],
+      "description": "## Overview\n\nIHookService interface exists and is well-designed, but implementation is a placeholder. Command hooks (@hook) don't actually modify behavior.\n\n## Hook System Features\n\n```csharp\nHook Types: ignore, override, before, after, extend\nHook Options:\n- Inline execution\n- Q-register control (localize, clearregs)\n- Break propagation control (nobreak)\n- Per-command hooks\n```\n\n## Current Status\n\n```\nLocation: HookService.cs:77\nStatus: \"// TODO: Replace placeholder implementation\"\nInterface: Complete and well-designed\nImplementation: Placeholder methods returning defaults\n```\n\n## Implementation Requirements\n\n1. Hook storage mechanism (database or memory)\n2. Hook retrieval and caching\n3. Hook execution in command pipeline\n4. Q-register management (localize, clearregs)\n5. Break propagation handling\n6. Inline vs queued execution\n\n## Testing Requirements\n\n- Test all hook types (ignore, override, before, after, extend)\n- Test inline execution\n- Test Q-register localization\n- Test Q-register clearing\n- Test break propagation\n- Test hook precedence\n- Test hook removal\n- Test multiple hooks on same command\n\n## Related Files\n\n- SharpMUSH.Library/Services/Interfaces/IHookService.cs\n- SharpMUSH.Library/Services/HookService.cs\n- SharpMUSH.Library/Models/CommandHook.cs\n\n## Estimated Effort\n\n40-60 hours\n\n## Acceptance Criteria\n\n- [ ] All hook types functional (ignore, override, before, after, extend)\n- [ ] Hook storage and retrieval working\n- [ ] Inline execution working\n- [ ] Q-register management correct\n- [ ] Break propagation correct\n- [ ] Hook caching for performance\n- [ ] @hook command fully functional\n- [ ] Comprehensive test coverage\n- [ ] Documentation updated"
+    },
+    {
+      "number": 6,
+      "title": "Complete Move Service Implementation",
+      "category": "Move System",
+      "priority": "MEDIUM",
+      "labels": ["enhancement", "pennmush-compatibility", "move-system"],
+      "description": "## Overview\n\nIMoveService interface exists but only defines loop checking. Full move mechanics are incomplete, affecting commands like GET, DROP, ENTER, LEAVE.\n\n## Current Implementation\n\n```csharp\nIMoveService.cs defines:\n- WouldCreateLoop(objectToMove, destination): Circular containment check\n```\n\n## Missing Move Features\n\n1. Enter/Leave attribute triggering (@ENTER, @LEAVE, @OXENTER, @OXLEAVE)\n2. Move cost checking\n3. Permission validation (can_move, move_lock)\n4. Location updates in database\n5. Contents notification\n6. Room verb triggering (@OTELEPORT, @OXTELEPORT, etc.)\n7. Move failure messages\n8. Recursive move handling (moving containers with contents)\n\n## Related TODOs\n\n```\nLocation: GeneralCommands.cs\nCurrent: \"// TODO: Evaluate room verbs upon teleportation.\"\nImpact: Teleport commands don't fire appropriate hooks\n```\n\n## Implementation Requirements\n\n1. Complete MoveService implementation\n2. Integrate with AttributeService for hook firing\n3. Integrate with PermissionService for checks\n4. Database location updates\n5. Notification system for contents\n6. Cost calculation and quota deduction\n\n## Testing Requirements\n\n- Test simple moves (GET, DROP)\n- Test enter/leave hooks\n- Test permission checks\n- Test move costs\n- Test circular containment prevention\n- Test recursive moves\n- Test teleportation verbs\n- Test move failure cases\n- Test notification to affected players\n\n## Related Files\n\n- SharpMUSH.Library/Services/Interfaces/IMoveService.cs\n- SharpMUSH.Implementation/Commands/GeneralCommands.cs (GET, DROP, ENTER, LEAVE)\n- SharpMUSH.Library/Services/AttributeService.cs (for hook firing)\n\n## Estimated Effort\n\n50-70 hours\n\n## Acceptance Criteria\n\n- [ ] Full MoveService implementation\n- [ ] Enter/Leave hooks fire correctly\n- [ ] Move costs calculated and applied\n- [ ] Permission checks working\n- [ ] Location updates in database\n- [ ] Contents notifications working\n- [ ] Teleport verbs fire correctly\n- [ ] Circular containment prevented\n- [ ] All move-related commands working\n- [ ] Comprehensive test coverage\n- [ ] Documentation updated"
+    },
+    {
+      "number": 7,
+      "title": "Implement 15 Utility Function Stubs",
+      "category": "Utility Functions",
+      "priority": "HIGH",
+      "labels": ["enhancement", "pennmush-compatibility", "functions"],
+      "description": "## Overview\n\n15+ utility functions are defined but not implemented in UtilityFunctions.cs. These are commonly-used softcode functions that limit builder capabilities.\n\n## Unimplemented Functions\n\n1. **grep()** - Pattern search across attributes\n2. **clone()** - Object cloning\n3. **dig()** - Room creation\n4. **link()** - Object linking\n5. **open()** - Exit creation\n6. **render()** - Code evaluation from another object's perspective\n7. **scan()** - Attribute scanning\n8. **tel()** - Teleportation\n9. **testlock()** - Lock testing\n10. **Plus 5-6 more** utility functions\n\n## TODO Status\n\n```\nLocation: UtilityFunctions.cs\nTODOs: 21 total, 15 marked as major implementations\nImpact: Builders cannot use these common functions\n```\n\n## Implementation Notes\n\n- Interfaces likely already defined\n- Need to integrate with existing services:\n  - grep() needs AttributeService\n  - clone() needs ManipulateSharpObjectService\n  - dig()/open() need building services\n  - render() needs parser with different perspective\n  - testlock() needs LockService\n  - tel() needs MoveService\n\n## Testing Requirements\n\n**For Each Function:**\n- Test with valid inputs\n- Test with invalid inputs\n- Test permission checks\n- Test edge cases\n- Test with unique test strings (e.g., \"test_string_GREP_case1\")\n- Compare behavior to PennMUSH\n\n## Related Files\n\n- SharpMUSH.Implementation/Functions/UtilityFunctions.cs\n- Various service interfaces for integration\n\n## Estimated Effort\n\n60-90 hours (4-6 hours per function average)\n\n## Acceptance Criteria\n\n- [ ] grep() implemented and tested\n- [ ] clone() implemented and tested\n- [ ] dig() implemented and tested\n- [ ] link() implemented and tested\n- [ ] open() implemented and tested\n- [ ] render() implemented and tested\n- [ ] scan() implemented and tested\n- [ ] tel() implemented and tested\n- [ ] testlock() implemented and tested\n- [ ] Remaining 5-6 functions implemented\n- [ ] All functions have comprehensive tests\n- [ ] Unique test strings used in tests\n- [ ] PennMUSH compatibility verified\n- [ ] Documentation updated"
+    },
+    {
+      "number": 8,
+      "title": "Complete Permission Service: Attribute-Based Controls",
+      "category": "Permission System",
+      "priority": "MEDIUM",
+      "labels": ["enhancement", "pennmush-compatibility", "permissions"],
+      "description": "## Overview\n\nPermissionService works for basic checks but is missing attribute-based permission controls, a key PennMUSH feature.\n\n## Missing Features\n\n1. **Attribute-Based Permission Controls** - Dynamic permissions via attributes\n2. **Flag Restrictions** - Proper enforcement based on ownership/permissions\n3. **Zone Master Permissions** - Integration with zone system\n\n## TODO Locations\n\n```\nPermissionService.cs:37 - \"// TODO: Implement attribute-based permission controls\"\nManipulateSharpObjectService.cs - \"// TODO: Flag Restrictions based on ownership, permissions, etc.\"\n```\n\n## Implementation Requirements\n\n1. Attribute evaluation for permission checks\n2. Caching of attribute-based permissions\n3. Integration with AttributeService\n4. Flag setting restrictions\n5. Zone master permission checking (after zone system)\n\n## Testing Requirements\n\n- Test attribute-based permission grants\n- Test attribute-based permission denials\n- Test permission caching\n- Test flag setting restrictions\n- Test ownership-based restrictions\n- Test zone master permissions (after zone system)\n\n## Related Files\n\n- SharpMUSH.Library/Services/PermissionService.cs\n- SharpMUSH.Library/Services/Interfaces/IPermissionService.cs\n- SharpMUSH.Library/Services/ManipulateSharpObjectService.cs\n\n## Estimated Effort\n\n30-40 hours\n\n## Acceptance Criteria\n\n- [ ] Attribute-based permissions implemented\n- [ ] Permission caching working\n- [ ] Flag restrictions enforced\n- [ ] Zone master permissions integrated\n- [ ] Comprehensive test coverage\n- [ ] Performance acceptable\n- [ ] Documentation updated"
+    },
+    {
+      "number": 9,
+      "title": "Fix mapsql() Safety Issue (DANGER)",
+      "category": "SQL Safety",
+      "priority": "CRITICAL",
+      "labels": ["bug", "security", "critical", "sql"],
+      "description": "## Overview\n\n**SEVERITY: CRITICAL - DANGER**\n\nThe mapsql() function has a known transformation bug that could lead to data corruption or security vulnerabilities.\n\n## Problem\n\n```\nLocation: SQLFunctions.cs:138\nPriority: CRITICAL - DANGER\nCurrent: \"// TODO: mapsql() transformation bug\"\nType: Functionality/Security bug\nImpact: SQL operations may be unsafe or incorrect\n```\n\n## Required Investigation\n\n1. Identify exact nature of transformation bug\n2. Determine if it's a correctness or security issue\n3. Review all SQL function implementations\n4. Check for SQL injection vulnerabilities\n5. Review parameter sanitization\n\n## Testing Requirements\n\n- Test mapsql() with various inputs\n- Test for SQL injection attempts\n- Test transformation correctness\n- Test edge cases (special characters, etc.)\n- Security audit of SQL functions\n\n## Related Files\n\n- SharpMUSH.Implementation/Functions/SQLFunctions.cs\n- SharpMUSH.Library/Services/Interfaces/ISqlService.cs\n\n## Estimated Effort\n\n20-40 hours (depends on bug severity)\n\n## Acceptance Criteria\n\n- [ ] Bug identified and documented\n- [ ] Fix implemented\n- [ ] Security audit completed\n- [ ] SQL injection tests pass\n- [ ] Transformation correctness verified\n- [ ] All SQL functions reviewed\n- [ ] Comprehensive test coverage\n- [ ] Security documentation updated"
+    },
+    {
+      "number": 10,
+      "title": "Complete Lock Service Implementation",
+      "category": "Lock System",
+      "priority": "MEDIUM",
+      "labels": ["enhancement", "pennmush-compatibility", "locks"],
+      "description": "## Overview\n\nLock system has good infrastructure and grammar support, but LockService is marked for completion.\n\n## Current Status\n\n```\nLock evaluation works\nMultiple lock types supported\nComplex lock grammar implemented\nTODO Location: LockService.cs:120 - Service marked for completion\n```\n\n## Missing Features\n\n1. **Indirect Lock Evaluation** - Attribute-based locks with correct %#/%! registers\n2. **Zone Lock Integration** - Lock inheritance through zones\n3. **Lock Service Completion** - Whatever is marked incomplete at line 120\n\n## TODO Locations\n\n```\nLockService.cs:120 - Service completion needed\nSharpMUSHBooleanExpressionVisitor.cs - \"// TODO: The attribute should be evaluated with %# = unlocker, %! = gated object\"\nConnectionFunctions.cs (4 instances) - \"// TODO: Check zone lock when zone lock checking is implemented\"\n```\n\n## Testing Requirements\n\n- Test all lock types\n- Test indirect locks (attribute-based)\n- Test %# and %! register setting\n- Test zone lock inheritance (after zone system)\n- Test complex lock combinations\n- Test lock evaluation performance\n\n## Related Files\n\n- SharpMUSH.Library/Services/LockService.cs\n- SharpMUSH.Library/Services/Interfaces/ILockService.cs\n- SharpMUSH.Implementation/Visitors/SharpMUSHBooleanExpressionVisitor.cs\n- SharpMUSH.Implementation/Functions/ConnectionFunctions.cs\n\n## Estimated Effort\n\n30-40 hours\n\n## Acceptance Criteria\n\n- [ ] LockService marked complete\n- [ ] Indirect locks work correctly\n- [ ] %# and %! registers set properly\n- [ ] Zone locks integrated (after zone system)\n- [ ] All lock TODOs resolved\n- [ ] Comprehensive test coverage\n- [ ] Documentation updated"
+    },
+    {
+      "number": 11,
+      "title": "Complete PID Tracking and Information Retrieval",
+      "category": "Process Management",
+      "priority": "MEDIUM",
+      "labels": ["enhancement", "pennmush-compatibility", "scheduler"],
+      "description": "## Overview\n\nPID generation and tracking exist in TaskScheduler, but information retrieval functions (pid(), ps()) are incomplete.\n\n## Current Status\n\n✅ PID generation (TaskScheduler.cs:38-39)\n✅ PID tracking for queued jobs\n✅ PID-based semaphore queries\n\n## Missing Features\n\n```\nTODO Location: InformationFunctions.cs\nCurrent: \"// TODO: Implement actual PID tracking and information retrieval\"\nImpact: pid() and ps() functions don't return full information\n```\n\n## Required Information\n\npid() should return:\n- Process ID\n- Object executing\n- Command being executed\n- Queue type (WAIT, INDEPENDENT, etc.)\n- Time queued\n- Time to execute\n\nps() should return:\n- All queued processes for an object\n- Process details\n- Queue statistics\n\n## Testing Requirements\n\n- Test pid() accuracy\n- Test ps() completeness\n- Test process tracking across queue types\n- Test process information updates\n\n## Related Files\n\n- SharpMUSH.Implementation/Functions/InformationFunctions.cs\n- SharpMUSH.Library/Services/TaskScheduler.cs\n\n## Estimated Effort\n\n20-30 hours\n\n## Acceptance Criteria\n\n- [ ] pid() returns complete information\n- [ ] ps() returns all processes\n- [ ] Queue type information accurate\n- [ ] Time information accurate\n- [ ] Comprehensive test coverage\n- [ ] Documentation updated"
+    }
+  ],
+  "remaining_commands": [
+    {
+      "name": "@BOOT",
+      "category": "Administrative",
+      "priority": "HIGH",
+      "description": "Disconnect a player from the game",
+      "estimated_hours": 4
+    },
+    {
+      "name": "@KICK",
+      "category": "Administrative",
+      "priority": "HIGH",
+      "description": "Force-disconnect a player",
+      "estimated_hours": 4
+    },
+    {
+      "name": "@ENABLE",
+      "category": "Administrative",
+      "priority": "HIGH",
+      "description": "Enable disabled features/commands",
+      "estimated_hours": 6
+    },
+    {
+      "name": "@DBCK",
+      "category": "Administrative",
+      "priority": "HIGH",
+      "description": "Database consistency check",
+      "estimated_hours": 8
+    },
+    {
+      "name": "@ALLHALT",
+      "category": "Administrative",
+      "priority": "MEDIUM",
+      "description": "Halt all queued commands",
+      "estimated_hours": 4
+    },
+    {
+      "name": "@PURGE",
+      "category": "Administrative",
+      "priority": "MEDIUM",
+      "description": "Purge deleted objects",
+      "estimated_hours": 6
+    },
+    {
+      "name": "@ALLQUOTA",
+      "category": "Administrative",
+      "priority": "MEDIUM",
+      "description": "Set quota for all players",
+      "estimated_hours": 4
+    },
+    {
+      "name": "@CHOWNALL",
+      "category": "Administrative",
+      "priority": "LOW",
+      "description": "Change ownership of all objects",
+      "estimated_hours": 6
+    },
+    {
+      "name": "@CHZONEALL",
+      "category": "Administrative",
+      "priority": "LOW",
+      "description": "Change zone for all objects",
+      "estimated_hours": 6
+    },
+    {
+      "name": "@POLL",
+      "category": "Administrative",
+      "priority": "LOW",
+      "description": "Polling system",
+      "estimated_hours": 8
+    },
+    {
+      "name": "@DECOMPILE",
+      "category": "General",
+      "priority": "HIGH",
+      "description": "Decompile object code for inspection",
+      "estimated_hours": 10
+    },
+    {
+      "name": "@EDIT",
+      "category": "General",
+      "priority": "MEDIUM",
+      "description": "Attribute editing with patterns",
+      "estimated_hours": 8
+    }
+  ],
+  "implementation_roadmap": {
+    "phase_1": {
+      "name": "Complete Command Set",
+      "duration_weeks": "1-2",
+      "effort_hours": "40-80",
+      "priority": "CRITICAL",
+      "items": [
+        "Implement 12 remaining commands",
+        "Fix critical mapsql() bug",
+        "Verify @SHUTDOWN, @DUMP status",
+        "Test all new commands"
+      ]
+    },
+    "phase_2": {
+      "name": "Critical Infrastructure",
+      "duration_weeks": "3-4",
+      "effort_hours": "120-160",
+      "priority": "HIGH",
+      "items": [
+        "Fix CommandDiscoveryService optimization (SEVERE)",
+        "Implement queue priority system",
+        "Complete LockService",
+        "Implement attribute pattern modes",
+        "Begin zone infrastructure"
+      ]
+    },
+    "phase_3": {
+      "name": "Feature Completeness",
+      "duration_weeks": "3-4",
+      "effort_hours": "120-160",
+      "priority": "MEDIUM",
+      "items": [
+        "Implement HookService",
+        "Complete MoveService",
+        "Implement 15 utility function stubs",
+        "Complete zone infrastructure",
+        "Add attribute-based permissions"
+      ]
+    },
+    "phase_4": {
+      "name": "Optimization & Testing",
+      "duration_weeks": "2-3",
+      "effort_hours": "80-120",
+      "priority": "MEDIUM",
+      "items": [
+        "Performance optimization pass",
+        "Fix skipped tests",
+        "Add missing test scenarios",
+        "Memory optimization"
+      ]
+    },
+    "phase_5": {
+      "name": "Documentation & Polish",
+      "duration_weeks": "1-2",
+      "effort_hours": "40-80",
+      "priority": "LOW",
+      "items": [
+        "Update documentation",
+        "Complete code comments",
+        "Create migration guides",
+        "Performance benchmarking"
+      ]
+    }
+  },
+  "summary": {
+    "total_effort_hours": "400-600",
+    "total_duration_weeks": "10-15",
+    "critical_items": 5,
+    "high_priority_items": 6,
+    "medium_priority_items": 5,
+    "estimated_completion": "Q1-Q2 2026"
+  }
+}
