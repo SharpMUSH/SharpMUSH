@@ -1,0 +1,96 @@
+@using SharpMUSH.Client.Models.Roles
+@using SharpMUSH.Client.Services
+@inject RoleRegistryClient Roles
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_slug" Label="Slug" Required="true" Variant="Variant.Outlined"
+                              Disabled="@(!_isNew)" HelperText="Stable machine key. Cannot change after creation." />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_name" Label="Name" Required="true" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_color" Label="Color" Variant="Variant.Outlined"
+                              HelperText="CSS color, e.g. #6cde9a" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField @bind-Value="_priority" Label="Priority" Variant="Variant.Outlined"
+                                 HelperText="Higher wins on conflict" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_saving">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Save
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public PortalRoleModel? Existing { get; set; }
+
+    private bool _isNew;
+    private bool _saving;
+    private string _slug = "";
+    private string _name = "";
+    private string _color = "#6cde9a";
+    private int _priority;
+
+    protected override void OnInitialized()
+    {
+        _isNew = Existing is null;
+        if (Existing is not null)
+        {
+            _slug = Existing.Slug;
+            _name = Existing.Name;
+            _color = Existing.Color;
+            _priority = Existing.Priority;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(_slug) || string.IsNullOrWhiteSpace(_name))
+        {
+            Snackbar.Add("Slug and name are required.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        var model = new PortalRoleModel(
+            _slug.Trim(),
+            _name.Trim(),
+            string.IsNullOrWhiteSpace(_color) ? "#6cde9a" : _color.Trim(),
+            _priority,
+            IsSystem: false,
+            Permissions: new Dictionary<string, string>(),
+            CreatedAt: Existing?.CreatedAt ?? DateTimeOffset.UtcNow,
+            UpdatedAt: DateTimeOffset.UtcNow);
+
+        var (ok, error) = await Roles.UpsertAsync(model);
+        _saving = false;
+
+        if (ok)
+        {
+            Snackbar.Add($"Saved {model.Slug}.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(model.Slug));
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Save failed.", Severity.Error);
+        }
+    }
+}
