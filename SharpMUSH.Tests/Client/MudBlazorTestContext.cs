@@ -3,6 +3,7 @@ using System.Text;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.JSInterop;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Services;
@@ -29,6 +30,11 @@ public abstract class MudBlazorTestContext : BunitContext
 		// without a live API; application-specific tests register their own client.
 		Services.AddSingleton(new ApplicationRegistryClient(
 			StubFactoryReturningEmptyList(), NullLogger<ApplicationRegistryClient>.Instance));
+		// NavMenu's profile card injects AccountAuthService to show the signed-in display name.
+		// Its HTTP/JS dependencies are never exercised during a render (only properties are read),
+		// so stubs suffice; Username/Characters default to empty.
+		Services.AddSingleton(new AccountAuthService(
+			StubFactoryReturningEmptyList(), Substitute.For<IJSRuntime>(), NullLogger<AccountAuthService>.Instance));
 	}
 
 	private static IHttpClientFactory StubFactoryReturningEmptyList()

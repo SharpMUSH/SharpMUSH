@@ -163,7 +163,7 @@ public class SuggestionManagementTests
 		var cut = ctx.Render<SuggestionManagement>();
 
 		// Assert
-		var description = cut.Find(".mud-card-content p");
+		var description = cut.Find("p.ph-subtitle");
 		await Assert.That(description.TextContent).Contains("spell-check and suggestion categories");
 	}
 
@@ -258,8 +258,8 @@ public class SuggestionManagementTests
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(100);
 
-		// Assert
-		var chips = cut.FindAll(".mud-chip");
+		// Assert — the per-category word count renders as a ".ph-chip" badge ("{n} words").
+		var chips = cut.FindAll(".ph-chip");
 		var wordCountChip = chips.FirstOrDefault(c => c.TextContent.Contains("words"));
 
 		await Assert.That(wordCountChip).IsNotNull();

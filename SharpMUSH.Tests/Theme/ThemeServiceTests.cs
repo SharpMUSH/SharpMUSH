@@ -24,7 +24,7 @@ public class ThemeServiceTests
 	public async Task GetDefaultPreset_ReturnsPresetWithExpectedName()
 	{
 		var preset = ThemeService.GetDefaultPreset();
-		await Assert.That(preset.Name).IsEqualTo("Default Dark");
+		await Assert.That(preset.Name).IsEqualTo("Phosphor");
 	}
 
 	[Test]
@@ -41,7 +41,7 @@ public class ThemeServiceTests
 	{
 		var svc = new ThemeService(MakeJs());
 		var current = await svc.GetCurrentThemeAsync();
-		await Assert.That(current.Name).IsEqualTo("Default Dark");
+		await Assert.That(current.Name).IsEqualTo("Phosphor");
 	}
 
 	[Test]
@@ -58,7 +58,7 @@ public class ThemeServiceTests
 		var svc = new ThemeService(MakeJs());
 		var presets = await svc.GetAvailablePresetsAsync();
 		var names = presets.Select(p => p.Name).ToList();
-		await Assert.That(names.Contains("Default Dark")).IsTrue();
+		await Assert.That(names.Contains("Phosphor")).IsTrue();
 	}
 
 	// ── ApplyPresetAsync ──────────────────────────────────────────────────────
@@ -67,9 +67,9 @@ public class ThemeServiceTests
 	public async Task ApplyPresetAsync_KnownPreset_ChangesCurrentTheme()
 	{
 		var svc = new ThemeService(MakeJs());
-		await svc.ApplyPresetAsync("Midnight Blue");
+		await svc.ApplyPresetAsync("Amber");
 		var current = await svc.GetCurrentThemeAsync();
-		await Assert.That(current.Name).IsEqualTo("Midnight Blue");
+		await Assert.That(current.Name).IsEqualTo("Amber");
 	}
 
 	[Test]
@@ -87,7 +87,7 @@ public class ThemeServiceTests
 		var fired = false;
 		svc.OnThemeChanged += () => fired = true;
 
-		await svc.ApplyPresetAsync("Forest");
+		await svc.ApplyPresetAsync("Violet");
 
 		await Assert.That(fired).IsTrue();
 	}
@@ -101,10 +101,10 @@ public class ThemeServiceTests
 		var eventFired = false;
 		svc.OnThemeChanged += () => eventFired = true;
 
-		await svc.ApplyPresetAsync("Midnight Blue");
+		await svc.ApplyPresetAsync("Amber");
 
 		var current = await svc.GetCurrentThemeAsync();
-		await Assert.That(current.Name).IsEqualTo("Midnight Blue");
+		await Assert.That(current.Name).IsEqualTo("Amber");
 		await Assert.That(eventFired).IsTrue();
 	}
 
@@ -113,10 +113,10 @@ public class ThemeServiceTests
 	[Test]
 	public async Task InitializeAsync_WithStoredValidPreset_RestoresThatPreset()
 	{
-		var svc = new ThemeService(MakeJs("Midnight Blue"));
+		var svc = new ThemeService(MakeJs("Amber"));
 		await svc.InitializeAsync();
 		var current = await svc.GetCurrentThemeAsync();
-		await Assert.That(current.Name).IsEqualTo("Midnight Blue");
+		await Assert.That(current.Name).IsEqualTo("Amber");
 	}
 
 	[Test]
@@ -125,7 +125,7 @@ public class ThemeServiceTests
 		var svc = new ThemeService(MakeJs("Does Not Exist"));
 		await svc.InitializeAsync();
 		var current = await svc.GetCurrentThemeAsync();
-		await Assert.That(current.Name).IsEqualTo("Default Dark");
+		await Assert.That(current.Name).IsEqualTo("Phosphor");
 	}
 
 	[Test]
@@ -134,7 +134,7 @@ public class ThemeServiceTests
 		var svc = new ThemeService(MakeJs(null));
 		await svc.InitializeAsync();
 		var current = await svc.GetCurrentThemeAsync();
-		await Assert.That(current.Name).IsEqualTo("Default Dark");
+		await Assert.That(current.Name).IsEqualTo("Phosphor");
 	}
 
 	// ── ToMudTheme extension ─────────────────────────────────────────────────

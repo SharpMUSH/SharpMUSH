@@ -230,8 +230,8 @@ public class WikiDisplayTests
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
 
-		// Assert - Hero style should have different styling (background:inherit)
+		// Assert - the home slug renders in hero mode (centered, no article chrome)
 		var markup = cut.Markup;
-		await Assert.That(markup).Contains("background:inherit");
+		await Assert.That(markup).Contains("WikiContent--hero");
 	}
 }
