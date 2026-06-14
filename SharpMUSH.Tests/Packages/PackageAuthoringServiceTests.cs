@@ -143,4 +143,38 @@ public class PackageAuthoringServiceTests
 		await Assert.That(result.IsT1).IsTrue();
 		await Assert.That(result.AsT1.Value).Contains("#4242");
 	}
+
+	[Test, NotInParallel]
+	public async Task Export_BlankAndWhitespaceAttributeValues_ProduceValidManifest()
+	{
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(3))).Known();
+		var pm = pmNode.Match(p => p, _ => null!, _ => null!, _ => null!);
+		var location = pmNode.Match<AnySharpContainer>(p => p, _ => null!, _ => null!, t => t);
+
+		var dbref = await Database.CreateThingAsync("Whitespace Edge", location, pm, location);
+		// A whitespace-only value is the regression: emitted as a block scalar whose
+		// only line is blank, YamlDotNet rejected it with "extra spaces in first line"
+		// before the explicit indentation indicator was added.
+		await Database.SetAttributeAsync(dbref, ["WS_ONLY"], MModule.single("   "), pm);
+		await Database.SetAttributeAsync(dbref, ["LEADING"], MModule.single("  indented body"), pm);
+		await Database.SetAttributeAsync(dbref, ["NORMAL"], MModule.single("plain value"), pm);
+		var objid = (await Database.GetObjectNodeAsync(dbref)).Known().Object().DBRef.ToString();
+
+		var result = await Authoring.ExportAsync(new PackageAuthoringRequest(
+			"ws-edge", "1.0.0", "whitespace edge cases", null, ["Tester"],
+			[new AuthoringObjectSelection(objid, "ws_obj", [])],
+			new Dictionary<string, string>(),
+			new Dictionary<string, AuthoringConfigureClassification>()));
+
+		await Assert.That(result.IsT0).IsTrue()
+			.Because($"export must produce a valid manifest for blank/whitespace values; got: {(result.IsT1 ? result.AsT1.Value : "success")}");
+
+		var parsed = new PackageManifestService().ParseManifest(result.AsT0);
+		await Assert.That(parsed.IsT0).IsTrue();
+		var attrs = parsed.AsT0.Manifest.Objects.Single(o => o.Ref == "ws_obj").Attributes;
+		await Assert.That(attrs.ContainsKey("WS_ONLY")).IsTrue();
+		await Assert.That(attrs.ContainsKey("LEADING")).IsTrue();
+		await Assert.That(attrs["NORMAL"].Value).IsEqualTo("plain value");
+		await Assert.That(attrs["LEADING"].Value).Contains("indented body");
+	}
 }
