@@ -114,6 +114,7 @@ public class WikiDisplayTests
 		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
+		authContext.SetPolicies("wiki.create"); // the Create-page block is gated on wiki.create
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
@@ -145,6 +146,7 @@ public class WikiDisplayTests
 		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
+		authContext.SetPolicies("wiki.edit"); // the Edit button is gated on wiki.edit
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();

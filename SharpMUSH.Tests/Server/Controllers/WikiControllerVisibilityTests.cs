@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
@@ -11,12 +12,20 @@ namespace SharpMUSH.Tests.Server.Controllers;
 
 /// <summary>
 /// Unit tests for the unpublished-page (draft) visibility rules on <see cref="WikiController"/>:
-/// anonymous callers must receive 404 for unpublished pages and never see drafts in
-/// listings, while authenticated callers see everything.
+/// anonymous callers (and accounts without the wiki.read scope) must receive 404 for unpublished
+/// pages and never see drafts in listings; callers holding wiki.read see everything; and a draft's
+/// own author always sees it, even without wiki.read.
 /// </summary>
 public class WikiControllerVisibilityTests
 {
-	private static WikiController MakeController(InMemoryWikiService wiki, bool authenticated)
+	/// <summary>
+	/// Builds a controller for a caller. <paramref name="canReadDrafts"/> grants the wiki.read scope
+	/// (any Player+ member by default); when false and <paramref name="callerDbref"/> is set, the
+	/// caller is authenticated but only sees drafts they authored. Pass authenticated: false for an
+	/// anonymous caller.
+	/// </summary>
+	private static WikiController MakeController(
+		InMemoryWikiService wiki, bool authenticated, bool canReadDrafts = true, string callerDbref = "#42")
 	{
 		var controller = new WikiController(
 			wiki,
@@ -24,9 +33,18 @@ public class WikiControllerVisibilityTests
 			NullLogger<WikiController>.Instance);
 
 		// An identity without an authentication type reports IsAuthenticated == false.
-		var identity = authenticated
-			? new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "#42")], "test")
-			: new ClaimsIdentity();
+		ClaimsIdentity identity;
+		if (!authenticated)
+		{
+			identity = new ClaimsIdentity();
+		}
+		else
+		{
+			var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, callerDbref) };
+			if (canReadDrafts)
+				claims.Add(new Claim(PortalPermission.ClaimType, PortalPermission.WikiRead));
+			identity = new ClaimsIdentity(claims, "test");
+		}
 
 		controller.ControllerContext = new ControllerContext
 		{
@@ -157,5 +175,28 @@ public class WikiControllerVisibilityTests
 
 		var header = controller.Response.Headers["X-Total-Count"].ToString();
 		await Assert.That(header).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task GetPage_Unpublished_Author_Returns200_EvenWithoutWikiRead()
+	{
+		// SeedUnpublishedPage authors the draft as "#1"; that author sees it without wiki.read.
+		var (wiki, slug) = await SeedUnpublishedPage();
+		var controller = MakeController(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#1");
+
+		var result = await controller.GetPage("main", "general", slug);
+
+		await Assert.That(result).IsTypeOf<OkObjectResult>();
+	}
+
+	[Test]
+	public async Task GetPage_Unpublished_AuthenticatedNonAuthorWithoutWikiRead_Returns404()
+	{
+		var (wiki, slug) = await SeedUnpublishedPage();
+		var controller = MakeController(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#99");
+
+		var result = await controller.GetPage("main", "general", slug);
+
+		await Assert.That(result).IsTypeOf<NotFoundResult>();
 	}
 }

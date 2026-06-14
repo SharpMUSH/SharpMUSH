@@ -12,12 +12,14 @@ namespace SharpMUSH.Tests.Server.Controllers;
 
 /// <summary>
 /// Unit tests for the page-protection enforcement on <see cref="WikiController.UpdatePage"/>:
-/// protected pages must reject edits from non-Wizard users with 403, while Wizard
-/// users (and anyone, for unprotected pages) can edit normally.
+/// protected pages must reject edits from callers lacking the wiki.admin (moderation) scope with
+/// 403, while wiki.admin holders (and anyone, for unprotected pages) can edit normally.
 /// </summary>
 public class WikiControllerProtectionTests
 {
-	private static WikiController MakeController(InMemoryWikiService wiki, params string[] roles)
+	// Callers are identified by their granted permission scopes (the protected-page check authorizes
+	// on the wiki.admin claim, not on a role name).
+	private static WikiController MakeController(InMemoryWikiService wiki, params string[] scopes)
 	{
 		var controller = new WikiController(
 			wiki,
@@ -25,7 +27,7 @@ public class WikiControllerProtectionTests
 			NullLogger<WikiController>.Instance);
 
 		var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "#42") };
-		claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+		claims.AddRange(scopes.Select(s => new Claim(PortalPermission.ClaimType, s)));
 
 		controller.ControllerContext = new ControllerContext
 		{
@@ -53,7 +55,7 @@ public class WikiControllerProtectionTests
 	public async Task UpdatePage_ProtectedPage_NonWizard_Returns403()
 	{
 		var (wiki, slug) = await SeedProtectedPage(isProtected: true);
-		var controller = MakeController(wiki, nameof(PortalRole.Player));
+		var controller = MakeController(wiki); // no scopes → not a wiki moderator
 
 		var result = await controller.UpdatePage(slug, new WikiController.UpdatePageRequest("# changed", null));
 
@@ -68,7 +70,7 @@ public class WikiControllerProtectionTests
 	public async Task UpdatePage_ProtectedPage_Wizard_Succeeds()
 	{
 		var (wiki, slug) = await SeedProtectedPage(isProtected: true);
-		var controller = MakeController(wiki, nameof(PortalRole.Wizard));
+		var controller = MakeController(wiki, PortalPermission.WikiAdmin); // moderator scope
 
 		var result = await controller.UpdatePage(slug, new WikiController.UpdatePageRequest("# changed", null));
 
@@ -79,7 +81,7 @@ public class WikiControllerProtectionTests
 	public async Task UpdatePage_UnprotectedPage_NonWizard_Succeeds()
 	{
 		var (wiki, slug) = await SeedProtectedPage(isProtected: false);
-		var controller = MakeController(wiki, nameof(PortalRole.Player));
+		var controller = MakeController(wiki); // unprotected page → no moderator scope needed
 
 		var result = await controller.UpdatePage(slug, new WikiController.UpdatePageRequest("# changed", null));
 
