@@ -73,7 +73,7 @@ public class LayoutServiceTests
 		var layout = svc.GetDefaultLayout(LayoutScopes.Profile);
 
 		var main = layout.Zones[WidgetZone.MainContent];
-		await Assert.That(main.Select(p => p.WidgetName)).Contains("CharacterHeader");
+		await Assert.That(main.Select(p => p.WidgetName)).Contains("character-header");
 		await Assert.That(main.Select(p => p.WidgetName)).Contains("WikiBody");
 		await Assert.That(layout.Zones[WidgetZone.RightSidebar][0].WidgetName).IsEqualTo("CharacterGallery");
 	}

@@ -410,6 +410,28 @@ body {
 	white-space: nowrap;
 	transition: background 0.14s ease, color 0.14s ease;
 }
+
+/* Play-session status dot: present while the play terminal is active, brighter/pulsing when there is
+   unread activity (output arrived while not viewing /play). */
+.phosphor-nav-dot {
+	position: absolute;
+	top: 8px;
+	right: 9px;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--accent);
+	box-shadow: 0 0 4px rgba(var(--glow), 0.45);
+}
+.phosphor-nav-dot--unread {
+	box-shadow: 0 0 9px 2px rgba(var(--glow), 0.95);
+	animation: phosphor-nav-pulse 1.4s ease-in-out infinite;
+}
+@keyframes phosphor-nav-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.5; }
+}
+
 .phosphor-nav-link:hover {
 	background: var(--surface-2);
 	color: var(--text);

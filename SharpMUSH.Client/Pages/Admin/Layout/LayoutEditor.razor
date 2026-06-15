@@ -67,10 +67,7 @@
                             <div class="le-zone-head">
                                 <MudIcon Icon="@ZoneIcon(zone)" Style="font-size:14px;color:var(--accent);" />
                                 <span>@zone</span>
-                                @if (IsGridZone(zone))
-                                {
-                                    <span class="le-zone-hint">12-column grid</span>
-                                }
+                                <span class="le-zone-hint">@(IsGridZone(zone) ? "12-column grid" : "horizontal — no width")</span>
                             </div>
                             <MudDropZone T="EditItem" Identifier="@zone.ToString()"
                                          Class="@($"le-zone-drop {(IsGridZone(zone) ? "le-zone-drop--grid" : "")}")" />
@@ -85,7 +82,7 @@
                     @if (!context.IsTemplate)
                     {
                         <span style="flex:1;"></span>
-                        @if (context.Zone == WidgetZone.MainContent.ToString())
+                        @if (IsGridZoneName(context.Zone))
                         {
                             <div class="le-width" @onpointerdown:stopPropagation="true" title="Width in columns (1–12)">
                                 <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Style="font-size:13px;color:var(--text-faint);" />
@@ -258,7 +255,12 @@
         public int Span { get; set; } = 12;
     }
 
-    private static bool IsGridZone(WidgetZone zone) => zone == WidgetZone.MainContent;
+    // Vertical zones lay widgets out in a 12-column grid (per-placement width). The top bar is
+    // horizontal, so it stays a simple list with no column-width control.
+    private static bool IsGridZone(WidgetZone zone) => zone != WidgetZone.TopBar;
+
+    private static bool IsGridZoneName(string zone)
+        => Enum.TryParse<WidgetZone>(zone, out var z) && IsGridZone(z);
 
     private static int ClampSpan(int span) => span is >= 1 and <= 12 ? span : 12;
 
@@ -267,7 +269,7 @@
 
     // Per-item CSS class so grid zones lay their items out by span.
     private string ItemsClass(EditItem item, string dropzoneId)
-        => !item.IsTemplate && dropzoneId == WidgetZone.MainContent.ToString()
+        => !item.IsTemplate && IsGridZoneName(dropzoneId)
             ? $"le-span-{ClampSpan(item.Span)}"
             : string.Empty;
 

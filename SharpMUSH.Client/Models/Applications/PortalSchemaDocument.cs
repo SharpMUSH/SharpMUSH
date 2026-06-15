@@ -71,6 +71,8 @@ public sealed record SchemaElement(
 	string? Help = null,
 	SchemaValidation? Validation = null,
 	[property: JsonPropertyName("visible_to")] string? VisibleTo = null,
+	// view: show the field even when its value is empty (default true); render Default in its place.
+	[property: JsonPropertyName("show_when_empty")] bool ShowWhenEmpty = true,
 	// markdown / static value
 	string? Value = null,
 	// image

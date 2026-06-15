@@ -1,4 +1,5 @@
 @using SharpMUSH.Library.Models.Portal.Widgets
+@using SharpMUSH.Client.Components.Widgets
 
 @if (_placements.Count > 0)
 {
@@ -13,7 +14,7 @@
                     <div class="zone-grid-cell" style="@($"grid-column:span {ClampSpan(placement.Span)};")">
                         <WidgetErrorBoundary WidgetName="@placement.WidgetName">
                             <DynamicComponent Type="@descriptor.ComponentType"
-                                              Parameters="@BuildParams(placement)" />
+                                              Parameters="@BuildParams(placement, descriptor)" />
                         </WidgetErrorBoundary>
                     </div>
                 }
@@ -29,7 +30,7 @@
             {
                 <WidgetErrorBoundary WidgetName="@placement.WidgetName">
                     <DynamicComponent Type="@descriptor.ComponentType"
-                                      Parameters="@BuildParams(placement)" />
+                                      Parameters="@BuildParams(placement, descriptor)" />
                 </WidgetErrorBoundary>
             }
         }
@@ -66,10 +67,21 @@
 
     private static int ClampSpan(int span) => span is >= 1 and <= 12 ? span : 12;
 
-    private Dictionary<string, object> BuildParams(WidgetPlacement placement)
-        => new()
+    private Dictionary<string, object> BuildParams(WidgetPlacement placement, IPortalWidget descriptor)
+    {
+        var parameters = new Dictionary<string, object>
         {
             ["Config"] = placement.Config!,
             ["Zone"] = Zone.ToString()
         };
+
+        // SchemaWidget (and application-backed widgets, which render through it) resolves its routes
+        // from the placement's widget name (slug), so pass it through.
+        if (descriptor.ComponentType == typeof(SchemaWidget))
+        {
+            parameters["WidgetName"] = placement.WidgetName;
+        }
+
+        return parameters;
+    }
 }

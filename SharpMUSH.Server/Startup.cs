@@ -498,6 +498,7 @@ public class Startup(
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
 		services.AddHostedService<Services.DefaultHttpHandlerBootstrapService>();
+		services.AddHostedService<Services.DefaultApplicationsBootstrapService>();
 		services.AddHostedService<NatsBridgeService>();
 		services.AddHostedService<Services.ConnectionReconciliationService>();
 		services.AddHostedService<Services.ConnectionLoggingService>();

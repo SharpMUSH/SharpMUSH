@@ -169,6 +169,11 @@ file static class WikiServiceSetup
             .AddSingleton(sp => new CharacterDirectoryService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 NullLogger<CharacterDirectoryService>.Instance))
+            // The profile header is an application-backed SchemaWidget; it injects these.
+            .AddSingleton(new SharpMUSH.Client.Services.ApplicationCatalog([]))
+            .AddSingleton(sp => new ApplicationRegistryClient(
+                sp.GetRequiredService<IHttpClientFactory>(),
+                NullLogger<ApplicationRegistryClient>.Instance))
             .AddSingleton<IStringLocalizer<SharedResource>, StubLocalizer<SharedResource>>();
 
         // The example pages compose from scoped layouts. Register the widget registry and a real
@@ -177,7 +182,6 @@ file static class WikiServiceSetup
         var registry = new WidgetRegistry();
         registry.Register(new QuickLinksWidgetDescriptor());
         registry.Register(new WelcomeTextWidgetDescriptor());
-        registry.Register(new CharacterHeaderWidgetDescriptor());
         registry.Register(new CharacterGalleryWidgetDescriptor());
         registry.Register(new WikiIndexWidgetDescriptor());
         registry.Register(new WikiBodyWidgetDescriptor());

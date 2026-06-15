@@ -147,7 +147,9 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 			{
 				[WidgetZone.MainContent] =
 				[
-					new WidgetPlacement("CharacterHeader", 0, null),
+					// The character header is a Widget application (slug "character-header"), seeded at
+					// startup and bridged into the widget registry; it renders through SchemaWidget.
+					new WidgetPlacement("character-header", 0, null),
 					new WidgetPlacement("WikiBody", 1, null)
 				],
 				[WidgetZone.RightSidebar] = [new WidgetPlacement("CharacterGallery", 0, null)]
