@@ -89,13 +89,6 @@
     }
 </div>
 
-<style>
-    .char-card:hover {
-        border-color: var(--accent) !important;
-        background: var(--surface-2) !important;
-    }
-</style>
-
 @code {
     [Parameter] public System.Text.Json.JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;

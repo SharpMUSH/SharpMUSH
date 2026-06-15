@@ -1,0 +1,28 @@
+@using System.Text.Json
+
+@* Static "new here?" quickstart links. *@
+<MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
+    <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">New Here?</MudText>
+    <MudText Style="font-size:13px;color:var(--text-dim);margin-bottom:14px;line-height:1.55;">
+        Get started by reading the wiki, browsing characters, or jumping into a scene.
+    </MudText>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+        <MudButton Variant="Variant.Outlined" Href="/wiki" FullWidth="true" Size="Size.Small"
+                   Style="justify-content:flex-start;border-color:var(--border);color:var(--text);">
+            <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" Class="mr-2" /> Read the Wiki
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Href="/characters" FullWidth="true" Size="Size.Small"
+                   Style="justify-content:flex-start;border-color:var(--border);color:var(--text);">
+            <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" Class="mr-2" /> Browse Characters
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Href="/scenes" FullWidth="true" Size="Size.Small"
+                   Style="justify-content:flex-start;border-color:var(--border);color:var(--text);">
+            <MudIcon Icon="@Icons.Material.Filled.Movie" Size="Size.Small" Class="mr-2" /> Browse Scenes
+        </MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public JsonElement? Config { get; set; }
+    [Parameter] public string Zone { get; set; } = string.Empty;
+}

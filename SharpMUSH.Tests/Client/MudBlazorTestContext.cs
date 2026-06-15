@@ -25,6 +25,8 @@ public abstract class MudBlazorTestContext : BunitContext
 		// NavMenu (and other chrome) inject ITerminalService to gate character-scoped
 		// links on connection state; a disconnected stub is enough for rendering tests.
 		Services.AddSingleton(Substitute.For<ITerminalService>());
+		// NavMenu also injects IPlayTerminalService for the Play-session status dot; a disconnected stub suffices.
+		Services.AddSingleton(Substitute.For<IPlayTerminalService>());
 		// NavMenu renders <ApplicationNavLinks>, which calls ApplicationRegistryClient.ListAsync()
 		// on init. Back it with a stub HTTP factory that returns an empty list so chrome renders
 		// without a live API; application-specific tests register their own client.

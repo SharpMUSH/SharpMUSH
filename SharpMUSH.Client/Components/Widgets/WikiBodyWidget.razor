@@ -1,0 +1,38 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Components
+@using SharpMUSH.Client.Models.Widgets
+
+@* Renders a character's free-form wiki biography (the page whose slug is the character name). The
+   character comes from the cascading ProfilePageContext when placed on the profile page; it falls
+   back to a "character" key in the widget config for standalone placements. *@
+
+@if (!string.IsNullOrWhiteSpace(_name))
+{
+    <MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+        <WikiView Slug="@_name" Mode="WikiView.WikiMode.View" />
+    </MudPaper>
+}
+
+@code {
+    [CascadingParameter] private ProfilePageContext? PageContext { get; set; }
+
+    [Parameter] public JsonElement? Config { get; set; }
+
+    /// <summary>Injected by ZoneRenderer; declared so DynamicComponent does not throw for the unmatched parameter.</summary>
+    [Parameter] public string Zone { get; set; } = string.Empty;
+
+    private string? _name;
+
+    protected override void OnParametersSet()
+        => _name = PageContext?.CharacterName ?? ConfigCharacter();
+
+    private string? ConfigCharacter()
+    {
+        if (Config is { } cfg && cfg.ValueKind == JsonValueKind.Object
+            && cfg.TryGetProperty("character", out var prop) && prop.ValueKind == JsonValueKind.String)
+        {
+            return prop.GetString();
+        }
+        return null;
+    }
+}

@@ -5,8 +5,10 @@
 @* Renders a read-only Portal Schema Document (kind:"view"). Pure renderer: all values and their
    per-viewer visibility come from softcode via the data payload. See dynamic-applications.md. *@
 
-@if (Document?.Pages is null)
+@if (Document?.Pages is null || !HasAnythingToShow)
 {
+    @* No document, or every field was filtered out (e.g. a character with no profile data set) — show
+       a placeholder instead of collapsing to nothing, so the widget/page never silently disappears. *@
     <MudText Typo="Typo.body2" Class="mud-text-secondary">Nothing to display.</MudText>
 }
 else
@@ -63,6 +65,11 @@ else
     /// <summary>Data values keyed by field key (value + per-viewer visibility), à la the profile API.</summary>
     [Parameter] public SchemaData? Data { get; set; }
 
+    /// <summary>True if a title or any visible element exists; otherwise the view would render empty.</summary>
+    private bool HasAnythingToShow =>
+        !string.IsNullOrWhiteSpace(Document?.Title)
+        || (Document?.Pages?.Any(p => (p.Sections ?? []).Any(s => VisibleElements(s).Any())) ?? false);
+
     private IEnumerable<SchemaElement> VisibleElements(SchemaSection section)
         => (section.Elements ?? []).Where(IsVisible);
 
@@ -85,7 +92,20 @@ else
             return (element.Fields ?? []).Any(IsKeyVisible);
         }
 
-        return element.Key is not null && IsKeyVisible(element.Key);
+        return element.Key is not null && IsFieldVisible(element);
+    }
+
+    // A field shows if the softcode included it and marked it visible (privacy is preserved). When its
+    // value is empty it shows only when ShowWhenEmpty (default true), rendering Default in its place.
+    private bool IsFieldVisible(SchemaElement element)
+    {
+        if (Data?.Fields is null || element.Key is null
+            || !Data.Fields.TryGetValue(element.Key, out var v) || !v.Visible)
+        {
+            return false;
+        }
+
+        return element.ShowWhenEmpty || !string.IsNullOrEmpty(ValueToString(v.Value));
     }
 
     private bool IsKeyVisible(string key)
@@ -134,6 +154,8 @@ else
 
             default: // "field"
                 var raw = ValueToString(element.Key is not null ? Lookup(element.Key) : null);
+                // Empty value → fall back to the element's Default (the "default value").
+                var display = string.IsNullOrEmpty(raw) ? ValueToString(element.Default) : raw;
                 <div class="mb-2">
                     @if (!string.IsNullOrWhiteSpace(element.Label))
                     {
@@ -142,11 +164,11 @@ else
                     @if (string.Equals(element.Type, "mstring", StringComparison.OrdinalIgnoreCase))
                     {
                         @* mstring fields carry ANSI/MXP markup — render it the way the terminal does. *@
-                        <div class="mud-typography mud-typography-body1">@((MarkupString)RenderMarkup(raw))</div>
+                        <div class="mud-typography mud-typography-body1">@((MarkupString)RenderMarkup(display))</div>
                     }
                     else
                     {
-                        <MudText Typo="Typo.body1">@raw</MudText>
+                        <MudText Typo="Typo.body1">@display</MudText>
                     }
                 </div>
                 break;

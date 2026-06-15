@@ -34,6 +34,20 @@
         </MudStack>
     }
 }
+else
+{
+    @* No links configured yet — prompt admins (only) toward the layout editor where this widget's
+       links are set. Regular visitors see nothing, as before. *@
+    <AuthorizeView Policy="layout.admin">
+        <Authorized>
+            <MudChip T="string" Href="/admin/layout"
+                     Icon="@Icons.Material.Filled.Settings" Color="Color.Default"
+                     Size="Size.Small" Variant="Variant.Text">
+                Configure Quick Links
+            </MudChip>
+        </Authorized>
+    </AuthorizeView>
+}
 
 @code {
     [Parameter] public JsonElement? Config { get; set; }

@@ -1,0 +1,201 @@
+/* ── Editor shell: three rounded panels with a gap (prototype SoftcodeScreen) ── */
+.sc-shell {
+    display: flex;
+    gap: 14px;
+    /* Match the standard content gutter (--cpad) so panels aren't cramped
+       against the edges, mirroring the prototype's full-height padding. */
+    padding: var(--cpad);
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+}
+
+.sc-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* ── Inline search box (prototype searchBox) ── */
+.sc-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    margin: 0 10px 4px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.14s;
+}
+.sc-search:focus-within {
+    border-color: var(--accent);
+}
+.sc-search-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+}
+.sc-search-input::placeholder {
+    color: var(--text-faint);
+}
+.sc-search-clear {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-faint);
+    cursor: pointer;
+    border-radius: 5px;
+}
+.sc-search-clear:hover {
+    color: var(--text);
+    background: var(--surface-2);
+}
+
+/* ── "+ Add" pill in the attribute pane header ── */
+.sc-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    border: 1px solid rgba(var(--glow), 0.3);
+    background: rgba(var(--glow), 0.10);
+    color: var(--accent);
+    font-family: var(--font-ui);
+    font-size: 11.5px;
+    font-weight: 600;
+    transition: background 0.14s;
+}
+.sc-add-btn:hover:not(:disabled) {
+    background: rgba(var(--glow), 0.18);
+}
+.sc-add-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── Inline add-attribute row (top of the list) ── */
+.sc-add-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    border-radius: var(--radius);
+    border: 1px dashed rgba(var(--glow), 0.4);
+    background: rgba(var(--glow), 0.05);
+}
+.sc-add-amp {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+.sc-add-input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    text-transform: uppercase;
+}
+.sc-add-input::placeholder {
+    color: var(--text-faint);
+    text-transform: none;
+}
+.sc-add-icon {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    border-radius: 6px;
+}
+.sc-add-icon:hover {
+    background: rgba(var(--glow), 0.12);
+}
+
+/* ── Attribute list item: kind badge + name + preview ── */
+.sc-attr-item {
+    width: 100%;
+    text-align: left;
+    display: block;
+    padding: 9px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    margin-bottom: 3px;
+    transition: background 0.12s;
+}
+.sc-attr-item:hover {
+    background: var(--surface-2);
+}
+.sc-attr-item--on {
+    background: rgba(var(--glow), 0.10);
+    box-shadow: inset 2px 0 0 var(--accent);
+}
+.sc-attr-row1 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 3px;
+}
+.sc-kind-badge {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+}
+.sc-attr-name {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sc-attr-item--on .sc-attr-name {
+    color: var(--text);
+    font-weight: 600;
+}
+.sc-attr-desc {
+    display: block;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    color: var(--text-faint);
+    line-height: 1.35;
+    padding-left: 23px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

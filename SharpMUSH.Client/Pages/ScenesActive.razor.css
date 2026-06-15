@@ -1,0 +1,56 @@
+.sa-kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+.sa-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text);
+}
+.sa-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 18px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-soft);
+    background: var(--surface);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transition: border-color 0.12s, background 0.12s;
+}
+.sa-card:hover {
+    border-color: var(--accent);
+    background: var(--surface-2);
+}
+.sa-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    border: 1px solid rgba(var(--glow),0.3);
+    border-radius: 999px;
+    padding: 1px 7px;
+}
+.sa-live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px rgba(var(--glow),0.6);
+}
+.sa-empty {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    color: var(--text-dim);
+    font-size: 13px;
+}

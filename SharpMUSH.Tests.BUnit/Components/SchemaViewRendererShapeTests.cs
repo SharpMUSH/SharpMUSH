@@ -228,14 +228,27 @@ public class SchemaViewRendererShapeTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
-	public async Task EmptyValuedField_IsTreatedAsInvisible()
+	public async Task EmptyValuedField_ShowsByDefault_WithDefaultValue()
 	{
-		// A present-but-empty value is not shown (IsKeyVisible requires non-empty).
+		// ShowWhenEmpty defaults true: a present, visible, but empty field still renders, showing its
+		// Default ("default value") in place of the empty value.
 		var doc = View(null, Page(1, null,
-			Section(1, "S", new SchemaElement(Kind: "field", Key: "blank", Label: "Blank", Type: "text"))));
+			Section(1, "S", new SchemaElement(Kind: "field", Key: "blank", Label: "Blank", Type: "text", Default: El("—")))));
 		var cut = RenderView(doc, Data(("blank", "", true)));
 
-		// The only element is empty → section has no visible elements → no paper at all.
+		await Assert.That(cut.FindAll("div.mud-paper").Count).IsEqualTo(1);
+		await Assert.That(cut.Markup).Contains("Blank");
+		await Assert.That(cut.Markup).Contains("—");
+	}
+
+	[TUnit.Core.Test]
+	public async Task EmptyValuedField_HiddenWhenShowWhenEmptyFalse()
+	{
+		// Opt out: ShowWhenEmpty=false hides a present-but-empty field.
+		var doc = View(null, Page(1, null,
+			Section(1, "S", new SchemaElement(Kind: "field", Key: "blank", Label: "Blank", Type: "text", ShowWhenEmpty: false))));
+		var cut = RenderView(doc, Data(("blank", "", true)));
+
 		await Assert.That(cut.FindAll("div.mud-paper").Count).IsEqualTo(0);
 		await Assert.That(cut.Markup).DoesNotContain("Blank");
 	}

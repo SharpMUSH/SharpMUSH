@@ -1,0 +1,24 @@
+/* Widget zone grid (ZoneRenderer grid mode). Component-scoped via CSS isolation — the isolation
+   bundle (SharpMUSH.Client.styles.css) is linked from wwwroot/index.html. The 12-column grid gives
+   row + column gaps; align-items:stretch makes same-row cells equal height, and home widgets fill
+   their cell (height:100% in their own markup) so card borders line up. */
+.zone-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+    align-items: stretch;
+}
+
+.zone-grid-cell {
+    min-width: 0;
+}
+
+@media (max-width: 760px) {
+    .zone-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .zone-grid-cell {
+        grid-column: 1 / -1 !important;
+    }
+}

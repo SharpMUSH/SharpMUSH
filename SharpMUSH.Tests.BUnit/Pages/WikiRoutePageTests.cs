@@ -7,6 +7,7 @@ using NSubstitute;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -168,7 +169,27 @@ file static class WikiServiceSetup
             .AddSingleton(sp => new CharacterDirectoryService(
                 sp.GetRequiredService<IHttpClientFactory>(),
                 NullLogger<CharacterDirectoryService>.Instance))
+            // The profile header is an application-backed SchemaWidget; it injects these.
+            .AddSingleton(new SharpMUSH.Client.Services.ApplicationCatalog([]))
+            .AddSingleton(sp => new ApplicationRegistryClient(
+                sp.GetRequiredService<IHttpClientFactory>(),
+                NullLogger<ApplicationRegistryClient>.Instance))
             .AddSingleton<IStringLocalizer<SharedResource>, StubLocalizer<SharedResource>>();
+
+        // The example pages compose from scoped layouts. Register the widget registry and a real
+        // (HTTP-backed) layout service; the in-memory handler 404s /api/layouts/* so each scope falls
+        // back to its code default.
+        var registry = new WidgetRegistry();
+        registry.Register(new QuickLinksWidgetDescriptor());
+        registry.Register(new WelcomeTextWidgetDescriptor());
+        registry.Register(new CharacterGalleryWidgetDescriptor());
+        registry.Register(new WikiIndexWidgetDescriptor());
+        registry.Register(new WikiBodyWidgetDescriptor());
+        ctx.Services
+            .AddSingleton<IWidgetRegistry>(registry)
+            .AddSingleton<ILayoutService>(sp => new LayoutService(
+                sp.GetRequiredService<IHttpClientFactory>(),
+                NullLogger<LayoutService>.Instance));
 
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
     }
@@ -188,10 +209,15 @@ public class WikiPageRouteTests : BunitContext
     [TUnit.Core.Test]
     public async Task WikiIndex_RendersHeroAndCategoryGrid()
     {
-        // The redesigned index is a static hero + auto-generated category grid
-        // (sourced from WikiService.GetAllPagesAsync), not an embedded editable
-        // "wiki-index" article.
+        // The index composes from the "wiki-index" layout scope; its default layout is the
+        // WikiIndex widget — a hero + auto-generated category grid sourced from WikiService.
         var cut = Render<SharpMUSH.Client.Pages.WikiIndex>();
+
+        cut.WaitForAssertion(() =>
+        {
+            if (!cut.Markup.Contains("Everything you need to play"))
+                throw new InvalidOperationException("wiki-index layout not resolved yet");
+        }, TimeSpan.FromSeconds(5));
 
         await Assert.That(cut.Markup).Contains("Everything you need to play");
         await Assert.That(cut.Markup).Contains("wiki-hero");
@@ -279,8 +305,16 @@ public class CharacterRouteTests : BunitContext
     [TUnit.Core.Test]
     public async Task CharacterProfile_RendersWikiViewWithCharacterName()
     {
+        // The profile composes from the "profile" scope; its default layout places the WikiBody
+        // widget, which renders WikiView for the character supplied via the cascading page context.
         var cut = Render<SharpMUSH.Client.Pages.CharacterProfile>(p => p
             .Add(c => c.Name, "Gandalf"));
+
+        cut.WaitForAssertion(() =>
+        {
+            if (cut.FindComponents<WikiView>().Count == 0)
+                throw new InvalidOperationException("profile layout not resolved yet");
+        }, TimeSpan.FromSeconds(5));
 
         var wikiView = cut.FindComponent<WikiView>();
         await Assert.That(wikiView).IsNotNull();

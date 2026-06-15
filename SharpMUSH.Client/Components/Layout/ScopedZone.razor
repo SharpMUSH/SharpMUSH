@@ -1,0 +1,61 @@
+@implements IDisposable
+@inject ILayoutService LayoutService
+
+@* Loads a named layout scope and renders one of its zones, refreshing live when an admin saves that
+   scope. Pages use this to compose themselves from admin-customizable widgets instead of hard-coded
+   markup. *@
+
+@if (_layout is not null)
+{
+    <ZoneRenderer Zone="Zone" Layout="_layout" Grid="Grid" />
+}
+
+@code {
+    /// <summary>The layout scope to load (e.g. <see cref="LayoutScopes.WikiIndex"/>).</summary>
+    [Parameter, EditorRequired] public string Scope { get; set; } = string.Empty;
+
+    /// <summary>Which zone of the scope to render here.</summary>
+    [Parameter, EditorRequired] public WidgetZone Zone { get; set; }
+
+    /// <summary>Lay widgets out in a 12-column grid (per-placement span). Default true for page content.</summary>
+    [Parameter] public bool Grid { get; set; } = true;
+
+    private LayoutConfiguration? _layout;
+    private string? _loadedScope;
+
+    protected override async Task OnInitializedAsync()
+    {
+        LayoutService.OnLayoutChanged += HandleChanged;
+        await ReloadAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.Equals(_loadedScope, Scope, StringComparison.OrdinalIgnoreCase))
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        _loadedScope = Scope;
+        _layout = await LayoutService.GetLayoutAsync(Scope);
+    }
+
+    private void HandleChanged(string scope)
+    {
+        if (!string.Equals(scope, Scope, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            _layout = await LayoutService.GetLayoutAsync(Scope);
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => LayoutService.OnLayoutChanged -= HandleChanged;
+}

@@ -46,7 +46,11 @@ public class ApplicationsController(
 		int Order,
 		string? OwningPackage = null);
 
+	// Reads are anonymous: these records are nav/widget metadata (the actual data and actions are
+	// authorized by the in-game handler), and the portal needs them to render widgets on public pages
+	// and to populate the layout palette before a visitor signs in.
 	[HttpGet]
+	[AllowAnonymous]
 	public async Task<ActionResult<IReadOnlyList<ApplicationDto>>> List()
 	{
 		var apps = await registry.GetApplicationsAsync();
@@ -54,6 +58,7 @@ public class ApplicationsController(
 	}
 
 	[HttpGet("{slug}")]
+	[AllowAnonymous]
 	public async Task<ActionResult<ApplicationDto>> Get(string slug)
 	{
 		var result = await registry.GetApplicationAsync(slug);

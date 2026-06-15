@@ -1,5 +1,6 @@
 using Microsoft.JSInterop;
 using NSubstitute;
+using SharpMUSH.Client.Components.Widgets;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Models.Portal.Widgets;
@@ -53,12 +54,16 @@ public class WidgetRegistryTests
 	// ─── GetWidget ─────────────────────────────────────────────────────────
 
 	[Test]
-	public async Task GetWidget_UnknownName_ReturnsNull()
+	public async Task GetWidget_UnknownName_ReturnsSchemaWidgetFallback()
 	{
 		var registry = MakeRegistry();
 		var result = registry.GetWidget("NonExistent");
 
-		await Assert.That(result).IsNull();
+		// Unknown names resolve to an application-backed SchemaWidget fallback (resolved by slug at
+		// render time), so an app-backed placement renders even if the startup app snapshot was empty.
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.Name).IsEqualTo("NonExistent");
+		await Assert.That(result.ComponentType).IsEqualTo(typeof(SchemaWidget));
 	}
 
 	[Test]
@@ -75,9 +80,11 @@ public class WidgetRegistryTests
 		var registry = MakeRegistry();
 		registry.Register(new QuickLinksWidgetDescriptor());
 
-		// Ordinal comparison — lowercase should not resolve
+		// Ordinal comparison — lowercase does not resolve to the registered descriptor; it falls back
+		// to a synthetic application widget keyed by the requested (lowercase) name.
 		var result = registry.GetWidget("quicklinks");
-		await Assert.That(result).IsNull();
+		await Assert.That(result!.Name).IsEqualTo("quicklinks");
+		await Assert.That(result.ComponentType).IsEqualTo(typeof(SchemaWidget));
 	}
 
 	// ─── GetAllWidgets ─────────────────────────────────────────────────────

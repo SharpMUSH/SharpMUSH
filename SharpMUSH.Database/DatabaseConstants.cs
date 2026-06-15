@@ -38,6 +38,10 @@ public static class DatabaseConstants
 	// has linked into the portal. Not visible to softcode; travels with backups.
 	public const string Applications = "sys_applications";
 
+	// Admin-customized portal layouts — one LayoutConfiguration JSON blob per named scope
+	// (e.g. "global", "home", "wiki-index", "profile"). Not visible to softcode; travels with backups.
+	public const string Layouts = "sys_layouts";
+
 	// Portal RBAC — custom roles (keyed by slug) and account→role assignments.
 	// Not visible to softcode; travels with backups.
 	public const string Roles = "sys_roles";

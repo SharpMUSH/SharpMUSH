@@ -25,7 +25,7 @@
     @if (_layout is not null && _layout.Settings.LeftSidebarEnabled && !_isConfigRoute)
     {
         <div class="phosphor-widget-aside" style="@($"width:{_layout.Settings.LeftSidebarWidth};")">
-            <ZoneRenderer Zone="WidgetZone.LeftSidebar" Layout="_layout" />
+            <ZoneRenderer Zone="WidgetZone.LeftSidebar" Layout="_layout" Grid="true" />
         </div>
     }
 
@@ -134,18 +134,13 @@
         <main class="phosphor-main"
               style="@(_terminalOpen ? "padding-bottom:300px;" : "")">
             @Body
-            @* MainContent widget zone renders below the page body *@
-            @if (_layout is not null)
-            {
-                <ZoneRenderer Zone="WidgetZone.MainContent" Layout="_layout" />
-            }
         </main>
 
         @* ── Footer widget zone — only when explicitly enabled ── *@
         @if (_layout is not null && _layout.Settings.FooterEnabled)
         {
             <div class="phosphor-footer">
-                <ZoneRenderer Zone="WidgetZone.Footer" Layout="_layout" />
+                <ZoneRenderer Zone="WidgetZone.Footer" Layout="_layout" Grid="true" />
             </div>
         }
 
@@ -175,7 +170,7 @@
     @if (_layout is not null && _layout.Settings.RightSidebarEnabled && !_isConfigRoute)
     {
         <div class="phosphor-widget-aside phosphor-widget-aside--right" style="@($"width:{_layout.Settings.RightSidebarWidth};")">
-            <ZoneRenderer Zone="WidgetZone.RightSidebar" Layout="_layout" />
+            <ZoneRenderer Zone="WidgetZone.RightSidebar" Layout="_layout" Grid="true" />
         </div>
     }
 </div>
@@ -214,6 +209,13 @@
             var debugOtt = await AccountAuth.GetDebugOttAsync();
             if (debugOtt is not null && !Terminal.IsConnected)
                 _ = Terminal.ConnectWithOttAsync("ws://localhost:4202/ws", debugOtt.Token);
+
+            // Auto-start the command terminal on load: open the docked drawer once a connection exists/begins.
+            _terminalOpen = true;
+        }
+        else if (Terminal.IsConnected)
+        {
+            _terminalOpen = true;
         }
 
         // Load characters if logged in and not yet populated
@@ -223,17 +225,24 @@
         _isDebugAuth = authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         await EnsureAccountRoutingAsync();
 
-        // Load widget layout
+        // Load the shell chrome layout (global scope: top bar, sidebars, footer).
         LayoutService.OnLayoutChanged += HandleLayoutChanged;
-        _layout = await LayoutService.GetLayoutAsync();
+        _layout = await LayoutService.GetLayoutAsync(LayoutScopes.Global);
     }
 
-    private void HandleLayoutChanged()
-        => InvokeAsync(async () =>
+    private void HandleLayoutChanged(string scope)
+    {
+        if (!string.Equals(scope, LayoutScopes.Global, StringComparison.OrdinalIgnoreCase))
         {
-            _layout = await LayoutService.GetLayoutAsync();
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            _layout = await LayoutService.GetLayoutAsync(LayoutScopes.Global);
             StateHasChanged();
         });
+    }
 
     private async Task SwitchCharacterAsync(AccountAuthService.CharacterSummary character)
     {

@@ -41,40 +41,6 @@
     </div>
 </div>
 
-<style>
-    .mc-kicker {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--accent);
-    }
-    .mc-title {
-        font-family: var(--font-display);
-        font-size: 26px;
-        font-weight: 700;
-        line-height: 1.1;
-        color: var(--text);
-    }
-    .mc-card {
-        max-width: 720px;
-        background: var(--surface);
-        border: 1px solid var(--border-soft);
-        border-radius: var(--radius-lg);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-        padding: 24px;
-    }
-    .mc-field .mud-input-control-input-container .mud-input.mud-input-outlined {
-        background: var(--surface-3);
-    }
-    .mc-field .mud-input-outlined-border {
-        border-color: var(--border) !important;
-    }
-    .mc-field.mud-input-control:focus-within .mud-input-outlined-border {
-        border-color: var(--accent) !important;
-    }
-</style>
-
 @code {
     [SupplyParameterFromQuery(Name = "to")] public string? ToQuery { get; set; }
     [SupplyParameterFromQuery(Name = "subject")] public string? SubjectQuery { get; set; }

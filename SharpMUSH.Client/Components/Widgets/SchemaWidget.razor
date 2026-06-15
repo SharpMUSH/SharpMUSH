@@ -1,11 +1,18 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Components.Schema
 @using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
 @inject SchemaAppService Schema
+@inject ApplicationCatalog Catalog
+@inject ApplicationRegistryClient RegistryClient
+@inject CharacterDirectoryService Directory
 
-@* A schema-driven widget (Area 21). Its config carries { schemaUrl, dataUrl }; it renders the
-   softcode-served Portal Schema Document with the same renderers the full-page route uses. *@
+@* A schema-driven widget (Area 21). Its schema/data routes come either from its config ({ schemaUrl,
+   dataUrl }, for manually-placed schema widgets) or — when it is an application-backed palette widget —
+   from the application catalog, resolved by the widget's slug (WidgetName). Page-context tokens such
+   as {objid}/{character} are filled from the cascading ProfilePageContext, so e.g. the character header
+   application renders the right character. The shared renderers display the result. *@
 
 @if (_loading)
 {
@@ -30,6 +37,11 @@ else
     /// <summary>Injected by ZoneRenderer; declared so DynamicComponent does not throw on the extra parameter.</summary>
     [Parameter] public string Zone { get; set; } = string.Empty;
 
+    /// <summary>Placement's widget name (slug). For application-backed widgets this resolves the app's routes.</summary>
+    [Parameter] public string WidgetName { get; set; } = string.Empty;
+
+    [CascadingParameter] private ProfilePageContext? PageContext { get; set; }
+
     private bool _loading = true;
     private PortalSchemaDocument? _schema;
     private SchemaData? _data;
@@ -40,18 +52,86 @@ else
         _schema = null;
         _data = null;
 
-        var schemaUrl = ConfigString("schemaUrl");
+        var (schemaUrl, dataUrl) = await ResolveRoutesAsync();
         if (!string.IsNullOrWhiteSpace(schemaUrl))
         {
-            _schema = await Schema.GetSchemaAsync(schemaUrl!);
-            var dataUrl = ConfigString("dataUrl");
-            if (!string.IsNullOrWhiteSpace(dataUrl))
+            // Fill page-context tokens (e.g. {objid}) before fetching, so the right character renders.
+            var objid = await ResolveObjidIfNeededAsync(schemaUrl, dataUrl);
+
+            var resolvedSchema = Substitute(schemaUrl!, objid);
+            if (resolvedSchema is not null)
             {
-                _data = await Schema.GetDataAsync(dataUrl!);
+                _schema = await Schema.GetSchemaAsync(resolvedSchema);
+            }
+
+            if (_schema is not null && !string.IsNullOrWhiteSpace(dataUrl))
+            {
+                var resolvedData = Substitute(dataUrl!, objid);
+                // A data route needing {objid} we couldn't resolve → skip data (schema still renders).
+                if (resolvedData is not null)
+                {
+                    _data = await Schema.GetDataAsync(resolvedData);
+                }
             }
         }
 
         _loading = false;
+    }
+
+    /// <summary>
+    /// Schema/data routes from config, else from the application catalog by slug, else a lazy fetch of
+    /// the application by slug (so an app-backed widget renders even if the startup snapshot was empty).
+    /// </summary>
+    private async Task<(string? SchemaUrl, string? DataUrl)> ResolveRoutesAsync()
+    {
+        var schemaUrl = ConfigString("schemaUrl");
+        var dataUrl = ConfigString("dataUrl");
+        if (!string.IsNullOrWhiteSpace(schemaUrl))
+        {
+            return (schemaUrl, dataUrl);
+        }
+
+        if (string.IsNullOrWhiteSpace(WidgetName))
+        {
+            return (null, null);
+        }
+
+        var app = Catalog.Get(WidgetName) ?? await RegistryClient.GetAsync(WidgetName);
+        return app is null ? (null, null) : (app.SchemaUrl, app.DataUrl);
+    }
+
+    private async Task<string?> ResolveObjidIfNeededAsync(string schemaUrl, string? dataUrl)
+    {
+        var needsObjid = schemaUrl.Contains("{objid}", StringComparison.Ordinal)
+            || (dataUrl?.Contains("{objid}", StringComparison.Ordinal) ?? false);
+        if (!needsObjid || string.IsNullOrWhiteSpace(PageContext?.CharacterName))
+        {
+            return null;
+        }
+
+        return await Directory.ResolveObjidAsync(PageContext.CharacterName);
+    }
+
+    /// <summary>Replaces {objid}/{character} tokens. Returns null if an {objid} token can't be filled.</summary>
+    private string? Substitute(string route, string? objid)
+    {
+        var result = route;
+
+        if (result.Contains("{objid}", StringComparison.Ordinal))
+        {
+            if (string.IsNullOrWhiteSpace(objid))
+            {
+                return null;
+            }
+            result = result.Replace("{objid}", Uri.EscapeDataString(objid), StringComparison.Ordinal);
+        }
+
+        if (result.Contains("{character}", StringComparison.Ordinal) && PageContext is not null)
+        {
+            result = result.Replace("{character}", Uri.EscapeDataString(PageContext.CharacterName), StringComparison.Ordinal);
+        }
+
+        return result;
     }
 
     private string? ConfigString(string property)

@@ -1,0 +1,35 @@
+.laybrowse { padding: var(--cpad); }
+.laybrowse-head { margin-bottom: 20px; }
+.laybrowse-kicker {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 6px;
+}
+.laybrowse-title { margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--text); }
+.laybrowse-blurb { margin: 8px 0 0; font-family: var(--font-ui); font-size: 13.5px; color: var(--text-dim); max-width: 620px; }
+
+.laybrowse-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.lay-card {
+    text-align: left; padding: 18px; cursor: pointer; background: var(--surface);
+    border-radius: var(--radius-lg); border: 1px solid var(--border-soft); transition: border-color 0.12s, transform 0.12s;
+    display: flex; flex-direction: column; gap: 12px;
+}
+.lay-card:hover { border-color: rgba(var(--glow), 0.4); transform: translateY(-2px); }
+.lay-card-top { display: flex; align-items: center; gap: 11px; }
+.lay-card-icon {
+    width: 36px; height: 36px; flex-shrink: 0; border-radius: var(--radius); display: grid; place-items: center;
+    background: rgba(var(--glow), 0.10); border: 1px solid rgba(var(--glow), 0.22); color: var(--accent);
+}
+.lay-card-name { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--text); }
+.lay-card-sub { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); }
+.lay-card-desc { font-family: var(--font-ui); font-size: 12.5px; color: var(--text-dim); line-height: 1.5; }
+.lay-card-zones { display: flex; gap: 6px; flex-wrap: wrap; }
+.lay-zone {
+    font-family: var(--font-mono); font-size: 10px; padding: 2px 8px; border-radius: 99px;
+    color: var(--text-dim); background: var(--surface-2); border: 1px solid var(--border);
+}
+.lay-badge {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 99px; flex-shrink: 0; color: var(--text-faint);
+    background: var(--surface-2); border: 1px solid var(--border);
+}
+.lay-badge--on { color: var(--accent); background: rgba(var(--glow), 0.12); border-color: rgba(var(--glow), 0.3); }

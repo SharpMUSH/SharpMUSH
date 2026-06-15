@@ -1,8 +1,11 @@
 @* NavMenu — Phosphor Refined sidebar: logo · Play/World/Build/Manage groups · profile card *@
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Client.Models
 @using Microsoft.AspNetCore.Components.Routing
 @inject IStringLocalizer<SharedResource> Loc
 @inject ITerminalService Terminal
+@inject IPlayTerminalService PlayTerminal
+@inject NavigationManager Nav
 @inject AccountAuthService AccountAuth
 @implements IDisposable
 
@@ -35,7 +38,18 @@
             @NavItem("/", Icons.Material.Filled.Home, Loc["Home"], NavLinkMatch.All)
             @if (_characterActive)
             {
-                @NavItem("/play", Icons.Material.Filled.SportsEsports, Loc["Play"])
+                <NavLink class="phosphor-nav-link" href="/play" Match="NavLinkMatch.Prefix">
+                    <MudIcon Icon="@Icons.Material.Filled.SportsEsports" Class="phosphor-nav-icon" />
+                    @if (!IsCollapsed)
+                    {
+                        <span class="phosphor-nav-text">@Loc["Play"]</span>
+                    }
+                    @if (_playActive)
+                    {
+                        <span class="phosphor-nav-dot @(_playUnread ? "phosphor-nav-dot--unread" : "")"
+                              title="@(_playUnread ? "Unread play activity" : "Play session active")"></span>
+                    }
+                </NavLink>
             }
             @NavItem("/scenes", Icons.Material.Filled.Movie, Loc["SceneArchive"])
             @if (_characterActive)
@@ -58,6 +72,9 @@
             <ApplicationNavLinks IsCollapsed="IsCollapsed" />
             <AuthorizeView Policy="applications.admin">
                 <Authorized>@NavItem("/admin/applications", Icons.Material.Filled.Apps, "Applications")</Authorized>
+            </AuthorizeView>
+            <AuthorizeView Policy="layout.admin">
+                <Authorized>@NavItem("/admin/layout", Icons.Material.Filled.Dashboard, "Layout")</Authorized>
             </AuthorizeView>
             <AuthorizeView Policy="packages.admin">
                 <Authorized>@NavItem("/admin/packages", Icons.Material.Filled.Inventory2, "Packages")</Authorized>
@@ -112,6 +129,10 @@
     public bool IsCollapsed { get; set; } = true;
 
     private bool _characterActive;
+
+    // Play-session terminal status, surfaced as a dot on the Play nav item.
+    private bool _playActive;
+    private bool _playUnread;
 
     // Avatar hue palette mirrors the prototype's AV_HUES.
     private static readonly int[] AvHues = [168, 28, 264, 210, 340, 130, 50];
@@ -169,6 +190,11 @@
     {
         _characterActive = Terminal.IsConnected;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
+
+        _playActive = PlayTerminal.IsConnected;
+        PlayTerminal.ConnectionStateChanged += OnPlayConnectionChanged;
+        PlayTerminal.LineReceived += OnPlayLine;
+        Nav.LocationChanged += OnLocationChanged;
     }
 
     private void OnConnectionChanged(bool connected)
@@ -178,5 +204,46 @@
             StateHasChanged();
         });
 
-    public void Dispose() => Terminal.ConnectionStateChanged -= OnConnectionChanged;
+    private void OnPlayConnectionChanged(bool connected)
+        => InvokeAsync(() =>
+        {
+            _playActive = connected;
+            if (!connected)
+            {
+                _playUnread = false;
+            }
+            StateHasChanged();
+        });
+
+    // New play output while the player isn't looking at /play → mark the dot as unread (brighter glow).
+    private void OnPlayLine(TerminalLine _)
+        => InvokeAsync(() =>
+        {
+            if (!IsOnPlay())
+            {
+                _playUnread = true;
+                StateHasChanged();
+            }
+        });
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+        => InvokeAsync(() =>
+        {
+            if (IsOnPlay() && _playUnread)
+            {
+                _playUnread = false;
+                StateHasChanged();
+            }
+        });
+
+    private bool IsOnPlay()
+        => new Uri(Nav.Uri).AbsolutePath.TrimEnd('/').Equals("/play", StringComparison.OrdinalIgnoreCase);
+
+    public void Dispose()
+    {
+        Terminal.ConnectionStateChanged -= OnConnectionChanged;
+        PlayTerminal.ConnectionStateChanged -= OnPlayConnectionChanged;
+        PlayTerminal.LineReceived -= OnPlayLine;
+        Nav.LocationChanged -= OnLocationChanged;
+    }
 }

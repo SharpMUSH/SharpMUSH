@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
@@ -13,9 +14,13 @@ namespace SharpMUSH.Tests.BUnit.Components;
 /// </summary>
 public abstract class QuickLinksWidgetTestBase : BunitContext
 {
+	/// <summary>The empty-state "Configure Quick Links" prompt is gated by AuthorizeView, so tests need an auth context.</summary>
+	protected BunitAuthorizationContext Auth { get; }
+
 	protected QuickLinksWidgetTestBase()
 	{
 		Services.AddMudServices();
+		Auth = AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -34,14 +39,27 @@ public abstract class QuickLinksWidgetTestBase : BunitContext
 public class QuickLinksWidgetNullConfigTests : QuickLinksWidgetTestBase
 {
 	[TUnit.Core.Test]
-	public async Task QuickLinksWidget_NullConfig_RendersNothing()
+	public async Task QuickLinksWidget_NullConfig_NonAdmin_RendersNothing()
 	{
+		// Default auth context: not authorized → the admin-only configure prompt does not render.
 		var cut = Render<QuickLinksWidget>(p => p
 			.Add(c => c.Config, (JsonElement?)null)
 			.Add(c => c.Zone, WidgetZone.TopBar.ToString()));
 
-		// No links → empty output
 		await Assert.That(cut.Markup.Trim()).IsEqualTo(string.Empty);
+	}
+
+	[TUnit.Core.Test]
+	public async Task QuickLinksWidget_NullConfig_Admin_ShowsConfigurePrompt()
+	{
+		Auth.SetAuthorized("Wizard");
+		Auth.SetPolicies("layout.admin");
+
+		var cut = Render<QuickLinksWidget>(p => p
+			.Add(c => c.Config, (JsonElement?)null)
+			.Add(c => c.Zone, WidgetZone.TopBar.ToString()));
+
+		await Assert.That(cut.Markup).Contains("Configure Quick Links");
 	}
 }
 

@@ -1,0 +1,195 @@
+.dbimport-page {
+	padding: var(--cpad);
+}
+
+.dbimport-header {
+	margin-bottom: 24px;
+}
+.dbimport-kicker {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--accent);
+	margin-bottom: 10px;
+}
+.dbimport-title {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: 26px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	color: var(--text);
+}
+.dbimport-subtitle {
+	margin: 8px 0 0;
+	font-family: var(--font-ui);
+	font-size: 13.5px;
+	color: var(--text-dim);
+	max-width: 70ch;
+}
+
+.dbimport-card {
+	background: var(--surface);
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow);
+	padding: 20px;
+	margin-bottom: 16px;
+}
+
+.dbimport-dropzone {
+	border: 1.5px dashed var(--border);
+}
+.dbimport-dropzone-inner {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-height: 140px;
+	margin-top: 8px;
+}
+.dbimport-dropzone-inner ::deep .dbimport-dropzone-icon {
+	font-size: 44px !important;
+	color: var(--accent);
+}
+.dbimport-dropzone-title {
+	font-family: var(--font-display);
+	font-size: 17px;
+	font-weight: 600;
+	color: var(--text);
+}
+.dbimport-dropzone-hint {
+	font-family: var(--font-ui);
+	font-size: 12.5px;
+	color: var(--text-dim);
+}
+
+.dbimport-section-label {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+	margin-bottom: 14px;
+}
+
+.dbimport-file-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.dbimport-file-row ::deep .dbimport-file-icon {
+	font-size: 20px !important;
+	color: var(--accent);
+}
+.dbimport-file-name {
+	font-family: var(--font-ui);
+	font-size: 14px;
+	color: var(--text);
+}
+.dbimport-file-size {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--text-faint);
+}
+
+.dbimport-actions {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	margin-top: 18px;
+}
+.dbimport-actions-start {
+	justify-content: flex-start;
+}
+
+.dbimport-progress-caption {
+	text-align: center;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: var(--text-dim);
+	margin-bottom: 18px;
+}
+
+.dbimport-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 14px;
+}
+.dbimport-tile {
+	background: var(--surface-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 16px;
+}
+.dbimport-tile-wide {
+	grid-column: 1 / -1;
+}
+.dbimport-tile-label {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+	margin-bottom: 12px;
+}
+.dbimport-tile-label-error {
+	color: #ff6b6b;
+}
+.dbimport-tile-label-warning {
+	color: #ffb454;
+}
+
+.dbimport-stat-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.dbimport-stat {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 12px;
+	font-family: var(--font-ui);
+	font-size: 13.5px;
+	color: var(--text-dim);
+}
+.dbimport-stat strong {
+	font-family: var(--font-mono);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--text);
+}
+
+::deep .dbimport-btn {
+	text-transform: none;
+	font-family: var(--font-ui);
+	font-weight: 600;
+	border-radius: var(--radius);
+}
+::deep .dbimport-btn-primary {
+	background: var(--accent);
+	color: var(--accent-on);
+}
+::deep .dbimport-btn-primary:hover {
+	background: var(--accent-dim);
+}
+::deep .dbimport-btn-ghost {
+	color: var(--text-dim);
+	border: 1px solid var(--border);
+	background: var(--surface-2);
+}
+::deep .dbimport-btn-ghost:hover {
+	color: var(--text);
+	border-color: var(--accent);
+}
+::deep .dbimport-btn-danger {
+	color: #ff6b6b;
+	border: 1px solid rgba(255, 107, 107, 0.4);
+	background: transparent;
+}
+::deep .dbimport-btn-danger:hover {
+	background: rgba(255, 107, 107, 0.1);
+}

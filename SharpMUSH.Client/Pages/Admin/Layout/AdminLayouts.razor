@@ -1,0 +1,50 @@
+@page "/admin/layout"
+@using SharpMUSH.Library.Authorization
+@attribute [Authorize(Policy = "layout.admin")]
+@inject ILayoutService LayoutService
+@inject NavigationManager Nav
+
+<PageTitle>Layout — Admin — SharpMUSH</PageTitle>
+
+<div class="laybrowse">
+    <div class="laybrowse-head">
+        <div>
+            <div class="laybrowse-kicker">Build · Page layouts</div>
+            <h1 class="laybrowse-title">Layout</h1>
+            <p class="laybrowse-blurb">Arrange the widgets on each page by dragging them between zones. Changes publish to every visitor.</p>
+        </div>
+    </div>
+
+    <div class="laybrowse-grid">
+        @foreach (var scope in LayoutScopes.All)
+        {
+            var customized = _customized.Contains(scope.Scope);
+            <button type="button" class="lay-card" @onclick="@(() => Open(scope.Scope))">
+                <div class="lay-card-top">
+                    <span class="lay-card-icon"><MudIcon Icon="@Icons.Material.Filled.Dashboard" Style="font-size:18px;" /></span>
+                    <div style="flex:1;min-width:0;">
+                        <div class="lay-card-name">@scope.DisplayName</div>
+                        <div class="lay-card-sub">@scope.Scope</div>
+                    </div>
+                    <span class="lay-badge @(customized ? "lay-badge--on" : "")">@(customized ? "customized" : "default")</span>
+                </div>
+                <div class="lay-card-desc">@scope.Description</div>
+                <div class="lay-card-zones">
+                    @foreach (var z in scope.Zones)
+                    {
+                        <span class="lay-zone">@z</span>
+                    }
+                </div>
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<string> _customized = [];
+
+    protected override async Task OnInitializedAsync()
+        => _customized = await LayoutService.GetCustomizedScopesAsync();
+
+    private void Open(string scope) => Nav.NavigateTo($"/admin/layout/{scope}");
+}

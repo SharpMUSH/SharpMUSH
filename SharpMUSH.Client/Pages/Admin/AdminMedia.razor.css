@@ -1,0 +1,4 @@
+/* .asset-card is applied via Class= on a child <MudPaper>, so it lands on the child's rendered DOM;
+   ::deep reaches past component boundaries (no own-element ancestor carries a class here). */
+::deep .asset-card { transition: border-color 0.15s; }
+::deep .asset-card:hover { border-color: var(--accent) !important; }

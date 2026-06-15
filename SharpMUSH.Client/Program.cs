@@ -64,9 +64,26 @@ var registry = new WidgetRegistry();
 registry.Register(new QuickLinksWidgetDescriptor());
 registry.Register(new WelcomeTextWidgetDescriptor());
 registry.Register(new CharacterDirectoryWidgetDescriptor());
-registry.Register(new CharacterHeaderWidgetDescriptor());
 registry.Register(new CharacterGalleryWidgetDescriptor());
+registry.Register(new WikiIndexWidgetDescriptor());
+registry.Register(new WikiBodyWidgetDescriptor());
+registry.Register(new SpacerWidgetDescriptor());
+registry.Register(new StatsWidgetDescriptor());
+registry.Register(new ActiveSceneWidgetDescriptor());
+registry.Register(new RecentWikiActivityWidgetDescriptor());
+registry.Register(new OnlineCharactersWidgetDescriptor());
+registry.Register(new QuickstartWidgetDescriptor());
 registry.Register(new SchemaWidgetDescriptor());
+
+// Bridge Widget-kind Dynamic Applications (Area 21) into the layout palette: load the registry once
+// at startup (anonymous) and register a synthetic widget per app, rendered by SchemaWidget. The
+// catalog is also injected so SchemaWidget can resolve a placement's schema/data routes by slug.
+var applicationCatalog = await ApplicationCatalog.LoadAsync(builder.HostEnvironment.BaseAddress);
+foreach (var widgetApp in applicationCatalog.WidgetApps)
+{
+	registry.Register(new ApplicationPortalWidget(widgetApp));
+}
+builder.Services.AddSingleton(applicationCatalog);
 builder.Services.AddSingleton<IWidgetRegistry>(registry);
 builder.Services.AddSingleton<ILayoutService, LayoutService>();
 builder.Services.AddSingleton<ICharacterStateService, CharacterStateService>();
