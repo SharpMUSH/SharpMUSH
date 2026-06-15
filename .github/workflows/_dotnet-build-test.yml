@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.x
           cache: true
@@ -34,10 +34,10 @@ jobs:
         database: [arangodb, memgraph, surrealdb]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.x
           cache: true
@@ -50,7 +50,7 @@ jobs:
         run: dotnet build --no-restore
 
       - name: Test (${{ matrix.database }})
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
@@ -73,7 +73,7 @@ jobs:
 
       - name: Upload Telemetry Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-telemetry-${{ matrix.database }}
           path: test-telemetry.md
@@ -84,10 +84,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.x
           cache: true
@@ -100,7 +100,7 @@ jobs:
         run: dotnet build --no-restore
 
       - name: BUnit Tests
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 10
           max_attempts: 3
@@ -114,10 +114,10 @@ jobs:
         database: [arangodb, memgraph, surrealdb]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.x
           cache: true
@@ -130,7 +130,7 @@ jobs:
         run: dotnet build --no-restore
 
       - name: Integration Test (${{ matrix.database }})
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry-integration.md
@@ -153,7 +153,7 @@ jobs:
 
       - name: Upload Integration Telemetry Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-telemetry-integration-${{ matrix.database }}
           path: test-telemetry-integration.md
@@ -161,7 +161,7 @@ jobs:
 
       - name: Upload Generated Myrddin BBS Package Manifest
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: myrddin-bbs-package-${{ matrix.database }}
           path: '**/MyrddinBBS_GeneratedPackage.yaml'

@@ -7,6 +7,12 @@
 **/packages/
 *.nupkg
 
+# ...but keep the bundled example packages: SharpMUSH.Server embeds their
+# package.yaml files as resources (see SharpMUSH.Server.csproj), so the
+# **/packages/ rule above must not strip examples/packages out of the build context.
+!examples/packages
+!examples/packages/**
+
 # Visual Studio cache/options
 .vs/
 *.user
