@@ -223,67 +223,6 @@
     </DialogActions>
 </MudDialog>
 
-<style>
-    .adminwiki-head {
-        margin-bottom: 20px;
-    }
-    .adminwiki-kicker {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: var(--accent);
-        margin-bottom: 6px;
-    }
-    .adminwiki-title {
-        margin: 0;
-        font-family: var(--font-display);
-        font-size: 26px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        color: var(--text);
-    }
-    .adminwiki-intro {
-        margin: 8px 0 0;
-        font-family: var(--font-ui);
-        font-size: 13px;
-        color: var(--text-dim);
-    }
-    .adminwiki-stats {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
-        margin-bottom: 18px;
-    }
-    .adminwiki-stat {
-        background: var(--surface);
-        border: 1px solid var(--border-soft);
-        border-radius: var(--radius-lg);
-        padding: 14px 16px;
-    }
-    .adminwiki-stat-top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 8px;
-    }
-    .adminwiki-stat-label {
-        font-family: var(--font-mono);
-        font-size: 10.5px;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--text-faint);
-    }
-    .adminwiki-stat-value {
-        font-family: var(--font-display);
-        font-size: 26px;
-        font-weight: 700;
-        color: var(--text);
-        letter-spacing: -0.02em;
-        line-height: 1;
-    }
-</style>
-
 @code {
     private MudDataGrid<WikiPageSummary>? _grid;
     private HashSet<WikiPageSummary> _selected = [];

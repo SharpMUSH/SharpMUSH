@@ -134,11 +134,6 @@
         <main class="phosphor-main"
               style="@(_terminalOpen ? "padding-bottom:300px;" : "")">
             @Body
-            @* MainContent widget zone renders below the page body *@
-            @if (_layout is not null)
-            {
-                <ZoneRenderer Zone="WidgetZone.MainContent" Layout="_layout" />
-            }
         </main>
 
         @* ── Footer widget zone — only when explicitly enabled ── *@
@@ -223,17 +218,24 @@
         _isDebugAuth = authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         await EnsureAccountRoutingAsync();
 
-        // Load widget layout
+        // Load the shell chrome layout (global scope: top bar, sidebars, footer).
         LayoutService.OnLayoutChanged += HandleLayoutChanged;
-        _layout = await LayoutService.GetLayoutAsync();
+        _layout = await LayoutService.GetLayoutAsync(LayoutScopes.Global);
     }
 
-    private void HandleLayoutChanged()
-        => InvokeAsync(async () =>
+    private void HandleLayoutChanged(string scope)
+    {
+        if (!string.Equals(scope, LayoutScopes.Global, StringComparison.OrdinalIgnoreCase))
         {
-            _layout = await LayoutService.GetLayoutAsync();
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            _layout = await LayoutService.GetLayoutAsync(LayoutScopes.Global);
             StateHasChanged();
         });
+    }
 
     private async Task SwitchCharacterAsync(AccountAuthService.CharacterSummary character)
     {

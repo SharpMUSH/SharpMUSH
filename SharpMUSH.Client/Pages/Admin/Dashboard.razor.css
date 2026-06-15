@@ -1,0 +1,80 @@
+.ph-header {
+    margin-bottom: 24px;
+}
+.ph-kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+}
+.ph-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+}
+
+.ph-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.ph-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    text-decoration: none;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.ph-card:hover {
+    border-color: rgba(var(--glow), 0.4);
+    transform: translateY(-1px);
+}
+
+.ph-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius);
+    background: rgba(var(--glow), 0.12);
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.ph-card-body {
+    flex: 1;
+    min-width: 0;
+}
+.ph-card-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+}
+.ph-card-action {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 2px;
+}
+
+.ph-card ::deep .ph-card-chevron {
+    color: var(--text-faint);
+    flex-shrink: 0;
+}
+.ph-card:hover ::deep .ph-card-chevron {
+    color: var(--accent);
+}

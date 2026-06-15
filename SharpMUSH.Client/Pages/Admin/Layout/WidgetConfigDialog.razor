@@ -1,0 +1,115 @@
+@using System.Text.Json
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        @if (IsSpacer)
+        {
+            <MudText Typo="Typo.body2" Class="mb-3" Style="color:var(--text-dim);">
+                Height of the empty space, in pixels. Its width follows the placement's column span.
+            </MudText>
+            <MudNumericField @bind-Value="_height" Label="Height (px)" Variant="Variant.Outlined"
+                             Min="0" Max="600" Step="4" />
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Class="mb-2" Style="color:var(--text-dim);">
+                Per-instance configuration for <strong>@WidgetName</strong>, as JSON. Leave empty for no config.
+            </MudText>
+            <MudTextField @bind-Value="_json" Variant="Variant.Outlined" Lines="10"
+                          Label="Config JSON" Class="layout-config-json"
+                          Style="font-family:var(--font-mono);font-size:12.5px;" />
+            @if (_error is not null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-1">@_error</MudText>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Apply</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    /// <summary>Human-readable widget name (shown in the JSON editor header).</summary>
+    [Parameter] public string WidgetName { get; set; } = string.Empty;
+
+    /// <summary>Machine widget key, used to offer typed editors for known widgets (e.g. the Spacer).</summary>
+    [Parameter] public string? WidgetKey { get; set; }
+
+    /// <summary>The placement's current config as raw JSON (null when unset).</summary>
+    [Parameter] public string? InitialJson { get; set; }
+
+    private const int DefaultSpacerHeight = 24;
+
+    private string _json = string.Empty;
+    private string? _error;
+    private int _height = DefaultSpacerHeight;
+
+    private bool IsSpacer => string.Equals(WidgetKey, "Spacer", StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnInitialized()
+    {
+        _json = InitialJson ?? string.Empty;
+        if (IsSpacer)
+        {
+            _height = ReadHeight(InitialJson) ?? DefaultSpacerHeight;
+        }
+    }
+
+    private static int? ReadHeight(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("height", out var h)
+                && h.TryGetInt32(out var value))
+            {
+                return value;
+            }
+        }
+        catch (JsonException) { /* ignore — use default */ }
+
+        return null;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Save()
+    {
+        if (IsSpacer)
+        {
+            var height = Math.Clamp(_height, 0, 600);
+            MudDialog.Close(DialogResult.Ok<string?>($"{{\"height\":{height}}}"));
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_json))
+        {
+            // Empty → clear config. Sentinel "null" distinguishes "cleared" from "cancelled".
+            MudDialog.Close(DialogResult.Ok<string?>(null));
+            return;
+        }
+
+        try
+        {
+            using var _ = JsonDocument.Parse(_json);
+        }
+        catch (JsonException ex)
+        {
+            _error = $"Invalid JSON: {ex.Message}";
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok<string?>(_json));
+    }
+}

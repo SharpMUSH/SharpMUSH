@@ -1,0 +1,114 @@
+.reg-card {
+    width: 100%;
+    max-width: 380px;
+    padding: 32px;
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    position: relative;
+    z-index: 1;
+}
+
+.reg-kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.reg-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.1;
+}
+
+.reg-field {
+    margin-bottom: 16px;
+}
+
+.reg-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+}
+
+.reg-optional {
+    color: var(--text-faint);
+    font-weight: 400;
+}
+
+.reg-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.reg-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.reg-input:disabled {
+    opacity: 0.6;
+}
+
+.reg-btn {
+    width: 100%;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: var(--accent-on);
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font-ui);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: box-shadow 0.12s ease, opacity 0.12s ease;
+}
+
+.reg-btn:hover:not(:disabled) {
+    box-shadow: 0 0 14px rgba(var(--glow), 0.4);
+}
+
+.reg-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.reg-divider {
+    height: 1px;
+    background: var(--border-soft);
+    margin: 20px 0 14px;
+}
+
+.reg-footer {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-faint);
+}
+
+.reg-link {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.reg-link:hover {
+    text-decoration: underline;
+}

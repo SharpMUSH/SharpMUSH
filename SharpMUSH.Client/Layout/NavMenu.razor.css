@@ -1,4 +1,0 @@
-/* Sidebar styling lives in wwwroot/css/custom.css (global) so the shared
-   .phosphor-nav-link class also styles ApplicationNavLinks' dynamic links.
-   Scoped CSS can't reach child-component output without ::deep, and these
-   links are rendered by Blazor's NavLink component. */

@@ -1,0 +1,126 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject WikiService Wiki
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Wiki landing page as a placeable widget: a hero with client-side search and a category grid of
+   pages. Data comes from WikiService (GET /api/wiki/pages); the portal imposes no game policy on
+   categories — "General" is just shown first, blanks fall under it. *@
+
+<div class="wiki-index">
+    @* ── Hero ── *@
+    <div class="wiki-hero">
+        <div class="wiki-hero-glow"></div>
+        <div class="wiki-hero-body">
+            <div class="wiki-hero-kicker">@Loc["AppTitle"] · World Wiki</div>
+            <h1 class="wiki-hero-title">Everything you need to play</h1>
+            <p class="wiki-hero-blurb">
+                Lore, policy, and getting-started guides — collaboratively edited by staff and players.
+                No account needed to read.
+            </p>
+            <div class="wiki-hero-search">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:16px;color:var(--text-faint);" />
+                <input placeholder="Search the wiki…" value="@_search"
+                       @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
+            </div>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="wiki-cat-grid">
+            @for (var i = 0; i < 4; i++)
+            {
+                <div class="wiki-skeleton"></div>
+            }
+        </div>
+    }
+    else if (FilteredGroups.Count == 0)
+    {
+        <div class="wiki-empty">
+            @(string.IsNullOrWhiteSpace(_search) ? "No wiki pages yet." : $"No pages match “{_search}”.")
+        </div>
+    }
+    else
+    {
+        <div class="wiki-cat-grid">
+            @foreach (var group in FilteredGroups)
+            {
+                <div class="wiki-cat">
+                    <div class="wiki-cat-head">
+                        <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:16px;color:var(--accent);" />
+                        <h3 class="wiki-cat-title">@group.Key</h3>
+                        <span class="wiki-cat-count">@group.Count()</span>
+                    </div>
+                    <div class="wiki-cat-list">
+                        @foreach (var pg in group)
+                        {
+                            <a class="wiki-page-card" href="@PageHref(pg)">
+                                <div class="wiki-page-main">
+                                    <div class="wiki-page-titlerow">
+                                        <span class="wiki-page-title">@pg.Title</span>
+                                        @if (pg.IsProtected)
+                                        {
+                                            <span class="wiki-lock"><MudIcon Icon="@Icons.Material.Filled.Lock" Style="font-size:10px;" /> locked</span>
+                                        }
+                                        @if (!pg.Published)
+                                        {
+                                            <span class="wiki-draft">draft</span>
+                                        }
+                                    </div>
+                                    <div class="wiki-page-meta">@pg.Namespace · updated @pg.UpdatedAt.LocalDateTime.ToString("MMM d, yyyy")</div>
+                                </div>
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="wiki-page-arrow" />
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public JsonElement? Config { get; set; }
+
+    /// <summary>Injected by ZoneRenderer; declared so DynamicComponent does not throw for the unmatched parameter.</summary>
+    [Parameter] public string Zone { get; set; } = string.Empty;
+
+    private bool _loading = true;
+    private string _search = string.Empty;
+    private IReadOnlyList<WikiPageSummary> _pages = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (items, _) = await Wiki.GetAllPagesAsync(skip: 0, take: 500);
+        _pages = items;
+        _loading = false;
+    }
+
+    private IReadOnlyList<IGrouping<string, WikiPageSummary>> FilteredGroups
+    {
+        get
+        {
+            var q = _pages.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_search))
+                q = q.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                                 || (p.Category ?? string.Empty).Contains(_search, StringComparison.OrdinalIgnoreCase));
+
+            return q
+                .GroupBy(p => CategoryLabel(p.Category))
+                .OrderBy(g => g.Key == "General" ? 1 : 0)
+                .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+    }
+
+    private static string CategoryLabel(string? category)
+        => string.IsNullOrWhiteSpace(category) ? "General" : Capitalize(category.Trim());
+
+    private static string Capitalize(string s)
+        => s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..];
+
+    private static string PageHref(WikiPageSummary page) =>
+        $"/wiki/{page.Namespace.ToLowerInvariant()}/{(page.Category ?? "general")}/{page.Slug}";
+}

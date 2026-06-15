@@ -1,0 +1,49 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject WikiService WikiService
+
+@* The most recently edited wiki pages. *@
+<MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
+    <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Recent Wiki Activity</MudText>
+    @if (_loading)
+    {
+        @for (var i = 0; i < 4; i++)
+        {
+            <MudSkeleton Height="32px" Class="mb-1" />
+        }
+    }
+    else if (_recentChanges is { Count: > 0 })
+    {
+        @foreach (var wp in _recentChanges.Take(6))
+        {
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-soft);">
+                <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(wp.Title.GetHashCode()) % 360},55%,35%);font-size:11px;width:26px;height:26px;")">
+                    @(wp.Title.Length > 0 ? wp.Title[0].ToString().ToUpper() : "W")
+                </MudAvatar>
+                <div style="flex:1;min-width:0;">
+                    <MudLink Href="@($"/wiki/{wp.Namespace}/{wp.Category}/{wp.Slug}")" Style="color:var(--text);font-size:13px;font-weight:500;">@wp.Title</MudLink>
+                    <MudText Style="font-size:11px;color:var(--text-faint);">@wp.UpdatedAt.ToLocalTime().ToString("MMM d")</MudText>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <MudText Style="color:var(--text-faint);font-size:13px;">No recent wiki activity.</MudText>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public JsonElement? Config { get; set; }
+    [Parameter] public string Zone { get; set; } = string.Empty;
+
+    private IReadOnlyList<WikiPageSummary>? _recentChanges;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _recentChanges = await WikiService.GetRecentChangesAsync(10);
+        _loading = false;
+    }
+}

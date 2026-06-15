@@ -2,22 +2,51 @@
 
 @if (_placements.Count > 0)
 {
-    @foreach (var placement in _placements)
+    @if (Grid)
     {
-        var descriptor = Registry?.GetWidget(placement.WidgetName);
-        @if (descriptor is not null)
+        <div class="zone-grid">
+            @foreach (var placement in _placements)
+            {
+                var descriptor = Registry?.GetWidget(placement.WidgetName);
+                @if (descriptor is not null)
+                {
+                    <div class="zone-grid-cell" style="@($"grid-column:span {ClampSpan(placement.Span)};")">
+                        <WidgetErrorBoundary WidgetName="@placement.WidgetName">
+                            <DynamicComponent Type="@descriptor.ComponentType"
+                                              Parameters="@BuildParams(placement)" />
+                        </WidgetErrorBoundary>
+                    </div>
+                }
+            }
+        </div>
+    }
+    else
+    {
+        @foreach (var placement in _placements)
         {
-            <WidgetErrorBoundary WidgetName="@placement.WidgetName">
-                <DynamicComponent Type="@descriptor.ComponentType"
-                                  Parameters="@BuildParams(placement)" />
-            </WidgetErrorBoundary>
+            var descriptor = Registry?.GetWidget(placement.WidgetName);
+            @if (descriptor is not null)
+            {
+                <WidgetErrorBoundary WidgetName="@placement.WidgetName">
+                    <DynamicComponent Type="@descriptor.ComponentType"
+                                      Parameters="@BuildParams(placement)" />
+                </WidgetErrorBoundary>
+            }
         }
     }
 }
 
+@* Grid styling (.zone-grid / .zone-grid-cell) is component-scoped in ZoneRenderer.razor.css; the CSS
+   isolation bundle is linked from wwwroot/index.html. Keeping it out of this component's markup also
+   keeps the rendered output empty when a zone has no placements. *@
+
 @code {
     [Parameter, EditorRequired] public WidgetZone Zone { get; set; }
     [Parameter, EditorRequired] public LayoutConfiguration? Layout { get; set; }
+
+    /// <summary>When true, widgets lay out in a 12-column grid honoring each placement's <c>Span</c>.</summary>
+    [Parameter] public bool Grid { get; set; }
+
     [Inject] private IWidgetRegistry? Registry { get; set; }
 
     private IReadOnlyList<WidgetPlacement> _placements = [];
@@ -34,6 +63,8 @@
             ? list.OrderBy(p => p.Order).ToList().AsReadOnly()
             : (IReadOnlyList<WidgetPlacement>)[];
     }
+
+    private static int ClampSpan(int span) => span is >= 1 and <= 12 ? span : 12;
 
     private Dictionary<string, object> BuildParams(WidgetPlacement placement)
         => new()

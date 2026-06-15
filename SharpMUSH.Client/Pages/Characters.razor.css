@@ -1,0 +1,223 @@
+.char-page {
+    padding: var(--cpad);
+}
+
+.char-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.char-kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+}
+
+.char-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+}
+
+/* Search box — matches the topbar search */
+.char-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 260px;
+    max-width: 100%;
+    height: 36px;
+    padding: 0 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    color: var(--text-faint);
+    transition: border-color 0.14s;
+}
+
+.char-search:focus-within {
+    border-color: var(--accent);
+}
+
+.char-search-icon {
+    font-size: 15px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.char-search input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 13px;
+}
+
+.char-search input::placeholder {
+    color: var(--text-faint);
+}
+
+.char-search input::-webkit-search-cancel-button {
+    display: none;
+}
+
+/* Filter pills */
+.char-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.char-pill {
+    padding: 7px 14px;
+    border-radius: 99px;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    transition: all 0.12s;
+}
+
+.char-pill:hover {
+    border-color: rgba(var(--glow), 0.4);
+    color: var(--text);
+}
+
+.char-pill--on {
+    border-color: rgba(var(--glow), 0.4);
+    background: rgba(var(--glow), 0.12);
+    color: var(--accent);
+}
+
+/* Card grid */
+.char-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.char-card {
+    display: block;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.char-card:hover {
+    border-color: rgba(var(--glow), 0.4);
+    transform: translateY(-2px);
+}
+
+.char-card-top {
+    display: flex;
+    gap: 13px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.char-avatar {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: var(--radius);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-ui);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.char-name {
+    font-family: var(--font-display);
+    font-size: 15.5px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.char-dbref {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--accent);
+    margin-top: 2px;
+}
+
+.char-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.char-chip {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: var(--surface-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+}
+
+.char-joined {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    white-space: nowrap;
+}
+
+/* Skeleton + empty */
+.char-skeleton {
+    height: 132px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%);
+    background-size: 200% 100%;
+    animation: char-shimmer 1.3s ease-in-out infinite;
+    border: 1px solid var(--border-soft);
+}
+
+@keyframes char-shimmer {
+    to { background-position: -200% 0; }
+}
+
+.char-empty {
+    font-family: var(--font-ui);
+    font-size: 14px;
+    color: var(--text-faint);
+    padding: 24px;
+    text-align: center;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+}

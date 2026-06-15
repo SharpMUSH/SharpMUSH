@@ -1,0 +1,36 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Models.Widgets
+
+@* Empty layout spacer. Width is governed by the placement's column span; height by config (px).
+   Renders nothing but reserved space, so admins can push widgets apart or pad a zone. *@
+<div class="spacer-widget" style="@($"height:{_height}px;")" aria-hidden="true"></div>
+
+@code {
+    [Parameter] public JsonElement? Config { get; set; }
+
+    /// <summary>Injected by ZoneRenderer; declared so DynamicComponent does not throw for the unmatched parameter.</summary>
+    [Parameter] public string Zone { get; set; } = string.Empty;
+
+    private const int DefaultHeight = 24;
+    private int _height = DefaultHeight;
+
+    protected override void OnParametersSet()
+    {
+        _height = DefaultHeight;
+
+        if (Config is { ValueKind: JsonValueKind.Object } cfg)
+        {
+            try
+            {
+                var parsed = cfg.Deserialize<SpacerConfig>(
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                if (parsed is { Height: > 0 })
+                {
+                    _height = parsed.Height;
+                }
+            }
+            catch (JsonException) { /* malformed config — keep default */ }
+            catch (NotSupportedException) { /* keep default */ }
+        }
+    }
+}

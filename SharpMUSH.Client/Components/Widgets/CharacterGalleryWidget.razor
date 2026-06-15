@@ -1,5 +1,6 @@
 @using System.Text.Json
 @using Microsoft.AspNetCore.Components.Forms
+@using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
 @inject GalleryService Gallery
 @inject ISnackbar Snackbar
@@ -10,7 +11,7 @@
         <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Color="Color.Primary" />
         <MudText Typo="Typo.h6">@Loc["Gallery"]</MudText>
         <MudSpacer />
-        @if (CanEdit)
+        @if (EffectiveCanEdit)
         {
             <MudFileUpload T="IBrowserFile" FilesChanged="UploadAsync"
                            Accept="image/*" MaximumFileCount="1" MaxFileSize="10485760" />
@@ -44,7 +45,7 @@
                             <MudIcon Icon="@Icons.Material.Filled.Star" Color="Color.Warning" Size="Size.Small"
                                      Style="position:absolute;top:4px;left:4px;" />
                         }
-                        @if (CanEdit)
+                        @if (EffectiveCanEdit)
                         {
                             <div style="position:absolute;top:0;right:0;display:flex;">
                                 @if (!item.IsIcon)
@@ -84,6 +85,11 @@
     [Parameter] public JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
 
+    [CascadingParameter] private ProfilePageContext? PageContext { get; set; }
+
+    /// <summary>Edit controls show when the page passes CanEdit directly or via the profile page context.</summary>
+    private bool EffectiveCanEdit => CanEdit || (PageContext?.CanEdit ?? false);
+
     private IReadOnlyList<GalleryService.GalleryItem> _items = [];
     private GalleryService.GalleryItem? _lightbox;
     private bool _loading = true;
@@ -92,7 +98,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        var name = CharacterName ?? ConfigCharacter();
+        var name = CharacterName ?? PageContext?.CharacterName ?? ConfigCharacter();
         if (string.IsNullOrWhiteSpace(name) || name == _resolvedName)
         {
             return;

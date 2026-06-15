@@ -1,0 +1,76 @@
+/* .pkg-row is applied via Class= on a child <MudPaper> (its rendered DOM), with no own-element
+   ancestor carrying a class, so it needs a leading ::deep. */
+::deep .pkg-row { transition: border-color 0.12s; }
+::deep .pkg-row:hover { border-color: var(--accent) !important; }
+
+.pkg-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.pkg-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-dim);
+    transition: color 0.12s, border-color 0.12s;
+}
+
+.pkg-tab:hover { color: var(--text); }
+
+.pkg-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.pkg-tab-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    padding: 0 6px;
+    border-radius: 99px;
+    background: var(--surface-2);
+}
+
+.pkg-tab.active .pkg-tab-count {
+    color: var(--accent);
+    background: rgba(var(--glow), 0.12);
+}
+
+.pkg-search {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.12s;
+}
+
+.pkg-search:focus-within { border-color: var(--accent); }
+
+.pkg-search input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    width: 200px;
+}
+
+.pkg-search input::placeholder { color: var(--text-faint); }

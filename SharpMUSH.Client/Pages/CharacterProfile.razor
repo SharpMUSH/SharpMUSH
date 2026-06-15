@@ -1,7 +1,6 @@
 @page "/character/{Name}"
 @using Microsoft.AspNetCore.Components.Authorization
-@using SharpMUSH.Client.Components
-@using SharpMUSH.Client.Components.Widgets
+@using SharpMUSH.Client.Models.Widgets
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -27,19 +26,18 @@
             </div>
         </div>
 
-        @* Profile content *@
-        <MudGrid Spacing="4">
-            <MudItem xs="12" md="8">
-                <CharacterHeaderWidget CharacterName="@Name" />
-
-                <MudPaper Elevation="0" Style="padding:20px;margin-top:16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
-                    <WikiView Slug="@Name" Mode="WikiView.WikiMode.View" />
-                </MudPaper>
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <CharacterGalleryWidget CharacterName="@Name" CanEdit="_canEdit" />
-            </MudItem>
-        </MudGrid>
+        @* Profile body and right rail compose from the "profile" layout scope. The cascading context
+           supplies the character (from the route) and edit rights to whatever widgets the admin places. *@
+        <CascadingValue Value="_context" IsFixed="false">
+            <MudGrid Spacing="4">
+                <MudItem xs="12" md="8">
+                    <ScopedZone Scope="@LayoutScopes.Profile" Zone="WidgetZone.MainContent" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <ScopedZone Scope="@LayoutScopes.Profile" Zone="WidgetZone.RightSidebar" Grid="false" />
+                </MudItem>
+            </MudGrid>
+        </CascadingValue>
     </div>
 </div>
 
@@ -48,10 +46,15 @@
     public required string Name { get; set; }
 
     private bool _canEdit;
+    private ProfilePageContext _context = new(string.Empty, false);
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _canEdit = authState.User.Identity?.IsAuthenticated == true;
+        _context = new ProfilePageContext(Name, _canEdit);
     }
+
+    protected override void OnParametersSet()
+        => _context = new ProfilePageContext(Name, _canEdit);
 }

@@ -59,6 +59,9 @@
             <AuthorizeView Policy="applications.admin">
                 <Authorized>@NavItem("/admin/applications", Icons.Material.Filled.Apps, "Applications")</Authorized>
             </AuthorizeView>
+            <AuthorizeView Policy="layout.admin">
+                <Authorized>@NavItem("/admin/layout", Icons.Material.Filled.Dashboard, "Layout")</Authorized>
+            </AuthorizeView>
             <AuthorizeView Policy="packages.admin">
                 <Authorized>@NavItem("/admin/packages", Icons.Material.Filled.Inventory2, "Packages")</Authorized>
             </AuthorizeView>

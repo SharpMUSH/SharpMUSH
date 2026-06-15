@@ -246,6 +246,8 @@ public class Startup(
 
 // Dynamic Application registry (Area 21) — same pattern; every DB backend implements IApplicationRegistryService.
 		services.AddSingleton<IApplicationRegistryService>(sp => (IApplicationRegistryService)sp.GetRequiredService<ISharpDatabase>());
+// Admin-customized layout registry — same cast pattern; every DB backend implements ILayoutRegistryService.
+		services.AddSingleton<ILayoutRegistryService>(sp => (ILayoutRegistryService)sp.GetRequiredService<ISharpDatabase>());
 // Portal RBAC role registry — same cast pattern; every DB backend implements IRoleRegistryService.
 		services.AddSingleton<IRoleRegistryService>(sp => (IRoleRegistryService)sp.GetRequiredService<ISharpDatabase>());
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();

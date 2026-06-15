@@ -1,106 +1,171 @@
+using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.JSInterop;
 using SharpMUSH.Library.Models.Portal.Widgets;
 
 namespace SharpMUSH.Client.Services;
 
-/// <inheritdoc/>
-public sealed class LayoutService : ILayoutService
+/// <summary>
+/// DB-backed, scope-aware layout service. Reads layouts from <c>/api/layouts/{scope}</c> (anonymous-
+/// friendly) and writes them back with <c>layout.admin</c>. A scope that has never been customized
+/// (HTTP 404) or that fails to load resolves to <see cref="GetDefaultLayout"/>.
+/// </summary>
+public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<LayoutService> logger) : ILayoutService
 {
-	private const string LocalStorageKey = "sharpmush_layout";
+	private static readonly JsonSerializerOptions JsonOptions = LayoutSerialization.Options;
 
-	private static readonly JsonSerializerOptions JsonOptions = new()
+	private readonly Dictionary<string, LayoutConfiguration> _cache = new(StringComparer.OrdinalIgnoreCase);
+
+	public event Action<string>? OnLayoutChanged;
+
+	public async Task<LayoutConfiguration> GetLayoutAsync(string scope)
 	{
-		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-		WriteIndented = false
-	};
-
-	private readonly IJSRuntime _js;
-	private LayoutConfiguration? _cached;
-
-	public event Action? OnLayoutChanged;
-
-	public LayoutService(IJSRuntime js) => _js = js;
-
-	/// <inheritdoc/>
-	public async Task<LayoutConfiguration> GetLayoutAsync()
-	{
-		if (_cached is not null)
-			return _cached;
-
-		try
+		if (_cache.TryGetValue(scope, out var cached))
 		{
-			var json = await _js.InvokeAsync<string?>("localStorage.getItem", LocalStorageKey);
-			if (json is not null)
-			{
-				var loaded = JsonSerializer.Deserialize<LayoutConfiguration>(json, JsonOptions);
-				if (loaded is not null)
-				{
-					_cached = loaded;
-					return _cached;
-				}
-			}
-		}
-		catch (JSException)
-		{
-			// localStorage unavailable — fall through to default
-		}
-		catch (JSDisconnectedException)
-		{
-			// Circuit disconnected — fall through to default
-		}
-		catch (JsonException)
-		{
-			// Malformed JSON in localStorage — fall through to default
+			return cached;
 		}
 
-		_cached = GetDefaultLayout();
-		return _cached;
+		var resolved = await FetchAsync(scope) ?? GetDefaultLayout(scope);
+		_cache[scope] = resolved;
+		return resolved;
 	}
 
-	/// <inheritdoc/>
-	public async Task SaveLayoutAsync(LayoutConfiguration layout)
+	public async Task<bool> SaveLayoutAsync(string scope, LayoutConfiguration layout)
 	{
 		ArgumentNullException.ThrowIfNull(layout);
-		_cached = layout;
 
 		try
 		{
-			var json = JsonSerializer.Serialize(layout, JsonOptions);
-			await _js.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, json);
-		}
-		catch (JSException)
-		{
-			// localStorage unavailable — in-memory only
-		}
-		catch (JSDisconnectedException)
-		{
-			// Circuit disconnected — in-memory only
-		}
+			var http = httpClientFactory.CreateClient("api");
+			var response = await http.PutAsJsonAsync($"api/layouts/{Uri.EscapeDataString(scope)}", layout, JsonOptions);
+			if (!response.IsSuccessStatusCode)
+			{
+				logger.LogWarning("Saving layout for scope {Scope} failed (HTTP {Status}).", scope, (int)response.StatusCode);
+				return false;
+			}
 
-		OnLayoutChanged?.Invoke();
+			_cache[scope] = layout;
+			OnLayoutChanged?.Invoke(scope);
+			return true;
+		}
+		catch (HttpRequestException ex)
+		{
+			logger.LogWarning(ex, "Could not reach the server saving layout for scope {Scope}.", scope);
+			return false;
+		}
 	}
 
-	/// <inheritdoc/>
-	public LayoutConfiguration GetDefaultLayout()
+	public async Task<bool> ResetLayoutAsync(string scope)
 	{
-		return new LayoutConfiguration(
-			Zones: new Dictionary<WidgetZone, List<WidgetPlacement>>
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var response = await http.DeleteAsync($"api/layouts/{Uri.EscapeDataString(scope)}");
+			if (!response.IsSuccessStatusCode)
 			{
-				[WidgetZone.TopBar] =
-				[
-					new WidgetPlacement("QuickLinks", 0, null)
-				],
-				[WidgetZone.LeftSidebar] = [],
-				[WidgetZone.RightSidebar] = [],
+				logger.LogWarning("Resetting layout for scope {Scope} failed (HTTP {Status}).", scope, (int)response.StatusCode);
+				return false;
+			}
+
+			_cache[scope] = GetDefaultLayout(scope);
+			OnLayoutChanged?.Invoke(scope);
+			return true;
+		}
+		catch (HttpRequestException ex)
+		{
+			logger.LogWarning(ex, "Could not reach the server resetting layout for scope {Scope}.", scope);
+			return false;
+		}
+	}
+
+	public async Task<IReadOnlyList<string>> GetCustomizedScopesAsync()
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var scopes = await http.GetFromJsonAsync<List<string>>("api/layouts");
+			return scopes ?? [];
+		}
+		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
+		{
+			logger.LogWarning(ex, "Failed to list customized layout scopes.");
+			return [];
+		}
+	}
+
+	private async Task<LayoutConfiguration?> FetchAsync(string scope)
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var response = await http.GetAsync($"api/layouts/{Uri.EscapeDataString(scope)}");
+			if (response.StatusCode == HttpStatusCode.NotFound)
+			{
+				return null;
+			}
+
+			if (!response.IsSuccessStatusCode)
+			{
+				logger.LogWarning("Loading layout for scope {Scope} failed (HTTP {Status}).", scope, (int)response.StatusCode);
+				return null;
+			}
+
+			return await response.Content.ReadFromJsonAsync<LayoutConfiguration>(JsonOptions);
+		}
+		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
+		{
+			logger.LogWarning(ex, "Loading layout for scope {Scope} failed.", scope);
+			return null;
+		}
+	}
+
+	public LayoutConfiguration GetDefaultLayout(string scope) => scope switch
+	{
+		LayoutScopes.Home => new LayoutConfiguration(
+			new Dictionary<WidgetZone, List<WidgetPlacement>>
+			{
 				[WidgetZone.MainContent] =
 				[
-					new WidgetPlacement("WelcomeText", 0, null)
+					new WidgetPlacement("Stats", 0, null, Span: 12),
+					new WidgetPlacement("ActiveScene", 1, null, Span: 8),
+					new WidgetPlacement("OnlineCharacters", 2, null, Span: 4),
+					new WidgetPlacement("RecentWikiActivity", 3, null, Span: 8),
+					new WidgetPlacement("Quickstart", 4, null, Span: 4)
+				]
+			},
+			SidebarsOff),
+
+		LayoutScopes.WikiIndex => new LayoutConfiguration(
+			new Dictionary<WidgetZone, List<WidgetPlacement>>
+			{
+				[WidgetZone.MainContent] = [new WidgetPlacement("WikiIndex", 0, null)]
+			},
+			SidebarsOff),
+
+		LayoutScopes.Profile => new LayoutConfiguration(
+			new Dictionary<WidgetZone, List<WidgetPlacement>>
+			{
+				[WidgetZone.MainContent] =
+				[
+					new WidgetPlacement("CharacterHeader", 0, null),
+					new WidgetPlacement("WikiBody", 1, null)
 				],
+				[WidgetZone.RightSidebar] = [new WidgetPlacement("CharacterGallery", 0, null)]
+			},
+			SidebarsOff),
+
+		// "global" and any unknown scope: the chrome shell.
+		_ => new LayoutConfiguration(
+			new Dictionary<WidgetZone, List<WidgetPlacement>>
+			{
+				[WidgetZone.TopBar] = [new WidgetPlacement("QuickLinks", 0, null)],
+				[WidgetZone.LeftSidebar] = [],
+				[WidgetZone.RightSidebar] = [],
+				[WidgetZone.MainContent] = [],
 				[WidgetZone.Footer] = []
 			},
-			Settings: new LayoutSettings(
-				LeftSidebarEnabled: false,
-				RightSidebarEnabled: false));
-	}
+			SidebarsOff)
+	};
+
+	private static LayoutSettings SidebarsOff => new(LeftSidebarEnabled: false, RightSidebarEnabled: false);
 }

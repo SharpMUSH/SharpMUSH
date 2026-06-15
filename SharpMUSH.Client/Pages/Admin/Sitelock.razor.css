@@ -1,0 +1,192 @@
+.config-section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.config-kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+}
+
+.config-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+}
+
+.config-desc {
+    margin: 6px 0 0;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+.config-desc code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+    background: rgba(var(--glow), 0.12);
+    border-radius: 4px;
+    padding: 1px 5px;
+}
+
+.config-group-title {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 8px 2px;
+}
+
+.config-field-card {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.config-pad {
+    padding: 18px 22px;
+}
+
+.config-add-fields {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.config-add-field {
+    flex: 1;
+    min-width: 0;
+}
+
+.config-field-label-text {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+}
+
+.config-input {
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.12s;
+}
+
+.config-input:focus {
+    border-color: var(--accent);
+}
+
+.config-input::placeholder {
+    color: var(--text-faint);
+}
+
+.config-primary-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 9px 16px;
+    border-radius: var(--radius);
+    border: none;
+    background: var(--accent);
+    color: var(--accent-on);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    transition: opacity 0.12s;
+}
+
+.config-primary-btn:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.config-primary-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.config-list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 22px;
+}
+
+.config-list-row:not(:first-child) {
+    border-top: 1px solid var(--border-soft);
+}
+
+.config-list-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.config-list-name {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.config-list-sub {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.config-empty {
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    color: var(--text-faint);
+}
+
+.config-icon-btn {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+
+.config-icon-btn--danger:hover {
+    color: var(--mud-palette-error, #e57373);
+    border-color: rgba(229, 115, 115, 0.5);
+}
+
+@media (max-width: 700px) {
+    .config-add-fields {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

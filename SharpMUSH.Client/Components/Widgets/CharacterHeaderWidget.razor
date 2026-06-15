@@ -1,6 +1,7 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Components.Schema
 @using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
 @inject SchemaAppService Schema
 @inject CharacterDirectoryService Directory
@@ -35,8 +36,10 @@
 </div>
 
 @code {
-    /// <summary>Character whose profile to render. Falls back to the <c>character</c> key in <see cref="Config"/>.</summary>
+    /// <summary>Character whose profile to render. Falls back to the profile page context, then the <c>character</c> key in <see cref="Config"/>.</summary>
     [Parameter] public string? CharacterName { get; set; }
+
+    [CascadingParameter] private ProfilePageContext? PageContext { get; set; }
 
     [Parameter] public JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
@@ -49,7 +52,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        var name = CharacterName ?? ConfigCharacter();
+        var name = CharacterName ?? PageContext?.CharacterName ?? ConfigCharacter();
         if (string.IsNullOrWhiteSpace(name) || name == _resolvedName)
         {
             return;

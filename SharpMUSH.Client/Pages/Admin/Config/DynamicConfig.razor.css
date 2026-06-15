@@ -1,0 +1,387 @@
+.config-section-page {
+    display: block;
+}
+
+.config-section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.config-kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+}
+
+.config-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+}
+
+.config-desc {
+    margin: 6px 0 0;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+.config-section-content {
+    padding: 0;
+}
+
+.config-section-page ::deep .save-bar {
+    position: sticky;
+    bottom: 0;
+    margin-top: 20px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    z-index: 10;
+}
+
+.save-bar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.save-bar-info {
+    display: flex;
+    align-items: center;
+}
+
+.save-bar-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* ── Group title above each flat field card ── */
+.config-group-title {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 8px 2px;
+}
+
+/* ── Flat field card ── */
+.config-field-card {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.config-field-row {
+    padding: 18px 22px;
+}
+
+.config-field-row:not(:first-child) {
+    border-top: 1px solid var(--border-soft);
+}
+
+.config-field-row--inline {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.config-field-label {
+    flex: 1;
+    min-width: 0;
+}
+
+.config-field-name {
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.config-field-help {
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    color: var(--text-dim);
+}
+
+.config-field-key {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    display: block;
+    margin-top: 2px;
+}
+
+.config-field-error {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    color: var(--mud-palette-error, #e57373);
+    margin-top: 4px;
+}
+
+.config-changed {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(var(--glow), 0.12);
+    border: 1px solid rgba(var(--glow), 0.3);
+    border-radius: 99px;
+    padding: 1px 7px;
+}
+
+.config-field-control {
+    width: 230px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.config-field-row--stacked .config-field-label {
+    margin-bottom: 12px;
+}
+
+.config-field-control--full {
+    width: 100%;
+    display: block;
+}
+
+/* ── Toggle pill ── */
+.config-toggle {
+    width: 46px;
+    height: 26px;
+    border-radius: 99px;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    background: var(--surface-2);
+    transition: background 0.15s;
+    margin-left: auto;
+    display: block;
+    padding: 0;
+}
+
+.config-toggle--on {
+    background: var(--accent);
+}
+
+.config-toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 99px;
+    background: #888;
+    transition: left 0.15s, background 0.15s;
+}
+
+.config-toggle--on .config-toggle-knob {
+    left: 23px;
+    background: var(--accent-on);
+}
+
+.config-toggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Select pills ── */
+.config-pills {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.config-pill {
+    padding: 6px 11px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    transition: all 0.12s;
+}
+
+.config-pill:hover {
+    border-color: rgba(var(--glow), 0.4);
+    color: var(--text);
+}
+
+.config-pill--on {
+    border-color: rgba(var(--glow), 0.4);
+    background: rgba(var(--glow), 0.12);
+    color: var(--accent);
+}
+
+/* ── Text / numeric input ── */
+.config-input {
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.12s;
+}
+
+.config-input:focus {
+    border-color: var(--accent);
+}
+
+.config-input::placeholder {
+    color: var(--text-faint);
+}
+
+.config-input[readonly] {
+    opacity: 0.6;
+}
+
+/* ── Chip row (string list + dictionary values) ── */
+.config-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    min-height: 30px;
+    margin-bottom: 8px;
+}
+
+.config-empty {
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    color: var(--text-faint);
+}
+
+.config-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    padding: 3px 5px 3px 9px;
+    border-radius: 99px;
+    background: var(--surface-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+}
+
+.config-chip--changed {
+    border-color: rgba(var(--glow), 0.3);
+    color: var(--accent);
+    background: rgba(var(--glow), 0.10);
+}
+
+.config-chip-x {
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 0 2px;
+    opacity: 0.7;
+}
+
+.config-chip-x:hover {
+    opacity: 1;
+}
+
+/* ── Dictionary editor ── */
+.config-dict {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.config-dict-entry {
+    background: var(--surface-3);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 12px;
+}
+
+.config-dict-entry-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.config-icon-btn {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+
+.config-icon-btn--danger:hover {
+    color: var(--mud-palette-error, #e57373);
+    border-color: rgba(229, 115, 115, 0.5);
+}
+
+.config-add-btn {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: var(--radius);
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+}
+
+.config-add-btn:hover {
+    border-color: rgba(var(--glow), 0.4);
+    color: var(--accent);
+}
+
+@media (max-width: 600px) {
+    .save-bar-content {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .save-bar-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .save-bar-actions > * {
+        flex: 1;
+    }
+}
