@@ -7,6 +7,7 @@
 @inject WikiMarkdigPipeline Pipeline
 @inject WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 
 @if (Article is null)
 {
@@ -154,6 +155,24 @@ else
         if (marked != html)
         {
             _segments = SplitOnDirectives(marked);
+        }
+    }
+
+    /// <summary>
+    /// After the article HTML is in the DOM, hand off to the client post-render pass
+    /// (js/wiki-render.js): initialise mermaid once, then on every render turn any
+    /// <c>```mermaid</c> blocks into SVG and honour a deep-link URL fragment.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.WikiRender.init");
+        }
+
+        if (Article is not null)
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.WikiRender.render");
         }
     }
 
@@ -372,5 +391,22 @@ else
     .wiki-toc-list a:hover {
         color: var(--accent);
         border-left-color: var(--accent);
+    }
+
+    /* Mermaid diagrams (rendered client-side by js/wiki-render.js). Before mermaid
+       processes the block it is a pre.mermaid of raw source; after, it holds an SVG.
+       Center it and let the SVG scale down on narrow viewports. */
+    .WikiContent .mermaid {
+        display: flex;
+        justify-content: center;
+        margin: 20px 0;
+        background: transparent;
+        border: 0;
+        padding: 0;
+        overflow-x: auto;
+    }
+    .WikiContent .mermaid svg {
+        max-width: 100%;
+        height: auto;
     }
 </style>
