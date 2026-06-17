@@ -235,7 +235,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		// Short-circuit: empty input (e.g. trailing comma in allof(1,2,3,)) → empty result.
 		// startPlainString requires a non-empty evaluationString; passing "" would trigger PARSER FAILURE.
-		if (string.IsNullOrEmpty(MModule.plainText(text).ToString()))
+		if (string.IsNullOrEmpty(MModule.plainText(text)))
 			return CallState.Empty;
 
 		// Ensure we have invocation tracking for standalone function parsing

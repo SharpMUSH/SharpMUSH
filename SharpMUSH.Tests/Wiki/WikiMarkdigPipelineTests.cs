@@ -499,4 +499,33 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(text).DoesNotContain("category");
 		await Assert.That(text).DoesNotContain("lore");
 	}
+
+	// ── Mermaid diagrams (Markdig Diagrams extension) ────────────────────────
+
+	/// <summary>
+	/// A ```mermaid fenced block is emitted as a &lt;pre class="mermaid"&gt; (Markdig's
+	/// Diagrams extension, active via UseAdvancedExtensions) rather than a code block,
+	/// so the client-side mermaid.js renderer (which targets the .mermaid class) can turn
+	/// it into an SVG. The diagram source survives un-escaped inside for the JS pass.
+	/// </summary>
+	[Test]
+	public async Task RenderToHtml_MermaidFence_EmitsMermaidContainer()
+	{
+		var html = Pipeline().RenderToHtml("```mermaid\nflowchart LR\nA-->B\n```");
+
+		await Assert.That(html).Contains("class=\"mermaid\"");
+		await Assert.That(html).Contains("flowchart LR");
+		await Assert.That(html).Contains("A-->B"); // arrow not HTML-escaped — mermaid reads textContent
+		await Assert.That(html).DoesNotContain("<pre><code");
+	}
+
+	/// <summary>A non-mermaid fenced block stays a normal code block.</summary>
+	[Test]
+	public async Task RenderToHtml_PlainCodeFence_StaysCodeBlock()
+	{
+		var html = Pipeline().RenderToHtml("```\n@emit hi\n```");
+
+		await Assert.That(html).Contains("<pre><code");
+		await Assert.That(html).DoesNotContain("class=\"mermaid\"");
+	}
 }

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 512" width="560" height="512" role="img" aria-label="Mock of the rendered chargen application form: Character Name, Concept, Class dropdown, Background text area and a Submit button.">
+  <defs>
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.18"/>
+    </filter>
+    <style>
+      .label  { font: 600 13px 'Hanken Grotesk', system-ui, sans-serif; fill: #475569; }
+      .title  { font: 700 22px 'Hanken Grotesk', system-ui, sans-serif; fill: #0f172a; }
+      .value  { font: 400 14px 'Hanken Grotesk', system-ui, sans-serif; fill: #334155; }
+      .ph     { font: 400 14px 'Hanken Grotesk', system-ui, sans-serif; fill: #94a3b8; }
+      .req    { font: 700 13px 'Hanken Grotesk', system-ui, sans-serif; fill: #e11d48; }
+      .btn    { font: 600 14px 'Hanken Grotesk', system-ui, sans-serif; fill: #ffffff; }
+      .field  { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <!-- Card -->
+  <rect x="14" y="12" width="532" height="488" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#card-shadow)"/>
+
+  <!-- Title -->
+  <text x="40" y="58" class="title">Character Application</text>
+  <line x1="40" y1="78" x2="520" y2="78" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- Character Name (required) -->
+  <text x="40" y="112" class="label">Character Name</text>
+  <text x="158" y="112" class="req">*</text>
+  <rect x="40" y="122" width="480" height="40" rx="8" class="field"/>
+  <text x="54" y="147" class="ph">e.g. Gandalf the Grey</text>
+
+  <!-- Concept -->
+  <text x="40" y="190" class="label">Concept</text>
+  <rect x="40" y="200" width="480" height="40" rx="8" class="field"/>
+  <text x="54" y="225" class="ph">a short pitch for the character</text>
+
+  <!-- Class (select) -->
+  <text x="40" y="268" class="label">Class</text>
+  <rect x="40" y="278" width="480" height="40" rx="8" class="field"/>
+  <text x="54" y="303" class="value">Fighter</text>
+  <path d="M 496 294 l 8 9 l 8 -9" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Background (multi-line) -->
+  <text x="40" y="346" class="label">Background</text>
+  <rect x="40" y="356" width="480" height="88" rx="8" class="field"/>
+  <text x="54" y="381" class="ph">history, ties, and goals (markup supported)</text>
+
+  <!-- Submit -->
+  <rect x="410" y="456" width="110" height="40" rx="8" fill="#6d28d9"/>
+  <text x="465" y="481" text-anchor="middle" class="btn">Submit</text>
+</svg>
