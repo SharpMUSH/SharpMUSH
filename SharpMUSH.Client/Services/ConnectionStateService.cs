@@ -14,7 +14,7 @@ namespace SharpMUSH.Client.Services;
 /// <see cref="IGameHubConnectionFactory"/>), and surfaces received messages
 /// as events.
 /// </summary>
-public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisposable
+public sealed class ConnectionStateService : IConnectionStateService, ISceneHubControl, IAsyncDisposable
 {
 	private readonly IGameHubConnectionFactory _factory;
 	private readonly ILogger<ConnectionStateService> _logger;
@@ -168,6 +168,22 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 			throw new InvalidOperationException("Not connected to the game hub.");
 
 		return _hub.InvokeAsync("SendCommand", command);
+	}
+
+	// ── Scene group membership (ISceneHubControl) ──────────────────────────────
+
+	/// <inheritdoc/>
+	public Task JoinSceneAsync(string sceneId)
+	{
+		if (_hub is null || !IsConnected) return Task.CompletedTask;
+		return _hub.InvokeAsync("JoinScene", sceneId);
+	}
+
+	/// <inheritdoc/>
+	public Task LeaveSceneAsync(string sceneId)
+	{
+		if (_hub is null || !IsConnected) return Task.CompletedTask;
+		return _hub.InvokeAsync("LeaveScene", sceneId);
 	}
 
 	// ── State helpers ────────────────────────────────────────────────────────

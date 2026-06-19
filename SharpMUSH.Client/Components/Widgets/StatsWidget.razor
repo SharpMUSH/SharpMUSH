@@ -3,6 +3,7 @@
 @using SharpMUSH.Client.Services
 @inject CharacterDirectoryService CharacterDirectory
 @inject WikiService WikiService
+@inject SceneService SceneService
 
 @* Game-at-a-glance stat tiles (players online, active scenes, recent changes, characters). *@
 <MudGrid Spacing="3">
@@ -23,11 +24,12 @@
 
     private int? _recent;
     private int? _characters;
+    private int? _activeScenes;
 
     private (string Label, string Value)[] Tiles =>
     [
         ("Players Online", _characters?.ToString() ?? "—"),
-        ("Active Scenes",  "—"), // TODO(Phase 5): server scene API
+        ("Active Scenes",  _activeScenes?.ToString() ?? "—"),
         ("Recent Changes", _recent?.ToString() ?? "—"),
         ("Characters",     _characters?.ToString() ?? "—"),
     ];
@@ -36,9 +38,11 @@
     {
         var recentTask = WikiService.GetRecentChangesAsync(10);
         var charsTask = CharacterDirectory.ListAsync();
-        await Task.WhenAll(recentTask.AsTask(), charsTask);
+        var scenesTask = SceneService.GetActiveScenesAsync();
+        await Task.WhenAll(recentTask.AsTask(), charsTask, scenesTask.AsTask());
 
         _recent = (await recentTask).Count;
         _characters = (await charsTask).Count;
+        _activeScenes = (await scenesTask).Count;
     }
 }

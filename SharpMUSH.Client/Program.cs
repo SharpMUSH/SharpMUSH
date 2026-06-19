@@ -30,8 +30,9 @@ builder.Services.AddSingleton<ApplicationRegistryClient>();
 builder.Services.AddSingleton<RoleRegistryClient>();
 builder.Services.AddSingleton<GalleryService>();
 builder.Services.AddSingleton<MailService>();
-// Scene data is served by the server API (Phase 5 wires the client HTTP service);
-// the WASM client has no local ISceneService implementation.
+// Scene data is served by the server API; the WASM client has no local ISceneService
+// implementation — reads go through this HTTP service, writes go through a game command.
+builder.Services.AddSingleton<SceneService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();
@@ -92,7 +93,10 @@ builder.Services.AddSingleton<INotificationService, NotificationService>();
 builder.Services.AddSingleton<IGameHubConnectionFactory>(_ =>
 	new GameHubConnectionFactory(
 		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/game"));
-builder.Services.AddSingleton<IConnectionStateService, ConnectionStateService>();
+builder.Services.AddSingleton<ConnectionStateService>();
+builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredService<ConnectionStateService>());
+// Same singleton, exposed for scene group join/leave (client-only control surface).
+builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<ConnectionStateService>());
 
 builder.Services.AddHttpClient("api", sp =>
 {
