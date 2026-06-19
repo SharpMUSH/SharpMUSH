@@ -22,6 +22,7 @@ public interface INatsBridgeService : IHostedService;
 /// Subjects consumed:
 ///   "game.output.{characterDbref}" → SignalR group "char:{characterDbref}"
 ///   "game.room.{roomDbref}"        → SignalR group "room:{roomDbref}"
+///   "game.scene.{sceneId}"         → SignalR group "scene:{sceneId}"
 ///
 /// Uses core NATS subscriptions (not JetStream) because these are transient,
 /// targeted delivery messages — not persistent queue messages.
@@ -57,13 +58,14 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 				_logger.LogInformation("[NatsBridge] Connecting to NATS at {Url}", _natsOptions.Url);
 				nats = new NatsConnection(new NatsOpts { Url = _natsOptions.Url });
 				await nats.ConnectAsync();
-				_logger.LogInformation("[NatsBridge] Connected. Subscribing to game.output.* and game.room.*");
+				_logger.LogInformation("[NatsBridge] Connected. Subscribing to game.output.*, game.room.* and game.scene.*");
 				delay = 2; // reset backoff on successful connect
 
 				var outputTask = SubscribeOutputAsync(nats, stoppingToken);
 				var roomTask   = SubscribeRoomAsync(nats, stoppingToken);
+				var sceneTask  = SubscribeSceneAsync(nats, stoppingToken);
 
-				await Task.WhenAll(outputTask, roomTask);
+				await Task.WhenAll(outputTask, roomTask, sceneTask);
 				// Both subscription loops exited cleanly (cancellation token triggered).
 				break;
 			}
@@ -143,6 +145,33 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 			catch (Exception ex) when (ex is not OperationCanceledException)
 			{
 				_logger.LogError(ex, "[NatsBridge] Error forwarding room event to group {Group}", group);
+			}
+		}
+	}
+
+	private async Task SubscribeSceneAsync(NatsConnection nats, CancellationToken ct)
+	{
+		// Subject wildcard: "game.scene.*" — the last token is the scene id.
+		await foreach (var msg in nats.SubscribeAsync<SceneEventMessage>(
+			"game.scene.*",
+			serializer: NatsJsonSerializer<SceneEventMessage>.Default,
+			cancellationToken: ct))
+		{
+			if (msg.Data is null) continue;
+
+			var sceneId = msg.Data.SceneId;
+			var group = GameHub.SceneGroupName(sceneId);
+
+			_logger.LogDebug("[NatsBridge] Forwarding SceneEventMessage for scene:{SceneId} to group {Group}",
+				sceneId, group);
+
+			try
+			{
+				await _hubContext.Clients.Group(group).ReceiveSceneMessage(msg.Data);
+			}
+			catch (Exception ex) when (ex is not OperationCanceledException)
+			{
+				_logger.LogError(ex, "[NatsBridge] Error forwarding scene event to group {Group}", group);
 			}
 		}
 	}

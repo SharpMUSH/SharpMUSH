@@ -26,6 +26,7 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 	public event Action? OnConnectionStateChanged;
 	public event Action<GameOutputMessage>? OnOutputReceived;
 	public event Action<RoomEventMessage>? OnRoomEventReceived;
+	public event Action<SceneEventMessage>? OnSceneEventReceived;
 
 	public ConnectionStateService(
 		IGameHubConnectionFactory factory,
@@ -65,6 +66,12 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 		{
 			_logger.LogDebug("[ConnectionStateService] ReceiveRoomEvent: {EventType}", msg.EventType);
 			OnRoomEventReceived?.Invoke(msg);
+		}));
+
+		_subscriptions.Add(_hub.On("ReceiveSceneMessage", (SceneEventMessage msg) =>
+		{
+			_logger.LogDebug("[ConnectionStateService] ReceiveSceneMessage: {EventType}", msg.EventType);
+			OnSceneEventReceived?.Invoke(msg);
 		}));
 
 		_hub.Closed += ex =>
@@ -184,7 +191,7 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 
 	private async Task DisposeHubAsync()
 	{
-		foreach (var sub in _subscriptions) sub.Dispose();
+		foreach (var sub in _subscriptions) sub?.Dispose();
 		_subscriptions.Clear();
 
 		if (_hub is not null)

@@ -45,6 +45,7 @@ public static class ScenePoseHandlers
 			async pose =>
 			{
 				await notifyService.Notify(executor, $"SCENE: Added pose #{pose.Id} to scene #{sceneId}.");
+				await SceneBroadcast.PublishSceneEventAsync(parser, sceneId, "pose", pose);
 				return MModule.single(pose.Id);
 			},
 			async _ =>
@@ -100,7 +101,8 @@ public static class ScenePoseHandlers
 		}
 
 		var result = await sceneService.EditPoseAsync(poseId, editorDbref, content);
-		return await PoseResult(notifyService, executor, poseId, result, $"#{poseId} edited.");
+		return await PoseResult(notifyService, executor, poseId, result, $"#{poseId} edited.",
+			parser, "edit");
 	}
 
 	public static async ValueTask<MString> Undo(
@@ -139,7 +141,8 @@ public static class ScenePoseHandlers
 		var poseId = SceneCommandHelper.Plain(poseIdArg);
 		var afterPoseId = SceneCommandHelper.Plain(afterArg);
 		var result = await sceneService.MovePoseAsync(poseId, afterPoseId);
-		return await PoseResultWithError(notifyService, executor, poseId, result, $"#{poseId} moved.");
+		return await PoseResultWithError(notifyService, executor, poseId, result, $"#{poseId} moved.",
+			parser, "move");
 	}
 
 	public static async ValueTask<MString> Delete(
@@ -152,7 +155,8 @@ public static class ScenePoseHandlers
 		// @scene/delete <poseId> (soft-delete)
 		var poseId = SceneCommandHelper.Plain(poseIdArg);
 		var result = await sceneService.DeletePoseAsync(poseId);
-		return await PoseResult(notifyService, executor, poseId, result, $"#{poseId} deleted.");
+		return await PoseResult(notifyService, executor, poseId, result, $"#{poseId} deleted.",
+			parser, "delete");
 	}
 
 	private static async ValueTask<MString> PoseResult(
@@ -160,11 +164,15 @@ public static class ScenePoseHandlers
 		AnySharpObject executor,
 		string poseId,
 		OneOf.OneOf<Library.Models.Scene.ScenePose, NotFound> result,
-		string successMessage)
+		string successMessage,
+		IMUSHCodeParser? parser = null,
+		string? eventType = null)
 		=> await result.Match(
 			async pose =>
 			{
 				await notifyService.Notify(executor, $"SCENE: {successMessage}");
+				if (parser is not null && eventType is not null)
+					await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
 				return MModule.single(pose.Id);
 			},
 			async _ =>
@@ -178,11 +186,15 @@ public static class ScenePoseHandlers
 		AnySharpObject executor,
 		string poseId,
 		OneOf.OneOf<Library.Models.Scene.ScenePose, NotFound, Error<string>> result,
-		string successMessage)
+		string successMessage,
+		IMUSHCodeParser? parser = null,
+		string? eventType = null)
 		=> await result.Match(
 			async pose =>
 			{
 				await notifyService.Notify(executor, $"SCENE: {successMessage}");
+				if (parser is not null && eventType is not null)
+					await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
 				return MModule.single(pose.Id);
 			},
 			async _ =>

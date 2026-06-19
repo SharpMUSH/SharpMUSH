@@ -20,7 +20,8 @@ public partial class Commands
 	/// <c>&lt;sceneId&gt;</c>; pose-scoped switches take a <c>&lt;poseId&gt;</c>.
 	/// Comma-separated arguments carry <c>content</c> last; object references are
 	/// dbrefs (the service resolves the vertex, manages the edge, and snapshots the name).
-	/// Publishing the realtime <c>SceneEventMessage</c> is a later phase and is not done here.
+	/// Pose mutations (addpose/editpose/delete/move) publish a realtime
+	/// <c>SceneEventMessage</c> on <c>game.scene.{id}</c> via <see cref="SceneBroadcast"/>.
 	/// </summary>
 	[SharpCommand(Name = "@SCENE",
 		CommandLock = "FLAG^WIZARD",

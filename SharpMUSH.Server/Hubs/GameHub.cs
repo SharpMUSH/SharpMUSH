@@ -17,6 +17,9 @@ public interface IGameHubClient
 
 	/// <summary>Broadcasts a room event (arrive, depart, say, pose) to room observers.</summary>
 	Task ReceiveRoomEvent(RoomEventMessage msg);
+
+	/// <summary>Broadcasts a live scene mutation (pose, edit, delete, move) to scene observers.</summary>
+	Task ReceiveSceneMessage(SceneEventMessage msg);
 }
 
 /// <summary>
@@ -184,6 +187,18 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGam
 		string roomDbref,
 		RoomEventMessage message) =>
 		hubContext.Clients.Group(RoomGroupName(roomDbref)).ReceiveRoomEvent(message);
+
+	/// <summary>
+	/// Broadcasts a <see cref="SceneEventMessage"/> to all connections observing a scene.
+	/// </summary>
+	/// <param name="hubContext">The hub context injected by the calling service.</param>
+	/// <param name="sceneId">The scene's id (the SignalR group key).</param>
+	/// <param name="message">The scene event message to broadcast.</param>
+	public static Task SendToSceneAsync(
+		IHubContext<GameHub, IGameHubClient> hubContext,
+		string sceneId,
+		SceneEventMessage message) =>
+		hubContext.Clients.Group(SceneGroupName(sceneId)).ReceiveSceneMessage(message);
 
 	/// <summary>
 	/// Broadcasts a system <see cref="GameOutputMessage"/> to all currently connected clients.
