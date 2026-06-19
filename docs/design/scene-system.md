@@ -430,6 +430,64 @@ the named-graph edge definitions naming those core collections are the coupling
 point for extraction (alongside seam #6 and #1b) — flagged for the
 package-manager framework.
 
+## Phase 7 — Extraction-Readiness Note (design only)
+
+All eight seams above are already shaped for a *move*, not a *rewrite*. Two of
+them currently require a core edit and so are the gating work the Package Manager
+framework must land **before** the Scene System can become a collectible
+`AssemblyLoadContext` DLL. Both are proposals here — **no code in this branch**.
+
+### Seam #6 blocker → `IBridgeSubscription`
+
+`NatsBridgeService` hard-codes its subscriptions in one `Task.WhenAll`
+(`outputTask`, `roomTask`, `sceneTask`). A plugin cannot add a leg without
+editing Server. Replace the fixed set with a registry the host enumerates:
+
+```csharp
+public interface IBridgeSubscription
+{
+    string SubjectPattern { get; }                 // e.g. "game.scene.*"
+    Task RunAsync(IHubContext<GameHub, IGameHubClient> hub,
+                  NatsConnection nats, CancellationToken ct);
+}
+// NatsBridgeService: await Task.WhenAll(subscriptions.Select(s => s.RunAsync(...)))
+// Scene plugin registers a SceneBridgeSubscription; the core room/output legs
+// become the same shape. SubscribeSceneAsync moves into the plugin unchanged.
+```
+
+### Seam #1b → `IFlagContribution`
+
+`SCENE_ROOM` (symbol `S`) is seeded alongside core flags in the migration. To
+ship it from a plugin without touching core flag seeding:
+
+```csharp
+public interface IFlagContribution
+{
+    SharpFlag Flag { get; }     // name, symbol, type-restrictions, perms
+}
+// Core flag-seeding enumerates IFlagContribution at bootstrap; the Scene plugin
+// contributes SCENE_ROOM. Until then it rides the Scene migration (seam #1).
+```
+
+### Frozen contracts (stabilize before extraction)
+
+- **`SceneEventMessage`** — `SceneId, EventType (pose|edit|delete|move),
+  PoseId, ActorName, Content, Markup, Tags, Source, Location, Timestamp`.
+  This is the wire contract for `game.scene.{id}` and the portal; **frozen**.
+- **`ISceneService`** — the full method surface; providers implement it, no new
+  `ISharpDatabase` methods. Adding methods is a minor version bump, not a break.
+- **Storage coupling** — the named-graph edge definitions reference
+  `node_rooms`/`node_players`/`node_objects`; object refs resolve to `#<key>`
+  and timestamps are `long` UTC-millis. These are the documented coupling
+  points a future provider/extraction must honor.
+
+### Contribution inventory
+
+The seam table above (#1–#8) **is** the contribution inventory: each row is one
+thing the plugin registers (migration, flag, command, functions, storage cast,
+realtime leg, widget, bootstrap recipe). Only #6 and #1b need the host changes
+sketched here; the rest are already register-and-go.
+
 ## Open Issues (carried forward)
 
 - **`@scene/create/temp` building dependency** — temp rooms are softcode, so the

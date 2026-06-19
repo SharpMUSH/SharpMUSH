@@ -161,14 +161,15 @@ plugin seam.
   not drop it.
 
 ## Phase 7 — Plugin-seam hardening (pre-extraction, design only)
-- [ ] Propose `IBridgeSubscription` registry (replace hard-coded
+- [x] Propose `IBridgeSubscription` registry (replace hard-coded
       `NatsBridgeService.Task.WhenAll`) — seam #6 blocker
-- [ ] Propose `IFlagContribution` (ship `SCENE_ROOM` without editing core flag
+- [x] Propose `IFlagContribution` (ship `SCENE_ROOM` without editing core flag
       seeding) — seam #1b
-- [ ] Confirm `SceneEventMessage` + the named-graph edge definitions referencing
+- [x] Confirm `SceneEventMessage` + the named-graph edge definitions referencing
       core collections (`node_rooms`/`node_players`/`node_objects`) are the
       documented extraction coupling points; freeze the realtime contract
-- **Ships:** extraction-readiness note + contribution-inventory mapping.
+- **Ships:** extraction-readiness note + contribution-inventory mapping —
+      see scene-system.md "Phase 7 — Extraction-Readiness Note".
 
 ## Cross-Phase Test Matrix Summary
 
@@ -190,5 +191,5 @@ plugin seam.
 | Web pose → SendCommand (no `@emit`, no double-capture) | — | — | — | — | P5 |
 | Pages + tag chips + ShowAsName + live patch | — | — | — | — | P5 |
 | `long` UTC-ms contract | P1 | P3 | P3 | P3 | P5 |
-| Config category | P6 | — | — | — | — |
+| Config category | — (dropped: no `SceneOptions`) | — | — | — | — |
 | Temp-room softcode (dig/recycle occupant-safe) | — | — | — | — | — (P6 docs) |
