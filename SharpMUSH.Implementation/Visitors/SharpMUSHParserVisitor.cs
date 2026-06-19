@@ -412,13 +412,26 @@ public class SharpMUSHParserVisitor(
 
 				if (!discoveredFunction.TryPickT0(out var functionValue, out _))
 				{
-					success = false;
-					return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name), context.Depth());
-				}
+					// Built-ins take precedence; only on a built-in miss do we consult the
+					// in-memory global user-defined-function registry (@function). Resolved
+					// entries are evaluated ufun-style against <object>/<attribute> with the
+					// call args bound to %0.., and are NOT cached in the shared FunctionLibrary
+					// (so /enable, /disable, /delete take effect immediately and never leak).
+					var userFunction = ResolveUserDefinedFunction(name);
+					if (userFunction is null)
+					{
+						success = false;
+						return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name), context.Depth());
+					}
 
-				// Avoid double lookup: store result and add to library
-				libraryMatch = (functionValue, true);
-				parser.FunctionLibrary.Add(name, libraryMatch);
+					libraryMatch = (userFunction.Value, false);
+				}
+				else
+				{
+					// Avoid double lookup: store result and add to library
+					libraryMatch = (functionValue, true);
+					parser.FunctionLibrary.Add(name, libraryMatch);
+				}
 			}
 
 			var (attribute, function) = libraryMatch.LibraryInformation;
@@ -674,6 +687,62 @@ public class SharpMUSHParserVisitor(
 		return (result.LibraryInformation.Attribute,
 			p => (ValueTask<CallState>)result.LibraryInformation.Function.Method.Invoke(null,
 				[p, result.LibraryInformation.Attribute])!);
+	}
+
+	/// <summary>
+	/// Resolves a global user-defined function (registered via <c>@function</c>) by name, returning
+	/// a transient <see cref="FunctionDefinition"/> that the normal function-call pipeline executes.
+	///
+	/// <para>The synthesized definition carries the registry's min/max arg bounds (so the standard
+	/// argument-count validation in <see cref="CallFunction"/> applies) and a delegate that evaluates
+	/// the stored <c>&lt;object&gt;/&lt;attribute&gt;</c> as softcode with the call args bound to
+	/// <c>%0..</c> — exactly like <c>ufun</c>. The definition is never cached in the shared library.</para>
+	/// </summary>
+	private FunctionDefinition? ResolveUserDefinedFunction(string name)
+	{
+		var registry = (parser as MUSHCodeParser)?.ServiceProvider.GetService<IUserDefinedFunctionService>();
+		var entry = registry?.Resolve(name);
+		if (entry is null)
+		{
+			return null;
+		}
+
+		var attribute = new SharpFunctionAttribute
+		{
+			Name = name,
+			MinArgs = entry.MinArgs,
+			MaxArgs = entry.MaxArgs,
+			Flags = FunctionFlags.Regular
+		};
+
+		var target = entry.Object;
+		var attributeName = entry.Attribute;
+
+		return new FunctionDefinition(attribute, async invokedParser =>
+		{
+			var executor = await invokedParser.CurrentState.KnownExecutorObject(Mediator);
+
+			var targetObject = await Mediator.Send(new GetObjectNodeQuery(target));
+			if (targetObject.IsNone)
+			{
+				return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name));
+			}
+
+			// The arguments pushed for this call become %0, %1, … inside the attribute.
+			var args = invokedParser.CurrentState.Arguments
+				.Select((kvp, i) => new KeyValuePair<string, CallState>(i.ToString(), kvp.Value))
+				.ToDictionary();
+
+			var result = await AttributeService.EvaluateAttributeFunctionAsync(
+				invokedParser,
+				executor,
+				targetObject.Known,
+				attributeName,
+				args,
+				evalParent: false);
+
+			return new CallState(result);
+		});
 	}
 
 

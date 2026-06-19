@@ -90,6 +90,10 @@
       <Link>BundledPackages\profile-handler.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.profile-handler.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\common-functions\package.yaml">
+      <Link>BundledPackages\common-functions.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.common-functions.package.yaml</LogicalName>
+    </EmbeddedResource>
     <PackageReference Include="SurrealDb.Embedded.InMemory" Version="0.9.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
   </ItemGroup>

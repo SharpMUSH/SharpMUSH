@@ -215,6 +215,8 @@ public class Startup(
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<IPackageManifestService, PackageManifestService>();
 		services.AddSingleton<IPackagePlanService, PackagePlanService>();
+		// Parser-layer runner for package AINSTALL/AUPDATE softcode; required by PackageInstallService.
+		services.AddSingleton<IPackageLifecycleRunner, SharpMUSH.Implementation.Services.PackageLifecycleRunner>();
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
 		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();
 		services.AddSingleton<IPackageSourceService>(sp =>
@@ -268,6 +270,9 @@ public class Startup(
 
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
+		// In-memory registry of global user-defined functions (@function). Not persisted:
+		// durability comes from re-running @function on boot via the @STARTUP attribute pass.
+		services.AddSingleton<IUserDefinedFunctionService, UserDefinedFunctionService>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 
@@ -499,8 +504,11 @@ public class Startup(
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
-		services.AddHostedService<Services.DefaultHttpHandlerBootstrapService>();
+		services.AddHostedService<Services.DefaultPackagesBootstrapService>();
 		services.AddHostedService<Services.DefaultApplicationsBootstrapService>();
+		// Run @STARTUP on all objects at boot — registered after the other bootstrap services so
+		// any objects/attributes they seed already exist. Re-establishes in-memory @function regs.
+		services.AddHostedService<Services.StartupAttributeBootstrapService>();
 		services.AddHostedService<NatsBridgeService>();
 		services.AddHostedService<Services.ConnectionReconciliationService>();
 		services.AddHostedService<Services.ConnectionLoggingService>();

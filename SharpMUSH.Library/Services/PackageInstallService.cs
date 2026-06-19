@@ -26,7 +26,8 @@ public class PackageInstallService(
 	IPackageRegistryService registry,
 	IApplicationRegistryService applications,
 	IPackagePlanService planner,
-	IOptionsWrapper<SharpMUSHOptions> configuration) : IPackageInstallService
+	IOptionsWrapper<SharpMUSHOptions> configuration,
+	IPackageLifecycleRunner lifecycle) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 
@@ -548,6 +549,12 @@ public class PackageInstallService(
 			await applications.UpsertApplicationAsync(built.AsT0);
 			notes.Add($"Registered application '{built.AsT0.Slug}' ({built.AsT0.Kind}) at /apps/{built.AsT0.Slug}.");
 		}
+
+		// Lifecycle hooks (decision 20.x): after a successful apply, run AINSTALL on
+		// a first install and AUPDATE on an upgrade so the package can self-configure
+		// (@function/@hook registration, etc.). Failures are swallowed/logged by the
+		// runner so a bad lifecycle script never fails the install.
+		await lifecycle.RunLifecycleAsync(changeset, created, cancellationToken);
 
 		return new PackageApplyResult(revision, created, notes);
 	}

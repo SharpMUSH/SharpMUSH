@@ -21,6 +21,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
@@ -3787,15 +3788,18 @@ public partial class Commands
 			// Check if executor has Functions power or is wizard
 			var canSeeDetails = await executor.IsWizard();
 
-			var userFunctions = FunctionLibrary.Where(kvp => !kvp.Value.IsSystem).ToArray();
+			// Global user-defined functions live in the in-memory registry (@function), not the
+			// FunctionLibrary; the library holds only built-ins (and any compiled-in defs).
+			var registry = parser.ServiceProvider.GetService<IUserDefinedFunctionService>();
+			var userFunctions = registry?.All().ToArray() ?? [];
 			var builtinFunctions = FunctionLibrary.Where(kvp => kvp.Value.IsSystem).ToArray();
 
 			if (canSeeDetails)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionUserDefinedCountFormat), executor, userFunctions.Length);
-				foreach (var (name, (def, _)) in userFunctions.Take(10))
+				foreach (var fn in userFunctions.Take(10))
 				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor, name, def.Attribute.MinArgs, def.Attribute.MaxArgs, def.Attribute.Flags);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor, fn.Name, fn.MinArgs, fn.MaxArgs, fn.Enabled ? "Enabled" : "Disabled");
 				}
 				if (userFunctions.Length > 10)
 				{
@@ -3820,27 +3824,41 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoFunctionSpecified);
 		}
 
+		var userFunctionService = parser.ServiceProvider.GetService<IUserDefinedFunctionService>();
+		if (userFunctionService == null)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionLibraryUnavailable), executor);
+			return new CallState(ErrorMessages.Returns.LibraryUnavailable);
+		}
+
 		// Handle administrative switches
 		if (switches.Contains("ALIAS"))
 		{
 			var aliasName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
 			if (string.IsNullOrEmpty(aliasName))
 			{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyAliasName), executor);
-			return new CallState(ErrorMessages.Returns.NoAliasSpecified);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyAliasName), executor);
+				return new CallState(ErrorMessages.Returns.NoAliasSpecified);
+			}
+
+			// @function/alias <alias>=<existing-user-function>
+			// functionName is the alias being created; aliasName is the existing target.
+			if (!userFunctionService.Alias(functionName, aliasName))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, aliasName);
+				return new CallState(ErrorMessages.Returns.FunctionNotFound);
+			}
+
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasWouldCreateFormat), executor, functionName, aliasName);
+			return CallState.Empty;
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasWouldCreateFormat), executor, aliasName, functionName);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasingNotImplemented), executor);
-		return new CallState(ErrorMessages.Returns.NotImplemented);
-	}
-
-	if (switches.Contains("CLONE"))
-	{
-		var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
-		if (string.IsNullOrEmpty(cloneName))
+		if (switches.Contains("CLONE"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyCloneName), executor);
+			var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+			if (string.IsNullOrEmpty(cloneName))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyCloneName), executor);
 				return new CallState(ErrorMessages.Returns.NoCloneNameSpecified);
 			}
 
@@ -3851,23 +3869,38 @@ public partial class Commands
 
 		if (switches.Contains("DELETE"))
 		{
+			if (!userFunctionService.Delete(functionName))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+				return new CallState(ErrorMessages.Returns.FunctionNotFound);
+			}
+
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDeleteWouldDeleteFormat), executor, functionName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDeletionNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			return CallState.Empty;
 		}
 
 		if (switches.Contains("DISABLE"))
 		{
+			if (!userFunctionService.SetEnabled(functionName, false))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+				return new CallState(ErrorMessages.Returns.FunctionNotFound);
+			}
+
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDisableWouldDisableFormat), executor, functionName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDisablingNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			return CallState.Empty;
 		}
 
 		if (switches.Contains("ENABLE"))
 		{
+			if (!userFunctionService.SetEnabled(functionName, true))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+				return new CallState(ErrorMessages.Returns.FunctionNotFound);
+			}
+
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEnableWouldEnableFormat), executor, functionName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEnablingNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			return CallState.Empty;
 		}
 
 		if (switches.Contains("RESTRICT"))
@@ -3878,40 +3911,93 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NotImplemented);
 		}
 
-		// Check if defining a new function: @function <name>=<obj>,<attrib>[,<min>,<max>[,<restrictions>]]
+		// Defining a new function: @function <name>=<obj>,<attrib>[,<min>,<max>]
+		// CB.RSArgs splits the RHS on commas: args["1"]=obj, ["2"]=attrib, ["3"]=min, ["4"]=max.
 		if (args.Count >= 2)
 		{
-			var defString = args["1"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(defString))
+			var objSpec = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+			var attribSpec = args.GetValueOrDefault("2")?.Message?.ToPlainText();
+
+			if (!string.IsNullOrEmpty(objSpec))
 			{
-				// Parse definition: obj, attrib[, min, max[, restrictions]]
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefineWouldDefineFormat), executor, functionName, defString);
-
-				// Parse min/max args if provided
-				if (args.Count >= 3)
+				if (string.IsNullOrEmpty(attribSpec))
 				{
-					var minArgs = args.GetValueOrDefault("2")?.Message?.ToPlainText();
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMinArgsFormat), executor, minArgs ?? "none");
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyName), executor);
+					return new CallState(ErrorMessages.Returns.NoFunctionSpecified);
 				}
 
-				if (args.Count >= 4)
+				// Built-in functions take precedence and may not be overridden by a user function.
+				if (FunctionLibrary != null && FunctionLibrary.TryGetValue(functionName.ToUpper(), out var existing) && existing.IsSystem)
 				{
-					var maxArgs = args.GetValueOrDefault("3")?.Message?.ToPlainText();
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMaxArgsFormat), executor, maxArgs ?? "none");
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+					return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, functionName));
 				}
 
-				if (args.Count >= 5)
+				// Parse min/max arg bounds (default 0..32, the engine-wide max).
+				var minArgs = 0;
+				var maxArgs = 32;
+				if (args.Count >= 4 && int.TryParse(args.GetValueOrDefault("3")?.Message?.ToPlainText(), out var parsedMin))
 				{
-					var restrictions = args.GetValueOrDefault("4")?.Message?.ToPlainText();
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictionsArgFormat), executor, restrictions ?? "none");
+					minArgs = parsedMin;
+				}
+				if (args.Count >= 5 && int.TryParse(args.GetValueOrDefault("4")?.Message?.ToPlainText(), out var parsedMax))
+				{
+					maxArgs = parsedMax;
 				}
 
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDynamicDefinitionNotImplemented), executor);
-				return new CallState(ErrorMessages.Returns.NotImplemented);
+				// Resolve the target object.
+				var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+					parser, executor, executor, objSpec, LocateFlags.All);
+				if (maybeObject.IsError)
+				{
+					return maybeObject.AsError;
+				}
+
+				var targetObject = maybeObject.AsSharpObject;
+
+				// The executor must control the object backing the function.
+				if (!await PermissionService!.Controls(executor, targetObject))
+				{
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				}
+
+				// The attribute must exist and be readable by the executor.
+				var attributeResult = await AttributeService!.GetAttributeAsync(
+					executor, targetObject, attribSpec, IAttributeService.AttributeMode.Read, false);
+				if (attributeResult.IsError || attributeResult.IsNone)
+				{
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, attribSpec);
+					return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+				}
+
+				var attributeLongName = attributeResult.AsAttribute.Last().LongName!.ToUpper();
+
+				userFunctionService.Define(new UserDefinedFunction(
+					Name: functionName,
+					Object: targetObject.Object().DBRef,
+					Attribute: attributeLongName,
+					MinArgs: minArgs,
+					MaxArgs: maxArgs,
+					Enabled: true,
+					AliasOf: null));
+
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefineWouldDefineFormat), executor, functionName, $"{targetObject.Object().DBRef}/{attributeLongName}");
+				return CallState.Empty;
 			}
 		}
 
-		// Single argument - show function information
+		// Single argument - show function information (built-in or user-defined)
+		var registeredFunction = userFunctionService.Get(functionName);
+		if (registeredFunction != null)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoNameFormat), executor, registeredFunction.Name);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoTypeFormat), executor, "User-defined");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMinArgsFormat), executor, registeredFunction.MinArgs);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMaxArgsFormat), executor, registeredFunction.MaxArgs);
+			return CallState.Empty;
+		}
+
 		if (FunctionLibrary == null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionLibraryUnavailable), executor);
@@ -6187,26 +6273,15 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			// Halt all objects, then trigger @STARTUP on all objects that have it
+			// Halt all object queues first.
 			await foreach (var obj in Mediator!.CreateStream(new GetAllTypedObjectsQuery()))
 			{
-				// Halt the object's queue
 				await Mediator.Send(new HaltObjectQueueRequest(obj.Object().DBRef));
-
-				// Trigger @STARTUP attribute if it exists (non-inherited)
-				// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
-				try
-				{
-					await AttributeService!.EvaluateAttributeFunctionAsync(
-						parser, executor, obj, "STARTUP",
-						new Dictionary<string, CallState>(),
-						evalParent: false);
-				}
-				catch
-				{
-					// Ignore errors from @STARTUP - they're non-fatal
-				}
 			}
+
+			// Then run @STARTUP on every object — the same pass used at boot, so global
+			// @function registrations etc. re-establish identically. Errors are swallowed.
+			await StartupAttributeRunner.RunAllAsync(parser, Mediator!, AttributeService!, executor);
 
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsRestarted), executor);
 			return CallState.Empty;
