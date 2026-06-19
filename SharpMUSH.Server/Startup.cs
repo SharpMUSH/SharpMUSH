@@ -254,8 +254,9 @@ public class Startup(
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
 		// Scene subsystem — ISceneService is implemented by the active ISharpDatabase
-		// provider (the IWikiService tri-cast precedent). Registered in Phase 2 once the
-		// provider .Scene.cs partials exist; there is no in-memory implementation.
+		// provider (Arango/Memgraph/Surreal), cast like the IWikiService tri-cast above.
+		// There is no in-memory implementation.
+		services.AddSingleton<ISceneService>(sp => (ISceneService)sp.GetRequiredService<ISharpDatabase>());
 
 // Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
 		services.AddMemoryCache();

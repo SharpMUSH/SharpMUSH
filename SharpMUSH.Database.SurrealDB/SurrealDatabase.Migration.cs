@@ -132,7 +132,59 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS received_mail_out ON received_mail FIELDS out",
 				"DEFINE INDEX IF NOT EXISTS mail_sender_in ON mail_sender FIELDS in",
 				"DEFINE INDEX IF NOT EXISTS mail_sender_out ON mail_sender FIELDS out",
-				"DEFINE INDEX IF NOT EXISTS object_data_key_type ON object_data FIELDS objectKey, dataType UNIQUE"
+				"DEFINE INDEX IF NOT EXISTS object_data_key_type ON object_data FIELDS objectKey, dataType UNIQUE",
+				// Scene System (Area 7) — graph_sharp_sys_scene. Tables + RELATE edges.
+				// Vertices.
+				"DEFINE TABLE scene SCHEMALESS",
+				"DEFINE TABLE scene_pose SCHEMALESS",
+				"DEFINE TABLE scene_pose_edit SCHEMALESS",
+				"DEFINE TABLE scene_plot SCHEMALESS",
+				// Scene first-class field indexes (status, scheduling, visibility, recency).
+				"DEFINE INDEX IF NOT EXISTS scene_status ON scene FIELDS status",
+				"DEFINE INDEX IF NOT EXISTS scene_scheduledfor ON scene FIELDS scheduledFor",
+				"DEFINE INDEX IF NOT EXISTS scene_public ON scene FIELDS isPublic",
+				"DEFINE INDEX IF NOT EXISTS scene_lastactivity ON scene FIELDS lastActivityAt",
+				// Structural edges (within the scene graph).
+				"DEFINE TABLE scene_first_pose TYPE RELATION",
+				"DEFINE TABLE scene_last_pose TYPE RELATION",
+				"DEFINE TABLE scene_pose_next TYPE RELATION",
+				"DEFINE TABLE scene_pose_in_scene TYPE RELATION",
+				"DEFINE TABLE scene_first_edit TYPE RELATION",
+				"DEFINE TABLE scene_current_edit TYPE RELATION",
+				"DEFINE TABLE scene_next_edit TYPE RELATION",
+				"DEFINE TABLE scene_plot_includes TYPE RELATION",
+				// Object edges into the game-object graph (incarnation-safe; *Name snapshot kept on the vertex).
+				"DEFINE TABLE scene_in_room TYPE RELATION",
+				"DEFINE TABLE scene_owner TYPE RELATION",
+				"DEFINE TABLE scene_starter TYPE RELATION",
+				"DEFINE TABLE scene_pose_author TYPE RELATION",
+				"DEFINE TABLE scene_pose_origin TYPE RELATION",
+				"DEFINE TABLE scene_edit_editor TYPE RELATION",
+				"DEFINE TABLE scene_plot_owner TYPE RELATION",
+				// The member edge (player -> scene) carries {role, showAs, isCurrent, grantedAt, memberName}.
+				"DEFINE TABLE scene_member TYPE RELATION",
+				// Edge traversal indexes.
+				"DEFINE INDEX IF NOT EXISTS scene_first_pose_in ON scene_first_pose FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_last_pose_in ON scene_last_pose FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_pose_next_in ON scene_pose_next FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_pose_next_out ON scene_pose_next FIELDS out",
+				"DEFINE INDEX IF NOT EXISTS scene_pose_in_scene_in ON scene_pose_in_scene FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_pose_in_scene_out ON scene_pose_in_scene FIELDS out",
+				"DEFINE INDEX IF NOT EXISTS scene_first_edit_in ON scene_first_edit FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_current_edit_in ON scene_current_edit FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_next_edit_in ON scene_next_edit FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_plot_includes_in ON scene_plot_includes FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_plot_includes_out ON scene_plot_includes FIELDS out",
+				"DEFINE INDEX IF NOT EXISTS scene_in_room_in ON scene_in_room FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_in_room_out ON scene_in_room FIELDS out",
+				"DEFINE INDEX IF NOT EXISTS scene_owner_in ON scene_owner FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_starter_in ON scene_starter FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_pose_author_in ON scene_pose_author FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_pose_origin_in ON scene_pose_origin FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_edit_editor_in ON scene_edit_editor FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_plot_owner_in ON scene_plot_owner FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_member_in ON scene_member FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS scene_member_out ON scene_member FIELDS out"
 			};
 
 			foreach (var q in indexQueries)
@@ -336,6 +388,8 @@ public partial class SurrealDatabase
 			("OPEN_OK", "", null, [], [], ["ROOM"]),
 			("GOING", "g", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
 			("GOING_TWICE", "", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
+			// Scene System (Area 7) — informational flag marking a temp/scene room. See docs/design/scene-system.md.
+			("SCENE_ROOM", "S", null, ["wizard"], ["wizard"], ["ROOM"]),
 		};
 
 		foreach (var f in flags)
