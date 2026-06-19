@@ -185,10 +185,8 @@ objects:
           @pemit %#=[iter(sceneposes(scenefocus(%#),,%0),scenepose(scenefocus(%#),##,content),@,%r)]
 
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
-      # The @hook RHS is RSArgs-split on commas, so the <object>,<attr> pair is
-      # brace-wrapped to keep it a single argument (otherwise the attr is dropped
-      # and the hook defaults to cmd.override).
+      # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).
       AINSTALL: |-
-        @hook/override POSE={%!,CMD`CAPTURE`POSE}; @hook/override SAY={%!,CMD`CAPTURE`SAY}; @hook/override SEMIPOSE={%!,CMD`CAPTURE`SEMI}
+        @hook/override POSE=%!,CMD`CAPTURE`POSE; @hook/override SAY=%!,CMD`CAPTURE`SAY; @hook/override SEMIPOSE=%!,CMD`CAPTURE`SEMI
       STARTUP: |-
-        @hook/override POSE={%!,CMD`CAPTURE`POSE}; @hook/override SAY={%!,CMD`CAPTURE`SAY}; @hook/override SEMIPOSE={%!,CMD`CAPTURE`SEMI}
+        @hook/override POSE=%!,CMD`CAPTURE`POSE; @hook/override SAY=%!,CMD`CAPTURE`SAY; @hook/override SEMIPOSE=%!,CMD`CAPTURE`SEMI

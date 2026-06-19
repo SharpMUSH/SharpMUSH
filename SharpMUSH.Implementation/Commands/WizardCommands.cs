@@ -1643,16 +1643,18 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoHook);
 		}
 
-		var objectAndAttribute = args["1"].Message!.ToPlainText();
-		var parts = objectAndAttribute.Split(',', 2);
+		// PennMUSH form (CMD_T_EQSPLIT | CMD_T_RS_ARGS): @hook/<type> <command> = <object>, <attribute>.
+		// CB.RSArgs has already split the RHS on commas, so args["1"] = object and args["2"] = attribute.
+		// Read them directly — re-splitting args["1"] dropped the attribute and silently defaulted the
+		// hook to cmd.<type>.
+		var objectRef = args["1"].Message!.ToPlainText().Trim();
 
-		if (parts.Length < 1 || string.IsNullOrWhiteSpace(parts[0]))
+		if (string.IsNullOrWhiteSpace(objectRef))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyObject), executor);
 			return new CallState(ErrorMessages.Returns.NoObject);
 		}
 
-		var objectRef = parts[0].Trim();
 		var maybeObject = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor,
 			objectRef, LocateFlags.All);
 
@@ -1664,8 +1666,9 @@ public partial class Commands
 		var targetObject = maybeObject.WithoutError().Known();
 		var dbref = targetObject.Object().DBRef;
 
-		var attributeName = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1])
-			? parts[1].Trim()
+		var attributeArg = args.Count > 2 ? args["2"].Message?.ToPlainText() : null;
+		var attributeName = !string.IsNullOrWhiteSpace(attributeArg)
+			? attributeArg.Trim()
 			: $"cmd.{selectedHookType.ToLower()}";
 
 		var attrResult = await AttributeService!.GetAttributeAsync(executor, targetObject,

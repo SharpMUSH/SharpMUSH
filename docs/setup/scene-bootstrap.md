@@ -93,15 +93,13 @@ Players pose with the native `pose`/`say`/`semipose` commands. An
 * `@EMIT` is **not** hooked — the override replaces only the personal pose verbs.
 
 The package's `AINSTALL` (once) and `STARTUP` (every boot) (re-)establish the
-three OVERRIDE hooks idempotently. Because the `@hook` RHS is RSArgs-split on
-commas, the `<object>,<attr>` pair is **brace-wrapped** to survive as a single
-argument (an un-braced comma would drop the attribute and silently default the
-hook to `cmd.override`):
+three OVERRIDE hooks idempotently, in the standard PennMUSH form
+`@hook/<type> <command> = <object>, <attribute>`:
 
 ```mush
-@hook/override POSE     = {%!, CMD`CAPTURE`POSE}
-@hook/override SAY      = {%!, CMD`CAPTURE`SAY}
-@hook/override SEMIPOSE = {%!, CMD`CAPTURE`SEMI}
+@hook/override POSE     = %!, CMD`CAPTURE`POSE
+@hook/override SAY      = %!, CMD`CAPTURE`SAY
+@hook/override SEMIPOSE = %!, CMD`CAPTURE`SEMI
 ```
 
 The three capture attributes are `$`-commands on the Scene Logger. Each (a)
