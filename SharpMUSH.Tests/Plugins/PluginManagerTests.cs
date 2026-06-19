@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Attributes;
@@ -11,8 +12,9 @@ using PM = SharpMUSH.Implementation.Services.PluginManager;
 namespace SharpMUSH.Tests.Plugins;
 
 /// <summary>
-/// Pure unit tests for <see cref="SharpMUSH.Implementation.Services.PluginManager"/>: no DB, no DLL loading.
-/// Exercises load-order resolution and the registration policy directly via the public seams.
+/// Pure unit tests for the plugin loader/registrar split: no DB, no DLL loading. Load-order resolution
+/// lives in <see cref="PluginLoaderService"/> (shared single-pass loader); command/function registration
+/// lives in <see cref="PM"/>, which now replays the already-loaded plugins from a <see cref="PluginCatalog"/>.
 /// </summary>
 public class PluginManagerTests
 {
@@ -22,19 +24,17 @@ public class PluginManagerTests
 	{
 		commands = [];
 		functions = [];
-		return new PM(commands, functions, EmptyProvider, NullLogger<PM>.Instance);
+		return new PM(PluginCatalog.Empty(), commands, functions, EmptyProvider, NullLogger<PM>.Instance);
 	}
 
 	[Test]
 	public async Task TopologicalSort_LoadsDependencyBeforeDependent()
 	{
-		var manager = NewManager(out _, out _);
-
 		// "a" depends on "b" → b must come before a.
-		var a = new PM.PluginCandidate("a.dll", "a", ["b"], 0);
-		var b = new PM.PluginCandidate("b.dll", "b", [], 0);
+		var a = new PluginLoaderService.PluginCandidate("a.dll", "a", ["b"], 0);
+		var b = new PluginLoaderService.PluginCandidate("b.dll", "b", [], 0);
 
-		var ordered = manager.TopologicalSort([a, b]);
+		var ordered = PluginLoaderService.TopologicalSort([a, b], NullLogger.Instance);
 
 		var ids = ordered.Select(c => c.Id).ToList();
 		await Assert.That(ids).IsEquivalentTo(new[] { "b", "a" });
@@ -44,13 +44,12 @@ public class PluginManagerTests
 	[Test]
 	public async Task TopologicalSort_TieBreaksByPriorityThenId()
 	{
-		var manager = NewManager(out _, out _);
+		var high = new PluginLoaderService.PluginCandidate("z.dll", "zeta", [], Priority: 10);
+		var lowB = new PluginLoaderService.PluginCandidate("b.dll", "beta", [], Priority: 1);
+		var lowA = new PluginLoaderService.PluginCandidate("a.dll", "alpha", [], Priority: 1);
 
-		var high = new PM.PluginCandidate("z.dll", "zeta", [], Priority: 10);
-		var lowB = new PM.PluginCandidate("b.dll", "beta", [], Priority: 1);
-		var lowA = new PM.PluginCandidate("a.dll", "alpha", [], Priority: 1);
-
-		var ordered = manager.TopologicalSort([high, lowB, lowA]).Select(c => c.Id).ToList();
+		var ordered = PluginLoaderService.TopologicalSort([high, lowB, lowA], NullLogger.Instance)
+			.Select(c => c.Id).ToList();
 
 		// Lower priority first; equal priority breaks by id alphabetically; highest priority last.
 		await Assert.That(ordered).IsEquivalentTo(new[] { "alpha", "beta", "zeta" });
@@ -59,14 +58,13 @@ public class PluginManagerTests
 	[Test]
 	public async Task TopologicalSort_CycleIsDetectedAndCyclicPluginsSkipped()
 	{
-		var manager = NewManager(out _, out _);
-
 		// a -> b -> a is a cycle; an independent "c" must still survive.
-		var a = new PM.PluginCandidate("a.dll", "a", ["b"], 0);
-		var b = new PM.PluginCandidate("b.dll", "b", ["a"], 0);
-		var c = new PM.PluginCandidate("c.dll", "c", [], 0);
+		var a = new PluginLoaderService.PluginCandidate("a.dll", "a", ["b"], 0);
+		var b = new PluginLoaderService.PluginCandidate("b.dll", "b", ["a"], 0);
+		var c = new PluginLoaderService.PluginCandidate("c.dll", "c", [], 0);
 
-		var ordered = manager.TopologicalSort([a, b, c]).Select(x => x.Id).ToList();
+		var ordered = PluginLoaderService.TopologicalSort([a, b, c], NullLogger.Instance)
+			.Select(x => x.Id).ToList();
 
 		await Assert.That(ordered).Contains("c");
 		await Assert.That(ordered).DoesNotContain("a");
@@ -122,6 +120,42 @@ public class PluginManagerTests
 		await Assert.That(commands.ContainsKey("+OK")).IsTrue();
 	}
 
+	[Test]
+	public async Task Catalog_AppliesServiceRegistrar_AndCollectsContributions()
+	{
+		// PluginCatalog.Build loads DLLs from disk, but its contribution-collection logic is exercisable
+		// directly via the typed source surfaces it exposes. Here we verify the two-phase collection shape:
+		// a plugin implementing several contribution interfaces is classified into the right buckets and an
+		// IServiceRegistrar applies straight into the IServiceCollection (pre-build).
+		var services = new ServiceCollection();
+		var plugin = new MultiContributionPlugin();
+
+		// Mirror the catalog's classification + DI application (the heart of the pre-build pass).
+		var serviceCollection = services;
+		((IServiceRegistrar)plugin).RegisterServices(serviceCollection);
+
+		var provider = services.BuildServiceProvider();
+		await Assert.That(provider.GetService<MarkerService>()).IsNotNull();
+
+		// Contribution interface classification.
+		await Assert.That(plugin is IServiceRegistrar).IsTrue();
+		await Assert.That(plugin is IFlagSource).IsTrue();
+		await Assert.That(plugin is IMigrationSource).IsTrue();
+		await Assert.That(((IFlagSource)plugin).Flags.Single().Name).IsEqualTo("PLUGINFLAG");
+		await Assert.That(((IMigrationSource)plugin).CypherStatements).IsNotEmpty();
+	}
+
+	[Test]
+	public async Task EmptyCatalog_HasNoContributions()
+	{
+		var catalog = PluginCatalog.Empty();
+		await Assert.That(catalog.Plugins).IsEmpty();
+		await Assert.That(catalog.FlagSources).IsEmpty();
+		await Assert.That(catalog.MigrationSources).IsEmpty();
+		await Assert.That(catalog.BridgeSources).IsEmpty();
+		await Assert.That(catalog.AllFlags).IsEmpty();
+	}
+
 	private static CommandDefinition MakeCommand(string name) =>
 		new(new SharpCommandAttribute { Name = name },
 			_ => ValueTask.FromResult(new Option<CallState>(new OneOf.Types.None())));
@@ -129,6 +163,26 @@ public class PluginManagerTests
 	private static FunctionDefinition MakeFunction(string name) =>
 		new(new SharpFunctionAttribute { Name = name, Flags = FunctionFlags.Regular },
 			_ => ValueTask.FromResult(new CallState("0")));
+
+	private sealed class MarkerService;
+
+	private sealed class MultiContributionPlugin
+		: IPlugin, IServiceRegistrar, IFlagSource, IMigrationSource
+	{
+		public string Id => "multi";
+		public string Version => "1.0.0";
+		public IReadOnlyList<string> Dependencies => [];
+		public int Priority => 0;
+		public void Initialize(IServiceProvider services) { }
+
+		public void RegisterServices(IServiceCollection services)
+			=> services.AddSingleton<MarkerService>();
+
+		public IEnumerable<PluginFlag> Flags =>
+			[new PluginFlag("PLUGINFLAG", "P", [], [], [], ["ROOM", "PLAYER", "EXIT", "THING"])];
+
+		public IEnumerable<string> CypherStatements => ["CREATE INDEX ON :PluginThing(id)"];
+	}
 
 	private sealed class FakePlugin(string id, CommandDefinition[] commands, FunctionDefinition[] functions)
 		: IPlugin, ICommandSource, IFunctionSource

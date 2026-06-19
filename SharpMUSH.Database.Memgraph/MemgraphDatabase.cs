@@ -9,6 +9,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
@@ -20,11 +21,18 @@ namespace SharpMUSH.Database.Memgraph;
 public partial class MemgraphDatabase(
 ILogger<MemgraphDatabase> logger,
 IDriver driver,
-IPasswordService passwordService
+IPasswordService passwordService,
+IReadOnlyList<IMigrationSource>? migrationSources = null,
+IReadOnlyList<PluginFlag>? pluginFlags = null
 ) : ISharpDatabase
 {
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
 	private static volatile bool _migrated;
+
+	// Phase 2a plugin contributions threaded through from the pre-build PluginCatalog. Empty for staging
+	// databases (created from a live DB) and any host that does not load plugins.
+	private IReadOnlyList<IMigrationSource> PluginMigrationSources => migrationSources ?? [];
+	private IReadOnlyList<PluginFlag> PluginFlags => pluginFlags ?? [];
 
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{

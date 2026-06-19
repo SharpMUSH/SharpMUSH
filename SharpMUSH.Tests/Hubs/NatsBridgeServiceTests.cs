@@ -31,7 +31,9 @@ public class NatsBridgeServiceTests
 		clientProxy.ReceiveSceneMessage(Arg.Any<SceneEventMessage>()).Returns(Task.CompletedTask);
 
 		var options = new NatsOptions { Url = natsUrl };
-		var service = new NatsBridgeService(hubContext, options, NullLogger<NatsBridgeService>.Instance);
+		var service = new NatsBridgeService(
+			hubContext, options, SharpMUSH.Implementation.Services.PluginCatalog.Empty(),
+			NullLogger<NatsBridgeService>.Instance);
 
 		return (service, hubContext);
 	}

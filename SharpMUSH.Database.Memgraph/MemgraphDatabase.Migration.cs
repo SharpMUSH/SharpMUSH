@@ -283,6 +283,11 @@ MATCH (o:Object {key: 3}), (f:ObjectFlag {name: 'WIZARD'})
 MERGE (o)-[:HAS_FLAG]->(f)
 """, ct: cancellationToken);
 
+			// Phase 2a: seed plugin-contributed flags (IFlagSource), then run plugin Cypher migrations
+			// (IMigrationSource). Both ride the same plumbing as the built-in seed batch above.
+			await SeedPluginFlags(cancellationToken);
+			await RunPluginCypherMigrations(cancellationToken);
+
 			logger.LogInformation("Memgraph Migration Completed");
 			_migrated = true;
 		}
@@ -381,6 +386,63 @@ f.typeRestrictions = $typeRestrictions
 				unsetPerms = f.UnsetPerms,
 				typeRestrictions = f.TypeRestrictions
 			}, ct);
+		}
+	}
+
+	/// <summary>
+	/// Seed plugin-contributed flags (Phase 2a <see cref="IFlagSource"/>) via the same idempotent MERGE
+	/// the built-in flag seed uses, so the flags exist after migration on Memgraph.
+	/// </summary>
+	private async Task SeedPluginFlags(CancellationToken ct)
+	{
+		foreach (var f in PluginFlags)
+		{
+			try
+			{
+				await ExecuteWithRetryAsync("""
+MERGE (f:ObjectFlag {name: $name})
+ON CREATE SET f.symbol = $symbol, f.system = $system, f.disabled = false,
+f.aliases = $aliases, f.setPermissions = $setPerms, f.unsetPermissions = $unsetPerms,
+f.typeRestrictions = $typeRestrictions
+""", new
+				{
+					name = f.Name,
+					symbol = f.Symbol,
+					system = f.System,
+					aliases = f.Aliases.ToArray(),
+					setPerms = f.SetPermissions.ToArray(),
+					unsetPerms = f.UnsetPermissions.ToArray(),
+					typeRestrictions = f.TypeRestrictions.ToArray()
+				}, ct);
+
+				logger.LogInformation("Seeded plugin flag '{Flag}' (Memgraph).", f.Name);
+			}
+			catch (Exception ex)
+			{
+				logger.LogError(ex, "Failed to seed plugin flag '{Flag}' (Memgraph); continuing.", f.Name);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Run each plugin's Cypher migration statements (Phase 2a <see cref="IMigrationSource.CypherStatements"/>)
+	/// after the built-in seed batch. Each statement is isolated so one failure does not abort the rest.
+	/// </summary>
+	private async Task RunPluginCypherMigrations(CancellationToken ct)
+	{
+		foreach (var source in PluginMigrationSources)
+		{
+			foreach (var statement in source.CypherStatements)
+			{
+				try
+				{
+					await ExecuteWithRetryAsync(statement, ct: ct);
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex, "Plugin Cypher migration statement failed (Memgraph); continuing.");
+				}
+			}
 		}
 	}
 

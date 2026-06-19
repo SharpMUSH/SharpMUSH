@@ -141,8 +141,80 @@ failing plugin is logged and skipped; it never aborts server boot.
   **logged and skipped** — the existing definition wins.
 - To guarantee your plugin loads after another, list that plugin's `id` in your `dependencies`.
 
+## 7. Contributing beyond commands/functions (Phase 2a)
+
+Your `[SharpPlugin] IPlugin` may also implement any subset of four **contribution interfaces** (all in
+`SharpMUSH.Library.Plugins`). These extend the host beyond commands/functions — DI services, DB migrations,
+engine flags, and NATS bridge subscriptions. The host discovers them through the same single load pass: a
+pre-build `PluginCatalog` loads your DLL once, applies your `IServiceRegistrar` straight into the container,
+and stashes your migration/flag/bridge contributions for the DB factory and bridge service to read. You do
+not register anything yourself — implement the interface and the host wires it.
+
+```csharp
+using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Plugins;
+
+[SharpPlugin]
+public sealed class MyPlugin : PluginBase,
+    IServiceRegistrar, IFlagSource, IMigrationSource, IBridgeSubscriptionSource
+{
+    public override string Id => "myplugin";
+
+    // (a) DI: register your own services into the host container. Applied PRE-BUILD, so your service is
+    //     available to the engine the moment the container is built. Resolve engine services in commands
+    //     at call time from parser.ServiceProvider as usual.
+    public void RegisterServices(IServiceCollection services)
+        => services.AddSingleton<MyPluginService>();
+
+    // (b) Flags: seeded into whichever DB backend is active, alongside the built-in flags, during migration.
+    //     Idempotent (keyed on Name), so it is safe across re-migration. Mirrors the built-in flag shape.
+    public IEnumerable<PluginFlag> Flags =>
+    [
+        new PluginFlag(
+            Name: "MYFLAG", Symbol: "y", Aliases: [],
+            SetPermissions: ["wizard"], UnsetPermissions: ["wizard"],
+            TypeRestrictions: ["ROOM", "PLAYER", "EXIT", "THING"])
+    ];
+
+    // (c) Migrations: provider-tagged. Implement only the backends you support; every member has an
+    //     empty/no-op default. These run AFTER the engine's own migration batch.
+    public Assembly? ArangoMigrationAssembly => typeof(MyPlugin).Assembly;        // IArangoMigration types here
+    public IEnumerable<string> CypherStatements => ["CREATE INDEX ON :MyThing(id)"];   // Memgraph
+    public IEnumerable<string> SurrealStatements => ["DEFINE TABLE my_thing SCHEMALESS"]; // SurrealDB
+
+    // (d) NATS bridge: subscribe to your own subjects and forward to SignalR groups, mirroring the engine's
+    //     built-in output/room/scene subscriptions. The host runs this alongside the built-ins, isolated in
+    //     try/catch. The params are loose (object) so the contract avoids a SignalR dependency — cast them:
+    public async Task RunAsync(object natsConnection, object hubContext, CancellationToken ct)
+    {
+        var nats = (NATS.Client.Core.NatsConnection)natsConnection;
+        var hub  = (Microsoft.AspNetCore.SignalR.IHubContext<
+                        SharpMUSH.Server.Hubs.GameHub, SharpMUSH.Server.Hubs.IGameHubClient>)hubContext;
+        await foreach (var msg in nats.SubscribeAsync<MyMessage>("game.myplugin.*", cancellationToken: ct))
+        {
+            // forward to a SignalR group...
+        }
+    }
+}
+```
+
+**Notes**
+
+- **Implement only what you need.** A plugin that just contributes one DI service implements only
+  `IServiceRegistrar`. The catalog classifies each plugin by the interfaces it implements.
+- **Flags ride the migration plumbing.** A contributed flag is seeded during `db.Migrate()` on every backend,
+  so it is queryable (e.g. `GetObjectFlagQuery`) immediately after boot.
+- **Migrations are per-provider.** If your plugin only supports ArangoDB, leave `CypherStatements` /
+  `SurrealStatements` at their empty defaults; the other backends simply seed nothing from your plugin.
+- **Bridge subscriptions are long-lived.** `RunAsync` should loop until `ct` is cancelled, exactly like the
+  built-in subscriptions. A faulting subscription is logged and isolated; it does not tear down the others.
+
+The worked Phase 2a fixture is the same `SamplePlugin` — it registers `SamplePluginService`
+(`IServiceRegistrar`), seeds the `SAMPLE_PLUGIN` flag (`IFlagSource`), and runs a bridge subscription
+(`IBridgeSubscriptionSource`); the integration tests assert each end-to-end.
+
 ## Later phases (not yet available)
 
-Service registration (`IServiceRegistrar`), migrations (`IMigrationSource`), engine flags (`IFlagSource`),
-NATS bridge subscriptions, named extension hooks, hot-reload, and signed package distribution are planned for
-later phases. This guide will grow as those seams ship.
+Named extension hooks (command pre/post/override, connection/object/startup lifecycle), hot-reload, and
+signed package distribution are planned for later phases. This guide will grow as those seams ship.

@@ -118,6 +118,21 @@ public class Startup(
 			});
 		});
 
+		// PHASE 2a TWO-PHASE BOOT — build the plugin catalog ONCE, pre-build, before any service the
+		// plugins might extend is registered. The catalog runs the single McMaster DLL-load pass, applies
+		// every IServiceRegistrar straight into this IServiceCollection, and stashes the migration/flag/
+		// bridge contributions. It is registered as a singleton so the DB factory (migrations + flags),
+		// NatsBridgeService (bridge subscriptions), and the post-build PluginManager (commands/functions)
+		// all read the same already-loaded set rather than loading any DLL a second time.
+		using var pluginCatalogLoggerFactory = LoggerFactory.Create(b => b.AddSerilog(
+			new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger(), dispose: true));
+		var pluginCatalog = Implementation.Services.PluginCatalog.Build(
+			services, pluginCatalogLoggerFactory.CreateLogger<Implementation.Services.PluginCatalog>());
+		services.AddSingleton(pluginCatalog);
+
+		var pluginMigrationSources = pluginCatalog.MigrationSources;
+		var pluginFlags = pluginCatalog.AllFlags;
+
 		if (databaseProvider == DatabaseProvider.Memgraph)
 		{
 			services.AddSingleton<IDriver>(_ =>
@@ -129,7 +144,7 @@ public class Startup(
 				var dbLogger = x.GetRequiredService<ILogger<MemgraphDatabase>>();
 				var neo4JDriver = x.GetRequiredService<IDriver>();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password);
+				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password, pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -144,7 +159,7 @@ public class Startup(
 				var surrealClient = x.GetRequiredService<ISurrealDbClient>();
 				surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new SurrealDatabase(dbLogger, surrealClient, password);
+				var db = new SurrealDatabase(dbLogger, surrealClient, password, pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -158,7 +173,7 @@ public class Startup(
 				var handle = x.GetRequiredService<ArangoHandle>();
 				var mediator = x.GetRequiredService<IMediator>();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new ArangoDatabase(dbLogger, context, handle, mediator, password);
+				var db = new ArangoDatabase(dbLogger, context, handle, mediator, password, pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});

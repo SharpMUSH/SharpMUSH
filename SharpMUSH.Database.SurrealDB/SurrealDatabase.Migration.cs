@@ -311,6 +311,11 @@ public partial class SurrealDatabase
 				"RELATE object:3->has_flags->object_flag:WIZARD",
 				cancellationToken);
 
+			// Phase 2a: seed plugin-contributed flags (IFlagSource), then run plugin SurrealQL migrations
+			// (IMigrationSource). Both ride the same plumbing as the built-in seed batch above.
+			await SeedPluginFlags(cancellationToken);
+			await RunPluginSurrealMigrations(cancellationToken);
+
 			logger.LogInformation("SurrealDB Migration Completed");
 			_migrated = true;
 		}
@@ -407,6 +412,62 @@ public partial class SurrealDatabase
 			await ExecuteAsync(
 				$"UPSERT object_flag:{SanitizeRecordId(f.Name)} SET name = $name, symbol = $symbol, system = true, disabled = false, aliases = $aliases, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
 				parameters, ct);
+		}
+	}
+
+	/// <summary>
+	/// Seed plugin-contributed flags (Phase 2a <see cref="IFlagSource"/>) via the same idempotent UPSERT
+	/// the built-in flag seed uses, so the flags exist after migration on SurrealDB.
+	/// </summary>
+	private async Task SeedPluginFlags(CancellationToken ct)
+	{
+		foreach (var f in PluginFlags)
+		{
+			try
+			{
+				var parameters = new Dictionary<string, object?>
+				{
+					["name"] = f.Name,
+					["symbol"] = f.Symbol,
+					["system"] = f.System,
+					["aliases"] = f.Aliases.ToArray(),
+					["setPerms"] = f.SetPermissions.ToArray(),
+					["unsetPerms"] = f.UnsetPermissions.ToArray(),
+					["typeRestrictions"] = f.TypeRestrictions.ToArray()
+				};
+
+				await ExecuteAsync(
+					$"UPSERT object_flag:{SanitizeRecordId(f.Name)} SET name = $name, symbol = $symbol, system = $system, disabled = false, aliases = $aliases, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
+					parameters, ct);
+
+				logger.LogInformation("Seeded plugin flag '{Flag}' (SurrealDB).", f.Name);
+			}
+			catch (Exception ex)
+			{
+				logger.LogError(ex, "Failed to seed plugin flag '{Flag}' (SurrealDB); continuing.", f.Name);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Run each plugin's SurrealQL migration statements (Phase 2a <see cref="IMigrationSource.SurrealStatements"/>)
+	/// after the built-in seed batch. Each statement is isolated so one failure does not abort the rest.
+	/// </summary>
+	private async Task RunPluginSurrealMigrations(CancellationToken ct)
+	{
+		foreach (var source in PluginMigrationSources)
+		{
+			foreach (var statement in source.SurrealStatements)
+			{
+				try
+				{
+					await ExecuteAsync(statement, ct);
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex, "Plugin SurrealQL migration statement failed (SurrealDB); continuing.");
+				}
+			}
 		}
 	}
 

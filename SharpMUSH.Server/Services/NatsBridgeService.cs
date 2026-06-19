@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 using NATS.Client.Serializers.Json;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Messaging.NATS;
 using SharpMUSH.Server.Hubs;
@@ -32,14 +33,17 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 	private readonly IHubContext<GameHub, IGameHubClient> _hubContext;
 	private readonly NatsOptions _natsOptions;
 	private readonly ILogger<NatsBridgeService> _logger;
+	private readonly PluginCatalog _pluginCatalog;
 
 	public NatsBridgeService(
 		IHubContext<GameHub, IGameHubClient> hubContext,
 		NatsOptions natsOptions,
+		PluginCatalog pluginCatalog,
 		ILogger<NatsBridgeService> logger)
 	{
 		_hubContext = hubContext;
 		_natsOptions = natsOptions;
+		_pluginCatalog = pluginCatalog;
 		_logger = logger;
 	}
 
@@ -61,12 +65,23 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 				_logger.LogInformation("[NatsBridge] Connected. Subscribing to game.output.*, game.room.* and game.scene.*");
 				delay = 2; // reset backoff on successful connect
 
-				var outputTask = SubscribeOutputAsync(nats, stoppingToken);
-				var roomTask   = SubscribeRoomAsync(nats, stoppingToken);
-				var sceneTask  = SubscribeSceneAsync(nats, stoppingToken);
+				var subscriptionTasks = new List<Task>
+				{
+					SubscribeOutputAsync(nats, stoppingToken),
+					SubscribeRoomAsync(nats, stoppingToken),
+					SubscribeSceneAsync(nats, stoppingToken)
+				};
 
-				await Task.WhenAll(outputTask, roomTask, sceneTask);
-				// Both subscription loops exited cleanly (cancellation token triggered).
+				// Phase 2a: run each plugin-contributed bridge subscription (IBridgeSubscriptionSource)
+				// alongside the built-ins. Each is wrapped so a single failing subscription is logged and
+				// cannot tear down the bridge loop (or the other subscriptions).
+				foreach (var source in _pluginCatalog.BridgeSources)
+				{
+					subscriptionTasks.Add(RunBridgeSourceAsync(source, nats, stoppingToken));
+				}
+
+				await Task.WhenAll(subscriptionTasks);
+				// All subscription loops exited cleanly (cancellation token triggered).
 				break;
 			}
 			catch (OperationCanceledException)
@@ -92,6 +107,32 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 				if (nats is not null)
 					await nats.DisposeAsync();
 			}
+		}
+	}
+
+	/// <summary>
+	/// Run one plugin-contributed bridge subscription, isolating any failure so it cannot tear down the
+	/// other subscriptions or the bridge connect loop. Cancellation is allowed to propagate so the
+	/// surrounding <see cref="Task.WhenAll(System.Collections.Generic.IEnumerable{Task})"/> unwinds cleanly.
+	/// </summary>
+	private async Task RunBridgeSourceAsync(
+		SharpMUSH.Library.Plugins.IBridgeSubscriptionSource source,
+		NatsConnection nats,
+		CancellationToken ct)
+	{
+		try
+		{
+			await source.RunAsync(nats, _hubContext, ct);
+		}
+		catch (OperationCanceledException)
+		{
+			// Bridge shutting down — let cancellation propagate to WhenAll.
+			throw;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[NatsBridge] Plugin bridge subscription '{Source}' faulted; it will not be retried until reconnect.",
+				source.GetType().FullName);
 		}
 	}
 
