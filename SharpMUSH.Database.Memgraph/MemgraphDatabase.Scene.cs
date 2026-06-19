@@ -1284,12 +1284,12 @@ public partial class MemgraphDatabase : ISceneService
 	{
 		var result = await session.RunAsync($$"""
 			MATCH (p:{{ScenePoseLabel}} {poseId: $id})-[:{{RelPoseInScene}}]->(s:{{SceneLabel}})
+			MATCH (p)-[:{{RelFirstEdit}}]->(head:{{ScenePoseEditLabel}})
+			MATCH editPath = (head)-[:{{RelNextEdit}}*0..]->(:{{ScenePoseEditLabel}})
 			OPTIONAL MATCH (p)-[:{{RelAuthor}}]->(authorO:Object)
 			OPTIONAL MATCH (p)-[:{{RelOrigin}}]->(originO:Object)
 			OPTIONAL MATCH (p)-[:{{RelCurrentEdit}}]->(cur:{{ScenePoseEditLabel}})
 			OPTIONAL MATCH (cur)-[:{{RelEditor}}]->(editorO:Object)
-			MATCH (p)-[:{{RelFirstEdit}}]->(head:{{ScenePoseEditLabel}})
-			MATCH editPath = (head)-[:{{RelNextEdit}}*0..]->(:{{ScenePoseEditLabel}})
 			RETURN p, s.sceneId AS sceneId,
 			       authorO.key AS authorKey, originO.key AS originKey,
 			       cur, editorO.key AS editorKey,

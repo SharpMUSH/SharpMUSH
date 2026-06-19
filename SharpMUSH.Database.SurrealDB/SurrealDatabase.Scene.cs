@@ -116,7 +116,7 @@ public partial class SurrealDatabase : ISceneService
 		};
 
 		await ExecuteAsync("""
-			CREATE type::thing('scene', $id) SET
+			CREATE scene:⟨$id⟩ SET
 				status = $status,
 				isPublic = false,
 				isTempRoom = false,
@@ -155,9 +155,9 @@ public partial class SurrealDatabase : ISceneService
 
 	public async Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId)
 	{
-		var key = SceneKey(sceneId);
-		var parameters = new Dictionary<string, object?> { ["id"] = new StringRecordId(key) };
-		var response = await ExecuteAsync($"SELECT {SceneFields} FROM $id", parameters);
+		var keySegment = SceneKey(sceneId).Split(':')[1];
+		var parameters = new Dictionary<string, object?> { ["k"] = keySegment };
+		var response = await ExecuteAsync($"SELECT {SceneFields} FROM scene:⟨$k⟩", parameters);
 		var rows = response.GetValue<List<SceneDbRecord>>(0);
 		if (rows is null or { Count: 0 })
 			return new NotFound();
@@ -314,7 +314,7 @@ public partial class SurrealDatabase : ISceneService
 
 		// Create the pose slot.
 		await ExecuteAsync("""
-			CREATE type::thing('scene_pose', $id) SET
+			CREATE scene_pose:⟨$id⟩ SET
 				authorName = $authorName,
 				showAsName = $showAs,
 				originName = $originName,
@@ -338,7 +338,7 @@ public partial class SurrealDatabase : ISceneService
 
 		// Create the first content edit.
 		await ExecuteAsync("""
-			CREATE type::thing('scene_pose_edit', $id) SET
+			CREATE scene_pose_edit:⟨$id⟩ SET
 				content = $content,
 				markup = $markup,
 				editorName = $editorName,
@@ -493,7 +493,7 @@ public partial class SurrealDatabase : ISceneService
 
 		// Create the new edit.
 		await ExecuteAsync("""
-			CREATE type::thing('scene_pose_edit', $id) SET
+			CREATE scene_pose_edit:⟨$id⟩ SET
 				content = $content,
 				markup = $markup,
 				editorName = $editorName,
@@ -666,11 +666,11 @@ public partial class SurrealDatabase : ISceneService
 
 		// At most one member edge per (player, scene): delete then RELATE.
 		await ExecuteAsync(
-			"DELETE scene_member WHERE in = object:$pk AND out = type::thing('scene', $sid)",
+			"DELETE scene_member WHERE in = object:$pk AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
 
 		await ExecuteAsync(
-			"RELATE object:$pk->scene_member->type::thing('scene', $sid) SET " +
+			"RELATE object:$pk->scene_member->scene:⟨$sid⟩ SET " +
 			"role = $role, showAs = '', isCurrent = false, grantedAt = $now, memberName = $name",
 			new Dictionary<string, object?>
 			{
@@ -696,7 +696,7 @@ public partial class SurrealDatabase : ISceneService
 
 		var sceneKey = SceneKey(sceneId);
 		await ExecuteAsync(
-			"DELETE scene_member WHERE in = object:$pk AND out = type::thing('scene', $sid)",
+			"DELETE scene_member WHERE in = object:$pk AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
 
 		return new OkNone();
@@ -709,7 +709,7 @@ public partial class SurrealDatabase : ISceneService
 			return new NotFound();
 
 		var sceneKey = SceneKey(sceneId);
-		var where = "out = type::thing('scene', $sid)";
+		var where = "out = scene:⟨$sid⟩";
 		var parameters = new Dictionary<string, object?> { ["sid"] = sceneKey.Split(':')[1] };
 		if (!string.IsNullOrWhiteSpace(role))
 		{
@@ -738,7 +738,7 @@ public partial class SurrealDatabase : ISceneService
 		var sceneKey = SceneKey(sceneId);
 		var response = await ExecuteAsync(
 			"SELECT role, showAs, isCurrent, grantedAt, memberName, in.key AS memberKey FROM scene_member " +
-			"WHERE in = object:$pk AND out = type::thing('scene', $sid)",
+			"WHERE in = object:$pk AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
 		var rows = response.GetValue<List<SceneMemberEdgeRecord>>(0);
 		if (rows is null or { Count: 0 })
@@ -767,7 +767,7 @@ public partial class SurrealDatabase : ISceneService
 
 		var sceneKey = SceneKey(sceneId);
 		await ExecuteAsync(
-			"UPDATE scene_member SET isCurrent = true WHERE in = object:$pk AND out = type::thing('scene', $sid)",
+			"UPDATE scene_member SET isCurrent = true WHERE in = object:$pk AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
 
 		return new OkNone();
@@ -798,7 +798,7 @@ public partial class SurrealDatabase : ISceneService
 		var playerKey = DbRefToKey(playerDbref);
 		var sceneKey = SceneKey(sceneId);
 		await ExecuteAsync(
-			"UPDATE scene_member SET showAs = $v WHERE in = object:$pk AND out = type::thing('scene', $sid)",
+			"UPDATE scene_member SET showAs = $v WHERE in = object:$pk AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?>
 			{
 				["v"] = showAs ?? "",
@@ -820,7 +820,7 @@ public partial class SurrealDatabase : ISceneService
 		{
 			var newId = Guid.NewGuid().ToString("N");
 			await ExecuteAsync("""
-				CREATE type::thing('scene_plot', $id) SET
+				CREATE scene_plot:⟨$id⟩ SET
 					title = $title, description = $description,
 					ownerName = $ownerName, createdAt = $now, updatedAt = $now
 				""",
@@ -886,10 +886,10 @@ public partial class SurrealDatabase : ISceneService
 		var sceneKey = SceneKey(sceneId).Split(':')[1];
 		// Idempotent: clear any existing edge first.
 		await ExecuteAsync(
-			"DELETE scene_plot_includes WHERE in = type::thing('scene_plot', $pid) AND out = type::thing('scene', $sid)",
+			"DELETE scene_plot_includes WHERE in = scene_plot:⟨$pid⟩ AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pid"] = plotKey, ["sid"] = sceneKey });
 		await ExecuteAsync(
-			"RELATE type::thing('scene_plot', $pid)->scene_plot_includes->type::thing('scene', $sid)",
+			"RELATE scene_plot:⟨$pid⟩->scene_plot_includes->scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pid"] = plotKey, ["sid"] = sceneKey });
 
 		return new OkNone();
@@ -907,7 +907,7 @@ public partial class SurrealDatabase : ISceneService
 		var plotKey = PlotKey(plotId).Split(':')[1];
 		var sceneKey = SceneKey(sceneId).Split(':')[1];
 		await ExecuteAsync(
-			"DELETE scene_plot_includes WHERE in = type::thing('scene_plot', $pid) AND out = type::thing('scene', $sid)",
+			"DELETE scene_plot_includes WHERE in = scene_plot:⟨$pid⟩ AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pid"] = plotKey, ["sid"] = sceneKey });
 
 		return new OkNone();
@@ -1025,14 +1025,14 @@ public partial class SurrealDatabase : ISceneService
 		if (key is null)
 			return;
 		await ExecuteAsync(
-			$"RELATE type::thing('scene', $sid)->{edge}->object:$ok",
+			$"RELATE scene:⟨$sid⟩->{edge}->object:$ok",
 			new Dictionary<string, object?> { ["sid"] = sceneId, ["ok"] = key.Value });
 	}
 
 	private async Task ReplaceSceneObjectEdgeAsync(string edge, string sceneKey, string? objectDbref)
 	{
 		var sid = sceneKey.Split(':')[1];
-		await ExecuteAsync($"DELETE {edge} WHERE in = type::thing('scene', $sid)",
+		await ExecuteAsync($"DELETE {edge} WHERE in = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["sid"] = sid });
 		await RelateSceneToObjectAsync(edge, sid, objectDbref);
 	}
@@ -1042,7 +1042,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		var sid = sceneKey.Split(':')[1];
 		var response = await ExecuteAsync(
-			$"SELECT out.key AS key FROM {edge} WHERE in = type::thing('scene', $sid) LIMIT 1",
+			$"SELECT out.key AS key FROM {edge} WHERE in = scene:⟨$sid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["sid"] = sid });
 		var rows = response.GetValue<List<SceneKeyRow>>(0);
 		if (rows is null or { Count: 0 } || rows[0].key is null)
@@ -1057,14 +1057,14 @@ public partial class SurrealDatabase : ISceneService
 		if (key is null)
 			return;
 		await ExecuteAsync(
-			$"RELATE type::thing('scene_pose', $pid)->{edge}->object:$ok",
+			$"RELATE scene_pose:⟨$pid⟩->{edge}->object:$ok",
 			new Dictionary<string, object?> { ["pid"] = poseId, ["ok"] = key.Value });
 	}
 
 	private async Task ReplacePoseObjectEdgeAsync(string edge, string poseKey, string? objectDbref)
 	{
 		var pid = poseKey.Split(':')[1];
-		await ExecuteAsync($"DELETE {edge} WHERE in = type::thing('scene_pose', $pid)",
+		await ExecuteAsync($"DELETE {edge} WHERE in = scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		await RelatePoseToObjectAsync(edge, pid, objectDbref);
 	}
@@ -1073,7 +1073,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		var pid = poseKey.Split(':')[1];
 		var response = await ExecuteAsync(
-			$"SELECT out.key AS key FROM {edge} WHERE in = type::thing('scene_pose', $pid) LIMIT 1",
+			$"SELECT out.key AS key FROM {edge} WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var rows = response.GetValue<List<SceneKeyRow>>(0);
 		if (rows is null or { Count: 0 } || rows[0].key is null)
@@ -1087,7 +1087,7 @@ public partial class SurrealDatabase : ISceneService
 		if (key is null)
 			return;
 		await ExecuteAsync(
-			$"RELATE type::thing('scene_pose_edit', $eid)->{edge}->object:$ok",
+			$"RELATE scene_pose_edit:⟨$eid⟩->{edge}->object:$ok",
 			new Dictionary<string, object?> { ["eid"] = editId, ["ok"] = key.Value });
 	}
 
@@ -1095,7 +1095,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		var eid = editKey.Split(':')[1];
 		var response = await ExecuteAsync(
-			$"SELECT out.key AS key FROM {edge} WHERE in = type::thing('scene_pose_edit', $eid) LIMIT 1",
+			$"SELECT out.key AS key FROM {edge} WHERE in = scene_pose_edit:⟨$eid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["eid"] = eid });
 		var rows = response.GetValue<List<SceneKeyRow>>(0);
 		if (rows is null or { Count: 0 } || rows[0].key is null)
@@ -1105,13 +1105,13 @@ public partial class SurrealDatabase : ISceneService
 
 	private async Task ReplacePlotObjectEdgeAsync(string plotIdSegment, string? objectDbref)
 	{
-		await ExecuteAsync("DELETE scene_plot_owner WHERE in = type::thing('scene_plot', $pid)",
+		await ExecuteAsync("DELETE scene_plot_owner WHERE in = scene_plot:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = plotIdSegment });
 		var key = DbRefToKey(objectDbref);
 		if (key is null)
 			return;
 		await ExecuteAsync(
-			"RELATE type::thing('scene_plot', $pid)->scene_plot_owner->object:$ok",
+			"RELATE scene_plot:⟨$pid⟩->scene_plot_owner->object:$ok",
 			new Dictionary<string, object?> { ["pid"] = plotIdSegment, ["ok"] = key.Value });
 	}
 
@@ -1119,7 +1119,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		var pid = plotKey.Split(':')[1];
 		var response = await ExecuteAsync(
-			"SELECT out.key AS key FROM scene_plot_owner WHERE in = type::thing('scene_plot', $pid) LIMIT 1",
+			"SELECT out.key AS key FROM scene_plot_owner WHERE in = scene_plot:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var rows = response.GetValue<List<SceneKeyRow>>(0);
 		if (rows is null or { Count: 0 } || rows[0].key is null)
@@ -1132,7 +1132,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task RelatePoseToSceneAsync(string poseId, string sceneKey)
 	{
 		await ExecuteAsync(
-			"RELATE type::thing('scene_pose', $pid)->scene_pose_in_scene->type::thing('scene', $sid)",
+			"RELATE scene_pose:⟨$pid⟩->scene_pose_in_scene->scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pid"] = poseId, ["sid"] = sceneKey.Split(':')[1] });
 	}
 
@@ -1140,7 +1140,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		var pid = poseKey.Split(':')[1];
 		var response = await ExecuteAsync(
-			"SELECT VALUE meta::id(out) FROM scene_pose_in_scene WHERE in = type::thing('scene_pose', $pid) LIMIT 1",
+			"SELECT VALUE meta::id(out) FROM scene_pose_in_scene WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var ids = response.GetValue<List<string>>(0);
 		if (ids is null or { Count: 0 })
@@ -1158,22 +1158,22 @@ public partial class SurrealDatabase : ISceneService
 		{
 			// Empty chain: this is also the first pose.
 			await ExecuteAsync(
-				"RELATE type::thing('scene', $sid)->scene_first_pose->type::thing('scene_pose', $pid)",
+				"RELATE scene:⟨$sid⟩->scene_first_pose->scene_pose:⟨$pid⟩",
 				new Dictionary<string, object?> { ["sid"] = sid, ["pid"] = poseId });
 		}
 		else
 		{
 			// Link last -> new via pose_next.
 			await ExecuteAsync(
-				"RELATE type::thing('scene_pose', $last)->scene_pose_next->type::thing('scene_pose', $pid)",
+				"RELATE scene_pose:⟨$last⟩->scene_pose_next->scene_pose:⟨$pid⟩",
 				new Dictionary<string, object?> { ["last"] = lastPoseKey.Split(':')[1], ["pid"] = poseId });
 		}
 
 		// Repoint last_pose -> new.
-		await ExecuteAsync("DELETE scene_last_pose WHERE in = type::thing('scene', $sid)",
+		await ExecuteAsync("DELETE scene_last_pose WHERE in = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["sid"] = sid });
 		await ExecuteAsync(
-			"RELATE type::thing('scene', $sid)->scene_last_pose->type::thing('scene_pose', $pid)",
+			"RELATE scene:⟨$sid⟩->scene_last_pose->scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["sid"] = sid, ["pid"] = poseId });
 	}
 
@@ -1199,7 +1199,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		var pid = poseKey.Split(':')[1];
 		var response = await ExecuteAsync(
-			"SELECT VALUE meta::id(out) FROM scene_pose_next WHERE in = type::thing('scene_pose', $pid) LIMIT 1",
+			"SELECT VALUE meta::id(out) FROM scene_pose_next WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var ids = response.GetValue<List<string>>(0);
 		if (ids is null or { Count: 0 })
@@ -1212,7 +1212,7 @@ public partial class SurrealDatabase : ISceneService
 		// The predecessor is whichever pose has pose_next -> poseKey, scoped to this scene's chain.
 		var pid = poseKey.Split(':')[1];
 		var response = await ExecuteAsync(
-			"SELECT VALUE meta::id(in) FROM scene_pose_next WHERE out = type::thing('scene_pose', $pid) LIMIT 1",
+			"SELECT VALUE meta::id(in) FROM scene_pose_next WHERE out = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var ids = response.GetValue<List<string>>(0);
 		if (ids is null or { Count: 0 })
@@ -1229,36 +1229,36 @@ public partial class SurrealDatabase : ISceneService
 		var next = await ResolvePoseNextAsync(poseKey);
 
 		// Drop the pose's outgoing/incoming next edges.
-		await ExecuteAsync("DELETE scene_pose_next WHERE in = type::thing('scene_pose', $pid)",
+		await ExecuteAsync("DELETE scene_pose_next WHERE in = scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid });
-		await ExecuteAsync("DELETE scene_pose_next WHERE out = type::thing('scene_pose', $pid)",
+		await ExecuteAsync("DELETE scene_pose_next WHERE out = scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid });
 
 		// Stitch prev -> next.
 		if (prev is not null && next is not null)
 			await ExecuteAsync(
-				"RELATE type::thing('scene_pose', $a)->scene_pose_next->type::thing('scene_pose', $b)",
+				"RELATE scene_pose:⟨$a⟩->scene_pose_next->scene_pose:⟨$b⟩",
 				new Dictionary<string, object?> { ["a"] = prev.Split(':')[1], ["b"] = next.Split(':')[1] });
 
 		// Fix first_pose if we removed the head.
 		if (prev is null)
 		{
-			await ExecuteAsync("DELETE scene_first_pose WHERE in = type::thing('scene', $sid)",
+			await ExecuteAsync("DELETE scene_first_pose WHERE in = scene:⟨$sid⟩",
 				new Dictionary<string, object?> { ["sid"] = sid });
 			if (next is not null)
 				await ExecuteAsync(
-					"RELATE type::thing('scene', $sid)->scene_first_pose->type::thing('scene_pose', $b)",
+					"RELATE scene:⟨$sid⟩->scene_first_pose->scene_pose:⟨$b⟩",
 					new Dictionary<string, object?> { ["sid"] = sid, ["b"] = next.Split(':')[1] });
 		}
 
 		// Fix last_pose if we removed the tail.
 		if (next is null)
 		{
-			await ExecuteAsync("DELETE scene_last_pose WHERE in = type::thing('scene', $sid)",
+			await ExecuteAsync("DELETE scene_last_pose WHERE in = scene:⟨$sid⟩",
 				new Dictionary<string, object?> { ["sid"] = sid });
 			if (prev is not null)
 				await ExecuteAsync(
-					"RELATE type::thing('scene', $sid)->scene_last_pose->type::thing('scene_pose', $a)",
+					"RELATE scene:⟨$sid⟩->scene_last_pose->scene_pose:⟨$a⟩",
 					new Dictionary<string, object?> { ["sid"] = sid, ["a"] = prev.Split(':')[1] });
 		}
 	}
@@ -1273,14 +1273,14 @@ public partial class SurrealDatabase : ISceneService
 		{
 			// Move to front.
 			var oldHead = await ResolveStructuralPointerAsync("scene_first_pose", "scene", sid);
-			await ExecuteAsync("DELETE scene_first_pose WHERE in = type::thing('scene', $sid)",
+			await ExecuteAsync("DELETE scene_first_pose WHERE in = scene:⟨$sid⟩",
 				new Dictionary<string, object?> { ["sid"] = sid });
 			await ExecuteAsync(
-				"RELATE type::thing('scene', $sid)->scene_first_pose->type::thing('scene_pose', $pid)",
+				"RELATE scene:⟨$sid⟩->scene_first_pose->scene_pose:⟨$pid⟩",
 				new Dictionary<string, object?> { ["sid"] = sid, ["pid"] = pid });
 			if (oldHead is not null)
 				await ExecuteAsync(
-					"RELATE type::thing('scene_pose', $a)->scene_pose_next->type::thing('scene_pose', $b)",
+					"RELATE scene_pose:⟨$a⟩->scene_pose_next->scene_pose:⟨$b⟩",
 					new Dictionary<string, object?> { ["a"] = pid, ["b"] = oldHead.Split(':')[1] });
 			else
 				// Chain was empty: pose is also the tail.
@@ -1292,16 +1292,16 @@ public partial class SurrealDatabase : ISceneService
 		var afterNext = await ResolvePoseNextAsync(afterKey);
 
 		// after -> pose
-		await ExecuteAsync("DELETE scene_pose_next WHERE in = type::thing('scene_pose', $a)",
+		await ExecuteAsync("DELETE scene_pose_next WHERE in = scene_pose:⟨$a⟩",
 			new Dictionary<string, object?> { ["a"] = afterId });
 		await ExecuteAsync(
-			"RELATE type::thing('scene_pose', $a)->scene_pose_next->type::thing('scene_pose', $b)",
+			"RELATE scene_pose:⟨$a⟩->scene_pose_next->scene_pose:⟨$b⟩",
 			new Dictionary<string, object?> { ["a"] = afterId, ["b"] = pid });
 
 		if (afterNext is not null)
 			// pose -> afterNext
 			await ExecuteAsync(
-				"RELATE type::thing('scene_pose', $a)->scene_pose_next->type::thing('scene_pose', $b)",
+				"RELATE scene_pose:⟨$a⟩->scene_pose_next->scene_pose:⟨$b⟩",
 				new Dictionary<string, object?> { ["a"] = pid, ["b"] = afterNext.Split(':')[1] });
 		else
 			// after was the tail: pose becomes the new tail.
@@ -1310,10 +1310,10 @@ public partial class SurrealDatabase : ISceneService
 
 	private async Task RepointLastPoseAsync(string sceneIdSegment, string poseIdSegment)
 	{
-		await ExecuteAsync("DELETE scene_last_pose WHERE in = type::thing('scene', $sid)",
+		await ExecuteAsync("DELETE scene_last_pose WHERE in = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["sid"] = sceneIdSegment });
 		await ExecuteAsync(
-			"RELATE type::thing('scene', $sid)->scene_last_pose->type::thing('scene_pose', $pid)",
+			"RELATE scene:⟨$sid⟩->scene_last_pose->scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["sid"] = sceneIdSegment, ["pid"] = poseIdSegment });
 	}
 
@@ -1321,7 +1321,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task<string?> ResolveStructuralPointerAsync(string edge, string fromTable, string fromKeySegment)
 	{
 		var response = await ExecuteAsync(
-			$"SELECT VALUE meta::id(out) FROM {edge} WHERE in = type::thing('{fromTable}', $k) LIMIT 1",
+			$"SELECT VALUE meta::id(out) FROM {edge} WHERE in = {fromTable}:⟨$k⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["k"] = fromKeySegment });
 		var ids = response.GetValue<List<string>>(0);
 		if (ids is null or { Count: 0 })
@@ -1334,14 +1334,14 @@ public partial class SurrealDatabase : ISceneService
 	private async Task RelatePoseToEditAsync(string edge, string poseId, string editId)
 	{
 		await ExecuteAsync(
-			$"RELATE type::thing('scene_pose', $pid)->{edge}->type::thing('scene_pose_edit', $eid)",
+			$"RELATE scene_pose:⟨$pid⟩->{edge}->scene_pose_edit:⟨$eid⟩",
 			new Dictionary<string, object?> { ["pid"] = poseId, ["eid"] = editId });
 	}
 
 	private async Task RelateEditToEditAsync(string edge, string fromEditKey, string toEditId)
 	{
 		await ExecuteAsync(
-			$"RELATE type::thing('scene_pose_edit', $a)->{edge}->type::thing('scene_pose_edit', $b)",
+			$"RELATE scene_pose_edit:⟨$a⟩->{edge}->scene_pose_edit:⟨$b⟩",
 			new Dictionary<string, object?> { ["a"] = fromEditKey.Split(':')[1], ["b"] = toEditId });
 	}
 
@@ -1350,7 +1350,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		var pid = poseKey.Split(':')[1];
 		var response = await ExecuteAsync(
-			$"SELECT VALUE meta::id(out) FROM {edge} WHERE in = type::thing('scene_pose', $pid) LIMIT 1",
+			$"SELECT VALUE meta::id(out) FROM {edge} WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var ids = response.GetValue<List<string>>(0);
 		if (ids is null or { Count: 0 })
@@ -1361,10 +1361,10 @@ public partial class SurrealDatabase : ISceneService
 	private async Task RepointEditPointerAsync(string edge, string poseKey, string editId)
 	{
 		var pid = poseKey.Split(':')[1];
-		await ExecuteAsync($"DELETE {edge} WHERE in = type::thing('scene_pose', $pid)",
+		await ExecuteAsync($"DELETE {edge} WHERE in = scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		await ExecuteAsync(
-			$"RELATE type::thing('scene_pose', $pid)->{edge}->type::thing('scene_pose_edit', $eid)",
+			$"RELATE scene_pose:⟨$pid⟩->{edge}->scene_pose_edit:⟨$eid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid, ["eid"] = editId });
 	}
 
@@ -1392,7 +1392,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		var eid = editKey.Split(':')[1];
 		var response = await ExecuteAsync(
-			"SELECT VALUE meta::id(out) FROM scene_next_edit WHERE in = type::thing('scene_pose_edit', $eid) LIMIT 1",
+			"SELECT VALUE meta::id(out) FROM scene_next_edit WHERE in = scene_pose_edit:⟨$eid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["eid"] = eid });
 		var ids = response.GetValue<List<string>>(0);
 		if (ids is null or { Count: 0 })
@@ -1415,16 +1415,16 @@ public partial class SurrealDatabase : ISceneService
 		foreach (var editKey in forward)
 		{
 			var eid = editKey.Split(':')[1];
-			await ExecuteAsync("DELETE scene_next_edit WHERE in = type::thing('scene_pose_edit', $eid)",
+			await ExecuteAsync("DELETE scene_next_edit WHERE in = scene_pose_edit:⟨$eid⟩",
 				new Dictionary<string, object?> { ["eid"] = eid });
-			await ExecuteAsync("DELETE scene_edit_editor WHERE in = type::thing('scene_pose_edit', $eid)",
+			await ExecuteAsync("DELETE scene_edit_editor WHERE in = scene_pose_edit:⟨$eid⟩",
 				new Dictionary<string, object?> { ["eid"] = eid });
-			await ExecuteAsync("DELETE type::thing('scene_pose_edit', $eid)",
+			await ExecuteAsync("DELETE scene_pose_edit:⟨$eid⟩",
 				new Dictionary<string, object?> { ["eid"] = eid });
 		}
 
 		// Drop the now-dangling next edge off the surviving tail.
-		await ExecuteAsync("DELETE scene_next_edit WHERE in = type::thing('scene_pose_edit', $eid)",
+		await ExecuteAsync("DELETE scene_next_edit WHERE in = scene_pose_edit:⟨$eid⟩",
 			new Dictionary<string, object?> { ["eid"] = fromEditKey.Split(':')[1] });
 	}
 
