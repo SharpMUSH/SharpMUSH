@@ -276,6 +276,10 @@ public class Startup(
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 
+		// C# plugin loader: discovers plugins/ DLLs at boot and registers their [SharpCommand]/[SharpFunction]
+		// into the live command/function libraries with IsSystem=true (see PluginBootstrapService below).
+		services.AddSingleton<IPluginManager, Implementation.Services.PluginManager>();
+
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
 		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();
 		services.AddSingleton<ConfigurationReloadService>();
@@ -504,6 +508,9 @@ public class Startup(
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
+		// Load C# plugins before softcode packages/startup attributes run, so plugin commands/functions
+		// are present in the libraries when later bootstrap stages execute.
+		services.AddHostedService<Services.PluginBootstrapService>();
 		services.AddHostedService<Services.DefaultPackagesBootstrapService>();
 		services.AddHostedService<Services.DefaultApplicationsBootstrapService>();
 		// Run @STARTUP on all objects at boot — registered after the other bootstrap services so

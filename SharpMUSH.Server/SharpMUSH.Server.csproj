@@ -37,6 +37,11 @@
     <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
 		<PackageReference Include="TelnetNegotiationCore" Version="2.5.0" />
+		<!-- FSharp.Core is a runtime transitive (via TelnetNegotiationCore) the engine never JITs, so it is
+		     normally trimmed from output. The McMaster plugin loader eagerly walks the shared SharpMUSH.Library
+		     reference closure and resolves each referenced assembly against the host's default load context,
+		     so FSharp.Core must be present beside the host binary for plugin loading to succeed. -->
+		<PackageReference Include="FSharp.Core" Version="10.1.203" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.7" />
 		<PackageReference Include="Testcontainers" Version="4.11.0" />
 		<PackageReference Include="Testcontainers.ArangoDb" Version="4.11.0" />
