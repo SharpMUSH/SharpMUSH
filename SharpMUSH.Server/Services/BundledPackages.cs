@@ -24,6 +24,7 @@ public static class BundledPackages
 		new("http-handler", RequiresHttpHandler: true),
 		new("profile-handler", RequiresHttpHandler: true),
 		new("common-functions", RequiresHttpHandler: false),
+		new("scene", RequiresHttpHandler: false),
 	];
 
 	/// <summary>The raw YAML of one bundled package manifest (embedded resource).</summary>

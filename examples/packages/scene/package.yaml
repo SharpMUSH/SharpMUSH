@@ -1,0 +1,194 @@
+format: 1
+package: scene
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [scene, rp, logging, capture, hooks]
+requires_server: ">=0.1"
+
+# Create mode: a single owned WIZARD thing carries the capture hooks and the
+# +scene/* verbs. It MUST be WIZARD — it is the @hook/override target, runs the
+# wizard-only @scene / @hook commands, and AINSTALL/STARTUP run as this object
+# (so %! / me = this object and self-execution of the wizard-locked @hook works).
+#
+# AINSTALL runs once after first install; STARTUP runs on every boot. Both
+# (re-)establish the three OVERRIDE hooks idempotently — immediate on install,
+# re-set on each boot (the hook registry is rebuilt from softcode policy).
+#
+# Capture is the ONLY pose-recording path: an @hook/override on POSE/SAY/SEMIPOSE
+# reproduces the built-in room emit EXACTLY, then records the pose via the
+# @scene/addpose COMMAND. @EMIT is deliberately NOT hooked. Reads use the
+# scene… functions; all data-writes use @scene/* commands (never side-effect fns).
+#
+# Attribute organization follows the project FUN`/CMD`/DATA`/INCLUDE` tree
+# convention (see the common-functions and http-handler packages):
+#   DATA`*     — config/constant knobs (reads, replaces a SceneOptions config)
+#   FUN`*      — pure reads / guards (called via u())
+#   CMD`*      — player verbs + capture $-commands (writes go through @scene/*)
+#   INCLUDE`*  — shared command tails composed via @include (keep attrs small)
+objects:
+  - ref: logger
+    type: thing
+    name: Scene Logger
+    flags: [WIZARD]
+    attributes:
+      # ---- policy knobs (read by the verbs; replaces a SceneOptions config) ----
+      DATA`CAPTURE: |-
+        1
+      DATA`DEFAULT_STATUS: |-
+        new
+
+      # ---- owner / wizard guard -------------------------------------------------
+      FUN`OWNS: |-
+        or(orflags(%0,Wz),strmatch(scene(%1,owner),%0))
+
+      # ---- shared capture tail (composed via @include) --------------------------
+      # %0 = <source token> (pose/say/semipose); %1 = <rendered content line>.
+      # Each CMD`CAPTURE`* reproduces its type-specific built-in emit, then calls
+      # @include %!/INCLUDE`CAPTURE=<source>,<content>. This tail (a) @asserts a
+      # scene is active in this room AND the poser is focused on it, then (b)
+      # records the rendered line with @scene/addpose (explicit author %#).
+      # The @assert halts the command list AFTER the emit already fired, so a
+      # pose outside any scene behaves exactly like the un-hooked built-in.
+      INCLUDE`CAPTURE: |-
+        @assert words(scenewhere(%L));
+        @assert strmatch(scenefocus(%#),scenewhere(%L));
+        @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,%0,,%1
+
+      # ---- capture hooks --------------------------------------------------------
+      # Each hook reproduces the built-in room emit byte-for-byte, then delegates
+      # the assert+addpose tail to INCLUDE`CAPTURE.
+
+      # Built-in POSE (MoreCommands.Pose) emits: "<name> <message>" to the room.
+      CMD`CAPTURE`POSE: |-
+        $pose *:
+          @emit [name(%#)] %0;
+          @include %!/INCLUDE`CAPTURE=pose,[name(%#)] %0
+
+      # Built-in SAY (MoreCommands.Say) emits "You say, \"<msg>\"" to the speaker
+      # and "<name> says, \"<msg>\"" to everyone else in the room.
+      CMD`CAPTURE`SAY: |-
+        $say *:
+          @pemit %#=You say, "%0";
+          @oemit %L/%#=[name(%#)] says, "%0";
+          @include %!/INCLUDE`CAPTURE=say,[name(%#)] says\, "%0"
+
+      # Built-in SEMIPOSE (MoreCommands.SemiPose) emits "<name><message>" (no space).
+      CMD`CAPTURE`SEMI: |-
+        $;*:
+          @emit [name(%#)]%0;
+          @include %!/INCLUDE`CAPTURE=semipose,[name(%#)]%0
+
+      # ---- create / lifecycle ---------------------------------------------------
+      CMD`CREATE: |-
+        $+scene/create *:
+          &MY.SID %#=[setr(0,[scenecreate(%L,%#,%0)])];
+          @scene/member %q0/owner=%#;
+          @scene/focus %#=%q0;
+          @scene/set %q0/status=[get(%!/DATA`DEFAULT_STATUS)];
+          @pemit %#=Scene %q0 created and focused.
+
+      CMD`START: |-
+        $+scene/start:
+          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
+          @scene/set [scenefocus(%#)]/status=active;
+          @pemit %#=Scene is now active.
+
+      CMD`PAUSE: |-
+        $+scene/pause:
+          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
+          @scene/set [scenefocus(%#)]/status=paused;
+          @pemit %#=Scene paused.
+
+      CMD`FINISH: |-
+        $+scene/finish:
+          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
+          @scene/set [scenefocus(%#)]/status=finished;
+          @scene/focus %#=;
+          @pemit %#=Scene finished.
+
+      # ---- membership / RSVP / focus --------------------------------------------
+      CMD`JOIN: |-
+        $+scene/join *:
+          @scene/member %0/participant=%#;
+          @scene/focus %#=%0;
+          @pemit %#=Joined and focused on scene %0.
+
+      CMD`LEAVE: |-
+        $+scene/leave:
+          &MY.SID %#=[setr(0,[scenefocus(%#)])];
+          @scene/focus %#=;
+          @@ no-trace exit: if they authored no poses, drop the membership entirely
+          @if not(words(sceneposes(%q0,%#)))={@scene/unmember %q0=%#};
+          @pemit %#=Left the scene.
+
+      CMD`TAG: |-
+        $+scene/tag *:
+          @scene/member %0/attending=%#;
+          @pemit %#=RSVP'd to scene %0.
+
+      CMD`UNTAG: |-
+        $+scene/untag *:
+          @scene/unmember %0=%#;
+          @pemit %#=Removed RSVP from scene %0.
+
+      CMD`SHOWAS: |-
+        $+scene/showas *:
+          @scene/showas [scenefocus(%#)]/%#=%0;
+          @pemit %#=Future poses show as: %0
+
+      # ---- edit your own poses --------------------------------------------------
+      # %1 is find^^^replace; author-only is enforced by @scene/editpose.
+      CMD`EDIT: |-
+        $+scene/edit *=*:
+          @scene/editpose %0=%#,[edit(scenepose(scenefocus(%#),%0,content),before(%1,^^^),after(%1,^^^))]
+
+      CMD`UNDO: |-
+        $+scene/undo *:
+          @scene/undo %0
+
+      CMD`REDO: |-
+        $+scene/redo *:
+          @scene/redo %0
+
+      CMD`DELETE: |-
+        $+scene/delete *:
+          @scene/delete %0
+
+      CMD`MOVE: |-
+        $+scene/move *=*:
+          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
+          @scene/move %0=%1
+
+      # ---- visibility -----------------------------------------------------------
+      CMD`PUBLIC: |-
+        $+scene/public:
+          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
+          @scene/set [scenefocus(%#)]/public=1;
+          @pemit %#=Scene is now public.
+
+      CMD`PRIVATE: |-
+        $+scene/private:
+          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
+          @scene/set [scenefocus(%#)]/public=0;
+          @pemit %#=Scene is now private.
+
+      # ---- viewing --------------------------------------------------------------
+      CMD`WHO: |-
+        $+scene/who *:
+          @pemit %#=Cast: [scenecast(%0)]%r[iter(scenemembers(%0),[name(##)] ([scenemember(%0,##,role)]))]
+
+      CMD`RECAP: |-
+        $+scene/recap *:
+          @pemit %#=[iter(sceneposes(scenefocus(%#),,%0),scenepose(scenefocus(%#),##,content),@,%r)]
+
+      # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
+      # The @hook RHS is RSArgs-split on commas, so the <object>,<attr> pair is
+      # brace-wrapped to keep it a single argument (otherwise the attr is dropped
+      # and the hook defaults to cmd.override).
+      AINSTALL: |-
+        @hook/override POSE={%!,CMD`CAPTURE`POSE}; @hook/override SAY={%!,CMD`CAPTURE`SAY}; @hook/override SEMIPOSE={%!,CMD`CAPTURE`SEMI}
+      STARTUP: |-
+        @hook/override POSE={%!,CMD`CAPTURE`POSE}; @hook/override SAY={%!,CMD`CAPTURE`SAY}; @hook/override SEMIPOSE={%!,CMD`CAPTURE`SEMI}

@@ -94,6 +94,10 @@
       <Link>BundledPackages\common-functions.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.common-functions.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\scene\package.yaml">
+      <Link>BundledPackages\scene.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.scene.package.yaml</LogicalName>
+    </EmbeddedResource>
     <PackageReference Include="SurrealDb.Embedded.InMemory" Version="0.9.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
   </ItemGroup>

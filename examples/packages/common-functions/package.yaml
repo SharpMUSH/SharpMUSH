@@ -16,21 +16,21 @@ objects:
     type: thing
     name: Common Functions
     attributes:
-      # Rule sized to the caller's client width (width(%#) defaults to 78 when the
-      # client doesn't report one), with an optional centered title. %0 = title,
-      # %1 = explicit width override. A title is padded with spaces; fill is '='.
-      HEADER: |-
+      # Functions live under the FUN` attribute tree (leaves inherit the branch's flags/perms).
+      # Each rule is sized to the caller's client width (width(%#) defaults to 78 when the client
+      # doesn't report one), with an optional centered title. %0 = title, %1 = width override.
+      FUN`HEADER: |-
         center(if(strlen(%0),[space(1)]%0[space(1)],),firstof(%1,width(%#)),=)
-      # Same as HEADER, drawn at the bottom of a block.
-      FOOTER: |-
+      # Same as the header, drawn at the bottom of a block.
+      FUN`FOOTER: |-
         center(if(strlen(%0),[space(1)]%0[space(1)],),firstof(%1,width(%#)),=)
       # Lighter divider filled with '-'.
-      LINE: |-
+      FUN`LINE: |-
         center(if(strlen(%0),[space(1)]%0[space(1)],),firstof(%1,width(%#)),-)
-      # Runs once, immediately after the first install: register the three
-      # global user functions, each evaluating an attribute on this object.
+      # Runs once after first install: register the three global user functions, each bound to its
+      # FUN` leaf on this object (data-writes go through the @function command, per the style guide).
       AINSTALL: |-
-        @function header=%!,HEADER,0,2; @function footer=%!,FOOTER,0,2; @function line=%!,LINE,0,2
+        @function header=%!,FUN`HEADER,0,2; @function footer=%!,FUN`FOOTER,0,2; @function line=%!,FUN`LINE,0,2
       # Runs on every server boot: re-establish the in-memory registrations.
       STARTUP: |-
-        @function header=%!,HEADER,0,2; @function footer=%!,FOOTER,0,2; @function line=%!,LINE,0,2
+        @function header=%!,FUN`HEADER,0,2; @function footer=%!,FUN`FOOTER,0,2; @function line=%!,FUN`LINE,0,2

@@ -35,9 +35,9 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 		// The UI-helper softcode attributes are managed on that object.
 		var attrs = (await Registry.GetManagedAttributesAsync("common-functions"))
 			.Select(m => m.Attribute).ToList();
-		await Assert.That(attrs).Contains("HEADER");
-		await Assert.That(attrs).Contains("FOOTER");
-		await Assert.That(attrs).Contains("LINE");
+		await Assert.That(attrs).Contains("FUN`HEADER");
+		await Assert.That(attrs).Contains("FUN`FOOTER");
+		await Assert.That(attrs).Contains("FUN`LINE");
 		await Assert.That(attrs).Contains("AINSTALL");
 		await Assert.That(attrs).Contains("STARTUP");
 	}
