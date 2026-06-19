@@ -40,6 +40,7 @@ using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
@@ -294,6 +295,10 @@ public class Startup(
 		// C# plugin loader: discovers plugins/ DLLs at boot and registers their [SharpCommand]/[SharpFunction]
 		// into the live command/function libraries with IsSystem=true (see PluginBootstrapService below).
 		services.AddSingleton<IPluginManager, Implementation.Services.PluginManager>();
+		// Phase 2b engine-extension hooks: the dispatcher the engine consults at its command/object seams,
+		// reading the hook buckets the PluginCatalog collected. (Connection hooks are wired as
+		// IConnectionService.ListenState listeners by PluginBootstrapService.)
+		services.AddSingleton<IPluginHookDispatcher, Implementation.Services.PluginHookDispatcher>();
 
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
 		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();

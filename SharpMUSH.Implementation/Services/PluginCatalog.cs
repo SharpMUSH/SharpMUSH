@@ -28,6 +28,9 @@ public sealed class PluginCatalog
 	private readonly List<IFlagSource> _flagSources = [];
 	private readonly List<IMigrationSource> _migrationSources = [];
 	private readonly List<IBridgeSubscriptionSource> _bridgeSources = [];
+	private readonly List<ICommandInterceptor> _commandInterceptors = [];
+	private readonly List<IConnectionHook> _connectionHooks = [];
+	private readonly List<IObjectLifecycleHook> _objectLifecycleHooks = [];
 
 	private PluginCatalog() { }
 
@@ -42,6 +45,15 @@ public sealed class PluginCatalog
 
 	/// <summary>Bridge subscription contributions from plugins implementing <see cref="IBridgeSubscriptionSource"/>.</summary>
 	public IReadOnlyList<IBridgeSubscriptionSource> BridgeSources => _bridgeSources;
+
+	/// <summary>Phase 2b: command interceptors from plugins implementing <see cref="ICommandInterceptor"/>, in load order.</summary>
+	public IReadOnlyList<ICommandInterceptor> CommandInterceptors => _commandInterceptors;
+
+	/// <summary>Phase 2b: connection hooks from plugins implementing <see cref="IConnectionHook"/>, in load order.</summary>
+	public IReadOnlyList<IConnectionHook> ConnectionHooks => _connectionHooks;
+
+	/// <summary>Phase 2b: object lifecycle hooks from plugins implementing <see cref="IObjectLifecycleHook"/>, in load order.</summary>
+	public IReadOnlyList<IObjectLifecycleHook> ObjectLifecycleHooks => _objectLifecycleHooks;
 
 	/// <summary>The flattened set of every plugin flag, in plugin load order.</summary>
 	public IReadOnlyList<PluginFlag> AllFlags =>
@@ -87,11 +99,28 @@ public sealed class PluginCatalog
 					catalog._bridgeSources.Add(bridgeSource);
 				}
 
+				// Phase 2b: engine-extension hooks (the C# analog of softcode @hook).
+				if (plugin is ICommandInterceptor commandInterceptor)
+				{
+					catalog._commandInterceptors.Add(commandInterceptor);
+				}
+
+				if (plugin is IConnectionHook connectionHook)
+				{
+					catalog._connectionHooks.Add(connectionHook);
+				}
+
+				if (plugin is IObjectLifecycleHook objectLifecycleHook)
+				{
+					catalog._objectLifecycleHooks.Add(objectLifecycleHook);
+				}
+
 				logger.LogInformation(
-					"Catalogued plugin '{Id}' v{Version} from {DllPath} (services:{Svc} flags:{Flag} migrations:{Mig} bridge:{Bridge}).",
+					"Catalogued plugin '{Id}' v{Version} from {DllPath} (services:{Svc} flags:{Flag} migrations:{Mig} bridge:{Bridge} cmdHook:{Cmd} connHook:{Conn} objHook:{Obj}).",
 					plugin.Id, plugin.Version, dllPath,
 					plugin is IServiceRegistrar, plugin is IFlagSource, plugin is IMigrationSource,
-					plugin is IBridgeSubscriptionSource);
+					plugin is IBridgeSubscriptionSource,
+					plugin is ICommandInterceptor, plugin is IConnectionHook, plugin is IObjectLifecycleHook);
 			}
 			catch (Exception ex)
 			{

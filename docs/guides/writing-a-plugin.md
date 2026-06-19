@@ -214,7 +214,70 @@ The worked Phase 2a fixture is the same `SamplePlugin` — it registers `SampleP
 (`IServiceRegistrar`), seeds the `SAMPLE_PLUGIN` flag (`IFlagSource`), and runs a bridge subscription
 (`IBridgeSubscriptionSource`); the integration tests assert each end-to-end.
 
+## 8. Engine-extension hooks (Phase 2b) — the C# `@hook`
+
+Your `[SharpPlugin] IPlugin` may also implement any subset of three **engine-extension hooks** (all in
+`SharpMUSH.Library.Plugins`). They are the compiled-C# analog of softcode `@hook`: intercept command
+execution, and react to connection and object lifecycle. You implement the interface; the host consults it
+at the right seam. Hooks **compose with** softcode `@hook` — they never replace it — and a host with no hook
+plugins runs exactly as before.
+
+```csharp
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Plugins;
+
+[SharpPlugin]
+public sealed class MyPlugin : PluginBase,
+    ICommandInterceptor, IConnectionHook, IObjectLifecycleHook
+{
+    public override string Id => "myplugin";
+
+    // (a) ICommandInterceptor — runs at the command seam alongside softcode BEFORE/OVERRIDE/AFTER.
+    //     BeforeAsync returning false VETOES the command (skips the body, short-circuits dispatch).
+    public ValueTask<bool> BeforeAsync(IMUSHCodeParser parser, string command)
+        => ValueTask.FromResult(!command.StartsWith("@danger", StringComparison.OrdinalIgnoreCase));
+
+    //     TryOverrideAsync returning non-null SHORT-CIRCUITS the built-in with your result.
+    public ValueTask<Option<CallState>?> TryOverrideAsync(IMUSHCodeParser parser, string command)
+        => ValueTask.FromResult<Option<CallState>?>(null);
+
+    //     AfterAsync observes the completed command (result discarded).
+    public ValueTask AfterAsync(IMUSHCodeParser parser, string command) => ValueTask.CompletedTask;
+
+    // (b) IConnectionHook — wired as an IConnectionService.ListenState listener at boot.
+    public ValueTask OnLoginAsync(long handle, DBRef player)      => ValueTask.CompletedTask;
+    public ValueTask OnDisconnectAsync(long handle, DBRef? player) => ValueTask.CompletedTask;
+    // (OnConnectAsync also available; all default to no-ops.)
+
+    // (c) IObjectLifecycleHook — OnCreatedAsync fires next to the softcode OBJECT`CREATE event;
+    //     OnDestroyingAsync fires before the object is destroyed (it is still readable from the DB).
+    public ValueTask OnCreatedAsync(DBRef obj, DBRef creator) => ValueTask.CompletedTask;
+    public ValueTask OnDestroyingAsync(DBRef obj)            => ValueTask.CompletedTask;
+}
+```
+
+**Notes**
+
+- **Implement only what you need.** Every callback on all three interfaces has a no-op default, so a plugin
+  that only wants `OnCreatedAsync` implements `IObjectLifecycleHook` and overrides that one method.
+- **Veto vs. override.** A `BeforeAsync` veto mirrors a softcode `IGNORE` that returns false (the command
+  body is skipped, the after seams still run). A non-`null` `TryOverrideAsync` mirrors a softcode `OVERRIDE`
+  (your `Option<CallState>` is returned in place of the built-in).
+- **Hooks are isolated.** Every hook call is wrapped in `try/catch` by the host (`IPluginHookDispatcher` for
+  command/object hooks; the connection-listener wrapper for connection hooks), so a throwing hook is logged
+  and never aborts dispatch.
+- **Ordering.** Command and object hooks fire in plugin load order; the first interceptor to veto or override
+  wins.
+- **No unification fuss.** The hook interfaces live in `SharpMUSH.Library`, which your plugin references with
+  `<Private>false</Private>` — so they unify with the host automatically across the isolation boundary.
+
+The worked Phase 2b fixture is again `SamplePlugin`: it observes every command (and vetoes `+vetome`) via
+`ICommandInterceptor`, and records created objects via `IObjectLifecycleHook`; the integration tests assert
+the interceptor fires, the veto skips the command body, and the create hook is invoked.
+
 ## Later phases (not yet available)
 
-Named extension hooks (command pre/post/override, connection/object/startup lifecycle), hot-reload, and
-signed package distribution are planned for later phases. This guide will grow as those seams ship.
+Hot-reload/unload and signed package distribution are planned for later phases. This guide will grow as those
+seams ship.

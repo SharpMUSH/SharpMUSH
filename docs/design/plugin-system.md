@@ -6,8 +6,9 @@ phases, services, migrations, flags, bridge subscriptions, and extension hooks) 
 without recompiling the server.
 
 This document describes the **Phase 1** architecture (command/function contributions), the **Phase 2a**
-contribution seams (DI services, DB migrations, engine flags, NATS bridge subscriptions), and the **Phase 3**
-runtime **unload/reload** model, and notes the seams reserved for later phases.
+contribution seams (DI services, DB migrations, engine flags, NATS bridge subscriptions), the **Phase 2b**
+engine-extension hooks (command interception + connection/object lifecycle — the C# analog of softcode
+`@hook`), and the **Phase 3** runtime **unload/reload** model, and notes the seams reserved for later phases.
 
 ## Why a plugin loader
 
@@ -235,16 +236,50 @@ loop and asserts the `WeakReference` is **dead** (the ALC genuinely unloaded) an
 longer resolves. The load/register step runs in a `[MethodImpl(NoInlining)]` helper that returns only the
 `WeakReference` and the id, so no stray local keeps the ALC rooted past unload.
 
+## Phase 2b — engine-extension hooks (the C# analog of softcode `@hook`)
+
+Phase 2b lets a plugin **intercept command execution** and **react to connection/object lifecycle** without
+recompiling the engine — the compiled-C# counterpart of softcode `@hook`. The three hook interfaces live in
+`SharpMUSH.Library.Plugins`; a plugin's `[SharpPlugin] IPlugin` implements any subset. Because they are
+declared in `SharpMUSH.Library` (which the plugin references with `<Private>false</Private>` +
+`ExcludeAssets=runtime`, so the host's copy is the one that loads), they **unify automatically** across the
+isolation boundary — no `SharedContractTypes` entry is required.
+
+| Interface | Callbacks | Where the engine consults it |
+|-----------|-----------|------------------------------|
+| `ICommandInterceptor` | `BeforeAsync` (return `false` to **veto**), `TryOverrideAsync` (return non-`null` to **short-circuit**), `AfterAsync` (observe) | `SharpMUSHParserVisitor.HandleInternalCommandPattern`, at the same seam as the softcode `BEFORE`/`OVERRIDE`/`AFTER` hooks — `before` runs **after** the softcode BEFORE, `override` **after** the softcode OVERRIDE, `after` **near** the softcode AFTER. |
+| `IConnectionHook` | `OnConnectAsync`, `OnLoginAsync(handle, player)`, `OnDisconnectAsync(handle, player?)` | Registered as an `IConnectionService.ListenState` listener at boot (in `PluginBootstrapService`), so it rides the engine's existing connection-state mechanism (fired on Register / Bind / Disconnect). |
+| `IObjectLifecycleHook` | `OnCreatedAsync(obj, creator)`, `OnDestroyingAsync(obj)` | `@create` fires `OnCreatedAsync` alongside the softcode `OBJECT`CREATE` event; the `@destroy`/`@recycle`/`@nuke` path fires `OnDestroyingAsync` **before** the object is marked GOING (so the hook can still read it). |
+
+**How the seams behave like `@hook` — and never break it.** Command and object hooks are consulted through
+a single service, **`IPluginHookDispatcher`** (interface in `SharpMUSH.Library.Plugins`, implementation
+`SharpMUSH.Implementation.Services.PluginHookDispatcher`), registered as a singleton in `Startup`. It reads
+the `CommandInterceptors` / `ObjectLifecycleHooks` buckets the `PluginCatalog` collected and fans each seam
+out in plugin load order, **isolating every plugin call in `try/catch`** so a misbehaving hook can never
+abort dispatch. The dispatcher exposes `HasCommandInterceptors`, and the command seam short-circuits all
+interceptor work when it is `false` — so **with no plugin registered, normal dispatch is byte-for-byte
+unchanged** (the softcode `@hook` flow is untouched in either case). A C# `before` veto returns
+`CallState.Empty` and still runs the after seams, mirroring a softcode `IGNORE` that returns false; a C#
+`override` returns its `Option<CallState>` after running both after seams, mirroring a softcode `OVERRIDE`.
+
+Connection hooks are deliberately **not** routed through the dispatcher: the `ListenState` callback is
+synchronous, so each transition dispatches the async hook fire-and-forget (isolated in `try/catch`),
+mirroring how `ConnectionService` already runs its sync handlers next to async publishes.
+
+The `PluginCatalog` collects these three buckets (`CommandInterceptors`, `ConnectionHooks`,
+`ObjectLifecycleHooks`) in the same pre-build classification pass it uses for the Phase 2a seams.
+
 ## Reserved seams (later phases)
 
 The architecture leaves these seams for the committed later phases:
 
 - **Phase 2a** — *implemented* — contribution interfaces (`IServiceRegistrar` pre-build DI, `IMigrationSource`,
   `IFlagSource`, `IBridgeSubscriptionSource`) via the two-phase `PluginCatalog` boot (see above).
-- **Phase 2b** — named **extension-point hooks** (command pre/post/override, connection/object/startup
-  lifecycle). When present, hook sources are equally runtime-removable and count as unloadable.
-- **Phase 3** — *implemented* — hot-reload/unload of command/function-only plugins via collectible ALCs,
-  with a `WeakReference`-dead gate (see above).
+- **Phase 2b** — *implemented* — engine-extension hooks: `ICommandInterceptor` (before/override/after),
+  `IConnectionHook` (connect/login/disconnect), `IObjectLifecycleHook` (created/destroying), consulted via
+  `IPluginHookDispatcher` and `IConnectionService.ListenState` (see above). Hook-only plugins stay unloadable.
+- **Phase 3** — *implemented* — hot-reload/unload of command/function-only (and hook-only) plugins via
+  collectible ALCs, with a `WeakReference`-dead gate (see above).
 - **Phase 4** — package-manager DLL distribution (signed/hashed manifest, trust gate).
 - **Phase 5** — extract the Scene system as the reference plugin via the Phase-2 seams.
 

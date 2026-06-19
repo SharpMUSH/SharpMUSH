@@ -14,6 +14,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
@@ -75,6 +76,16 @@ public class SharpMUSHParserVisitor(
 	private static ITelemetryService? GetTelemetryService(IMUSHCodeParser parser)
 		=> parser is MUSHCodeParser mushParser
 			? mushParser.ServiceProvider.GetService<ITelemetryService>()
+			: null;
+
+	/// <summary>
+	/// Phase 2b: resolve the plugin hook dispatcher, used to consult C# command interceptors at the command
+	/// seam alongside the softcode @hook flow. Returns null when no parser provider is available (the
+	/// dispatcher itself no-ops when no interceptors are registered, so normal dispatch is unaffected).
+	/// </summary>
+	private static IPluginHookDispatcher? GetPluginHookDispatcher(IMUSHCodeParser parser)
+		=> parser is MUSHCodeParser mushParser
+			? mushParser.ServiceProvider.GetService<IPluginHookDispatcher>()
 			: null;
 
 	/// <summary>
@@ -1471,6 +1482,22 @@ public class SharpMUSHParserVisitor(
 					// Result is discarded
 				}
 
+				// Phase 2b: C# command interceptors run alongside the softcode @hook flow. The dispatcher
+				// no-ops (and HasCommandInterceptors is false) when no plugin registered an interceptor, so
+				// normal dispatch is unchanged. The raw command-with-switches text is the interceptor's input.
+				var pluginHooks = GetPluginHookDispatcher(parser);
+				var pluginCommandText = commandWithSwitches.ToPlainText();
+				if (pluginHooks is { HasCommandInterceptors: true })
+				{
+					// before → after the softcode BEFORE: a C# interceptor returning false vetoes the command
+					// (mirrors a softcode IGNORE that returns false: skip the body and run the after seam).
+					if (!await pluginHooks.CommandBeforeAsync(newParser, pluginCommandText))
+					{
+						await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
+						return CallState.Empty;
+					}
+				}
+
 				// 3. Check for /override hook with $-command matching
 				var overrideHook = await HookService.GetHookAsync(rootCommand, "OVERRIDE");
 				if (overrideHook.IsSome())
@@ -1488,6 +1515,24 @@ public class SharpMUSHParserVisitor(
 						}
 
 						return overrideResult.AsValue();
+					}
+				}
+
+				// override → after the softcode OVERRIDE: a non-null C# interceptor override short-circuits
+				// the built-in (mirrors a softcode OVERRIDE), still running both after seams before returning.
+				if (pluginHooks is { HasCommandInterceptors: true })
+				{
+					var pluginOverride = await pluginHooks.CommandTryOverrideAsync(newParser, pluginCommandText);
+					if (pluginOverride is not null)
+					{
+						var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
+						if (afterHook.IsSome())
+						{
+							await ExecuteHookCode(newParser, executor, afterHook.AsValue());
+						}
+
+						await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
+						return pluginOverride;
 					}
 				}
 
@@ -1577,6 +1622,12 @@ public class SharpMUSHParserVisitor(
 				{
 					await ExecuteHookCode(newParser, executor, afterHookFinal.AsValue());
 					// Result is discarded
+				}
+
+				// after → near the softcode AFTER: C# interceptors observe the completed command. Result discarded.
+				if (pluginHooks is { HasCommandInterceptors: true })
+				{
+					await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
 				}
 
 				return commandResult;

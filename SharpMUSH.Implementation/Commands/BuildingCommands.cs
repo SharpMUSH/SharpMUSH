@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Library;
@@ -8,6 +9,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
@@ -84,6 +86,13 @@ public partial class Commands
 			executor.Object().DBRef,
 			thing.ToString(),
 			""); // null for cloned-from (not a clone)
+
+		// Phase 2b: C# object-lifecycle hooks fire alongside the softcode OBJECT`CREATE event.
+		var createHooks = parser.ServiceProvider.GetService<IPluginHookDispatcher>();
+		if (createHooks is not null)
+		{
+			await createHooks.ObjectCreatedAsync(thing, executor.Object().DBRef);
+		}
 
 		return new CallState(thing.ToString());
 	}
@@ -434,6 +443,10 @@ public partial class Commands
 
 		if (await obj.HasFlag("GOING"))
 		{
+			// Phase 2b: object-lifecycle destroy seam. Fired while the object is still in the DB so a plugin
+			// hook can still read it; this is the second-stage (GOING -> GOING_TWICE) commit.
+			await NotifyObjectDestroyingAsync(parser, obj.Object().DBRef);
+
 			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Destroyed), executor);
 
@@ -450,6 +463,10 @@ public partial class Commands
 		{
 			await HandlePlayerPossessionsAsync(parser, executor, obj);
 		}
+
+		// Phase 2b: object-lifecycle destroy seam. The object is about to be marked GOING (scheduled for
+		// destruction) but still present in the DB, so a plugin hook can read it before it is gone.
+		await NotifyObjectDestroyingAsync(parser, obj.Object().DBRef);
 
 		await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
 
@@ -494,6 +511,18 @@ public partial class Commands
 	/// </list>
 	/// <para>Lock expressions are left unchanged per PennMUSH invariants.</para>
 	/// </summary>
+	private static async ValueTask NotifyObjectDestroyingAsync(IMUSHCodeParser parser, DBRef obj)
+	{
+		// Phase 2b: notify plugin IObjectLifecycleHooks that obj is about to be destroyed. No-op when no
+		// dispatcher (or no hooks) is registered, so normal @destroy flow is unchanged. The object is still
+		// present in the DB at the call site so a hook can read it.
+		var hooks = parser.ServiceProvider.GetService<IPluginHookDispatcher>();
+		if (hooks is not null)
+		{
+			await hooks.ObjectDestroyingAsync(obj);
+		}
+	}
+
 	private static async ValueTask HandlePlayerPossessionsAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,

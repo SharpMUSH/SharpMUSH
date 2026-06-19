@@ -110,6 +110,55 @@ public class PluginLoaderIntegrationTests
 		await Assert.That(ran).IsTrue();
 	}
 
+	// ----- Phase 2b engine-extension hooks -----
+
+	[Test]
+	public async Task CommandInterceptor_ObservesDispatchedCommand()
+	{
+		// The SamplePlugin's ICommandInterceptor is cataloged and consulted at the command seam. Dispatching
+		// any command must record it in BeforeAsync (LastCommandObserved) and increment AfterAsync's counter.
+		var pluginType = FindPluginType("SamplePlugin.SamplePlugin")!;
+		var lastObservedField = pluginType.GetField("LastCommandObserved", BindingFlags.Public | BindingFlags.Static)!;
+		var afterCountField = pluginType.GetField("AfterCommandCount", BindingFlags.Public | BindingFlags.Static)!;
+
+		var beforeCount = (int)afterCountField.GetValue(null)!;
+		await Cmd("think interceptor-probe");
+
+		await Assert.That((string?)lastObservedField.GetValue(null)).IsNotNull();
+		await Assert.That(((string?)lastObservedField.GetValue(null))!.Contains("interceptor-probe")).IsTrue();
+		await Assert.That((int)afterCountField.GetValue(null)!).IsGreaterThan(beforeCount);
+	}
+
+	[Test]
+	public async Task CommandInterceptor_VetoesCommand_BodyDoesNotRun()
+	{
+		// The interceptor vetoes "+vetome" by returning false from BeforeAsync; the engine must skip the
+		// command body, so the plugin command's VetoCommandBodyRan flag stays false.
+		var pluginType = FindPluginType("SamplePlugin.SamplePlugin")!;
+		var bodyRanField = pluginType.GetField("VetoCommandBodyRan", BindingFlags.Public | BindingFlags.Static)!;
+
+		// Sanity: a non-vetoed plugin command body DOES run, proving plugin commands dispatch in this host.
+		var pong = await Cmd("+ping");
+		await Assert.That(pong).IsEqualTo("Pong from the sample plugin!");
+
+		await Cmd("+vetome");
+		await Assert.That((bool)bodyRanField.GetValue(null)!).IsFalse();
+	}
+
+	[Test]
+	public async Task ObjectLifecycleHook_OnCreated_FiresForAtCreate()
+	{
+		// @create fires the OBJECT`CREATE event AND the C# IObjectLifecycleHook.OnCreatedAsync seam; the
+		// SamplePlugin's hook records the new object's dbref. Assert it captured the object @create returned.
+		var pluginType = FindPluginType("SamplePlugin.SamplePlugin")!;
+		var lastCreatedField = pluginType.GetField("LastCreatedObject", BindingFlags.Public | BindingFlags.Static)!;
+
+		var created = await Cmd("@create HookTestObject");
+		await Assert.That(created).IsNotNull();
+
+		await Assert.That((string?)lastCreatedField.GetValue(null)).IsEqualTo(created);
+	}
+
 	/// <summary>
 	/// Resolve a type by full name from the loaded plugin assemblies (which are not linked into this test
 	/// project — they load at runtime from <c>plugins/</c>). Falls back to scanning all loaded assemblies.

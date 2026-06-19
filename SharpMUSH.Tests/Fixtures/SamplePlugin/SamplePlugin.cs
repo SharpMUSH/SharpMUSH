@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
@@ -28,10 +29,27 @@ public sealed class SamplePluginService
 /// assembly is heavy to fixture; the flag seam proves the same migration plumbing end-to-end.)
 /// </summary>
 [SharpPlugin]
-public sealed class SamplePlugin : PluginBase, IServiceRegistrar, IFlagSource, IBridgeSubscriptionSource
+public sealed class SamplePlugin
+	: PluginBase, IServiceRegistrar, IFlagSource, IBridgeSubscriptionSource,
+		ICommandInterceptor, IObjectLifecycleHook
 {
 	/// <summary>Set true once <see cref="RunAsync"/> is invoked by the host bridge service.</summary>
 	public static volatile bool BridgeSubscriptionRan;
+
+	// ----- Phase 2b engine-extension hook observability (static so the integration test can poll across
+	// the plugin isolation boundary via reflection) -----
+
+	/// <summary>The last command text the interceptor's BeforeAsync observed.</summary>
+	public static volatile string? LastCommandObserved;
+
+	/// <summary>Count of commands the interceptor observed in AfterAsync.</summary>
+	public static int AfterCommandCount;
+
+	/// <summary>The DBRef string of the last object the lifecycle hook saw created.</summary>
+	public static volatile string? LastCreatedObject;
+
+	/// <summary>The command that, if dispatched, the interceptor vetoes (BeforeAsync returns false).</summary>
+	public const string VetoCommand = "+vetome";
 
 	public override string Id => "sample";
 	public override string Version => "1.0.0";
@@ -61,6 +79,33 @@ public sealed class SamplePlugin : PluginBase, IServiceRegistrar, IFlagSource, I
 		return Task.Delay(Timeout.Infinite, ct);
 	}
 
+	// ----- Phase 2b: ICommandInterceptor (the C# analog of softcode @hook on a command) -----
+
+	/// <summary>Observe every command; veto the designated <see cref="VetoCommand"/> (returns false).</summary>
+	public ValueTask<bool> BeforeAsync(IMUSHCodeParser parser, string command)
+	{
+		LastCommandObserved = command;
+		// A before returning false vetoes the command — the engine skips the body and short-circuits.
+		var veto = command.TrimStart().StartsWith(VetoCommand, StringComparison.OrdinalIgnoreCase);
+		return ValueTask.FromResult(!veto);
+	}
+
+	/// <summary>Observe every command after it runs (or after a veto/override). Side-effect only.</summary>
+	public ValueTask AfterAsync(IMUSHCodeParser parser, string command)
+	{
+		Interlocked.Increment(ref AfterCommandCount);
+		return ValueTask.CompletedTask;
+	}
+
+	// ----- Phase 2b: IObjectLifecycleHook -----
+
+	/// <summary>Record that an object was created (fires alongside the softcode OBJECT`CREATE event).</summary>
+	public ValueTask OnCreatedAsync(DBRef obj, DBRef creator)
+	{
+		LastCreatedObject = obj.ToString();
+		return ValueTask.CompletedTask;
+	}
+
 	[SharpCommand(Name = "+PING", MinArgs = 0, MaxArgs = 1)]
 	public static async ValueTask<Option<CallState>> Ping(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -72,6 +117,18 @@ public sealed class SamplePlugin : PluginBase, IServiceRegistrar, IFlagSource, I
 		await notify.Notify(executor, "Pong from the sample plugin!", executor);
 
 		return new CallState("Pong from the sample plugin!");
+	}
+
+	/// <summary>True if the <see cref="VetoCommand"/> body ever actually executed. The interceptor vetoes
+	/// it, so a correctly-wired command seam leaves this false.</summary>
+	public static volatile bool VetoCommandBodyRan;
+
+	[SharpCommand(Name = "+VETOME", MinArgs = 0, MaxArgs = 1)]
+	public static ValueTask<Option<CallState>> VetoMe(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// If the interceptor's BeforeAsync veto works, the engine never reaches this body.
+		VetoCommandBodyRan = true;
+		return ValueTask.FromResult(new Option<CallState>(new CallState("veto body ran")));
 	}
 
 	[SharpFunction(Name = "pluginadd", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]

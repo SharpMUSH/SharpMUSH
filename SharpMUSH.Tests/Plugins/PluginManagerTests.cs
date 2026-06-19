@@ -143,6 +143,34 @@ public class PluginManagerTests
 		await Assert.That(plugin is IMigrationSource).IsTrue();
 		await Assert.That(((IFlagSource)plugin).Flags.Single().Name).IsEqualTo("PLUGINFLAG");
 		await Assert.That(((IMigrationSource)plugin).CypherStatements).IsNotEmpty();
+
+		// Phase 2b engine-extension hook classification.
+		await Assert.That(plugin is ICommandInterceptor).IsTrue();
+		await Assert.That(plugin is IConnectionHook).IsTrue();
+		await Assert.That(plugin is IObjectLifecycleHook).IsTrue();
+	}
+
+	[Test]
+	public async Task CommandInterceptor_VetoAndOverride_FlowThroughTheInterface()
+	{
+		// Verify the ICommandInterceptor contract semantics the hook dispatcher relies on: a before that
+		// returns false vetoes; a non-null override short-circuits; defaults are inert.
+		ICommandInterceptor interceptor = new MultiContributionPlugin();
+
+		// MultiContributionPlugin vetoes any command starting with "@veto" and overrides "@over".
+		await Assert.That(await interceptor.BeforeAsync(null!, "@veto stuff")).IsFalse();
+		await Assert.That(await interceptor.BeforeAsync(null!, "look")).IsTrue();
+
+		var overridden = await interceptor.TryOverrideAsync(null!, "@over here");
+		await Assert.That(overridden).IsNotNull();
+		await Assert.That(overridden!.AsValue().Message!.ToString()).IsEqualTo("overridden");
+
+		await Assert.That(await interceptor.TryOverrideAsync(null!, "look")).IsNull();
+
+		// A bare interceptor with only the default methods neither vetoes nor overrides.
+		ICommandInterceptor inert = new InertInterceptor();
+		await Assert.That(await inert.BeforeAsync(null!, "anything")).IsTrue();
+		await Assert.That(await inert.TryOverrideAsync(null!, "anything")).IsNull();
 	}
 
 	[Test]
@@ -154,6 +182,10 @@ public class PluginManagerTests
 		await Assert.That(catalog.MigrationSources).IsEmpty();
 		await Assert.That(catalog.BridgeSources).IsEmpty();
 		await Assert.That(catalog.AllFlags).IsEmpty();
+		// Phase 2b hook buckets.
+		await Assert.That(catalog.CommandInterceptors).IsEmpty();
+		await Assert.That(catalog.ConnectionHooks).IsEmpty();
+		await Assert.That(catalog.ObjectLifecycleHooks).IsEmpty();
 	}
 
 	private static CommandDefinition MakeCommand(string name) =>
@@ -167,7 +199,8 @@ public class PluginManagerTests
 	private sealed class MarkerService;
 
 	private sealed class MultiContributionPlugin
-		: IPlugin, IServiceRegistrar, IFlagSource, IMigrationSource
+		: IPlugin, IServiceRegistrar, IFlagSource, IMigrationSource,
+			ICommandInterceptor, IConnectionHook, IObjectLifecycleHook
 	{
 		public string Id => "multi";
 		public string Version => "1.0.0";
@@ -182,7 +215,19 @@ public class PluginManagerTests
 			[new PluginFlag("PLUGINFLAG", "P", [], [], [], ["ROOM", "PLAYER", "EXIT", "THING"])];
 
 		public IEnumerable<string> CypherStatements => ["CREATE INDEX ON :PluginThing(id)"];
+
+		// Phase 2b: veto "@veto*", override "@over*", everything else passes through.
+		public ValueTask<bool> BeforeAsync(IMUSHCodeParser parser, string command)
+			=> ValueTask.FromResult(!command.StartsWith("@veto", StringComparison.OrdinalIgnoreCase));
+
+		public ValueTask<Option<CallState>?> TryOverrideAsync(IMUSHCodeParser parser, string command)
+			=> ValueTask.FromResult(command.StartsWith("@over", StringComparison.OrdinalIgnoreCase)
+				? (Option<CallState>?)new CallState("overridden")
+				: null);
 	}
+
+	/// <summary>An interceptor that overrides nothing — exercises the default no-op interface methods.</summary>
+	private sealed class InertInterceptor : ICommandInterceptor;
 
 	private sealed class FakePlugin(string id, CommandDefinition[] commands, FunctionDefinition[] functions)
 		: IPlugin, ICommandSource, IFunctionSource
