@@ -42,14 +42,24 @@ public partial class ArangoDatabase : ISceneService
 	}
 
 	/// <summary>
-	/// Resolves the live dbref string for a typed-vertex id by traversing to its
-	/// <c>node_objects</c> document. Returns <c>null</c> when the vertex is gone.
+	/// Resolves the live dbref for an object-reference edge's target vertex — a
+	/// <c>node_objects</c> vertex (key extracted directly) or, defensively, a typed
+	/// vertex traversed to its object via the IsObject edge. Returns <c>null</c> when gone.
 	/// </summary>
 	private async Task<string?> ResolveDbrefFromVertexAsync(string vertexId)
 	{
 		if (string.IsNullOrWhiteSpace(vertexId))
 			return null;
 
+		// Object-reference edges target the node_objects vertex directly (the resolved
+		// SharpObject.Id IS the object vertex), so the dbref is simply its key. The
+		// IsObject edges run typed -> object, so an OUTBOUND traversal from an object
+		// vertex finds nothing — hence the direct key extraction here.
+		if (vertexId.StartsWith(DatabaseConstants.Objects + "/", StringComparison.Ordinal))
+			return $"#{vertexId.Split('/')[1]}";
+
+		// Defensive fallback: a typed vertex (node_players/node_rooms/…) links OUTBOUND
+		// to its object via the IsObject edge.
 		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR o IN 1..1 OUTBOUND @v GRAPH {DatabaseConstants.GraphObjects} " +
 			$"FILTER IS_SAME_COLLECTION(@objects, o) RETURN o._key",
