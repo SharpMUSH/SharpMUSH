@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<IsPackable>false</IsPackable>
+		<!-- Marks this as a dynamically-loadable plugin: emits a .deps.json and keeps the
+		     contract assembly out of the plugin's private bin (the host owns it via sharedTypes). -->
+		<EnableDynamicLoading>true</EnableDynamicLoading>
+		<!-- This is a test fixture, not part of the solution build graph; do not error on warnings here. -->
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Contract surface only (Private=false + ExcludeAssets=runtime) so the host's copy loads, while the
+		     loader's sharedTypes unifies type identity across the isolation boundary. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.Library\SharpMUSH.Library.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- Source generator as an analyzer: this assembly gets its own
+		     SharpMUSH.Implementation.Generated.CommandLibrary/FunctionLibrary that PluginBase reflects. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+</Project>

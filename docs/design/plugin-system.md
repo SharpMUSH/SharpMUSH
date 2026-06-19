@@ -5,9 +5,9 @@ ordinary .NET assembly that contributes `[SharpCommand]`/`[SharpFunction]` defin
 phases, services, migrations, flags, bridge subscriptions, and extension hooks) into the live engine —
 without recompiling the server.
 
-This document describes the **Phase 1** architecture (command/function contributions) and the **Phase 2a**
-contribution seams (DI services, DB migrations, engine flags, NATS bridge subscriptions), and notes the
-seams reserved for later phases.
+This document describes the **Phase 1** architecture (command/function contributions), the **Phase 2a**
+contribution seams (DI services, DB migrations, engine flags, NATS bridge subscriptions), and the **Phase 3**
+runtime **unload/reload** model, and notes the seams reserved for later phases.
 
 ## Why a plugin loader
 
@@ -25,10 +25,17 @@ plugin is loaded through its own `PluginLoader`:
 ```csharp
 var loader = PluginLoader.CreateFromAssemblyFile(
     dllPath,
-    isUnloadable: false,            // stays false until the Phase 3 hot-reload work
+    isUnloadable: true,             // every plugin loads in a collectible ALC (Phase 3); see below
     sharedTypes: SharedContractTypes);
 var assembly = loader.LoadDefaultAssembly();
 ```
+
+Since Phase 3, **every** plugin is loaded into a *collectible* `AssemblyLoadContext` (`isUnloadable: true`).
+A collectible context that is never unloaded costs nothing extra, but it is the only kind that *can* be
+unloaded — so load-once plugins are loaded collectibly too and simply never torn down, while command/function-
+only plugins can be unloaded at runtime. The `PluginLoader` handle is kept alive (never disposed at the end of
+the load pass) and recorded against the plugin instance so the manager can later dispose it; see
+**Phase 3 — runtime unload/reload** below.
 
 **`sharedTypes`** is the host-declared set of contract types that must **unify** across the isolation
 boundary, so a `CommandDefinition` produced inside the plugin is the *same* type the host's library expects.
@@ -169,6 +176,65 @@ var notify = parser.ServiceProvider.GetRequiredService<INotifyService>();
 
 `IMUSHCodeParser.ServiceProvider` is part of the interface; there is no static-service-injection mechanism.
 
+## Phase 3 — runtime unload/reload
+
+A plugin that contributes **only** commands/functions (and, when Phase 2b lands, hooks) can be **unloaded or
+reloaded at runtime** without restarting the server. A plugin that also contributes any load-once state —
+DI services, migrations, flags, or a NATS bridge subscription — **cannot**: that state is already captured by
+the container, the database, or the bridge and cannot be reversed without a restart. The manager refuses to
+unload/reload such a plugin with a clear message.
+
+### Which plugins are unloadable
+
+`PluginLoaderService.IsUnloadablePlugin(plugin)` is the single verdict, computed once at load:
+
+> **Unloadable iff** the plugin implements `ICommandSource` and/or `IFunctionSource` **and none of**
+> `IServiceRegistrar`, `IMigrationSource`, `IFlagSource`, `IBridgeSubscriptionSource`.
+
+| Contributes… | Captured by… | Unloadable? |
+|--------------|--------------|-------------|
+| only `ICommandSource` / `IFunctionSource` (+ Phase-2b hooks) | the command/function libraries the manager owns | **yes** |
+| `IServiceRegistrar` | the built `IServiceProvider` (singletons live for process lifetime) | no |
+| `IMigrationSource` | the database schema/seed | no |
+| `IFlagSource` | the database flag set | no |
+| `IBridgeSubscriptionSource` | the long-lived NATS→SignalR bridge loop | no |
+
+The verdict is recorded on the `LoadedPlugin` (`IsUnloadable`) and in a `ConditionalWeakTable<IPlugin,
+PluginHandle>` side-table keyed by the plugin instance, so the post-build `PluginManager` can recover a
+plugin's `PluginLoader` handle, DLL path, and verdict for a plugin the `PluginCatalog` handed it as a bare
+`IPlugin` — without the catalog itself having to surface loaders. The weak key keeps the handle alive exactly
+as long as the plugin instance is reachable.
+
+### What the manager tracks, and how unload works
+
+For every plugin it registers, `PluginManager` records a `TrackedPlugin`: the `PluginLoader` handle, the DLL
+path, the unloadable verdict, and the **exact set of command/function names it actually added** (collision-
+skipped names are never recorded, so unload never removes a built-in or another plugin's entry).
+
+`IPluginManager` exposes:
+
+- **`UnloadAsync(pluginId)`** — for an unloadable plugin: remove its recorded command/function entries from
+  the live `CommandLibraryService`/`FunctionLibraryService`, drop the manager's strong references to the
+  plugin and its loader, and `Dispose()` the `PluginLoader` (which unloads the collectible ALC). The per-parse
+  command trie is rebuilt from the live library on every parse, so **removing the library entries is
+  sufficient — there is no trie surgery**. Returns `Error` for an unknown id or a load-once plugin.
+- **`ReloadAsync(pluginId)`** — unload as above, then `PluginLoaderService.LoadOne(dllPath)` afresh from disk
+  and re-register its commands/functions. Same `Error` restraints. A reload picks up a new DLL on disk because
+  the load goes back to the file every time.
+
+Both return `OneOf<Success, Error<string>>`; the `Error` message for a load-once plugin names the offending
+contribution kinds and says to restart.
+
+### The unload proof (the real gate)
+
+Disposing the loader only makes the ALC *eligible* for collection; it is reclaimed when no managed reference
+into its assemblies survives. The canonical test (`PluginUnloadTests.UnloadAsync_CommandOnlyPlugin_
+CollectibleContextIsReclaimed`) loads the command-only fixture, registers it, captures a `WeakReference` to
+its `PluginLoader`, calls `UnloadAsync`, then forces a bounded `GC.Collect()` + `WaitForPendingFinalizers()`
+loop and asserts the `WeakReference` is **dead** (the ALC genuinely unloaded) and the plugin's command no
+longer resolves. The load/register step runs in a `[MethodImpl(NoInlining)]` helper that returns only the
+`WeakReference` and the id, so no stray local keeps the ALC rooted past unload.
+
 ## Reserved seams (later phases)
 
 The architecture leaves these seams for the committed later phases:
@@ -176,8 +242,9 @@ The architecture leaves these seams for the committed later phases:
 - **Phase 2a** — *implemented* — contribution interfaces (`IServiceRegistrar` pre-build DI, `IMigrationSource`,
   `IFlagSource`, `IBridgeSubscriptionSource`) via the two-phase `PluginCatalog` boot (see above).
 - **Phase 2b** — named **extension-point hooks** (command pre/post/override, connection/object/startup
-  lifecycle).
-- **Phase 3** — hot-reload/unload (`isUnloadable: true`, reload + `WeakReference`-dead gate).
+  lifecycle). When present, hook sources are equally runtime-removable and count as unloadable.
+- **Phase 3** — *implemented* — hot-reload/unload of command/function-only plugins via collectible ALCs,
+  with a `WeakReference`-dead gate (see above).
 - **Phase 4** — package-manager DLL distribution (signed/hashed manifest, trust gate).
 - **Phase 5** — extract the Scene system as the reference plugin via the Phase-2 seams.
 

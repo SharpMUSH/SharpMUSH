@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.Logging;
@@ -58,6 +59,18 @@ public static class PluginLoaderService
 		PropertyNameCaseInsensitive = true
 	};
 
+	/// <summary>
+	/// Side-table that ties each loaded <see cref="IPlugin"/> instance to the McMaster
+	/// <see cref="PluginLoader"/> handle it came from (plus the DLL path and the unloadable verdict). Keyed
+	/// by the plugin instance, it lets the post-build <see cref="PluginManager"/> recover the loader for a
+	/// plugin the <see cref="PluginCatalog"/> handed it as a bare <see cref="IPlugin"/> — without the
+	/// catalog (owned elsewhere) having to surface loaders. A <see cref="ConditionalWeakTable{TKey,TValue}"/>
+	/// keeps the handle alive exactly as long as the plugin instance is reachable and needs no cleanup or
+	/// cross-boot static state. The manager pins both the plugin and its handle while registered, so the
+	/// collectible ALC only becomes collectible once the manager drops it on unload.
+	/// </summary>
+	private static readonly ConditionalWeakTable<IPlugin, PluginHandle> Handles = new();
+
 	/// <summary>A plugin DLL found on disk together with its (manifest-or-fallback) ordering metadata.</summary>
 	public sealed record PluginCandidate(
 		string DllPath,
@@ -66,7 +79,32 @@ public static class PluginLoaderService
 		int Priority);
 
 	/// <summary>An instantiated plugin together with the DLL it was loaded from.</summary>
-	public sealed record LoadedPlugin(IPlugin Plugin, string DllPath);
+	public sealed record LoadedPlugin(IPlugin Plugin, string DllPath)
+	{
+		/// <summary>
+		/// The live McMaster loader handle for this plugin's collectible-or-not ALC. Held so the loader is
+		/// not disposed at the end of <see cref="LoadAll"/>; the manager owns its lifetime thereafter.
+		/// Non-positional so the catalog's <c>var (plugin, dllPath)</c> deconstruct keeps working unchanged.
+		/// </summary>
+		public required PluginLoader Loader { get; init; }
+
+		/// <summary>
+		/// True when this plugin contributes <b>only</b> command/function (and Phase-2b hook) sources and
+		/// none of the load-once contribution seams, so its collectible ALC can be unloaded at runtime.
+		/// </summary>
+		public required bool IsUnloadable { get; init; }
+	}
+
+	/// <summary>The loader handle, DLL path and unloadable verdict recorded against a loaded plugin instance.</summary>
+	public sealed record PluginHandle(PluginLoader Loader, string DllPath, bool IsUnloadable);
+
+	/// <summary>
+	/// Recover the <see cref="PluginHandle"/> recorded for an already-loaded plugin instance, or
+	/// <c>null</c> if it was not loaded through <see cref="LoadAll"/>/<see cref="LoadOne"/> (e.g. a fake test
+	/// plugin). Lets the <see cref="PluginManager"/> find a plugin's loader for unload/reload.
+	/// </summary>
+	public static PluginHandle? TryGetHandle(IPlugin plugin) =>
+		Handles.TryGetValue(plugin, out var handle) ? handle : null;
 
 	/// <summary>
 	/// Discover, order, and load every plugin under <c>plugins/</c> exactly once. Returns the
@@ -95,10 +133,10 @@ public static class PluginLoaderService
 		var loaded = new List<LoadedPlugin>();
 		foreach (var candidate in ordered)
 		{
-			var plugin = LoadOne(candidate, logger);
-			if (plugin is not null)
+			var result = LoadOne(candidate.DllPath, logger);
+			if (result is not null)
 			{
-				loaded.Add(new LoadedPlugin(plugin, candidate.DllPath));
+				loaded.Add(result);
 			}
 		}
 
@@ -239,42 +277,93 @@ public static class PluginLoaderService
 
 	/// <summary>
 	/// Load a single plugin DLL through McMaster with the shared contract types and instantiate its
-	/// <c>[SharpPlugin] IPlugin</c>. Returns <c>null</c> (and logs) on any failure so the caller keeps loading.
+	/// <c>[SharpPlugin] IPlugin</c>. The collectibility of the underlying <see cref="System.Runtime.Loader.AssemblyLoadContext"/>
+	/// is decided <b>per plugin</b> by <see cref="IsUnloadablePlugin"/>: a plugin that contributes only
+	/// command/function (and Phase-2b hook) sources gets a collectible ALC and can be unloaded at runtime;
+	/// one that also contributes DI/migration/flag/bridge state is loaded non-collectibly (load-once). The
+	/// loader handle is kept alive (never disposed here) and recorded against the plugin instance via
+	/// <see cref="Handles"/> so the manager can later unload it. Returns <c>null</c> (and logs) on any
+	/// failure so the caller keeps loading.
 	/// </summary>
-	private static IPlugin? LoadOne(PluginCandidate candidate, ILogger logger)
+	public static LoadedPlugin? LoadOne(string dllPath, ILogger logger)
 	{
+		PluginLoader? loader = null;
 		try
 		{
-			var loader = PluginLoader.CreateFromAssemblyFile(
-				candidate.DllPath,
-				isUnloadable: false,
+			// Load collectibly: a collectible ALC costs nothing extra while it stays loaded, but it is the
+			// only kind that can later be unloaded. We instantiate the entry type, read which contribution
+			// interfaces it implements, and derive the unloadable verdict from that. Load-once plugins keep
+			// the same collectible loader (we simply never unload them); command/function-only plugins are
+			// the ones the manager may actually unload.
+			loader = PluginLoader.CreateFromAssemblyFile(
+				dllPath,
+				isUnloadable: true,
 				sharedTypes: SharedContractTypes);
 
-			var assembly = loader.LoadDefaultAssembly();
-
-			var entryType = assembly.GetTypes()
-				.FirstOrDefault(t => t is { IsClass: true, IsAbstract: false }
-					&& t.GetCustomAttribute<SharpPluginAttribute>() is not null
-					&& typeof(IPlugin).IsAssignableFrom(t));
-
-			if (entryType is null)
+			var plugin = Instantiate(loader, dllPath, logger);
+			if (plugin is null)
 			{
-				logger.LogWarning("Plugin DLL {DllPath} has no [SharpPlugin] IPlugin entry type; skipping.", candidate.DllPath);
+				loader.Dispose();
 				return null;
 			}
 
-			if (Activator.CreateInstance(entryType) is not IPlugin plugin)
-			{
-				logger.LogWarning("Could not instantiate plugin entry type {EntryType} in {DllPath}; skipping.", entryType.FullName, candidate.DllPath);
-				return null;
-			}
-
-			return plugin;
+			var unloadable = IsUnloadablePlugin(plugin);
+			Handles.AddOrUpdate(plugin, new PluginHandle(loader, dllPath, unloadable));
+			return new LoadedPlugin(plugin, dllPath) { Loader = loader, IsUnloadable = unloadable };
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Failed to load plugin from {DllPath}; skipping it.", candidate.DllPath);
+			loader?.Dispose();
+			logger.LogError(ex, "Failed to load plugin from {DllPath}; skipping it.", dllPath);
 			return null;
 		}
+	}
+
+	/// <summary>
+	/// Instantiate the single <c>[SharpPlugin] IPlugin</c> entry type from a loader's default assembly, or
+	/// <c>null</c> (with a log) when the DLL has no valid entry type.
+	/// </summary>
+	private static IPlugin? Instantiate(PluginLoader loader, string dllPath, ILogger logger)
+	{
+		var assembly = loader.LoadDefaultAssembly();
+
+		var entryType = assembly.GetTypes()
+			.FirstOrDefault(t => t is { IsClass: true, IsAbstract: false }
+				&& t.GetCustomAttribute<SharpPluginAttribute>() is not null
+				&& typeof(IPlugin).IsAssignableFrom(t));
+
+		if (entryType is null)
+		{
+			logger.LogWarning("Plugin DLL {DllPath} has no [SharpPlugin] IPlugin entry type; skipping.", dllPath);
+			return null;
+		}
+
+		if (Activator.CreateInstance(entryType) is not IPlugin plugin)
+		{
+			logger.LogWarning("Could not instantiate plugin entry type {EntryType} in {DllPath}; skipping.", entryType.FullName, dllPath);
+			return null;
+		}
+
+		return plugin;
+	}
+
+	/// <summary>
+	/// The per-plugin unloadable verdict. A plugin is unloadable iff it contributes <b>only</b> runtime-
+	/// removable surfaces — <see cref="ICommandSource"/>/<see cref="IFunctionSource"/> (Phase-2b hook
+	/// sources, when present, are equally removable) — and <b>none</b> of the load-once seams whose effects
+	/// are captured by the DI container, the database, the flag set, or the NATS bridge and therefore cannot
+	/// be torn down without a server restart: <see cref="IServiceRegistrar"/>, <see cref="IMigrationSource"/>,
+	/// <see cref="IFlagSource"/>, <see cref="IBridgeSubscriptionSource"/>.
+	/// </summary>
+	public static bool IsUnloadablePlugin(IPlugin plugin)
+	{
+		var contributesCommandsOrFunctions = plugin is ICommandSource or IFunctionSource;
+		var contributesLoadOnceState =
+			plugin is IServiceRegistrar
+			|| plugin is IMigrationSource
+			|| plugin is IFlagSource
+			|| plugin is IBridgeSubscriptionSource;
+
+		return contributesCommandsOrFunctions && !contributesLoadOnceState;
 	}
 }
