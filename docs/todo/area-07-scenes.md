@@ -140,10 +140,10 @@ plugin seam.
   (no double from room emit + feed); **editor calls `SendCommand` with POSE/SAY/
   SEMIPOSE, never `ISceneService`/`@emit`**; `long` timestamp binding.
 
-## Phase 6 — `SceneOptions` config + `#SCENELOGGER` softcode bootstrap
-- [ ] `SceneOptions.cs` (advisory: capture toggle, logger object, default
-      status/public, temp-room knobs, known-status/tag UI hints, share-requires-
-      owner) + `SharpMUSHOptions.Scene` (generator re-runs)
+## Phase 6 — `#SCENELOGGER` softcode bootstrap
+- [x] **No `SceneOptions` config** — dropped by design (every knob is softcode
+      policy with zero C# consumers; the bootstrap hardcodes its own policy via
+      `&conf.* #SCENELOGGER` attributes). Keeps the mechanism/policy split clean.
 - [ ] `docs/setup/scene-bootstrap.md` — the **WIZARD** `#SCENELOGGER`:
       `@hook/override POSE/SAY/SEMIPOSE` capture (reproduce-emit + `sceneaddpose`
       via `scenewhere`/`scenefocus`/`scenemember(...,showas)`); `+scene/*` verbs

@@ -28,7 +28,7 @@ capture is a softcode `@hook/override` (see *Capture*).
 
 This subsystem is the **first reference plugin** for the Package Manager DLL
 framework; every seam (migrations, the `SCENE_ROOM` flag, `@SCENE`, the `scene…`
-functions, `SceneOptions`, the `ISceneService` DI cast, the `game.scene.{id}`
+functions, the `ISceneService` DI cast, the `game.scene.{id}`
 realtime leg, the portal widget) is shaped so later extraction into a
 collectible `AssemblyLoadContext` is a *move*, not a *rewrite*.
 
@@ -342,15 +342,17 @@ if they posed, the edge stays (they're credited in the record).
 (Illustrative — the shipped bootstrap fleshes these out; capture/permission/
 formatting/room-orchestration are all softcode policy.)
 
-## `SceneOptions` Config
+## Configuration — none (by design)
 
-`SharpMUSH.Configuration/Options/SceneOptions.cs`, a `[property: SharpConfig]`
-record added to `SharpMUSHOptions`. All values are **advisory** — softcode reads
-them; C# enforces none. Keys: `scene_capture_enabled`, `scene_logger_object`,
-`scene_default_public`, `scene_max_recent`, `scene_default_status`,
-`scene_known_statuses` (UI hint list), `scene_temp_grace_minutes`,
-`scene_temp_room_name_pattern`, `scene_temp_zone`, `scene_max_temp_per_player`,
-`scene_known_tags` (UI hint), `scene_share_requires_owner`.
+There is **no `SceneOptions` config category**. Every knob the system needs
+(capture on/off, the logger object, default status/visibility, known
+statuses/tags, temp-room naming/zone/grace/limits, share-requires-owner) is
+**game policy**, and policy lives entirely in the `#SCENELOGGER` softcode
+bootstrap — there are no C# consumers for any of it. Adding a `SharpConfig`
+category would just be a second place to express what the softcode already
+hardcodes, so admins set these directly in the bootstrap softcode (e.g.
+`&conf.* #SCENELOGGER` attributes the verbs read). This keeps the
+mechanism/policy split clean: C# ships primitives, softcode owns policy.
 
 ## Realtime — `game.scene.{id}`
 
@@ -417,8 +419,8 @@ matrix.
 | 1b | `SCENE_ROOM` flag seed | Schema (flag) | Couples to core flag-seeding → flag for an `IFlagContribution` seam. |
 | 2 | `@SCENE` command + handlers | Command | `[SharpCommand]` assembly-scanned; no temp-room/building dependency (temp is softcode) → cleanly extractable. |
 | 3 | `scene…` functions | Function | `[SharpFunction]` assembly-scanned. |
-| 4 | `SceneOptions` | Config | Plugin contributes its `SharpConfig` category. |
-| 5 | `ISceneService` tri-cast (`*.Scene.cs` partials) | Storage | Net-new provider files; no new `ISharpDatabase` methods; client stays InMemory. |
+| 4 | *(no config)* | — | No `SceneOptions` by design — all knobs are softcode policy in the bootstrap; nothing to contribute. |
+| 5 | `ISceneService` tri-cast (`*.Scene.cs` partials) | Storage | Net-new provider files; no new `ISharpDatabase` methods. |
 | 6 | `SceneEventMessage` + bridge + hub + client | Realtime/UI | **Blocker:** `SubscribeSceneAsync` is hard-coded in Server's `Task.WhenAll` — must become a registrable `IBridgeSubscription` list before DLL extraction. |
 | 7 | `ActiveSceneWidget` + pages | Widget/Zone | Registered via `IWidgetRegistry`. |
 | 8 | `#SCENELOGGER` bootstrap + hook recipe | Integration recipe | No engine edits — capture rides `@hook/override`. |
