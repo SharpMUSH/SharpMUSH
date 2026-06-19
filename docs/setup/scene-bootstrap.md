@@ -11,6 +11,15 @@ There is intentionally **no `SceneOptions` config category**: every knob is
 policy, so it is set as `&conf.*` attributes on `#SCENELOGGER` and read by the
 verbs below. One place, not two.
 
+> **Prerequisite.** The `scene…` **write** functions (`scenecreate`,
+> `sceneaddpose`, `sceneset`, …) are `WizardOnly | HasSideFX`, so they run only
+> when **side-effect functions are enabled** (the `function_side_effects`
+> config) *and* the caller is a wizard — `#SCENELOGGER` satisfies the latter.
+> If you cannot enable side-effect functions, every write verb below has an
+> equivalent **`@scene/<switch>`** command form (gated only by `FLAG^WIZARD`):
+> e.g. `think sceneaddpose(…)` → `@scene/addpose <id>=…`. The read functions
+> (`scenewhere`, `scenefocus`, `scene`, …) are plain `Regular` and always work.
+
 > Style note: examples follow SharpMUSH softcode conventions — bare `%0`/`%#`/
 > `%q<…>` substitutions are never wrapped in `[ ]` (brackets are for function
 > calls only), and `firstof()` is preferred over nested `if()` chains.
