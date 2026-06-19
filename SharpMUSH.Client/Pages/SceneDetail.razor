@@ -1,123 +1,15 @@
 @page "/scenes/{Id}"
 @inject IStringLocalizer<SharedResource> Loc
-@inject ISceneService SceneService
 
-@if (_loading)
-{
-    <PageTitle>@Loc["Scene"] — SharpMUSH</PageTitle>
-    <div style="padding:var(--cpad);">
-        <MudProgressLinear Indeterminate="true" />
-    </div>
-}
-else if (_notFound)
-{
-    <PageTitle>@Loc["Scene"] — @Loc["NotFound"]</PageTitle>
-    <div style="padding:var(--cpad);">
-        <MudAlert Severity="Severity.Warning">@Loc["SceneNotFound"]</MudAlert>
-        <MudButton Href="/scenes" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
-            @Loc["BackToArchive"]
-        </MudButton>
-    </div>
-}
-else
-{
-    <PageTitle>@_scene!.Title — SharpMUSH</PageTitle>
-    <div style="padding:var(--cpad);">
+<PageTitle>@Loc["Scene"] — SharpMUSH</PageTitle>
 
-        @* Header *@
-        <div style="margin-bottom:20px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                @if (!_scene!.ClosedAt.HasValue)
-                {
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                             Style="font-size:10px;letter-spacing:0.06em;height:20px;padding:0 7px;">LIVE</MudChip>
-                }
-                <MudText Typo="Typo.h4" Style="font-weight:700;line-height:1.2;">
-                    @(string.IsNullOrWhiteSpace(_scene!.Title) ? Loc["Untitled"].ToString() : _scene!.Title)
-                </MudText>
-            </div>
-            <div style="display:flex;align-items:center;gap:16px;color:var(--text-dim);font-size:13px;">
-                <span>
-                    <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:3px;" />
-                    @_scene!.RoomName
-                </span>
-                <span>
-                    <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Style="vertical-align:middle;margin-right:3px;" />
-                    @_scene!.ParticipantDbrefs.Count participant(s)
-                </span>
-                <span>@_scene!.StartedAt.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
-            </div>
-            @if (!string.IsNullOrWhiteSpace(_scene!.Description))
-            {
-                <MudText Style="color:var(--text-dim);font-size:14px;margin-top:8px;">@_scene!.Description</MudText>
-            }
-        </div>
-
-        @* Transcript *@
-        @if (_messages.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@Loc["NoMessagesInScene"]</MudAlert>
-        }
-        else
-        {
-            <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;">
-                <div class="scene-log" style="max-height:65vh;padding:16px;">
-                    @foreach (var msg in _messages)
-                    {
-                        <div class="scene-line scene-line--@msg.MessageType.ToString().ToLowerInvariant()">
-                            @((MarkupString)msg.RenderedHtml)
-                        </div>
-                    }
-                </div>
-            </MudPaper>
-        }
-
-        @* Actions *@
-        <div style="display:flex;gap:10px;margin-top:16px;">
-            @if (!_scene!.ClosedAt.HasValue)
-            {
-                <MudButton Href="@($"/scenes/{Id}/live")"
-                           Variant="Variant.Filled" Color="Color.Primary">
-                    @Loc["WatchLive"]
-                </MudButton>
-            }
-            <MudButton Href="/scenes" Variant="Variant.Text" Color="Color.Default">
-                @Loc["BackToArchive"]
-            </MudButton>
-        </div>
-    </div>
-}
+<div style="padding:var(--cpad);">
+    @* TODO(Phase 5): render the scene transcript (ScenePose) from the server API. *@
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+        Scene @Id is being rebuilt on the new scene engine.
+    </MudAlert>
+</div>
 
 @code {
-    [Parameter]
-    public required string Id { get; set; }
-
-    private SceneArchive? _scene;
-    private List<SceneMessage> _messages = [];
-    private bool _loading = true;
-    private bool _notFound;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        _loading = true;
-        _notFound = false;
-        _messages = [];
-        _scene = null;
-
-        var sceneResult = await SceneService.GetSceneAsync(Id);
-        if (sceneResult.IsT1)
-        {
-            _notFound = true;
-            _loading = false;
-            return;
-        }
-
-        _scene = sceneResult.AsT0;
-
-        var msgResult = await SceneService.GetMessagesAsync(Id);
-        if (msgResult.IsT0)
-            _messages = [..msgResult.AsT0];
-
-        _loading = false;
-    }
+    [Parameter] public string Id { get; set; } = string.Empty;
 }

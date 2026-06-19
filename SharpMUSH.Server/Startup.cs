@@ -253,8 +253,9 @@ public class Startup(
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
-// Scene subsystem — InMemorySceneService for dev/test; swap for a persistent implementation later.
-		services.AddSingleton<ISceneService, InMemorySceneService>();
+		// Scene subsystem — ISceneService is implemented by the active ISharpDatabase
+		// provider (the IWikiService tri-cast precedent). Registered in Phase 2 once the
+		// provider .Scene.cs partials exist; there is no in-memory implementation.
 
 // Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
 		services.AddMemoryCache();

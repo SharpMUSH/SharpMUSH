@@ -1,8 +1,5 @@
 @page "/scenes"
-@using Microsoft.AspNetCore.Components.Authorization
 @inject IStringLocalizer<SharedResource> Loc
-@inject ISceneService SceneService
-@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>@Loc["SceneArchive"] — SharpMUSH</PageTitle>
 
@@ -10,98 +7,10 @@
     <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:4px;">@Loc["SceneArchive"]</MudText>
     <MudText Style="color:var(--text-dim);font-size:14px;margin-bottom:24px;">Browse and watch roleplay sessions.</MudText>
 
-    <MudTabs Elevation="0" Rounded="false" @bind-ActivePanelIndex="_tab">
-        <MudTabPanel Text="All" BadgeData="@(_allScenes?.Count)" BadgeColor="Color.Default">
-            @SceneList(_allScenes, live: false)
-        </MudTabPanel>
-        <MudTabPanel Text="Live" BadgeData="@(_activeScenes?.Count)" BadgeColor="Color.Success">
-            @SceneList(_activeScenes, live: true)
-        </MudTabPanel>
-    </MudTabs>
+    @* TODO(Phase 5): wire to the server scene API. The client-only fake
+       (InMemorySceneService) was removed in Phase 1; the scene browser is being
+       rebuilt on the new graph-backed engine. Prior markup is in git history. *@
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+        The scene browser is being rebuilt on the new scene engine.
+    </MudAlert>
 </div>
-
-@code {
-    private int _tab = 0;
-    private bool _loading = true;
-    private List<SceneArchive>? _allScenes;
-    private List<SceneArchive>? _activeScenes;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var allTask    = SceneService.GetRecentScenesAsync(50);
-        var activeTask = SceneService.GetActiveScenesAsync();
-        await Task.WhenAll(allTask, activeTask);
-        _allScenes    = [..await allTask];
-        _activeScenes = [..await activeTask];
-        _loading = false;
-    }
-
-    private RenderFragment SceneList(List<SceneArchive>? scenes, bool live) => __builder =>
-    {
-        if (_loading)
-        {
-            for (var i = 0; i < 4; i++)
-            {
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="72px" Class="mb-2" Style="border-radius:var(--radius);" />
-            }
-        }
-        else if (scenes is null || scenes.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No scenes found.</MudAlert>
-        }
-        else
-        {
-            <div style="display:flex;flex-direction:column;gap:10px;">
-                @foreach (var scene in scenes)
-                {
-                    <MudPaper Elevation="0"
-                              Style="display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);"
-                              Class="scene-card">
-                        <div style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
-                                @if (live)
-                                {
-                                    <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                                             Style="font-size:10px;letter-spacing:0.06em;height:20px;padding:0 7px;">LIVE</MudChip>
-                                }
-                                <MudText Style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                    @(string.IsNullOrWhiteSpace(scene.Title) ? Loc["Untitled"].ToString() : scene.Title)
-                                </MudText>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:14px;">
-                                <MudText Style="font-size:12px;color:var(--text-dim);">
-                                    <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:2px;font-size:13px;" />
-                                    @scene.RoomName
-                                </MudText>
-                                <MudText Style="font-size:12px;color:var(--text-faint);">
-                                    <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Style="vertical-align:middle;margin-right:2px;font-size:13px;" />
-                                    @scene.ParticipantDbrefs.Count
-                                </MudText>
-                                @if (scene.ClosedAt.HasValue)
-                                {
-                                    <MudText Style="font-size:12px;color:var(--text-faint);">
-                                        @scene.ClosedAt.Value.ToLocalTime().ToString("MMM d, yyyy")
-                                    </MudText>
-                                }
-                            </div>
-                        </div>
-                        <div style="display:flex;gap:8px;flex-shrink:0;">
-                            <MudButton Variant="Variant.Text" Size="Size.Small"
-                                       Color="Color.Primary" Href="@($"/scenes/{scene.Id}")">
-                                Read
-                            </MudButton>
-                            @if (live || !scene.ClosedAt.HasValue)
-                            {
-                                <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                                           Style="border-color:var(--accent);color:var(--accent);"
-                                           Href="@($"/scenes/{scene.Id}/live")">
-                                    Join
-                                </MudButton>
-                            }
-                        </div>
-                    </MudPaper>
-                }
-            </div>
-        }
-    };
-}

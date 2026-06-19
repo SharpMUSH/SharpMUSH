@@ -30,7 +30,8 @@ builder.Services.AddSingleton<ApplicationRegistryClient>();
 builder.Services.AddSingleton<RoleRegistryClient>();
 builder.Services.AddSingleton<GalleryService>();
 builder.Services.AddSingleton<MailService>();
-builder.Services.AddSingleton<ISceneService, InMemorySceneService>();
+// Scene data is served by the server API (Phase 5 wires the client HTTP service);
+// the WASM client has no local ISceneService implementation.
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();
