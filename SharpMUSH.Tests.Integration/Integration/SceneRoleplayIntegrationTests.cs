@@ -433,4 +433,32 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(quinnLine.ToLowerInvariant()).Contains("up")
 			.Because("the never-posed member (Quinn) is oldest, so the up-next marker is on Quinn's row");
 	}
+
+	/// <summary>+scene/list — the align()'d scene browser. A created+started scene must appear in the
+	/// 'recent' table with its title and status.</summary>
+	[Test]
+	public async Task SceneList_RendersBrowserTableWithCreatedScene()
+	{
+		await God1("@set #1=WIZARD");
+
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+
+		var digOut = (await God1($"@dig ListRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var rob = await CreatePlayerAsync($"Rob_{Tag}", "pw_rob_123", 31L);
+		await God1($"@tel {rob}={digOut}");
+		await God1($"@tel {loggerDbref}={digOut}");
+
+		await RunAndCollectAs(31L, $"+scene/create ListTest_{Tag}");
+		await RunAndCollectAs(31L, "+scene/start");
+
+		var listMsgs = await RunAndCollectAs(31L, "+scene/list");
+		var table = string.Join("\n", listMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
+		Console.WriteLine("=== +scene/list ===\n" + table);
+
+		await Assert.That(table).Contains("Scenes").Because("the list header should render");
+		await Assert.That(table).Contains($"ListTest_{Tag}").Because("the created scene's title should appear in the table");
+		await Assert.That(table).Contains("active").Because("the status column should show the started scene as active");
+	}
 }

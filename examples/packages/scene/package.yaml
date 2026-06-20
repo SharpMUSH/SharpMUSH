@@ -164,6 +164,16 @@ objects:
       CMD`POT: |-
         $+scene/pot: @pemit %#=[setq(0,scenefocus(%#))][switch(words(%q0),0,You are not focused on a scene. Use +scene/join <id> or +scene/create <title>.,[header(Pose Tracker - Scene %q0,width(%#))]%r[iter(sort(iter(scenemembers(%q0),u(%!/FUN`POT_KEY,%q0,##))),u(%!/FUN`POT_ROW,%q0,after(##,~),inum(0),width(%#)),,%r)]%r[footer([words(scenemembers(%q0))] in scene - oldest pose is up next,width(%#))])]
 
+      # ---- scene browser (+scene/list [filter]): align()'d table of scenes -------
+      # filter: active | recent (default) | scheduled | mine. Width-adaptive columns;
+      # the Title column flexes to fill the user's terminal width(%#).
+      FUN`LIST_TITLE: |-
+        [switch(setr(8,scene(%0,title)),#-1*,(untitled),%q8)]
+      FUN`LIST_ROW: |-
+        align(<10 <[sub(%2,41)] <14 >5 <8,left(%0,10),left(u(%!/FUN`LIST_TITLE,%0),sub(%2,42)),left(scene(%0,roomname),14),words(scenemembers(%0)),scene(%0,status),%1)
+      CMD`LIST: |-
+        $+scene/list*: @pemit %#=[setq(0,firstof(edit(%0,%b,),recent))][setq(1,scenelist(%q0))][header(Scenes: %q0,width(%#))]%r[align(<10 <[sub(width(%#),41)] <14 >5 <8,ID,Title,Where,Cast,Status,%b)]%r[iter(%q1,u(%!/FUN`LIST_ROW,##,%b,width(%#)),,%r)]%r[footer([words(%q1)] scenes,width(%#))]
+
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).
       AINSTALL: |-

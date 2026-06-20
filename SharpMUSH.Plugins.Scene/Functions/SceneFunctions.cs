@@ -37,24 +37,28 @@ public static class SceneFunctions
 		}
 
 		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
-		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		// The viewer is the ENACTOR (%#, the player asking) — not the executor. Verbs run via the WIZARD
+		// Scene Logger $-commands, so keying on the executor would make every read see the logger's view;
+		// keying on the enactor gives each player their own visibility (a member sees their own scene).
+		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
 
-		// Wizards see every scene. This is what makes the WIZARD-flagged Scene Logger (which runs the
-		// +scene/* $-commands) able to read/manage non-public scenes it is not a member of.
-		if (await executor.IsWizard())
+		// A wizard enactor still sees every scene.
+		if (await enactor.IsWizard())
 		{
 			return true;
 		}
 
-		var member = await service.GetMemberAsync(scene.Id, executor.Object().DBRef.ToString());
+		var member = await service.GetMemberAsync(scene.Id, enactor.Object().DBRef.ToString());
 		return member.IsT0;
 	}
 
 	private static async ValueTask<string> ViewerDbrefAsync(IMUSHCodeParser parser)
 	{
 		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
-		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		return executor.Object().DBRef.ToString();
+		// The enactor (%#) is the viewer — see SceneVisibleToAsync. Used by scenelist() to scope the
+		// browser to the asking player's scenes rather than the Scene Logger's.
+		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
+		return enactor.Object().DBRef.ToString();
 	}
 
 	/// <summary>Guard for side-effect (write) functions: false ⇒ side effects are disabled in config.</summary>
