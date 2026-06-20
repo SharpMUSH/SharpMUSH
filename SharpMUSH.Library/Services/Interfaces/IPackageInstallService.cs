@@ -4,6 +4,8 @@ using SharpMUSH.Library.Models.Packages;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
+// IManagedPackageBinarySource lives in this namespace.
+
 /// <summary>
 /// The orchestration layer of the package plan/apply model: gathers live game
 /// state and registry records for the plan engine, executes reviewed
@@ -28,11 +30,19 @@ public interface IPackageInstallService
 	/// creates/updates/deletes objects and attributes, and records registry
 	/// state plus a revision snapshot. Fails without writing when the plan is
 	/// blocked or a conflict is undecided.
+	///
+	/// <para>For a <see cref="PackageKind.Managed"/> package (Phase 4 — a compiled
+	/// C# plugin DLL), this instead verifies and deposits the carried binaries via
+	/// <paramref name="binarySource"/> into <c>plugins/&lt;id&gt;/</c> (subject to the
+	/// trust gate on <paramref name="request"/>) and records the deployed file
+	/// list; the plugin loads on the next boot. A managed apply requires a
+	/// <paramref name="binarySource"/>.</para>
 	/// </summary>
 	Task<OneOf<PackageApplyResult, Error<string>>> ApplyAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
-		CancellationToken cancellationToken = default);
+		CancellationToken cancellationToken = default,
+		IManagedPackageBinarySource? binarySource = null);
 
 	/// <summary>
 	/// Uninstalls a package: blocks when dependents exist (unless

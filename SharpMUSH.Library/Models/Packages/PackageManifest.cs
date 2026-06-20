@@ -20,8 +20,9 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Dependencies">Packages this package requires, with version constraints.</param>
 /// <param name="Configure"><c>{{?configure}}</c> parameters the installing admin supplies, keyed by name.</param>
 /// <param name="Objects">Objects the package manages, in manifest order (empty for <see cref="PackageKind.Application"/> packages).</param>
-/// <param name="Kind">Package kind: a softcode package (objects/attributes) or an application package (a portal registration).</param>
+/// <param name="Kind">Package kind: a softcode package (objects/attributes), an application package (a portal registration), or a managed package (a C# plugin DLL).</param>
 /// <param name="Application">The dynamic-application registration this package installs, when <see cref="Kind"/> is <see cref="PackageKind.Application"/>; otherwise null.</param>
+/// <param name="Binary">The compiled plugin DLL(s) this package carries, when <see cref="Kind"/> is <see cref="PackageKind.Managed"/>; otherwise null.</param>
 public sealed record PackageManifest(
 	PackageFormatVersion Format,
 	string Name,
@@ -39,23 +40,50 @@ public sealed record PackageManifest(
 	IReadOnlyDictionary<string, PackageConfigureSpec> Configure,
 	IReadOnlyList<PackageObjectSpec> Objects,
 	PackageKind Kind = PackageKind.Softcode,
-	PackageApplicationSpec? Application = null);
+	PackageApplicationSpec? Application = null,
+	PackageBinarySpec? Binary = null);
 
 /// <summary>
-/// The two kinds of package the manager installs. A <see cref="Softcode"/>
+/// The kinds of package the manager installs. A <see cref="Softcode"/>
 /// package creates objects and manages attributes (the original Area-20 model).
 /// An <see cref="Application"/> package carries no objects of its own — it
 /// registers a Dynamic Application (Area 21) in the portal and <c>depends</c>
-/// on the softcode package that provides its HTTP-handler routes.
+/// on the softcode package that provides its HTTP-handler routes. A
+/// <see cref="Managed"/> package distributes a compiled C# plugin DLL (Phase 4
+/// of the plugin system): installing it verifies the carried binaries against
+/// SHA-256 hashes in the manifest and, once the operator opts in (managed code
+/// runs in full server trust), deposits them into <c>plugins/&lt;id&gt;/</c> for
+/// the plugin loader to pick up on the next boot.
 /// </summary>
 public enum PackageKind
 {
-	/// <summary>Objects and attributes (the default). Requires <c>objects:</c>; forbids <c>application:</c>.</summary>
+	/// <summary>Objects and attributes (the default). Requires <c>objects:</c>; forbids <c>application:</c>/<c>binaries:</c>.</summary>
 	Softcode,
 
-	/// <summary>A portal application registration. Requires <c>application:</c>; forbids <c>objects:</c>.</summary>
-	Application
+	/// <summary>A portal application registration. Requires <c>application:</c>; forbids <c>objects:</c>/<c>binaries:</c>.</summary>
+	Application,
+
+	/// <summary>A compiled C# plugin DLL. Requires <c>binaries:</c>; forbids <c>objects:</c>/<c>application:</c>.</summary>
+	Managed
 }
+
+/// <summary>
+/// The binary payload a <see cref="PackageKind.Managed"/> package carries: the
+/// hashed plugin DLL(s) (and optional dependency assemblies / <c>plugin.json</c>)
+/// shipped alongside <c>package.yaml</c> in the package source, plus the minimum
+/// server/plugin-contract version they were built against. Each file is verified
+/// against its declared SHA-256 at install time; any mismatch rejects the apply.
+/// </summary>
+/// <param name="MinServerVersion">Minimum SharpMUSH server / plugin-contract version the binaries require; the install refuses an older server.</param>
+/// <param name="Files">The carried files, in manifest order. At least one must be present.</param>
+public sealed record PackageBinarySpec(
+	VersionConstraint MinServerVersion,
+	IReadOnlyList<PackageBinaryFile> Files);
+
+/// <summary>One carried binary file and the SHA-256 the installer must verify it against.</summary>
+/// <param name="FileName">File name relative to the package source directory (no path separators — a flat manifest of files to deposit into <c>plugins/&lt;id&gt;/</c>).</param>
+/// <param name="Sha256">Lowercase hex SHA-256 of the file's bytes; the install rejects a mismatch.</param>
+public sealed record PackageBinaryFile(string FileName, string Sha256);
 
 /// <summary>
 /// The portal registration an application package installs: it maps one-to-one

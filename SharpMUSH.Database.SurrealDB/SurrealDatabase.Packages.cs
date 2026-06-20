@@ -20,6 +20,7 @@ internal class SysPackageDbRecord : Record
 	public string? pinnedBranch { get; set; }
 	public string installedAt { get; set; } = "";
 	public int currentRevision { get; set; }
+	public List<string>? deployedFiles { get; set; }
 }
 
 internal class SysPackageObjectDbRecord : Record
@@ -81,7 +82,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 	#region Package Registry
 
 	private const string SysPackageFields =
-		"id, packageId, version, sourceRepo, sourcePath, installedCommit, pinnedBranch, installedAt, currentRevision";
+		"id, packageId, version, sourceRepo, sourcePath, installedCommit, pinnedBranch, installedAt, currentRevision, deployedFiles";
 
 	private const string SysPackageObjectFields = "id, packageId, refName, objid, objectType";
 
@@ -114,12 +115,14 @@ public partial class SurrealDatabase : IPackageRegistryService
 			["installedCommit"] = package.InstalledCommit,
 			["pinnedBranch"] = package.PinnedBranch,
 			["installedAt"] = package.InstalledAt.ToString("o", CultureInfo.InvariantCulture),
-			["currentRevision"] = package.CurrentRevision
+			["currentRevision"] = package.CurrentRevision,
+			["deployedFiles"] = (package.DeployedFiles ?? []).ToList()
 		};
 		await ExecuteAsync("""
 			UPSERT type::thing('sys_package', $pkg) SET packageId = $pkg, version = $version,
 				sourceRepo = $sourceRepo, sourcePath = $sourcePath, installedCommit = $installedCommit,
-				pinnedBranch = $pinnedBranch, installedAt = $installedAt, currentRevision = $currentRevision
+				pinnedBranch = $pinnedBranch, installedAt = $installedAt, currentRevision = $currentRevision,
+				deployedFiles = $deployedFiles
 			""", parameters);
 	}
 
@@ -143,7 +146,8 @@ public partial class SurrealDatabase : IPackageRegistryService
 	private static InstalledPackageRecord MapPackage(SysPackageDbRecord record) => new(
 		record.packageId, record.version, record.sourceRepo, record.sourcePath,
 		record.installedCommit, record.pinnedBranch, ParsePackageTimestamp(record.installedAt),
-		record.currentRevision);
+		record.currentRevision,
+		record.deployedFiles is { Count: > 0 } ? record.deployedFiles : null);
 
 	public async Task RemoveInstalledPackageAsync(string packageId)
 	{

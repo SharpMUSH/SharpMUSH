@@ -8,7 +8,9 @@ without recompiling the server.
 This document describes the **Phase 1** architecture (command/function contributions), the **Phase 2a**
 contribution seams (DI services, DB migrations, engine flags, NATS bridge subscriptions), the **Phase 2b**
 engine-extension hooks (command interception + connection/object lifecycle — the C# analog of softcode
-`@hook`), and the **Phase 3** runtime **unload/reload** model, and notes the seams reserved for later phases.
+`@hook`), the **Phase 3** runtime **unload/reload** model, and the **Phase 4** **package-manager DLL
+distribution** (a `kind: managed` package carries a hashed plugin DLL, verified + trust-gated + deposited into
+`plugins/<id>/`), and notes the seams reserved for later phases.
 
 ## Why a plugin loader
 
@@ -280,9 +282,93 @@ The architecture leaves these seams for the committed later phases:
   `IPluginHookDispatcher` and `IConnectionService.ListenState` (see above). Hook-only plugins stay unloadable.
 - **Phase 3** — *implemented* — hot-reload/unload of command/function-only (and hook-only) plugins via
   collectible ALCs, with a `WeakReference`-dead gate (see above).
-- **Phase 4** — package-manager DLL distribution (signed/hashed manifest, trust gate).
+- **Phase 4** — *implemented* — package-manager DLL distribution: a `kind: managed` package carries a
+  hashed plugin DLL, verified + trust-gated + deposited into `plugins/<id>/` on install (see below).
 - **Phase 5** — *implemented* — the Scene system is extracted into the standalone `SharpMUSH.Plugins.Scene`
   plugin via the Phase-1/2a seams (see below).
+
+## Phase 4 — package-manager DLL distribution
+
+Until Phase 4, a plugin DLL could only reach `plugins/` by a **manual drop**. Phase 4 lets the Area-20
+**package manager** distribute compiled plugins: a package can declare `kind: managed` and carry a plugin
+DLL (plus optional dependency assemblies) alongside its `package.yaml`. Installing it **verifies** the
+binaries against SHA-256 hashes in the manifest and, once the operator opts in, **deposits** them into
+`plugins/<packageId>/` so the existing boot-time loader picks them up. Uninstalling **removes** the directory
+(and unloads the plugin if it is loaded + unloadable).
+
+### The manifest binary section
+
+A managed package's `package.yaml` declares `kind: managed` and a `binaries:` block, and **must not** declare
+softcode `objects:` or an `application:` block (validated in `PackageManifestService`, mirroring how the
+Softcode/Application kinds are validated). The shape (`PackageBinarySpec` / `PackageBinaryFile` in
+`SharpMUSH.Library/Models/Packages/PackageManifest.cs`):
+
+```yaml
+package: my-plugin
+version: "1.0.0"
+kind: managed
+binaries:
+  min_server_version: ">=1.0"        # plugin/server contract version constraint (refused if too new)
+  files:
+    - file: MyPlugin.dll             # flat file name — no path separators or '..'
+      sha256: <64-hex SHA-256>       # the installer rejects a mismatch
+    - file: MyPlugin.deps.json
+      sha256: <64-hex SHA-256>
+    - file: plugin.json              # ordering metadata for the loader (optional)
+      sha256: <64-hex SHA-256>
+```
+
+`min_server_version` is checked against `PluginContractVersion.Current` (a `PackageVersion` in
+`SharpMUSH.Library/Plugins/PluginContractVersion.cs`, tracking the shared contract surface plugins bind to).
+File names are constrained to bare names so they deposit flat into `plugins/<id>/`.
+
+### Distribution: bytes alongside `package.yaml`
+
+The DLL bytes live in the **package source** — the git directory `package.yaml` is in. `IPackageSourceService`
+gained `GetBinarySourceAsync(remote, path, commit, …)`, which reads the package directory's blobs from the
+**exact commit** the manifest was fetched at (a moved tag therefore cannot smuggle different bytes than the
+SHA-256 the manifest signed off on) and returns an `IManagedPackageBinarySource` — a tiny `ReadBinaryAsync(fileName)`
+seam. Tests back it with a directory; the controller backs it with the git commit snapshot.
+
+### Install / verify / trust / uninstall flow
+
+`PackageInstallService.ApplyAsync` short-circuits a `kind: managed` manifest to `ApplyManagedAsync`, which
+delegates to **`IManagedPackageInstaller`** (`ManagedPackageInstaller` in `SharpMUSH.Library/Services/`):
+
+1. **Trust gate (two parts, both required).** Managed installs are distinct from softcode: the apply needs the
+   operator's explicit per-apply opt-in **`PackageApplyRequest.AllowManagedCode`** *and* the package id must be
+   on the server's standing allow-list (`ManagedPackageTrustOptions`, from the `ManagedPackages` config section
+   — `AllowAll` or `AllowList`). Both are server-side / operator-supplied; a package never self-declares trust.
+2. **Server-version check.** `PluginContractVersion.Satisfies(min_server_version)` — refuse a package built for
+   a newer contract than this server provides.
+3. **Hash verification.** Every declared file is read through the binary source and its SHA-256 compared to the
+   manifest. A missing file or any mismatch **rejects the apply, having written nothing**.
+4. **Deposit.** The verified bytes are written into `plugins/<packageId>/` (a clean re-deploy replaces any prior
+   directory for that id). The deposited file names are recorded on the installed-package registry record.
+5. **Uninstall.** `UninstallAsync` sees a managed package by its recorded `DeployedFiles`, calls
+   `IManagedPackageInstaller.RemoveAsync` — which **unloads** the plugin first if it is loaded + unloadable
+   (`IPluginManager.UnloadAsync`; a load-once plugin can't unload at runtime, but its directory is still removed
+   so the next boot does not re-load it), then deletes `plugins/<packageId>/` — and drops the registry records.
+
+A freshly-installed managed plugin is **loaded on the next boot** — the loader (`PluginLoaderService`) runs at
+startup. Live hot-load of a newly-installed package is a possible future nicety, **not** implemented here.
+
+### The trust model (arbitrary managed code = full server trust)
+
+A managed package distributes **arbitrary compiled C#** that, once loaded, runs in **full server trust** — there
+is no sandbox, exactly as for a plugin dropped into `plugins/` by hand. This mirrors the trust posture in
+`docs/design/custom-widgets.md`. SHA-256 verification guards **integrity** (the bytes are what the manifest
+committed to), not trust; trust is the operator's two-part opt-in. The default `ManagedPackageTrustOptions` is
+**deny** — a server installs no managed packages until the operator configures the allow-list (or `AllowAll`)
+**and** confirms each install.
+
+### The installed-package registry record extension
+
+The existing `InstalledPackageRecord` gained one field — `IReadOnlyList<string>? DeployedFiles` (default empty)
+— **no new collection**. It is threaded read+write through all three providers: ArangoDB (`DeployedFiles` array
+on the `PackageDbDoc`), Memgraph (a `deployedFiles` list property on `:SysPackage`), and SurrealDB (a
+`deployedFiles` list field on `sys_package`). Empty for softcode/application packages; populated for managed
+packages so uninstall removes exactly what install deposited.
 
 ## Phase 5 — Scene as the reference plugin
 

@@ -598,4 +598,109 @@ public class PackageInstallServiceTests
 
 		await Assert.That((await Installer.UninstallAsync("struct-pkg")).IsT0).IsTrue();
 	}
+
+	// ── Phase 4: managed (compiled C# plugin DLL) packages ───────────────────
+
+	private static string CommandOnlyDllPath =>
+		System.IO.Path.Combine(AppContext.BaseDirectory, "plugins-unit", "command-only", "CommandOnlyPlugin.dll");
+
+	private sealed class DirectoryBinarySource(string directory)
+		: SharpMUSH.Library.Services.Interfaces.IManagedPackageBinarySource
+	{
+		public async Task<byte[]?> ReadBinaryAsync(string fileName, CancellationToken cancellationToken = default)
+		{
+			var path = System.IO.Path.Combine(directory, fileName);
+			return System.IO.File.Exists(path) ? await System.IO.File.ReadAllBytesAsync(path, cancellationToken) : null;
+		}
+	}
+
+	/// <summary>
+	/// End-to-end through the real DB registry: a managed package deposits its
+	/// carried DLL into a scratch plugins root, the install records the deployed
+	/// file list on the installed-package record (proving the registry-record
+	/// extension threads through the active provider), and uninstall removes the
+	/// directory. Uses a dedicated installer pointed at a scratch root + allow-all
+	/// trust so the real plugins/ folder is never touched.
+	/// </summary>
+	[Test, NotInParallel]
+	public async Task ManagedPackage_InstallRecordsDeployedFiles_UninstallRemovesThem()
+	{
+		await Assert.That(System.IO.File.Exists(CommandOnlyDllPath)).IsTrue()
+			.Because("the CommandOnlyPlugin fixture DLL is reused as the carried managed binary");
+
+		var sourceDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"mpkg-src-{Guid.NewGuid():N}");
+		var pluginsRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"mpkg-plugins-{Guid.NewGuid():N}");
+		System.IO.Directory.CreateDirectory(sourceDir);
+		System.IO.File.Copy(CommandOnlyDllPath, System.IO.Path.Combine(sourceDir, "CommandOnlyPlugin.dll"));
+		var sha = Convert.ToHexString(
+			System.Security.Cryptography.SHA256.HashData(System.IO.File.ReadAllBytes(CommandOnlyDllPath))).ToLowerInvariant();
+
+		try
+		{
+			var manifest = Parse($"""
+				package: e2e-managed
+				version: "1.0.0"
+				kind: managed
+				binaries:
+				  min_server_version: ">=1.0"
+				  files:
+				    - file: CommandOnlyPlugin.dll
+				      sha256: {sha}
+				""");
+
+			var pluginManager = WebAppFactoryArg.Services.GetRequiredService<IPluginManager>();
+			var managedInstaller = new SharpMUSH.Library.Services.ManagedPackageInstaller(
+				pluginManager,
+				new SharpMUSH.Library.Services.ManagedPackageTrustOptions(false, ["e2e-managed"]),
+				Microsoft.Extensions.Logging.Abstractions.NullLogger<SharpMUSH.Library.Services.ManagedPackageInstaller>.Instance,
+				pluginsRoot);
+
+			var installer = new PackageInstallService(
+				Database,
+				Registry,
+				Applications,
+				WebAppFactoryArg.Services.GetRequiredService<IPackagePlanService>(),
+				WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>(),
+				WebAppFactoryArg.Services.GetRequiredService<IPackageLifecycleRunner>(),
+				managedInstaller);
+
+			// Refused without the per-apply opt-in, and nothing deposited.
+			var refused = await installer.ApplyAsync(
+				manifest,
+				new PackageApplyRequest(Source(), new Dictionary<string, string>(), [], 10, AllowManagedCode: false),
+				CancellationToken.None,
+				new DirectoryBinarySource(sourceDir));
+			await Assert.That(refused.IsT1).IsTrue().Because("a managed install without the opt-in must be refused");
+			await Assert.That((await Registry.GetInstalledPackageAsync("e2e-managed")).IsT1).IsTrue()
+				.Because("a refused managed install records nothing");
+
+			// Opt-in: deposit + record.
+			var applied = await installer.ApplyAsync(
+				manifest,
+				new PackageApplyRequest(Source(), new Dictionary<string, string>(), [], 10, AllowManagedCode: true),
+				CancellationToken.None,
+				new DirectoryBinarySource(sourceDir));
+			await Assert.That(applied.IsT0).IsTrue().Because("the opt-in + allow-list + matching hash should install");
+
+			var depositedDll = System.IO.Path.Combine(pluginsRoot, "e2e-managed", "CommandOnlyPlugin.dll");
+			await Assert.That(System.IO.File.Exists(depositedDll)).IsTrue();
+
+			var record = await Registry.GetInstalledPackageAsync("e2e-managed");
+			await Assert.That(record.IsT0).IsTrue();
+			await Assert.That(record.AsT0.DeployedFiles).IsNotNull();
+			await Assert.That(record.AsT0.DeployedFiles!).Contains("CommandOnlyPlugin.dll")
+				.Because("the deployed file list must round-trip through the active DB provider");
+
+			// Uninstall removes the directory and the registry record.
+			var uninstalled = await installer.UninstallAsync("e2e-managed");
+			await Assert.That(uninstalled.IsT0).IsTrue();
+			await Assert.That(System.IO.Directory.Exists(System.IO.Path.Combine(pluginsRoot, "e2e-managed"))).IsFalse();
+			await Assert.That((await Registry.GetInstalledPackageAsync("e2e-managed")).IsT1).IsTrue();
+		}
+		finally
+		{
+			System.IO.Directory.Delete(sourceDir, true);
+			if (System.IO.Directory.Exists(pluginsRoot)) System.IO.Directory.Delete(pluginsRoot, true);
+		}
+	}
 }

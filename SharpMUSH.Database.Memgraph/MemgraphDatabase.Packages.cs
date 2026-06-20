@@ -31,7 +31,8 @@ public partial class MemgraphDatabase : IPackageRegistryService
 			MERGE (p:SysPackage {id: $id})
 			SET p.version = $version, p.sourceRepo = $sourceRepo, p.sourcePath = $sourcePath,
 			    p.installedCommit = $installedCommit, p.pinnedBranch = $pinnedBranch,
-			    p.installedAt = $installedAt, p.currentRevision = $currentRevision
+			    p.installedAt = $installedAt, p.currentRevision = $currentRevision,
+			    p.deployedFiles = $deployedFiles
 			""",
 			new
 			{
@@ -42,7 +43,8 @@ public partial class MemgraphDatabase : IPackageRegistryService
 				installedCommit = package.InstalledCommit,
 				pinnedBranch = package.PinnedBranch,
 				installedAt = package.InstalledAt.ToString("o", CultureInfo.InvariantCulture),
-				currentRevision = package.CurrentRevision
+				currentRevision = package.CurrentRevision,
+				deployedFiles = (package.DeployedFiles ?? []).ToArray()
 			});
 	}
 
@@ -70,7 +72,19 @@ public partial class MemgraphDatabase : IPackageRegistryService
 		node.Properties["installedCommit"].As<string>(),
 		OptionalString(node, "pinnedBranch"),
 		ParsePackageTimestamp(node.Properties["installedAt"].As<string>()),
-		node.Properties["currentRevision"].As<int>());
+		node.Properties["currentRevision"].As<int>(),
+		OptionalStringList(node, "deployedFiles"));
+
+	private static IReadOnlyList<string>? OptionalStringList(INode node, string property)
+	{
+		if (!node.Properties.TryGetValue(property, out var value) || value is null)
+		{
+			return null;
+		}
+
+		var list = value.As<List<object>>().Select(o => o.As<string>()).ToList();
+		return list.Count > 0 ? list : null;
+	}
 
 	public async Task RemoveInstalledPackageAsync(string packageId)
 	{

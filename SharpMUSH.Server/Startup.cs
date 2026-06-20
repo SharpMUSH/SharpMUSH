@@ -233,6 +233,20 @@ public class Startup(
 		services.AddSingleton<IPackagePlanService, PackagePlanService>();
 		// Parser-layer runner for package AINSTALL/AUPDATE softcode; required by PackageInstallService.
 		services.AddSingleton<IPackageLifecycleRunner, SharpMUSH.Implementation.Services.PackageLifecycleRunner>();
+		// Phase-4 managed-package (compiled C# plugin DLL) installer + its server-side trust allow-list.
+		// The allow-list is read from the "ManagedPackages" config section (AllowAll / AllowList) and is
+		// the standing half of the trust gate; the per-apply allow_managed_code flag is the other half.
+		services.AddSingleton(_ =>
+		{
+			var section = configuration.GetSection("ManagedPackages");
+			var allowAll = section.GetValue("AllowAll", false);
+			var allowList = section.GetSection("AllowList").Get<string[]>() ?? [];
+			return new ManagedPackageTrustOptions(allowAll, allowList);
+		});
+		services.AddSingleton<IManagedPackageInstaller>(sp => new ManagedPackageInstaller(
+			sp.GetRequiredService<IPluginManager>(),
+			sp.GetRequiredService<ManagedPackageTrustOptions>(),
+			sp.GetRequiredService<ILogger<ManagedPackageInstaller>>()));
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
 		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();
 		services.AddSingleton<IPackageSourceService>(sp =>

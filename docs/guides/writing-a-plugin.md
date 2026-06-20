@@ -277,7 +277,62 @@ The worked Phase 2b fixture is again `SamplePlugin`: it observes every command (
 `ICommandInterceptor`, and records created objects via `IObjectLifecycleHook`; the integration tests assert
 the interceptor fires, the veto skips the command body, and the create hook is invoked.
 
+## 9. Publishing a managed package (Phase 4 — package-manager DLL distribution)
+
+Instead of asking operators to hand-copy your DLL into `plugins/`, you can ship it through the **package
+manager** as a `kind: managed` package. Installing it verifies your binaries against SHA-256 hashes you publish
+and, once the operator opts in, deposits them into `plugins/<id>/` for the loader to pick up on the next boot.
+
+### Author the `package.yaml`
+
+A managed package is a package directory in a git repo (exactly like a softcode package) whose `package.yaml`
+declares `kind: managed` and a `binaries:` block. It carries **no** softcode `objects:` and **no**
+`application:` block — only the compiled DLL(s):
+
+```yaml
+package: my-plugin            # also the plugins/<id>/ directory name
+version: "1.0.0"
+authors: [You]
+description: "What it does"
+kind: managed
+binaries:
+  min_server_version: ">=1.0"   # the plugin/server contract version your DLL was built against
+  files:
+    - file: MyPlugin.dll
+      sha256: <64-hex SHA-256 of MyPlugin.dll>
+    - file: MyPlugin.deps.json   # ship the .deps.json so the loader resolves your private deps
+      sha256: <64-hex SHA-256>
+    - file: plugin.json          # your ordering metadata (id/version/dependencies/priority)
+      sha256: <64-hex SHA-256>
+```
+
+`file:` entries are **flat names** (no path separators) — they deposit directly into `plugins/<id>/`. Compute
+each hash from the built bytes, e.g. `sha256sum MyPlugin.dll`. Commit `package.yaml` **and** the listed files
+together in the package directory; release versions are tagged exactly like softcode packages
+(`<package-dir>/v<semver>`), and the installer reads the bytes from that commit, so a moved tag cannot smuggle
+different bytes than the hash you signed.
+
+### How an operator installs it
+
+Managed installs are gated more strictly than softcode, because **a managed package runs arbitrary compiled C#
+in full server trust — there is no sandbox** (same posture as a hand-dropped plugin). The operator must:
+
+1. Add your package id to the server's `ManagedPackages:AllowList` (or set `ManagedPackages:AllowAll` on a
+   single-operator/dev box), and
+2. confirm the install with the explicit managed-code opt-in (`allow_managed_code` on the apply).
+
+Then the package manager verifies every file's hash, refuses anything built for a newer `min_server_version`
+than the server provides, and deposits the verified bytes into `plugins/<id>/`. **Your plugin loads on the next
+server boot** — a freshly-installed managed package is not hot-loaded into the running engine.
+
+Uninstalling removes `plugins/<id>/` and, if your plugin is command/function/hook-only (unloadable, see §7),
+unloads it from the live engine first.
+
+> Authoring shape is unchanged from §1–§8 — a managed package is just the distribution wrapper around the same
+> `EnableDynamicLoading` plugin DLL. The carried `MyPlugin.deps.json` and `plugin.json` are the same files you
+> would otherwise hand-copy.
+
 ## Later phases (not yet available)
 
-Hot-reload/unload and signed package distribution are planned for later phases. This guide will grow as those
-seams ship.
+Live hot-load of a newly-installed managed package (loading it into the running engine without a reboot) is a
+possible future nicety. This guide will grow as those seams ship.

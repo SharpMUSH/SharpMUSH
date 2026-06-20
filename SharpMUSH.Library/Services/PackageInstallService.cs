@@ -27,7 +27,8 @@ public class PackageInstallService(
 	IApplicationRegistryService applications,
 	IPackagePlanService planner,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
-	IPackageLifecycleRunner lifecycle) : IPackageInstallService
+	IPackageLifecycleRunner lifecycle,
+	IManagedPackageInstaller managedInstaller) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 
@@ -283,8 +284,18 @@ public class PackageInstallService(
 	public async Task<OneOf<PackageApplyResult, Error<string>>> ApplyAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
-		CancellationToken cancellationToken = default)
+		CancellationToken cancellationToken = default,
+		IManagedPackageBinarySource? binarySource = null)
 	{
+		// Managed packages (Phase 4) carry a compiled C# plugin DLL rather than
+		// softcode: there is no plan/changeset to compute. Verify + trust-gate +
+		// deposit the binaries, then record the install (with the deployed file
+		// list) and return. The plugin loads on the next boot.
+		if (manifest.Kind == PackageKind.Managed)
+		{
+			return await ApplyManagedAsync(manifest, request, binarySource, cancellationToken);
+		}
+
 		if (manifest.Objects.Any(o => o.Type == PackageObjectType.Player))
 		{
 			return new Error<string>("Packages containing player objects are not yet supported by the apply engine.");
@@ -557,6 +568,67 @@ public class PackageInstallService(
 		await lifecycle.RunLifecycleAsync(changeset, created, cancellationToken);
 
 		return new PackageApplyResult(revision, created, notes);
+	}
+
+	/// <summary>
+	/// Applies a <see cref="PackageKind.Managed"/> package (Phase 4): delegates to
+	/// <see cref="IManagedPackageInstaller"/> to verify + trust-gate + deposit the
+	/// carried plugin DLL(s), then records the install with the deployed file list
+	/// and a revision. No game objects, attributes, or plan are involved. The
+	/// plugin loads on the next server boot.
+	/// </summary>
+	private async Task<OneOf<PackageApplyResult, Error<string>>> ApplyManagedAsync(
+		PackageManifest manifest,
+		PackageApplyRequest request,
+		IManagedPackageBinarySource? binarySource,
+		CancellationToken cancellationToken)
+	{
+		if (binarySource is null)
+		{
+			return new Error<string>(
+				$"Managed package '{manifest.Name}' cannot be installed without a binary source to read its DLL(s) from.");
+		}
+
+		var deployResult = await managedInstaller.DeployAsync(manifest, request, binarySource, cancellationToken);
+		if (deployResult.IsT1)
+		{
+			return deployResult.AsT1;
+		}
+
+		var deployed = deployResult.AsT0;
+
+		var installedResult = await registry.GetInstalledPackageAsync(manifest.Name);
+		var installed = installedResult.IsT0 ? installedResult.AsT0 : null;
+		var revision = (installed?.CurrentRevision ?? 0) + 1;
+
+		await registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(
+			manifest.Name, manifest.Version.ToString(), request.Source.Repo, request.Source.Path,
+			request.Source.Commit, request.Source.Branch, DateTimeOffset.UtcNow, revision, deployed));
+
+		await registry.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
+			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
+			.ToList());
+
+		// A minimal revision snapshot: a managed package has no objects/attributes,
+		// so history records only the version + commit it deposited.
+		var snapshot = new PackageRevisionSnapshot(
+			manifest.Version.ToString(), [], [], []);
+		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
+			manifest.Name, revision,
+			installed is null ? PackageRevisionKind.Install : PackageRevisionKind.Upgrade,
+			manifest.Version.ToString(), request.Source.Commit,
+			JsonSerializer.Serialize(snapshot, SnapshotJson),
+			JsonSerializer.Serialize(request.ConfigureAnswers, SnapshotJson),
+			"[]",
+			DateTimeOffset.UtcNow));
+		await registry.PrunePackageRevisionsAsync(manifest.Name, request.KeepRevisions);
+
+		var notes = new List<string>
+		{
+			$"Deposited {deployed.Count} verified binary file(s) into plugins/{manifest.Name}/. "
+			+ "The plugin loads on the next server boot."
+		};
+		return new PackageApplyResult(revision, new Dictionary<string, string>(StringComparer.Ordinal), notes);
 	}
 
 	/// <summary>
@@ -999,6 +1071,22 @@ public class PackageInstallService(
 		{
 			return new Error<string>(
 				$"Cannot uninstall '{packageId}': {string.Join(", ", dependents.Select(d => d.PackageId))} depend(s) on it. Uninstall them first or force-remove.");
+		}
+
+		// Managed packages (Phase 4): no game objects/attributes — remove the
+		// deposited plugins/<id>/ directory (and unload the plugin if it is loaded
+		// and unloadable), then drop the registry records.
+		if (installed.AsT0.DeployedFiles is { Count: > 0 })
+		{
+			var removed = await managedInstaller.RemoveAsync(
+				packageId, installed.AsT0.DeployedFiles, cancellationToken);
+			if (removed.IsT1)
+			{
+				return removed.AsT1;
+			}
+
+			await registry.RemoveInstalledPackageAsync(packageId);
+			return new Success();
 		}
 
 		var notes = new List<string>();
