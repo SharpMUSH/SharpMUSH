@@ -1,0 +1,39 @@
+format: 1.1
+package: PACKAGE_ID-app
+version: 0.1.0
+kind: application
+authors: [AUTHOR_NAME]
+description: "PACKAGE_DESCRIPTION (portal registration)."
+license: MIT
+homepage: https://github.com/OWNER/PACKAGE_ID
+keywords: [portal, application, form]
+requires_server: ">=0.1"
+
+# An application package owns NO objects. It depends on the softcode package
+# that provides its HTTP-handler routes (the schema + submit handlers, in
+# ../routes) and registers the portal entry point that renders them.
+depends:
+  - package: PACKAGE_ID-routes
+    version: ">=0.1 <1.0"
+    source:
+      repo: https://github.com/OWNER/PACKAGE_ID
+      path: routes/
+
+# The installing admin chooses who may open the application. A {{?configure}}
+# ref in an application field is prompted at review and substituted at apply.
+configure:
+  access:
+    label: "Minimum portal role that may open the application"
+    type: string
+    default: player
+
+application:
+  slug: PACKAGE_ID
+  display_name: PACKAGE_ID Application
+  icon: assignment_ind
+  type: page
+  schema_url: http/PACKAGE_ID/schema
+  submit_route: http/PACKAGE_ID
+  minimum_role: "{{?access}}"
+  nav_placement: main
+  order: 50

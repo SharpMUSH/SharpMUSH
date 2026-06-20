@@ -1,0 +1,100 @@
+name: build-and-release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*", "*/v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to create the GitHub release on a tag
+
+env:
+  CI: "true"
+  DOTNET_NOLOGO: "true"
+  # Reproducible build: SourceLink/path mapping for deterministic output so the
+  # SHA-256 hashes are stable across runners.
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: preview
+
+      # The plugin depends on the SharpMUSH.Plugin.Abstractions + generator NuGets.
+      # Once those are published, restore resolves them from nuget.org. Until then,
+      # point at the in-repo projects (see the commented ProjectReferences in the
+      # csproj) or add a local feed:
+      #   dotnet nuget add source <path-or-url> --name sharpmush
+      - name: Restore
+        run: dotnet restore PLUGIN_NAME.csproj
+
+      # Deterministic Release build (ContinuousIntegrationBuild flips on via CI=true).
+      - name: Build
+        run: dotnet build PLUGIN_NAME.csproj -c Release --no-restore -p:Deterministic=true
+
+      # Optional: run a test project if you add one (e.g. PLUGIN_NAME.Tests).
+      # - name: Test
+      #   run: dotnet test PLUGIN_NAME.Tests/PLUGIN_NAME.Tests.csproj -c Release
+
+      - name: Stage plugin files
+        id: stage
+        run: |
+          set -euo pipefail
+          OUT="bin/Release/net10.0"
+          mkdir -p dist
+          cp "$OUT/PLUGIN_NAME.dll" "$OUT/PLUGIN_NAME.deps.json" plugin.json dist/
+          ls -l dist
+
+      # Compute SHA-256 of each deposited file and rewrite the binaries: block in
+      # package.yaml so the manifest's hashes match the built bytes exactly.
+      - name: Compute hashes and rewrite package.yaml
+        run: |
+          python3 - <<'PY'
+          import hashlib, re, sys
+          files = ["PLUGIN_NAME.dll", "PLUGIN_NAME.deps.json", "plugin.json"]
+          hashes = {}
+          for f in files:
+              with open(f"dist/{f}", "rb") as fh:
+                  hashes[f] = hashlib.sha256(fh.read()).hexdigest()
+              print(f"{hashes[f]}  {f}")
+          text = open("package.yaml").read()
+          for f, h in hashes.items():
+              # Replace the sha256 on the line(s) belonging to this file entry.
+              pat = re.compile(r'(- file:\s*' + re.escape(f) + r'\s*\n\s*sha256:\s*)"[0-9a-fA-F]*"')
+              text, n = pat.subn(lambda m: m.group(1) + f'"{h}"', text)
+              if n != 1:
+                  sys.exit(f"expected exactly one entry for {f}, patched {n}")
+          open("package.yaml", "w").write(text)
+          print("package.yaml updated")
+          PY
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PLUGIN_ID-package
+          path: |
+            dist/PLUGIN_NAME.dll
+            dist/PLUGIN_NAME.deps.json
+            dist/plugin.json
+            package.yaml
+
+      # On a release tag (vX.Y.Z or PLUGIN_ID/vX.Y.Z), publish a GitHub release.
+      # Commit the hash-updated package.yaml back to the package directory in the
+      # SAME commit the tag points at, so the package manager reads matching bytes.
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/PLUGIN_NAME.dll
+            dist/PLUGIN_NAME.deps.json
+            dist/plugin.json
+            package.yaml

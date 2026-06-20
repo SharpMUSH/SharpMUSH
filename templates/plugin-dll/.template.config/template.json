@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "SharpMUSH",
+  "classifications": ["SharpMUSH", "MUSH", "Plugin", "C#"],
+  "identity": "SharpMUSH.Plugin.Dll",
+  "name": "SharpMUSH C# DLL plugin",
+  "shortName": "sharpmush-plugin",
+  "description": "A starter SharpMUSH compiled C# plugin (net10.0, EnableDynamicLoading): [SharpPlugin] : PluginBase with a sample command + function, a kind:managed package.yaml, and a deterministic build/SHA-256/release CI.",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "PLUGIN_NAME",
+  "preferNameDirectory": true,
+  "symbols": {
+    "PluginNamespace": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "PLUGIN_NAMESPACE",
+      "defaultValue": "MyPlugin",
+      "description": "Root namespace for the plugin's C# (set this to match the assembly name -n you pass, e.g. MyPlugin)."
+    },
+    "PluginId": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "PLUGIN_ID",
+      "defaultValue": "my-plugin",
+      "description": "The plugin id slug (lowercase, digits, hyphens). Also the plugins/<id>/ directory, the package id, and the release-tag prefix."
+    },
+    "PluginCmd": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "PLUGINCMDTOKEN",
+      "defaultValue": "MYPLUGIN",
+      "description": "The sample command name (without the leading +). Uppercase, no spaces or hyphens, e.g. MYPLUGIN."
+    },
+    "PluginFn": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "PLUGINFNTOKEN",
+      "defaultValue": "myplugin_add",
+      "description": "The sample function name. Lowercase, no spaces or hyphens, e.g. myplugin_add."
+    },
+    "Author": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "AUTHOR_NAME",
+      "defaultValue": "Your Name",
+      "description": "Author, written into package.yaml and LICENSE."
+    },
+    "Description": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "PACKAGE_DESCRIPTION",
+      "defaultValue": "A SharpMUSH C# plugin.",
+      "description": "One-line description."
+    },
+    "Owner": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "OWNER",
+      "defaultValue": "your-github-user",
+      "description": "GitHub owner/org for the homepage URL."
+    }
+  },
+  "primaryOutputs": [
+    { "path": "PLUGIN_NAME.csproj" }
+  ]
+}

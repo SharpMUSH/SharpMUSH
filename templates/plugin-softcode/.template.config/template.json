@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "SharpMUSH",
+  "classifications": ["SharpMUSH", "MUSH", "Softcode", "Package"],
+  "identity": "SharpMUSH.Plugin.Softcode",
+  "name": "SharpMUSH softcode package",
+  "shortName": "sharpmush-softcode",
+  "description": "A starter SharpMUSH softcode package (kind: softcode): one object with a $command and a global function, plus CI and release-tag conventions.",
+  "tags": {
+    "language": "yaml",
+    "type": "project"
+  },
+  "preferNameDirectory": true,
+  "symbols": {
+    "PackageId": {
+      "type": "generated",
+      "generator": "casing",
+      "parameters": { "source": "name", "toLower": true },
+      "replaces": "PACKAGE_ID",
+      "fileRename": "PACKAGE_ID"
+    },
+    "Author": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "AUTHOR_NAME",
+      "defaultValue": "Your Name",
+      "description": "Package author, written into package.yaml and LICENSE."
+    },
+    "Description": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "PACKAGE_DESCRIPTION",
+      "defaultValue": "A SharpMUSH softcode package.",
+      "description": "One-line package description."
+    },
+    "Owner": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "OWNER",
+      "defaultValue": "your-github-user",
+      "description": "GitHub owner/org for the homepage URL."
+    }
+  }
+}

@@ -1,0 +1,35 @@
+format: 1
+package: PACKAGE_ID-routes
+version: 0.1.0
+kind: softcode
+authors: [AUTHOR_NAME]
+description: "PACKAGE_DESCRIPTION (HTTP-handler schema + submit routes)."
+license: MIT
+homepage: https://github.com/OWNER/PACKAGE_ID
+keywords: [http, portal, application, form]
+requires_server: ">=0.1"
+
+# Requires the verb routers — its GET`*/POST`* routes are backtick children of
+# the GET/POST verbs that the bundled `http-handler` package provides.
+depends:
+  - package: http-handler
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
+      path: http-handler/
+
+# Attach mode: this package manages route attributes on the existing
+# http_handler object ({{$http_handler}}, #4 by default). It creates nothing.
+objects:
+  - ref: handler
+    target: "{{$http_handler}}"
+    attributes:
+      # GET /http/PACKAGE_ID/schema — the form schema the portal renders. Pure
+      # literal json() so it is self-contained and validates standalone.
+      GET`PACKAGE_UID`SCHEMA: |-
+        @respond/type application/json; think json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,PACKAGE_ID Application),pages,json(array,json(object,key,json(string,main),title,json(string,Application),order,json(number,1),sections,json(array,json(object,name,json(string,About),order,json(number,1),elements,json(array,json(object,kind,json(string,field),key,json(string,subject),label,json(string,Subject),type,json(string,text),validation,json(object,required,json(boolean,true),max_length,json(number,80))),json(object,kind,json(string,field),key,json(string,body),label,json(string,Body),type,json(string,mstring))))))),actions,json(object,submit,json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/PACKAGE_ID/submit),payload,json(string,fields),on_success,json(object,toast,json(string,Submitted!)),on_error,json(object,bind_field_errors,json(boolean,true)))))
+
+      # POST /http/PACKAGE_ID/submit — validate and acknowledge. %1 = posted
+      # field JSON. Requires a non-empty subject; returns the structured envelope.
+      POST`PACKAGE_UID`SUBMIT: |-
+        @respond/type application/json; think firstof(if(not(t(edit(json_query(%1,get,subject),",))),json(object,ok,json(boolean,false),errors,json(object,subject,json(string,A subject is required.)))),json(object,ok,json(boolean,true),message,json(string,Received. Staff will review it.),redirect,json(string,/)))

@@ -1,0 +1,11 @@
+name: PACKAGE_ID
+description: A SharpMUSH Dynamic Application — softcode routes plus a portal registration.
+packages:
+  - path: routes/
+    package: PACKAGE_ID-routes
+    version: 0.1.0
+    description: HTTP-handler schema + submit routes (requires http-handler)
+  - path: app/
+    package: PACKAGE_ID-app
+    version: 0.1.0
+    description: Application package — registers the portal page (requires PACKAGE_ID-routes)

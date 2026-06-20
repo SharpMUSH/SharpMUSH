@@ -1,0 +1,51 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+    tags: ["*/v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Validates every package.yaml against the SharpMUSH manifest parser
+      # (the same PackageManifestService the server uses at install time).
+      #
+      # NOTE: The reusable validate-package Action is being produced in parallel
+      # and is not published yet. Until it ships, this step is the placeholder
+      # reference; pin it to a released version once available, e.g.:
+      #
+      #   - uses: SharpMUSH/validate-package-action@v1
+      #     with:
+      #       path: .            # repo root; scans for package.yaml files
+      #
+      # In the meantime, a minimal YAML well-formedness gate keeps CI green:
+      - name: Validate package.yaml (placeholder — YAML well-formedness)
+        run: |
+          python3 - <<'PY'
+          import sys, glob
+          try:
+              import yaml
+          except ImportError:
+              import subprocess
+              subprocess.check_call([sys.executable, "-m", "pip", "install", "pyyaml"])
+              import yaml
+          files = glob.glob("**/package.yaml", recursive=True)
+          if not files:
+              sys.exit("no package.yaml found")
+          for f in files:
+              with open(f) as fh:
+                  doc = yaml.safe_load(fh)
+              for key in ("package", "version"):
+                  if key not in doc:
+                      sys.exit(f"{f}: missing required key '{key}'")
+              print(f"OK  {f}  ({doc['package']} {doc['version']})")
+          PY
