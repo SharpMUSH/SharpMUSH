@@ -444,4 +444,186 @@ public class UserDefinedCommandsTests
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Leaf {token}")),
 				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
+
+	// ── Leading-space $command matching (bug repro) ───────────────────────────
+	// Reported bug: a $command like `$test:@emit ...` does NOT match when the
+	// player types " test" (a leading space before the command). PennMUSH strips
+	// leading whitespace from a command before matching, so this SHOULD fire.
+	// These tests assert the expected (PennMUSH-compatible) behavior; if the bug
+	// is present they fail with a "Huh?" (zero notifications received).
+
+	/// <summary>
+	/// Control: an exact-match $command with NO leading space fires (baseline for the leading-space tests).
+	/// </summary>
+	[Test]
+	public async ValueTask NoLeadingSpace_TerminalEntry_Matches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcNoLeadSpace");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_NOLEAD {obj}=${token}:@emit {token} Matched"));
+
+		// No leading space — the control case.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Terminal entry (direct player input): typing " {token}" (leading space) should still match the $command.
+	/// This is the exact scenario from the bug report.
+	/// </summary>
+	[Test]
+	public async ValueTask LeadingSpace_TerminalEntry_StillMatches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceTerm");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_LEAD_TERM {obj}=${token}:@emit {token} Matched"));
+
+		// Leading space before the command (player typed " test").
+		await Parser.CommandParse(1, ConnectionService, MModule.single($" {token}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Command-list path (queued/callback, e.g. softcode action lists): a single command with a
+	/// leading space run via CommandListParse should still match the $command.
+	/// </summary>
+	[Test]
+	public async ValueTask LeadingSpace_CommandList_StillMatches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceList");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_LEAD_LIST {obj}=${token}:@emit {token} Matched"));
+
+		// Command-list entry point with a leading space before the command.
+		await listParser.CommandListParse(MModule.single($" {token}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// SCOPED OUT: command-list path with a space after a ';' separator ("@@ comment;  {token}").
+	/// Fails for the same reason as <see cref="SemicolonList_SecondCommand_NoLeadingSpace_Match"/> — the
+	/// whole-list-source matching, not the leading space. See the note above that test.
+	/// </summary>
+	[Test]
+	[Skip("Scoped out: $command matching in ';' command-lists uses the whole list source (SharpMUSHParserVisitor.cs:907). Separate from the fixed leading/trailing-space bug.")]
+	public async ValueTask LeadingSpace_AfterSemicolonInCommandList_StillMatches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceSemi");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_LEAD_SEMI {obj}=${token}:@emit {token} Matched"));
+
+		// A null command followed by a space-prefixed $command in the same list.
+		await listParser.CommandListParse(MModule.single($"@@ ignore;  {token}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	// ── SCOPED-OUT: separate command-list bug (tracked, to be fixed later) ─────
+	// A $command that is part of a multi-command ';' list does not match, because $command
+	// matching runs against the WHOLE list source (SharpMUSHParserVisitor.cs:907 passes the
+	// visitor's full `source`), not the individual command — so its ^...$ pattern never matches
+	// ("token;@emit X"). Proven independent of whitespace and of command position: with plain
+	// @emit in the same positions the command fires; ';' splitting itself works for built-ins.
+	// This is NOT the leading/trailing-space bug (that one is fixed); these two tests are Skipped
+	// until the command-list $command-matching path is addressed.
+
+	/// <summary>
+	/// SCOPED OUT: a $command that is the SECOND command in a list, with NO leading space
+	/// ("@@ ignore;{token}"). Fails because matching runs against the whole list source. See note above.
+	/// </summary>
+	[Test]
+	[Skip("Scoped out: $command matching in ';' command-lists uses the whole list source (SharpMUSHParserVisitor.cs:907). Separate from the fixed leading/trailing-space bug.")]
+	public async ValueTask SemicolonList_SecondCommand_NoLeadingSpace_Match()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiNoSpace");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_SEMI_NOSPACE {obj}=${token}:@emit {token} Matched"));
+
+		// Second command in the list, NO leading space.
+		await listParser.CommandListParse(MModule.single($"@@ ignore;{token}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Terminal entry: a trailing space after the command (" {token} ") should still match an exact $command.
+	/// The wildcard patterns are anchored at the end (^...$), so a trailing space breaks an exact match.
+	/// </summary>
+	[Test]
+	public async ValueTask TrailingSpace_TerminalEntry_StillMatches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcTrailSpaceTerm");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_TRAIL_TERM {obj}=${token}:@emit {token} Matched"));
+
+		// Trailing space after the command.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} "));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Command-list path: a trailing space after the command run via CommandListParse should still match.
+	/// </summary>
+	[Test]
+	public async ValueTask TrailingSpace_CommandList_StillMatches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcTrailSpaceList");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_TRAIL_LIST {obj}=${token}:@emit {token} Matched"));
+
+		// Command-list entry point with a trailing space after the command.
+		await listParser.CommandListParse(MModule.single($"{token} "));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
 }
