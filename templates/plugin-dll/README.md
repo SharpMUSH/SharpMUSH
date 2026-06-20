@@ -26,18 +26,20 @@ PLUGIN_ID/
 
 ## Build prerequisites — the parallel NuGets
 
-This template references two packages **being produced in parallel** that are not
-published yet:
+This template references two SharpMUSH contract packages (versioned **1.0.0**,
+aligned to the server's `PluginContractVersion`):
 
-- **`SharpMUSH.Plugin.Abstractions`** — the contract surface (`IPlugin`,
-  `PluginBase`, the `[SharpPlugin]`/`[SharpCommand]`/`[SharpFunction]` attributes,
-  `IMUSHCodeParser`, `CallState`, the contribution + hook interfaces).
+- **`SharpMUSH.Library`** — the contract surface (`IPlugin`, `PluginBase`, the
+  `[SharpPlugin]`/`[SharpCommand]`/`[SharpFunction]` attributes, `IMUSHCodeParser`,
+  `CallState`, the contribution + hook interfaces). (A slim
+  `SharpMUSH.Plugin.Abstractions` split is a future refinement.)
 - **`SharpMUSH.Implementation.Generated`** — the source generator, referenced **as
   an analyzer**, that emits your `Generated.CommandLibrary`/`FunctionLibrary` so
   `PluginBase` can reflect your commands/functions in this assembly.
 
-The csproj pins **placeholder versions** (`0.1.0-*`). Pin a real version once they
-ship. **Until then**, build against an in-repo SharpMUSH checkout: comment out the
+These packages are produced by the SharpMUSH repo's `publish-plugin-nugets.yml`
+workflow. **Until they are published to a public feed**, build against an in-repo
+SharpMUSH checkout: comment out the
 two `PackageReference` lines in the csproj and uncomment the `ProjectReference`
 block right below them (fix the relative paths). That reproduces the in-tree plugin
 shape exactly — see `SharpMUSH.Plugins.Scene` and

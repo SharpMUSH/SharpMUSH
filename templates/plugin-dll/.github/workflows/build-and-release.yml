@@ -28,7 +28,7 @@ jobs:
           dotnet-version: "10.0.x"
           dotnet-quality: preview
 
-      # The plugin depends on the SharpMUSH.Plugin.Abstractions + generator NuGets.
+      # The plugin depends on the SharpMUSH.Library + generator NuGets.
       # Once those are published, restore resolves them from nuget.org. Until then,
       # point at the in-repo projects (see the commented ProjectReferences in the
       # csproj) or add a local feed:

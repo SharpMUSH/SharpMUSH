@@ -23,20 +23,19 @@
 	<ItemGroup>
 		<!-- Contract surface: IPlugin / PluginBase / SharpPluginAttribute / SharpCommandAttribute /
 		     SharpFunctionAttribute / CallState / Option<CallState> / the IMUSHCodeParser interface, and
-		     the Phase-2a/2b contribution + hook interfaces. Distributed as a NuGet package.
+		     the Phase-2a/2b contribution + hook interfaces. These all live in the SharpMUSH.Library
+		     contract package (a slim SharpMUSH.Plugin.Abstractions split is a future refinement).
 
-		     PrivateAssets=all + ExcludeAssets=runtime keep the abstractions assembly OUT of the plugin's
+		     PrivateAssets=all + ExcludeAssets=runtime keep the contract assembly OUT of the plugin's
 		     output so the HOST's copy is the one that loads (the loader's sharedTypes is the real
-		     type-unification net). The version is a PLACEHOLDER — these packages are being produced in
-		     parallel and are not published yet. Pin a real version once they ship. -->
-		<PackageReference Include="SharpMUSH.Plugin.Abstractions" Version="0.1.0-*"
+		     type-unification net). The version aligns with the server's PluginContractVersion. -->
+		<PackageReference Include="SharpMUSH.Library" Version="1.0.0"
 			PrivateAssets="all" ExcludeAssets="runtime" />
 
 		<!-- The source generator referenced AS AN ANALYZER: your [SharpCommand]/[SharpFunction] methods
 		     produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
-		     FunctionLibrary.Functions inside THIS assembly, so PluginBase can reflect them. Same
-		     placeholder-version + parallel-publish caveat as above. -->
-		<PackageReference Include="SharpMUSH.Implementation.Generated" Version="0.1.0-*"
+		     FunctionLibrary.Functions inside THIS assembly, so PluginBase can reflect them. -->
+		<PackageReference Include="SharpMUSH.Implementation.Generated" Version="1.0.0"
 			PrivateAssets="all" />
 	</ItemGroup>
 
