@@ -106,7 +106,8 @@ public partial class SurrealDatabase : ISceneService
 		var parameters = new Dictionary<string, object?>
 		{
 			["id"] = sceneId,
-			["status"] = "active",
+			["status"] = "new", // create-default must match the other providers (ArangoDB/Memgraph) — a freshly created scene is "new", not "active"
+
 			["startedAt"] = now,
 			["lastActivityAt"] = now,
 			["ownerName"] = ownerName ?? "",
