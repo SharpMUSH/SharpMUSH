@@ -541,4 +541,47 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(card).Contains("A tense standoff").Because("the summary text should render in the card");
 		await Assert.That(card).Contains("active").Because("the Status row should show the scene is active");
 	}
+
+	/// <summary>
+	/// Proves #2 (AINSTALL `leave` lands the logger in the master room #2) and #4 (capture keys off the
+	/// poser's loc(%#), not the logger's %L): with the logger NOT co-located, a remote player's +scene/create
+	/// still works (global $-command from #2) and their pose both OUTPUTS to their room and is CAPTURED.
+	/// </summary>
+	[Test]
+	public async Task SceneCapture_LoggerInMasterRoom_CapturesRemotePose()
+	{
+		await God1("@set #1=WIZARD");
+
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+
+		// #2: the logger must live in the master room (#2) so the +scene/* $-commands are global.
+		// AINSTALL @teleports it there at install; this shared-session logger may have been moved into
+		// another test's room since, so re-establish the precondition before asserting + testing.
+		await God1($"@teleport {loggerDbref}=#2");
+		await Assert.That(Num(await Eval($"loc({loggerDbref})"))).IsEqualTo("#2")
+			.Because("the Scene Logger must be in the master room (#2) for +scene/* to match globally");
+
+		// A player in a SEPARATE dug room — the logger is NOT co-located with them.
+		var digOut = (await God1($"@dig CapRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var zed = await CreatePlayerAsync($"Zed_{Tag}", "pw_zed_123", 61L);
+		await God1($"@tel {zed}={digOut}");
+
+		// +scene/create must work globally (logger $-commands live in #2) even though Zed isn't there.
+		await RunAndCollectAs(61L, $"+scene/create CapTest_{Tag}");
+		await RunAndCollectAs(61L, "+scene/start");
+		var sceneId = await Eval($"get({zed}/MY.SID)");
+		await Assert.That(sceneId).IsNotEmpty()
+			.Because("+scene/create should work for a remote player when the logger is global in #2");
+
+		// #4: pose must OUTPUT to Zed's room and be CAPTURED — using loc(%#), not the logger's %L.
+		var poseMsgs = await RunAndCollectAs(61L, "pose waves a banner");
+		var poseOut = string.Join("\n", poseMsgs.SelectMany(m => m.Split('\n')));
+		Console.WriteLine("=== remote pose output ===\n" + poseOut);
+		await Assert.That(poseOut).Contains("waves a banner")
+			.Because("the pose must emit to the poser's room (loc(%#)), not the logger's room in #2");
+		await Assert.That(await Eval($"words(sceneposes({sceneId}))")).IsEqualTo("1")
+			.Because("the pose must be captured into the active scene in the poser's room");
+	}
 }

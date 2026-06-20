@@ -58,16 +58,16 @@ objects:
 
       # Built-in POSE (MoreCommands.Pose) emits: "<name> <message>" to the room.
       CMD`CAPTURE`POSE: |-
-        $pose *: @emit [name(%#)] %0; @assert words(scenewhere(%L)); @assert strmatch(scenefocus(%#),scenewhere(%L)); @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,pose,,[name(%#)] %0
+        $pose *: @remit [setr(here,loc(%#))]=[name(%#)] %0; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,pose,,[name(%#)] %0
 
       # Built-in SAY (MoreCommands.Say) emits "You say, \"<msg>\"" to the speaker
       # and "<name> says, \"<msg>\"" to everyone else in the room.
       CMD`CAPTURE`SAY: |-
-        $say *: @pemit %#=You say, "%0"; @oemit %L/%#=[name(%#)] says, "%0"; @assert words(scenewhere(%L)); @assert strmatch(scenefocus(%#),scenewhere(%L)); @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,say,,[name(%#)] says\, "%0"
+        $say *: @pemit %#=You say, "%0"; @oemit [setr(here,loc(%#))]/%#=[name(%#)] says, "%0"; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,say,,[name(%#)] says\, "%0"
 
       # Built-in SEMIPOSE (MoreCommands.SemiPose) emits "<name><message>" (no space).
       CMD`CAPTURE`SEMI: |-
-        $;*: @emit [name(%#)]%0; @assert words(scenewhere(%L)); @assert strmatch(scenefocus(%#),scenewhere(%L)); @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,semipose,,[name(%#)]%0
+        $;*: @remit [setr(here,loc(%#))]=[name(%#)]%0; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,semipose,,[name(%#)]%0
 
       # ---- create / lifecycle ---------------------------------------------------
       # NOTE: capture the new scene id into %q0 with @assert (it both sets the register and
@@ -226,6 +226,6 @@ objects:
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).
       AINSTALL: |-
-        @hook/override POSE=%!,CMD`CAPTURE`POSE; @hook/override SAY=%!,CMD`CAPTURE`SAY; @hook/override SEMIPOSE=%!,CMD`CAPTURE`SEMI
+        @teleport %!=#2; @trigger %!/STARTUP
       STARTUP: |-
         @hook/override POSE=%!,CMD`CAPTURE`POSE; @hook/override SAY=%!,CMD`CAPTURE`SAY; @hook/override SEMIPOSE=%!,CMD`CAPTURE`SEMI
