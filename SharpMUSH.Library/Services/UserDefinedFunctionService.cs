@@ -14,6 +14,11 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 	private readonly ConcurrentDictionary<string, UserDefinedFunction> _functions =
 		new(StringComparer.OrdinalIgnoreCase);
 
+	// Restriction overlay for BUILT-IN function names (and "deleted" built-ins): a built-in carries
+	// no registry entry, so its @function/restrict restriction lives here and is consulted at call time.
+	private readonly ConcurrentDictionary<string, string> _builtinRestrictions =
+		new(StringComparer.OrdinalIgnoreCase);
+
 	public void Define(UserDefinedFunction function)
 	{
 		var key = function.Name.ToLowerInvariant();
@@ -77,6 +82,79 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 			AliasOf: targetKey);
 		return true;
 	}
+
+	public bool SetRestriction(string name, string? restriction)
+	{
+		if (!_functions.TryGetValue(name, out var entry))
+		{
+			return false;
+		}
+
+		var normalized = string.IsNullOrWhiteSpace(restriction) ? null : restriction.Trim();
+		_functions[entry.Name] = entry with { Restriction = normalized };
+		return true;
+	}
+
+	public bool Clone(string newName, string existing)
+	{
+		// Clone the concrete (alias-resolved) target so the copy is independent of the source.
+		var source = Resolve(existing) ?? Get(existing);
+		if (source is null || source.AliasOf is not null)
+		{
+			return false;
+		}
+
+		var cloneKey = newName.ToLowerInvariant();
+		_functions[cloneKey] = source with
+		{
+			Name = cloneKey,
+			AliasOf = null,
+			Enabled = true,
+			Restriction = null,
+			Preserved = false
+		};
+		return true;
+	}
+
+	public bool SetPreserved(string name, bool preserved)
+	{
+		if (!_functions.TryGetValue(name, out var entry))
+		{
+			return false;
+		}
+
+		_functions[entry.Name] = entry with { Preserved = preserved };
+		return true;
+	}
+
+	public int ResetUnpreserved()
+	{
+		var removed = 0;
+		foreach (var entry in _functions.Values.ToArray())
+		{
+			if (!entry.Preserved && _functions.TryRemove(entry.Name, out _))
+			{
+				removed++;
+			}
+		}
+
+		return removed;
+	}
+
+	public void SetBuiltinRestriction(string name, string? restriction)
+	{
+		var key = name.ToLowerInvariant();
+		if (string.IsNullOrWhiteSpace(restriction))
+		{
+			_builtinRestrictions.TryRemove(key, out _);
+			return;
+		}
+
+		_builtinRestrictions[key] = restriction.Trim();
+	}
+
+	public string? GetBuiltinRestriction(string name)
+		=> _builtinRestrictions.TryGetValue(name, out var restriction) ? restriction : null;
 
 	public IReadOnlyCollection<UserDefinedFunction> All() => _functions.Values.ToArray();
 }

@@ -50,6 +50,66 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsGuest(this AnySharpObject obj)
 		=> await obj.HasPower("Guest");
 
+	/// <summary>
+	/// Evaluates an <c>@function/restrict</c> restriction string against <paramref name="executor"/>,
+	/// returning whether the executor is PERMITTED to call the function.
+	///
+	/// <para>The restriction is a space-separated list of permission keywords, each optionally
+	/// prefixed with <c>!</c> to negate it. Recognised keywords: <c>nobody</c> (never permitted),
+	/// <c>god</c>, <c>wizard</c>, <c>royalty</c>, <c>admin</c> (wizard or royalty). A bare keyword
+	/// requires the executor to satisfy it; a <c>!</c>-prefixed keyword forbids executors that
+	/// satisfy it. All tokens must pass. An empty/whitespace restriction permits everyone.</para>
+	/// </summary>
+	public static async ValueTask<bool> SatisfiesFunctionRestriction(this AnySharpObject executor, string? restriction)
+	{
+		if (string.IsNullOrWhiteSpace(restriction))
+		{
+			return true;
+		}
+
+		foreach (var rawToken in restriction.Split([' ', '\t', ','], StringSplitOptions.RemoveEmptyEntries))
+		{
+			var negate = rawToken.StartsWith('!');
+			var keyword = (negate ? rawToken[1..] : rawToken).Trim().ToLowerInvariant();
+			if (keyword.Length == 0)
+			{
+				continue;
+			}
+
+			var satisfies = keyword switch
+			{
+				"nobody" => false,
+				"god" => executor.IsGod(),
+				"wizard" => await executor.IsWizard(),
+				"royalty" => await executor.IsRoyalty(),
+				"admin" => await executor.IsWizard() || await executor.IsRoyalty(),
+				// Unknown keywords are treated permissively (ignored) so that unsupported PennMUSH
+				// restriction flags never silently lock everyone out of a function.
+				_ => true
+			};
+
+			// "nobody" forbids everyone regardless of negation: !nobody would mean "permit everyone",
+			// which is the default, so only the bare form is meaningful.
+			if (keyword == "nobody")
+			{
+				if (!negate)
+				{
+					return false;
+				}
+
+				continue;
+			}
+
+			// Bare keyword: executor must satisfy it. Negated keyword: executor must NOT satisfy it.
+			if (negate ? satisfies : !satisfies)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	public static async ValueTask<bool> IsVisual(this AnySharpObject obj)
 		=> await obj.HasPower("Visual");
 

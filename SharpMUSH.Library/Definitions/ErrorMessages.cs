@@ -1159,6 +1159,20 @@ public static class ErrorMessages
 		public const string FunctionRestrictWouldRestrictFormat = "@function/restrict: Would restrict function '{0}' to: {1}";
 		public const string FunctionRestrictionNotImplemented = "Note: Function restriction not yet implemented.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FunctionRestrictedFormat = "Function '{0}' restricted to: {1}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FunctionRestrictionClearedFormat = "Restriction cleared on function '{0}'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FunctionClonedFormat = "Function '{0}' cloned from '{1}'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FunctionBuiltinRestoredFormat = "Function '{0}' restored to its built-in implementation.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FunctionPreservedFormat = "Function '{0}' marked as preserved.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FunctionRestoredOneFormat = "Function '{0}' restored to its built-in implementation.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FunctionRestoredResetFormat = "@function/restore: removed {0} unpreserved user function(s); preserved entries kept.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionDefineWouldDefineFormat = "@function: Would define function '{0}' as: {1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionMinArgsFormat = "  Min args: {0}";

@@ -509,6 +509,23 @@ public class SharpMUSHParserVisitor(
 				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
+			// @function/restrict restrictions. For user-defined functions the restriction string
+			// is carried on the synthesized attribute's Restrict (see ResolveUserDefinedFunction);
+			// for built-ins it lives in the registry overlay keyed by name. Either failing means
+			// the caller lacks permission and gets the standard error instead of the result.
+			var functionRestriction = attribute.Restrict is { Length: > 0 }
+				? string.Join(' ', attribute.Restrict)
+				: null;
+			var builtinRestriction = (parser as MUSHCodeParser)?.ServiceProvider
+				.GetService<IUserDefinedFunctionService>()?.GetBuiltinRestriction(name);
+
+			if ((functionRestriction is not null && !await executor.SatisfiesFunctionRestriction(functionRestriction))
+			    || (builtinRestriction is not null && !await executor.SatisfiesFunctionRestriction(builtinRestriction)))
+			{
+				success = false;
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
+			}
+
 			/* Validation, this should probably go into its own function! */
 			// PennMUSH compat: if minargs=0 and we got 1 empty arg from func(), treat as 0 args
 			if (attribute.MinArgs == 0 && args is [null])
@@ -723,7 +740,10 @@ public class SharpMUSHParserVisitor(
 			Name = name,
 			MinArgs = entry.MinArgs,
 			MaxArgs = entry.MaxArgs,
-			Flags = FunctionFlags.Regular
+			Flags = FunctionFlags.Regular,
+			// Carry any @function/restrict restriction onto the synthesized attribute so the
+			// permission check in CallFunction enforces it before evaluating the attribute.
+			Restrict = string.IsNullOrWhiteSpace(entry.Restriction) ? [] : [entry.Restriction]
 		};
 
 		var target = entry.Object;
@@ -731,8 +751,6 @@ public class SharpMUSHParserVisitor(
 
 		return new FunctionDefinition(attribute, async invokedParser =>
 		{
-			var executor = await invokedParser.CurrentState.KnownExecutorObject(Mediator);
-
 			var targetObject = await Mediator.Send(new GetObjectNodeQuery(target));
 			if (targetObject.IsNone)
 			{
@@ -744,9 +762,13 @@ public class SharpMUSHParserVisitor(
 				.Select((kvp, i) => new KeyValuePair<string, CallState>(i.ToString(), kvp.Value))
 				.ToDictionary();
 
+			// A global @function runs *as the backing object, with its powers* (PennMUSH semantics):
+			// the attribute is read and evaluated with the function object's permissions, not the
+			// caller's, so a player who lacks read access to the object can still call the function.
+			// The caller-level permission gate (@function/restrict) was already enforced in CallFunction.
 			var result = await AttributeService.EvaluateAttributeFunctionAsync(
 				invokedParser,
-				executor,
+				targetObject.Known,
 				targetObject.Known,
 				attributeName,
 				args,

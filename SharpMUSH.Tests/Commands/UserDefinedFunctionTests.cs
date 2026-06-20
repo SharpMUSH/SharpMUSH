@@ -1,11 +1,18 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OneOf.Types;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Concurrent;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -26,6 +33,8 @@ public class UserDefinedFunctionTests
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IUserDefinedFunctionService Registry => WebAppFactoryArg.Services.GetRequiredService<IUserDefinedFunctionService>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IServiceProvider Services => WebAppFactoryArg.Services;
 
 	/// <summary>A fresh lowercase-hex token, unique per call — used to keep names collision-free.</summary>
 	private static string U() => Guid.NewGuid().ToString("N");
@@ -35,6 +44,44 @@ public class UserDefinedFunctionTests
 
 	private async Task<string> Eval(string expression) =>
 		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText();
+
+	/// <summary>Evaluates <paramref name="expression"/> with <paramref name="executor"/> as the executor (not #1).</summary>
+	private async Task<string> EvalAs(DBRef executor, string expression)
+	{
+		var parser = new MUSHCodeParser(
+			Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
+			Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
+			Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
+			Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
+			Services,
+			state: new ParserState(
+				Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
+				IterationRegisters: [],
+				RegexRegisters: [],
+				SwitchStack: [],
+				ExecutionStack: [],
+				EnvironmentRegisters: [],
+				CurrentEvaluation: null,
+				ParserFunctionDepth: 0,
+				Function: null,
+				Command: "think",
+				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
+				Switches: [],
+				Arguments: [],
+				Executor: executor,
+				Enactor: executor,
+				Caller: executor,
+				Handle: 1,
+				CallDepth: new InvocationCounter(),
+				FunctionRecursionDepths: new Dictionary<string, int>(),
+				TotalInvocations: new InvocationCounter(),
+				LimitExceeded: new LimitExceededFlag()));
+
+		return (await parser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText();
+	}
+
+	private Task<DBRef> NewNonWizardPlayer() =>
+		Mediator.Send(new CreatePlayerCommand($"UDFPlayer{U()}", "password", new DBRef(0), new DBRef(0), 100)).AsTask();
 
 	[Test]
 	public async ValueTask DefineThenCallEvaluatesAttribute()
@@ -162,5 +209,134 @@ public class UserDefinedFunctionTests
 		await StartupAttributeRunner.RunObjectAttributeAsync(CommandParser, attributeService, god, startupAttr, god);
 
 		await Assert.That(await Eval($"{fn}()")).IsEqualTo("booted");
+	}
+
+	[Test]
+	public async ValueTask RestrictRefusesNonWizardButPermitsWizard()
+	{
+		var fn = $"restrictfn{U()}";
+		var attr = $"RESTRICTATTR{U()}";
+		await Cmd($"&{attr} me=secret");
+		await Cmd($"@function {fn}=me,{attr}");
+
+		// Before restriction, anyone can call it.
+		var player = await NewNonWizardPlayer();
+		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("secret");
+
+		await Cmd($"@function/restrict {fn}=wizard");
+
+		// Non-wizard now gets the standard permission error, not the result.
+		await Assert.That((await EvalAs(player, $"{fn}()")).ToUpperInvariant()).Contains("PERMISSION DENIED");
+
+		// Wizard (#1) is still permitted.
+		await Assert.That(await Eval($"{fn}()")).IsEqualTo("secret");
+
+		// Clearing the restriction restores access for the non-wizard.
+		await Cmd($"@function/restrict {fn}=");
+		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("secret");
+	}
+
+	[Test]
+	public async ValueTask RestrictNegationForbidsWizard()
+	{
+		// "!wizard" forbids wizards; a non-wizard is still permitted.
+		var fn = $"negfn{U()}";
+		var attr = $"NEGATTR{U()}";
+		await Cmd($"&{attr} me=plebsonly");
+		await Cmd($"@function {fn}=me,{attr}");
+		await Cmd($"@function/restrict {fn}=!wizard");
+
+		await Assert.That((await Eval($"{fn}()")).ToUpperInvariant()).Contains("PERMISSION DENIED");
+
+		var player = await NewNonWizardPlayer();
+		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("plebsonly");
+	}
+
+	[Test]
+	public async ValueTask CloneProducesIndependentCopy()
+	{
+		var fn = $"clonesrc{U()}";
+		var clone = $"clonedst{U()}";
+		var attr = $"CLONEATTR{U()}";
+		await Cmd($"&{attr} me=cloned");
+		await Cmd($"@function {fn}=me,{attr}");
+
+		await Cmd($"@function/clone {clone}={fn}");
+
+		// The clone works.
+		await Assert.That(await Eval($"{clone}()")).IsEqualTo("cloned");
+
+		// Restricting the clone must NOT affect the original.
+		await Cmd($"@function/restrict {clone}=wizard");
+		var player = await NewNonWizardPlayer();
+		await Assert.That((await EvalAs(player, $"{clone}()")).ToUpperInvariant()).Contains("PERMISSION DENIED");
+		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("cloned");
+
+		// Deleting the clone leaves the original intact.
+		await Cmd($"@function/delete {clone}");
+		await Assert.That(await Eval($"{clone}()")).Contains("COULD NOT FIND FUNCTION");
+		await Assert.That(await Eval($"{fn}()")).IsEqualTo("cloned");
+	}
+
+	[Test]
+	public async ValueTask BuiltinRestoresOriginalAfterOverride()
+	{
+		// Delete a built-in so it can be overridden, override it, then /builtin restores the original.
+		// Use a UNIQUE attribute but the literal built-in name 'add' — clean up carefully.
+		Registry.Delete("add");
+		Services.GetRequiredService<IUserDefinedFunctionService>().SetBuiltinRestriction("add", null);
+		var attr = $"ADDOVR{U()}";
+		await Cmd($"&{attr} me=overridden");
+
+		try
+		{
+			await Cmd($"@function/delete add");          // allow override
+			await Cmd($"@function add=me,{attr}");       // override built-in add()
+			await Assert.That(await Eval("add(2,3)")).IsEqualTo("overridden");
+
+			await Cmd("@function/builtin add");          // discard override, restore built-in
+			await Assert.That(await Eval("add(2,3)")).IsEqualTo("5");
+		}
+		finally
+		{
+			Registry.Delete("add");
+			Services.GetRequiredService<IUserDefinedFunctionService>().SetBuiltinRestriction("add", null);
+		}
+	}
+
+	[Test]
+	public async ValueTask PreserveSurvivesRestoreReset()
+	{
+		// /preserve marks a user function to survive the bulk /restore * reset; an unmarked one is removed.
+		var kept = $"keepfn{U()}";
+		var dropped = $"dropfn{U()}";
+		var attr = $"PRESATTR{U()}";
+		await Cmd($"&{attr} me=here");
+		await Cmd($"@function {kept}=me,{attr}");
+		await Cmd($"@function {dropped}=me,{attr}");
+
+		await Cmd($"@function/preserve {kept}");
+		await Cmd("@function/restore *");
+
+		// Preserved entry remains callable; unpreserved entry is gone.
+		await Assert.That(await Eval($"{kept}()")).IsEqualTo("here");
+		await Assert.That(await Eval($"{dropped}()")).Contains("COULD NOT FIND FUNCTION");
+
+		// Cleanup so the global registry doesn't leak the preserved entry to other tests.
+		Registry.Delete(kept);
+	}
+
+	[Test]
+	public async ValueTask RestoreSingleNameRemovesOverride()
+	{
+		// /restore <name> discards a single user override (like /builtin).
+		var fn = $"restoresingle{U()}";
+		var attr = $"RESTOREATTR{U()}";
+		await Cmd($"&{attr} me=present");
+		await Cmd($"@function {fn}=me,{attr}");
+		await Assert.That(await Eval($"{fn}()")).IsEqualTo("present");
+
+		await Cmd($"@function/restore {fn}");
+		await Assert.That(await Eval($"{fn}()")).Contains("COULD NOT FIND FUNCTION");
 	}
 }
