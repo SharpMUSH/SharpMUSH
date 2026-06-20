@@ -86,4 +86,30 @@ public class SceneCommandFunctionIntegrationTests
 		await Assert.That(listed).DoesNotStartWith("#-1");
 		await Assert.That(listed).Contains(scene.Id);
 	}
+
+	/// <summary>
+	/// Service-level (runs on every provider, including SurrealDB): scene and pose ids come from 1-based
+	/// incrementing counters, not GUIDs or ArangoDB's server-wide HLC key sequence. Providers format the
+	/// id differently (Arango/Memgraph bare "N"; SurrealDB "scene:N"/"scene_pose:N") — the counter is the
+	/// trailing numeric segment in all cases.
+	/// </summary>
+	[Test]
+	public async Task SceneAndPoseIds_AreSequentialCounters_ViaService()
+	{
+		static int IdSeq(string id) => int.Parse(id.Split(':')[^1]);
+
+		var a = await Scenes.CreateSceneAsync(roomDbref: "", ownerDbref: God, title: "SeqA");
+		var b = await Scenes.CreateSceneAsync(roomDbref: "", ownerDbref: God, title: "SeqB");
+		await Assert.That(int.TryParse(a.Id.Split(':')[^1], out _)).IsTrue()
+			.Because("scene ids must be 1-based counter values, not GUIDs or large HLC keys");
+		await Assert.That(IdSeq(b.Id)).IsEqualTo(IdSeq(a.Id) + 1)
+			.Because("scene ids increment by a 1-based counter");
+
+		var p1 = (await Scenes.AddPoseAsync(b.Id, God, "", God, "pose", [], "one")).AsT0;
+		var p2 = (await Scenes.AddPoseAsync(b.Id, God, "", God, "pose", [], "two")).AsT0;
+		await Assert.That(int.TryParse(p1.Id.Split(':')[^1], out _)).IsTrue()
+			.Because("pose ids must be 1-based counter values");
+		await Assert.That(IdSeq(p2.Id)).IsEqualTo(IdSeq(p1.Id) + 1)
+			.Because("pose ids increment by a 1-based counter");
+	}
 }

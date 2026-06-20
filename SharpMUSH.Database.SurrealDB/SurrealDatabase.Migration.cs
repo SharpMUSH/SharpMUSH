@@ -148,6 +148,10 @@ public partial class SurrealDatabase
 			// Initialize in-memory counter for auto-increment object keys (migration creates keys 0-5)
 			_nextObjectKey = 5;
 
+			// Seed the 1-based scene/pose id counters at 0; runtime UPDATE increments them atomically.
+			await ExecuteAsync("UPSERT counter:scene_id SET seq = 0", cancellationToken);
+			await ExecuteAsync("UPSERT counter:pose_id SET seq = 0", cancellationToken);
+
 			// Create Room Zero (key=0)
 			await ExecuteAsync(
 				"UPSERT object:0 SET name = 'Room Zero', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 0",

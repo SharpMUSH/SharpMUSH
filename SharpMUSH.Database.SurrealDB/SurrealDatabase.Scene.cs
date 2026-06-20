@@ -92,7 +92,7 @@ public partial class SurrealDatabase : ISceneService
 	public async Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "")
 	{
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-		var sceneId = Guid.NewGuid().ToString("N");
+		var sceneId = (await GetNextSceneIdAsync()).ToString();
 
 		var ownerName = await ResolveObjectNameAsync(ownerDbref);
 		var roomName = await ResolveObjectNameAsync(roomDbref);
@@ -178,7 +178,7 @@ public partial class SurrealDatabase : ISceneService
 			return new NotFound();
 
 		var sceneKey = SceneKey(sceneId);
-		var idParam = new StringRecordId(sceneKey);
+		var idParam = Rid(sceneKey);
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var normalized = key.Trim().ToLowerInvariant();
 
@@ -305,7 +305,7 @@ public partial class SurrealDatabase : ISceneService
 
 		var sceneKey = SceneKey(sceneId);
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-		var poseId = Guid.NewGuid().ToString("N");
+		var poseId = (await GetNextPoseIdAsync()).ToString();
 		var editId = Guid.NewGuid().ToString("N");
 
 		var authorName = await ResolveObjectNameAsync(authorDbref) ?? "";
@@ -369,7 +369,7 @@ public partial class SurrealDatabase : ISceneService
 		// Bump scene counters.
 		await ExecuteAsync(
 			"UPDATE $id SET poseCount = poseCount + 1, lastActivityAt = $now",
-			new Dictionary<string, object?> { ["id"] = new StringRecordId(sceneKey), ["now"] = now });
+			new Dictionary<string, object?> { ["id"] = Rid(sceneKey), ["now"] = now });
 
 		var pose = await GetPoseAsync($"scene_pose:{poseId}");
 		if (pose.IsT1)
@@ -381,7 +381,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		var key = PoseKey(poseId);
 		var response = await ExecuteAsync($"SELECT {ScenePoseFields} FROM $id",
-			new Dictionary<string, object?> { ["id"] = new StringRecordId(key) });
+			new Dictionary<string, object?> { ["id"] = Rid(key) });
 		var rows = response.GetValue<List<ScenePoseDbRecord>>(0);
 		if (rows is null or { Count: 0 })
 			return new NotFound();
@@ -429,7 +429,7 @@ public partial class SurrealDatabase : ISceneService
 			return new NotFound();
 
 		var poseKey = PoseKey(poseId);
-		var idParam = new StringRecordId(poseKey);
+		var idParam = Rid(poseKey);
 		var normalized = key.Trim().ToLowerInvariant();
 
 		switch (normalized)
@@ -596,7 +596,7 @@ public partial class SurrealDatabase : ISceneService
 		await ExecuteAsync("UPDATE $id SET lastActivityAt = $now",
 			new Dictionary<string, object?>
 			{
-				["id"] = new StringRecordId(sceneKey),
+				["id"] = Rid(sceneKey),
 				["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 			});
 
@@ -614,7 +614,7 @@ public partial class SurrealDatabase : ISceneService
 
 		var poseKey = PoseKey(poseId);
 		await ExecuteAsync("UPDATE $id MERGE { isDeleted: true }",
-			new Dictionary<string, object?> { ["id"] = new StringRecordId(poseKey) });
+			new Dictionary<string, object?> { ["id"] = Rid(poseKey) });
 
 		// Decrement the denormalized count on the owning scene.
 		var sceneKey = await ResolvePoseSceneKeyAsync(poseKey);
@@ -623,7 +623,7 @@ public partial class SurrealDatabase : ISceneService
 				"UPDATE $id SET poseCount = math::max([0, poseCount - 1]), lastActivityAt = $now",
 				new Dictionary<string, object?>
 				{
-					["id"] = new StringRecordId(sceneKey),
+					["id"] = Rid(sceneKey),
 					["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 				});
 
@@ -845,7 +845,7 @@ public partial class SurrealDatabase : ISceneService
 			"UPDATE $id MERGE { title: $title, description: $description, ownerName: $ownerName, updatedAt: $now }",
 			new Dictionary<string, object?>
 			{
-				["id"] = new StringRecordId(plotKey),
+				["id"] = Rid(plotKey),
 				["title"] = title ?? "",
 				["description"] = description ?? "",
 				["ownerName"] = ownerName,
@@ -863,7 +863,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		var key = PlotKey(plotId);
 		var response = await ExecuteAsync($"SELECT {ScenePlotFields} FROM $id",
-			new Dictionary<string, object?> { ["id"] = new StringRecordId(key) });
+			new Dictionary<string, object?> { ["id"] = Rid(key) });
 		var rows = response.GetValue<List<ScenePlotDbRecord>>(0);
 		if (rows is null or { Count: 0 })
 			return new NotFound();
@@ -973,6 +973,18 @@ public partial class SurrealDatabase : ISceneService
 	private static string PoseKey(string id) => NormalizeSurrealId(id, "scene_pose");
 	private static string PlotKey(string id) => NormalizeSurrealId(id, "scene_plot");
 	private static string EditKeyToId(string editKeyOrId) => NormalizeSurrealId(editKeyOrId, "scene_pose_edit");
+
+	// Builds a record-id param that forces the STRING id form (table:⟨id⟩). ExecuteAsync inlines a plain
+	// StringRecordId as the bare ref `table:id`, which SurrealDB binds as a NUMBER for numeric-looking ids
+	// (e.g. counter id "1" -> table:1) — missing the string-id record that CREATE made via `table:⟨$id⟩`.
+	// Wrapping the id in ⟨⟩ keeps it a string and round-trips for both numeric counters and GUIDs.
+	private static StringRecordId Rid(string normalizedKey)
+	{
+		var i = normalizedKey.IndexOf(':');
+		return i < 0
+			? new StringRecordId(normalizedKey)
+			: new StringRecordId($"{normalizedKey[..i]}:⟨{normalizedKey[(i + 1)..]}⟩");
+	}
 
 	private static string NormalizeSceneId(RecordId? id) => NormalizeRecordId(id, "scene");
 	private static string NormalizePoseId(RecordId? id) => NormalizeRecordId(id, "scene_pose");
@@ -1432,7 +1444,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task<ScenePoseEdit?> ReadEditAsync(string editKey, string poseKey)
 	{
 		var response = await ExecuteAsync($"SELECT {ScenePoseEditFields} FROM $id",
-			new Dictionary<string, object?> { ["id"] = new StringRecordId(editKey) });
+			new Dictionary<string, object?> { ["id"] = Rid(editKey) });
 		var rows = response.GetValue<List<ScenePoseEditDbRecord>>(0);
 		if (rows is null or { Count: 0 })
 			return null;
@@ -1451,7 +1463,7 @@ public partial class SurrealDatabase : ISceneService
 		await ExecuteAsync("UPDATE $id MERGE { meta: $meta, lastActivityAt: $now }",
 			new Dictionary<string, object?>
 			{
-				["id"] = new StringRecordId(sceneKey),
+				["id"] = Rid(sceneKey),
 				["meta"] = JsonSerializer.Serialize(existing, JsonOptions),
 				["now"] = now
 			});
@@ -1460,7 +1472,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task<Dictionary<string, string>> ReadSceneMetaAsync(string sceneKey)
 	{
 		var response = await ExecuteAsync("SELECT meta FROM $id",
-			new Dictionary<string, object?> { ["id"] = new StringRecordId(sceneKey) });
+			new Dictionary<string, object?> { ["id"] = Rid(sceneKey) });
 		var rows = response.GetValue<List<SceneDbRecord>>(0);
 		return rows is { Count: > 0 } ? DeserializeMeta(rows[0].meta) : new Dictionary<string, string>();
 	}
@@ -1468,14 +1480,14 @@ public partial class SurrealDatabase : ISceneService
 	private async Task UpdatePoseMetaKeyAsync(string poseKey, string key, string value)
 	{
 		var response = await ExecuteAsync("SELECT meta FROM $id",
-			new Dictionary<string, object?> { ["id"] = new StringRecordId(poseKey) });
+			new Dictionary<string, object?> { ["id"] = Rid(poseKey) });
 		var rows = response.GetValue<List<ScenePoseDbRecord>>(0);
 		var meta = rows is { Count: > 0 } ? DeserializeMeta(rows[0].meta) : new Dictionary<string, string>();
 		meta[key] = value;
 		await ExecuteAsync("UPDATE $id MERGE { meta: $meta }",
 			new Dictionary<string, object?>
 			{
-				["id"] = new StringRecordId(poseKey),
+				["id"] = Rid(poseKey),
 				["meta"] = JsonSerializer.Serialize(meta, JsonOptions)
 			});
 	}

@@ -218,6 +218,21 @@ public partial class SurrealDatabase(
 		return ValueTask.FromResult(Interlocked.Increment(ref _nextObjectKey));
 	}
 
+	// 1-based scene/pose id counters, persisted as counter:<name> records (seeded at 0 by migration).
+	// On the file-backed engine these survive restarts; in-memory they reset with the data. The single-
+	// record UPDATE is atomic. `seq` (not `value`) because RETURN value collides with the VALUE keyword.
+	private ValueTask<int> GetNextSceneIdAsync(CancellationToken ct = default) => NextCounterAsync("scene_id", ct);
+
+	private ValueTask<int> GetNextPoseIdAsync(CancellationToken ct = default) => NextCounterAsync("pose_id", ct);
+
+	private async ValueTask<int> NextCounterAsync(string name, CancellationToken ct)
+	{
+		var response = await ExecuteAsync(
+			$"UPDATE counter:{name} SET seq = seq + 1 RETURN seq",
+			new Dictionary<string, object?>(), ct);
+		return response.GetValue<List<CounterRecord>>(0)?.FirstOrDefault()?.seq ?? 1;
+	}
+
 	private static string SerializeLocks(IImmutableDictionary<string, SharpLockData>? locks)
 	{
 		if (locks == null || locks.Count == 0) return "{}";
@@ -911,6 +926,11 @@ public partial class SurrealDatabase(
 	internal record CountRecord
 	{
 		public long cnt { get; set; }
+	}
+
+	internal record CounterRecord
+	{
+		public int seq { get; set; }
 	}
 
 	internal record ValueRecord
