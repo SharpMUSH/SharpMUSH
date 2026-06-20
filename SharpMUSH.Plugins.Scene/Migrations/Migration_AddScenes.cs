@@ -36,6 +36,15 @@ public class Migration_AddScenes : IArangoMigration
 				Name = DatabaseConstants.SharpScenes,
 				Type = ArangoCollectionType.Document,
 				WaitForSync = true,
+				// 1-based scene ids: keys come from this collection's own autoincrement
+				// sequence (1,2,3,…) rather than the server-wide HLC key generator.
+				KeyOptions = new ArangoKeyOptions
+				{
+					AllowUserKeys = true,
+					Type = ArangoKeyType.Autoincrement,
+					Increment = 1,
+					Offset = 0
+				},
 				Schema = new ArangoSchema
 				{
 					Rule = new
@@ -81,6 +90,14 @@ public class Migration_AddScenes : IArangoMigration
 				Name = DatabaseConstants.SharpScenePoses,
 				Type = ArangoCollectionType.Document,
 				WaitForSync = true,
+				// 1-based pose ids: keys come from this collection's own autoincrement sequence.
+				KeyOptions = new ArangoKeyOptions
+				{
+					AllowUserKeys = true,
+					Type = ArangoKeyType.Autoincrement,
+					Increment = 1,
+					Offset = 0
+				},
 				Schema = new ArangoSchema
 				{
 					Rule = new

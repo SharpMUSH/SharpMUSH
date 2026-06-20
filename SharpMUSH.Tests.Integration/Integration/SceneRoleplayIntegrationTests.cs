@@ -622,4 +622,45 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(contents).Contains("says, \"hello there\"").Because("'\"' say shortcut");
 		await Assert.That(contents).Contains("The wind howls.").Because("@emit captured verbatim");
 	}
+
+	/// <summary>
+	/// Scene IDs and pose IDs come from 1-based incrementing counters (not GUIDs or ArangoDB's
+	/// server-wide HLC key sequence): two scenes created back-to-back get consecutive numeric ids,
+	/// and two poses in a scene likewise.
+	/// </summary>
+	[Test]
+	public async Task SceneAndPoseIds_AreSequentialCounters()
+	{
+		await God1("@set #1=WIZARD");
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+		await God1($"@teleport {loggerDbref}=#2");
+
+		var digOut = (await God1($"@dig SeqRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var bea = await CreatePlayerAsync($"Bea_{Tag}", "pw_bea_123", 81L);
+		await God1($"@tel {bea}={digOut}");
+
+		// Two scenes back-to-back → consecutive numeric ids.
+		await RunAndCollectAs(81L, $"+scene/create SeqA_{Tag}");
+		var idA = await Eval($"get({bea}/MY.SID)");
+		await RunAndCollectAs(81L, $"+scene/create SeqB_{Tag}");
+		var idB = await Eval($"get({bea}/MY.SID)");
+		// Providers format the id differently (Arango/Memgraph bare "N"; SurrealDB "scene:N"/"scene_pose:N");
+		// the 1-based counter is the trailing numeric segment in all cases.
+		static int IdSeq(string id) => int.Parse(id.Split(':')[^1]);
+		await Assert.That(int.TryParse(idA.Split(':')[^1], out _)).IsTrue()
+			.Because("scene ids must be 1-based counter values, not GUIDs or large HLC keys");
+		await Assert.That(IdSeq(idB)).IsEqualTo(IdSeq(idA) + 1)
+			.Because("scene ids increment by a 1-based counter");
+
+		// Two poses in scene B → consecutive numeric pose ids.
+		await RunAndCollectAs(81L, "+scene/start");
+		await RunAndCollectAs(81L, "pose one.");
+		await RunAndCollectAs(81L, "pose two.");
+		var poseIds = (await Eval($"sceneposes({idB})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(poseIds.Length).IsEqualTo(2).Because("both poses should be captured");
+		await Assert.That(IdSeq(poseIds[1])).IsEqualTo(IdSeq(poseIds[0]) + 1)
+			.Because("pose ids increment by a 1-based counter");
+	}
 }

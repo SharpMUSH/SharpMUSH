@@ -161,6 +161,30 @@ RETURN c.value AS nextKey
 		return result.Result[0]["nextKey"].As<int>();
 	}
 
+	// 1-based scene/pose id counters. MERGE creates the counter at 1 on first use (no migration
+	// dependency); subsequent calls atomically increment it.
+	private async ValueTask<int> GetNextSceneIdAsync(CancellationToken ct = default)
+	{
+		var result = await ExecuteWithRetryAsync("""
+MERGE (c:Counter {name: 'scene_id'})
+ON CREATE SET c.value = 1
+ON MATCH SET c.value = c.value + 1
+RETURN c.value AS nextKey
+""", ct: ct);
+		return result.Result[0]["nextKey"].As<int>();
+	}
+
+	private async ValueTask<int> GetNextPoseIdAsync(CancellationToken ct = default)
+	{
+		var result = await ExecuteWithRetryAsync("""
+MERGE (c:Counter {name: 'pose_id'})
+ON CREATE SET c.value = 1
+ON MATCH SET c.value = c.value + 1
+RETURN c.value AS nextKey
+""", ct: ct);
+		return result.Result[0]["nextKey"].As<int>();
+	}
+
 	private static string SerializeLocks(IImmutableDictionary<string, SharpLockData>? locks)
 	{
 		if (locks == null || locks.Count == 0) return "{}";

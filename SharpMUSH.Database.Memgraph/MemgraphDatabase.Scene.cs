@@ -74,7 +74,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "")
 	{
-		var sceneId = Guid.NewGuid().ToString("N");
+		var sceneId = (await GetNextSceneIdAsync()).ToString();
 		var now = NowMillis();
 
 		await using var session = driver.AsyncSession();
@@ -268,7 +268,7 @@ public partial class MemgraphDatabase : ISceneService
 	public async Task<OneOf<ScenePose, NotFound, Error<string>>> AddPoseAsync(string sceneId, string authorDbref,
 		string showAs, string originDbref, string source, IReadOnlyList<string> tags, string content)
 	{
-		var poseId = Guid.NewGuid().ToString("N");
+		var poseId = (await GetNextPoseIdAsync()).ToString();
 		var editId = Guid.NewGuid().ToString("N");
 		var now = NowMillis();
 		var (plain, markup) = SplitContent(content);
