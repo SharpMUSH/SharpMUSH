@@ -263,7 +263,11 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		else if (useSurrealDb)
 		{
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "surrealdb");
-			// SurrealDB uses embedded in-memory mode, no external URI needed
+			// Tests run the embedded in-memory engine for isolation/speed; production defaults to a
+			// durable file-backed RocksDB store (see Startup). Default to mem:// unless a test explicitly
+			// sets the endpoint (e.g. to smoke-test the rocksdb:// path).
+			if (Environment.GetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT") is null)
+				Environment.SetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT", "mem://");
 		}
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");

@@ -152,8 +152,17 @@ public class Startup(
 		}
 		else if (databaseProvider == DatabaseProvider.SurrealDB)
 		{
-			services.AddSurreal("Endpoint=mem://;Namespace=sharpmush;Database=world")
-				.AddInMemoryProvider();
+			// Config-driven endpoint so production persists to disk (RocksDB) while tests stay in-memory.
+			// Resolution: SHARPMUSH_SURREALDB_ENDPOINT env → appsettings "SurrealDb:Endpoint" → file-backed default.
+			// A pure mem:// store loses ALL data on restart, so production must default to a durable engine.
+			var surrealEndpoint = Environment.GetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT")
+				?? configuration["SurrealDb:Endpoint"]
+				?? "rocksdb://surrealdb-data";
+			// Register both embedded engines; the endpoint scheme selects which the live client uses, and the
+			// migration staging client (always mem://) needs the in-memory engine present regardless.
+			services.AddSurreal($"Endpoint={surrealEndpoint};Namespace=sharpmush;Database=world")
+				.AddInMemoryProvider()
+				.AddRocksDbProvider();
 			services.AddSingleton<ISharpDatabase, SurrealDatabase>(x =>
 			{
 				var dbLogger = x.GetRequiredService<ILogger<SurrealDatabase>>();
