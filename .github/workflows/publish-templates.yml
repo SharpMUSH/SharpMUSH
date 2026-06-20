@@ -1,0 +1,76 @@
+name: Publish Templates NuGet
+
+# Packs and pushes the SharpMUSH.Templates `dotnet new` template pack (sharpmush-softcode /
+# sharpmush-application / sharpmush-plugin) so authors can `dotnet new install SharpMUSH.Templates`.
+#
+# Keyless via NuGet Trusted Publishing (OIDC) — no long-lived API key. Triggered by a tag like
+# sharpmush-templates/v1.0.0; the version after the slash+v becomes the package version. Versioned
+# INDEPENDENTLY of the contract packages (SharpMUSH.Library / SharpMUSH.Implementation.Generated),
+# so the templates can ship on their own cadence.
+#
+# Requires (one-time): a nuget.org Trusted Publishing policy bound to this workflow file
+#   owner=SharpMUSH, repository=SharpMUSH, workflow file=publish-templates.yml
+# plus the NUGET_USER secret (nuget.org profile name). Must be on the default branch for the tag
+# trigger to fire.
+
+on:
+  push:
+    tags:
+      - 'sharpmush-templates/v*'  # e.g. sharpmush-templates/v1.0.0
+  workflow_dispatch:               # manual run uses the csproj <Version>
+
+permissions:
+  contents: read
+
+jobs:
+  pack-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read    # checkout
+      id-token: write   # mint the GitHub OIDC token for NuGet Trusted Publishing (keyless)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Derive version from tag
+        id: meta
+        run: |
+          # sharpmush-templates/v1.0.0 -> 1.0.0 ; on workflow_dispatch leave empty (csproj default).
+          REF="${GITHUB_REF}"
+          if [[ "$REF" == refs/tags/sharpmush-templates/v* ]]; then
+            VERSION="${REF#refs/tags/sharpmush-templates/v}"
+            echo "version_arg=-p:Version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "Packing SharpMUSH.Templates at version: $VERSION"
+          else
+            echo "version_arg=" >> "$GITHUB_OUTPUT"
+            echo "Packing SharpMUSH.Templates at csproj <Version> (manual run)"
+          fi
+
+      - name: Pack template pack (SharpMUSH.Templates)
+        run: dotnet pack templates/SharpMUSH.Templates.csproj
+             --configuration Release
+             --output ${{ runner.temp }}/nupkgs
+             ${{ steps.meta.outputs.version_arg }}
+
+      - name: List produced packages
+        run: ls -la ${{ runner.temp }}/nupkgs
+
+      # Trusted Publishing (OIDC): exchange this job's short-lived GitHub OIDC token for a ~1h
+      # nuget.org API key — no long-lived NUGET_API_KEY secret. NUGET_USER is the nuget.org profile name.
+      - name: NuGet login (OIDC -> short-lived key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to NuGet
+        run: dotnet nuget push "${{ runner.temp }}/nupkgs/*.nupkg"
+             --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
+             --source https://api.nuget.org/v3/index.json
+             --skip-duplicate

@@ -1,9 +1,12 @@
 # SharpMUSH plugin templates
 
 Starter scaffolds for authoring [SharpMUSH](https://github.com/SharpMUSH/SharpMUSH)
-plugins of all three kinds. Each is delivered **both** as a "Use this template"
-GitHub-template directory **and** as a `dotnet new` template, so you can scaffold a
-fresh, ready-to-fill repo either way.
+plugins of all three kinds. Two ways to start:
+
+- **Fork the whole thing** — the [**SharpMUSH.Template**](https://github.com/SharpMUSH/SharpMUSH.Template)
+  repo bundles a working example of all three layers; click **Use this template**.
+- **Scaffold one piece** — `dotnet new install SharpMUSH.Templates`, then
+  `dotnet new sharpmush-softcode|sharpmush-application|sharpmush-plugin` (handles all renaming).
 
 SharpMUSH extends at three layers (see the
 [extensibility overview](../docs/design/extensibility-overview.md)); these templates
@@ -24,7 +27,21 @@ Authoring background:
 
 ## Use them via `dotnet new`
 
-Install one (or all) of the templates from a local checkout, then scaffold:
+### From nuget.org (recommended)
+
+All three ship together in the **`SharpMUSH.Templates`** pack — install once, scaffold any kind:
+
+```bash
+dotnet new install SharpMUSH.Templates
+```
+
+`dotnet new` handles all the renaming and token substitution (e.g. `sharpmush-plugin -n MyPlugin`
+renames `PLUGIN_NAME.csproj` → `MyPlugin.csproj` and rewrites the namespace), so there are no files
+to rename by hand.
+
+### From a local checkout
+
+Or install individual templates straight from this repo, then scaffold:
 
 ```bash
 # Install (point at the template directory containing .template.config/):

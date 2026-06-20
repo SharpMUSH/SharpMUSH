@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ============================================================================================
+       `dotnet new` template PACK. Bundles the three SharpMUSH extension templates so authors can:
+
+           dotnet new install SharpMUSH.Templates
+           dotnet new sharpmush-softcode    -n my-package
+           dotnet new sharpmush-application -n my-app
+           dotnet new sharpmush-plugin      -n MyPlugin   # renames PLUGIN_NAME.csproj etc.
+
+       This is a content-only NuGet (PackageType=Template) — it ships the template trees under
+       content/ and builds no assembly. NoDefaultExcludes keeps the .template.config and .github
+       folders (NuGet strips dotfiles otherwise). Published via Trusted Publishing (see
+       publish-templates.yml); version is aligned to PluginContractVersion.Current (1.0.0). -->
+
+  <PropertyGroup>
+    <PackageType>Template</PackageType>
+    <PackageId>SharpMUSH.Templates</PackageId>
+    <Version>1.0.0</Version>
+    <Title>SharpMUSH Extension Templates</Title>
+    <Authors>SharpMUSH Contributors</Authors>
+    <Description>`dotnet new` templates for SharpMUSH extensions: a softcode package (sharpmush-softcode), a Dynamic Application (sharpmush-application), and a C# DLL plugin (sharpmush-plugin). Aligned to PluginContractVersion 1.0.0.</Description>
+    <PackageTags>dotnet-new;templates;sharpmush;mush;plugin;softcode;dynamic-application</PackageTags>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/SharpMUSH/SharpMUSH</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/SharpMUSH/SharpMUSH</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+
+    <!-- Content-only template pack: no compile, no build output, ship under content/. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>content</ContentTargetFolders>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <IsPackable>true</IsPackable>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="plugin-dll/**/*;plugin-softcode/**/*;plugin-application/**/*"
+             Exclude="**/bin/**;**/obj/**" />
+    <Compile Remove="**/*" />
+  </ItemGroup>
+
+</Project>
