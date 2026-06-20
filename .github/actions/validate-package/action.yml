@@ -1,0 +1,58 @@
+name: Validate SharpMUSH package
+description: >-
+  Offline-validates a SharpMUSH package.yaml manifest (softcode / application /
+  managed) using the sharpmush-package CLI. No server, database, or network
+  connection to a running game is required. For a managed package it also
+  verifies each declared binary exists and matches its SHA-256.
+
+inputs:
+  package-dir:
+    description: >-
+      Directory containing the package.yaml to validate (or a path to a
+      package.yaml file directly). Defaults to the repository root.
+    required: false
+    default: "."
+  strict:
+    description: >-
+      When 'true', warnings fail the build (the CLI is run with --strict).
+    required: false
+    default: "false"
+  tool-version:
+    description: >-
+      Specific version of the SharpMUSH.PackageTool global tool to install.
+      Defaults to the latest published version.
+    required: false
+    default: ""
+  dotnet-version:
+    description: .NET SDK version to set up for installing/running the tool.
+    required: false
+    default: "10.0.x"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: Install sharpmush-package tool
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -n "${{ inputs.tool-version }}" ]; then
+          dotnet tool install --global SharpMUSH.PackageTool --version "${{ inputs.tool-version }}"
+        else
+          dotnet tool install --global SharpMUSH.PackageTool
+        fi
+        echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+    - name: Validate package
+      shell: bash
+      run: |
+        set -euo pipefail
+        ARGS=("${{ inputs.package-dir }}")
+        if [ "${{ inputs.strict }}" = "true" ]; then
+          ARGS+=("--strict")
+        fi
+        sharpmush-package validate "${ARGS[@]}"
