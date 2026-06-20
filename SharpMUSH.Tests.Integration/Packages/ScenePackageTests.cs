@@ -69,15 +69,12 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		var loggerDbref = PackageInstallService.ParseObjid(objects.Single().Objid)!.Value;
 
-		// STARTUP/AINSTALL set @hook/override on POSE, SAY, and SEMIPOSE, all targeting
+		// STARTUP sets @hook/override on POSE, SAY, SEMIPOSE, and @EMIT, all targeting
 		// the Scene Logger with its CMD`CAPTURE`* capture attributes.
 		await AssertOverrideHook("POSE", loggerDbref.Number, "CMD`CAPTURE`POSE");
 		await AssertOverrideHook("SAY", loggerDbref.Number, "CMD`CAPTURE`SAY");
 		await AssertOverrideHook("SEMIPOSE", loggerDbref.Number, "CMD`CAPTURE`SEMI");
-
-		// @EMIT must NOT be hooked by this package.
-		var emitHook = await Hooks.GetHookAsync("@EMIT", "OVERRIDE");
-		await Assert.That(emitHook.IsT0).IsFalse();
+		await AssertOverrideHook("@EMIT", loggerDbref.Number, "CMD`CAPTURE`EMIT");
 	}
 
 	private async Task AssertOverrideHook(string command, int expectedTargetNumber, string expectedAttribute)

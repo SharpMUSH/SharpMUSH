@@ -584,4 +584,42 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"words(sceneposes({sceneId}))")).IsEqualTo("1")
 			.Because("the pose must be captured into the active scene in the poser's room");
 	}
+
+	/// <summary>
+	/// #1: the REGEXP capture patterns match every input form — "pose "/":" (pose), "semipose "/";"
+	/// (semipose), "say "/'"' (say) — plus @emit. All five are captured with correct rendering.
+	/// </summary>
+	[Test]
+	public async Task SceneCapture_AllInputFormsCaptured()
+	{
+		await God1("@set #1=WIZARD");
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+
+		var digOut = (await God1($"@dig FormRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var ada = await CreatePlayerAsync($"Ada_{Tag}", "pw_ada_123", 71L);
+		await God1($"@tel {ada}={digOut}");
+		await God1($"@tel {loggerDbref}={digOut}");   // co-located, to isolate FORM matching from #4
+
+		await RunAndCollectAs(71L, $"+scene/create FormTest_{Tag}");
+		await RunAndCollectAs(71L, "+scene/start");
+		var sceneId = await Eval($"get({ada}/MY.SID)");
+
+		await RunAndCollectAs(71L, "pose waves.");          // "pose " form
+		await RunAndCollectAs(71L, ":nods.");               // ':' pose shortcut
+		await RunAndCollectAs(71L, ";grins.");              // ';' semipose shortcut
+		await RunAndCollectAs(71L, "\"hello there");        // '\"' say shortcut
+		await RunAndCollectAs(71L, "@emit The wind howls."); // @emit (currently unhooked)
+
+		var captured = await Eval($"words(sceneposes({sceneId}))");
+		var contents = await Eval($"iter(sceneposes({sceneId}),scenepose({sceneId},##,content),,|)");
+		await Assert.That(captured).IsEqualTo("5")
+			.Because("all five input forms (pose / : / ; / \" / @emit) must be captured");
+		await Assert.That(contents).Contains($"Ada_{Tag} waves.").Because("'pose ' form, name + space");
+		await Assert.That(contents).Contains($"Ada_{Tag} nods.").Because("':' pose shortcut, name + space");
+		await Assert.That(contents).Contains($"Ada_{Tag}grins.").Because("';' semipose shortcut, name + no space");
+		await Assert.That(contents).Contains("says, \"hello there\"").Because("'\"' say shortcut");
+		await Assert.That(contents).Contains("The wind howls.").Because("@emit captured verbatim");
+	}
 }

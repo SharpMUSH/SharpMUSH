@@ -57,17 +57,27 @@ objects:
       # outside any scene behaves exactly like the un-hooked built-in.
 
       # Built-in POSE (MoreCommands.Pose) emits: "<name> <message>" to the room.
-      CMD`CAPTURE`POSE: |-
-        $pose *: @remit [setr(here,loc(%#))]=[name(%#)] %0; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,pose,,[name(%#)] %0
+      CMD`CAPTURE`POSE:
+        value: |-
+          $(?i)^(pose |\:)(.*)$: @remit [setr(here,loc(%#))]=[name(%#)] %2; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,pose,,[name(%#)] %2
+        flags: [REGEXP]
 
       # Built-in SAY (MoreCommands.Say) emits "You say, \"<msg>\"" to the speaker
       # and "<name> says, \"<msg>\"" to everyone else in the room.
-      CMD`CAPTURE`SAY: |-
-        $say *: @pemit %#=You say, "%0"; @oemit [setr(here,loc(%#))]/%#=[name(%#)] says, "%0"; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,say,,[name(%#)] says\, "%0"
+      CMD`CAPTURE`SAY:
+        value: |-
+          $(?i)^(say |")(.*)$: @pemit %#=You say, "%2"; @oemit [setr(here,loc(%#))]/%#=[name(%#)] says, "%2"; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,say,,[name(%#)] says\, "%2"
+        flags: [REGEXP]
 
       # Built-in SEMIPOSE (MoreCommands.SemiPose) emits "<name><message>" (no space).
-      CMD`CAPTURE`SEMI: |-
-        $;*: @remit [setr(here,loc(%#))]=[name(%#)]%0; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,semipose,,[name(%#)]%0
+      CMD`CAPTURE`SEMI:
+        value: |-
+          $(?i)^(semipose |;)(.*)$: @remit [setr(here,loc(%#))]=[name(%#)]%2; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,semipose,,[name(%#)]%2
+        flags: [REGEXP]
+      CMD`CAPTURE`EMIT:
+        value: |-
+          $(?i)^@emit (.*)$: @remit [setr(here,loc(%#))]=%1; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,emit,,%1
+        flags: [REGEXP]
 
       # ---- create / lifecycle ---------------------------------------------------
       # NOTE: capture the new scene id into %q0 with @assert (it both sets the register and
@@ -228,4 +238,4 @@ objects:
       AINSTALL: |-
         @teleport %!=#2; @trigger %!/STARTUP
       STARTUP: |-
-        @hook/override POSE=%!,CMD`CAPTURE`POSE; @hook/override SAY=%!,CMD`CAPTURE`SAY; @hook/override SEMIPOSE=%!,CMD`CAPTURE`SEMI
+        @hook/override POSE=%!,CMD`CAPTURE`POSE; @hook/override SAY=%!,CMD`CAPTURE`SAY; @hook/override SEMIPOSE=%!,CMD`CAPTURE`SEMI; @hook/override @EMIT=%!,CMD`CAPTURE`EMIT
