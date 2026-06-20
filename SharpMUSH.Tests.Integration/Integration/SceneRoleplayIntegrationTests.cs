@@ -390,4 +390,47 @@ public class SceneRoleplayIntegrationTests
 		await File.WriteAllTextAsync(outPath, output.ToString());
 		Console.WriteLine($"[SCENE] Full narrative output written to: {outPath}");
 	}
+
+	/// <summary>
+	/// +scene/pot — the query-on-run Pose Tracker. Two members; one poses, one never does. The tracker
+	/// must render (header + aligned rows), list both, and put the never-posed member (oldest) up next.
+	/// </summary>
+	[Test]
+	public async Task ScenePot_OrdersMembersOldestPoseUpNext()
+	{
+		await God1("@set #1=WIZARD");
+
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+
+		var digOut = (await God1($"@dig PotRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var pat = await CreatePlayerAsync($"Pat_{Tag}", "pw_pat_123", 21L);
+		var quinn = await CreatePlayerAsync($"Quinn_{Tag}", "pw_quinn_123", 22L);
+		foreach (var p in new[] { pat, quinn }) await God1($"@tel {p}={digOut}");
+		await God1($"@tel {loggerDbref}={digOut}");
+
+		await RunAndCollectAs(21L, $"+scene/create PotTest_{Tag}");
+		await RunAndCollectAs(21L, "+scene/start");
+		var sceneId = await Eval($"get({pat}/MY.SID)");   // CMD`CREATE records the id in MY.SID
+		await Assert.That(sceneId).IsNotEmpty().Because("+scene/create should have recorded the scene id");
+		await Assert.That(sceneId).DoesNotStartWith("#-1");
+
+		await RunAndCollectAs(22L, $"+scene/join {sceneId}");
+		await RunAndCollectAs(21L, "pose stretches and yawns by the fire.");   // captured for Pat
+		// Quinn deliberately never poses → oldest (never) → up next.
+
+		var potMsgs = await RunAndCollectAs(21L, "+scene/pot");
+		var lines = potMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()).ToList();
+		var table = string.Join("\n", lines);
+		Console.WriteLine("=== +scene/pot ===\n" + table);
+
+		await Assert.That(table).Contains("Pose Tracker").Because("the +pot header should render");
+		await Assert.That(table).Contains($"Pat_{Tag}").Because("Pat (a poser) should be listed");
+		await Assert.That(table).Contains($"Quinn_{Tag}").Because("Quinn (a member) should be listed");
+
+		var quinnLine = lines.First(l => l.Contains($"Quinn_{Tag}"));
+		await Assert.That(quinnLine.ToLowerInvariant()).Contains("up")
+			.Because("the never-posed member (Quinn) is oldest, so the up-next marker is on Quinn's row");
+	}
 }

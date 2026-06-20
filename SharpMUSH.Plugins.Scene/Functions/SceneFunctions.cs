@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -28,19 +29,24 @@ public static class SceneFunctions
 	/// to anyone; non-public scenes are visible only to their members. Mirrors the
 	/// wiki draft-visibility convention.
 	/// </summary>
-	private static async ValueTask<bool> SceneVisibleToAsync(ISceneService service, Library.Models.Scene.Scene scene, string viewerDbref)
+	private static async ValueTask<bool> SceneVisibleToAsync(ISceneService service, Library.Models.Scene.Scene scene, IMUSHCodeParser parser)
 	{
 		if (scene.IsPublic)
 		{
 			return true;
 		}
 
-		if (string.IsNullOrEmpty(viewerDbref))
+		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+
+		// Wizards see every scene. This is what makes the WIZARD-flagged Scene Logger (which runs the
+		// +scene/* $-commands) able to read/manage non-public scenes it is not a member of.
+		if (await executor.IsWizard())
 		{
-			return false;
+			return true;
 		}
 
-		var member = await service.GetMemberAsync(scene.Id, viewerDbref);
+		var member = await service.GetMemberAsync(scene.Id, executor.Object().DBRef.ToString());
 		return member.IsT0;
 	}
 
@@ -83,7 +89,7 @@ public static class SceneFunctions
 		}
 
 		var scene = lookup.AsT0;
-		if (!await SceneVisibleToAsync(service, scene, await ViewerDbrefAsync(parser)))
+		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
 		}
@@ -183,7 +189,7 @@ public static class SceneFunctions
 		}
 
 		var scene = lookup.AsT0;
-		if (!await SceneVisibleToAsync(service, scene, await ViewerDbrefAsync(parser)))
+		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
 		}
@@ -235,7 +241,7 @@ public static class SceneFunctions
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, lookup.AsT0, await ViewerDbrefAsync(parser)))
+		if (!await SceneVisibleToAsync(service, lookup.AsT0, parser))
 		{
 			return new CallState(ScenePermission);
 		}
@@ -274,7 +280,7 @@ public static class SceneFunctions
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, await ViewerDbrefAsync(parser)))
+		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
 		{
 			return new CallState(ScenePermission);
 		}
@@ -336,7 +342,7 @@ public static class SceneFunctions
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, await ViewerDbrefAsync(parser)))
+		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
 		{
 			return new CallState(ScenePermission);
 		}
@@ -384,7 +390,7 @@ public static class SceneFunctions
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, await ViewerDbrefAsync(parser)))
+		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
 		{
 			return new CallState(ScenePermission);
 		}
@@ -422,7 +428,7 @@ public static class SceneFunctions
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, await ViewerDbrefAsync(parser)))
+		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
 		{
 			return new CallState(ScenePermission);
 		}
@@ -463,7 +469,7 @@ public static class SceneFunctions
 		}
 
 		var scene = lookup.AsT0;
-		if (!await SceneVisibleToAsync(service, scene, await ViewerDbrefAsync(parser)))
+		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
 		}
@@ -488,7 +494,7 @@ public static class SceneFunctions
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, await ViewerDbrefAsync(parser)))
+		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
 		{
 			return new CallState(ScenePermission);
 		}
@@ -519,7 +525,7 @@ public static class SceneFunctions
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, await ViewerDbrefAsync(parser)))
+		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
 		{
 			return new CallState(ScenePermission);
 		}

@@ -148,6 +148,22 @@ objects:
       CMD`RECAP: |-
         $+scene/recap *: @pemit %#=[iter(sceneposes(scenefocus(%#),,%0),scenepose(scenefocus(%#),##,content),%b,%r)]
 
+      # ---- pose tracker (+pot): query-on-run turn tracker for the focused scene --
+      # No hooks, no state: rebuilt each run from the recorded poses. A member's last
+      # pose time is sceneposes(scene,member,1) -> scenepose(...,createdat) (Unix-millis,
+      # diffed against msecs()). Members are ordered OLDEST-pose-first, so whoever is
+      # most overdue sits at the top, flagged up-next. Columns align to width(%#).
+      FUN`POT_MS: |-
+        firstof(scenepose(%0,sceneposes(%0,%1,1),createdat),0)
+      FUN`POT_IDLE: |-
+        switch(setr(9,u(%!/FUN`POT_MS,%0,%1)),0,-,timestring(div(sub(msecs(),%q9),1000)))
+      FUN`POT_KEY: |-
+        [rjust(u(%!/FUN`POT_MS,%0,%1),15,0)]~%1
+      FUN`POT_ROW: |-
+        align(>3 <[sub(%3,30)] >14 <9,%2,[name(%1)][switch(scenemember(%0,%1,showas),,,%b\([scenemember(%0,%1,showas)]\))],u(%!/FUN`POT_IDLE,%0,%1),switch(%2,1,<- up,))
+      CMD`POT: |-
+        $+scene/pot: @pemit %#=[setq(0,scenefocus(%#))][switch(words(%q0),0,You are not focused on a scene. Use +scene/join <id> or +scene/create <title>.,[header(Pose Tracker - Scene %q0,width(%#))]%r[iter(sort(iter(scenemembers(%q0),u(%!/FUN`POT_KEY,%q0,##))),u(%!/FUN`POT_ROW,%q0,after(##,~),inum(0),width(%#)),,%r)]%r[footer([words(scenemembers(%q0))] in scene - oldest pose is up next,width(%#))])]
+
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).
       AINSTALL: |-
