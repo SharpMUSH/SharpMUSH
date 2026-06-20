@@ -24,7 +24,21 @@ Authoring background:
 
 ## Use them via `dotnet new`
 
-Install one (or all) of the templates from a local checkout, then scaffold:
+### From nuget.org (recommended)
+
+All three ship together in the **`SharpMUSH.Templates`** pack — install once, scaffold any kind:
+
+```bash
+dotnet new install SharpMUSH.Templates
+```
+
+`dotnet new` handles all the renaming and token substitution (e.g. `sharpmush-plugin -n MyPlugin`
+renames `PLUGIN_NAME.csproj` → `MyPlugin.csproj` and rewrites the namespace), so there are no files
+to rename by hand.
+
+### From a local checkout
+
+Or install individual templates straight from this repo, then scaffold:
 
 ```bash
 # Install (point at the template directory containing .template.config/):
