@@ -35,3 +35,11 @@ packages:
     package: chargen-app
     version: 1.0.0
     description: Application package (Area 21) — registers chargen as a portal page (requires chargen)
+  - path: common-functions/
+    package: common-functions
+    version: 1.0.0
+    description: "Global UI-helper functions: header(), footer(), line()"
+  - path: scene/
+    package: scene
+    version: 1.0.0
+    description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)

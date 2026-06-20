@@ -44,145 +44,109 @@ objects:
       FUN`OWNS: |-
         or(orflags(%0,Wz),strmatch(scene(%1,owner),%0))
 
-      # ---- shared capture tail (composed via @include) --------------------------
-      # %0 = <source token> (pose/say/semipose); %1 = <rendered content line>.
-      # Each CMD`CAPTURE`* reproduces its type-specific built-in emit, then calls
-      # @include %!/INCLUDE`CAPTURE=<source>,<content>. This tail (a) @asserts a
-      # scene is active in this room AND the poser is focused on it, then (b)
-      # records the rendered line with @scene/addpose (explicit author %#).
-      # The @assert halts the command list AFTER the emit already fired, so a
-      # pose outside any scene behaves exactly like the un-hooked built-in.
-      INCLUDE`CAPTURE: |-
-        @assert words(scenewhere(%L));
-        @assert strmatch(scenefocus(%#),scenewhere(%L));
-        @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,%0,,%1
-
       # ---- capture hooks --------------------------------------------------------
-      # Each hook reproduces the built-in room emit byte-for-byte, then delegates
-      # the assert+addpose tail to INCLUDE`CAPTURE.
+      # Each hook reproduces its type-specific built-in room emit byte-for-byte, then
+      # records the rendered line. The capture tail is INLINED into each hook (not
+      # factored into an @include attribute): @include cannot resolve an attribute
+      # name that contains a backtick (e.g. INCLUDE`CAPTURE) — only get()/u() do — so
+      # an @include of the shared tail silently no-ops and nothing is captured.
+      #
+      # The tail (a) @asserts a scene is active in this room AND the poser is focused on
+      # it, then (b) records the rendered line with @scene/addpose (explicit author %#).
+      # The two @asserts halt the command list AFTER the emit already fired, so a pose
+      # outside any scene behaves exactly like the un-hooked built-in.
 
       # Built-in POSE (MoreCommands.Pose) emits: "<name> <message>" to the room.
       CMD`CAPTURE`POSE: |-
-        $pose *:
-          @emit [name(%#)] %0;
-          @include %!/INCLUDE`CAPTURE=pose,[name(%#)] %0
+        $pose *: @emit [name(%#)] %0; @assert words(scenewhere(%L)); @assert strmatch(scenefocus(%#),scenewhere(%L)); @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,pose,,[name(%#)] %0
 
       # Built-in SAY (MoreCommands.Say) emits "You say, \"<msg>\"" to the speaker
       # and "<name> says, \"<msg>\"" to everyone else in the room.
       CMD`CAPTURE`SAY: |-
-        $say *:
-          @pemit %#=You say, "%0";
-          @oemit %L/%#=[name(%#)] says, "%0";
-          @include %!/INCLUDE`CAPTURE=say,[name(%#)] says\, "%0"
+        $say *: @pemit %#=You say, "%0"; @oemit %L/%#=[name(%#)] says, "%0"; @assert words(scenewhere(%L)); @assert strmatch(scenefocus(%#),scenewhere(%L)); @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,say,,[name(%#)] says\, "%0"
 
       # Built-in SEMIPOSE (MoreCommands.SemiPose) emits "<name><message>" (no space).
       CMD`CAPTURE`SEMI: |-
-        $;*:
-          @emit [name(%#)]%0;
-          @include %!/INCLUDE`CAPTURE=semipose,[name(%#)]%0
+        $;*: @emit [name(%#)]%0; @assert words(scenewhere(%L)); @assert strmatch(scenefocus(%#),scenewhere(%L)); @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,semipose,,[name(%#)]%0
 
       # ---- create / lifecycle ---------------------------------------------------
+      # NOTE: capture the new scene id into %q0 with @assert (it both sets the register and
+      # aborts cleanly if creation fails — the id is truthy), then drive the writes off %q0.
+      # IMPORTANT: the body is one PHYSICAL line with `;` separators. q-registers are shared
+      # across `;`-separated commands but NOT across newline-separated ones in a $-command
+      # body, so the original multi-line `|-` form lost %q0 between writes. The original
+      # `&MY.SID %#=[setr(0,…)]` also failed (setr inside an &attr=<value> RHS doesn't
+      # propagate its register); @assert in command position does.
       CMD`CREATE: |-
-        $+scene/create *:
-          &MY.SID %#=[setr(0,[scenecreate(%L,%#,%0)])];
-          @scene/member %q0/owner=%#;
-          @scene/focus %#=%q0;
-          @scene/set %q0/status=[get(%!/DATA`DEFAULT_STATUS)];
-          @pemit %#=Scene %q0 created and focused.
+        $+scene/create *: @assert setr(0,scenecreate(%L,%#,%0)); @scene/member %q0/owner=%#; @scene/focus %#=%q0; @scene/set %q0/status=[get(%!/DATA`DEFAULT_STATUS)]; @pemit %#=Scene %q0 created and focused.; &MY.SID %#=%q0
 
+      # NOTE: verb bodies are written as ONE physical line with `;` separators. In a
+      # multi-line ($-command) attribute the FIRST command after the `$pattern:` header does
+      # not parse cleanly (the following line's leading `@scene…` leaks into it) and
+      # q-registers do not cross newlines — the `;` form is robust on both counts.
       CMD`START: |-
-        $+scene/start:
-          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-          @scene/set [scenefocus(%#)]/status=active;
-          @pemit %#=Scene is now active.
+        $+scene/start: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=active; @pemit %#=Scene is now active.
 
       CMD`PAUSE: |-
-        $+scene/pause:
-          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-          @scene/set [scenefocus(%#)]/status=paused;
-          @pemit %#=Scene paused.
+        $+scene/pause: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=paused; @pemit %#=Scene paused.
 
       CMD`FINISH: |-
-        $+scene/finish:
-          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-          @scene/set [scenefocus(%#)]/status=finished;
-          @scene/focus %#=;
-          @pemit %#=Scene finished.
+        $+scene/finish: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
 
       # ---- membership / RSVP / focus --------------------------------------------
       CMD`JOIN: |-
-        $+scene/join *:
-          @scene/member %0/participant=%#;
-          @scene/focus %#=%0;
-          @pemit %#=Joined and focused on scene %0.
+        $+scene/join *: @scene/member %0/participant=%#; @scene/focus %#=%0; @pemit %#=Joined and focused on scene %0.
 
+      # NOTE: one physical line (q-registers cross `;` but not newlines in a $-command body).
+      # Capture the focused scene id into %q0 BEFORE @scene/focus clears it (@assert sets the
+      # register and no-ops cleanly when not focused), then drive the writes off %q0.
       CMD`LEAVE: |-
-        $+scene/leave:
-          &MY.SID %#=[setr(0,[scenefocus(%#)])];
-          @scene/focus %#=;
-          @@ no-trace exit: if they authored no poses, drop the membership entirely
-          @if not(words(sceneposes(%q0,%#)))={@scene/unmember %q0=%#};
-          @pemit %#=Left the scene.
+        $+scene/leave: @assert setr(0,scenefocus(%#)); @scene/focus %#=; @if not(words(sceneposes(%q0,%#)))={@scene/unmember %q0=%#}; @pemit %#=Left the scene.; &MY.SID %#=%q0
 
       CMD`TAG: |-
-        $+scene/tag *:
-          @scene/member %0/attending=%#;
-          @pemit %#=RSVP'd to scene %0.
+        $+scene/tag *: @scene/member %0/attending=%#; @pemit %#=RSVP'd to scene %0.
 
       CMD`UNTAG: |-
-        $+scene/untag *:
-          @scene/unmember %0=%#;
-          @pemit %#=Removed RSVP from scene %0.
+        $+scene/untag *: @scene/unmember %0=%#; @pemit %#=Removed RSVP from scene %0.
 
       CMD`SHOWAS: |-
-        $+scene/showas *:
-          @scene/showas [scenefocus(%#)]/%#=%0;
-          @pemit %#=Future poses show as: %0
+        $+scene/showas *: @scene/showas [scenefocus(%#)]/%#=%0; @pemit %#=Future poses show as: %0
 
       # ---- edit your own poses --------------------------------------------------
-      # %1 is find^^^replace; author-only is enforced by @scene/editpose.
+      # %1 is find^^^replace; author-only is enforced by @scene/editpose. Compute the new
+      # content into %q0 in a separate command first (a nested function reference to the
+      # verb's %0/%1 inside an @scene arg does not resolve reliably), then edit off %q0.
       CMD`EDIT: |-
-        $+scene/edit *=*:
-          @scene/editpose %0=%#,[edit(scenepose(scenefocus(%#),%0,content),before(%1,^^^),after(%1,^^^))]
+        $+scene/edit *=*: @assert setr(1,%0); @assert setr(0,edit(scenepose(scenefocus(%#),%q1,content),before(%1,^^^),after(%1,^^^))); @scene/editpose %q1=%#,%q0
 
       CMD`UNDO: |-
-        $+scene/undo *:
-          @scene/undo %0
+        $+scene/undo *: @scene/undo %0
 
       CMD`REDO: |-
-        $+scene/redo *:
-          @scene/redo %0
+        $+scene/redo *: @scene/redo %0
 
       CMD`DELETE: |-
-        $+scene/delete *:
-          @scene/delete %0
+        $+scene/delete *: @scene/delete %0
 
       CMD`MOVE: |-
-        $+scene/move *=*:
-          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-          @scene/move %0=%1
+        $+scene/move *=*: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/move %0=%1
 
       # ---- visibility -----------------------------------------------------------
       CMD`PUBLIC: |-
-        $+scene/public:
-          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-          @scene/set [scenefocus(%#)]/public=1;
-          @pemit %#=Scene is now public.
+        $+scene/public: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=1; @pemit %#=Scene is now public.
 
       CMD`PRIVATE: |-
-        $+scene/private:
-          @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-          @scene/set [scenefocus(%#)]/public=0;
-          @pemit %#=Scene is now private.
+        $+scene/private: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=0; @pemit %#=Scene is now private.
 
       # ---- viewing --------------------------------------------------------------
       CMD`WHO: |-
-        $+scene/who *:
-          @pemit %#=Cast: [scenecast(%0)]%r[iter(scenemembers(%0),[name(##)] ([scenemember(%0,##,role)]))]
+        $+scene/who *: @pemit %#=Cast: [scenecast(%0)]%r[iter(scenemembers(%0),[name(##)] ([scenemember(%0,##,role)]))]
 
+      # sceneposes() returns a SPACE-separated id list, so iter() must use the default
+      # space input delimiter (an `@` input delim collapsed the whole list into one bogus
+      # id → #-1). %r is the output separator (one pose content per line).
       CMD`RECAP: |-
-        $+scene/recap *:
-          @pemit %#=[iter(sceneposes(scenefocus(%#),,%0),scenepose(scenefocus(%#),##,content),@,%r)]
+        $+scene/recap *: @pemit %#=[iter(sceneposes(scenefocus(%#),,%0),scenepose(scenefocus(%#),##,content),%b,%r)]
 
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).

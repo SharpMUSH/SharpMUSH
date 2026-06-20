@@ -1983,8 +1983,14 @@ public class SharpMUSHParserVisitor(
 			// The LHS of an EqSplit command is evaluated unless the command declares full NoParse.
 			// Commands that only want their RHS unevaluated (like &) use RSNoParse instead of NoParse,
 			// so that the LHS (object reference) is evaluated normally here while the RHS is deferred.
+			// For a full-NoParse EqSplit command the LHS stays raw, BUT we still attach a
+			// deferred ParsedMessage (mirroring the RHS args below) so a command that opts
+			// to evaluate its LHS — e.g. @SCENE, which evaluates args itself unless /NOEVAL —
+			// can do so. Without this, the raw LHS (e.g. "[scenewhere(%L)]") never evaluated.
+			var noParseLhs = argCallState.Arguments.FirstOrDefault() ?? MModule.empty();
 			arguments.Add(noParse
-				? new CallState(argCallState.Arguments.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
+				? new CallState(noParseLhs, argCallState.Depth, null,
+					async () => (await prs.FunctionParse(noParseLhs))!.Message!)
 				: (await prs.FunctionParse(argCallState.Arguments.FirstOrDefault() ?? MModule.empty()))!);
 
 			if (nArgs < 2) return arguments;
@@ -2015,8 +2021,11 @@ public class SharpMUSHParserVisitor(
 		{
 			if (noParse)
 			{
+				// Attach a deferred ParsedMessage so a self-evaluating NoParse command
+				// (e.g. @SCENE/undo <poseId>) can evaluate a functional single arg on demand.
 				arguments.AddRange(argCallState.Arguments
-					.Select(x => new CallState(x, argCallState.Depth)));
+					.Select(x => new CallState(x, argCallState.Depth, null,
+						async () => (await prs.FunctionParse(x))!.Message!)));
 			}
 			else
 			{

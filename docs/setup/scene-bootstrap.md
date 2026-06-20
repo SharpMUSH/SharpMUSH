@@ -112,29 +112,26 @@ it, then (c) records the rendered line with `@scene/addpose` (note the
 list *after* the emit already fired, so a pose outside any scene behaves exactly
 like the un-hooked built-in. **Writes are commands.**
 
-```mush
-@@ Shared tail: %0 = <source token>, %1 = <rendered content line>.
-&INCLUDE`CAPTURE Scene Logger=
-  @assert words(scenewhere(%L));                         @@ a scene is active in this room?
-  @assert strmatch(scenefocus(%#),scenewhere(%L));       @@ poser is focused on THIS scene
-  @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,%0,,%1
+Each capture hook is written as ONE physical line (commands separated by `;`),
+and the assert+addpose tail is **inlined** into each hook rather than factored
+into a shared `&INCLUDE\`CAPTURE` attribute. Two engine realities drive this:
 
-@@ Built-in POSE emits "<name> <message>" to the room.
-&CMD`CAPTURE`POSE Scene Logger=$pose *:
-  @emit [name(%#)] %0;
-  @include %!/INCLUDE`CAPTURE=pose,[name(%#)] %0
+* **`@include` cannot resolve a backtick attribute name.** `@include %!/INCLUDE\`CAPTURE`
+  silently no-ops (only `get()`/`u()` resolve `FOO\`BAR` tree attributes), so a
+  factored tail never runs — nothing is captured. Inlining avoids `@include`.
+* **A multi-line `$`-command body misparses its first command**, and q-registers
+  do not cross newlines in a `$`-command body. The single-line `;` form is robust.
+
+```mush
+@@ Built-in POSE emits "<name> <message>" to the room, then records the pose.
+&CMD`CAPTURE`POSE Scene Logger=$pose *: @emit [name(%#)] %0; @assert words(scenewhere(%L)); @assert strmatch(scenefocus(%#),scenewhere(%L)); @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,pose,,[name(%#)] %0
 
 @@ Built-in SAY emits "You say, \"<msg>\"" to the speaker and
-@@ "<name> says, \"<msg>\"" to everyone else — reproduce both.
-&CMD`CAPTURE`SAY Scene Logger=$say *:
-  @pemit %#=You say, "%0";
-  @oemit %L/%#=[name(%#)] says, "%0";
-  @include %!/INCLUDE`CAPTURE=say,[name(%#)] says\, "%0"
+@@ "<name> says, \"<msg>\"" to everyone else — reproduce both, then record.
+&CMD`CAPTURE`SAY Scene Logger=$say *: @pemit %#=You say, "%0"; @oemit %L/%#=[name(%#)] says, "%0"; @assert words(scenewhere(%L)); @assert strmatch(scenefocus(%#),scenewhere(%L)); @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,say,,[name(%#)] says\, "%0"
 
-@@ Built-in SEMIPOSE emits "<name><message>" (no space).
-&CMD`CAPTURE`SEMI Scene Logger=$;*:
-  @emit [name(%#)]%0;
-  @include %!/INCLUDE`CAPTURE=semipose,[name(%#)]%0
+@@ Built-in SEMIPOSE emits "<name><message>" (no space), then records.
+&CMD`CAPTURE`SEMI Scene Logger=$;*: @emit [name(%#)]%0; @assert words(scenewhere(%L)); @assert strmatch(scenefocus(%#),scenewhere(%L)); @scene/addpose [scenewhere(%L)]=%#,[scenemember(scenewhere(%L),%#,showas)],%L,semipose,,[name(%#)]%0
 ```
 
 `scenewhere(%L)` resolves the room's active scene; `scenefocus(%#)` is the
@@ -163,84 +160,51 @@ All writes go through `@scene/*` commands; reads stay as `scene…()` functions.
 `%!` is the Scene Logger object (the verbs live on it), so `u(%!/FUN\`OWNS,…)`
 calls its guard.
 
+> **Softcode conventions that matter here (engine realities):**
+> * Each verb body is **one physical line** (`;`-separated). A multi-line
+>   `$`-command body misparses its first command (the next line's leading
+>   `@scene…` leaks into it) and q-registers do not cross newlines in a
+>   `$`-command body — both break the verbs. Use `;`.
+> * `@scene/*` are NoParse commands: they evaluate their own args, but a bare
+>   `%0`/`%1` positional passed *directly* as an `@scene` arg can collide with
+>   the command's own arg context. Stash the positional into a `%q` register
+>   first when it would otherwise be the whole arg (see `EDIT`).
+> * `@create`/`@assert setr(...)` in command position **does** propagate its
+>   register to later `;` commands; a `setr()` inside an `&attr=<value>` RHS does
+>   **not** — capture the scene id with `@assert setr(...)`, not `&MY.SID=[setr(...)]`.
+
 ```mush
 @@ ---- create / lifecycle -------------------------------------------------
-&CMD`CREATE Scene Logger=$+scene/create *:
-  &MY.SID %#=[setr(0,[scenecreate(%L,%#,%0)])];
-  @scene/member %q0/owner=%#;
-  @scene/focus %#=%q0;
-  @scene/set %q0/status=[get(%!/DATA`DEFAULT_STATUS)];
-  @pemit %#=Scene %q0 created and focused.
+&CMD`CREATE Scene Logger=$+scene/create *: @assert setr(0,scenecreate(%L,%#,%0)); @scene/member %q0/owner=%#; @scene/focus %#=%q0; @scene/set %q0/status=[get(%!/DATA`DEFAULT_STATUS)]; @pemit %#=Scene %q0 created and focused.; &MY.SID %#=%q0
 
-&CMD`START Scene Logger=$+scene/start:
-  @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-  @scene/set [scenefocus(%#)]/status=active;
-  @pemit %#=Scene is now active.
-
-&CMD`PAUSE Scene Logger=$+scene/pause:
-  @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-  @scene/set [scenefocus(%#)]/status=paused;
-  @pemit %#=Scene paused.
-
-&CMD`FINISH Scene Logger=$+scene/finish:
-  @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-  @scene/set [scenefocus(%#)]/status=finished;
-  @scene/focus %#=;
-  @pemit %#=Scene finished.
+&CMD`START   Scene Logger=$+scene/start: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=active; @pemit %#=Scene is now active.
+&CMD`PAUSE   Scene Logger=$+scene/pause: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=paused; @pemit %#=Scene paused.
+&CMD`FINISH  Scene Logger=$+scene/finish: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=finished; @scene/focus %#=; @pemit %#=Scene finished.
 
 @@ ---- membership / RSVP / focus ------------------------------------------
-&CMD`JOIN Scene Logger=$+scene/join *:
-  @scene/member %0/participant=%#;
-  @scene/focus %#=%0;
-  @pemit %#=Joined and focused on scene %0.
-
-&CMD`LEAVE Scene Logger=$+scene/leave:
-  &MY.SID %#=[setr(0,[scenefocus(%#)])];
-  @scene/focus %#=;
-  @@ no-trace exit: if they authored no poses, drop the membership entirely
-  @if not(words(sceneposes(%q0,%#)))={@scene/unmember %q0=%#};
-  @pemit %#=Left the scene.
-
-&CMD`TAG Scene Logger=$+scene/tag *:
-  @scene/member %0/attending=%#;                     @@ RSVP = the "attending" role
-  @pemit %#=RSVP'd to scene %0.
-
-&CMD`UNTAG Scene Logger=$+scene/untag *:
-  @scene/unmember %0=%#;
-  @pemit %#=Removed RSVP from scene %0.
-
-&CMD`SHOWAS Scene Logger=$+scene/showas *:
-  @scene/showas [scenefocus(%#)]/%#=%0;
-  @pemit %#=Future poses show as: %0
+&CMD`JOIN  Scene Logger=$+scene/join *: @scene/member %0/participant=%#; @scene/focus %#=%0; @pemit %#=Joined and focused on scene %0.
+&CMD`LEAVE Scene Logger=$+scene/leave: @assert setr(0,scenefocus(%#)); @scene/focus %#=; @if not(words(sceneposes(%q0,%#)))={@scene/unmember %q0=%#}; @pemit %#=Left the scene.; &MY.SID %#=%q0
+&CMD`TAG   Scene Logger=$+scene/tag *: @scene/member %0/attending=%#; @pemit %#=RSVP'd to scene %0.
+&CMD`UNTAG Scene Logger=$+scene/untag *: @scene/unmember %0=%#; @pemit %#=Removed RSVP from scene %0.
+&CMD`SHOWAS Scene Logger=$+scene/showas *: @scene/showas [scenefocus(%#)]/%#=%0; @pemit %#=Future poses show as: %0
 
 @@ ---- edit your own poses -------------------------------------------------
-@@ %1 is find^^^replace; author-only is enforced by @scene/editpose.
-&CMD`EDIT Scene Logger=$+scene/edit *=*:
-  @scene/editpose %0=%#,[edit(scenepose(scenefocus(%#),%0,content),before(%1,^^^),after(%1,^^^))]
+@@ %1 is find^^^replace; author-only is enforced by @scene/editpose. The poseId
+@@ (%0) is stashed in %q1 so it is not a bare positional inside the @scene arg.
+&CMD`EDIT Scene Logger=$+scene/edit *=*: @assert setr(1,%0); @assert setr(0,edit(scenepose(scenefocus(%#),%q1,content),before(%1,^^^),after(%1,^^^))); @scene/editpose %q1=%#,%q0
 
-&CMD`UNDO   Scene Logger=$+scene/undo *:   @scene/undo %0
-&CMD`REDO   Scene Logger=$+scene/redo *:   @scene/redo %0
+&CMD`UNDO   Scene Logger=$+scene/undo *: @scene/undo %0
+&CMD`REDO   Scene Logger=$+scene/redo *: @scene/redo %0
 &CMD`DELETE Scene Logger=$+scene/delete *: @scene/delete %0
-&CMD`MOVE   Scene Logger=$+scene/move *=*:
-  @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-  @scene/move %0=%1
+&CMD`MOVE   Scene Logger=$+scene/move *=*: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/move %0=%1
 
 @@ ---- visibility ----------------------------------------------------------
-&CMD`PUBLIC  Scene Logger=$+scene/public:
-  @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-  @scene/set [scenefocus(%#)]/public=1;
-  @pemit %#=Scene is now public.
-&CMD`PRIVATE Scene Logger=$+scene/private:
-  @assert u(%!/FUN`OWNS,%#,scenefocus(%#));
-  @scene/set [scenefocus(%#)]/public=0;
-  @pemit %#=Scene is now private.
+&CMD`PUBLIC  Scene Logger=$+scene/public: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=1; @pemit %#=Scene is now public.
+&CMD`PRIVATE Scene Logger=$+scene/private: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/public=0; @pemit %#=Scene is now private.
 
 @@ ---- viewing --------------------------------------------------------------
-&CMD`WHO Scene Logger=$+scene/who *:
-  @pemit %#=Cast: [scenecast(%0)]%r[iter(scenemembers(%0),[name(##)] ([scenemember(%0,##,role)]))]
-
-&CMD`RECAP Scene Logger=$+scene/recap *:
-  @pemit %#=[iter(sceneposes(scenefocus(%#),,%0),scenepose(scenefocus(%#),##,content),@,%r)]
+&CMD`WHO   Scene Logger=$+scene/who *: @pemit %#=Cast: [scenecast(%0)]%r[iter(scenemembers(%0),[name(##)] ([scenemember(%0,##,role)]))]
+&CMD`RECAP Scene Logger=$+scene/recap *: @pemit %#=[iter(sceneposes(scenefocus(%#),,%0),scenepose(scenefocus(%#),##,content),%b,%r)]
 ```
 
 > The `+scene/schedule` and `+scene/create/temp` verbs from earlier drafts are not
