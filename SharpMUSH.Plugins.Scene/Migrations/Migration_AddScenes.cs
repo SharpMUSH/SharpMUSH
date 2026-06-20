@@ -1,8 +1,9 @@
 using Core.Arango;
 using Core.Arango.Migration;
 using Core.Arango.Protocol;
+using SharpMUSH.Database;
 
-namespace SharpMUSH.Database.ArangoDB.Migrations;
+namespace SharpMUSH.Plugins.Scene.Migrations;
 
 /// <summary>
 /// Adds the Scene System (Area 7) — the graph-native <c>graph_sharp_sys_scene</c>
@@ -12,7 +13,12 @@ namespace SharpMUSH.Database.ArangoDB.Migrations;
 /// named graph with edge definitions (including cross-collection edges into
 /// <c>node_rooms</c>/<c>node_players</c>/<c>node_objects</c>), and persistent
 /// indexes on <c>Scene.Status</c> / <c>Scene.ScheduledFor</c> / <c>Scene.IsPublic</c>.
-/// Also seeds the informational <c>SCENE_ROOM</c> object flag.
+///
+/// <para>Phase 5: this migration was moved OUT of the engine's ArangoDB assembly into the
+/// Scene plugin. The Scene plugin's <see cref="ScenePlugin"/> surfaces this assembly via
+/// <c>IMigrationSource.ArangoMigrationAssembly</c>, so the host's <c>ArangoDatabase.Migrate()</c>
+/// runs it in the same upgrade pass as the engine's built-in migrations. The <c>SCENE_ROOM</c>
+/// flag is no longer seeded here — it is contributed by the plugin's <c>IFlagSource</c>.</para>
 /// </summary>
 public class Migration_AddScenes : IArangoMigration
 {
@@ -297,28 +303,6 @@ public class Migration_AddScenes : IArangoMigration
 							To = [DatabaseConstants.Objects]
 						}
 				]
-			});
-		}
-
-		// ── SCENE_ROOM informational object flag ──────────────────────────────────
-		var sceneRoomExists = await migrator.Context.Query.ExecuteAsync<int>(handle,
-			"FOR f IN @@c FILTER f.Name == @name COLLECT WITH COUNT INTO cnt RETURN cnt",
-			new Dictionary<string, object>
-			{
-				{ "@c", DatabaseConstants.ObjectFlags },
-				{ "name", "SCENE_ROOM" }
-			});
-
-		if (sceneRoomExists.FirstOrDefault() == 0)
-		{
-			await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-			{
-				Name = "SCENE_ROOM",
-				Symbol = "S",
-				System = true,
-				SetPermissions = DatabaseConstants.permissionsWizard,
-				UnsetPermissions = DatabaseConstants.permissionsWizard,
-				TypeRestrictions = DatabaseConstants.typesRoom
 			});
 		}
 	}

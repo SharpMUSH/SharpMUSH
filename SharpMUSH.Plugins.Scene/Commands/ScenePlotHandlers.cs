@@ -2,7 +2,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
-namespace SharpMUSH.Implementation.Commands.SceneCommand;
+namespace SharpMUSH.Plugins.Scene.Commands;
 
 /// <summary>
 /// Plot switch: <c>@scene/plot[/create|/link|/unlink] &lt;plot&gt;[=&lt;sceneId&gt;]</c>.

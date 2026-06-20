@@ -1,14 +1,22 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models.Scene;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
-namespace SharpMUSH.Implementation.Functions;
+namespace SharpMUSH.Plugins.Scene.Functions;
 
-public partial class Functions
+/// <summary>
+/// The <c>scene…</c> softcode functions — the Phase-5 plugin counterpart of the engine's former
+/// <c>Functions</c> partial. Reads are <c>Regular</c>; writes are <c>WizardOnly|HasSideFX</c> and honour
+/// the engine's <c>FunctionSideEffects</c> config. Every function resolves <c>ISceneService</c> (and, where
+/// needed, <c>IMediator</c> / the config) from <c>parser.ServiceProvider</c> at call time — the supported,
+/// unload-friendly plugin pattern.
+/// </summary>
+public static class SceneFunctions
 {
 	// ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -20,7 +28,7 @@ public partial class Functions
 	/// to anyone; non-public scenes are visible only to their members. Mirrors the
 	/// wiki draft-visibility convention.
 	/// </summary>
-	private static async ValueTask<bool> SceneVisibleToAsync(ISceneService service, Scene scene, string viewerDbref)
+	private static async ValueTask<bool> SceneVisibleToAsync(ISceneService service, Library.Models.Scene.Scene scene, string viewerDbref)
 	{
 		if (scene.IsPublic)
 		{
@@ -38,9 +46,15 @@ public partial class Functions
 
 	private static async ValueTask<string> ViewerDbrefAsync(IMUSHCodeParser parser)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		return executor.Object().DBRef.ToString();
 	}
+
+	/// <summary>Guard for side-effect (write) functions: false ⇒ side effects are disabled in config.</summary>
+	private static bool SideEffectsEnabled(IMUSHCodeParser parser)
+		=> parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
+			.CurrentValue.Function.FunctionSideEffects;
 
 	// ── Reads ───────────────────────────────────────────────────────────────────
 
@@ -530,7 +544,7 @@ public partial class Functions
 		ParameterNames = ["room", "owner", "title"])]
 	public static async ValueTask<CallState> SceneCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -556,7 +570,7 @@ public partial class Functions
 		ParameterNames = ["id", "key", "value"])]
 	public static async ValueTask<CallState> SceneSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -583,7 +597,7 @@ public partial class Functions
 		ParameterNames = ["id", "author", "showas", "origin", "source", "tags", "content"])]
 	public static async ValueTask<CallState> SceneAddPose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -619,7 +633,7 @@ public partial class Functions
 		ParameterNames = ["poseId", "key", "value"])]
 	public static async ValueTask<CallState> SceneSetPose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -645,7 +659,7 @@ public partial class Functions
 		ParameterNames = ["poseId", "editor", "content"])]
 	public static async ValueTask<CallState> SceneEditPose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -671,7 +685,7 @@ public partial class Functions
 		ParameterNames = ["poseId"])]
 	public static async ValueTask<CallState> SceneUndo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -695,7 +709,7 @@ public partial class Functions
 		ParameterNames = ["poseId"])]
 	public static async ValueTask<CallState> SceneRedo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -720,7 +734,7 @@ public partial class Functions
 		ParameterNames = ["poseId", "after"])]
 	public static async ValueTask<CallState> SceneMovePose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -749,7 +763,7 @@ public partial class Functions
 		ParameterNames = ["poseId"])]
 	public static async ValueTask<CallState> SceneDelPose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -771,7 +785,7 @@ public partial class Functions
 		ParameterNames = ["id", "player", "role"])]
 	public static async ValueTask<CallState> SceneAddMember(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -797,7 +811,7 @@ public partial class Functions
 		ParameterNames = ["id", "player"])]
 	public static async ValueTask<CallState> SceneUnMember(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -823,7 +837,7 @@ public partial class Functions
 		ParameterNames = ["player", "id"])]
 	public static async ValueTask<CallState> SceneSetFocus(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -850,7 +864,7 @@ public partial class Functions
 		ParameterNames = ["id", "player", "name"])]
 	public static async ValueTask<CallState> SceneShowAs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
@@ -878,7 +892,7 @@ public partial class Functions
 		ParameterNames = ["op", "plot", "id"])]
 	public static async ValueTask<CallState> ScenePlotFn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!SideEffectsEnabled(parser))
 		{
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}

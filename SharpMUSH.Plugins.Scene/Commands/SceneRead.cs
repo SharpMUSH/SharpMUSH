@@ -5,7 +5,7 @@ using SharpMUSH.Library.Models.Scene;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
-namespace SharpMUSH.Implementation.Commands.SceneCommand;
+namespace SharpMUSH.Plugins.Scene.Commands;
 
 /// <summary>
 /// Read switches: <c>@scene &lt;sceneId&gt;</c> (bare display), <c>@scene/list [&lt;status&gt;]</c>,
@@ -104,12 +104,12 @@ public static class SceneRead
 			});
 	}
 
-	private static string FormatSummary(Scene scene)
+	private static string FormatSummary(Library.Models.Scene.Scene scene)
 		=> $"SCENE #{scene.Id} [{scene.Status}] {(scene.Meta.TryGetValue("title", out var t) ? t : "(untitled)")}" +
 		   $" — owner {scene.OwnerName}, room {(string.IsNullOrEmpty(scene.RoomName) ? "(roomless)" : scene.RoomName)}," +
 		   $" {scene.PoseCount} pose(s)";
 
-	private static string ReadKey(Scene scene, string key)
+	private static string ReadKey(Library.Models.Scene.Scene scene, string key)
 		=> key.ToLowerInvariant() switch
 		{
 			"status" => scene.Status,

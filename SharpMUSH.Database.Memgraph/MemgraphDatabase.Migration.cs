@@ -135,35 +135,9 @@ public partial class MemgraphDatabase
 					{ /* Index already exists — safe to ignore */ }
 				}
 
-				// Scene System (graph_sharp_sys_scene) labels — same auto-commit requirement.
-				// Vertices keyed by generated ids; secondary indexes on the recency/scheduling/
-				// visibility properties the list/where reads filter and sort on. Uniqueness
-				// constraints guard the generated keys against accidental duplication.
-				var sceneIndexQueries = new[]
-				{
-					"CREATE INDEX ON :SharpScene(sceneId)",
-					"CREATE INDEX ON :SharpScene(status)",
-					"CREATE INDEX ON :SharpScene(isPublic)",
-					"CREATE INDEX ON :SharpScene(scheduledFor)",
-					"CREATE INDEX ON :SharpScene(lastActivityAt)",
-					"CREATE CONSTRAINT ON (s:SharpScene) ASSERT s.sceneId IS UNIQUE",
-					"CREATE INDEX ON :SharpScenePose(poseId)",
-					"CREATE INDEX ON :SharpScenePose(createdAt)",
-					"CREATE CONSTRAINT ON (p:SharpScenePose) ASSERT p.poseId IS UNIQUE",
-					"CREATE INDEX ON :SharpScenePoseEdit(editId)",
-					"CREATE CONSTRAINT ON (e:SharpScenePoseEdit) ASSERT e.editId IS UNIQUE",
-					"CREATE INDEX ON :SharpScenePlot(plotId)",
-					"CREATE CONSTRAINT ON (pl:SharpScenePlot) ASSERT pl.plotId IS UNIQUE"
-				};
-
-				foreach (var sq in sceneIndexQueries)
-				{
-					try { await indexSession.RunAsync(sq); }
-					catch (ClientException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
-					{ /* Index/constraint already exists — safe to ignore */ }
-					catch (DatabaseException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
-					{ /* Index/constraint already exists — safe to ignore */ }
-				}
+				// Scene System schema (graph_sharp_sys_scene) is no longer seeded here — Phase 5 moved it
+				// into the Scene plugin's IMigrationSource.CypherStatements, run after this built-in batch
+				// (see RunPluginCypherMigrations). The provider's ISceneService storage stays in-tree.
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -365,9 +339,8 @@ MERGE (o)-[:HAS_FLAG]->(f)
 ("OPEN_OK", "", null, [], [], ["ROOM"]),
 ("GOING", "g", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
 ("GOING_TWICE", "", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
-// Scene System (Area 7): informational flag marking a room dug for a scene.
-// See docs/design/scene-system.md — symbol 'S' (free among ObjectFlags), room-only, wizard set/unset.
-("SCENE_ROOM", "S", null, ["wizard"], ["wizard"], ["ROOM"]),
+// Scene System SCENE_ROOM flag is no longer seeded here — Phase 5 moved it into the Scene
+// plugin's IFlagSource, seeded after this built-in batch by SeedPluginFlags.
 		};
 
 		foreach (var f in flags)

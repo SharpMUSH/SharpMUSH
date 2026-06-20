@@ -281,7 +281,55 @@ The architecture leaves these seams for the committed later phases:
 - **Phase 3** — *implemented* — hot-reload/unload of command/function-only (and hook-only) plugins via
   collectible ALCs, with a `WeakReference`-dead gate (see above).
 - **Phase 4** — package-manager DLL distribution (signed/hashed manifest, trust gate).
-- **Phase 5** — extract the Scene system as the reference plugin via the Phase-2 seams.
+- **Phase 5** — *implemented* — the Scene system is extracted into the standalone `SharpMUSH.Plugins.Scene`
+  plugin via the Phase-1/2a seams (see below).
+
+## Phase 5 — Scene as the reference plugin
+
+`SharpMUSH.Plugins.Scene` is the first **real** plugin: the whole `@SCENE` command/`scene…` function/
+migration/flag/bridge surface ships from a standalone DLL built into `plugins/scene/`, while the
+`ISceneService` *storage* stays in the three DB providers (graph-native, cannot move). It proves every
+Phase-1/2a seam end-to-end against the existing Scene test suite, with no engine recompile to add the
+subsystem.
+
+| What | Seam used | Where it lives now |
+|------|-----------|--------------------|
+| `@SCENE` command (`SceneCommandModule` + the `Scene*Handlers`) | `PluginBase`→`ICommandSource` via the generator analyzer | `SharpMUSH.Plugins.Scene/Commands/` |
+| `scene…` functions (`SceneFunctions`) | `PluginBase`→`IFunctionSource` | `SharpMUSH.Plugins.Scene/Functions/` |
+| `game.scene.{id}` publish (`SceneBroadcast`) | called by the `@SCENE` arms | `SharpMUSH.Plugins.Scene/Commands/SceneBroadcast.cs` |
+| Arango `Migration_AddScenes`; Memgraph/Surreal scene schema | `IMigrationSource` (`ArangoMigrationAssembly` / `CypherStatements` / `SurrealStatements`) | `ScenePlugin` + `Migrations/Migration_AddScenes.cs` |
+| `SCENE_ROOM` object flag | `IFlagSource` (`PluginFlag`) | `ScenePlugin.Flags` |
+| `game.scene.*` NATS→SignalR leg (was `NatsBridgeService.SubscribeSceneAsync`) | `IBridgeSubscriptionSource` | `ScenePlugin.RunAsync` |
+
+Because it contributes load-once state (migration + flag + bridge), `ScenePlugin` is a **non-unloadable**
+plugin (`PluginLoaderService.IsUnloadablePlugin` returns false), exactly as the Phase-3 table prescribes.
+
+**Authoring shape.** The plugin csproj mirrors the `SamplePlugin` fixture (`EnableDynamicLoading`, the
+`SharpMUSH.Library` reference `Private=false`+`ExcludeAssets=runtime`, the `SharpMUSH.Implementation.Generated`
+analyzer). It additionally references `SharpMUSH.Database` (for `DatabaseConstants` + the `Core.Arango`
+migration types) and `SharpMUSH.Messaging` (for `NatsOptions`/`NatsConnection`), both `Private=false` so the
+host's copies load. The bridge leg forwards through the **non-generic** `IHubContext` with
+`SendAsync("ReceiveSceneMessage", …)` and builds the `scene:{id}` group key itself, so the plugin needs no
+reference to the Server's `GameHub`/`IGameHubClient`.
+
+**What stayed in the engine.** `ISceneService` + `Models/Scene/*` + `SceneEventMessage` (`SharpMUSH.Library`);
+the providers' `ISceneService` implementations (`*.Scene.cs` — graph storage); the `ISceneService` DI cast in
+`Startup`; `SceneController` (REST) + the client portal; the `DatabaseConstants` scene collection names (the
+providers' storage still references them).
+
+**Boot ordering.** The bundled `scene` softcode package (`examples/packages/scene`) drives `@scene`/`scene…`,
+so the plugin must register its commands/functions *before* the package installs and `@STARTUP` runs.
+`PluginBootstrapService` (which registers plugin commands/functions) is registered ahead of
+`DefaultPackagesBootstrapService` and `StartupAttributeBootstrapService` in `Startup`, and the load-once
+migration/flag/bridge contributions are applied even earlier — during container construction, via
+`PluginCatalog.Build` → the DB factory and `NatsBridgeService`.
+
+**Build/wiring.** `SharpMUSH.Plugins.Scene` is in the solution but referenced by the host (`SharpMUSH.Server`)
+and the test host (`SharpMUSH.Tests.Integration`) with `ReferenceOutputAssembly="false"`; a `CopyScenePlugin`
+MSBuild target drops its DLL+`deps.json`+`plugin.json` into each output's `plugins/scene/` (mirroring how
+`SamplePlugin` is built+copied). The existing Scene suite —`SceneServiceIntegrationTests`,
+`SceneCommandFunctionIntegrationTests`, `SceneDbrefResolutionTests`, `SceneHttpControllerTests`,
+`ScenePackageTests`— passes unchanged with Scene running as a plugin, which is the proof the seams are complete.
 
 ## See also
 

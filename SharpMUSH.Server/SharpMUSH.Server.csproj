@@ -57,7 +57,30 @@
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
+    <!-- The Scene plugin (Phase-5 reference plugin) is loaded at runtime from plugins/scene/, NOT linked.
+         ReferenceOutputAssembly=false keeps it out of the host's compile graph; the CopyScenePlugin target
+         below drops it into the output's plugins/scene/ where PluginBootstrapService discovers it. -->
+    <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj"
+      ReferenceOutputAssembly="false"
+      Private="false"
+      SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
+
+  <!-- Drop the built Scene plugin (DLL + deps.json + manifest) into plugins/scene/ beside the server binary
+       so the booting host's PluginBootstrapService discovers and loads it. -->
+  <Target Name="CopyScenePlugin" AfterTargets="Build">
+    <PropertyGroup>
+      <ScenePluginOutDir>$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\bin\$(Configuration)\net10.0</ScenePluginOutDir>
+      <ScenePluginsTargetDir>$(OutDir)plugins\scene</ScenePluginsTargetDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.dll" />
+      <ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.deps.json" />
+      <ScenePluginFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\plugin.json" />
+    </ItemGroup>
+    <MakeDir Directories="$(ScenePluginsTargetDir)" />
+    <Copy SourceFiles="@(ScenePluginFiles)" DestinationFolder="$(ScenePluginsTargetDir)" SkipUnchangedFiles="false" />
+  </Target>
 	
   <ItemGroup>
     <Content Include="appsettings*.json">

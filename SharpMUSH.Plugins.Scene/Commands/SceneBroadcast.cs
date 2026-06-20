@@ -6,15 +6,15 @@ using SharpMUSH.Library.Models.Scene;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Messaging.NATS;
 
-namespace SharpMUSH.Implementation.Commands.SceneCommand;
+namespace SharpMUSH.Plugins.Scene.Commands;
 
 /// <summary>
 /// Publishes the realtime <see cref="SceneEventMessage"/> on the core-NATS subject
-/// <c>game.scene.{id}</c> — the wire the server's <c>NatsBridgeService</c>
-/// subscribes to (<c>game.scene.*</c>) and forwards to the SignalR
+/// <c>game.scene.{id}</c> — the wire the Scene plugin's bridge subscription
+/// (<c>game.scene.*</c>, see <see cref="ScenePlugin"/>) forwards to the SignalR
 /// <c>scene:{id}</c> group. This mirrors the <c>game.room.*</c> realtime leg:
-/// the bridge listens on a transient, targeted core-NATS subject (not the
-/// JetStream <c>{prefix}.{kebab}</c> queue), so the publish stays on the same wire.
+/// publishing on a transient, targeted core-NATS subject (not the JetStream
+/// <c>{prefix}.{kebab}</c> queue), so the publish stays on the same wire.
 ///
 /// Publish lives outside <c>ISceneService</c> (which must remain provider-agnostic
 /// and extractable): the <c>@SCENE</c> arms call this shared helper after a

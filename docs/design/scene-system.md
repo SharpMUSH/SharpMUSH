@@ -139,7 +139,8 @@ graph LR
 
 ## Wizard-Only `@SCENE` Command Surface
 
-`SharpMUSH.Implementation/Commands/SceneCommand/`, one `[SharpCommand(Name =
+`SharpMUSH.Plugins.Scene/Commands/` (Phase-5 plugin; was
+`SharpMUSH.Implementation/Commands/SceneCommand/`), one `[SharpCommand(Name =
 "@SCENE", CommandLock = "FLAG^WIZARD", …)]` with switch dispatch and an explicit
 `if (!await executor.IsWizard())` gate (the `@SQL`/`AdminMail` precedent). It is
 the **privileged primitive surface admin softcode drives** — players never call
@@ -181,7 +182,8 @@ to a scheduled scene is `@scene/set <id>/room=<roomDbref>`).
 
 ## Softcode Functions
 
-`SharpMUSH.Implementation/Functions/SceneFunctions.cs`. Names follow the
+`SharpMUSH.Plugins.Scene/Functions/SceneFunctions.cs` (Phase-5 plugin; was
+`SharpMUSH.Implementation/Functions/SceneFunctions.cs`). Names follow the
 existing convention — **no underscores**, `scene`-prefixed, side-effect writes
 use a **verb form** (cf. `mail`/`mailsend`, `wiki`/`wikilist`). Writes are
 `WizardOnly|HasSideFX` (guard `Configuration.CurrentValue.Function.FunctionSideEffects`),
@@ -421,7 +423,7 @@ matrix.
 | 3 | `scene…` functions | Function | `[SharpFunction]` assembly-scanned. |
 | 4 | *(no config)* | — | No `SceneOptions` by design — all knobs are softcode policy in the bootstrap; nothing to contribute. |
 | 5 | `ISceneService` tri-cast (`*.Scene.cs` partials) | Storage | Net-new provider files; no new `ISharpDatabase` methods. |
-| 6 | `SceneEventMessage` + bridge + hub + client | Realtime/UI | **Blocker:** `SubscribeSceneAsync` is hard-coded in Server's `Task.WhenAll` — must become a registrable `IBridgeSubscription` list before DLL extraction. |
+| 6 | `SceneEventMessage` + bridge + hub + client | Realtime/UI | *Resolved (Phase 5):* the `game.scene.*` leg moved out of `NatsBridgeService.SubscribeSceneAsync` into `ScenePlugin`'s `IBridgeSubscriptionSource`; the host runs it alongside its built-in legs. |
 | 7 | `ActiveSceneWidget` + pages | Widget/Zone | Registered via `IWidgetRegistry`. |
 | 8 | `#SCENELOGGER` bootstrap + hook recipe | Integration recipe | No engine edits — capture rides `@hook/override`. |
 
@@ -430,12 +432,28 @@ the named-graph edge definitions naming those core collections are the coupling
 point for extraction (alongside seam #6 and #1b) — flagged for the
 package-manager framework.
 
-## Phase 7 — Extraction-Readiness Note (design only)
+## Phase 7 — Extraction (now realized as the Phase-5 plugin)
 
-All eight seams above are already shaped for a *move*, not a *rewrite*. Two of
-them currently require a core edit and so are the gating work the Package Manager
-framework must land **before** the Scene System can become a collectible
-`AssemblyLoadContext` DLL. Both are proposals here — **no code in this branch**.
+> **Realized (plugin Phase 5).** The Scene System has been extracted into the
+> standalone `SharpMUSH.Plugins.Scene` plugin via the plugin framework's Phase-1/2a
+> seams; the `ISceneService` *storage* stays in the three DB providers
+> (`*.Scene.cs` — graph-native, cannot move). The two blockers below
+> (`IBridgeSubscription` and `IFlagContribution`) were the gating work, and both
+> are solved by the generic Phase-2a contribution seams
+> (`IBridgeSubscriptionSource` and `IFlagSource`) — see
+> `docs/design/plugin-system.md §Phase 5 — Scene as the reference plugin`. The
+> command/function surface ships as `PluginBase`→`ICommandSource`/`IFunctionSource`
+> (generator analyzer); the Arango `Migration_AddScenes` + the Memgraph/Surreal
+> scene schema ship as `IMigrationSource`; the `SCENE_ROOM` flag as `IFlagSource`;
+> the `game.scene.*` NATS→SignalR leg as `IBridgeSubscriptionSource`. The five
+> existing Scene test classes pass unchanged with Scene running as a plugin, which
+> is the proof the seams are complete. The notes below are kept for the design
+> rationale that drove the seam shapes.
+
+All eight seams above are shaped for a *move*, not a *rewrite*. Two of them
+originally required a core edit and were the gating work the plugin framework had
+to land **before** the Scene System could become a collectible
+`AssemblyLoadContext` DLL. Both are now provided by the generic Phase-2a seams.
 
 ### Seam #6 blocker → `IBridgeSubscription`
 

@@ -3,7 +3,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
-namespace SharpMUSH.Implementation.Commands.SceneCommand;
+namespace SharpMUSH.Plugins.Scene.Commands;
 
 /// <summary>
 /// Pose-scoped switches. All take a globally-unique <c>&lt;poseId&gt;</c> (poses live in

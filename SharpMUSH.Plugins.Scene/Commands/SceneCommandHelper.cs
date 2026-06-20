@@ -1,7 +1,7 @@
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 
-namespace SharpMUSH.Implementation.Commands.SceneCommand;
+namespace SharpMUSH.Plugins.Scene.Commands;
 
 /// <summary>
 /// Shared helpers for the wizard-only @SCENE primitive surface: error strings,

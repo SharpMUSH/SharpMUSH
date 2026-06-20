@@ -23,7 +23,8 @@ public interface INatsBridgeService : IHostedService;
 /// Subjects consumed:
 ///   "game.output.{characterDbref}" → SignalR group "char:{characterDbref}"
 ///   "game.room.{roomDbref}"        → SignalR group "room:{roomDbref}"
-///   "game.scene.{sceneId}"         → SignalR group "scene:{sceneId}"
+/// The "game.scene.{sceneId}" → "scene:{sceneId}" leg moved into the Scene plugin (Phase 5) as an
+/// IBridgeSubscriptionSource, run here alongside the built-ins via the catalog's BridgeSources.
 ///
 /// Uses core NATS subscriptions (not JetStream) because these are transient,
 /// targeted delivery messages — not persistent queue messages.
@@ -62,14 +63,15 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 				_logger.LogInformation("[NatsBridge] Connecting to NATS at {Url}", _natsOptions.Url);
 				nats = new NatsConnection(new NatsOpts { Url = _natsOptions.Url });
 				await nats.ConnectAsync();
-				_logger.LogInformation("[NatsBridge] Connected. Subscribing to game.output.*, game.room.* and game.scene.*");
+				_logger.LogInformation("[NatsBridge] Connected. Subscribing to game.output.* and game.room.* (game.scene.* is now a plugin bridge leg)");
 				delay = 2; // reset backoff on successful connect
 
+				// Phase 5: the game.scene.* leg moved into the Scene plugin as an IBridgeSubscriptionSource —
+				// it is run below via the catalog's BridgeSources, alongside any other plugin bridge legs.
 				var subscriptionTasks = new List<Task>
 				{
 					SubscribeOutputAsync(nats, stoppingToken),
-					SubscribeRoomAsync(nats, stoppingToken),
-					SubscribeSceneAsync(nats, stoppingToken)
+					SubscribeRoomAsync(nats, stoppingToken)
 				};
 
 				// Phase 2a: run each plugin-contributed bridge subscription (IBridgeSubscriptionSource)
@@ -186,33 +188,6 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 			catch (Exception ex) when (ex is not OperationCanceledException)
 			{
 				_logger.LogError(ex, "[NatsBridge] Error forwarding room event to group {Group}", group);
-			}
-		}
-	}
-
-	private async Task SubscribeSceneAsync(NatsConnection nats, CancellationToken ct)
-	{
-		// Subject wildcard: "game.scene.*" — the last token is the scene id.
-		await foreach (var msg in nats.SubscribeAsync<SceneEventMessage>(
-			"game.scene.*",
-			serializer: NatsJsonSerializer<SceneEventMessage>.Default,
-			cancellationToken: ct))
-		{
-			if (msg.Data is null) continue;
-
-			var sceneId = msg.Data.SceneId;
-			var group = GameHub.SceneGroupName(sceneId);
-
-			_logger.LogDebug("[NatsBridge] Forwarding SceneEventMessage for scene:{SceneId} to group {Group}",
-				sceneId, group);
-
-			try
-			{
-				await _hubContext.Clients.Group(group).ReceiveSceneMessage(msg.Data);
-			}
-			catch (Exception ex) when (ex is not OperationCanceledException)
-			{
-				_logger.LogError(ex, "[NatsBridge] Error forwarding scene event to group {Group}", group);
 			}
 		}
 	}

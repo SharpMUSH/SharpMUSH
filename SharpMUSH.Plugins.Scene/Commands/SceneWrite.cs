@@ -2,7 +2,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
-namespace SharpMUSH.Implementation.Commands.SceneCommand;
+namespace SharpMUSH.Plugins.Scene.Commands;
 
 /// <summary>
 /// Scene-level write switches: <c>@scene/create &lt;roomDbref&gt;,&lt;ownerDbref&gt;[,&lt;title&gt;]</c>

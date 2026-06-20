@@ -35,6 +35,12 @@
 			ReferenceOutputAssembly="false"
 			Private="false"
 			SkipGetTargetFrameworkProperties="true" />
+		<!-- Build the Scene plugin (the Phase-5 reference plugin) before this project so its DLL exists to
+		     copy into plugins/scene/. ReferenceOutputAssembly=false: it is loaded at runtime, not linked. -->
+		<ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj"
+			ReferenceOutputAssembly="false"
+			Private="false"
+			SkipGetTargetFrameworkProperties="true" />
 	</ItemGroup>
 
 	<!-- Drop the built SamplePlugin (DLL + manifest only — its SharpMUSH deps resolve from the host's
@@ -52,6 +58,23 @@
 		</ItemGroup>
 		<MakeDir Directories="$(PluginsTargetDir)" />
 		<Copy SourceFiles="@(SamplePluginFiles)" DestinationFolder="$(PluginsTargetDir)" SkipUnchangedFiles="false" />
+	</Target>
+
+	<!-- Drop the built Scene plugin (DLL + deps.json + manifest) into plugins/scene/ so the booting server's
+	     PluginBootstrapService discovers it. The plugin's load-once contributions (Arango migration, SCENE_ROOM
+	     flag, game.scene.* bridge) and its @scene command + scene… functions are what the scene tests exercise. -->
+	<Target Name="CopyScenePlugin" AfterTargets="Build">
+		<PropertyGroup>
+			<ScenePluginOutDir>$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\bin\$(Configuration)\net10.0</ScenePluginOutDir>
+			<ScenePluginsTargetDir>$(OutDir)plugins\scene</ScenePluginsTargetDir>
+		</PropertyGroup>
+		<ItemGroup>
+			<ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.dll" />
+			<ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.deps.json" />
+			<ScenePluginFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\plugin.json" />
+		</ItemGroup>
+		<MakeDir Directories="$(ScenePluginsTargetDir)" />
+		<Copy SourceFiles="@(ScenePluginFiles)" DestinationFolder="$(ScenePluginsTargetDir)" SkipUnchangedFiles="false" />
 	</Target>
 
 	<ItemGroup>
