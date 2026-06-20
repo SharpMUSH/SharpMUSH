@@ -495,4 +495,50 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(table).Contains("Scheduled Scenes").Because("the schedule header should render");
 		await Assert.That(table).Contains($"Gala_{Tag}").Because("the scheduled scene's title should appear");
 	}
+
+	/// <summary>+scene/deactivate keeps membership but clears focus; +scene/activate restores it.
+	/// +scene/summary sets the summary; +scene/info renders the card with it.</summary>
+	[Test]
+	public async Task SceneParticipation_DeactivateActivate_SummaryAndInfoCard()
+	{
+		await God1("@set #1=WIZARD");
+
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+
+		var digOut = (await God1($"@dig PartRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var tom = await CreatePlayerAsync($"Tom_{Tag}", "pw_tom_123", 51L);
+		await God1($"@tel {tom}={digOut}");
+		await God1($"@tel {loggerDbref}={digOut}");
+
+		await RunAndCollectAs(51L, $"+scene/create PartTest_{Tag}");
+		await RunAndCollectAs(51L, "+scene/start");
+		var sceneId = await Eval($"get({tom}/MY.SID)");
+		await Assert.That(sceneId).IsNotEmpty();
+
+		// Summary (set while focused, owner-gated).
+		await RunAndCollectAs(51L, "+scene/summary A tense standoff at dawn.");
+		await Assert.That(await Eval($"scene({sceneId}, summary)")).IsEqualTo("A tense standoff at dawn.");
+
+		// Deactivate: focus cleared, membership retained.
+		await RunAndCollectAs(51L, "+scene/deactivate");
+		await Assert.That(await Eval($"scenefocus({tom})")).StartsWith("#-1")
+			.Because("deactivate clears the player's focus");
+		await Assert.That(await Eval($"scenemember({sceneId}, {tom}, role)")).DoesNotStartWith("#-1")
+			.Because("deactivate keeps membership");
+
+		// Activate: focus restored.
+		await RunAndCollectAs(51L, $"+scene/activate {sceneId}");
+		await Assert.That(await Eval($"scenefocus({tom})")).IsEqualTo(sceneId)
+			.Because("activate re-focuses the player");
+
+		// Info card renders the fields.
+		var infoMsgs = await RunAndCollectAs(51L, "+scene/info");
+		var card = string.Join("\n", infoMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
+		Console.WriteLine("=== +scene/info ===\n" + card);
+		await Assert.That(card).Contains("Summary").Because("the info card should have a Summary row");
+		await Assert.That(card).Contains("A tense standoff").Because("the summary text should render in the card");
+		await Assert.That(card).Contains("active").Because("the Status row should show the scene is active");
+	}
 }

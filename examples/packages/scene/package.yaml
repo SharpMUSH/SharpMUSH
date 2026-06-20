@@ -156,30 +156,36 @@ objects:
       FUN`POT_MS: |-
         firstof(scenepose(%0,sceneposes(%0,%1,1),createdat),0)
       FUN`POT_IDLE: |-
-        switch(setr(9,u(%!/FUN`POT_MS,%0,%1)),0,-,timestring(div(sub(msecs(),%q9),1000)))
+        switch(setr(ms,u(%!/FUN`POT_MS,%0,%1)),0,-,timestring(div(sub(msecs(),%q<ms>),1000)))
       FUN`POT_KEY: |-
         [rjust(u(%!/FUN`POT_MS,%0,%1),15,0)]~%1
       FUN`POT_ROW: |-
         align(>3 <[sub(%3,30)] >14 <9,%2,[name(%1)][switch(scenemember(%0,%1,showas),,,%b\([scenemember(%0,%1,showas)]\))],u(%!/FUN`POT_IDLE,%0,%1),switch(%2,1,<- up,))
+      # Control flow is guard-then-display: INC`REQUIRE`FOCUS early-exits via @assert (no switch() for
+      # output) and leaves %q<sid> set for the shared display tail, which is @included with that id.
+      INC`REQUIRE`FOCUS: |-
+        @assert not(strmatch(setr(sid,scenefocus(%#)),#-1*))=@pemit %#=You are not focused on a scene. Use +scene/join <id> or +scene/create <title>.
+      INC`DISPLAY`POT: |-
+        @pemit %#=[header(Pose Tracker - Scene %0,width(%#))]%r[iter(sort(iter(scenemembers(%0),u(%!/FUN`POT_KEY,%0,##))),u(%!/FUN`POT_ROW,%0,after(##,~),inum(0),width(%#)),,%r)]%r[footer([words(scenemembers(%0))] in scene - oldest pose is up next,width(%#))]
       CMD`POT: |-
-        $+scene/pot: @pemit %#=[setq(0,scenefocus(%#))][switch(words(%q0),0,You are not focused on a scene. Use +scene/join <id> or +scene/create <title>.,[header(Pose Tracker - Scene %q0,width(%#))]%r[iter(sort(iter(scenemembers(%q0),u(%!/FUN`POT_KEY,%q0,##))),u(%!/FUN`POT_ROW,%q0,after(##,~),inum(0),width(%#)),,%r)]%r[footer([words(scenemembers(%q0))] in scene - oldest pose is up next,width(%#))])]
+        $+scene/pot: @include %!/INC`REQUIRE`FOCUS; @include %!/INC`DISPLAY`POT=%q<sid>
 
       # ---- scene browser (+scene/list [filter]): align()'d table of scenes -------
       # filter: active | recent (default) | scheduled | mine. Width-adaptive columns;
       # the Title column flexes to fill the user's terminal width(%#).
       FUN`LIST_TITLE: |-
-        [switch(setr(8,scene(%0,title)),#-1*,(untitled),%q8)]
+        [switch(setr(ttl,scene(%0,title)),#-1*,\(untitled\),%q<ttl>)]
       FUN`LIST_ROW: |-
         align(<10 <[sub(%2,41)] <14 >5 <8,left(%0,10),left(u(%!/FUN`LIST_TITLE,%0),sub(%2,42)),left(scene(%0,roomname),14),words(scenemembers(%0)),scene(%0,status),%1)
       CMD`LIST: |-
-        $+scene/list*: @pemit %#=[setq(0,firstof(edit(%0,%b,),recent))][setq(1,scenelist(%q0))][header(Scenes: %q0,width(%#))]%r[align(<10 <[sub(width(%#),41)] <14 >5 <8,ID,Title,Where,Cast,Status,%b)]%r[iter(%q1,u(%!/FUN`LIST_ROW,##,%b,width(%#)),,%r)]%r[footer([words(%q1)] scenes,width(%#))]
+        $+scene/list*: @pemit %#=[setq(flt,firstof(edit(%0,%b,),recent))][setq(lst,scenelist(%q<flt>))][header(Scenes: %q<flt>,width(%#))]%r[align(<10 <[sub(width(%#),41)] <14 >5 <8,ID,Title,Where,Cast,Status,%b)]%r[iter(%q<lst>,u(%!/FUN`LIST_ROW,##,%b,width(%#)),,%r)]%r[footer([words(%q<lst>)] scenes,width(%#))]
 
       # ---- scheduling (+scene/schedule ...): roomless future scenes --------------
       # When = a convtime()-parseable date string OR raw epoch-seconds; scheduledfor is UTC-millis.
       FUN`SCHED_WHEN: |-
         mul(firstof(convtime(%0),%0),1000)
       CMD`SCHED_ADD: |-
-        $+scene/schedule/add *=*: @assert setr(0,scenecreate(,%#,%0)); @scene/member %q0/owner=%#; @scene/set %q0/status=scheduled; @scene/set %q0/scheduledfor=[u(%!/FUN`SCHED_WHEN,%1)]; @pemit %#=Scheduled scene %q0 "%0" for [convsecs(div(u(%!/FUN`SCHED_WHEN,%1),1000))].
+        $+scene/schedule/add *=*: @assert setr(sid,scenecreate(,%#,%0)); @scene/member %q<sid>/owner=%#; @scene/set %q<sid>/status=scheduled; @scene/set %q<sid>/scheduledfor=[u(%!/FUN`SCHED_WHEN,%1)]; @pemit %#=Scheduled scene %q<sid> "%0" for [convsecs(div(u(%!/FUN`SCHED_WHEN,%1),1000))].
       CMD`SCHED_RESCHED: |-
         $+scene/schedule/reschedule *=*: @assert u(%!/FUN`OWNS,%#,%0); @scene/set %0/scheduledfor=[u(%!/FUN`SCHED_WHEN,%1)]; @pemit %#=Rescheduled scene %0 for [convsecs(div(u(%!/FUN`SCHED_WHEN,%1),1000))].
       CMD`SCHED_DEL: |-
@@ -187,7 +193,35 @@ objects:
       FUN`SCHED_ROW: |-
         align(<10 <[sub(%1,42)] <24 >6,left(%0,10),left(u(%!/FUN`LIST_TITLE,%0),sub(%1,43)),convsecs(div(scene(%0,scheduledfor),1000)),words(scenemembers(%0)))
       CMD`SCHED_LIST: |-
-        $+scene/schedule: @pemit %#=[setq(1,scenelist(scheduled))][header(Scheduled Scenes,width(%#))]%r[align(<10 <[sub(width(%#),42)] <24 >6,ID,Title,When,RSVP)]%r[iter(%q1,u(%!/FUN`SCHED_ROW,##,width(%#)),,%r)]%r[footer([words(%q1)] scheduled,width(%#))]
+        $+scene/schedule: @pemit %#=[setq(lst,scenelist(scheduled))][header(Scheduled Scenes,width(%#))]%r[align(<10 <[sub(width(%#),42)] <24 >6,ID,Title,When,RSVP)]%r[iter(%q<lst>,u(%!/FUN`SCHED_ROW,##,width(%#)),,%r)]%r[footer([words(%q<lst>)] scheduled,width(%#))]
+
+      # ---- participation (+scene/deactivate | /activate): pause/resume w/o leaving -
+      # /deactivate clears your focus so poses stop recording, but keeps your membership
+      # (and your existing poses); /activate re-focuses you so capture resumes. Softer
+      # than join/leave, which add/remove membership.
+      CMD`DEACTIVATE: |-
+        $+scene/deactivate: @assert setr(sid,scenefocus(%#)); @scene/focus %#=; @pemit %#=Deactivated scene %q<sid> - still a member, poses paused. +scene/activate %q<sid> to resume.
+      CMD`ACTIVATE: |-
+        $+scene/activate *: @scene/member %0/participant=%#; @scene/focus %#=%0; @pemit %#=Activated scene %0 - your poses are recorded again.
+
+      # ---- summary + info card --------------------------------------------------
+      # SCENE_FIELD(scene,field,default) reads a field, substituting <default> for an unset/#-1 result.
+      # +scene/info guards (focused scene, or a valid id arg) via @assert/@include, sets %q<sid>, then
+      # @includes the shared display tail — no switch() picks the output.
+      FUN`SCENE_FIELD: |-
+        switch(setr(val,scene(%0,%1)),#-1*,%2,%q<val>)
+      FUN`INFO_LINE: |-
+        align(>9 <[sub(%2,11)],ansi(h,%0),%1)
+      INC`REQUIRE`SCENE: |-
+        @assert not(strmatch(scene(setr(sid,%0),status),#-1*))=@pemit %#=No such scene: %0
+      INC`DISPLAY`INFO: |-
+        @pemit %#=[header(Scene %0,width(%#))]%r[u(%!/FUN`INFO_LINE,Title,u(%!/FUN`LIST_TITLE,%0),width(%#))]%r[u(%!/FUN`INFO_LINE,Summary,u(%!/FUN`SCENE_FIELD,%0,summary,-),width(%#))]%r[u(%!/FUN`INFO_LINE,Owner,scene(%0,ownername),width(%#))]%r[u(%!/FUN`INFO_LINE,Where,u(%!/FUN`SCENE_FIELD,%0,roomname,\(roomless\)),width(%#))]%r[u(%!/FUN`INFO_LINE,Status,scene(%0,status),width(%#))]%r[u(%!/FUN`INFO_LINE,Poses,scene(%0,posecount),width(%#))]%r[u(%!/FUN`INFO_LINE,Cast,scenecast(%0),width(%#))]%r[footer(,width(%#))]
+      CMD`SUMMARY: |-
+        $+scene/summary *: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/summary=%0; @pemit %#=Summary set for scene [scenefocus(%#)].
+      CMD`INFO: |-
+        $+scene/info: @include %!/INC`REQUIRE`FOCUS; @include %!/INC`DISPLAY`INFO=%q<sid>
+      CMD`INFO_ARG: |-
+        $+scene/info *: @include %!/INC`REQUIRE`SCENE=%0; @include %!/INC`DISPLAY`INFO=%q<sid>
 
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).

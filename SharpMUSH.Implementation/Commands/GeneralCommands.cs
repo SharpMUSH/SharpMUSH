@@ -6121,9 +6121,13 @@ public partial class Commands
 
 		var targetObject = maybeObject.AsSharpObject;
 
-		// Get the attribute - must be visible to enactor
+		// Get the attribute with the EXECUTOR's read permission — the included commands run as the
+		// executor, so this mirrors u()/$-command dispatch. Reading as the enactor was wrong: it broke
+		// the common pattern of a $-command on a (e.g. WIZARD) object @include'ing its own helper tails
+		// when a mortal enactor triggered it — the attr read failed and the error went to the executor,
+		// so the enactor saw nothing.
 		var attributeResult = await AttributeService!.GetAttributeAsync(
-			enactor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
+			executor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
 
 		if (attributeResult.IsError)
 		{
