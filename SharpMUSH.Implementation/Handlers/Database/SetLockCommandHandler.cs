@@ -34,7 +34,7 @@ public class SetLockCommandHandler(ISharpDatabase database, IBooleanExpressionPa
 		request.Target.Locks = request.Target.Locks.SetItem(request.LockName, lockData);
 
 		// Invalidate the object cache so Locate calls see the updated locks
-		await cache.RemoveAsync($"object:{request.Target.DBRef}", token: cancellationToken);
+		await cache.RemoveAsync(SharpMUSH.Library.Definitions.CacheKeys.Object(request.Target.DBRef), token: cancellationToken);
 
 		return new Unit();
 	}
@@ -56,7 +56,7 @@ public class UnsetLockCommandHandler(ISharpDatabase database, IBooleanExpression
 		request.Target.Locks = request.Target.Locks.Remove(request.LockName);
 
 		// Invalidate the object cache
-		await cache.RemoveAsync($"object:{request.Target.DBRef}", token: cancellationToken);
+		await cache.RemoveAsync(SharpMUSH.Library.Definitions.CacheKeys.Object(request.Target.DBRef), token: cancellationToken);
 
 		return new Unit();
 	}

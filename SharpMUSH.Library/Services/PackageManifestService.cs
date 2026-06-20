@@ -25,8 +25,16 @@ public partial class PackageManifestService : IPackageManifestService
 	{
 		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
 		"convention_prefix", "requires_server", "replaces", "conflicts", "depends", "configure", "objects",
-		"kind", "application"
+		"kind", "application", "binaries"
 	};
+
+	private static readonly IReadOnlySet<string> KnownBinaryFileKeys = new HashSet<string>(StringComparer.Ordinal)
+	{
+		"file", "sha256"
+	};
+
+	[GeneratedRegex("^[0-9a-fA-F]{64}$")]
+	private static partial Regex Sha256Regex();
 
 	private static readonly IReadOnlySet<string> KnownApplicationKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
@@ -145,15 +153,16 @@ public partial class PackageManifestService : IPackageManifestService
 
 		var kind = ReadKind(doc, issues);
 
-		// A softcode package requires objects and forbids an application block;
-		// an application package is the mirror — it registers a portal app and
-		// carries no objects of its own (it depends on a softcode package for
-		// its routes). Read both unconditionally so every issue is reported, but
-		// gate the requirement/forbidden checks on the declared kind.
-		var objects = kind == PackageKind.Application
-			? ReadObjectsForApplication(doc, issues)
-			: ReadObjects(doc, issues);
+		// A softcode package requires objects and forbids an application/binaries
+		// block; an application package is the mirror — it registers a portal app
+		// and carries no objects of its own; a managed package carries a compiled
+		// DLL and no softcode at all. Read each block so every issue is reported,
+		// but gate the requirement/forbidden checks on the declared kind.
+		var objects = kind == PackageKind.Softcode
+			? ReadObjects(doc, issues)
+			: ReadNoObjects(doc, kind, issues);
 		var application = ReadApplication(doc, name, kind, issues);
+		var binary = ReadBinaries(doc, kind, issues);
 
 		ValidateRefs(objects, application, configure, dependencies, issues);
 
@@ -179,7 +188,8 @@ public partial class PackageManifestService : IPackageManifestService
 			configure,
 			objects,
 			kind,
-			application);
+			application,
+			binary);
 
 		return new ParsedPackageManifest(manifest, issues);
 	}
@@ -767,24 +777,143 @@ public partial class PackageManifestService : IPackageManifestService
 			return kind;
 		}
 
-		issues.Add(PackageManifestIssue.Error("kind", $"'{node}' is not a valid package kind (softcode, application)."));
+		issues.Add(PackageManifestIssue.Error("kind", $"'{node}' is not a valid package kind (softcode, application, managed)."));
 		return PackageKind.Softcode;
 	}
 
 	/// <summary>
-	/// Application packages register a portal app and own no objects; an
-	/// <c>objects:</c> key is therefore an error. Returns an empty object list.
+	/// Application and managed packages own no game objects; an <c>objects:</c>
+	/// key is therefore an error for them. Returns an empty object list.
 	/// </summary>
-	private static IReadOnlyList<PackageObjectSpec> ReadObjectsForApplication(
-		Dictionary<string, object?> doc, List<PackageManifestIssue> issues)
+	private static IReadOnlyList<PackageObjectSpec> ReadNoObjects(
+		Dictionary<string, object?> doc, PackageKind kind, List<PackageManifestIssue> issues)
 	{
 		if (doc.ContainsKey("objects"))
 		{
-			issues.Add(PackageManifestIssue.Error("objects",
-				"An application package owns no objects — declare the routes in a softcode package and 'depends' on it. Remove 'objects'."));
+			issues.Add(PackageManifestIssue.Error("objects", kind == PackageKind.Application
+				? "An application package owns no objects — declare the routes in a softcode package and 'depends' on it. Remove 'objects'."
+				: "A managed package carries only a compiled DLL — it owns no game objects. Remove 'objects'."));
 		}
 
 		return [];
+	}
+
+	/// <summary>
+	/// Reads the <c>binaries:</c> block (Phase 4 managed packages). Required for a
+	/// managed package, forbidden otherwise. The block carries a
+	/// <c>min_server_version</c> constraint and a list of <c>{file, sha256}</c>
+	/// entries; file names must be flat (no path separators) and hashes must be
+	/// 64 hex chars. The bytes themselves live alongside package.yaml in the
+	/// package source and are verified against these hashes at apply time.
+	/// </summary>
+	private static PackageBinarySpec? ReadBinaries(
+		Dictionary<string, object?> doc, PackageKind kind, List<PackageManifestIssue> issues)
+	{
+		var present = doc.TryGetValue("binaries", out var node) && node is not null;
+
+		if (kind != PackageKind.Managed)
+		{
+			if (present)
+			{
+				issues.Add(PackageManifestIssue.Error("binaries",
+					"'binaries' is only valid when 'kind: managed'."));
+			}
+
+			return null;
+		}
+
+		if (!present)
+		{
+			issues.Add(PackageManifestIssue.Error("binaries", "A managed package requires a 'binaries' block."));
+			return null;
+		}
+
+		if (node is not Dictionary<object, object> rawBin)
+		{
+			issues.Add(PackageManifestIssue.Error("binaries", "'binaries' must be a mapping with 'min_server_version' and 'files'."));
+			return null;
+		}
+
+		var bin = Normalize(rawBin);
+		foreach (var key in bin.Keys.Where(k => k is not ("min_server_version" or "files")))
+		{
+			issues.Add(PackageManifestIssue.Warning($"binaries.{key}", $"Unknown key '{key}' is ignored."));
+		}
+
+		var minServer = ReadConstraintField(bin, "min_server_version", issues);
+		if (minServer is null && !bin.ContainsKey("min_server_version"))
+		{
+			issues.Add(PackageManifestIssue.Error("binaries.min_server_version",
+				"A managed package requires a 'min_server_version' constraint (e.g. \">=1.0\")."));
+		}
+
+		var files = new List<PackageBinaryFile>();
+		var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		if (!bin.TryGetValue("files", out var filesNode) || filesNode is null)
+		{
+			issues.Add(PackageManifestIssue.Error("binaries.files", "'binaries' requires a non-empty 'files' list."));
+		}
+		else if (filesNode is not List<object> list || list.Count == 0)
+		{
+			issues.Add(PackageManifestIssue.Error("binaries.files", "'files' must be a non-empty list of {file, sha256} entries."));
+		}
+		else
+		{
+			for (var i = 0; i < list.Count; i++)
+			{
+				var path = $"binaries.files[{i}]";
+				if (list[i] is not Dictionary<object, object> rawEntry)
+				{
+					issues.Add(PackageManifestIssue.Error(path, "Each file entry must be a mapping with 'file' and 'sha256'."));
+					continue;
+				}
+
+				var entry = Normalize(rawEntry);
+				foreach (var key in entry.Keys.Where(k => !KnownBinaryFileKeys.Contains(k)))
+				{
+					issues.Add(PackageManifestIssue.Warning($"{path}.{key}", $"Unknown key '{key}' is ignored."));
+				}
+
+				var fileName = (entry.GetValueOrDefault("file") as string)?.Trim();
+				if (string.IsNullOrEmpty(fileName))
+				{
+					issues.Add(PackageManifestIssue.Error($"{path}.file", "A binary entry requires a 'file' name."));
+					continue;
+				}
+
+				if (fileName.Contains('/') || fileName.Contains('\\') || fileName.Contains("..", StringComparison.Ordinal)
+					|| Path.IsPathRooted(fileName) || fileName != Path.GetFileName(fileName))
+				{
+					issues.Add(PackageManifestIssue.Error($"{path}.file",
+						$"'{fileName}' must be a bare file name (no path separators or '..') — files are deposited flat into plugins/<id>/."));
+					continue;
+				}
+
+				var sha = (entry.GetValueOrDefault("sha256") as string)?.Trim();
+				if (string.IsNullOrEmpty(sha) || !Sha256Regex().IsMatch(sha))
+				{
+					issues.Add(PackageManifestIssue.Error($"{path}.sha256", "A binary entry requires a 64-character hex 'sha256'."));
+					continue;
+				}
+
+				if (!seen.Add(fileName))
+				{
+					issues.Add(PackageManifestIssue.Error($"{path}.file", $"Duplicate binary file '{fileName}'."));
+					continue;
+				}
+
+				files.Add(new PackageBinaryFile(fileName, sha.ToLowerInvariant()));
+			}
+		}
+
+		// A DLL is the point of a managed package: require at least one.
+		if (files.Count > 0 && files.All(f => !f.FileName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
+		{
+			issues.Add(PackageManifestIssue.Warning("binaries.files",
+				"No '.dll' among the carried files; the plugin loader only loads assemblies."));
+		}
+
+		return new PackageBinarySpec(minServer ?? VersionConstraint.Any, files);
 	}
 
 	/// <summary>

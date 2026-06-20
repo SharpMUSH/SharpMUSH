@@ -7,6 +7,6 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record SetObjectParentCommand(AnySharpObject Target, AnySharpObject Parent) : ICommand, ICacheInvalidating
 {
-	public string[] CacheKeys => [$"object:{Target.Object().DBRef}", $"object:{Parent.Object().DBRef}"];
+	public string[] CacheKeys => [Definitions.CacheKeys.Object(Target.Object().DBRef), Definitions.CacheKeys.Object(Parent.Object().DBRef)];
 	public string[] CacheTags => [];
 }

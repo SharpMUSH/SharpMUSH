@@ -19,6 +19,7 @@ public class ConnectionStateServiceTests
 		var disposable = Substitute.For<IDisposable>();
 		hub.On(Arg.Any<string>(), Arg.Any<Action<GameOutputMessage>>()).Returns(disposable);
 		hub.On(Arg.Any<string>(), Arg.Any<Action<RoomEventMessage>>()).Returns(disposable);
+		hub.On(Arg.Any<string>(), Arg.Any<Action<SceneEventMessage>>()).Returns(disposable);
 
 		var factory = Substitute.For<IGameHubConnectionFactory>();
 		factory.Create(Arg.Any<string>()).Returns(hub);
@@ -96,6 +97,7 @@ public class ConnectionStateServiceTests
 		var disposable = Substitute.For<IDisposable>();
 		hub.On(Arg.Any<string>(), Arg.Any<Action<GameOutputMessage>>()).Returns(disposable);
 		hub.On(Arg.Any<string>(), Arg.Any<Action<RoomEventMessage>>()).Returns(disposable);
+		hub.On(Arg.Any<string>(), Arg.Any<Action<SceneEventMessage>>()).Returns(disposable);
 		hub.StartAsync(Arg.Any<CancellationToken>()).ThrowsAsync(new Exception("network error"));
 
 		var factory = Substitute.For<IGameHubConnectionFactory>();

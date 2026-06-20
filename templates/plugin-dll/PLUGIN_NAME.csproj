@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<IsPackable>false</IsPackable>
+		<RootNamespace>PLUGIN_NAMESPACE</RootNamespace>
+		<AssemblyName>PLUGIN_NAME</AssemblyName>
+
+		<!-- Marks this as a dynamically-loadable plugin: emits a .deps.json and keeps the shared
+		     contract assemblies out of the plugin's private bin (the host owns them via its default
+		     load context). Required for the loader to resolve shared types across the ALC boundary. -->
+		<EnableDynamicLoading>true</EnableDynamicLoading>
+
+		<!-- Deterministic build: byte-for-byte reproducible output so the SHA-256 hashes the CI
+		     computes for the managed package.yaml are stable across machines/runs. -->
+		<Deterministic>true</Deterministic>
+		<ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Contract surface: IPlugin / PluginBase / SharpPluginAttribute / SharpCommandAttribute /
+		     SharpFunctionAttribute / CallState / Option<CallState> / the IMUSHCodeParser interface, and
+		     the Phase-2a/2b contribution + hook interfaces. These all live in the SharpMUSH.Library
+		     contract package (a slim SharpMUSH.Plugin.Abstractions split is a future refinement).
+
+		     PrivateAssets=all + ExcludeAssets=runtime keep the contract assembly OUT of the plugin's
+		     output so the HOST's copy is the one that loads (the loader's sharedTypes is the real
+		     type-unification net). The version aligns with the server's PluginContractVersion. -->
+		<PackageReference Include="SharpMUSH.Library" Version="1.0.0"
+			PrivateAssets="all" ExcludeAssets="runtime" />
+
+		<!-- The source generator referenced AS AN ANALYZER: your [SharpCommand]/[SharpFunction] methods
+		     produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
+		     FunctionLibrary.Functions inside THIS assembly, so PluginBase can reflect them. -->
+		<PackageReference Include="SharpMUSH.Implementation.Generated" Version="1.0.0"
+			PrivateAssets="all" />
+	</ItemGroup>
+
+	<!-- ════════════════════════════════════════════════════════════════════════════════════════
+	     UNTIL THE NUGET PACKAGES ARE PUBLISHED: if you are building against an in-repo checkout of
+	     SharpMUSH, comment out the two PackageReferences above and uncomment the ProjectReferences
+	     below (fix the relative paths to your checkout). They reproduce the in-tree plugin shape
+	     exactly (see SharpMUSH.Plugins.Scene and SharpMUSH.Tests/Fixtures/SamplePlugin).
+	     ════════════════════════════════════════════════════════════════════════════════════════ -->
+	<!--
+	<ItemGroup>
+		<ProjectReference Include="..\SharpMUSH\SharpMUSH.Library\SharpMUSH.Library.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<ProjectReference Include="..\SharpMUSH\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false" />
+	</ItemGroup>
+	-->
+
+	<!-- Ship the manifest next to the DLL so the loader reads ordering metadata, and so the managed
+	     package can carry it. plugin.json is copied to output; package.yaml is repo metadata only. -->
+	<ItemGroup>
+		<None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
+</Project>

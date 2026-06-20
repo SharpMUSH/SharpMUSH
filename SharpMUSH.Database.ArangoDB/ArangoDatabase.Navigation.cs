@@ -299,14 +299,14 @@ public partial class ArangoDatabase
 			DatabaseConstants.Things => new SharpThing
 			{
 				Id = id, Object = sharpObject,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, sharpObject.Id!), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.Players => new SharpPlayer
 			{
 				Id = id, Object = sharpObject,
 				Aliases = typedVertex.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, sharpObject.Id!), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
 				PasswordHash = typedVertex.GetProperty("PasswordHash").GetString()!,
 				PasswordSalt = typedVertex.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
@@ -322,7 +322,7 @@ public partial class ArangoDatabase
 			{
 				Id = id, Object = sharpObject,
 				Aliases = typedVertex.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, sharpObject.Id!), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{objectVertex.GetProperty("Type").GetString()}'"),

@@ -17,12 +17,65 @@
 		<PackageReference Include="TUnit" Version="1.19.16" />
 		<PackageReference Include="TUnit.AspNetCore" Version="1.19.16" />
 		<PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
+		<!-- FSharp.Core is a runtime transitive of SharpMUSH.Library (via TelnetNegotiationCore) that the
+		     engine never JITs, so it is normally trimmed from output. The McMaster plugin loader, however,
+		     eagerly walks the shared SharpMUSH.Library reference closure and resolves every referenced
+		     assembly against the host's default load context — so FSharp.Core must be present beside the
+		     host binary for plugin loading to succeed. A host that loads plugins must carry its full
+		     dependency closure; this reference materializes FSharp.Core into the test host output. -->
+		<PackageReference Include="FSharp.Core" Version="10.1.203" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<!-- Shared test infrastructure (ServerWebAppFactory, test containers, etc.) -->
 		<ProjectReference Include="..\SharpMUSH.Tests.Infrastructure\SharpMUSH.Tests.Infrastructure.csproj" />
+		<!-- Build the SamplePlugin fixture before this project so its DLL exists to copy into plugins/.
+		     ReferenceOutputAssembly=false: we do NOT link the plugin; we load it at runtime from plugins/. -->
+		<ProjectReference Include="..\SharpMUSH.Tests\Fixtures\SamplePlugin\SamplePlugin.csproj"
+			ReferenceOutputAssembly="false"
+			Private="false"
+			SkipGetTargetFrameworkProperties="true" />
+		<!-- Build the Scene plugin (the Phase-5 reference plugin) before this project so its DLL exists to
+		     copy into plugins/scene/. ReferenceOutputAssembly=false: it is loaded at runtime, not linked. -->
+		<ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj"
+			ReferenceOutputAssembly="false"
+			Private="false"
+			SkipGetTargetFrameworkProperties="true" />
 	</ItemGroup>
+
+	<!-- Drop the built SamplePlugin (DLL + manifest only — its SharpMUSH deps resolve from the host's
+	     default load context via McMaster, which keeps contract types unified) into the test output's
+	     plugins/sample/ folder so the booting server's PluginBootstrapService discovers and loads it. -->
+	<Target Name="CopySamplePlugin" AfterTargets="Build">
+		<PropertyGroup>
+			<SamplePluginOutDir>$(MSBuildThisFileDirectory)..\SharpMUSH.Tests\Fixtures\SamplePlugin\bin\$(Configuration)\net10.0</SamplePluginOutDir>
+			<PluginsTargetDir>$(OutDir)plugins\sample</PluginsTargetDir>
+		</PropertyGroup>
+		<ItemGroup>
+			<SamplePluginFiles Include="$(SamplePluginOutDir)\SamplePlugin.dll" />
+			<SamplePluginFiles Include="$(SamplePluginOutDir)\SamplePlugin.deps.json" />
+			<SamplePluginFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Tests\Fixtures\SamplePlugin\plugin.json" />
+		</ItemGroup>
+		<MakeDir Directories="$(PluginsTargetDir)" />
+		<Copy SourceFiles="@(SamplePluginFiles)" DestinationFolder="$(PluginsTargetDir)" SkipUnchangedFiles="false" />
+	</Target>
+
+	<!-- Drop the built Scene plugin (DLL + deps.json + manifest) into plugins/scene/ so the booting server's
+	     PluginBootstrapService discovers it. The plugin's load-once contributions (Arango migration, SCENE_ROOM
+	     flag, game.scene.* bridge) and its @scene command + scene… functions are what the scene tests exercise. -->
+	<Target Name="CopyScenePlugin" AfterTargets="Build">
+		<PropertyGroup>
+			<ScenePluginOutDir>$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\bin\$(Configuration)\net10.0</ScenePluginOutDir>
+			<ScenePluginsTargetDir>$(OutDir)plugins\scene</ScenePluginsTargetDir>
+		</PropertyGroup>
+		<ItemGroup>
+			<ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.dll" />
+			<ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.deps.json" />
+			<ScenePluginFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\plugin.json" />
+		</ItemGroup>
+		<MakeDir Directories="$(ScenePluginsTargetDir)" />
+		<Copy SourceFiles="@(ScenePluginFiles)" DestinationFolder="$(ScenePluginsTargetDir)" SkipUnchangedFiles="false" />
+	</Target>
 
 	<ItemGroup>
 		<!-- BBS script and reference output files required by MyrddinBBSIntegrationTests -->

@@ -59,4 +59,16 @@ public interface IPackageSourceService
 	Task<OneOf<string, Error<string>>> GetReadmeAsync(
 		PackageRemoteRecord remote, string path, string? version = null,
 		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Builds a binary reader over a managed package's carried files (Phase 4):
+	/// reads the bytes of files sitting alongside <c>package.yaml</c> in the
+	/// package directory, from the exact <paramref name="commit"/> the manifest
+	/// was fetched at (a moved tag therefore cannot smuggle different bytes than
+	/// the SHA-256 the manifest signed off on). The installer asks it for each
+	/// declared file name and verifies the hash before depositing.
+	/// </summary>
+	Task<OneOf<IManagedPackageBinarySource, Error<string>>> GetBinarySourceAsync(
+		PackageRemoteRecord remote, string path, string commit,
+		CancellationToken cancellationToken = default);
 }

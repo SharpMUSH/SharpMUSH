@@ -1,0 +1,47 @@
+format: 1
+package: PACKAGE_ID
+version: 0.1.0
+kind: softcode
+authors: [AUTHOR_NAME]
+description: "PACKAGE_DESCRIPTION"
+license: MIT
+homepage: https://github.com/OWNER/PACKAGE_ID
+keywords: [example, starter]
+requires_server: ">=0.1"
+
+# Advisory prefix for this package's attributes (not enforced). Pick something
+# unique to your package so its attributes never collide with another's.
+convention_prefix: PKG_
+
+# Create mode: a single owned `thing` carries this package's softcode. The
+# AINSTALL/STARTUP convention below registers the global function once at
+# install and re-registers it on every boot (the registry is in-memory).
+#
+# Write every MUSHcode value as a YAML block scalar (`|-`): block scalars carry
+# brackets, %subs, $patterns, and `#dbrefs byte-for-byte. Never use plain or
+# double-quoted YAML for code. Indent with SPACES (tabs are a YAML error).
+objects:
+  - ref: starter_object
+    type: thing
+    name: PACKAGE_ID Object
+    flags: [no_command]
+    attributes:
+      # A `$command`. Keep function objects `no_command` and `$commands` on a
+      # separate global object in real packages; this starter keeps both on one
+      # object for brevity. Substitutions are written bare (%0, %#); brackets
+      # are only for function calls.
+      CMD_+HELLO: |-
+        $+hello *:@pemit %#=Hello, [firstof(%0,name(%#))]! (from PACKAGE_ID)
+
+      # A global user function bound to the FUN_GREET leaf below.
+      FUN_GREET: |-
+        Hello, [firstof(%0,name(%#))]! Welcome to [name(home(%#))].
+
+      # Runs ONCE at install: register the global function bound to this object's
+      # FUN_GREET leaf. Data-writes go through @function per the style guide.
+      AINSTALL: |-
+        @function greet=%!,FUN_GREET,1,1
+
+      # Runs on EVERY server boot: re-establish the in-memory registration.
+      STARTUP: |-
+        @function greet=%!,FUN_GREET,1,1

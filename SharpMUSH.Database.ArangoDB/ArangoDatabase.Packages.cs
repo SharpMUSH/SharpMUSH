@@ -20,6 +20,9 @@ public partial class ArangoDatabase : IPackageRegistryService
 		public string? PinnedBranch { get; set; }
 		public string InstalledAt { get; set; } = "";
 		public int CurrentRevision { get; set; }
+
+		/// <summary>Phase-4 managed packages: file names deposited into plugins/&lt;id&gt;/ (empty otherwise).</summary>
+		public List<string>? DeployedFiles { get; set; }
 	}
 
 	private class PackageObjectDbDoc
@@ -104,7 +107,8 @@ public partial class ArangoDatabase : IPackageRegistryService
 				["InstalledCommit"] = p.InstalledCommit,
 				["PinnedBranch"] = p.PinnedBranch,
 				["InstalledAt"] = p.InstalledAt.ToString("o", CultureInfo.InvariantCulture),
-				["CurrentRevision"] = p.CurrentRevision
+				["CurrentRevision"] = p.CurrentRevision,
+				["DeployedFiles"] = p.DeployedFiles is { Count: > 0 } files ? files.ToList() : null
 			};
 			if (withKey)
 			{
@@ -139,7 +143,8 @@ public partial class ArangoDatabase : IPackageRegistryService
 
 	private static InstalledPackageRecord MapPackage(PackageDbDoc doc) => new(
 		doc.PackageId, doc.Version, doc.SourceRepo, doc.SourcePath, doc.InstalledCommit,
-		doc.PinnedBranch, ParseTimestamp(doc.InstalledAt), doc.CurrentRevision);
+		doc.PinnedBranch, ParseTimestamp(doc.InstalledAt), doc.CurrentRevision,
+		doc.DeployedFiles is { Count: > 0 } ? doc.DeployedFiles : null);
 
 	public async Task RemoveInstalledPackageAsync(string packageId)
 	{

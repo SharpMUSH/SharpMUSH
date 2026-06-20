@@ -14,7 +14,7 @@ namespace SharpMUSH.Client.Services;
 /// <see cref="IGameHubConnectionFactory"/>), and surfaces received messages
 /// as events.
 /// </summary>
-public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisposable
+public sealed class ConnectionStateService : IConnectionStateService, ISceneHubControl, IAsyncDisposable
 {
 	private readonly IGameHubConnectionFactory _factory;
 	private readonly ILogger<ConnectionStateService> _logger;
@@ -26,6 +26,7 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 	public event Action? OnConnectionStateChanged;
 	public event Action<GameOutputMessage>? OnOutputReceived;
 	public event Action<RoomEventMessage>? OnRoomEventReceived;
+	public event Action<SceneEventMessage>? OnSceneEventReceived;
 
 	public ConnectionStateService(
 		IGameHubConnectionFactory factory,
@@ -65,6 +66,12 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 		{
 			_logger.LogDebug("[ConnectionStateService] ReceiveRoomEvent: {EventType}", msg.EventType);
 			OnRoomEventReceived?.Invoke(msg);
+		}));
+
+		_subscriptions.Add(_hub.On("ReceiveSceneMessage", (SceneEventMessage msg) =>
+		{
+			_logger.LogDebug("[ConnectionStateService] ReceiveSceneMessage: {EventType}", msg.EventType);
+			OnSceneEventReceived?.Invoke(msg);
 		}));
 
 		_hub.Closed += ex =>
@@ -163,6 +170,22 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 		return _hub.InvokeAsync("SendCommand", command);
 	}
 
+	// ── Scene group membership (ISceneHubControl) ──────────────────────────────
+
+	/// <inheritdoc/>
+	public Task JoinSceneAsync(string sceneId)
+	{
+		if (_hub is null || !IsConnected) return Task.CompletedTask;
+		return _hub.InvokeAsync("JoinScene", sceneId);
+	}
+
+	/// <inheritdoc/>
+	public Task LeaveSceneAsync(string sceneId)
+	{
+		if (_hub is null || !IsConnected) return Task.CompletedTask;
+		return _hub.InvokeAsync("LeaveScene", sceneId);
+	}
+
 	// ── State helpers ────────────────────────────────────────────────────────
 
 	private void SetState(SignalRState state)
@@ -184,7 +207,7 @@ public sealed class ConnectionStateService : IConnectionStateService, IAsyncDisp
 
 	private async Task DisposeHubAsync()
 	{
-		foreach (var sub in _subscriptions) sub.Dispose();
+		foreach (var sub in _subscriptions) sub?.Dispose();
 		_subscriptions.Clear();
 
 		if (_hub is not null)

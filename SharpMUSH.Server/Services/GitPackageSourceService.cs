@@ -224,6 +224,49 @@ public class GitPackageSourceService(
 		}, cancellationToken);
 	}
 
+	public async Task<OneOf<IManagedPackageBinarySource, Error<string>>> GetBinarySourceAsync(
+		PackageRemoteRecord remote, string path, string commit, CancellationToken cancellationToken = default)
+	{
+		return await WithRepoAsync(remote, repository =>
+		{
+			var resolved = repository.Lookup<Commit>(commit);
+			if (resolved is null)
+			{
+				return OneOf<IManagedPackageBinarySource, Error<string>>.FromT1(
+					new Error<string>($"Remote '{remote.Name}': commit '{commit}' is not in the cache."));
+			}
+
+			// Snapshot the bytes of every blob directly under the package directory
+			// at this commit, so the reader needs no further repo access (and the
+			// repo handle here is disposed when WithRepoAsync returns).
+			var directory = path.TrimEnd('/');
+			var tree = directory.Length == 0 ? resolved.Tree : resolved[directory]?.Target as Tree;
+			var files = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+			if (tree is not null)
+			{
+				foreach (var entry in tree)
+				{
+					if (entry.TargetType == TreeEntryTargetType.Blob && entry.Target is Blob blob)
+					{
+						using var stream = blob.GetContentStream();
+						using var memory = new MemoryStream();
+						stream.CopyTo(memory);
+						files[entry.Name] = memory.ToArray();
+					}
+				}
+			}
+
+			return OneOf<IManagedPackageBinarySource, Error<string>>.FromT0(new GitCommitBinarySource(files));
+		}, cancellationToken);
+	}
+
+	/// <summary>An in-memory snapshot of a package directory's blob bytes at one commit.</summary>
+	private sealed class GitCommitBinarySource(IReadOnlyDictionary<string, byte[]> files) : IManagedPackageBinarySource
+	{
+		public Task<byte[]?> ReadBinaryAsync(string fileName, CancellationToken cancellationToken = default) =>
+			Task.FromResult(files.GetValueOrDefault(fileName));
+	}
+
 	// ── Repo cache management ───────────────────────────────────────────────
 
 	private async Task<OneOf<T, Error<string>>> WithRepoAsync<T>(

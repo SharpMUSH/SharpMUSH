@@ -1,40 +1,40 @@
 @page "/scenes/{Id}"
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
-@inject ISceneService SceneService
+@inject SceneService SceneService
 
 @if (_loading)
 {
-    <PageTitle>@Loc["Scene"] — SharpMUSH</PageTitle>
+    <PageTitle>Scene — SharpMUSH</PageTitle>
     <div style="padding:var(--cpad);">
         <MudProgressLinear Indeterminate="true" />
     </div>
 }
 else if (_notFound)
 {
-    <PageTitle>@Loc["Scene"] — @Loc["NotFound"]</PageTitle>
+    <PageTitle>Scene — Not Found</PageTitle>
     <div style="padding:var(--cpad);">
-        <MudAlert Severity="Severity.Warning">@Loc["SceneNotFound"]</MudAlert>
+        <MudAlert Severity="Severity.Warning">Scene not found.</MudAlert>
         <MudButton Href="/scenes" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
-            @Loc["BackToArchive"]
+            Back to Scenes
         </MudButton>
     </div>
 }
 else
 {
-    <PageTitle>@_scene!.Title — SharpMUSH</PageTitle>
+    <PageTitle>@SceneTitle(_scene!) — SharpMUSH</PageTitle>
     <div style="padding:var(--cpad);">
 
         @* Header *@
         <div style="margin-bottom:20px;">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                @if (!_scene!.ClosedAt.HasValue)
+                @if (_scene!.IsLive)
                 {
                     <MudChip T="string" Color="Color.Success" Size="Size.Small"
                              Style="font-size:10px;letter-spacing:0.06em;height:20px;padding:0 7px;">LIVE</MudChip>
                 }
-                <MudText Typo="Typo.h4" Style="font-weight:700;line-height:1.2;">
-                    @(string.IsNullOrWhiteSpace(_scene!.Title) ? Loc["Untitled"].ToString() : _scene!.Title)
-                </MudText>
+                <MudText Typo="Typo.h4" Style="font-weight:700;line-height:1.2;">@SceneTitle(_scene!)</MudText>
             </div>
             <div style="display:flex;align-items:center;gap:16px;color:var(--text-dim);font-size:13px;">
                 <span>
@@ -42,31 +42,44 @@ else
                     @_scene!.RoomName
                 </span>
                 <span>
-                    <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Style="vertical-align:middle;margin-right:3px;" />
-                    @_scene!.ParticipantDbrefs.Count participant(s)
+                    <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Style="vertical-align:middle;margin-right:3px;" />
+                    @_scene!.PoseCount pose(s)
                 </span>
-                <span>@_scene!.StartedAt.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
+                <span>@_scene!.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
             </div>
-            @if (!string.IsNullOrWhiteSpace(_scene!.Description))
-            {
-                <MudText Style="color:var(--text-dim);font-size:14px;margin-top:8px;">@_scene!.Description</MudText>
-            }
         </div>
 
-        @* Transcript *@
-        @if (_messages.Count == 0)
+        @* Tag filter chip bar — built from the DISTINCT union of pose tags. *@
+        @if (_allTags.Count > 0)
         {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@Loc["NoMessagesInScene"]</MudAlert>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px;">
+                <MudChip T="string" Size="Size.Small" Variant="@(_activeTag is null ? Variant.Filled : Variant.Outlined)"
+                         Color="Color.Primary" OnClick="@(() => SetTag(null))">All</MudChip>
+                @foreach (var tag in _allTags)
+                {
+                    var thisTag = tag;
+                    <MudChip T="string" Size="Size.Small"
+                             Variant="@(string.Equals(_activeTag, thisTag, StringComparison.Ordinal) ? Variant.Filled : Variant.Outlined)"
+                             Color="Color.Default" OnClick="@(() => SetTag(thisTag))">@thisTag</MudChip>
+                }
+            </div>
+        }
+
+        @* Transcript *@
+        @{
+            var visible = FilteredPoses();
+        }
+        @if (visible.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No poses in this scene.</MudAlert>
         }
         else
         {
             <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;">
                 <div class="scene-log" style="max-height:65vh;padding:16px;">
-                    @foreach (var msg in _messages)
+                    @foreach (var pose in visible)
                     {
-                        <div class="scene-line scene-line--@msg.MessageType.ToString().ToLowerInvariant()">
-                            @((MarkupString)msg.RenderedHtml)
-                        </div>
+                        <ScenePoseLine Pose="pose" />
                     }
                 </div>
             </MudPaper>
@@ -74,26 +87,26 @@ else
 
         @* Actions *@
         <div style="display:flex;gap:10px;margin-top:16px;">
-            @if (!_scene!.ClosedAt.HasValue)
+            @if (_scene!.IsLive)
             {
-                <MudButton Href="@($"/scenes/{Id}/live")"
-                           Variant="Variant.Filled" Color="Color.Primary">
-                    @Loc["WatchLive"]
+                <MudButton Href="@($"/scenes/{Id}/live")" Variant="Variant.Filled" Color="Color.Primary">
+                    Watch Live
                 </MudButton>
             }
             <MudButton Href="/scenes" Variant="Variant.Text" Color="Color.Default">
-                @Loc["BackToArchive"]
+                Back to Scenes
             </MudButton>
         </div>
     </div>
 }
 
 @code {
-    [Parameter]
-    public required string Id { get; set; }
+    [Parameter] public required string Id { get; set; }
 
-    private SceneArchive? _scene;
-    private List<SceneMessage> _messages = [];
+    private SceneSummary? _scene;
+    private IReadOnlyList<ScenePoseView> _poses = [];
+    private List<string> _allTags = [];
+    private string? _activeTag;
     private bool _loading = true;
     private bool _notFound;
 
@@ -101,23 +114,42 @@ else
     {
         _loading = true;
         _notFound = false;
-        _messages = [];
+        _poses = [];
+        _allTags = [];
+        _activeTag = null;
         _scene = null;
 
-        var sceneResult = await SceneService.GetSceneAsync(Id);
-        if (sceneResult.IsT1)
+        var scene = await SceneService.GetSceneAsync(Id);
+        if (scene is null)
         {
             _notFound = true;
             _loading = false;
             return;
         }
 
-        _scene = sceneResult.AsT0;
-
-        var msgResult = await SceneService.GetMessagesAsync(Id);
-        if (msgResult.IsT0)
-            _messages = [..msgResult.AsT0];
-
+        _scene = scene;
+        _poses = await SceneService.GetPosesAsync(Id);
+        RebuildTags();
         _loading = false;
     }
+
+    private void RebuildTags() =>
+        _allTags = _poses
+            .SelectMany(p => p.Tags)
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private void SetTag(string? tag) => _activeTag = tag;
+
+    private List<ScenePoseView> FilteredPoses() =>
+        _activeTag is null
+            ? _poses.ToList()
+            : _poses.Where(p => p.Tags.Contains(_activeTag, StringComparer.Ordinal)).ToList();
+
+    private static string SceneTitle(SceneSummary s) =>
+        s.Meta.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)
+            ? t
+            : $"Scene in {s.RoomName}";
 }

@@ -1,9 +1,9 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
-@inject ISceneService SceneService
 @inject CharacterDirectoryService CharacterDirectory
 @inject WikiService WikiService
+@inject SceneService SceneService
 
 @* Game-at-a-glance stat tiles (players online, active scenes, recent changes, characters). *@
 <MudGrid Spacing="3">
@@ -22,27 +22,27 @@
     [Parameter] public JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
 
-    private int? _scenes;
     private int? _recent;
     private int? _characters;
+    private int? _activeScenes;
 
     private (string Label, string Value)[] Tiles =>
     [
         ("Players Online", _characters?.ToString() ?? "—"),
-        ("Active Scenes",  _scenes?.ToString() ?? "—"),
+        ("Active Scenes",  _activeScenes?.ToString() ?? "—"),
         ("Recent Changes", _recent?.ToString() ?? "—"),
         ("Characters",     _characters?.ToString() ?? "—"),
     ];
 
     protected override async Task OnInitializedAsync()
     {
-        var scenesTask = SceneService.GetActiveScenesAsync();
         var recentTask = WikiService.GetRecentChangesAsync(10);
         var charsTask = CharacterDirectory.ListAsync();
-        await Task.WhenAll(scenesTask, recentTask.AsTask(), charsTask);
+        var scenesTask = SceneService.GetActiveScenesAsync();
+        await Task.WhenAll(recentTask.AsTask(), charsTask, scenesTask.AsTask());
 
-        _scenes = (await scenesTask).Count;
         _recent = (await recentTask).Count;
         _characters = (await charsTask).Count;
+        _activeScenes = (await scenesTask).Count;
     }
 }

@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "SharpMUSH",
+  "classifications": ["SharpMUSH", "MUSH", "Application", "Portal", "Package"],
+  "identity": "SharpMUSH.Plugin.Application",
+  "name": "SharpMUSH application package",
+  "shortName": "sharpmush-application",
+  "description": "A starter SharpMUSH Dynamic Application (Area 21): a softcode routes package (schema + submit) plus a kind:application portal registration, with CI.",
+  "tags": {
+    "language": "yaml",
+    "type": "project"
+  },
+  "preferNameDirectory": true,
+  "symbols": {
+    "PackageId": {
+      "type": "generated",
+      "generator": "casing",
+      "parameters": { "source": "name", "toLower": true },
+      "replaces": "PACKAGE_ID",
+      "fileRename": "PACKAGE_ID"
+    },
+    "PackageIdUpper": {
+      "type": "generated",
+      "generator": "casing",
+      "parameters": { "source": "name", "toLower": false },
+      "replaces": "PACKAGE_UID"
+    },
+    "Author": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "AUTHOR_NAME",
+      "defaultValue": "Your Name",
+      "description": "Package author, written into package.yaml and LICENSE."
+    },
+    "Description": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "PACKAGE_DESCRIPTION",
+      "defaultValue": "A SharpMUSH Dynamic Application.",
+      "description": "One-line description."
+    },
+    "Owner": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "OWNER",
+      "defaultValue": "your-github-user",
+      "description": "GitHub owner/org for homepage and source-hint URLs."
+    }
+  }
+}

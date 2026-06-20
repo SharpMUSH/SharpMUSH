@@ -1,0 +1,36 @@
+format: 1
+package: common-functions
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional centered title."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [ui, formatting, functions]
+requires_server: ">=0.1"
+
+# Create mode: a single owned thing carries the softcode the global functions
+# evaluate. AINSTALL registers header()/footer()/line() once at install; STARTUP
+# re-registers them on every boot (the global-function registry is in-memory).
+objects:
+  - ref: functions
+    type: thing
+    name: Common Functions
+    attributes:
+      # Functions live under the FUN` attribute tree (leaves inherit the branch's flags/perms).
+      # Each rule is sized to the caller's client width (width(%#) defaults to 78 when the client
+      # doesn't report one), with an optional centered title. %0 = title, %1 = width override.
+      FUN`HEADER: |-
+        center(if(strlen(%0),[space(1)]%0[space(1)],),firstof(%1,width(%#)),=)
+      # Same as the header, drawn at the bottom of a block.
+      FUN`FOOTER: |-
+        center(if(strlen(%0),[space(1)]%0[space(1)],),firstof(%1,width(%#)),=)
+      # Lighter divider filled with '-'.
+      FUN`LINE: |-
+        center(if(strlen(%0),[space(1)]%0[space(1)],),firstof(%1,width(%#)),-)
+      # Runs once after first install: register the three global user functions, each bound to its
+      # FUN` leaf on this object (data-writes go through the @function command, per the style guide).
+      AINSTALL: |-
+        @function header=%!,FUN`HEADER,0,2; @function footer=%!,FUN`FOOTER,0,2; @function line=%!,FUN`LINE,0,2
+      # Runs on every server boot: re-establish the in-memory registrations.
+      STARTUP: |-
+        @function header=%!,FUN`HEADER,0,2; @function footer=%!,FUN`FOOTER,0,2; @function line=%!,FUN`LINE,0,2

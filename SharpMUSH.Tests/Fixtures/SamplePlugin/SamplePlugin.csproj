@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<IsPackable>false</IsPackable>
+		<!-- Marks this as a dynamically-loadable plugin: emits a .deps.json and keeps the
+		     contract assembly out of the plugin's private bin (the host owns it via sharedTypes). -->
+		<EnableDynamicLoading>true</EnableDynamicLoading>
+		<!-- This is a test fixture, not part of the solution build graph; do not error on warnings here. -->
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Contract surface. Private=false + ExcludeAssets=runtime keeps SharpMUSH.Library out of the
+		     plugin's output so the host's copy is the one that loads; the loader's sharedTypes is the real
+		     safety net for type-identity unification regardless. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.Library\SharpMUSH.Library.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- MarkupString (MString used by command/function bodies). Referenced directly because
+		     SharpMUSH.Library marks its SharpMUSH.* ProjectReferences PrivateAssets="all" for packaging, so
+		     it no longer flows transitively. An external plugin gets MarkupString from the bundled lib/ DLL
+		     in the SharpMUSH.Library package the same way; here it is a sibling project. Host-owned at runtime. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- The source generator referenced as an analyzer: the plugin's [SharpCommand]/[SharpFunction]
+		     methods produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
+		     FunctionLibrary.Functions inside THIS assembly. ReferenceOutputAssembly=false because we only
+		     want the generator to run, not to link the netstandard2.0 generator project as a dependency. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+</Project>

@@ -33,6 +33,12 @@ public interface IGameHubConnection : IAsyncDisposable
 	IDisposable On(string methodName, Action<RoomEventMessage> handler);
 
 	/// <summary>
+	/// Registers a handler for a strongly-typed hub client method that carries a
+	/// <see cref="SceneEventMessage"/> payload.
+	/// </summary>
+	IDisposable On(string methodName, Action<SceneEventMessage> handler);
+
+	/// <summary>
 	/// Raised when the connection drops unexpectedly.
 	/// The exception may be null for a graceful close.
 	/// </summary>

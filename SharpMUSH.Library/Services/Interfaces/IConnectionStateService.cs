@@ -24,6 +24,9 @@ public interface IConnectionStateService
 	/// <summary>Raised when the hub pushes a <see cref="RoomEventMessage"/> to this client.</summary>
 	event Action<RoomEventMessage>? OnRoomEventReceived;
 
+	/// <summary>Raised when the hub pushes a <see cref="SceneEventMessage"/> to this client.</summary>
+	event Action<SceneEventMessage>? OnSceneEventReceived;
+
 	/// <summary>
 	/// Opens the hub connection authenticated with <paramref name="accessToken"/>.
 	/// The token is passed as the <c>access_token</c> query parameter so the hub

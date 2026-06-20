@@ -13,6 +13,12 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="PinnedBranch">Branch the admin pinned for updates, or null for the remote default.</param>
 /// <param name="InstalledAt">UTC time of the most recent apply.</param>
 /// <param name="CurrentRevision">Monotonic revision number of the latest apply (see <see cref="PackageRevisionRecord"/>).</param>
+/// <param name="DeployedFiles">
+/// For a <see cref="PackageKind.Managed"/> package (Phase 4): the file names this
+/// install deposited into <c>plugins/&lt;id&gt;/</c>, recorded so uninstall removes
+/// exactly what it deposited. Empty for softcode/application packages. A simple
+/// string list on the existing record — no separate collection.
+/// </param>
 public sealed record InstalledPackageRecord(
 	string Id,
 	string Version,
@@ -21,7 +27,8 @@ public sealed record InstalledPackageRecord(
 	string InstalledCommit,
 	string? PinnedBranch,
 	DateTimeOffset InstalledAt,
-	int CurrentRevision);
+	int CurrentRevision,
+	IReadOnlyList<string>? DeployedFiles = null);
 
 /// <summary>An object created by a package (sys_package_objects).</summary>
 /// <param name="PackageId">Owning package id.</param>

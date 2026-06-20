@@ -1,7 +1,7 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
-@inject ISceneService SceneService
+@inject SceneService SceneService
 
 @* The most recent active scene, with a join link; an empty state otherwise. *@
 @if (_loading)
@@ -15,13 +15,13 @@ else if (_activeScenes is { Count: > 0 })
         <div style="position:absolute;top:0;right:0;bottom:0;width:4px;background:var(--accent);border-radius:0 var(--radius) var(--radius) 0;"></div>
         <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:8px;">
             <MudChip T="string" Color="Color.Success" Size="Size.Small" Style="font-size:10px;letter-spacing:0.08em;height:20px;">LIVE</MudChip>
-            <MudText Typo="Typo.h6" Style="font-weight:600;line-height:1.2;">@(string.IsNullOrWhiteSpace(scene.Title) ? "Untitled Scene" : scene.Title)</MudText>
+            <MudText Typo="Typo.h6" Style="font-weight:600;line-height:1.2;">@SceneTitle(scene)</MudText>
         </div>
         <MudText Style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">
             <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:4px;" />
-            @scene.RoomName — @scene.ParticipantDbrefs.Count participant(s)
+            @scene.RoomName — @scene.PoseCount pose(s)
         </MudText>
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Href="@($"/scenes/{scene.Id}")"
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Href="@($"/scenes/{scene.Id}/live")"
                    Style="border-color:var(--accent);color:var(--accent);">
             Join Scene
         </MudButton>
@@ -39,7 +39,7 @@ else
     [Parameter] public JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
 
-    private IReadOnlyList<SceneArchive>? _activeScenes;
+    private IReadOnlyList<SceneSummary>? _activeScenes;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -47,4 +47,9 @@ else
         _activeScenes = await SceneService.GetActiveScenesAsync();
         _loading = false;
     }
+
+    private static string SceneTitle(SceneSummary s) =>
+        s.Meta.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)
+            ? t
+            : $"Scene in {s.RoomName}";
 }

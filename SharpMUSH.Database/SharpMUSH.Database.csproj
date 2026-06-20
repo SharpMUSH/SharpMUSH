@@ -21,6 +21,10 @@
   <ItemGroup>
     <PackageReference Include="DotNext" Version="6.2.0" />
     <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
+    <!-- MarkupString used directly across the providers. Referenced explicitly because SharpMUSH.Library
+         marks its SharpMUSH.* ProjectReferences PrivateAssets="all" (to keep them out of its NuGet
+         package), so they no longer flow transitively through Library. -->
+    <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
   </ItemGroup>
 
 </Project>

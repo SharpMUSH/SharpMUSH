@@ -469,90 +469,101 @@ server-side. Handler returns only fields the viewer is authorized to see.
 
 ## 7. Scene System
 
+> **Amended & confirmed 2026-06-19 (owner)** — The Scene System is a
+> **graph-native, mechanism/policy** subsystem: the engine ships wizard-only
+> primitives (`@SCENE` + `scene…` functions over `ISceneService`); capture,
+> permission, formatting, and temp-room orchestration are **softcode**. The
+> binding detail design is `docs/design/scene-system.md` (reconciled 2026-06-19).
+> Prose below describing an *engine scene-logger*, a *separate web→scene routing
+> path*, FK-by-property storage, an `ActRole` table, or `SCENE`*` object
+> attributes is **superseded**; the spirit of each decision (explicit opt-in,
+> graph storage, MString poses, granular privacy, simple discovery) holds.
+
 ### 7.1 Scene Tracking: Explicit (Opt-In)
 
-**Decision:** Scenes are explicitly started (`+scene/create`) and ended
-(`+scene/end`). No passive room logging. Rooms without an active scene
-produce no archived log.
+**Decision (retained):** scenes are explicitly created and ended; no passive
+room logging.
 
-**Rationale:** Privacy by default. Players consent to logging by starting a scene.
-OOC conversations in rooms are never recorded unless someone explicitly opts in.
+**Amended:** "create/end" is the wizard-only `@SCENE` primitive driven by a
+**softcode** policy layer (the shipped `#SCENELOGGER` object + `+scene/*` verbs).
+Capture is a softcode **`@hook/override`** on POSE/SAY/SEMIPOSE (verified: AFTER/
+BEFORE hooks get empty args and cannot see the pose text; OVERRIDE passes it).
+The engine **never auto-captures** and `MoreCommands.cs` POSE/SAY/SEMIPOSE are
+never patched. The poser's *focus* (their `member` edge `isCurrent`) must match
+the room's active scene for capture to fire, so only real participants are logged.
 
-### 7.2 Web Participation: Watch + Direct Scene Pose
+### 7.2 Web Participation: Watch + Direct Pose (one path)
 
-**Decision:** Web scene panel is primarily for reading (watching the clean pose
-stream). However, the web CAN submit poses directly to a specific scene.
+**Decision (retained):** the web scene panel both reads the live stream and
+submits poses; temp rooms keep the "always in a room" invariant.
 
-**Key distinction between MUSH and Web pose paths:**
+**Superseded — "two pose paths / web targets a scene_id":** there is **one**
+capture path. A web pose runs through the identical `GameHub.SendCommand →
+engine → room` path as a telnet pose, so the same `@hook/override` fires —
+no double-capture, no echo loop (room emit and the `game.scene.{id}` broadcast
+are two renderings of one stored pose). The editor submits a normal POSE/SAY/
+SEMIPOSE; `@EMIT` is not hooked.
 
-- **MUSH path:** Player types a pose command in their terminal → game processes it
-  in their current room → room emit → scene logger captures it (because there's
-  an active scene in that room). The pose goes to the ROOM first, scene captures it.
+**Superseded — temp rooms are an engine concern:** the **entire temp-room
+lifecycle is softcode** (`@dig`/`@tel`/`@destroy`, occupant-safe
+`lcon()`-evacuate-then-destroy). The only engine piece is the informational
+**`SCENE_ROOM`** object flag (symbol `S`). There is no `@scene/create/temp|join|
+leave|recycle` C# primitive and **no C# recycle janitor** (softcode `@wait`/cron,
+later).
 
-- **Web scene path:** Player submits a pose via the scene panel UI → server routes
-  it to the specific scene → scene emits to the scene's room → scene logger records it.
-  The pose targets the SCENE first, gets emitted to the room.
+### 7.3 Scene Storage: Graph, namespaced `sharp_sys_scene`
 
-Both paths produce the same result (pose appears in room AND in scene log), but
-the routing is different. The web path targets a scene_id, not a room.
+**Decision (retained, amended to graph):** scene data lives in dedicated
+collections separate from the game-object DB — now a **named graph**
+`graph_sharp_sys_scene` (not FK-by-property). Vertices `node_sharp_sys_scene_*`
+(`scenes`, `poses`, `pose_edits`, `plots`); edges `edge_sharp_sys_scene_*`.
 
-**Every scene has a room.** Web-created scenes auto-create a temporary room. MUSH
-players can `+scene/join <scene#>` to teleport into that temp room and participate
-at the same level as web players. No "virtual scene" concept — just rooms that are
-temporary vs permanent.
-
-**Temporary room lifecycle:**
-- Created on web "New Scene" or `+scene/create/temp`
-- No grid exits (access via `+scene/join` only)
-- Recycled on scene end (grace period, then @destroy)
-- Characters returned to previous location on leave/end
-
-### 7.3 Scene Storage: Separate Collections
-
-**Decision:** Multiple collections: Scenes, Poses, Participants, ActorRoles, Plots.
-Not stored as game objects or attributes. Scene data lives in the portal/content DB,
-separate from the game object DB.
-
-**Rationale:** Scene data is inherently relational (many poses per scene, many
-participants per scene, many scenes per plot). Graph DB collections with indexes
-are ideal. Game objects are for game state, not content archives.
+- **Pose order** is a `pose_next` linked list with `first_pose`/`last_pose` (no
+  integer order; move = re-link). **Pose content is versioned** in `pose_edits`
+  with a `current_edit` pointer (undo/redo move the pointer).
+- **No `ActRole` table** — a pose carries an opaque `ShowAsName` (display
+  persona); the per-scene live persona is `showAs` on the player's `member` edge.
+- **References to game objects are edges to the real vertices** (`in_room`,
+  `owner`, `starter`, `author`, `origin`, `editor`, `plotowner`, and the
+  player→scene `member` edge) **plus a `Name` snapshot** on the scene-side
+  vertex. The edge is the live link; the snapshot is the guaranteed-displayable
+  value so a deleted/renamed object still renders. **Only the ObjId *strings* are
+  dropped** — names are kept.
+- **No `SCENE`*` attributes** on rooms or players. A player's current scene +
+  persona live on the `member` edge (`isCurrent`, `showAs`); a room's active
+  scene is derived via `scenewhere()` (the `in_room` edge + `status=active`).
+- Implemented across all three providers via the `ISceneService` tri-cast
+  (server `Startup.cs:257`; client `Client/Program.cs:33` stays `InMemory`); no
+  new `ISharpDatabase` methods.
 
 ### 7.4 Pose Format: MString / ANSI Only
 
-**Decision:** Poses are stored as raw MString (ANSI markup). No Markdown in poses.
-Plain text extraction (ANSI-stripped) is stored alongside for search indexing.
+**Decision (retained):** poses are raw MString (`Markup`) + plain `Content`
+(ANSI-stripped, for search), stored on the **`pose_edit`** version. `RenderedHtml`
+is never stored or transmitted — the portal renders `Markup` client-side
+(`output-rendering-pipeline`). Display uses the `Name`/`ShowAsName` snapshots
+(historical). All timestamps are **UTC Unix-millis**; client models use `long`.
 
-**Rendering:**
-- In-game: MString rendered natively (ANSI codes interpreted by client)
-- Web scene panel: MString → HTML conversion (existing client-side pipeline)
-- Scene archive (published log): MString → HTML
+### 7.5 Scene Privacy & Status: Granular, Free-String Status
 
-**Rationale:** MUSH players format poses with ANSI (bold names, colored speech).
-This is the native format. Markdown would be foreign to the MUSH tradition.
+**Decision (retained, amended):** visibility is `IsPublic` + member cohorts;
+read functions return `#-1 PERMISSION` to non-members of private scenes. Lifecycle
+is a **free-string `Status`** (defaults `new` → `active` ⇄ `paused` →
+`finished`), set via `@scene/set status=…`. Owner-only stop/share and all
+permission policy are **softcode** (`@assert strmatch(scene(<id>,owner),%#)`);
+the engine only wizard-gates the `@SCENE` primitive and stores the owner edge.
 
-### 7.5 Scene Privacy: Granular with Public Default
+### 7.6 Scene Discovery & Scheduling
 
-**Decision:** Scenes can be: public (default), watchers-allowed (can watch but not
-search/browse), participants-only, private (hidden from all non-participants).
-
-**Admin default:** `public` out of the box. Any participant can downgrade
-visibility (mark private). Only runner can upgrade (make public again after
-being marked private by a participant).
-
-**Veto rule:** Any participant can veto publication at any time. Once vetoed,
-only that participant can un-veto. This protects player consent.
-
-### 7.6 Scene Discovery: Simple List
-
-**Decision:** Simple list of active scenes. Title, location, participant
-count, last activity time. MUSH players can `+scene/join <scene#>` to teleport
-into any listed scene (including web-created temp rooms).
-
-**No multi-scene participation:** A character is in one room at a time. Period.
-To switch scenes, leave the current one first. This is PennMUSH-native behavior.
-
-**Web "Join" button:** Equivalent to `+scene/join` — teleports character to the
-scene's room (temp or grid). MUSH players and web players end up in the same room.
+**Decision (retained, amended):** discovery is the `scene…` read functions
+(`scenelist active|recent|scheduled|mine`, `scenewhere`) surfaced in the portal.
+**Scheduling:** `+scene/schedule` creates a **roomless** scene in `status=new`
+with `ScheduledFor` (UTC-ms); the owner **explicitly** `+scene/start`s it later,
+which binds the current room. RSVP is a player adding themselves to the
+**`attending`** `member` role (`+scene/tag`). `+schedule`/`+scenes` render the
+upcoming agenda. The live feed rides the new `game.scene.{id}` NATS → `GameHub`
+leg into the previously-unpopulated `scene:{id}` groups. A character is in one
+room at a time (no multi-scene participation).
 
 ---
 

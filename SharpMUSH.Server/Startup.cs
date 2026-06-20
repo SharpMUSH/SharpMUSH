@@ -40,6 +40,7 @@ using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
@@ -118,6 +119,21 @@ public class Startup(
 			});
 		});
 
+		// PHASE 2a TWO-PHASE BOOT — build the plugin catalog ONCE, pre-build, before any service the
+		// plugins might extend is registered. The catalog runs the single McMaster DLL-load pass, applies
+		// every IServiceRegistrar straight into this IServiceCollection, and stashes the migration/flag/
+		// bridge contributions. It is registered as a singleton so the DB factory (migrations + flags),
+		// NatsBridgeService (bridge subscriptions), and the post-build PluginManager (commands/functions)
+		// all read the same already-loaded set rather than loading any DLL a second time.
+		using var pluginCatalogLoggerFactory = LoggerFactory.Create(b => b.AddSerilog(
+			new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger(), dispose: true));
+		var pluginCatalog = Implementation.Services.PluginCatalog.Build(
+			services, pluginCatalogLoggerFactory.CreateLogger<Implementation.Services.PluginCatalog>());
+		services.AddSingleton(pluginCatalog);
+
+		var pluginMigrationSources = pluginCatalog.MigrationSources;
+		var pluginFlags = pluginCatalog.AllFlags;
+
 		if (databaseProvider == DatabaseProvider.Memgraph)
 		{
 			services.AddSingleton<IDriver>(_ =>
@@ -129,7 +145,7 @@ public class Startup(
 				var dbLogger = x.GetRequiredService<ILogger<MemgraphDatabase>>();
 				var neo4JDriver = x.GetRequiredService<IDriver>();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password);
+				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password, pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -144,7 +160,7 @@ public class Startup(
 				var surrealClient = x.GetRequiredService<ISurrealDbClient>();
 				surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new SurrealDatabase(dbLogger, surrealClient, password);
+				var db = new SurrealDatabase(dbLogger, surrealClient, password, pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -158,7 +174,7 @@ public class Startup(
 				var handle = x.GetRequiredService<ArangoHandle>();
 				var mediator = x.GetRequiredService<IMediator>();
 				var password = x.GetRequiredService<IPasswordService>();
-				var db = new ArangoDatabase(dbLogger, context, handle, mediator, password);
+				var db = new ArangoDatabase(dbLogger, context, handle, mediator, password, pluginMigrationSources, pluginFlags);
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
@@ -215,6 +231,22 @@ public class Startup(
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<IPackageManifestService, PackageManifestService>();
 		services.AddSingleton<IPackagePlanService, PackagePlanService>();
+		// Parser-layer runner for package AINSTALL/AUPDATE softcode; required by PackageInstallService.
+		services.AddSingleton<IPackageLifecycleRunner, SharpMUSH.Implementation.Services.PackageLifecycleRunner>();
+		// Phase-4 managed-package (compiled C# plugin DLL) installer + its server-side trust allow-list.
+		// The allow-list is read from the "ManagedPackages" config section (AllowAll / AllowList) and is
+		// the standing half of the trust gate; the per-apply allow_managed_code flag is the other half.
+		services.AddSingleton(_ =>
+		{
+			var section = configuration.GetSection("ManagedPackages");
+			var allowAll = section.GetValue("AllowAll", false);
+			var allowList = section.GetSection("AllowList").Get<string[]>() ?? [];
+			return new ManagedPackageTrustOptions(allowAll, allowList);
+		});
+		services.AddSingleton<IManagedPackageInstaller>(sp => new ManagedPackageInstaller(
+			sp.GetRequiredService<IPluginManager>(),
+			sp.GetRequiredService<ManagedPackageTrustOptions>(),
+			sp.GetRequiredService<ILogger<ManagedPackageInstaller>>()));
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
 		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();
 		services.AddSingleton<IPackageSourceService>(sp =>
@@ -253,8 +285,10 @@ public class Startup(
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
-// Scene subsystem — InMemorySceneService for dev/test; swap for a persistent implementation later.
-		services.AddSingleton<ISceneService, InMemorySceneService>();
+		// Scene subsystem — ISceneService is implemented by the active ISharpDatabase
+		// provider (Arango/Memgraph/Surreal), cast like the IWikiService tri-cast above.
+		// There is no in-memory implementation.
+		services.AddSingleton<ISceneService>(sp => (ISceneService)sp.GetRequiredService<ISharpDatabase>());
 
 // Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
 		services.AddMemoryCache();
@@ -266,8 +300,19 @@ public class Startup(
 
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
+		// In-memory registry of global user-defined functions (@function). Not persisted:
+		// durability comes from re-running @function on boot via the @STARTUP attribute pass.
+		services.AddSingleton<IUserDefinedFunctionService, UserDefinedFunctionService>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
+
+		// C# plugin loader: discovers plugins/ DLLs at boot and registers their [SharpCommand]/[SharpFunction]
+		// into the live command/function libraries with IsSystem=true (see PluginBootstrapService below).
+		services.AddSingleton<IPluginManager, Implementation.Services.PluginManager>();
+		// Phase 2b engine-extension hooks: the dispatcher the engine consults at its command/object seams,
+		// reading the hook buckets the PluginCatalog collected. (Connection hooks are wired as
+		// IConnectionService.ListenState listeners by PluginBootstrapService.)
+		services.AddSingleton<IPluginHookDispatcher, Implementation.Services.PluginHookDispatcher>();
 
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
 		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();
@@ -497,8 +542,14 @@ public class Startup(
 		services.AddControllers();
 		services.AddQuartzHostedService();
 		services.AddHostedService<StartupHandler>();
-		services.AddHostedService<Services.DefaultHttpHandlerBootstrapService>();
+		// Load C# plugins before softcode packages/startup attributes run, so plugin commands/functions
+		// are present in the libraries when later bootstrap stages execute.
+		services.AddHostedService<Services.PluginBootstrapService>();
+		services.AddHostedService<Services.DefaultPackagesBootstrapService>();
 		services.AddHostedService<Services.DefaultApplicationsBootstrapService>();
+		// Run @STARTUP on all objects at boot — registered after the other bootstrap services so
+		// any objects/attributes they seed already exist. Re-establishes in-memory @function regs.
+		services.AddHostedService<Services.StartupAttributeBootstrapService>();
 		services.AddHostedService<NatsBridgeService>();
 		services.AddHostedService<Services.ConnectionReconciliationService>();
 		services.AddHostedService<Services.ConnectionLoggingService>();

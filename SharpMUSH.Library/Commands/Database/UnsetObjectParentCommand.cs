@@ -9,6 +9,6 @@ public record UnsetObjectParentCommand(AnySharpObject Target) : ICommand, ICache
 {
 	// Invalidate cache for the target object only
 	// The parent (if it exists) doesn't need invalidation since we're only modifying the child
-	public string[] CacheKeys => [$"object:{Target.Object().DBRef}"];
+	public string[] CacheKeys => [Definitions.CacheKeys.Object(Target.Object().DBRef)];
 	public string[] CacheTags => [];
 }

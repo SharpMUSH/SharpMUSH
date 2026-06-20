@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<IsPackable>false</IsPackable>
+		<!-- Marks this as a dynamically-loadable plugin: emits a .deps.json and keeps the shared contract
+		     assemblies out of the plugin's private bin (the host owns them via its default load context). -->
+		<EnableDynamicLoading>true</EnableDynamicLoading>
+		<!-- Plugins are built into plugins/, NOT linked by the host; keep warnings-as-errors honest anyway. -->
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<RootNamespace>SharpMUSH.Plugins.Scene</RootNamespace>
+	</PropertyGroup>
+
+	<!-- The non-generic IHubContext the bridge subscription forwards through lives in the ASP.NET Core
+	     shared framework, which the host already loads. Compile-time only — nothing is copied into the plugin. -->
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Contract surface (IPlugin/PluginBase/CommandDefinition/ISceneService/SceneEventMessage/...).
+		     Private=false + ExcludeAssets=runtime keeps SharpMUSH.Library out of the plugin's output so the
+		     host's copy is the one that loads; the loader's sharedTypes is the real type-unification net. -->
+		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- DatabaseConstants (scene collection/edge/graph names) + Core.Arango migration types for the
+		     IMigrationSource Arango migration. The host (Server) already loads SharpMUSH.Database and
+		     Core.Arango, so resolve them from the host's default load context rather than the plugin bin. -->
+		<ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- The messaging layer carries NatsOptions + the NATS connection used by SceneBroadcast and the
+		     bridge leg. Host-owned, so do not duplicate it into the plugin bin. -->
+		<ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- SharpMUSH.Configuration (PennMUSH-compat options used by SceneFunctions). Referenced directly
+		     because SharpMUSH.Library now marks its SharpMUSH.* ProjectReferences PrivateAssets="all" for
+		     packaging, so Configuration no longer flows transitively through Library. Host-owned at runtime. -->
+		<ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- The source generator referenced as an analyzer: the plugin's [SharpCommand]/[SharpFunction]
+		     methods produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
+		     FunctionLibrary.Functions inside THIS assembly, so PluginBase can reflect them. -->
+		<ProjectReference Include="..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+</Project>

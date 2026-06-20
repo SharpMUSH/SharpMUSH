@@ -52,8 +52,9 @@ public class CachingBehaviorTests
 		// First call – populates cache
 		var result1 = await mediator.Send(new GetObjectNodeQuery(dbRef));
 
-		// Verify cache key exists
-		var cacheKey = $"object:{dbRef}";
+		// Verify cache key exists. GetObjectNodeQuery delegates the cached load to the number-keyed
+		// GetObjectNodeByNumberQuery, so the entry lives under the number-only CacheKeys.Object key.
+		var cacheKey = SharpMUSH.Library.Definitions.CacheKeys.Object(dbRef);
 		var cached = await Cache.TryGetAsync<AnyOptionalSharpObject>(cacheKey);
 		await Assert.That(cached.HasValue).IsTrue();
 
@@ -90,7 +91,7 @@ public class CachingBehaviorTests
 		// MoveObjectCommand fallback ObjectContents tag sweep, which fires for all callers that
 		// don't supply OldContainer (GeneralCommands, MoreCommands, UtilityFunctions) and is
 		// common under parallel CI load.
-		var cacheKey = $"object-contents:{dbRef}";
+		var cacheKey = SharpMUSH.Library.Definitions.CacheKeys.Contents(dbRef);
 		var cached = await Cache.TryGetAsync<List<AnySharpContent>>(cacheKey);
 		for (var retry = 0; !cached.HasValue && retry < 10; retry++)
 		{

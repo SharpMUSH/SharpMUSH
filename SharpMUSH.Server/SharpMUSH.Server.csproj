@@ -37,6 +37,11 @@
     <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
 		<PackageReference Include="TelnetNegotiationCore" Version="2.5.0" />
+		<!-- FSharp.Core is a runtime transitive (via TelnetNegotiationCore) the engine never JITs, so it is
+		     normally trimmed from output. The McMaster plugin loader eagerly walks the shared SharpMUSH.Library
+		     reference closure and resolves each referenced assembly against the host's default load context,
+		     so FSharp.Core must be present beside the host binary for plugin loading to succeed. -->
+		<PackageReference Include="FSharp.Core" Version="10.1.203" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.7" />
 		<PackageReference Include="Testcontainers" Version="4.11.0" />
 		<PackageReference Include="Testcontainers.ArangoDb" Version="4.11.0" />
@@ -52,7 +57,30 @@
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
+    <!-- The Scene plugin (Phase-5 reference plugin) is loaded at runtime from plugins/scene/, NOT linked.
+         ReferenceOutputAssembly=false keeps it out of the host's compile graph; the CopyScenePlugin target
+         below drops it into the output's plugins/scene/ where PluginBootstrapService discovers it. -->
+    <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj"
+      ReferenceOutputAssembly="false"
+      Private="false"
+      SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
+
+  <!-- Drop the built Scene plugin (DLL + deps.json + manifest) into plugins/scene/ beside the server binary
+       so the booting host's PluginBootstrapService discovers and loads it. -->
+  <Target Name="CopyScenePlugin" AfterTargets="Build">
+    <PropertyGroup>
+      <ScenePluginOutDir>$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\bin\$(Configuration)\net10.0</ScenePluginOutDir>
+      <ScenePluginsTargetDir>$(OutDir)plugins\scene</ScenePluginsTargetDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.dll" />
+      <ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.deps.json" />
+      <ScenePluginFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\plugin.json" />
+    </ItemGroup>
+    <MakeDir Directories="$(ScenePluginsTargetDir)" />
+    <Copy SourceFiles="@(ScenePluginFiles)" DestinationFolder="$(ScenePluginsTargetDir)" SkipUnchangedFiles="false" />
+  </Target>
 	
   <ItemGroup>
     <Content Include="appsettings*.json">
@@ -89,6 +117,14 @@
     <EmbeddedResource Include="..\examples\packages\profile-handler\package.yaml">
       <Link>BundledPackages\profile-handler.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.profile-handler.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\common-functions\package.yaml">
+      <Link>BundledPackages\common-functions.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.common-functions.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\scene\package.yaml">
+      <Link>BundledPackages\scene.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.scene.package.yaml</LogicalName>
     </EmbeddedResource>
     <PackageReference Include="SurrealDb.Embedded.InMemory" Version="0.9.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />

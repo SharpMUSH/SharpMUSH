@@ -39,6 +39,26 @@ public class HookCommandTests
 	}
 
 	[Test]
+	public async ValueTask HookOverride_KeepsExplicitAttribute()
+	{
+		// Regression: @hook/<type> <cmd> = <object>, <attribute> must preserve the attribute.
+		// CB.RSArgs splits the RHS on the comma, so the handler reads args[1]=object and
+		// args[2]=attribute. Before the fix it re-split args[1] only, dropping the attribute
+		// and silently defaulting the hook to "cmd.<type>".
+		var token = Guid.NewGuid().ToString("N");
+		var cmd = $"hooktest_attr_{token}".ToUpperInvariant();
+		var attr = $"HOOKATTR{token}".ToUpperInvariant();
+
+		// The attribute must exist on the target object for @hook to accept it.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&{attr} #1=think captured"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/override {cmd}=#1,{attr}"));
+
+		var hook = await HookService.GetHookAsync(cmd, "OVERRIDE");
+		await Assert.That(hook.IsSome()).IsTrue();
+		await Assert.That(hook.AsValue().AttributeName.ToUpperInvariant()).IsEqualTo(attr);
+	}
+
+	[Test]
 	public async ValueTask HookClear_ExistingHook_RemovesHook()
 	{
 		// Test clearing a hook when no hook is set

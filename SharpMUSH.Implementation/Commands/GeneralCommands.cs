@@ -21,6 +21,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
@@ -633,7 +634,7 @@ public partial class Commands
 		}
 		else
 		{
-			viewing = (await Mediator!.Send(new GetCertainLocationQuery(executor.Id()!))).WithExitOption()
+			viewing = (await Mediator!.Send(new GetCertainLocationQuery(executor.Id()!, executor.Object().Id!))).WithExitOption()
 				.WithNoneOption();
 		}
 
@@ -3787,15 +3788,18 @@ public partial class Commands
 			// Check if executor has Functions power or is wizard
 			var canSeeDetails = await executor.IsWizard();
 
-			var userFunctions = FunctionLibrary.Where(kvp => !kvp.Value.IsSystem).ToArray();
+			// Global user-defined functions live in the in-memory registry (@function), not the
+			// FunctionLibrary; the library holds only built-ins (and any compiled-in defs).
+			var registry = parser.ServiceProvider.GetService<IUserDefinedFunctionService>();
+			var userFunctions = registry?.All().ToArray() ?? [];
 			var builtinFunctions = FunctionLibrary.Where(kvp => kvp.Value.IsSystem).ToArray();
 
 			if (canSeeDetails)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionUserDefinedCountFormat), executor, userFunctions.Length);
-				foreach (var (name, (def, _)) in userFunctions.Take(10))
+				foreach (var fn in userFunctions.Take(10))
 				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor, name, def.Attribute.MinArgs, def.Attribute.MaxArgs, def.Attribute.Flags);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor, fn.Name, fn.MinArgs, fn.MaxArgs, fn.Enabled ? "Enabled" : "Disabled");
 				}
 				if (userFunctions.Length > 10)
 				{
@@ -3820,98 +3824,318 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoFunctionSpecified);
 		}
 
+		var userFunctionService = parser.ServiceProvider.GetService<IUserDefinedFunctionService>();
+		if (userFunctionService == null)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionLibraryUnavailable), executor);
+			return new CallState(ErrorMessages.Returns.LibraryUnavailable);
+		}
+
 		// Handle administrative switches
 		if (switches.Contains("ALIAS"))
 		{
 			var aliasName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
 			if (string.IsNullOrEmpty(aliasName))
 			{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyAliasName), executor);
-			return new CallState(ErrorMessages.Returns.NoAliasSpecified);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyAliasName), executor);
+				return new CallState(ErrorMessages.Returns.NoAliasSpecified);
+			}
+
+			// @function/alias <alias>=<existing-user-function>
+			// functionName is the alias being created; aliasName is the existing target.
+			if (!userFunctionService.Alias(functionName, aliasName))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, aliasName);
+				return new CallState(ErrorMessages.Returns.FunctionNotFound);
+			}
+
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasWouldCreateFormat), executor, functionName, aliasName);
+			return CallState.Empty;
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasWouldCreateFormat), executor, aliasName, functionName);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasingNotImplemented), executor);
-		return new CallState(ErrorMessages.Returns.NotImplemented);
-	}
-
-	if (switches.Contains("CLONE"))
-	{
-		var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
-		if (string.IsNullOrEmpty(cloneName))
+		if (switches.Contains("CLONE"))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyCloneName), executor);
+			// @function/clone <new>=<existing>: create <new> mirroring <existing> (built-in or user)
+			// so the clone can be independently restricted/disabled without touching the original.
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
+			var existingName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+			if (string.IsNullOrEmpty(existingName))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyCloneName), executor);
 				return new CallState(ErrorMessages.Returns.NoCloneNameSpecified);
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionCloneWouldCloneFormat), executor, functionName, cloneName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionCloningNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			// Prefer a user-defined source; fall back to a built-in in the FunctionLibrary.
+			if (userFunctionService.Get(existingName) is not null)
+			{
+				if (!userFunctionService.Clone(functionName, existingName))
+				{
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, existingName);
+					return new CallState(ErrorMessages.Returns.FunctionNotFound);
+				}
+
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionClonedFormat), executor, functionName, existingName);
+				return CallState.Empty;
+			}
+
+			if (FunctionLibrary != null && FunctionLibrary.TryGetValue(existingName.ToUpper(), out var builtinSource) && builtinSource.IsSystem)
+			{
+				// Register the clone under <new> pointing at the SAME FunctionDefinition; it is a
+				// system function (IsSystem=true) so it resolves like a built-in, but its name is
+				// distinct, so @function/restrict and @function/builtin can act on it alone.
+				FunctionLibrary[functionName.ToUpper()] = builtinSource;
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionClonedFormat), executor, functionName, existingName);
+				return CallState.Empty;
+			}
+
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, existingName);
+			return new CallState(ErrorMessages.Returns.FunctionNotFound);
+		}
+
+		if (switches.Contains("BUILTIN"))
+		{
+			// @function/builtin <function>: discard a user override/clone so the original built-in
+			// (regenerated by the function-library source generator) resolves again. We remove any
+			// registry entry, any restriction overlay, and any cloned/overridden library entry for
+			// the name. The generated built-in is re-added lazily on next call (DiscoverBuiltInFunction).
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
+			userFunctionService.Delete(functionName);
+			userFunctionService.SetBuiltinRestriction(functionName, null);
+			FunctionLibrary?.Remove(functionName.ToUpper());
+			RestoreBuiltinFunction(functionName);
+
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionBuiltinRestoredFormat), executor, functionName);
+			return CallState.Empty;
+		}
+
+		if (switches.Contains("PRESERVE"))
+		{
+			// @function/preserve <function>: mark a user function to survive a bulk
+			// @function/restore reset and to be reported for re-registration.
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
+			if (!userFunctionService.SetPreserved(functionName, true))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+				return new CallState(ErrorMessages.Returns.FunctionNotFound);
+			}
+
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionPreservedFormat), executor, functionName);
+			return CallState.Empty;
+		}
+
+		if (switches.Contains("RESTORE"))
+		{
+			// @function/restore <function>: discard the user override of a single name so its
+			// built-in resolves again (same outcome as /builtin).
+			// @function/restore * : bulk reset — remove every user function NOT marked /preserve,
+			// keeping the preserved set for re-registration.
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
+			if (functionName.Equals("*", StringComparison.Ordinal))
+			{
+				var removed = userFunctionService.ResetUnpreserved();
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestoredResetFormat), executor, removed);
+				return CallState.Empty;
+			}
+
+			userFunctionService.Delete(functionName);
+			userFunctionService.SetBuiltinRestriction(functionName, null);
+			FunctionLibrary?.Remove(functionName.ToUpper());
+			RestoreBuiltinFunction(functionName);
+
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestoredOneFormat), executor, functionName);
+			return CallState.Empty;
 		}
 
 		if (switches.Contains("DELETE"))
 		{
+			// /delete removes a user-defined or cloned function, OR "deletes" a built-in from the
+			// library so a user @function can override it (PennMUSH semantics). The "deleted"
+			// built-in is still reachable via fn() and can be brought back with /builtin or /restore.
+			var removedUser = userFunctionService.Delete(functionName);
+			var removedBuiltin = FunctionLibrary?.Remove(functionName.ToUpper()) ?? false;
+
+			if (!removedUser && !removedBuiltin)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+				return new CallState(ErrorMessages.Returns.FunctionNotFound);
+			}
+
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDeleteWouldDeleteFormat), executor, functionName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDeletionNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			return CallState.Empty;
 		}
 
 		if (switches.Contains("DISABLE"))
 		{
+			if (!userFunctionService.SetEnabled(functionName, false))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+				return new CallState(ErrorMessages.Returns.FunctionNotFound);
+			}
+
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDisableWouldDisableFormat), executor, functionName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDisablingNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			return CallState.Empty;
 		}
 
 		if (switches.Contains("ENABLE"))
 		{
+			if (!userFunctionService.SetEnabled(functionName, true))
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+				return new CallState(ErrorMessages.Returns.FunctionNotFound);
+			}
+
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEnableWouldEnableFormat), executor, functionName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEnablingNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			return CallState.Empty;
 		}
 
 		if (switches.Contains("RESTRICT"))
 		{
+			// @function/restrict <function>=<restriction>: set the permission restriction on a
+			// function. A user function stores it on its registry entry; a built-in (or "deleted"
+			// built-in / clone) stores it in the registry's built-in restriction overlay, consulted
+			// at call time. An empty restriction clears it.
+			if (!await executor.IsWizard())
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
 			var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictWouldRestrictFormat), executor, functionName, restriction ?? "none");
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictionNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			var clearing = string.IsNullOrWhiteSpace(restriction);
+
+			if (userFunctionService.Get(functionName) is not null)
+			{
+				userFunctionService.SetRestriction(functionName, restriction);
+			}
+			else if (FunctionLibrary != null && FunctionLibrary.ContainsKey(functionName.ToUpper()))
+			{
+				userFunctionService.SetBuiltinRestriction(functionName, restriction);
+			}
+			else
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+				return new CallState(ErrorMessages.Returns.FunctionNotFound);
+			}
+
+			if (clearing)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictionClearedFormat), executor, functionName);
+			}
+			else
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictedFormat), executor, functionName, restriction!);
+			}
+
+			return CallState.Empty;
 		}
 
-		// Check if defining a new function: @function <name>=<obj>,<attrib>[,<min>,<max>[,<restrictions>]]
+		// Defining a new function: @function <name>=<obj>,<attrib>[,<min>,<max>]
+		// CB.RSArgs splits the RHS on commas: args["1"]=obj, ["2"]=attrib, ["3"]=min, ["4"]=max.
 		if (args.Count >= 2)
 		{
-			var defString = args["1"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(defString))
+			var objSpec = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+			var attribSpec = args.GetValueOrDefault("2")?.Message?.ToPlainText();
+
+			if (!string.IsNullOrEmpty(objSpec))
 			{
-				// Parse definition: obj, attrib[, min, max[, restrictions]]
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefineWouldDefineFormat), executor, functionName, defString);
-
-				// Parse min/max args if provided
-				if (args.Count >= 3)
+				if (string.IsNullOrEmpty(attribSpec))
 				{
-					var minArgs = args.GetValueOrDefault("2")?.Message?.ToPlainText();
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMinArgsFormat), executor, minArgs ?? "none");
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyName), executor);
+					return new CallState(ErrorMessages.Returns.NoFunctionSpecified);
 				}
 
-				if (args.Count >= 4)
+				// Built-in functions take precedence and may not be overridden by a user function.
+				if (FunctionLibrary != null && FunctionLibrary.TryGetValue(functionName.ToUpper(), out var existing) && existing.IsSystem)
 				{
-					var maxArgs = args.GetValueOrDefault("3")?.Message?.ToPlainText();
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMaxArgsFormat), executor, maxArgs ?? "none");
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+					return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, functionName));
 				}
 
-				if (args.Count >= 5)
+				// Parse min/max arg bounds (default 0..32, the engine-wide max).
+				var minArgs = 0;
+				var maxArgs = 32;
+				if (args.Count >= 4 && int.TryParse(args.GetValueOrDefault("3")?.Message?.ToPlainText(), out var parsedMin))
 				{
-					var restrictions = args.GetValueOrDefault("4")?.Message?.ToPlainText();
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionRestrictionsArgFormat), executor, restrictions ?? "none");
+					minArgs = parsedMin;
+				}
+				if (args.Count >= 5 && int.TryParse(args.GetValueOrDefault("4")?.Message?.ToPlainText(), out var parsedMax))
+				{
+					maxArgs = parsedMax;
 				}
 
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDynamicDefinitionNotImplemented), executor);
-				return new CallState(ErrorMessages.Returns.NotImplemented);
+				// Resolve the target object.
+				var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+					parser, executor, executor, objSpec, LocateFlags.All);
+				if (maybeObject.IsError)
+				{
+					return maybeObject.AsError;
+				}
+
+				var targetObject = maybeObject.AsSharpObject;
+
+				// The executor must control the object backing the function.
+				if (!await PermissionService!.Controls(executor, targetObject))
+				{
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				}
+
+				// The attribute must exist and be readable by the executor.
+				var attributeResult = await AttributeService!.GetAttributeAsync(
+					executor, targetObject, attribSpec, IAttributeService.AttributeMode.Read, false);
+				if (attributeResult.IsError || attributeResult.IsNone)
+				{
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, attribSpec);
+					return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+				}
+
+				var attributeLongName = attributeResult.AsAttribute.Last().LongName!.ToUpper();
+
+				userFunctionService.Define(new UserDefinedFunction(
+					Name: functionName,
+					Object: targetObject.Object().DBRef,
+					Attribute: attributeLongName,
+					MinArgs: minArgs,
+					MaxArgs: maxArgs,
+					Enabled: true,
+					AliasOf: null));
+
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefineWouldDefineFormat), executor, functionName, $"{targetObject.Object().DBRef}/{attributeLongName}");
+				return CallState.Empty;
 			}
 		}
 
-		// Single argument - show function information
+		// Single argument - show function information (built-in or user-defined)
+		var registeredFunction = userFunctionService.Get(functionName);
+		if (registeredFunction != null)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoNameFormat), executor, registeredFunction.Name);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoTypeFormat), executor, "User-defined");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMinArgsFormat), executor, registeredFunction.MinArgs);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMaxArgsFormat), executor, registeredFunction.MaxArgs);
+			return CallState.Empty;
+		}
+
 		if (FunctionLibrary == null)
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionLibraryUnavailable), executor);
@@ -3952,6 +4176,25 @@ public partial class Commands
 		}
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// Re-registers a built-in function into the shared FunctionLibrary from the source-generated
+	/// definition dictionary, undoing a prior <c>@function/delete</c> of a built-in. No-op if the
+	/// name is not a generated built-in (e.g. it was a pure user function).
+	/// </summary>
+	private static void RestoreBuiltinFunction(string functionName)
+	{
+		if (FunctionLibrary == null)
+		{
+			return;
+		}
+
+		var key = functionName.ToLowerInvariant();
+		if (SharpMUSH.Implementation.Generated.FunctionLibrary.Functions.TryGetValue(key, out var definition))
+		{
+			FunctionLibrary[key] = (definition, true);
+		}
 	}
 
 	[SharpCommand(Name = "@LEMIT", Switches = ["NOEVAL", "NOISY", "SILENT", "SPOOF"], Behavior = CB.Default | CB.NoGagged,
@@ -5878,9 +6121,13 @@ public partial class Commands
 
 		var targetObject = maybeObject.AsSharpObject;
 
-		// Get the attribute - must be visible to enactor
+		// Get the attribute with the EXECUTOR's read permission — the included commands run as the
+		// executor, so this mirrors u()/$-command dispatch. Reading as the enactor was wrong: it broke
+		// the common pattern of a $-command on a (e.g. WIZARD) object @include'ing its own helper tails
+		// when a mortal enactor triggered it — the attr read failed and the error went to the executor,
+		// so the enactor saw nothing.
 		var attributeResult = await AttributeService!.GetAttributeAsync(
-			enactor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
+			executor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
 
 		if (attributeResult.IsError)
 		{
@@ -6187,26 +6434,15 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			// Halt all objects, then trigger @STARTUP on all objects that have it
+			// Halt all object queues first.
 			await foreach (var obj in Mediator!.CreateStream(new GetAllTypedObjectsQuery()))
 			{
-				// Halt the object's queue
 				await Mediator.Send(new HaltObjectQueueRequest(obj.Object().DBRef));
-
-				// Trigger @STARTUP attribute if it exists (non-inherited)
-				// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
-				try
-				{
-					await AttributeService!.EvaluateAttributeFunctionAsync(
-						parser, executor, obj, "STARTUP",
-						new Dictionary<string, CallState>(),
-						evalParent: false);
-				}
-				catch
-				{
-					// Ignore errors from @STARTUP - they're non-fatal
-				}
 			}
+
+			// Then run @STARTUP on every object — the same pass used at boot, so global
+			// @function registrations etc. re-establish identically. Errors are swallowed.
+			await StartupAttributeRunner.RunAllAsync(parser, Mediator!, AttributeService!, executor);
 
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsRestarted), executor);
 			return CallState.Empty;

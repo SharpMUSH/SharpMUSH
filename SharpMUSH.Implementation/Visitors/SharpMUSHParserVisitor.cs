@@ -14,6 +14,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
@@ -75,6 +76,16 @@ public class SharpMUSHParserVisitor(
 	private static ITelemetryService? GetTelemetryService(IMUSHCodeParser parser)
 		=> parser is MUSHCodeParser mushParser
 			? mushParser.ServiceProvider.GetService<ITelemetryService>()
+			: null;
+
+	/// <summary>
+	/// Phase 2b: resolve the plugin hook dispatcher, used to consult C# command interceptors at the command
+	/// seam alongside the softcode @hook flow. Returns null when no parser provider is available (the
+	/// dispatcher itself no-ops when no interceptors are registered, so normal dispatch is unaffected).
+	/// </summary>
+	private static IPluginHookDispatcher? GetPluginHookDispatcher(IMUSHCodeParser parser)
+		=> parser is MUSHCodeParser mushParser
+			? mushParser.ServiceProvider.GetService<IPluginHookDispatcher>()
 			: null;
 
 	/// <summary>
@@ -412,13 +423,26 @@ public class SharpMUSHParserVisitor(
 
 				if (!discoveredFunction.TryPickT0(out var functionValue, out _))
 				{
-					success = false;
-					return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name), context.Depth());
-				}
+					// Built-ins take precedence; only on a built-in miss do we consult the
+					// in-memory global user-defined-function registry (@function). Resolved
+					// entries are evaluated ufun-style against <object>/<attribute> with the
+					// call args bound to %0.., and are NOT cached in the shared FunctionLibrary
+					// (so /enable, /disable, /delete take effect immediately and never leak).
+					var userFunction = ResolveUserDefinedFunction(name);
+					if (userFunction is null)
+					{
+						success = false;
+						return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name), context.Depth());
+					}
 
-				// Avoid double lookup: store result and add to library
-				libraryMatch = (functionValue, true);
-				parser.FunctionLibrary.Add(name, libraryMatch);
+					libraryMatch = (userFunction.Value, false);
+				}
+				else
+				{
+					// Avoid double lookup: store result and add to library
+					libraryMatch = (functionValue, true);
+					parser.FunctionLibrary.Add(name, libraryMatch);
+				}
 			}
 
 			var (attribute, function) = libraryMatch.LibraryInformation;
@@ -480,6 +504,23 @@ public class SharpMUSHParserVisitor(
 
 			// Check if function cannot be used by Gagged players
 			if (attribute.Flags.HasFlag(FunctionFlags.NoGagged) && await executor.HasFlag("GAGGED"))
+			{
+				success = false;
+				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
+			}
+
+			// @function/restrict restrictions. For user-defined functions the restriction string
+			// is carried on the synthesized attribute's Restrict (see ResolveUserDefinedFunction);
+			// for built-ins it lives in the registry overlay keyed by name. Either failing means
+			// the caller lacks permission and gets the standard error instead of the result.
+			var functionRestriction = attribute.Restrict is { Length: > 0 }
+				? string.Join(' ', attribute.Restrict)
+				: null;
+			var builtinRestriction = (parser as MUSHCodeParser)?.ServiceProvider
+				.GetService<IUserDefinedFunctionService>()?.GetBuiltinRestriction(name);
+
+			if ((functionRestriction is not null && !await executor.SatisfiesFunctionRestriction(functionRestriction))
+			    || (builtinRestriction is not null && !await executor.SatisfiesFunctionRestriction(builtinRestriction)))
 			{
 				success = false;
 				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
@@ -674,6 +715,67 @@ public class SharpMUSHParserVisitor(
 		return (result.LibraryInformation.Attribute,
 			p => (ValueTask<CallState>)result.LibraryInformation.Function.Method.Invoke(null,
 				[p, result.LibraryInformation.Attribute])!);
+	}
+
+	/// <summary>
+	/// Resolves a global user-defined function (registered via <c>@function</c>) by name, returning
+	/// a transient <see cref="FunctionDefinition"/> that the normal function-call pipeline executes.
+	///
+	/// <para>The synthesized definition carries the registry's min/max arg bounds (so the standard
+	/// argument-count validation in <see cref="CallFunction"/> applies) and a delegate that evaluates
+	/// the stored <c>&lt;object&gt;/&lt;attribute&gt;</c> as softcode with the call args bound to
+	/// <c>%0..</c> — exactly like <c>ufun</c>. The definition is never cached in the shared library.</para>
+	/// </summary>
+	private FunctionDefinition? ResolveUserDefinedFunction(string name)
+	{
+		var registry = (parser as MUSHCodeParser)?.ServiceProvider.GetService<IUserDefinedFunctionService>();
+		var entry = registry?.Resolve(name);
+		if (entry is null)
+		{
+			return null;
+		}
+
+		var attribute = new SharpFunctionAttribute
+		{
+			Name = name,
+			MinArgs = entry.MinArgs,
+			MaxArgs = entry.MaxArgs,
+			Flags = FunctionFlags.Regular,
+			// Carry any @function/restrict restriction onto the synthesized attribute so the
+			// permission check in CallFunction enforces it before evaluating the attribute.
+			Restrict = string.IsNullOrWhiteSpace(entry.Restriction) ? [] : [entry.Restriction]
+		};
+
+		var target = entry.Object;
+		var attributeName = entry.Attribute;
+
+		return new FunctionDefinition(attribute, async invokedParser =>
+		{
+			var targetObject = await Mediator.Send(new GetObjectNodeQuery(target));
+			if (targetObject.IsNone)
+			{
+				return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name));
+			}
+
+			// The arguments pushed for this call become %0, %1, … inside the attribute.
+			var args = invokedParser.CurrentState.Arguments
+				.Select((kvp, i) => new KeyValuePair<string, CallState>(i.ToString(), kvp.Value))
+				.ToDictionary();
+
+			// A global @function runs *as the backing object, with its powers* (PennMUSH semantics):
+			// the attribute is read and evaluated with the function object's permissions, not the
+			// caller's, so a player who lacks read access to the object can still call the function.
+			// The caller-level permission gate (@function/restrict) was already enforced in CallFunction.
+			var result = await AttributeService.EvaluateAttributeFunctionAsync(
+				invokedParser,
+				targetObject.Known,
+				targetObject.Known,
+				attributeName,
+				args,
+				evalParent: false);
+
+			return new CallState(result);
+		});
 	}
 
 
@@ -1402,6 +1504,22 @@ public class SharpMUSHParserVisitor(
 					// Result is discarded
 				}
 
+				// Phase 2b: C# command interceptors run alongside the softcode @hook flow. The dispatcher
+				// no-ops (and HasCommandInterceptors is false) when no plugin registered an interceptor, so
+				// normal dispatch is unchanged. The raw command-with-switches text is the interceptor's input.
+				var pluginHooks = GetPluginHookDispatcher(parser);
+				var pluginCommandText = commandWithSwitches.ToPlainText();
+				if (pluginHooks is { HasCommandInterceptors: true })
+				{
+					// before → after the softcode BEFORE: a C# interceptor returning false vetoes the command
+					// (mirrors a softcode IGNORE that returns false: skip the body and run the after seam).
+					if (!await pluginHooks.CommandBeforeAsync(newParser, pluginCommandText))
+					{
+						await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
+						return CallState.Empty;
+					}
+				}
+
 				// 3. Check for /override hook with $-command matching
 				var overrideHook = await HookService.GetHookAsync(rootCommand, "OVERRIDE");
 				if (overrideHook.IsSome())
@@ -1419,6 +1537,24 @@ public class SharpMUSHParserVisitor(
 						}
 
 						return overrideResult.AsValue();
+					}
+				}
+
+				// override → after the softcode OVERRIDE: a non-null C# interceptor override short-circuits
+				// the built-in (mirrors a softcode OVERRIDE), still running both after seams before returning.
+				if (pluginHooks is { HasCommandInterceptors: true })
+				{
+					var pluginOverride = await pluginHooks.CommandTryOverrideAsync(newParser, pluginCommandText);
+					if (pluginOverride is not null)
+					{
+						var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
+						if (afterHook.IsSome())
+						{
+							await ExecuteHookCode(newParser, executor, afterHook.AsValue());
+						}
+
+						await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
+						return pluginOverride;
 					}
 				}
 
@@ -1508,6 +1644,12 @@ public class SharpMUSHParserVisitor(
 				{
 					await ExecuteHookCode(newParser, executor, afterHookFinal.AsValue());
 					// Result is discarded
+				}
+
+				// after → near the softcode AFTER: C# interceptors observe the completed command. Result discarded.
+				if (pluginHooks is { HasCommandInterceptors: true })
+				{
+					await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
 				}
 
 				return commandResult;
@@ -1841,8 +1983,14 @@ public class SharpMUSHParserVisitor(
 			// The LHS of an EqSplit command is evaluated unless the command declares full NoParse.
 			// Commands that only want their RHS unevaluated (like &) use RSNoParse instead of NoParse,
 			// so that the LHS (object reference) is evaluated normally here while the RHS is deferred.
+			// For a full-NoParse EqSplit command the LHS stays raw, BUT we still attach a
+			// deferred ParsedMessage (mirroring the RHS args below) so a command that opts
+			// to evaluate its LHS — e.g. @SCENE, which evaluates args itself unless /NOEVAL —
+			// can do so. Without this, the raw LHS (e.g. "[scenewhere(%L)]") never evaluated.
+			var noParseLhs = argCallState.Arguments.FirstOrDefault() ?? MModule.empty();
 			arguments.Add(noParse
-				? new CallState(argCallState.Arguments.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
+				? new CallState(noParseLhs, argCallState.Depth, null,
+					async () => (await prs.FunctionParse(noParseLhs))!.Message!)
 				: (await prs.FunctionParse(argCallState.Arguments.FirstOrDefault() ?? MModule.empty()))!);
 
 			if (nArgs < 2) return arguments;
@@ -1873,8 +2021,11 @@ public class SharpMUSHParserVisitor(
 		{
 			if (noParse)
 			{
+				// Attach a deferred ParsedMessage so a self-evaluating NoParse command
+				// (e.g. @SCENE/undo <poseId>) can evaluate a functional single arg on demand.
 				arguments.AddRange(argCallState.Arguments
-					.Select(x => new CallState(x, argCallState.Depth)));
+					.Select(x => new CallState(x, argCallState.Depth, null,
+						async () => (await prs.FunctionParse(x))!.Message!)));
 			}
 			else
 			{

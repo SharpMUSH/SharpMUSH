@@ -55,13 +55,20 @@ public sealed record PlanRequest(
 	Dictionary<string, string>? ConfigureAnswers);
 
 /// <summary>Request body for applying a reviewed plan.</summary>
+/// <param name="AllowManagedCode">
+/// Phase-4 trust opt-in for <c>kind: managed</c> packages: the operator's explicit
+/// confirmation that they trust this package to deposit and run arbitrary compiled
+/// C# in full server trust. Required (alongside the server allow-list) for a
+/// managed install; ignored for softcode/application packages.
+/// </param>
 public sealed record ApplyRequest(
 	string Remote,
 	string Path,
 	string? Version,
 	Dictionary<string, string>? ConfigureAnswers,
 	List<PackageConflictDecision>? Decisions,
-	int KeepRevisions = 10);
+	int KeepRevisions = 10,
+	bool AllowManagedCode = false);
 
 /// <summary>A configure prompt for the review screen.</summary>
 public sealed record ConfigurePromptDto(string Key, string Label, string Type, string? Default, bool Answered);

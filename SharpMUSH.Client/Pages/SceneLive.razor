@@ -1,12 +1,15 @@
 @page "/scenes/{Id}/live"
 @attribute [Authorize]
-@implements IDisposable
+@implements IAsyncDisposable
+@using SharpMUSH.Client.Models
 @using SharpMUSH.Library.Models.Portal
+@using SharpMUSH.Library.Services.Interfaces
 @inject IStringLocalizer<SharedResource> Loc
-@inject ISceneService SceneService
+@inject SceneService SceneService
 @inject IConnectionStateService Hub
+@inject ISceneHubControl SceneHub
 
-<PageTitle>@Loc["LiveScene"] @Id — SharpMUSH</PageTitle>
+<PageTitle>Live Scene — SharpMUSH</PageTitle>
 
 @if (_loading)
 {
@@ -17,9 +20,9 @@
 else if (_notFound)
 {
     <div style="padding:var(--cpad);">
-        <MudAlert Severity="Severity.Warning">@Loc["SceneNotFound"]</MudAlert>
-        <MudButton Href="/scenes" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
-            @Loc["BackToActiveScenes"]
+        <MudAlert Severity="Severity.Warning">Scene not found.</MudAlert>
+        <MudButton Href="/scenes/active" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
+            Back to Active Scenes
         </MudButton>
     </div>
 }
@@ -31,9 +34,7 @@ else
         <div style="padding:12px var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:12px;flex-shrink:0;">
             <MudChip T="string" Color="Color.Success" Size="Size.Small"
                      Style="font-size:10px;letter-spacing:0.06em;height:20px;padding:0 7px;">LIVE</MudChip>
-            <MudText Style="font-size:15px;font-weight:600;">
-                @(string.IsNullOrWhiteSpace(_scene!.Title) ? Loc["LiveScene"].ToString() : _scene!.Title)
-            </MudText>
+            <MudText Style="font-size:15px;font-weight:600;">@SceneTitle(_scene!)</MudText>
             <MudText Style="font-size:12px;color:var(--text-dim);margin-left:4px;">
                 <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:2px;" />
                 @_scene!.RoomName
@@ -48,110 +49,224 @@ else
         @if (!Hub.IsConnected)
         {
             <MudAlert Severity="Severity.Warning" Dense="true" Style="border-radius:0;flex-shrink:0;">
-                @Loc["HubNotConnected"]
+                Not connected to the game — connect to post and receive live poses.
             </MudAlert>
         }
 
         @* Transcript — scrollable *@
-        <div class="scene-log scene-log--live" @ref="_logContainer" style="flex:1;min-height:0;padding:16px var(--cpad);">
-            @if (_messages.Count == 0 && _liveLines.Count == 0)
+        <div class="scene-log scene-log--live" style="flex:1;min-height:0;padding:16px var(--cpad);">
+            @if (_poses.Count == 0)
             {
-                <MudText Style="color:var(--text-faint);font-style:italic;">@Loc["WaitingForActivity"]</MudText>
+                <MudText Style="color:var(--text-faint);font-style:italic;">Waiting for activity…</MudText>
             }
-            @foreach (var msg in _messages)
+            @foreach (var pose in _poses)
             {
-                <div class="scene-line scene-line--@msg.MessageType.ToString().ToLowerInvariant() scene-line--archived">
-                    @((MarkupString)msg.RenderedHtml)
-                </div>
-            }
-            @foreach (var line in _liveLines)
-            {
-                <div class="scene-line scene-line--live">
-                    @((MarkupString)line)
-                </div>
+                <ScenePoseLine Pose="pose" />
             }
         </div>
 
-        @* Compose bar *@
+        @* Compose bar — submits a normal game command (POSE/SAY/SEMIPOSE) via the hub. *@
         <div style="padding:10px var(--cpad);border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:flex-end;gap:8px;flex-shrink:0;">
+            <MudSelect T="string" @bind-Value="_mode" Dense="true" Margin="Margin.Dense"
+                       Variant="Variant.Outlined" Style="max-width:130px;">
+                <MudSelectItem Value="@("pose")">Pose</MudSelectItem>
+                <MudSelectItem Value="@("say")">Say</MudSelectItem>
+                <MudSelectItem Value="@("semipose")">Semipose</MudSelectItem>
+            </MudSelect>
             <MudTextField @bind-Value="_composeText" Placeholder="Pose, say, or narrate…"
                           Variant="Variant.Outlined" Margin="Margin.Dense"
                           Lines="2" MaxLines="4"
                           Style="flex:1;background:var(--surface-2);"
                           OnKeyDown="OnComposeKeyDown" />
-            <div style="display:flex;flex-direction:column;gap:4px;">
-                <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary"
-                               Size="Size.Medium" Variant="Variant.Filled"
-                               OnClick="SendPoseAsync" Disabled="string.IsNullOrWhiteSpace(_composeText)" />
-            </div>
+            <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary"
+                           Size="Size.Medium" Variant="Variant.Filled"
+                           OnClick="SendPoseAsync"
+                           Disabled="@(string.IsNullOrWhiteSpace(_composeText) || !Hub.IsConnected)" />
         </div>
     </div>
 }
 
 @code {
-    [Parameter]
-    public required string Id { get; set; }
+    [Parameter] public required string Id { get; set; }
 
-    private SceneArchive? _scene;
-    private List<SceneMessage> _messages = [];
-    private readonly List<string> _liveLines = [];
+    private SceneSummary? _scene;
+    private readonly List<ScenePoseView> _poses = [];
     private bool _loading = true;
     private bool _notFound;
-    private ElementReference _logContainer;
     private string _composeText = string.Empty;
+    private string _mode = "pose";
+    private bool _subscribed;
+    private string? _joinedSceneId;
+
+    protected override void OnInitialized()
+    {
+        Hub.OnSceneEventReceived += HandleSceneEvent;
+        _subscribed = true;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
         _notFound = false;
-        _messages = [];
-        _liveLines.Clear();
+        _poses.Clear();
         _scene = null;
 
-        var sceneResult = await SceneService.GetSceneAsync(Id);
-        if (sceneResult.IsT1)
+        var scene = await SceneService.GetSceneAsync(Id);
+        if (scene is null)
         {
             _notFound = true;
             _loading = false;
             return;
         }
 
-        _scene = sceneResult.AsT0;
-        var msgResult = await SceneService.GetRecentMessagesAsync(Id, count: 50);
-        if (msgResult.IsT0)
-            _messages = [..msgResult.AsT0];
+        _scene = scene;
+        _poses.AddRange(await SceneService.GetPosesAsync(Id, count: 100));
+
+        // Join the SignalR scene group so we receive realtime ReceiveSceneMessage events.
+        if (!string.Equals(_joinedSceneId, Id, StringComparison.Ordinal))
+        {
+            if (_joinedSceneId is not null)
+            {
+                await SceneHub.LeaveSceneAsync(_joinedSceneId);
+            }
+
+            await SceneHub.JoinSceneAsync(Id);
+            _joinedSceneId = Id;
+        }
 
         _loading = false;
     }
 
-    protected override void OnInitialized()
-    {
-        Hub.OnRoomEventReceived += HandleRoomEvent;
-    }
+    // ── Realtime patching ──────────────────────────────────────────────────────
 
-    public void Dispose() => Hub.OnRoomEventReceived -= HandleRoomEvent;
-
-    private void HandleRoomEvent(RoomEventMessage msg)
+    private void HandleSceneEvent(SceneEventMessage msg)
     {
-        if (_scene is null) return;
-        if (!string.Equals(msg.RoomDbref, _scene.RoomDbref, StringComparison.Ordinal)) return;
-        _liveLines.Add(msg.Content);
+        if (!string.Equals(msg.SceneId, Id, StringComparison.Ordinal)) return;
+
+        switch (msg.EventType)
+        {
+            case "pose":
+                // Append exactly once — there is no optimistic insert, so an author's own
+                // pose arrives here and renders for the first time.
+                if (_poses.All(p => !string.Equals(p.Id, msg.PoseId, StringComparison.Ordinal)))
+                {
+                    _poses.Add(FromEvent(msg, existing: null));
+                }
+                break;
+
+            case "edit":
+                ReplacePose(msg.PoseId, existing => FromEvent(msg, existing));
+                break;
+
+            case "delete":
+                // Strike through in place (keep ordering).
+                ReplacePose(msg.PoseId, existing => existing with { IsDeleted = true });
+                break;
+
+            case "move":
+                // Reorder isn't fully described by the event payload; re-fetch the ordered chain.
+                _ = ReloadPosesAsync();
+                return;
+
+            default:
+                // "meta" and unknown event kinds: nothing to patch in the pose list.
+                return;
+        }
+
         InvokeAsync(StateHasChanged);
     }
 
+    private void ReplacePose(string poseId, Func<ScenePoseView, ScenePoseView> mutate)
+    {
+        var idx = _poses.FindIndex(p => string.Equals(p.Id, poseId, StringComparison.Ordinal));
+        if (idx >= 0)
+        {
+            _poses[idx] = mutate(_poses[idx]);
+        }
+    }
+
+    private async Task ReloadPosesAsync()
+    {
+        var fresh = await SceneService.GetPosesAsync(Id, count: 100);
+        _poses.Clear();
+        _poses.AddRange(fresh);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Projects a realtime event onto a <see cref="ScenePoseView"/>. For edits the
+    /// existing pose supplies the fields the event does not carry (author identity);
+    /// EditCount is bumped so the "edited" badge shows.
+    /// </summary>
+    private ScenePoseView FromEvent(SceneEventMessage msg, ScenePoseView? existing) => new(
+        Id: msg.PoseId,
+        SceneId: msg.SceneId,
+        AuthorDbref: existing?.AuthorDbref,
+        AuthorName: existing?.AuthorName ?? msg.ActorName,
+        ShowAsName: msg.ActorName,
+        OriginDbref: existing?.OriginDbref,
+        OriginName: existing?.OriginName ?? msg.Location,
+        Source: msg.Source,
+        Tags: msg.Tags ?? [],
+        Meta: existing?.Meta ?? new Dictionary<string, string>(),
+        CreatedAt: existing?.CreatedAt ?? msg.Timestamp,
+        IsDeleted: false,
+        Content: msg.Content,
+        Markup: msg.Markup,
+        EditCount: existing is null ? 1 : existing.EditCount + 1,
+        LastEditedAt: existing is null ? null : msg.Timestamp,
+        LastEditorDbref: existing?.LastEditorDbref,
+        LastEditorName: existing is null ? null : msg.ActorName);
+
+    // ── Web pose authoring ───────────────────────────────────────────────────
+
     private async Task SendPoseAsync()
     {
-        if (string.IsNullOrWhiteSpace(_composeText)) return;
-        var text = _composeText;
+        var text = _composeText.Trim();
+        if (text.Length == 0 || !Hub.IsConnected) return;
+
+        var command = _mode switch
+        {
+            "say"      => $"say {text}",
+            "semipose" => $";{text}",
+            _          => $":{text}",
+        };
+
         _composeText = string.Empty;
-        // Pose via the scene service (stub — actual sending goes through the game terminal command)
-        await SceneService.PostMessageAsync(Id, "portal", "Portal", text, text, SceneMessageType.Pose);
-        StateHasChanged();
+
+        // Send a normal game command — never @emit, never a scene-service write, and no
+        // optimistic insert. The author's pose renders once, when its SceneEventMessage
+        // round-trips back through HandleSceneEvent.
+        await Hub.SendCommandAsync(command);
     }
 
     private async Task OnComposeKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !e.ShiftKey)
+        {
             await SendPoseAsync();
+        }
     }
+
+    // ── Disposal ───────────────────────────────────────────────────────────────
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_subscribed)
+        {
+            Hub.OnSceneEventReceived -= HandleSceneEvent;
+            _subscribed = false;
+        }
+
+        if (_joinedSceneId is not null)
+        {
+            await SceneHub.LeaveSceneAsync(_joinedSceneId);
+            _joinedSceneId = null;
+        }
+    }
+
+    private static string SceneTitle(SceneSummary s) =>
+        s.Meta.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)
+            ? t
+            : $"Scene in {s.RoomName}";
 }

@@ -334,11 +334,27 @@ public class PackagesController(
 		var (manifest, _, manifestSource) = fetched.AsT0;
 		var remote = (await Registry.GetPackageRemoteAsync(request.Remote)).AsT0;
 
+		// Managed packages (Phase 4) carry a compiled DLL alongside package.yaml;
+		// resolve a binary reader over the same commit so the installer can verify
+		// and deposit the bytes. Softcode/application packages need none.
+		IManagedPackageBinarySource? binarySource = null;
+		if (manifest.Kind == PackageKind.Managed)
+		{
+			var binary = await source.GetBinarySourceAsync(remote, request.Path, manifestSource.Commit, cancellationToken);
+			if (binary.IsT1)
+			{
+				return BadRequest(binary.AsT1.Value);
+			}
+
+			binarySource = binary.AsT0;
+		}
+
 		var result = await installer.ApplyAsync(manifest, new PackageApplyRequest(
 			new PackageApplySource(remote.Url, request.Path, manifestSource.Commit, remote.Branch),
 			request.ConfigureAnswers ?? new Dictionary<string, string>(),
 			request.Decisions ?? [],
-			request.KeepRevisions), cancellationToken);
+			request.KeepRevisions,
+			request.AllowManagedCode), cancellationToken, binarySource);
 
 		return result.Match<ActionResult<ApplyResponse>>(
 			ok => Ok(new ApplyResponse(ok.Revision, ok.CreatedObjects, ok.Notes)),

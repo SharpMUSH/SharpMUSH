@@ -1,0 +1,34 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+
+@* Renders a single scene pose: the display persona (ShowAsName → AuthorName),
+   an "edited" badge when the pose has been edited, the timestamp, and the pose body
+   rendered from its raw Markup client-side. Deleted poses render struck-through. *@
+<div class="scene-line scene-line--pose @(Pose.IsDeleted ? "ms-strike" : null)"
+     style="@(Pose.IsDeleted ? "opacity:0.55;" : null)">
+    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;">
+        <span style="font-weight:600;color:var(--accent);font-size:13px;">@Pose.DisplayName</span>
+        @if (Pose.WasEdited)
+        {
+            <span class="scene-edited-badge" title="@($"Edited {Pose.EditCount - 1} time(s)")"
+                  style="font-size:10px;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-faint);border:1px solid var(--border);border-radius:4px;padding:0 5px;">edited</span>
+        }
+        <span style="font-size:11px;color:var(--text-faint);margin-left:auto;">
+            @Pose.CreatedAtUtc.ToLocalTime().ToString("HH:mm")
+        </span>
+    </div>
+    <div class="scene-pose-body">@((MarkupString)SceneMarkupRenderer.ToHtml(Pose.Markup))</div>
+    @if (Pose.Tags.Count > 0)
+    {
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;">
+            @foreach (var tag in Pose.Tags)
+            {
+                <span style="font-size:10px;color:var(--text-faint);background:var(--surface-2);border-radius:4px;padding:0 5px;">@tag</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public required ScenePoseView Pose { get; set; }
+}
