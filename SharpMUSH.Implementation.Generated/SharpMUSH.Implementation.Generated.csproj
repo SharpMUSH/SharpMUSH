@@ -10,6 +10,39 @@
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
   </PropertyGroup>
 
+	<!-- ============================================================================================
+	     Source-generator analyzer package.
+
+	     Packed as a standard analyzer NuGet so an external plugin can reference it and get its own
+	     SharpMUSH.Implementation.Generated.CommandLibrary.Commands / FunctionLibrary.Functions emitted
+	     into its assembly (which PluginBase reflects at load time). The generator DLL is shipped under
+	     analyzers/dotnet/cs and carries no compile/runtime output (IncludeBuildOutput=false above);
+	     DevelopmentDependency=true marks it PrivateAssets=all for consumers by default.
+	     Version is aligned to PluginContractVersion.Current (1.0.0) — keep it in step with the
+	     SharpMUSH.Library contract package. -->
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+		<PackageId>SharpMUSH.Implementation.Generated</PackageId>
+		<Version>1.0.0</Version>
+		<Authors>SharpMUSH Contributors</Authors>
+		<Description>SharpMUSH command/function source generator, packaged as a Roslyn analyzer. External SharpMUSH plugins reference this so their [SharpCommand]/[SharpFunction] methods produce the generated CommandLibrary/FunctionLibrary that PluginBase reflects. Aligned to PluginContractVersion 1.0.0.</Description>
+		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+		<RepositoryUrl>https://github.com/SharpMUSH/SharpMUSH</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageProjectUrl>https://github.com/SharpMUSH/SharpMUSH</PackageProjectUrl>
+		<Deterministic>true</Deterministic>
+		<DevelopmentDependency>true</DevelopmentDependency>
+		<!-- Analyzer packages legitimately have no lib/ build output. -->
+		<NoWarn>$(NoWarn);NU5128</NoWarn>
+		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Ship the generator assembly under analyzers/dotnet/cs (the standard analyzer package layout). -->
+		<None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs"
+			Visible="false" />
+	</ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.0.0" PrivateAssets="all" />

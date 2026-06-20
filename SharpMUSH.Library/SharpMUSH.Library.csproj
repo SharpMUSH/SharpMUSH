@@ -9,6 +9,60 @@
 		<NoWarn>NU1510</NoWarn>
 	</PropertyGroup>
 
+	<!-- ============================================================================================
+	     Plugin contract package (interim).
+
+	     This project IS the contract surface external plugin authors reference: IPlugin / PluginBase /
+	     [SharpPlugin] / ICommandSource / IFunctionSource / the Phase 2a contribution interfaces /
+	     the Phase 2b hook interfaces / [SharpCommand] / [SharpFunction] / CommandDefinition /
+	     FunctionDefinition and the IMUSHCodeParser / CallState / Option types they transitively require.
+
+	     We pack SharpMUSH.Library whole rather than carving out a slim SharpMUSH.Plugin.Abstractions,
+	     because CommandDefinition/FunctionDefinition reference IMUSHCodeParser, which transitively pulls
+	     in SharpMUSH.Library.Services, Services.Interfaces and Models — i.e. nearly the entire Library.
+	     Splitting those out would move the bulk of the Library into the "abstractions" assembly and force
+	     the dynamic loader's SharedContractTypes to span two assemblies, defeating the carve-out's purpose.
+	     The whole-Library package also matches the loader: every type in
+	     PluginLoaderService.SharedContractTypes lives in this one assembly, so host and plugin unify on it.
+
+	     TODO slim abstractions: once CommandDefinition/FunctionDefinition can be expressed without the
+	     full parser surface (or behind a parser-abstractions seam), carve the plugin-author types into a
+	     dedicated SharpMUSH.Plugin.Abstractions package and demote this back to an internal project.
+	     ============================================================================================ -->
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+		<PackageId>SharpMUSH.Library</PackageId>
+		<!-- Version is aligned to PluginContractVersion.Current (1.0.0). Bump both together when the
+		     plugin contract surface changes. -->
+		<Version>1.0.0</Version>
+		<Authors>SharpMUSH Contributors</Authors>
+		<Description>SharpMUSH plugin contract surface (interim). External SharpMUSH plugins reference this package to write [SharpPlugin] : PluginBase entry types with [SharpCommand]/[SharpFunction] members. Aligned to PluginContractVersion 1.0.0.</Description>
+		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+		<RepositoryUrl>https://github.com/SharpMUSH/SharpMUSH</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageProjectUrl>https://github.com/SharpMUSH/SharpMUSH</PackageProjectUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<Deterministic>true</Deterministic>
+		<!-- The host owns the runtime copies of the transitive ProjectReference assemblies (plugins build
+		     with ExcludeAssets=runtime). We bundle those reference DLLs into lib/ below so an EXTERNAL
+		     plugin can still compile against the contract surface; they are stripped at plugin runtime. -->
+		<TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeReferencedProjectsInPackage</TargetsForTfmSpecificBuildOutput>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<!-- Bundle the (non-packable) ProjectReference output assemblies into the package's lib folder so the
+	     contract surface compiles standalone for external authors. DependsOnTargets="ResolveReferences"
+	     ensures @(ReferenceCopyLocalPaths) is populated when pack invokes this. -->
+	<Target Name="IncludeReferencedProjectsInPackage" DependsOnTargets="ResolveReferences">
+		<ItemGroup>
+			<BuildOutputInPackage Include="@(ReferenceCopyLocalPaths)"
+				Condition="'%(ReferenceCopyLocalPaths.ReferenceSourceTarget)' == 'ProjectReference' And '%(Extension)' == '.dll'" />
+		</ItemGroup>
+	</Target>
+
   <ItemGroup>
     <PackageReference Include="DotNext" Version="6.2.0" />
     <PackageReference Include="Markdig" Version="0.40.0" />
@@ -42,10 +96,16 @@
   </ItemGroup>
 
   <ItemGroup>
-	  <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
-	  <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
-	  <ProjectReference Include="..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" />
-	  <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
+	  <!-- These four are NOT published NuGet packages. PrivateAssets="all" keeps them out of the generated
+	       .nuspec <dependencies> (the only reliable NuGet lever, since the dependency list is projected from
+	       the restore assets file), so an external consumer's restore never looks for them on nuget.org.
+	       Their compile-time DLLs are bundled into lib/ by IncludeReferencedProjectsInPackage instead.
+	       Because PrivateAssets="all" also stops them flowing transitively to SharpMUSH.Library's consumers,
+	       the few in-tree projects that relied on that transitivity now reference them directly. -->
+	  <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" PrivateAssets="all" />
+	  <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" PrivateAssets="all" />
+	  <ProjectReference Include="..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" PrivateAssets="all" />
+	  <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

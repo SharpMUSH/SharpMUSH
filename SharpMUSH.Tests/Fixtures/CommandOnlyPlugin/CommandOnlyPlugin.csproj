@@ -20,6 +20,14 @@
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
+		<!-- MarkupString (MString used by command bodies). Referenced directly because SharpMUSH.Library
+		     marks its SharpMUSH.* ProjectReferences PrivateAssets="all" for packaging, so it no longer flows
+		     transitively. An external plugin referencing the SharpMUSH.Library package gets MarkupString from
+		     the bundled lib/ DLL the same way; here it is a sibling project. Host-owned at runtime. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
 		<!-- Source generator as an analyzer: this assembly gets its own
 		     SharpMUSH.Implementation.Generated.CommandLibrary/FunctionLibrary that PluginBase reflects. -->
 		<ProjectReference Include="..\..\..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj"

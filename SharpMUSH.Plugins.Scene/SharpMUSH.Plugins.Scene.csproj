@@ -41,6 +41,13 @@
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
+		<!-- SharpMUSH.Configuration (PennMUSH-compat options used by SceneFunctions). Referenced directly
+		     because SharpMUSH.Library now marks its SharpMUSH.* ProjectReferences PrivateAssets="all" for
+		     packaging, so Configuration no longer flows transitively through Library. Host-owned at runtime. -->
+		<ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
 		<!-- The source generator referenced as an analyzer: the plugin's [SharpCommand]/[SharpFunction]
 		     methods produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
 		     FunctionLibrary.Functions inside THIS assembly, so PluginBase can reflect them. -->

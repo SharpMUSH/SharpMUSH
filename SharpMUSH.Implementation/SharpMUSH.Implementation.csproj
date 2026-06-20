@@ -33,6 +33,9 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
+		<!-- Referenced directly (IMessageBus / SharpMUSH.Messaging) because SharpMUSH.Library now marks its
+		     SharpMUSH.* ProjectReferences PrivateAssets="all" for packaging, so they no longer flow through. -->
+		<ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Documentation\SharpMUSH.Documentation.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj" OutputItemType="Analyzer" />
