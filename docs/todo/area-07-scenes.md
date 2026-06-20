@@ -160,16 +160,21 @@ plugin seam.
 - **Test matrix:** config binds; `Scene` category generated; stale generator does
   not drop it.
 
-## Phase 7 — Plugin-seam hardening (pre-extraction, design only)
-- [x] Propose `IBridgeSubscription` registry (replace hard-coded
-      `NatsBridgeService.Task.WhenAll`) — seam #6 blocker
-- [x] Propose `IFlagContribution` (ship `SCENE_ROOM` without editing core flag
-      seeding) — seam #1b
-- [x] Confirm `SceneEventMessage` + the named-graph edge definitions referencing
-      core collections (`node_rooms`/`node_players`/`node_objects`) are the
-      documented extraction coupling points; freeze the realtime contract
-- **Ships:** extraction-readiness note + contribution-inventory mapping —
-      see scene-system.md "Phase 7 — Extraction-Readiness Note".
+## Phase 7 — Plugin-seam hardening → **extraction realized** (Scene is now a plugin)
+The seams below were proposed here, then **built and consumed for real** when Scene
+was extracted into `SharpMUSH.Plugins.Scene` (Phase 5 of the plugin framework).
+- [x] `IBridgeSubscription` registry — built as the framework's `IBridgeSubscriptionSource`;
+      `NatsBridgeService` now enumerates registered sources instead of a hard-coded
+      `Task.WhenAll`, and `ScenePlugin` contributes the `game.scene.*` leg. (seam #6)
+- [x] `IFlagContribution` — built as `IFlagSource` + `PluginFlag`; `ScenePlugin` ships
+      `SCENE_ROOM` without the engine seeding it. (seam #1b)
+- [x] `SceneEventMessage` + the named-graph edges referencing core collections are the
+      documented coupling points; the realtime contract is frozen.
+- **Shipped:** `SharpMUSH.Plugins.Scene` (commands/functions via `ICommandSource`/
+      `IFunctionSource`, migration via `IMigrationSource`, flag via `IFlagSource`, bridge
+      via `IBridgeSubscriptionSource`); `ISceneService` graph storage stays in the
+      providers. The unchanged 29-test scene suite passes with Scene as a loaded plugin —
+      see `docs/design/plugin-system.md` §"Phase 5".
 
 ## Cross-Phase Test Matrix Summary
 
