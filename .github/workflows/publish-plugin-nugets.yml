@@ -1,0 +1,84 @@
+name: Publish Plugin NuGets
+
+# Packs and pushes the two packages an external SharpMUSH plugin author references:
+#   - SharpMUSH.Library                  (the plugin contract surface)
+#   - SharpMUSH.Implementation.Generated (the [SharpCommand]/[SharpFunction] source-generator analyzer)
+#
+# Triggered by a tag like plugin-nuget/v1.0.0. The version after the slash+v is used as the
+# package version, so it should match PluginContractVersion.Current / the csproj <Version>.
+
+on:
+  push:
+    tags:
+      - 'plugin-nuget/v*'  # e.g. plugin-nuget/v1.0.0
+  workflow_dispatch:       # Allow manual triggering (uses the csproj <Version>)
+
+permissions:
+  contents: read
+
+jobs:
+  pack-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read    # checkout
+      id-token: write   # mint the GitHub OIDC token for NuGet Trusted Publishing (keyless)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Derive version from tag
+        id: meta
+        run: |
+          # plugin-nuget/v1.0.0 -> 1.0.0 ; on workflow_dispatch leave VERSION empty (csproj default).
+          REF="${GITHUB_REF}"
+          if [[ "$REF" == refs/tags/plugin-nuget/v* ]]; then
+            VERSION="${REF#refs/tags/plugin-nuget/v}"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "version_arg=-p:Version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "Packing plugin NuGets at version: $VERSION"
+          else
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "version_arg=" >> "$GITHUB_OUTPUT"
+            echo "Packing plugin NuGets at csproj <Version> (manual run)"
+          fi
+
+      - name: Restore
+        run: dotnet restore SharpMUSH.Library/SharpMUSH.Library.csproj
+             && dotnet restore SharpMUSH.Implementation.Generated/SharpMUSH.Implementation.Generated.csproj
+
+      - name: Pack contract package (SharpMUSH.Library)
+        run: dotnet pack SharpMUSH.Library/SharpMUSH.Library.csproj
+             --configuration Release
+             --output ${{ runner.temp }}/nupkgs
+             ${{ steps.meta.outputs.version_arg }}
+
+      - name: Pack analyzer package (SharpMUSH.Implementation.Generated)
+        run: dotnet pack SharpMUSH.Implementation.Generated/SharpMUSH.Implementation.Generated.csproj
+             --configuration Release
+             --output ${{ runner.temp }}/nupkgs
+             ${{ steps.meta.outputs.version_arg }}
+
+      - name: List produced packages
+        run: ls -la ${{ runner.temp }}/nupkgs
+
+      # Trusted Publishing (OIDC): exchange this job's short-lived GitHub OIDC token for a ~1h
+      # nuget.org API key — no long-lived NUGET_API_KEY secret. Requires a Trusted Publishing policy
+      # on nuget.org bound to owner=SharpMUSH, repository=SharpMUSH, workflow file=publish-plugin-nugets.yml.
+      # NUGET_USER is just your nuget.org profile name (NOT email; not sensitive — could be hardcoded).
+      - name: NuGet login (OIDC -> short-lived key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to NuGet
+        run: dotnet nuget push "${{ runner.temp }}/nupkgs/*.nupkg"
+             --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
+             --source https://api.nuget.org/v3/index.json
+             --skip-duplicate
