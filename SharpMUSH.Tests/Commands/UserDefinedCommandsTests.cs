@@ -222,6 +222,31 @@ public class UserDefinedCommandsTests
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
+	/// <summary>
+	/// Per `help r` / `help regexp syntax6`, a regexp $-command's named captures are "named stack
+	/// registers", read via r(&lt;name&gt;, args) — the `args` TYPE selector (r/&lt;name&gt; alone reads
+	/// q-registers). This proves whether the args-type read of named captures works.
+	/// </summary>
+	[Test]
+	public async ValueTask Regex_NamedCaptureGroups_AccessibleByName_ViaRArgs()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRxName");
+		var token = TestIsolationHelpers.GenerateUniqueName("ucn");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_RXNAME {obj}=${token} (?<num>[0-9]+)d(?<sides>[0-9]+):@emit {token}: Rolling [r(num,args)]d[r(sides,args)]"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@set {obj}/UTEST_RXNAME=regexp"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} 3d6"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: Rolling 3d6")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
 	[Test]
 	[Category("TestInfrastructure")]
 	[Skip("Test needs investigation - unrelated to communication commands")]

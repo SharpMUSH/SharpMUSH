@@ -314,11 +314,24 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	public async Task R_WithDefault()
+	public async Task R_TypeSelectorAndMissing()
 	{
-		// r(NONEXISTENT,default_value)
-		var result = (await Parser.FunctionParse(MModule.single("r(NONEXISTENT,default_value)")))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo("default_value");
+		// A missing q-register returns empty — the SECOND argument is a TYPE selector (per `help r`),
+		// not a fallback default value.
+		var empty = (await Parser.FunctionParse(MModule.single("r(NONEXISTENT)")))?.Message!;
+		await Assert.That(empty.ToPlainText()).IsEqualTo("");
+
+		// The explicit "qregisters" type reads setq/setr registers, same as the default.
+		var explicitQ = (await Parser.FunctionParse(MModule.single("setq(A,qval)[r(A,qregisters)]")))?.Message!;
+		await Assert.That(explicitQ.ToPlainText()).IsEqualTo("qval");
+
+		// An unrecognized type is an error (it is NOT treated as a default value any more).
+		var badType = (await Parser.FunctionParse(MModule.single("r(NONEXISTENT,default_value)")))?.Message!;
+		await Assert.That(badType.ToPlainText()).StartsWith("#-1");
+
+		// The type accepts unambiguous prefixes: "q" resolves to "qregisters".
+		var prefixQ = (await Parser.FunctionParse(MModule.single("setq(B,bval)[r(B,q)]")))?.Message!;
+		await Assert.That(prefixQ.ToPlainText()).IsEqualTo("bval");
 	}
 
 	[Test]
