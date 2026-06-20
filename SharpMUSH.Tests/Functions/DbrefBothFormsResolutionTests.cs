@@ -97,11 +97,6 @@ public class DbrefBothFormsResolutionTests
 	}
 
 	[Test]
-	[Skip("Known bug: loc() by a bare #N returns a stale location after a move. GetObjectNodeQuery.CacheKey " +
-		"keys on the timestamp-sensitive DBRef, so a bare-#N read caches under 'object:#N', which move " +
-		"invalidation (keyed by the object's full objid) never clears. The move is correct (loc by full objid " +
-		"and lcon are fresh); only loc()-by-bare is stale. Fix: normalize the object cache key to the dbref " +
-		"number on both read (GetObjectNodeQuery/GetContentsQuery) and the ~27 invalidation sites.")]
 	public async ValueTask Loc_ByBareDbref_IsFreshAfterMove()
 	{
 		var tag = Guid.NewGuid().ToString("N")[..8];
@@ -117,5 +112,27 @@ public class DbrefBothFormsResolutionTests
 		// loc() by the bare #N should reflect the move (currently returns the stale pre-move location).
 		await Assert.That(Short(await Eval($"loc({thing})"))).IsEqualTo(room)
 			.Because("loc() by the bare #N must reflect a move (full objid loc() and lcon() already do)");
+	}
+
+	// The recycle/objid guard the cache fix must NOT regress: a full objid with a mismatched creation
+	// time must never resolve the live #N — even after the bare #N (number-keyed) entry is cached.
+	[Test]
+	public async ValueTask ObjidWithWrongTimestamp_DoesNotResolve_EvenWhenBareIsCached()
+	{
+		var tag = Guid.NewGuid().ToString("N")[..8];
+		var name = $"ObjidThing_{tag}";
+		var thingFull = await CmdOut($"@create {name}");
+		var thing = Short(thingFull);                       // #N
+		var objid = await Eval($"objid({thing})");          // #N:realts
+
+		// Prime the by-number cache with the bare form, then confirm the correct objid still resolves.
+		await Assert.That(await Eval($"name({thing})")).IsEqualTo(name)
+			.Because("the bare #N resolves the object");
+		await Assert.That(await Eval($"name({objid})")).IsEqualTo(name)
+			.Because("the correct full objid resolves the object");
+
+		// A WRONG-timestamp objid must NOT resolve the live #N, despite object:#N being cached.
+		await Assert.That(await Eval($"name({thing}:1)")).IsNotEqualTo(name)
+			.Because("a full objid with a mismatched creation time must not resolve the live #N (recycle validation must run on every request)");
 	}
 }

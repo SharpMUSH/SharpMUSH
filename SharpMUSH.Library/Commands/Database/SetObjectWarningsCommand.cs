@@ -8,6 +8,6 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record SetObjectWarningsCommand(AnySharpObject Target, WarningType Warnings) : ICommand, ICacheInvalidating
 {
-	public string[] CacheKeys => [$"object:{Target.Object().DBRef}"];
+	public string[] CacheKeys => [Definitions.CacheKeys.Object(Target.Object().DBRef)];
 	public string[] CacheTags => [];
 }

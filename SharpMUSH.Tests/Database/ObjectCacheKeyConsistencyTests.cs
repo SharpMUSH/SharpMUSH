@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -7,16 +8,16 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Database;
 
 /// <summary>
-/// Proves the cache read/write key DISAGREEMENT behind the loc()-stale-after-move bug.
+/// Proves the object-cache read key and write/invalidation key AGREE regardless of dbref form (the
+/// number-keying fix for the loc()-stale-after-move bug).
 ///
-/// READ side  (QueryCachingBehavior caches under this): GetObjectNodeQuery.CacheKey => $"object:{DBRef}".
-/// WRITE side (CacheInvalidationBehavior removes these): every mutating command, e.g.
-///            MoveObjectCommand.CacheKeys => $"object:{Target.Object().DBRef}".
+/// READ side  — GetObjectNodeByNumberQuery caches under CacheKeys.Object(Number).
+/// WRITE side — every mutating command invalidates CacheKeys.Object(...DBRef).
 ///
-/// DBRef.ToString() is "#N" when CreationMilliseconds is null and "#N:ms" otherwise, and a loaded
-/// object's DBRef is built as `new DBRef(int.Parse(obj.Key), time)` (always WITH the timestamp). So a
-/// bare "#N" reference caches under "object:#N" while every invalidation removes the FULL "object:#N:ms" —
-/// the bare entry is never cleared.
+/// CacheKeys.Object keys by the dbref NUMBER only, so a bare "#N" reference and a full "#N:creation" objid
+/// map to the SAME entry, and a mutation (which knows the number) invalidates exactly the entry a bare-#N
+/// read cached under. The objid (recycle) check now lives outside the cache (see
+/// DbrefBothFormsResolutionTests.ObjidWithWrongTimestamp_DoesNotResolve_EvenWhenBareIsCached).
 /// </summary>
 [NotInParallel]
 public class ObjectCacheKeyConsistencyTests
@@ -29,59 +30,51 @@ public class ObjectCacheKeyConsistencyTests
 
 	private const long SampleCreation = 1781000000000L;
 
-	// ── READ side ────────────────────────────────────────────────────────────────────────────────
 	[Test]
-	public async ValueTask ReadCacheKey_IsTimestampSensitive_BareVsFull()
+	public async ValueTask ObjectKey_IsNumberOnly_BareAndFullUnify()
 	{
-		var bareKey = new GetObjectNodeQuery(new DBRef(10)).CacheKey;
-		var fullKey = new GetObjectNodeQuery(new DBRef(10, SampleCreation)).CacheKey;
+		var bare = CacheKeys.Object(new DBRef(10));
+		var full = CacheKeys.Object(new DBRef(10, SampleCreation));
 
-		await Assert.That(bareKey).IsEqualTo("object:#10");
-		await Assert.That(fullKey).IsEqualTo($"object:#10:{SampleCreation}");
-		await Assert.That(bareKey).IsNotEqualTo(fullKey)
-			.Because("the read cache key changes with the dbref form (bare #N vs full #N:creation)");
+		await Assert.That(bare).IsEqualTo("object:#10");
+		await Assert.That(full).IsEqualTo("object:#10");
+		await Assert.That(bare).IsEqualTo(full)
+			.Because("the object cache key is the dbref number only — bare #N and full #N:creation unify");
 	}
 
-	// A softcode "#10" reference (what %#, %!, or a literal #N produce) parses timestamp-less → bare key.
 	[Test]
-	public async ValueTask BareDbrefString_ParsesTimestampless_ProducingTheBareReadKey()
+	public async ValueTask ByNumberReadKey_MatchesInvalidationKey()
 	{
-		var parsed = DBRef.Parse("#10");
-		await Assert.That(parsed.CreationMilliseconds).IsNull()
-			.Because("a bare '#10' reference has no creation timestamp");
-		await Assert.That(new GetObjectNodeQuery(parsed).CacheKey).IsEqualTo("object:#10");
+		var readKey = new GetObjectNodeByNumberQuery(10).CacheKey;          // what a read caches under
+		var invalidationKey = CacheKeys.Object(new DBRef(10, SampleCreation)); // what a mutation removes (full dbref)
+
+		await Assert.That(readKey).IsEqualTo("object:#10");
+		await Assert.That(invalidationKey).IsEqualTo(readKey)
+			.Because("read and write keys now agree on the number — a move invalidates exactly the cached read");
 	}
 
-	// ── WRITE side vs READ side ──────────────────────────────────────────────────────────────────
-	// Mirrors MoveObjectCommand.CacheKeys ($"object:{Target.Object().DBRef}"); a loaded object's DBRef
-	// is full-form, so the invalidation key matches a FULL read but never a BARE read.
 	[Test]
-	public async ValueTask MoveInvalidationKey_MatchesFullRead_ButMissesBareRead()
+	public async ValueTask BareDbrefString_AndFullObjid_ProduceTheSameKey()
 	{
-		var loadedObjectDbref = new DBRef(10, SampleCreation);   // == Target.Object().DBRef (always full)
-		var invalidationKey = $"object:{loadedObjectDbref}";
+		var fromBare = CacheKeys.Object(DBRef.Parse("#10"));
+		var fromFull = CacheKeys.Object(DBRef.Parse($"#10:{SampleCreation}"));
 
-		var fullReadKey = new GetObjectNodeQuery(loadedObjectDbref).CacheKey;
-		var bareReadKey = new GetObjectNodeQuery(new DBRef(10)).CacheKey;
-
-		await Assert.That(invalidationKey).IsEqualTo(fullReadKey)
-			.Because("a move invalidates exactly the full-objid read key");
-		await Assert.That(invalidationKey).IsNotEqualTo(bareReadKey)
-			.Because("a move NEVER invalidates the bare #N read key → loc(#10) stays cached and goes stale");
+		await Assert.That(fromBare).IsEqualTo("object:#10");
+		await Assert.That(fromFull).IsEqualTo("object:#10")
+			.Because("a full objid and a bare reference to the same number share one cache entry");
 	}
 
-	// ── Linchpin (integration): a real loaded object's DBRef is full-form ─────────────────────────
 	[Test]
-	public async ValueTask LoadedObjectDbref_CarriesCreationTimestamp_SoInvalidationIsFullForm()
+	public async ValueTask LoadedObjectDbref_CarriesTimestamp_ButKeyDropsIt_SoInvalidationMatchesBareRead()
 	{
 		var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CacheKeyLinchpin");
 
 		await Assert.That(thing.CreationMilliseconds).IsNotNull()
-			.Because("a real object's DBRef carries its creation time, so every mutation's invalidation key is the FULL objid");
+			.Because("a real object's DBRef carries its creation time");
 
-		var invalidationKey = $"object:{thing}";                                  // object:#N:ms (write)
-		var bareReadKey = new GetObjectNodeQuery(new DBRef(thing.Number)).CacheKey; // object:#N    (loc(#N) read)
-		await Assert.That(invalidationKey).IsNotEqualTo(bareReadKey)
-			.Because("the move invalidates object:{full-objid} while loc(#N) cached object:#N — the disagreement, with a real object");
+		var invalidationKey = CacheKeys.Object(thing);                  // write side (full-form dbref)
+		var bareReadKey = CacheKeys.Object(new DBRef(thing.Number));    // read side (loc(#N))
+		await Assert.That(invalidationKey).IsEqualTo(bareReadKey)
+			.Because("CacheKeys.Object drops the timestamp, so a move invalidates the same entry loc(#N) caches");
 	}
 }

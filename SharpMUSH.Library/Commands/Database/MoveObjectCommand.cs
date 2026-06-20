@@ -17,14 +17,14 @@ public record MoveObjectCommand(
 {
 	public string[] CacheKeys => OldContainer is not null
 		? [
-			$"object-contents:{OldContainer}",
-			$"object-contents:{Destination.Object().DBRef}",
-			$"object:{Target.Object().DBRef}",
-			$"object:{Destination.Object().DBRef}"
+			Definitions.CacheKeys.Contents(OldContainer.Value),
+			Definitions.CacheKeys.Contents(Destination.Object().DBRef),
+			Definitions.CacheKeys.Object(Target.Object().DBRef),
+			Definitions.CacheKeys.Object(Destination.Object().DBRef)
 		]
 		: [
-			$"object:{Target.Object().DBRef}",
-			$"object:{Destination.Object().DBRef}"
+			Definitions.CacheKeys.Object(Target.Object().DBRef),
+			Definitions.CacheKeys.Object(Destination.Object().DBRef)
 		];
 
 	/// <summary>
