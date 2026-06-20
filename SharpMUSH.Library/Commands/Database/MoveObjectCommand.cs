@@ -28,11 +28,15 @@ public record MoveObjectCommand(
 		];
 
 	/// <summary>
-	/// Falls back to the broad <see cref="Definitions.CacheTags.ObjectContents"/> tag only when
-	/// the caller has not supplied <see cref="OldContainer"/>.  When <see cref="OldContainer"/> is
-	/// provided the specific cache keys above are sufficient.
+	/// Always invalidates the moved object's location (both the number-keyed and graph-id-keyed location
+	/// caches, via per-object tags that clear every depth). Falls back to the broad
+	/// <see cref="Definitions.CacheTags.ObjectContents"/> tag only when the caller has not supplied
+	/// <see cref="OldContainer"/>; when it is provided the specific contents keys above are sufficient.
 	/// </summary>
-	public string[] CacheTags => OldContainer is null
-		? [Definitions.CacheTags.ObjectContents]
-		: [];
+	public string[] CacheTags =>
+	[
+		Definitions.CacheKeys.LocationTag(Target.Object().DBRef.Number),
+		Definitions.CacheKeys.LocationTag(Target.Object().Id!), // base Object().Id — matches GetCertainLocationQuery cache identity
+		.. OldContainer is null ? (string[]) [Definitions.CacheTags.ObjectContents] : []
+	];
 }

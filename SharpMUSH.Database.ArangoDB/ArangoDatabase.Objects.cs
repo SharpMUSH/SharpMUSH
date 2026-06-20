@@ -490,7 +490,7 @@ public partial class ArangoDatabase
 			{
 				Id = id,
 				Object = convertObject,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.TypePlayer => new SharpPlayer
@@ -498,7 +498,7 @@ public partial class ArangoDatabase
 				Id = id,
 				Object = convertObject,
 				Aliases = res.Aliases,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
 				PasswordHash = res.PasswordHash,
 				PasswordSalt = res.PasswordSalt,
@@ -515,7 +515,7 @@ public partial class ArangoDatabase
 				Id = id,
 				Object = convertObject,
 				Aliases = res.Aliases,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{obj.Type}'")
@@ -555,13 +555,13 @@ public partial class ArangoDatabase
 			DatabaseConstants.Things => new SharpThing
 			{
 				Id = id, Object = convertObject,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.Players => new SharpPlayer
 			{
 				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct)),
 				PasswordHash = res.GetProperty("PasswordHash").GetString()!,
 				PasswordSalt = res.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
@@ -576,7 +576,7 @@ public partial class ArangoDatabase
 			DatabaseConstants.Exits => new SharpExit
 			{
 				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, convertObject.Id!), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			_ => new None(),

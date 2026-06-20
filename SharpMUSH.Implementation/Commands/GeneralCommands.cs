@@ -634,7 +634,7 @@ public partial class Commands
 		}
 		else
 		{
-			viewing = (await Mediator!.Send(new GetCertainLocationQuery(executor.Id()!))).WithExitOption()
+			viewing = (await Mediator!.Send(new GetCertainLocationQuery(executor.Id()!, executor.Object().Id!))).WithExitOption()
 				.WithNoneOption();
 		}
 
