@@ -32,17 +32,23 @@ public interface INatsBridgeService : IHostedService;
 public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 {
 	private readonly IHubContext<GameHub, IGameHubClient> _hubContext;
+	// Untyped hub context handed to plugin bridge sources. IBridgeSubscriptionSource.RunAsync receives it as
+	// object and casts to the non-generic IHubContext to SendAsync(<method-name>, ...). IHubContext<GameHub,T>
+	// (strongly-typed) does NOT implement the non-generic IHubContext, so we must pass IHubContext<GameHub>.
+	private readonly IHubContext<GameHub> _pluginHubContext;
 	private readonly NatsOptions _natsOptions;
 	private readonly ILogger<NatsBridgeService> _logger;
 	private readonly PluginCatalog _pluginCatalog;
 
 	public NatsBridgeService(
 		IHubContext<GameHub, IGameHubClient> hubContext,
+		IHubContext<GameHub> pluginHubContext,
 		NatsOptions natsOptions,
 		PluginCatalog pluginCatalog,
 		ILogger<NatsBridgeService> logger)
 	{
 		_hubContext = hubContext;
+		_pluginHubContext = pluginHubContext;
 		_natsOptions = natsOptions;
 		_pluginCatalog = pluginCatalog;
 		_logger = logger;
@@ -124,7 +130,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 	{
 		try
 		{
-			await source.RunAsync(nats, _hubContext, ct);
+			await source.RunAsync(nats, _pluginHubContext, ct);
 		}
 		catch (OperationCanceledException)
 		{

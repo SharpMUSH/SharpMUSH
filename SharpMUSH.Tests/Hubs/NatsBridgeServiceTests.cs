@@ -30,9 +30,10 @@ public class NatsBridgeServiceTests
 		clientProxy.ReceiveRoomEvent(Arg.Any<RoomEventMessage>()).Returns(Task.CompletedTask);
 		clientProxy.ReceiveSceneMessage(Arg.Any<SceneEventMessage>()).Returns(Task.CompletedTask);
 
+		var pluginHubContext = Substitute.For<IHubContext<GameHub>>();
 		var options = new NatsOptions { Url = natsUrl };
 		var service = new NatsBridgeService(
-			hubContext, options, SharpMUSH.Implementation.Services.PluginCatalog.Empty(),
+			hubContext, pluginHubContext, options, SharpMUSH.Implementation.Services.PluginCatalog.Empty(),
 			NullLogger<NatsBridgeService>.Instance);
 
 		return (service, hubContext);
