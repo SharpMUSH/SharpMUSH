@@ -19,6 +19,9 @@ permissions:
 jobs:
   pack-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read    # checkout
+      id-token: write   # mint the GitHub OIDC token for NuGet Trusted Publishing (keyless)
 
     steps:
       - name: Checkout code
@@ -64,9 +67,18 @@ jobs:
       - name: List produced packages
         run: ls -la ${{ runner.temp }}/nupkgs
 
+      # Trusted Publishing (OIDC): exchange this job's short-lived GitHub OIDC token for a ~1h
+      # nuget.org API key — no long-lived NUGET_API_KEY secret. Requires a Trusted Publishing policy
+      # on nuget.org bound to owner=SharpMUSH, repository=SharpMUSH, workflow file=publish-plugin-nugets.yml.
+      # NUGET_USER is just your nuget.org profile name (NOT email; not sensitive — could be hardcoded).
+      - name: NuGet login (OIDC -> short-lived key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push to NuGet
-        # NUGET_API_KEY is a repository/organization secret placeholder — set it before tagging.
         run: dotnet nuget push "${{ runner.temp }}/nupkgs/*.nupkg"
-             --api-key "${{ secrets.NUGET_API_KEY }}"
+             --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
              --source https://api.nuget.org/v3/index.json
              --skip-duplicate
