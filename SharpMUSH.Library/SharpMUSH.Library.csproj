@@ -22,6 +22,9 @@
     <PackageReference Include="NATS.Net" Version="2.7.3" />
     <PackageReference Include="Npgsql" Version="10.0.2" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.7" />
+    <!-- Transitive pin: force SQLitePCLRaw 3.x (bundles SQLite >= 3.50.4, past CVE-2025-6965).
+         Microsoft.Data.Sqlite 10.0.7 requires SQLitePCLRaw >= 2.1.11 (a minimum), so 3.x satisfies it. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
     <PackageReference Include="NaturalSort.Extension" Version="4.4.1" />
 		<PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="OneOf.SourceGenerator" Version="3.0.271" />
