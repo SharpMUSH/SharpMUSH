@@ -461,4 +461,38 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(table).Contains($"ListTest_{Tag}").Because("the created scene's title should appear in the table");
 		await Assert.That(table).Contains("active").Because("the status column should show the started scene as active");
 	}
+
+	/// <summary>+scene/schedule/add — a roomless future scene. Sets scheduledfor (millis), lands in the
+	/// 'scheduled' filter, and renders in the +scene/schedule table.</summary>
+	[Test]
+	public async Task SceneSchedule_AddsRoomlessFutureScene()
+	{
+		await God1("@set #1=WIZARD");
+
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+		await God1($"@tel {loggerDbref}=#0");
+
+		var sam = await CreatePlayerAsync($"Sam_{Tag}", "pw_sam_123", 41L);
+		await God1($"@tel {sam}=#0");
+
+		// Schedule with raw epoch-seconds (convtime rejects it → SCHED_WHEN falls back to the number * 1000).
+		var schedMsgs = await RunAndCollectAs(41L, $"+scene/schedule/add Gala_{Tag}=2524608000");
+		var schedLine = schedMsgs.First(m => m.Contains("Scheduled scene"));
+		var schedId = schedLine.Replace("Scheduled scene ", "").Split(' ')[0];
+		await Assert.That(schedId).IsNotEmpty().Because("the schedule confirmation should carry the new scene id");
+
+		await Assert.That(await Eval($"scene({schedId}, scheduledfor)")).IsEqualTo("2524608000000")
+			.Because("scheduledfor should be the epoch-seconds value converted to millis");
+		await Assert.That(await Eval($"scene({schedId}, status)")).IsEqualTo("scheduled");
+
+		// scenelist() is exercised through the verb (command-parser context) rather than Eval (the
+		// function-parser doesn't see the just-written scene in a collection scan; a key lookup does).
+		var listMsgs = await RunAndCollectAs(41L, "+scene/schedule");
+		var table = string.Join("\n", listMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
+		Console.WriteLine("=== +scene/schedule ===\n" + table);
+		await Assert.That(table).Contains("Scheduled Scenes").Because("the schedule header should render");
+		await Assert.That(table).Contains($"Gala_{Tag}").Because("the scheduled scene's title should appear");
+	}
 }
