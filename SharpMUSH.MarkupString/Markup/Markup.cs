@@ -7,6 +7,13 @@ using ANSILibrary;
 
 namespace MarkupString.MarkupImplementation;
 
+/// <summary>
+/// Distinguishes a link that runs a MUSH command when clicked (e.g. "help topic")
+/// from one that navigates to a URL. <see cref="Url"/> is value 0 and the default so
+/// legacy markup with no LinkKind deserialises to navigation behaviour.
+/// </summary>
+public enum LinkKind { Url = 0, Command = 1 }
+
 // ── Struct records ─────────────────────────────────────────────────────────────
 
 /// <summary>
@@ -18,6 +25,7 @@ public readonly record struct AnsiStructure
     public AnsiColor Background    { get; init; }
     public string?  LinkText       { get; init; }
     public string?  LinkUrl        { get; init; }
+    public LinkKind LinkKind       { get; init; }
     public bool     Blink          { get; init; }
     public bool     Bold           { get; init; }
     public bool     Clear          { get; init; }
@@ -87,6 +95,7 @@ public sealed class AnsiMarkup : IMarkup
         AnsiColor? background  = null,
         string?    linkText    = null,
         string?    linkUrl     = null,
+        LinkKind   linkKind    = LinkKind.Url,
         bool       blink       = false,
         bool       bold        = false,
         bool       clear       = false,
@@ -103,6 +112,7 @@ public sealed class AnsiMarkup : IMarkup
             Background    = background  ?? AnsiColor.NoAnsi.Instance,
             LinkText      = linkText    ?? string.Empty,
             LinkUrl       = linkUrl     ?? string.Empty,
+            LinkKind      = linkKind,
             Blink         = blink,
             Bold          = bold,
             Clear         = clear,
