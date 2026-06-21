@@ -1535,7 +1535,12 @@ public class SharpMUSHParserVisitor(
 				var overrideHook = await HookService.GetHookAsync(rootCommand, "OVERRIDE");
 				if (overrideHook.IsSome())
 				{
-					Option<MString> overrideInput = commandWithSwitches;
+					// Match the override $-command against the command line EVALUATED in the caller's context
+					// (prs), so substitutions/functions are applied first — an override must see the command
+					// the way the real command would (e.g. `@emit payload=hello`, not the raw `@emit payload=%0`).
+					// Evaluate against prs, not newParser: newParser's %0 is the command's OWN argument, whereas
+					// prs still holds the caller's numbered registers (the surrounding $-command's %0).
+					Option<MString> overrideInput = (await prs.FunctionParse(commandWithSwitches))?.Message ?? commandWithSwitches;
 					var overrideResult = await ExecuteHookCode(newParser, executor, overrideHook.AsValue(), overrideInput);
 					if (overrideResult.IsSome())
 					{
@@ -1582,7 +1587,9 @@ public class SharpMUSHParserVisitor(
 					var extendHook = await HookService.GetHookAsync(rootCommand, "EXTEND");
 					if (extendHook.IsSome())
 					{
-						Option<MString> extendInput = commandWithSwitches;
+						// Same as the override path: match against the command line evaluated in the caller's
+						// context (prs) so substitutions are applied before the extend $-command sees it.
+						Option<MString> extendInput = (await prs.FunctionParse(commandWithSwitches))?.Message ?? commandWithSwitches;
 						var extendResult = await ExecuteHookCode(newParser, executor, extendHook.AsValue(), extendInput);
 						if (extendResult.IsSome())
 						{
