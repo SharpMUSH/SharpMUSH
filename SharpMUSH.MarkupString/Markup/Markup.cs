@@ -161,10 +161,18 @@ public sealed class AnsiMarkup : IMarkup
 
         var classes = HtmlClassNames(d);
 
-        // Wrap hyperlink
+        // Wrap hyperlink. Command links run a MUSH command (xch_cmd, intercepted by the
+        // WASM terminal); URL links navigate in a new tab.
         string inner = text;
         if (d.LinkUrl is { Length: > 0 } url)
-            inner = $"<a href=\"{WebUtility.HtmlEncode(url)}\">{text}</a>";
+        {
+            var title = d.LinkText is { Length: > 0 } hint
+                ? $" title=\"{WebUtility.HtmlEncode(hint)}\""
+                : "";
+            inner = d.LinkKind == LinkKind.Command
+                ? $"<a class=\"ms-cmd-link\" xch_cmd=\"{WebUtility.HtmlEncode(url)}\"{title}>{text}</a>"
+                : $"<a href=\"{WebUtility.HtmlEncode(url)}\" target=\"_blank\" rel=\"noopener noreferrer\"{title}>{text}</a>";
+        }
 
         string styleAttr = styles.Count > 0 ? $" style=\"{string.Join("; ", styles)}\"" : "";
         string classAttr = classes.Count > 0 ? $" class=\"{string.Join(" ", classes)}\"" : "";
