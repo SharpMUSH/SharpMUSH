@@ -243,4 +243,78 @@ public class LinkKindRenderTests
 		await Assert.That(mxp).Contains("SEND HREF=\"+who\"");
 		await Assert.That(mxp).Contains("<COLOR FORE=");
 	}
+
+	// ── Accessibility: command links are keyboard-focusable ──────────────────────
+
+	[Test]
+	public async Task Html_CommandLink_IsKeyboardAccessible()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "help topic", linkKind: LinkKind.Command), "topic");
+		var html = ms.Render("html");
+
+		await Assert.That(html).Contains("role=\"button\"");
+		await Assert.That(html).Contains("tabindex=\"0\"");
+	}
+
+	// ── Security: unsafe URL schemes are not rendered as clickable links ─────────
+
+	[Test]
+	public async Task IsSafeNavigableUrl_AllowsSafeSchemesAndRelative_BlocksDangerous()
+	{
+		await Assert.That(AnsiMarkup.IsSafeNavigableUrl("https://example.com")).IsTrue();
+		await Assert.That(AnsiMarkup.IsSafeNavigableUrl("http://example.com")).IsTrue();
+		await Assert.That(AnsiMarkup.IsSafeNavigableUrl("mailto:a@b.com")).IsTrue();
+		await Assert.That(AnsiMarkup.IsSafeNavigableUrl("/wiki/page")).IsTrue();
+		await Assert.That(AnsiMarkup.IsSafeNavigableUrl("javascript:alert(1)")).IsFalse();
+		await Assert.That(AnsiMarkup.IsSafeNavigableUrl("JavaScript:alert(1)")).IsFalse();
+		await Assert.That(AnsiMarkup.IsSafeNavigableUrl("data:text/html,<script>")).IsFalse();
+		await Assert.That(AnsiMarkup.IsSafeNavigableUrl("vbscript:msgbox(1)")).IsFalse();
+		await Assert.That(AnsiMarkup.IsSafeNavigableUrl("file:///etc/passwd")).IsFalse();
+	}
+
+	[Test]
+	public async Task Html_UrlLink_JavascriptScheme_RendersPlainText()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "javascript:alert(1)", linkKind: LinkKind.Url), "click");
+		var html = ms.Render("html");
+
+		await Assert.That(html).DoesNotContain("<a ");
+		await Assert.That(html).DoesNotContain("javascript:");
+		await Assert.That(html.Contains("click")).IsTrue();
+	}
+
+	[Test]
+	public async Task Pueblo_UrlLink_UnsafeScheme_RendersPlainText()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "javascript:alert(1)", linkKind: LinkKind.Url), "click");
+		var pueblo = ms.Render("pueblo");
+
+		await Assert.That(pueblo).DoesNotContain("<A HREF");
+		await Assert.That(pueblo).DoesNotContain("javascript:");
+	}
+
+	[Test]
+	public async Task Mxp_UrlLink_UnsafeScheme_RendersPlainText()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "data:text/html,x", linkKind: LinkKind.Url), "click");
+		var mxp = ms.Render("mxp");
+
+		await Assert.That(mxp).DoesNotContain("<A HREF");
+		await Assert.That(mxp).DoesNotContain("data:");
+	}
+
+	[Test]
+	public async Task Ansi_UrlLink_UnsafeScheme_RendersPlainTextNoOsc8()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "javascript:alert(1)", linkKind: LinkKind.Url), "click");
+		var ansi = ms.Render("ansi");
+
+		await Assert.That(ansi).DoesNotContain("]8;;");
+		await Assert.That(ansi.Contains("click")).IsTrue();
+	}
 }

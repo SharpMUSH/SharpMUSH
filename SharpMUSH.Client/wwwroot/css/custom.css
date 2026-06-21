@@ -775,6 +775,12 @@ body {
 .ms-cmd-link:hover {
     text-decoration-style: solid;
 }
+/* Command links carry role="button" tabindex="0"; show a focus ring for keyboard users. */
+.ms-cmd-link:focus-visible {
+    outline: 2px solid var(--primary, #6cf);
+    outline-offset: 2px;
+    text-decoration-style: solid;
+}
 
 /* ── Softcode Editor ── */
 .mush-editor-fill {
