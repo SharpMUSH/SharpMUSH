@@ -116,4 +116,49 @@ public class LinkKindRenderTests
 		await Assert.That(back.Render("html")).Contains("href=\"help topic\"");
 		await Assert.That(back.Render("html")).DoesNotContain("xch_cmd");
 	}
+
+	[Test]
+	public async Task Pueblo_CommandLink_UsesXchCmd()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "+who", linkKind: LinkKind.Command, linkText: "Who?"), "who");
+		var pueblo = ms.Render("pueblo");
+
+		await Assert.That(pueblo).Contains("<A XCH_CMD=\"+who\"");
+		await Assert.That(pueblo).Contains("XCH_HINT=\"Who?\"");
+		await Assert.That(pueblo).DoesNotContain("HREF=");
+	}
+
+	[Test]
+	public async Task Pueblo_UrlLink_UsesHref()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "https://example.com", linkKind: LinkKind.Url), "site");
+		var pueblo = ms.Render("pueblo");
+
+		await Assert.That(pueblo).Contains("<A HREF=\"https://example.com\">");
+		await Assert.That(pueblo).DoesNotContain("XCH_CMD");
+	}
+
+	[Test]
+	public async Task Mxp_CommandLink_UsesSend()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "+who", linkKind: LinkKind.Command, linkText: "Who?"), "who");
+		var mxp = ms.Render("mxp");
+
+		await Assert.That(mxp).Contains("<SEND HREF=\"+who\"");
+		await Assert.That(mxp).Contains("HINT=\"Who?\"");
+	}
+
+	[Test]
+	public async Task Mxp_UrlLink_UsesAnchorNotSend()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "https://example.com", linkKind: LinkKind.Url), "site");
+		var mxp = ms.Render("mxp");
+
+		await Assert.That(mxp).Contains("<A HREF=\"https://example.com\">");
+		await Assert.That(mxp).DoesNotContain("<SEND");
+	}
 }

@@ -192,7 +192,19 @@ public sealed class AnsiMarkup : IMarkup
         if (d.Italic)        t = $"<I>{t}</I>";
         if (d.Bold)          t = $"<B>{t}</B>";
         if (d.LinkUrl is { Length: > 0 } url)
-            t = $"<A HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</A>";
+        {
+            if (d.LinkKind == LinkKind.Command)
+            {
+                var hint = d.LinkText is { Length: > 0 } h
+                    ? $" XCH_HINT=\"{WebUtility.HtmlEncode(h)}\""
+                    : "";
+                t = $"<A XCH_CMD=\"{WebUtility.HtmlEncode(url)}\"{hint}>{t}</A>";
+            }
+            else
+            {
+                t = $"<A HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</A>";
+            }
+        }
         if (ColorToHex(bg) is string bgHex) t = $"<SPAN STYLE=\"background-color: {bgHex}\">{t}</SPAN>";
         if (ColorToHex(fg) is string fgHex) t = $"<FONT COLOR=\"{fgHex}\">{t}</FONT>";
         return t;
@@ -221,7 +233,19 @@ public sealed class AnsiMarkup : IMarkup
         if (d.Italic)        t = $"<I>{t}</I>";
         if (d.Bold)          t = $"<B>{t}</B>";
         if (d.LinkUrl is { Length: > 0 } url)
-            t = $"<SEND HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</SEND>";
+        {
+            if (d.LinkKind == LinkKind.Command)
+            {
+                var hint = d.LinkText is { Length: > 0 } h
+                    ? $" HINT=\"{WebUtility.HtmlEncode(h)}\""
+                    : "";
+                t = $"<SEND HREF=\"{WebUtility.HtmlEncode(url)}\"{hint}>{t}</SEND>";
+            }
+            else
+            {
+                t = $"<A HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</A>";
+            }
+        }
         string? fgHex = ColorToHex(fg);
         string? bgHex = ColorToHex(bg);
         t = (fgHex, bgHex) switch
