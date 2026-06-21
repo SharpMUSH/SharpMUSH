@@ -428,6 +428,28 @@
             var el = document.getElementById(elementId);
             if (el) el.scrollTop = el.scrollHeight;
         },
+
+        // Registers a delegated click handler on the terminal output container.
+        // Clicking a command link (<a xch_cmd="...">) runs the command via .NET
+        // (RunCommandLinkAsync) instead of navigating. Plain <a href> links are left
+        // untouched so they open normally. Returns a disposable for cleanup.
+        attachCommandLinks: function (outputId, dotNetRef) {
+            var el = document.getElementById(outputId);
+            if (!el) return { dispose: function () { } };
+
+            function onClick(e) {
+                var a = e.target.closest('a[xch_cmd]');
+                if (!a || !el.contains(a)) return;
+                e.preventDefault();
+                var cmd = a.getAttribute('xch_cmd');
+                if (cmd) dotNetRef.invokeMethodAsync('RunCommandLinkAsync', cmd);
+            }
+
+            el.addEventListener('click', onClick);
+            return {
+                dispose: function () { el.removeEventListener('click', onClick); },
+            };
+        },
     };
 
     // ── Wiki editor: wrap the current textarea selection with markdown markup ──

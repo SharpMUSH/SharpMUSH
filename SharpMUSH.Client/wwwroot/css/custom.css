@@ -765,6 +765,17 @@ body {
     to { visibility: hidden; }
 }
 
+/* Command links (xch_cmd) — clickable, run a MUSH command. Distinct from URL links. */
+.ms-cmd-link {
+    color: var(--primary, #6cf);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    cursor: pointer;
+}
+.ms-cmd-link:hover {
+    text-decoration-style: solid;
+}
+
 /* ── Softcode Editor ── */
 .mush-editor-fill {
     width: 100%;
