@@ -1,5 +1,6 @@
 using Markdig.Extensions.TaskLists;
 using Markdig.Syntax.Inlines;
+using MarkupString.MarkupImplementation;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -84,8 +85,14 @@ public partial class RecursiveMarkdownRenderer
 			contentText = url;
 		}
 
-		// Create hyperlink markup with linkUrl parameter
-		var linkMarkup = Ansi.Create(linkUrl: url);
+		// Help-topic shortcuts ([topic]) are command links; ordinary links navigate.
+		// A markdown link title ([text](url "title")) becomes the link hint.
+		var isCommand = link.GetData(HelpTopicInlineParser.CommandDataKey) is true;
+		var hint = string.IsNullOrWhiteSpace(link.Title) ? null : link.Title;
+		var linkMarkup = Ansi.Create(
+			linkUrl: url,
+			linkKind: isCommand ? LinkKind.Command : LinkKind.Url,
+			linkText: hint);
 		return MModule.MarkupSingle(linkMarkup, contentText);
 	}
 
