@@ -127,6 +127,7 @@ the server, or softcode that already requires the `PUEBLO_SEND`/`Send_OOB` power
 protocol tags (per `sharppueb.md`). The client simply sends back whatever the server placed
 in `xch_cmd`; it introduces no new trust boundary beyond what typing the same command would.
 Attribute values remain HTML-encoded.
+Any future code path that turns *player-supplied* text into command-kind links (none exists today — help-topic links are doc-authored) would let one player craft a command another could click, so such a path must not be added without escaping/gating.
 
 ## Components & Boundaries
 

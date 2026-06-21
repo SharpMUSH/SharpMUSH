@@ -1,5 +1,7 @@
 using MarkupString;
 using MarkupString.MarkupImplementation;
+using System.Drawing;
+using ANSILibrary;
 
 namespace SharpMUSH.Tests.Markup;
 
@@ -204,5 +206,41 @@ public class LinkKindRenderTests
 
 		await Assert.That(bbcode).DoesNotContain("[url=");
 		await Assert.That(bbcode.Contains("topic")).IsTrue();
+	}
+
+	[Test]
+	public async Task Html_ColoredCommandLink_KeepsColorAndXchCmd()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(foreground: new AnsiColor.RGB(Color.Red),
+				linkUrl: "help topic", linkKind: LinkKind.Command), "topic");
+		var html = ms.Render("html");
+
+		await Assert.That(html).Contains("color: #ff0000");
+		await Assert.That(html).Contains("xch_cmd=\"help topic\"");
+	}
+
+	[Test]
+	public async Task Pueblo_ColoredCommandLink_KeepsColorAndXchCmd()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(foreground: new AnsiColor.RGB(Color.Red),
+				linkUrl: "+who", linkKind: LinkKind.Command), "who");
+		var pueblo = ms.Render("pueblo");
+
+		await Assert.That(pueblo).Contains("XCH_CMD=\"+who\"");
+		await Assert.That(pueblo).Contains("<FONT COLOR=");
+	}
+
+	[Test]
+	public async Task Mxp_ColoredCommandLink_KeepsColorAndSend()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(foreground: new AnsiColor.RGB(Color.Red),
+				linkUrl: "+who", linkKind: LinkKind.Command), "who");
+		var mxp = ms.Render("mxp");
+
+		await Assert.That(mxp).Contains("SEND HREF=\"+who\"");
+		await Assert.That(mxp).Contains("<COLOR FORE=");
 	}
 }
