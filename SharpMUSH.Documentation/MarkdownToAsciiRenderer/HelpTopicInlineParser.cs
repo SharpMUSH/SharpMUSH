@@ -25,6 +25,12 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 /// </summary>
 public class HelpTopicInlineParser : InlineParser
 {
+	/// <summary>
+	/// Markdig data key set on the <see cref="LinkInline"/> nodes this parser produces, marking
+	/// them as command links (run "help &lt;topic&gt;") rather than URL navigation links.
+	/// </summary>
+	public const string CommandDataKey = "sharpmush:command-link";
+
 	public HelpTopicInlineParser()
 	{
 		OpeningCharacters = ['['];
@@ -84,6 +90,7 @@ public class HelpTopicInlineParser : InlineParser
 		};
 		link.AppendChild(new LiteralInline(topic));
 
+		link.SetData(CommandDataKey, true);
 		processor.Inline = link;
 		return true;
 	}

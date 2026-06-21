@@ -2,6 +2,7 @@
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+@using Microsoft.JSInterop
 @inject ITerminalService DefaultTerminal
 @inject IJSRuntime JsRuntime
 @inject CredentialService Credentials
@@ -233,6 +234,9 @@
     private string? _accountError;
     private bool _showCharacterPicker;
 
+    private DotNetObjectReference<GlobalTerminal>? _selfRef;
+    private IJSObjectReference? _cmdLinkHandle;
+
     protected override async Task OnInitializedAsync()
     {
         _serverUri = DefaultServerUri;
@@ -316,8 +320,30 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            _selfRef = DotNetObjectReference.Create(this);
+            try
+            {
+                _cmdLinkHandle = await JsRuntime.InvokeAsync<IJSObjectReference>(
+                    "SharpMUSH.Terminal.attachCommandLinks", _outputId, _selfRef);
+            }
+            catch (JSException) { /* ignore if JS not ready */ }
+        }
+
         if (_autoScroll)
             await ScrollToBottomAsync();
+    }
+
+    /// <summary>
+    /// Invoked from JS when a command link (&lt;a xch_cmd="..."&gt;) is clicked in the
+    /// terminal output. Sends the command exactly as if the player had typed it.
+    /// </summary>
+    [JSInvokable]
+    public async Task RunCommandLinkAsync(string command)
+    {
+        if (string.IsNullOrWhiteSpace(command) || !_connected) return;
+        await Terminal.SendAsync(command);
     }
 
     // ── Account login / register ─────────────────────────────────────────────
@@ -507,6 +533,14 @@
     {
         Terminal.LineReceived -= OnLineReceived;
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
-        await Task.CompletedTask;
+
+        if (_cmdLinkHandle is not null)
+        {
+            try { await _cmdLinkHandle.InvokeVoidAsync("dispose"); }
+            catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
+            try { await _cmdLinkHandle.DisposeAsync(); }
+            catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
+        }
+        _selfRef?.Dispose();
     }
 }

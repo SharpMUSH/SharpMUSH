@@ -7,6 +7,13 @@ using ANSILibrary;
 
 namespace MarkupString.MarkupImplementation;
 
+/// <summary>
+/// Distinguishes a link that runs a MUSH command when clicked (e.g. "help topic")
+/// from one that navigates to a URL. <see cref="Url"/> is value 0 and the default so
+/// legacy markup with no LinkKind deserialises to navigation behaviour.
+/// </summary>
+public enum LinkKind { Url = 0, Command = 1 }
+
 // ── Struct records ─────────────────────────────────────────────────────────────
 
 /// <summary>
@@ -18,6 +25,7 @@ public readonly record struct AnsiStructure
     public AnsiColor Background    { get; init; }
     public string?  LinkText       { get; init; }
     public string?  LinkUrl        { get; init; }
+    public LinkKind LinkKind       { get; init; }
     public bool     Blink          { get; init; }
     public bool     Bold           { get; init; }
     public bool     Clear          { get; init; }
@@ -87,6 +95,7 @@ public sealed class AnsiMarkup : IMarkup
         AnsiColor? background  = null,
         string?    linkText    = null,
         string?    linkUrl     = null,
+        LinkKind   linkKind    = LinkKind.Url,
         bool       blink       = false,
         bool       bold        = false,
         bool       clear       = false,
@@ -103,6 +112,7 @@ public sealed class AnsiMarkup : IMarkup
             Background    = background  ?? AnsiColor.NoAnsi.Instance,
             LinkText      = linkText    ?? string.Empty,
             LinkUrl       = linkUrl     ?? string.Empty,
+            LinkKind      = linkKind,
             Blink         = blink,
             Bold          = bold,
             Clear         = clear,
@@ -140,6 +150,21 @@ public sealed class AnsiMarkup : IMarkup
         _ => throw new NotSupportedException()
     };
 
+    /// <summary>
+    /// Returns true if a URL is safe to render as a navigable hyperlink. Relative URLs
+    /// (no scheme) and a small allow-list of schemes are permitted; dangerous schemes such
+    /// as <c>javascript:</c>, <c>data:</c>, <c>vbscript:</c>, and <c>file:</c> are rejected so
+    /// they render as plain text rather than clickable links. Applies to URL links only —
+    /// command links carry a MUSH command in <c>xch_cmd</c>, never a browser-navigable href.
+    /// </summary>
+    public static bool IsSafeNavigableUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        if (!Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var uri)) return false;
+        if (!uri.IsAbsoluteUri) return true; // relative / anchor => safe
+        return uri.Scheme.ToLowerInvariant() is "http" or "https" or "mailto" or "ftp" or "ftps" or "tel";
+    }
+
     /// <summary>Renders AnsiStructure as an HTML span with inline style + CSS classes.</summary>
     public static string WrapAsHtmlClass(AnsiStructure d, string text)
     {
@@ -151,10 +176,21 @@ public sealed class AnsiMarkup : IMarkup
 
         var classes = HtmlClassNames(d);
 
-        // Wrap hyperlink
+        // Wrap hyperlink. Command links run a MUSH command (xch_cmd, intercepted by the
+        // WASM terminal); URL links navigate in a new tab. A command link has no href, so it
+        // carries role="button" + tabindex="0" to stay keyboard-focusable/activatable.
+        // URL links with an unsafe scheme (e.g. javascript:) fall back to plain text.
         string inner = text;
         if (d.LinkUrl is { Length: > 0 } url)
-            inner = $"<a href=\"{WebUtility.HtmlEncode(url)}\">{text}</a>";
+        {
+            var title = d.LinkText is { Length: > 0 } hint
+                ? $" title=\"{WebUtility.HtmlEncode(hint)}\""
+                : "";
+            if (d.LinkKind == LinkKind.Command)
+                inner = $"<a class=\"ms-cmd-link\" role=\"button\" tabindex=\"0\" xch_cmd=\"{WebUtility.HtmlEncode(url)}\"{title}>{text}</a>";
+            else if (IsSafeNavigableUrl(url))
+                inner = $"<a href=\"{WebUtility.HtmlEncode(url)}\" target=\"_blank\" rel=\"noopener noreferrer\"{title}>{text}</a>";
+        }
 
         string styleAttr = styles.Count > 0 ? $" style=\"{string.Join("; ", styles)}\"" : "";
         string classAttr = classes.Count > 0 ? $" class=\"{string.Join(" ", classes)}\"" : "";
@@ -174,7 +210,19 @@ public sealed class AnsiMarkup : IMarkup
         if (d.Italic)        t = $"<I>{t}</I>";
         if (d.Bold)          t = $"<B>{t}</B>";
         if (d.LinkUrl is { Length: > 0 } url)
-            t = $"<A HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</A>";
+        {
+            if (d.LinkKind == LinkKind.Command)
+            {
+                var hint = d.LinkText is { Length: > 0 } h
+                    ? $" XCH_HINT=\"{WebUtility.HtmlEncode(h)}\""
+                    : "";
+                t = $"<A XCH_CMD=\"{WebUtility.HtmlEncode(url)}\"{hint}>{t}</A>";
+            }
+            else if (IsSafeNavigableUrl(url))
+            {
+                t = $"<A HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</A>";
+            }
+        }
         if (ColorToHex(bg) is string bgHex) t = $"<SPAN STYLE=\"background-color: {bgHex}\">{t}</SPAN>";
         if (ColorToHex(fg) is string fgHex) t = $"<FONT COLOR=\"{fgHex}\">{t}</FONT>";
         return t;
@@ -188,7 +236,8 @@ public sealed class AnsiMarkup : IMarkup
         if (d.Underlined)    t = $"[u]{t}[/u]";
         if (d.Italic)        t = $"[i]{t}[/i]";
         if (d.Bold)          t = $"[b]{t}[/b]";
-        if (d.LinkUrl is { Length: > 0 } url)
+        // BBCode has no command-link concept — only safe URL links are wrapped.
+        if (d.LinkUrl is { Length: > 0 } url && d.LinkKind == LinkKind.Url && IsSafeNavigableUrl(url))
             t = $"[url={url}]{t}[/url]";
         if (ColorToHex(fg) is string fgHex) t = $"[color={fgHex}]{t}[/color]";
         return t;
@@ -203,7 +252,19 @@ public sealed class AnsiMarkup : IMarkup
         if (d.Italic)        t = $"<I>{t}</I>";
         if (d.Bold)          t = $"<B>{t}</B>";
         if (d.LinkUrl is { Length: > 0 } url)
-            t = $"<SEND HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</SEND>";
+        {
+            if (d.LinkKind == LinkKind.Command)
+            {
+                var hint = d.LinkText is { Length: > 0 } h
+                    ? $" HINT=\"{WebUtility.HtmlEncode(h)}\""
+                    : "";
+                t = $"<SEND HREF=\"{WebUtility.HtmlEncode(url)}\"{hint}>{t}</SEND>";
+            }
+            else if (IsSafeNavigableUrl(url))
+            {
+                t = $"<A HREF=\"{WebUtility.HtmlEncode(url)}\">{t}</A>";
+            }
+        }
         string? fgHex = ColorToHex(fg);
         string? bgHex = ColorToHex(bg);
         t = (fgHex, bgHex) switch
@@ -219,7 +280,10 @@ public sealed class AnsiMarkup : IMarkup
     public static ANSIString ApplyDetails(AnsiStructure d, string text)
     {
         var s = text.ToANSI();
-        if (d.LinkUrl is { Length: > 0 } url)  s = s.LinkANSI(url);
+        // OSC 8 hyperlinks can only navigate, so command links — and unsafe URL schemes —
+        // render as plain text.
+        if (d.LinkUrl is { Length: > 0 } url && d.LinkKind == LinkKind.Url && IsSafeNavigableUrl(url))
+            s = s.LinkANSI(url);
         if (d.Foreground is not AnsiColor.NoAnsi) s = s.ColorANSI(d.Foreground);
         if (d.Background is not AnsiColor.NoAnsi) s = s.BackgroundANSI(d.Background);
         if (d.Blink)          s = s.BlinkANSI();

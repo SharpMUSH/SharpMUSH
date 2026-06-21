@@ -87,16 +87,42 @@ internal sealed class PlainTextRenderStrategy : IRenderStrategy
 }
 
 /// <summary>
-/// Pueblo/MXP render strategy: ANSI codes for AnsiMarkup (colors stay as escape sequences)
+/// Pueblo render strategy: ANSI codes for AnsiMarkup (colors stay as escape sequences)
 /// plus native HTML tags for HtmlMarkup (e.g. &lt;send&gt;). This produces an additive stream
-/// where terminal clients see ANSI and Pueblo/MXP clients see both ANSI + HTML.
+/// where terminal clients see ANSI and Pueblo clients see both ANSI + HTML.
+/// Links in AnsiMarkup render as Pueblo HTML tags (XCH_CMD) instead of ANSI.
 /// </summary>
-internal sealed class PuebloMxpRenderStrategy : IRenderStrategy
+internal sealed class PuebloRenderStrategy : IRenderStrategy
 {
     public string EncodeText(string text) => WebUtility.HtmlEncode(text);
     public string ApplyMarkup(IMarkup markup, string text) => markup switch
     {
         HtmlMarkup html => html.Wrap(text),
+        AnsiMarkup ansi => ansi.Details.LinkUrl is { Length: > 0 }
+            ? ansi.WrapAs("pueblo", text)
+            : ansi.WrapAs("ansi", text),
+        _ => markup.WrapAs("ansi", text),
+    };
+    public string Prefix  => string.Empty;
+    public string Postfix => string.Empty.EndWithTrueClear().ToString();
+    public string Optimize(string text) => Optimization.Optimize(text);
+}
+
+/// <summary>
+/// MXP render strategy: ANSI codes for AnsiMarkup (colors stay as escape sequences)
+/// plus native HTML tags for HtmlMarkup (e.g. &lt;send&gt;). This produces an additive stream
+/// where terminal clients see ANSI and MXP clients see both ANSI + HTML.
+/// Links in AnsiMarkup render as MXP HTML tags (SEND) instead of ANSI.
+/// </summary>
+internal sealed class MxpRenderStrategy : IRenderStrategy
+{
+    public string EncodeText(string text) => WebUtility.HtmlEncode(text);
+    public string ApplyMarkup(IMarkup markup, string text) => markup switch
+    {
+        HtmlMarkup html => html.Wrap(text),
+        AnsiMarkup ansi => ansi.Details.LinkUrl is { Length: > 0 }
+            ? ansi.WrapAs("mxp", text)
+            : ansi.WrapAs("ansi", text),
         _ => markup.WrapAs("ansi", text),
     };
     public string Prefix  => string.Empty;
@@ -195,7 +221,8 @@ public sealed class MarkupString
     private readonly Lazy<string> _cachedAnsiRender;
     private readonly Lazy<string> _cachedHtmlRender;
     private readonly Lazy<string> _cachedPlainTextRender;
-    private readonly Lazy<string> _cachedPuebloMxpRender;
+    private readonly Lazy<string> _cachedPuebloRender;
+    private readonly Lazy<string> _cachedMxpRender;
 
     public MarkupString(string text, ImmutableArray<AttributeRun> runs)
     {
@@ -205,7 +232,8 @@ public sealed class MarkupString
         _cachedAnsiRender    = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.AnsiStrategy));
         _cachedHtmlRender    = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.HtmlStrategy));
         _cachedPlainTextRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.PlainTextStrategy));
-        _cachedPuebloMxpRender = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.PuebloMxpStrategy));
+        _cachedPuebloRender  = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.PuebloStrategy));
+        _cachedMxpRender     = new Lazy<string>(() => RenderWith(MarkupStringModule.RenderStrategies.MxpStrategy));
     }
 
     public string                   Text  => _text;
@@ -220,7 +248,8 @@ public sealed class MarkupString
     {
         "html"               => _cachedHtmlRender.Value,
         "plaintext" or "plain" => _cachedPlainTextRender.Value,
-        "pueblo" or "mxp"    => _cachedPuebloMxpRender.Value,
+        "pueblo"             => _cachedPuebloRender.Value,
+        "mxp"                => _cachedMxpRender.Value,
         _                    => _cachedAnsiRender.Value,
     };
 
@@ -321,7 +350,8 @@ public static partial class MarkupStringModule
         public static readonly IRenderStrategy AnsiStrategy      = new AnsiRenderStrategy();
         public static readonly IRenderStrategy HtmlStrategy      = new HtmlRenderStrategy();
         public static readonly IRenderStrategy PlainTextStrategy = new PlainTextRenderStrategy();
-        public static readonly IRenderStrategy PuebloMxpStrategy = new PuebloMxpRenderStrategy();
+        public static readonly IRenderStrategy PuebloStrategy    = new PuebloRenderStrategy();
+        public static readonly IRenderStrategy MxpStrategy       = new MxpRenderStrategy();
     }
 
     public static IRenderStrategy ForFormat(RenderFormat format) => format.ToStrategy();
