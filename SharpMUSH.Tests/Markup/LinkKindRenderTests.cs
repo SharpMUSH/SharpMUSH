@@ -161,4 +161,48 @@ public class LinkKindRenderTests
 		await Assert.That(mxp).Contains("<A HREF=\"https://example.com\">");
 		await Assert.That(mxp).DoesNotContain("<SEND");
 	}
+
+	[Test]
+	public async Task Ansi_CommandLink_RendersPlainTextNoOsc8()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "help topic", linkKind: LinkKind.Command), "topic");
+		var ansi = ms.Render("ansi");
+
+		await Assert.That(ansi).DoesNotContain("]8;;");
+		await Assert.That(ansi.Contains("topic")).IsTrue();
+	}
+
+	[Test]
+	public async Task Ansi_UrlLink_StillRendersOsc8()
+	{
+		var ms = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "https://example.com", linkKind: LinkKind.Url), "site");
+		var ansi = ms.Render("ansi");
+
+		await Assert.That(ansi).Contains("]8;;https://example.com");
+	}
+
+	[Test]
+	public async Task BBCode_UrlLink_UsesUrlTag()
+	{
+		// NOTE: Render("bbcode") is intentionally NOT a wired render route — BBCode has no
+		// production consumer (the string Render switch falls through to ANSI, and the only
+		// "bbcode" usage is a test-local custom strategy). Wiring a full BBCode strategy/cache
+		// for an unused format would be YAGNI, so we test the public static WrapAsBBCode directly.
+		var details = AnsiMarkup.Create(linkUrl: "https://example.com", linkKind: LinkKind.Url).Details;
+		var bbcode = AnsiMarkup.WrapAsBBCode(details, "site");
+
+		await Assert.That(bbcode).Contains("[url=https://example.com]");
+	}
+
+	[Test]
+	public async Task BBCode_CommandLink_RendersPlainText()
+	{
+		var details = AnsiMarkup.Create(linkUrl: "help topic", linkKind: LinkKind.Command).Details;
+		var bbcode = AnsiMarkup.WrapAsBBCode(details, "topic");
+
+		await Assert.That(bbcode).DoesNotContain("[url=");
+		await Assert.That(bbcode.Contains("topic")).IsTrue();
+	}
 }

@@ -218,7 +218,8 @@ public sealed class AnsiMarkup : IMarkup
         if (d.Underlined)    t = $"[u]{t}[/u]";
         if (d.Italic)        t = $"[i]{t}[/i]";
         if (d.Bold)          t = $"[b]{t}[/b]";
-        if (d.LinkUrl is { Length: > 0 } url)
+        // BBCode has no command-link concept — only URL links are wrapped.
+        if (d.LinkUrl is { Length: > 0 } url && d.LinkKind == LinkKind.Url)
             t = $"[url={url}]{t}[/url]";
         if (ColorToHex(fg) is string fgHex) t = $"[color={fgHex}]{t}[/color]";
         return t;
@@ -261,7 +262,8 @@ public sealed class AnsiMarkup : IMarkup
     public static ANSIString ApplyDetails(AnsiStructure d, string text)
     {
         var s = text.ToANSI();
-        if (d.LinkUrl is { Length: > 0 } url)  s = s.LinkANSI(url);
+        // OSC 8 hyperlinks can only navigate, so command links render as plain text.
+        if (d.LinkUrl is { Length: > 0 } url && d.LinkKind == LinkKind.Url)  s = s.LinkANSI(url);
         if (d.Foreground is not AnsiColor.NoAnsi) s = s.ColorANSI(d.Foreground);
         if (d.Background is not AnsiColor.NoAnsi) s = s.BackgroundANSI(d.Background);
         if (d.Blink)          s = s.BlinkANSI();
