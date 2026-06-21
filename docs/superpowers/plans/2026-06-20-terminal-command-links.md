@@ -481,9 +481,12 @@ Add to `LinkKindRenderTests.cs`:
 	[Test]
 	public async Task BBCode_UrlLink_UsesUrlTag()
 	{
-		var ms = MModule.MarkupSingle(
-			AnsiMarkup.Create(linkUrl: "https://example.com", linkKind: LinkKind.Url), "site");
-		var bbcode = ms.Render("bbcode");
+		// NOTE: Render("bbcode") is intentionally NOT a wired render route — BBCode has no
+		// production consumer (the string Render switch falls through to ANSI, and the only
+		// "bbcode" usage is a test-local custom strategy). Wiring a full BBCode strategy/cache
+		// for an unused format would be YAGNI, so we test the public static WrapAsBBCode directly.
+		var details = AnsiMarkup.Create(linkUrl: "https://example.com", linkKind: LinkKind.Url).Details;
+		var bbcode = AnsiMarkup.WrapAsBBCode(details, "site");
 
 		await Assert.That(bbcode).Contains("[url=https://example.com]");
 	}
@@ -491,9 +494,8 @@ Add to `LinkKindRenderTests.cs`:
 	[Test]
 	public async Task BBCode_CommandLink_RendersPlainText()
 	{
-		var ms = MModule.MarkupSingle(
-			AnsiMarkup.Create(linkUrl: "help topic", linkKind: LinkKind.Command), "topic");
-		var bbcode = ms.Render("bbcode");
+		var details = AnsiMarkup.Create(linkUrl: "help topic", linkKind: LinkKind.Command).Details;
+		var bbcode = AnsiMarkup.WrapAsBBCode(details, "topic");
 
 		await Assert.That(bbcode).DoesNotContain("[url=");
 		await Assert.That(bbcode.Contains("topic")).IsTrue();
@@ -503,7 +505,7 @@ Add to `LinkKindRenderTests.cs`:
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/LinkKindRenderTests/Ansi_*"` then `BBCode_*`.
-Expected: FAIL — ANSI currently emits OSC8 for command links; BBCode currently emits `[url=]` for command links.
+Expected: FAIL — `Ansi_CommandLink_RendersPlainTextNoOsc8` fails (ANSI currently emits OSC8 for command links) and `BBCode_CommandLink_RendersPlainText` fails (WrapAsBBCode currently emits `[url=]` for any link). `Ansi_UrlLink_StillRendersOsc8` and `BBCode_UrlLink_UsesUrlTag` already pass.
 
 - [ ] **Step 3: Implement WrapAsBBCode**
 
