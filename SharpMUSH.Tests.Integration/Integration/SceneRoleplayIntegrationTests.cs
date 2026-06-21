@@ -177,9 +177,11 @@ public class SceneRoleplayIntegrationTests
 			await God1($"@tel {dbref}={digOut}");
 
 		// Co-locate the Scene Logger with the players so its +scene/* $-commands match for them.
-		// (The bundled package parks the Logger in its own package room — it is NOT placed in the
-		// master room, so its verbs are not global. This is the same co-location trick the Myrddin
-		// BBS test uses for mbboard's $-commands. The capture hooks fire regardless of locality.)
+		// (AINSTALL parks the Logger in the master room #2 — proven by
+		// PackageLifecycleHooksTests.Ainstall_TeleportSelfToMasterRoom_LandsObjectInRoom2 — so its
+		// verbs ARE global from there. We co-locate it into this dug room anyway: this is the same
+		// trick the Myrddin BBS test uses for mbboard's $-commands, and it keeps the beat independent
+		// of the shared-session Logger location. The capture hooks fire regardless of locality.)
 		await God1($"@tel {loggerDbref}={digOut}");
 		await Assert.That(await EvalNum($"loc({loggerDbref})")).IsEqualTo(roomDbref)
 			.Because("the Scene Logger must be co-located so its +scene/* verbs fire for the players");

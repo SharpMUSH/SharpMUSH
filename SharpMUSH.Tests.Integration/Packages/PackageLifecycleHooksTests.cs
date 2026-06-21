@@ -88,6 +88,44 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 		await Assert.That((await Installer.UninstallAsync(pkg)).IsT0).IsTrue();
 	}
 
+	// Mirrors the bundled scene package's AINSTALL (`@teleport %!=#2`): a WIZARD thing
+	// that relocates ITSELF into the master room (#2) at first install, so its $-commands
+	// become globally matched. This is the exact mechanism the Scene Logger relies on for
+	// remote +scene/* capture; the assertion proves AINSTALL actually lands it in #2.
+	private static string TeleportManifest(string pkg) =>
+		$"""
+		package: {pkg}
+		version: "1.0"
+		objects:
+		  - ref: marker
+		    type: thing
+		    name: Teleport Marker
+		    flags: [WIZARD]
+		    attributes:
+		      AINSTALL: |-
+		        @teleport %!=#2
+		""";
+
+	[Test, NotInParallel]
+	public async Task Ainstall_TeleportSelfToMasterRoom_LandsObjectInRoom2()
+	{
+		var pkg = UniquePackageId();
+		var answers = new Dictionary<string, string>();
+
+		var install = await Installer.ApplyAsync(Parse(TeleportManifest(pkg)), new PackageApplyRequest(Source(pkg), answers, []));
+		await Assert.That(install.IsT0).IsTrue();
+
+		var markerObjid = install.AsT0.CreatedObjects["marker"];
+		var markerDbref = PackageInstallService.ParseObjid(markerObjid)!.Value;
+
+		// The object must be in #2 purely because AINSTALL's `@teleport %!=#2` ran — no manual move.
+		var location = (await Database.GetLocationAsync(markerDbref)).WithoutNone();
+		await Assert.That(location.Object().DBRef.Number).IsEqualTo(2)
+			.Because("AINSTALL `@teleport %!=#2` must land the package object in the master room (#2)");
+
+		await Assert.That((await Installer.UninstallAsync(pkg)).IsT0).IsTrue();
+	}
+
 	[Test, NotInParallel]
 	public async Task Upgrade_RunsAupdate_NotAinstall()
 	{
