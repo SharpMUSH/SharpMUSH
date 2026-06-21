@@ -76,38 +76,22 @@ public class LinkKindRenderTests
 	}
 
 	[Test]
-	public async Task Serialization_CommandLink_RoundTrips()
+	public async Task Serialization_LinkKind_RoundTripsJson()
 	{
 		var cmd = MModule.MarkupSingle(
 			AnsiMarkup.Create(linkUrl: "help topic", linkKind: LinkKind.Command), "topic");
 		var json = MModule.serialize(cmd);
 
+		await Assert.That(json).Contains("LinkKind");
+
+		// Deserialise then re-serialise: the LinkKind survives the round-trip unchanged.
 		var back = MModule.deserialize(json);
-
-		// Command kind survives the round-trip: HTML render emits xch_cmd, not href.
-		await Assert.That(back.Render("html")).Contains("xch_cmd=\"help topic\"");
-		await Assert.That(back.Render("html")).DoesNotContain("href=");
-	}
-
-	[Test]
-	public async Task Serialization_LegacyPayloadWithoutLinkKind_DefaultsToUrl()
-	{
-		var cmd = MModule.MarkupSingle(
-			AnsiMarkup.Create(linkUrl: "help topic", linkKind: LinkKind.Command), "topic");
-		var json = MModule.serialize(cmd);
-
-		// Simulate a pre-LinkKind payload by stripping the property entirely.
-		var legacy = System.Text.RegularExpressions.Regex.Replace(json, "\"LinkKind\":\\d+,?", "");
-		legacy = legacy.Replace(",}", "}");
-
-		var back = MModule.deserialize(legacy);
-
-		// Missing field => default(LinkKind) == Url => navigation rendering.
-		await Assert.That(back.Render("html")).Contains("href=\"help topic\"");
-		await Assert.That(back.Render("html")).DoesNotContain("xch_cmd");
+		await Assert.That(MModule.serialize(back)).IsEqualTo(json);
 	}
 }
 ```
+
+> These three tests are rendering-independent, so Task 1's suite is fully green at commit time. The serialization tests whose assertions depend on the HTML renderer (command→`xch_cmd`, legacy→`href`) live in Task 2, where that renderer distinguishes the kinds.
 
 - [ ] **Step 2: Run tests to verify they fail (compile error)**
 
@@ -152,9 +136,7 @@ and in the returned `new AnsiStructure { ... }`, after the `LinkUrl = linkUrl ??
 - [ ] **Step 6: Run tests**
 
 Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/LinkKindRenderTests/*"`
-Expected: PASS — all 4 tests pass. (The two render tests rely on the existing `WrapAsHtmlClass`, which still emits `href` for everything; the command round-trip test passes because legacy/Url path renders `href` and the command test... )
-
-> NOTE: `Serialization_CommandLink_RoundTrips` asserts `xch_cmd`, which the HTML renderer does NOT emit until Task 2. Expect that ONE test to FAIL here; the other 3 pass. It turns green at the end of Task 2. This is the intended TDD ordering — the failing assertion is the spec for Task 2.
+Expected: PASS — all 3 tests pass (they assert on the data model and JSON round-trip, not on rendering).
 
 - [ ] **Step 7: Commit**
 
@@ -229,12 +211,44 @@ Add to `LinkKindRenderTests.cs` (inside the class):
 
 		await Assert.That(html).Contains("xch_cmd=\"say &quot;hi&quot; &amp; &lt;bye&gt;\"");
 	}
+
+	[Test]
+	public async Task Serialization_CommandLink_SurvivesAndRendersXchCmd()
+	{
+		var cmd = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "help topic", linkKind: LinkKind.Command), "topic");
+		var json = MModule.serialize(cmd);
+
+		var back = MModule.deserialize(json);
+
+		// Command kind survives the round-trip: HTML render emits xch_cmd, not href.
+		await Assert.That(back.Render("html")).Contains("xch_cmd=\"help topic\"");
+		await Assert.That(back.Render("html")).DoesNotContain("href=");
+	}
+
+	[Test]
+	public async Task Serialization_LegacyPayloadWithoutLinkKind_DefaultsToUrl()
+	{
+		var cmd = MModule.MarkupSingle(
+			AnsiMarkup.Create(linkUrl: "help topic", linkKind: LinkKind.Command), "topic");
+		var json = MModule.serialize(cmd);
+
+		// Simulate a pre-LinkKind payload by stripping the property entirely.
+		var legacy = System.Text.RegularExpressions.Regex.Replace(json, "\"LinkKind\":\\d+,?", "");
+		legacy = legacy.Replace(",}", "}");
+
+		var back = MModule.deserialize(legacy);
+
+		// Missing field => default(LinkKind) == Url => navigation rendering.
+		await Assert.That(back.Render("html")).Contains("href=\"help topic\"");
+		await Assert.That(back.Render("html")).DoesNotContain("xch_cmd");
+	}
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/LinkKindRenderTests/Html_*"`
-Expected: FAIL — current renderer emits `<a href="help topic">` for everything (no `xch_cmd`, no `target`).
+Run: `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/LinkKindRenderTests/*"`
+Expected: the four `Html_*` tests and the two `Serialization_*` tests added in this step FAIL (current renderer emits `<a href="help topic">` for everything — no `xch_cmd`, no `target`); the three Task 1 tests still PASS.
 
 - [ ] **Step 3: Implement the renderer change**
 
