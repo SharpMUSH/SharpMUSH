@@ -428,6 +428,45 @@
             var el = document.getElementById(elementId);
             if (el) el.scrollTop = el.scrollHeight;
         },
+
+        // Registers delegated handlers on the terminal output container. Clicking — or
+        // pressing Enter/Space on — a command link (<a xch_cmd="...">) runs the command via
+        // .NET (RunCommandLinkAsync) instead of navigating. Command links carry
+        // role="button" tabindex="0" so they are keyboard-focusable. Plain <a href> links are
+        // left untouched so they open normally. Returns a disposable for cleanup.
+        attachCommandLinks: function (outputId, dotNetRef) {
+            var el = document.getElementById(outputId);
+            if (!el) return { dispose: function () { } };
+
+            function run(a) {
+                var cmd = a.getAttribute('xch_cmd');
+                if (cmd) dotNetRef.invokeMethodAsync('RunCommandLinkAsync', cmd);
+            }
+
+            function onClick(e) {
+                var a = e.target.closest('a[xch_cmd]');
+                if (!a || !el.contains(a)) return;
+                e.preventDefault();
+                run(a);
+            }
+
+            function onKeyDown(e) {
+                if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+                var a = e.target.closest('a[xch_cmd]');
+                if (!a || !el.contains(a)) return;
+                e.preventDefault();
+                run(a);
+            }
+
+            el.addEventListener('click', onClick);
+            el.addEventListener('keydown', onKeyDown);
+            return {
+                dispose: function () {
+                    el.removeEventListener('click', onClick);
+                    el.removeEventListener('keydown', onKeyDown);
+                },
+            };
+        },
     };
 
     // ── Wiki editor: wrap the current textarea selection with markdown markup ──

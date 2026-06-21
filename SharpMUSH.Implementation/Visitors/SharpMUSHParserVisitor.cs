@@ -817,6 +817,17 @@ public class SharpMUSHParserVisitor(
 			if (command.Length == 0)
 				return new None();
 
+			// Per-command, markup-preserving slice of this command out of the (possibly whole-list) src.
+			// In a ';' command-list, src is the entire list (e.g. "alpha;beta"); each command is addressed
+			// by its evaluationString span. Built-in commands already re-slice src this exact way in
+			// ArgumentSplit; $command matching must use the same slice (commandText) rather than the whole
+			// src, otherwise a $command in a list is matched against the entire list and its ^...$ pattern
+			// never matches. This is the same arithmetic as ArgumentSplit's realSubtext.
+			var commandText = MModule.substring(
+				firstCommandMatch.Start.StartIndex,
+				firstCommandMatch.Stop.StopIndex - firstCommandMatch.Start.StartIndex + 1,
+				src);
+
 			if (parser.CurrentState.Handle is not null && command != "IDLE")
 			{
 				ConnectionService.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",
@@ -1009,7 +1020,7 @@ public class SharpMUSHParserVisitor(
 			var userDefinedCommandMatches = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
 				nearbyObjects,
-				src);
+				commandText);
 
 			if (userDefinedCommandMatches.IsSome())
 			{
@@ -1036,7 +1047,7 @@ public class SharpMUSHParserVisitor(
 					var userDefinedCommandMatchesOnZMR = await CommandDiscoveryService.MatchUserDefinedCommand(
 						parser,
 						zmrContents,
-						src);
+						commandText);
 
 					if (userDefinedCommandMatchesOnZMR.IsSome())
 					{
@@ -1052,7 +1063,7 @@ public class SharpMUSHParserVisitor(
 				var userDefinedCommandMatchesOnLocation = await CommandDiscoveryService.MatchUserDefinedCommand(
 					parser,
 					item.ToAsyncEnumerable(),
-					src);
+					commandText);
 
 				if (userDefinedCommandMatchesOnLocation.IsSome())
 				{
@@ -1073,7 +1084,7 @@ public class SharpMUSHParserVisitor(
 				var userDefinedCommandMatchesOnPersonalZMR = await CommandDiscoveryService.MatchUserDefinedCommand(
 					parser,
 					personalZMRContents,
-					src);
+					commandText);
 
 				if (userDefinedCommandMatchesOnPersonalZMR.IsSome())
 				{
@@ -1094,7 +1105,7 @@ public class SharpMUSHParserVisitor(
 			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
 				globalObjects.ToAsyncEnumerable().Union(globalObjectContent),
-				src);
+				commandText);
 
 			if (userDefinedCommandMatchesOnGlobal.IsSome())
 			{

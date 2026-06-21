@@ -469,4 +469,281 @@ public class UserDefinedCommandsTests
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Leaf {token}")),
 				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
+
+	// ── Leading-space $command matching (bug repro) ───────────────────────────
+	// Reported bug: a $command like `$test:@emit ...` does NOT match when the
+	// player types " test" (a leading space before the command). PennMUSH strips
+	// leading whitespace from a command before matching, so this SHOULD fire.
+	// These tests assert the expected (PennMUSH-compatible) behavior; if the bug
+	// is present they fail with a "Huh?" (zero notifications received).
+
+	/// <summary>
+	/// Control: an exact-match $command with NO leading space fires (baseline for the leading-space tests).
+	/// </summary>
+	[Test]
+	public async ValueTask NoLeadingSpace_TerminalEntry_Matches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcNoLeadSpace");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_NOLEAD {obj}=${token}:@emit {token} Matched"));
+
+		// No leading space — the control case.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Terminal entry (direct player input): typing " {token}" (leading space) should still match the $command.
+	/// This is the exact scenario from the bug report.
+	/// </summary>
+	[Test]
+	public async ValueTask LeadingSpace_TerminalEntry_StillMatches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceTerm");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_LEAD_TERM {obj}=${token}:@emit {token} Matched"));
+
+		// Leading space before the command (player typed " test").
+		await Parser.CommandParse(1, ConnectionService, MModule.single($" {token}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Command-list path (queued/callback, e.g. softcode action lists): a single command with a
+	/// leading space run via CommandListParse should still match the $command.
+	/// </summary>
+	[Test]
+	public async ValueTask LeadingSpace_CommandList_StillMatches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceList");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_LEAD_LIST {obj}=${token}:@emit {token} Matched"));
+
+		// Command-list entry point with a leading space before the command.
+		await listParser.CommandListParse(MModule.single($" {token}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Command-list path with a space after a ';' separator ("@@ comment;  {token}"). The $command is the
+	/// second command in the list; it must match its own per-command slice, not the whole list source.
+	/// </summary>
+	[Test]
+	public async ValueTask LeadingSpace_AfterSemicolonInCommandList_StillMatches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceSemi");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_LEAD_SEMI {obj}=${token}:@emit {token} Matched"));
+
+		// A null command followed by a space-prefixed $command in the same list.
+		await listParser.CommandListParse(MModule.single($"@@ ignore;  {token}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	// ── Command-list per-command $command matching ────────────────────────────
+	// A $command that is part of a multi-command ';' list must match against its own per-command
+	// slice (EvaluateCommands computes `commandText` via the command's evaluationString span), NOT
+	// the whole list source. Otherwise its ^...$ pattern would be tested against "alpha;beta" and
+	// never match. Built-in commands already slice this way (ArgumentSplit's realSubtext).
+
+	/// <summary>
+	/// A $command that is the SECOND command in a list, with NO leading space ("@@ ignore;{token}").
+	/// </summary>
+	[Test]
+	public async ValueTask SemicolonList_SecondCommand_NoLeadingSpace_Match()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiNoSpace");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_SEMI_NOSPACE {obj}=${token}:@emit {token} Matched"));
+
+		// Second command in the list, NO leading space.
+		await listParser.CommandListParse(MModule.single($"@@ ignore;{token}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Terminal entry: a trailing space after the command (" {token} ") should still match an exact $command.
+	/// The wildcard patterns are anchored at the end (^...$), so a trailing space breaks an exact match.
+	/// </summary>
+	[Test]
+	public async ValueTask TrailingSpace_TerminalEntry_StillMatches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcTrailSpaceTerm");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_TRAIL_TERM {obj}=${token}:@emit {token} Matched"));
+
+		// Trailing space after the command.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} "));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Command-list path: a trailing space after the command run via CommandListParse should still match.
+	/// </summary>
+	[Test]
+	public async ValueTask TrailingSpace_CommandList_StillMatches()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcTrailSpaceList");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_TRAIL_LIST {obj}=${token}:@emit {token} Matched"));
+
+		// Command-list entry point with a trailing space after the command.
+		await listParser.CommandListParse(MModule.single($"{token} "));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// A $command that is the FIRST command in a list with a trailing built-in ("{token};@emit X").
+	/// It must match its own slice, not "token;@emit X".
+	/// </summary>
+	[Test]
+	public async ValueTask SemicolonList_FirstCommand_WithTail_Match()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiFirst");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_SEMI_FIRST {obj}=${token}:@emit {token} Matched"));
+
+		await listParser.CommandListParse(MModule.single($"{token};@emit TAIL"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Matched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Three-command list: a $command in the MIDDLE and at the END both match. Guards the
+	/// Stop.StopIndex arithmetic for the final list element.
+	/// </summary>
+	[Test]
+	public async ValueTask SemicolonList_MiddleAndLastCommands_Match()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiThree");
+		var mid = TestIsolationHelpers.GenerateUniqueName("ucmid");
+		var last = TestIsolationHelpers.GenerateUniqueName("uclast");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_SEMI_MID {obj}=${mid}:@emit {mid} MidMatched"));
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_SEMI_LAST {obj}=${last}:@emit {last} LastMatched"));
+
+		await listParser.CommandListParse(MModule.single($"@emit HEAD;{mid};{last}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{mid} MidMatched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{last} LastMatched")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Per-command argument capture in a list (the "funky indexes" guard). A wildcard $command as the
+	/// SECOND command must capture %0 from its OWN slice — "Bob" — not leak the first command's text or a
+	/// wrong offset. The first command is deliberately a different length than the second.
+	/// </summary>
+	[Test]
+	public async ValueTask SemicolonList_WildcardArg_CapturesPerCommandSlice()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiArg");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_SEMI_ARG {obj}=${token} *:@emit GREET=<%0>"));
+
+		// First command is a longer @emit; second is the wildcard $command with arg "Bob".
+		await listParser.CommandListParse(MModule.single($"@emit AAAAAAAAAA;{token} Bob"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "GREET=<Bob>")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
+	/// Two-wildcard $command as the second command in a list: %0 and %1 each capture from the
+	/// per-command slice. Further guards capture-group index alignment after slicing.
+	/// </summary>
+	[Test]
+	public async ValueTask SemicolonList_TwoWildcardArgs_CapturePerCommandSlice()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var listParser = WebAppFactoryArg.CommandParser;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiArg2");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&UTEST_SEMI_ARG2 {obj}=${token} * to *:@emit MSG=<%0>-<%1>"));
+
+		await listParser.CommandListParse(MModule.single($"@emit IGNORE;{token} Alice to Bob"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "MSG=<Alice>-<Bob>")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
 }

@@ -516,10 +516,10 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
-	public async Task RenderHelpTopicLink_ShouldCreateHelpUrl()
+	public async Task RenderHelpTopicLink_ShouldCreateCommandLink()
 	{
 		// Arrange - bare [topic] with no URL definition is parsed by HelpTopicInlineParser
-		// into a proper LinkInline with URL "help newbie2" (not the old literal-inline hack).
+		// into a command LinkInline whose URL is "help <topic>".
 		var markdown = "See [newbie2] for more.";
 
 		// Act
@@ -527,9 +527,38 @@ public class RecursiveMarkdownRendererTests
 
 		// Assert - plain text contains the topic name without brackets
 		await Assert.That(result.ToPlainText()).IsEqualTo("See newbie2 for more.");
-		// OSC 8 hyperlink is present containing "help newbie2"
-		var fullString = result.ToString();
-		await Assert.That(fullString).Contains("\u001b]8;;help newbie2");
+
+		// It is a command link: HTML renders xch_cmd (not href), ANSI has no OSC 8 link.
+		await Assert.That(result.Render("html")).Contains("xch_cmd=\"help newbie2\"");
+		await Assert.That(result.ToString()).DoesNotContain("]8;;");
+	}
+
+	[Test]
+	public async Task RenderRegularLink_ShouldBeNavigationLink()
+	{
+		// Arrange - an explicit [text](url) link is a navigation link, not a command.
+		var markdown = "[Site](https://example.com)";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert
+		await Assert.That(result.Render("html")).Contains("href=\"https://example.com\"");
+		await Assert.That(result.Render("html")).Contains("target=\"_blank\"");
+		await Assert.That(result.Render("html")).DoesNotContain("xch_cmd");
+	}
+
+	[Test]
+	public async Task RenderLink_WithTitle_CarriesHint()
+	{
+		// Arrange - markdown link title becomes the link hint (HTML title / xch_hint / MXP HINT).
+		var markdown = "[Site](https://example.com \"Open the site\")";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert
+		await Assert.That(result.Render("html")).Contains("title=\"Open the site\"");
 	}
 
 	[Test]

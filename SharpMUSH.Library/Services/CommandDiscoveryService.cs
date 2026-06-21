@@ -35,7 +35,13 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 			.Where(async (x, _) => !await x.HasFlag("NO_COMMAND"))
 			.SelectMany(MatchUserDefinedCommandSelectMany);
 
-		var plainCommandString = MModule.plainText(commandString);
+		// Strip leading/trailing spaces before matching: the compiled $command patterns are anchored
+		// at both ends (^...$), so a command typed (or queued) with surrounding whitespace — e.g.
+		// " test" — would otherwise fail to match and produce a "Huh?". PennMUSH strips this whitespace
+		// before command matching. Trim the MString itself (not just the plain text) so the argument
+		// capture indices below stay aligned with the string the regex actually matched against.
+		var trimmedCommandString = MModule.trim(commandString, " ", global::MarkupString.TrimType.TrimBoth);
+		var plainCommandString = MModule.plainText(trimmedCommandString);
 		var matchedCommandPatternAttributes = await commandPatternAttributes
 			.Where(x => x.Regex.IsMatch(plainCommandString))
 			.ToArrayAsync();
@@ -57,14 +63,14 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 					match.IsRegex
 						// For regex patterns: generate both numeric index key and named capture group key
 						? [
-							new KeyValuePair<string, MString>(x.groupIndex.ToString(), MModule.substring(x.group.Index, x.group.Length, commandString)),
-							new KeyValuePair<string, MString>(x.group.Name, MModule.substring(x.group.Index, x.group.Length, commandString))
+							new KeyValuePair<string, MString>(x.groupIndex.ToString(), MModule.substring(x.group.Index, x.group.Length, trimmedCommandString)),
+							new KeyValuePair<string, MString>(x.group.Name, MModule.substring(x.group.Index, x.group.Length, trimmedCommandString))
 						  ]
 						// For wildcard patterns: generate only numeric index key (0-based) to avoid key
 						// collisions between a group's auto-generated name (e.g. "1") and the next
 						// group's 0-based index key (also "1"), which would cause wrong %1, %2 values.
 						: [
-							new KeyValuePair<string, MString>((x.groupIndex - 1).ToString(), MModule.substring(x.group.Index, x.group.Length, commandString))
+							new KeyValuePair<string, MString>((x.groupIndex - 1).ToString(), MModule.substring(x.group.Index, x.group.Length, trimmedCommandString))
 						  ])
 				.GroupBy(kv => kv.Key)
 				.ToDictionary(kv => kv.Key, kv => new CallState(kv.First().Value, 0))
