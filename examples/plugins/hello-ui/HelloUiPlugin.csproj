@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<IsPackable>false</IsPackable>
+		<RootNamespace>HelloUiPlugin</RootNamespace>
+		<AssemblyName>HelloUiPlugin</AssemblyName>
+
+		<!-- Marks this as a dynamically-loadable plugin: emits a .deps.json and keeps the shared
+		     contract assemblies out of the plugin's private bin (the host owns them and the loader's
+		     sharedTypes unifies type identity across the AssemblyLoadContext boundary). -->
+		<EnableDynamicLoading>true</EnableDynamicLoading>
+
+		<!-- Deterministic build: byte-for-byte reproducible output so the SHA-256 hashes a managed
+		     package.yaml commits to are stable across machines/runs. -->
+		<Deterministic>true</Deterministic>
+		<ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+		<!-- This is an example, not part of the solution build graph's warnings-as-errors net. -->
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+	</PropertyGroup>
+
+	<!-- A plugin that serves its own [ApiController] needs the ASP.NET shared framework so MVC types
+	     (ControllerBase / [ApiController] / [HttpGet]) resolve. ExcludeAssets keeps it out of the
+	     plugin's private bin — the host owns the framework. -->
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Contract surface only (Private=false + ExcludeAssets=runtime) so the host's copy loads at
+		     runtime, while the loader's sharedTypes unifies type identity across the isolation boundary.
+		     IApplicationSource, IServiceRegistrar, RegisteredApplication, PluginBase, etc. all live in
+		     SharpMUSH.Library (host-shared). -->
+		<ProjectReference Include="..\..\..\SharpMUSH.Library\SharpMUSH.Library.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- MarkupString (MString used by command bodies). Host-owned at runtime. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- The source generator referenced AS AN ANALYZER: any [SharpCommand]/[SharpFunction] methods in
+		     THIS assembly produce SharpMUSH.Implementation.Generated.CommandLibrary/FunctionLibrary that
+		     PluginBase reflects. Authoring is identical to in-tree engine code. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+	<!-- Ship the manifest next to the DLL so the loader reads ordering metadata, and so the managed
+	     package can carry it. -->
+	<ItemGroup>
+		<None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
+</Project>

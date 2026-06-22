@@ -1,0 +1,37 @@
+format: 1
+package: hello-ui
+version: 1.0.0
+kind: managed
+authors: [SharpMUSH Examples]
+description: "End-to-end UI plugin (controller + IApplicationSource) shipped as a managed DLL package"
+license: MIT
+homepage: https://github.com/sharpmush/sharpmush
+keywords: [plugin, dll, managed, ui, application]
+
+# A managed package distributes a COMPILED C# plugin DLL through the package manager. It carries
+# NO softcode `objects:` and NO `application:` block — only the `binaries:` section below. Installing
+# it verifies each file against its SHA-256, then (after the operator's two-part trust opt-in — the
+# server allow-list AND a per-apply allow_managed_code) deposits the bytes into plugins/hello-ui/ for
+# the boot-time loader to pick up on the next restart.
+#
+# A managed package runs ARBITRARY compiled C# in full server trust — there is no sandbox (same posture
+# as a hand-dropped DLL). The SHA-256 hashes guard INTEGRITY (the bytes are what this manifest committed
+# to), not trust; trust is the operator's opt-in.
+binaries:
+  # The plugin/server contract version the DLL was built against. The installer refuses a package built
+  # for a newer contract than the target server provides (checked against PluginContractVersion.Current).
+  min_server_version: ">=1.0"
+  files:
+    # file: = a FLAT name (no path separators, no '..'). Each deposits directly into plugins/hello-ui/.
+    # sha256: = the lowercase 64-hex digest of the built bytes.
+    #
+    # NOTE: these hashes were computed from a local Release build of examples/plugins/hello-ui (see the
+    # README). The .dll/.deps.json digests are build-environment specific — recompute them with
+    # `sha256sum` after building on your machine, or let a deterministic-build CI rewrite this block
+    # before tagging. The parser only validates the 64-hex SHAPE; the installer verifies the bytes match.
+    - file: HelloUiPlugin.dll
+      sha256: "a3a25a87d7d35612e175961657f2aa94e87c93c22f513bd424c52ebbc6975623"
+    - file: HelloUiPlugin.deps.json
+      sha256: "61f7e047d13b3e96b759baae88a47f36ec880901b8a98aa4bc13875403eb7c70"
+    - file: plugin.json
+      sha256: "5b0c85e13578c170502bd61ff14fc0d10795b1f48451dd686a0e8980dc909758"

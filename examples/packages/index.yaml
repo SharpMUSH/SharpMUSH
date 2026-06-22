@@ -43,3 +43,8 @@ packages:
     package: scene
     version: 1.0.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
+  - path: hello-ui/
+    name: Hello UI
+    package: hello-ui
+    version: 1.0.0
+    description: "Managed DLL package (Phase 4) — a UI plugin: controller + IApplicationSource page under \"Examples\""

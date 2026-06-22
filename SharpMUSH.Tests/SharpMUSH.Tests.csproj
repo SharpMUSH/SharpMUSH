@@ -82,6 +82,9 @@
     <!-- Build the IApplicationSource fixture before this project so its DLL exists to copy into the test
          output. Loaded at runtime from disk through PluginLoaderService, never linked. -->
     <ProjectReference Include="Fixtures\ApplicationSourcePlugin\ApplicationSourcePlugin.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
+    <!-- Build the examples/plugins/hello-ui worked example (a UI plugin shipped as a managed package) so the
+         HelloUiManagedPackageExampleTests can load its DLL from disk, exactly as the booting server would. -->
+    <ProjectReference Include="..\examples\plugins\hello-ui\HelloUiPlugin.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- Drop the built CommandOnlyPlugin (DLL + manifest only — its SharpMUSH deps resolve from this host's
@@ -116,6 +119,22 @@
     </ItemGroup>
     <MakeDir Directories="$(ApplicationSourcePluginTargetDir)" />
     <Copy SourceFiles="@(ApplicationSourcePluginFiles)" DestinationFolder="$(ApplicationSourcePluginTargetDir)" SkipUnchangedFiles="false" />
+  </Target>
+
+  <!-- Drop the built examples/plugins/hello-ui worked example into plugins-unit/hello-ui/ so
+       HelloUiManagedPackageExampleTests can load it from disk through PluginLoaderService. -->
+  <Target Name="CopyHelloUiPlugin" AfterTargets="Build">
+    <PropertyGroup>
+      <HelloUiPluginOutDir>$(MSBuildThisFileDirectory)..\examples\plugins\hello-ui\bin\$(Configuration)\net10.0</HelloUiPluginOutDir>
+      <HelloUiPluginTargetDir>$(OutDir)plugins-unit\hello-ui</HelloUiPluginTargetDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <HelloUiPluginFiles Include="$(HelloUiPluginOutDir)\HelloUiPlugin.dll" />
+      <HelloUiPluginFiles Include="$(HelloUiPluginOutDir)\HelloUiPlugin.deps.json" />
+      <HelloUiPluginFiles Include="$(MSBuildThisFileDirectory)..\examples\plugins\hello-ui\plugin.json" />
+    </ItemGroup>
+    <MakeDir Directories="$(HelloUiPluginTargetDir)" />
+    <Copy SourceFiles="@(HelloUiPluginFiles)" DestinationFolder="$(HelloUiPluginTargetDir)" SkipUnchangedFiles="false" />
   </Target>
 
   <ItemGroup>
