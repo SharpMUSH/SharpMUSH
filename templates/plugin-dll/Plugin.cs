@@ -59,6 +59,7 @@ public sealed class Plugin : PluginBase
 	//
 	//   IServiceRegistrar        → register your own DI services (pre-build, into the host container)
 	//   IEndpointContributor     → map your own ASP.NET endpoints/SignalR hubs into the host pipeline
+	//   IApplicationSource       → contribute portal UI: schema-driven Application(s) + NavBar entries
 	//   IFlagSource              → seed engine object flags during DB migration
 	//   IMigrationSource         → provider-tagged DB migrations (Arango/Memgraph/Surreal)
 	//   IBridgeSubscriptionSource→ a NATS→SignalR background subscription
@@ -67,9 +68,9 @@ public sealed class Plugin : PluginBase
 	//   IObjectLifecycleHook     → object created/destroying
 	//
 	// NOTE: a plugin that implements ONLY command/function/hook seams can be hot-unloaded at runtime.
-	// Implementing any of IServiceRegistrar / IEndpointContributor / IFlagSource / IMigrationSource /
-	// IBridgeSubscriptionSource captures load-once state, so such a plugin is load-once (restart to
-	// reload). See docs/guides/writing-a-plugin.md for the full worked examples.
+	// Implementing any of IServiceRegistrar / IEndpointContributor / IApplicationSource / IFlagSource /
+	// IMigrationSource / IBridgeSubscriptionSource captures load-once state, so such a plugin is load-once
+	// (restart to reload). See docs/guides/writing-a-plugin.md for the full worked examples.
 	//
 	// Example — register one DI service:
 	//

@@ -295,6 +295,10 @@ The architecture leaves these seams for the committed later phases:
 - **Phase 10** — *implemented* — **no shared contracts**: `Scene.Contracts` deleted; `ISceneService` + scene
   models + `SceneEventMessage` moved *inside* the plugin; `Library`/`Server`/`Client` reference zero scene types.
   Host↔plugin is generic seams + serialization only — the boundary a third-party, hot-loaded plugin needs (see below).
+- **Phase 11** — *implemented* — plugin-contributed **portal UI**: the `IApplicationSource` seam lets a plugin
+  contribute schema-driven Area-21 `RegisteredApplication`(s) (page/widget) that overlay the app registry
+  in-memory while the plugin is loaded; the NavBar renders them per `NavPlacement` (slotting into the built-in
+  groups or forming new data-driven sections). No browser-loaded plugin assemblies (see below).
 
 ## Phase 4 — package-manager DLL distribution
 
@@ -504,6 +508,29 @@ ALC-loaded plugin, host-side scene coverage is **wire-based** (drive `@scene`/`s
 the public surface). A plugin's *internal* unit tests belong in a project that compile-references the
 plugin and loads it in the **default** context (no ALC). This is exactly how a third-party plugin author
 tests their own plugin while the host tests only the wire.
+
+## Phase 11 — plugin-contributed portal UI (`IApplicationSource`)
+
+A plugin contributes browser UI **without shipping a browser-loaded assembly** by reusing the Area-21
+"Dynamic Applications" pipeline (schema-driven views the WASM client renders generically) plus the Phase-9
+controller seam (the plugin serves its own schema/data endpoints):
+
+- **`IApplicationSource`** (`SharpMUSH.Library.Plugins`): `IEnumerable<RegisteredApplication> GetApplications()`.
+  `RegisteredApplication` is a general portal type in `Library` (host-shared), so this is a generic seam, not
+  a plugin-specific contract. `PluginCatalog` collects it into `ApplicationSources`; it is **load-once**.
+- **In-memory overlay:** `PluginApplicationRegistryDecorator` wraps `IApplicationRegistryService` and unions
+  the catalog's plugin apps over the DB-backed admin apps in `GetApplicationsAsync()`/`GetApplicationAsync()`.
+  Plugin apps are read-only and **not persisted** — they appear while the plugin is loaded and vanish on
+  unload (no orphaned rows). Slug collision: DB/admin wins, the plugin overlay entry is skipped with a warning.
+  `/api/applications` returns the merged set; the client catalog just sees more apps.
+- **NavBar:** `RegisteredApplication.NavPlacement` names a section. `NavMenu.razor` slots each accessible
+  app's link into the built-in group it names (`Play`/`World`/`Build`/`Manage`), or — for a novel name —
+  renders a new data-driven section ordered by `Order`. `MinimumRole` filters visibility.
+
+So a UI plugin ships end-to-end inside its own assembly: the app descriptor (`IApplicationSource`), the
+schema/data endpoints (its controller via `AddApplicationPart`), and the NavBar placement — appearing and
+disappearing with load/unload. Custom compiled Blazor/WASM components remain a later phase; Phase 11 is
+declarative/schema-driven only.
 
 ## See also
 

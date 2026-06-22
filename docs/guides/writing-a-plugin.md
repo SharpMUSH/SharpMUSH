@@ -322,6 +322,39 @@ in a non-collectible assembly that can't reference your collectible plugin type.
 > example: REST `SceneController`, a `/hubs/scene` `SceneHub`, scene types kept internal to the plugin, and a
 > client that owns its own `SceneEventMessage` DTO. See `docs/design/plugin-system.md` (Phases 8–10).
 
+## 8.6. Contributing portal UI + a NavBar section (Phase 11)
+
+You can add pages and NavBar entries to the WASM client **without shipping a browser assembly** — by
+contributing a schema-driven Area-21 *Application* and serving its schema/data from your own controller
+(§8.5). Implement `IApplicationSource`:
+
+```csharp
+public sealed class Plugin : PluginBase, IServiceRegistrar, IEndpointContributor, IApplicationSource
+{
+	public IEnumerable<RegisteredApplication> GetApplications() =>
+	[
+		new RegisteredApplication(
+			Slug: "myplugin",
+			DisplayName: "My Plugin",
+			Icon: null,
+			Kind: "Page",                       // Page → a /apps/{slug} route; Widget → a layout-zone tile
+			SchemaUrl: "/api/myplugin/schema",  // served by YOUR controller (AddApplicationPart)
+			DataUrl: "/api/myplugin/data",
+			SubmitRoute: null,
+			MinimumRole: "Player",
+			NavPlacement: "World",              // a built-in group, or a NEW name to create your own section
+			Zones: [],
+			Order: 100)
+	];
+}
+```
+
+The host overlays your apps onto the registry **in memory while you're loaded** (nothing is persisted), so
+they appear in `/api/applications`, render at `/apps/myplugin` via the client's generic schema renderer, and
+show up in the NavBar — under `World` here, or as their own section if `NavPlacement` is a new name. Unload
+the plugin and they vanish. Access is filtered by `MinimumRole`. Custom compiled Blazor components are not
+supported (declarative/schema-driven only). See `docs/design/plugin-system.md` (Phase 11).
+
 ## 9. Publishing a managed package (Phase 4 — package-manager DLL distribution)
 
 Instead of asking operators to hand-copy your DLL into `plugins/`, you can ship it through the **package
