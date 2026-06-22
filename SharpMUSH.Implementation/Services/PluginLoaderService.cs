@@ -71,12 +71,28 @@ public static class PluginLoaderService
 	/// </summary>
 	private static readonly ConditionalWeakTable<IPlugin, PluginHandle> Handles = new();
 
+	/// <summary>
+	/// Host assembly NAMES shared into <b>every</b> plugin's ALC by default, in addition to any a plugin
+	/// declares in its manifest. These are the three DB-client assemblies the host already loads (it
+	/// references all three providers); sharing them by name lets a storage plugin use a provider connection
+	/// returned through a host-shared accessor without a type-identity mismatch — and without the plugin
+	/// framework itself referencing the client packages. Kept deliberately small and explicit (never
+	/// <c>PreferSharedTypes=true</c>, which would be far too broad).
+	/// </summary>
+	public static readonly IReadOnlyList<string> DefaultSharedAssemblyNames =
+	[
+		"Core.Arango",
+		"Neo4j.Driver",
+		"SurrealDb.Net"
+	];
+
 	/// <summary>A plugin DLL found on disk together with its (manifest-or-fallback) ordering metadata.</summary>
 	public sealed record PluginCandidate(
 		string DllPath,
 		string Id,
 		IReadOnlyList<string> Dependencies,
-		int Priority);
+		int Priority,
+		IReadOnlyList<string>? SharedAssemblies = null);
 
 	/// <summary>An instantiated plugin together with the DLL it was loaded from.</summary>
 	public sealed record LoadedPlugin(IPlugin Plugin, string DllPath)
@@ -133,7 +149,7 @@ public static class PluginLoaderService
 		var loaded = new List<LoadedPlugin>();
 		foreach (var candidate in ordered)
 		{
-			var result = LoadOne(candidate.DllPath, logger);
+			var result = LoadOne(candidate.DllPath, logger, candidate.SharedAssemblies);
 			if (result is not null)
 			{
 				loaded.Add(result);
@@ -159,7 +175,8 @@ public static class PluginLoaderService
 			var manifest = TryReadManifest(dll, logger);
 			if (manifest is not null)
 			{
-				yield return new PluginCandidate(dll, manifest.Id, manifest.Dependencies, manifest.Priority);
+				yield return new PluginCandidate(dll, manifest.Id, manifest.Dependencies, manifest.Priority,
+					manifest.SharedAssemblies);
 			}
 			else
 			{
@@ -285,20 +302,39 @@ public static class PluginLoaderService
 	/// <see cref="Handles"/> so the manager can later unload it. Returns <c>null</c> (and logs) on any
 	/// failure so the caller keeps loading.
 	/// </summary>
-	public static LoadedPlugin? LoadOne(string dllPath, ILogger logger)
+	public static LoadedPlugin? LoadOne(string dllPath, ILogger logger,
+		IReadOnlyList<string>? sharedAssemblyNames = null)
 	{
 		PluginLoader? loader = null;
 		try
 		{
+			// Assembly NAMES the host must share into this plugin's ALC, beyond the sharedTypes net: the
+			// DefaultSharedAssemblyNames (the DB-client assemblies a storage plugin needs to unify on) plus
+			// anything the plugin's manifest declares. Sharing by name makes the host's already-loaded copy
+			// authoritative, so a host service whose signatures reference those types casts cleanly inside the
+			// plugin. We never set PreferSharedTypes=true (too broad).
+			var sharedNames = DefaultSharedAssemblyNames
+				.Concat(sharedAssemblyNames ?? [])
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.ToList();
+
 			// Load collectibly: a collectible ALC costs nothing extra while it stays loaded, but it is the
 			// only kind that can later be unloaded. We instantiate the entry type, read which contribution
 			// interfaces it implements, and derive the unloadable verdict from that. Load-once plugins keep
 			// the same collectible loader (we simply never unload them); command/function-only plugins are
-			// the ones the manager may actually unload.
+			// the ones the manager may actually unload. The sharedTypes net is preserved verbatim (it unifies
+			// the contract assemblies); the configure leg additionally shares the DB-client assemblies BY NAME.
 			loader = PluginLoader.CreateFromAssemblyFile(
 				dllPath,
 				isUnloadable: true,
-				sharedTypes: SharedContractTypes);
+				sharedTypes: SharedContractTypes,
+				configure: config =>
+				{
+					foreach (var name in sharedNames)
+					{
+						config.SharedAssemblies.Add(new AssemblyName(name));
+					}
+				});
 
 			var plugin = Instantiate(loader, dllPath, logger);
 			if (plugin is null)

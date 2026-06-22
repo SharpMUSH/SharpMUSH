@@ -21,8 +21,7 @@ public class SceneCommandFunctionIntegrationTests
 	private IMUSHCodeParser CommandParser => WebAppFactory.CommandParser;
 	private IMUSHCodeParser FunctionParser => WebAppFactory.FunctionParser;
 	private IConnectionService Connection => WebAppFactory.Services.GetRequiredService<IConnectionService>();
-	private ISceneService Scenes => WebAppFactory.Services.GetRequiredService<ISharpDatabase>() as ISceneService
-		?? throw new InvalidOperationException("ISharpDatabase does not implement ISceneService in this configuration.");
+	private ISceneService Scenes => WebAppFactory.Services.GetRequiredService<ISceneService>();
 
 	private const string God = "#1";
 

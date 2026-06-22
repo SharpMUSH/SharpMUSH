@@ -135,7 +135,8 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS object_data_key_type ON object_data FIELDS objectKey, dataType UNIQUE"
 				// Scene System schema (scene tables/edges/indexes) is no longer defined here — Phase 5 moved
 				// it into the Scene plugin's IMigrationSource.SurrealStatements, run after this built-in batch
-				// (see RunPluginSurrealMigrations). The provider's ISceneService storage stays in-tree.
+				// (see RunPluginSurrealMigrations). The ISceneService storage moved into the plugin too (Phase 8),
+				// reaching this provider's connection through the host-shared ISurrealStorageAccessor.
 			};
 
 			foreach (var q in indexQueries)

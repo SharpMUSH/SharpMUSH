@@ -7,8 +7,9 @@ namespace SharpMUSH.Tests.Integration.Scenes;
 
 /// <summary>
 /// Integration tests for the graph-native Scene System against the configured DB backend.
-/// <see cref="ISceneService"/> is implemented by the active <c>ISharpDatabase</c> provider
-/// (selected by <c>SHARPMUSH_DATABASE_PROVIDER</c> — arangodb / memgraph / surrealdb); these
+/// <see cref="ISceneService"/> is provided by the Scene plugin's per-provider storage (Phase 8),
+/// keyed to the active provider (selected by <c>SHARPMUSH_DATABASE_PROVIDER</c> — arangodb / memgraph /
+/// surrealdb) and reaching the provider's connection through a host-shared storage accessor; these
 /// tests must pass identically on all three. Object references use <c>#1</c> (the seeded God
 /// object) so the resolve → edge → name-snapshot mechanism is exercised against a real vertex.
 /// </summary>
@@ -18,8 +19,7 @@ public class SceneServiceIntegrationTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactory { get; init; }
 
-	private ISceneService Scenes => WebAppFactory.Services.GetRequiredService<ISharpDatabase>() as ISceneService
-		?? throw new InvalidOperationException("ISharpDatabase does not implement ISceneService in this configuration.");
+	private ISceneService Scenes => WebAppFactory.Services.GetRequiredService<ISceneService>();
 
 	private const string God = "#1"; // seeded object — used for owner/author/origin in these tests
 

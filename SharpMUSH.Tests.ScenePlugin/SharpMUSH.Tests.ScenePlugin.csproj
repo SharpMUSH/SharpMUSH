@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <RollForward>LatestMajor</RollForward>
+    <NoWarn>TUnit0038</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TUnit" Version="1.19.16" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.7" />
+    <!-- The fake IArangoStorageAccessor references Core.Arango types at runtime. -->
+    <PackageReference Include="Core.Arango" Version="3.12.2" />
+  </ItemGroup>
+
+  <!-- Focused unit test for the Scene plugin's AddSceneSystem registration seam (Phase 8). References the
+       plugin and Library WITHOUT touching SharpMUSH.Implementation, so the plugin's generated VersionInfo
+       does not collide with the engine's. The storage classes never reach a database here. -->
+  <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
+  </ItemGroup>
+
+</Project>

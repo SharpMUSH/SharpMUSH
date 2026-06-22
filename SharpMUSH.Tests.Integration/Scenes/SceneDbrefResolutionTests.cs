@@ -17,8 +17,7 @@ public class SceneDbrefResolutionTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactory { get; init; }
 
-	private ISceneService Scenes => WebAppFactory.Services.GetRequiredService<ISharpDatabase>() as ISceneService
-		?? throw new InvalidOperationException("ISharpDatabase does not implement ISceneService in this configuration.");
+	private ISceneService Scenes => WebAppFactory.Services.GetRequiredService<ISceneService>();
 
 	private const string God = "#1";
 
