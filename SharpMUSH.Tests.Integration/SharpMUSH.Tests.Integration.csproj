@@ -35,7 +35,6 @@
 		<!-- Build the Scene plugin (the Phase-5 reference plugin) before this project so its DLL exists to
 		     copy into plugins/scene/. ReferenceOutputAssembly=false: it is loaded at runtime, not linked. -->
 		<ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
-		<ProjectReference Include="..\SharpMUSH.Plugins.Scene.Contracts\SharpMUSH.Plugins.Scene.Contracts.csproj" />
 	</ItemGroup>
 
 	<!-- Drop the built SamplePlugin (DLL + manifest only — its SharpMUSH deps resolve from the host's

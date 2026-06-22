@@ -100,7 +100,7 @@ else
 
     protected override void OnInitialized()
     {
-        Hub.OnSceneEventReceived += HandleSceneEvent;
+        SceneHub.OnSceneEventReceived += HandleSceneEvent;
         _subscribed = true;
     }
 
@@ -254,7 +254,7 @@ else
     {
         if (_subscribed)
         {
-            Hub.OnSceneEventReceived -= HandleSceneEvent;
+            SceneHub.OnSceneEventReceived -= HandleSceneEvent;
             _subscribed = false;
         }
 

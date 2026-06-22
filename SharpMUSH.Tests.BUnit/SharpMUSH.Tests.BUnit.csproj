@@ -21,7 +21,6 @@
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Client\SharpMUSH.Client.csproj" />
     <ProjectReference Include="..\SharpMUSH.Server\SharpMUSH.Server.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Plugins.Scene.Contracts\SharpMUSH.Plugins.Scene.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

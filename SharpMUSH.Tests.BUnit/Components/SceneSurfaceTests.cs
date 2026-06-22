@@ -10,12 +10,12 @@ using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components.Widgets;
+using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Pages;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Plugins.Scene.Contracts;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 

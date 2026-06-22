@@ -3,10 +3,12 @@
 global using MModule = global::MarkupString.MarkupStringModule;
 global using MString = global::MarkupString.MarkupString;
 
-// Phase 9: the scene contract surface (Scene/ScenePose/ScenePoseEdit/ScenePlot/SceneMember/
-// SceneEventMessage/ISceneService) moved into SharpMUSH.Plugins.Scene.Contracts. A global using keeps the
-// moved command/function/storage bodies compiling without per-file edits.
-global using SharpMUSH.Plugins.Scene.Contracts;
-// The `Scene` contract type collides by simple name with the `SharpMUSH.Plugins.Scene` namespace segment,
+// The scene contract surface now lives ENTIRELY inside this plugin assembly (no shared Contracts assembly):
+//   • the models (Scene/ScenePose/ScenePoseEdit/ScenePlot/SceneMember/SceneEventMessage) in .Models, and
+//   • ISceneService alongside the storage in .Storage.
+// Global usings keep the moved command/function/storage/web bodies compiling without per-file edits.
+global using SharpMUSH.Plugins.Scene.Models;
+global using SharpMUSH.Plugins.Scene.Storage;
+// The `Scene` model type collides by simple name with the `SharpMUSH.Plugins.Scene` namespace segment,
 // so code that needs to disambiguate (e.g. method-parameter types) qualifies it as `Contracts.Scene`.
-global using Contracts = SharpMUSH.Plugins.Scene.Contracts;
+global using Contracts = SharpMUSH.Plugins.Scene.Models;

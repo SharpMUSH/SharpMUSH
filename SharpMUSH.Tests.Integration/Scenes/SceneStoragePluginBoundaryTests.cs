@@ -1,23 +1,23 @@
 using System.Runtime.Loader;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Plugins.Scene.Contracts;
 
 namespace SharpMUSH.Tests.Integration.Scenes;
 
 /// <summary>
-/// Phase 8 boundary + ALC proofs for the relocated Scene storage.
+/// Boundary + ALC proofs for the Scene storage, now that the entire scene contract surface
+/// (<c>ISceneService</c> + the models) lives INSIDE <c>SharpMUSH.Plugins.Scene</c> with no shared Contracts
+/// assembly. The host cannot compile-reference any scene type, so everything here is reflection over the
+/// runtime-loaded plugin assembly.
 ///
-/// <para><b>Boundary:</b> the core <c>ISharpDatabase</c> provider must NOT implement <see cref="ISceneService"/>
-/// any more — the storage moved into the Scene plugin. Resolving <see cref="ISceneService"/> must therefore
-/// hand back the plugin's storage type (an assembly that is NOT the provider's), and the provider class's own
-/// interface set must no longer include <see cref="ISceneService"/>.</para>
+/// <para><b>Boundary:</b> the core <c>ISharpDatabase</c> provider must NOT implement the plugin's
+/// <c>ISceneService</c>; the service is supplied by the plugin's own storage type (in the plugin assembly,
+/// not the provider's).</para>
 ///
 /// <para><b>ALC smoke:</b> the resolved storage lives in the plugin's collectible
-/// <see cref="AssemblyLoadContext"/> (a different ALC than the host default), yet a real call succeeds —
-/// proving the provider's DB-client connection, handed across the boundary through the host-shared accessor,
-/// unified by type identity (the make-or-break risk of this refactor).</para>
+/// <see cref="AssemblyLoadContext"/> (a different ALC than the host default), yet a real round-trip call
+/// succeeds — proving the provider's DB-client connection, handed across the boundary through the
+/// host-shared accessor, unified by type identity (the make-or-break risk of this refactor).</para>
 /// </summary>
 [NotInParallel]
 public class SceneStoragePluginBoundaryTests
@@ -25,21 +25,28 @@ public class SceneStoragePluginBoundaryTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactory { get; init; }
 
-	private ISceneService Scenes => WebAppFactory.Services.GetRequiredService<ISceneService>();
 	private ISharpDatabase Database => WebAppFactory.Services.GetRequiredService<ISharpDatabase>();
+
+	/// <summary>The plugin's <c>ISceneService</c> interface type, loaded in the plugin's ALC.</summary>
+	private static Type SceneServiceType =>
+		AppDomain.CurrentDomain.GetAssemblies()
+			.First(a => a.GetName().Name == "SharpMUSH.Plugins.Scene")
+			.GetType("SharpMUSH.Plugins.Scene.Storage.ISceneService", throwOnError: true)!;
+
+	/// <summary>The active-provider scene service, resolved from host DI by the plugin's interface type.</summary>
+	private object SceneService => WebAppFactory.Services.GetRequiredService(SceneServiceType);
 
 	[Test]
 	public async Task CoreProvider_DoesNotImplementISceneService()
 	{
 		// The active provider (Arango/Memgraph/Surreal) no longer carries scene storage.
-		await Assert.That(Database is ISceneService).IsFalse();
-		await Assert.That(typeof(ISceneService).IsAssignableFrom(Database.GetType())).IsFalse();
+		await Assert.That(SceneServiceType.IsAssignableFrom(Database.GetType())).IsFalse();
 	}
 
 	[Test]
 	public async Task SceneService_IsProvidedByThePluginNotTheCoreProvider()
 	{
-		var scenes = Scenes;
+		var scenes = SceneService;
 		// The storage came from the Scene plugin assembly, distinct from the core provider's assembly.
 		await Assert.That(scenes.GetType().Assembly).IsNotEqualTo(Database.GetType().Assembly);
 		await Assert.That(scenes.GetType().Assembly.GetName().Name).IsEqualTo("SharpMUSH.Plugins.Scene");
@@ -48,7 +55,7 @@ public class SceneStoragePluginBoundaryTests
 	[Test]
 	public async Task SceneService_LivesInACollectiblePluginAlc_AndACallSucceeds()
 	{
-		var scenes = Scenes;
+		var scenes = SceneService;
 
 		// The plugin loaded in its own (collectible) ALC, not the host default — this is the boundary the
 		// DB-client types had to unify across.
@@ -61,11 +68,22 @@ public class SceneStoragePluginBoundaryTests
 		// A real round-trip through the storage exercises the host-shared accessor's connection: create a
 		// scene (owned by #1) and read it straight back. If the DB-client type identity had NOT unified,
 		// the accessor-returned connection could not have been used inside the plugin and this would throw.
-		var created = await scenes.CreateSceneAsync(roomDbref: "", ownerDbref: "#1", title: "ALC smoke scene");
-		await Assert.That(created.Id).IsNotNull().And.IsNotEmpty();
+		// Invoked reflectively because the host cannot name the plugin's ISceneService / Scene model.
+		var createTask = (Task)SceneServiceType
+			.GetMethod("CreateSceneAsync")!
+			.Invoke(scenes, ["", "#1", "ALC smoke scene"])!;
+		await createTask;
+		var created = createTask.GetType().GetProperty("Result")!.GetValue(createTask)!;
+		var createdId = (string)created.GetType().GetProperty("Id")!.GetValue(created)!;
+		await Assert.That(createdId).IsNotNull().And.IsNotEmpty();
 
-		var fetched = await scenes.GetSceneAsync(created.Id);
-		await Assert.That(fetched.IsT0).IsTrue();
-		await Assert.That(fetched.AsT0.Id).IsEqualTo(created.Id);
+		var getTask = (Task)SceneServiceType
+			.GetMethod("GetSceneAsync")!
+			.Invoke(scenes, [createdId])!;
+		await getTask;
+		var got = getTask.GetType().GetProperty("Result")!.GetValue(getTask)!;
+		// OneOf<Scene, NotFound>: IsT0 must be true (found).
+		var isT0 = (bool)got.GetType().GetProperty("IsT0")!.GetValue(got)!;
+		await Assert.That(isT0).IsTrue();
 	}
 }

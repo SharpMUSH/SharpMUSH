@@ -1,4 +1,4 @@
-namespace SharpMUSH.Plugins.Scene.Contracts;
+namespace SharpMUSH.Plugins.Scene.Models;
 
 /// <summary>
 /// A single content version of a pose — the <c>node_sharp_sys_scene_pose_edits</c>

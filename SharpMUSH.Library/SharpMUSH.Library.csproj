@@ -132,11 +132,6 @@
 	  <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" PrivateAssets="all" />
 	  <ProjectReference Include="..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" PrivateAssets="all" />
 	  <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" PrivateAssets="all" />
-	  <!-- The scene contract surface (Scene/ScenePose/.../ISceneService/SceneEventMessage) that the deferred
-	       Client realtime members on IConnectionStateService + NotificationType reference. PrivateAssets="all"
-	       bundles its DLL into lib/ (via IncludeReferencedProjectsInPackage) without adding a NuGet dependency,
-	       and stops it flowing transitively — the host (Server/Client) and the Scene plugin reference it directly. -->
-	  <ProjectReference Include="..\SharpMUSH.Plugins.Scene.Contracts\SharpMUSH.Plugins.Scene.Contracts.csproj" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

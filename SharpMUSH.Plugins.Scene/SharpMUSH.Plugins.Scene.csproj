@@ -42,13 +42,6 @@
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
-		<!-- The scene contract surface (models + ISceneService + SceneEventMessage) shared host↔plugin across
-		     the ALC. Private=false + ExcludeAssets=runtime keeps it out of the plugin's private bin so the
-		     host's copy loads; the loader's DefaultSharedAssemblyNames entry is the real type-unification net. -->
-		<ProjectReference Include="..\SharpMUSH.Plugins.Scene.Contracts\SharpMUSH.Plugins.Scene.Contracts.csproj">
-			<Private>false</Private>
-			<ExcludeAssets>runtime</ExcludeAssets>
-		</ProjectReference>
 		<!-- DatabaseConstants (scene collection/edge/graph names) + Core.Arango migration types for the
 		     IMigrationSource Arango migration. The host (Server) already loads SharpMUSH.Database and
 		     Core.Arango, so resolve them from the host's default load context rather than the plugin bin. -->

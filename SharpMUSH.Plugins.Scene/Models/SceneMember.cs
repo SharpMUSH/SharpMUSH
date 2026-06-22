@@ -1,4 +1,4 @@
-namespace SharpMUSH.Plugins.Scene.Contracts;
+namespace SharpMUSH.Plugins.Scene.Models;
 
 /// <summary>
 /// A player's participation in a scene — a projection of the

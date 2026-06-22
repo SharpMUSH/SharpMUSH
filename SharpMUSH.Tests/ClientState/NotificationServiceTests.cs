@@ -63,8 +63,7 @@ public class NotificationServiceTests
 		svc.AddNotification("Info", "msg", NotificationType.Info);
 		svc.AddNotification("Warn", "msg", NotificationType.Warning);
 		svc.AddNotification("Mail", "msg", NotificationType.Mail);
-		svc.AddNotification("Scene", "msg", NotificationType.Scene);
-		await Assert.That(svc.GetUnreadCount()).IsEqualTo(4);
+		await Assert.That(svc.GetUnreadCount()).IsEqualTo(3);
 	}
 
 	// ── MarkRead ─────────────────────────────────────────────────────────────

@@ -96,7 +96,9 @@ public sealed class Plugin : PluginBase
 	//      	endpoints.MapGet("/api/myplugin/ping", () => "pong");
 	//      }
 	//
-	// DTOs/service interfaces shared by your controller/hub AND the host belong in a small "contracts"
-	// assembly that is host-shared in the plugin ALC — see SharpMUSH.Plugins.Scene.Contracts and
-	// docs/design/plugin-system.md (Phase 9) for the canonical end-to-end example.
+	// Keep your DTOs/service interfaces INSIDE this plugin assembly. The host cannot compile-reference a
+	// runtime-loaded plugin, so every host↔plugin and client↔plugin boundary must be a generic seam
+	// (IServiceRegistrar / IEndpointContributor) or serialization (HTTP / SignalR JSON) — the client
+	// defines its own DTO matching your wire shape. See SharpMUSH.Plugins.Scene (the reference plugin) and
+	// docs/design/plugin-system.md for the canonical end-to-end example.
 }

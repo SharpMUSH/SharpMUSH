@@ -85,12 +85,11 @@ public static class PluginLoaderService
 	[
 		"Core.Arango",
 		"Neo4j.Driver",
-		"SurrealDb.Net",
-		// Phase 9: the Scene plugin's contract surface (Scene/ScenePose/.../ISceneService/SceneEventMessage).
-		// The host references this assembly (SharpMUSH.Server / SharpMUSH.Client), so sharing it BY NAME makes
-		// the host's copy authoritative for both sides — a plugin-hosted controller/hub returns/serializes the
-		// SAME contract Type the host's DI and SignalR wire expect, across the collectible plugin ALC.
-		"SharpMUSH.Plugins.Scene.Contracts"
+		"SurrealDb.Net"
+		// The Scene plugin is now fully self-contained: its models + ISceneService + SceneEventMessage live
+		// INSIDE SharpMUSH.Plugins.Scene (no shared Contracts assembly). Every host↔plugin and client↔plugin
+		// scene boundary is a generic seam (IServiceRegistrar / IEndpointContributor) or serialization
+		// (HTTP / SignalR JSON), so no scene assembly needs to be host-shared by name.
 	];
 
 	/// <summary>A plugin DLL found on disk together with its (manifest-or-fallback) ordering metadata.</summary>

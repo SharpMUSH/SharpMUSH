@@ -1,16 +1,14 @@
-using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library;
-using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Plugins.Scene.Contracts;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Integration.Scenes;
 
 /// <summary>
-/// Proves (or disproves) the reported bug: the live <c>*Dbref</c> values on scene
-/// records — resolved from the object edges — come back empty even though the
-/// <c>*Name</c> snapshots are captured. Object references are taken as <c>#1</c>
-/// (the seeded God object), so a correct resolution must round-trip back to <c>#1</c>.
-/// These assertions are deliberately on the resolved DBREF, not the name snapshot.
+/// Proves the live <c>*Dbref</c> values on scene records — resolved from the object edges — round-trip
+/// back to the real object, not just the <c>*Name</c> snapshot. Driven over the WIRE (the host can no
+/// longer name <c>ISceneService</c> now that it lives inside the Scene plugin's ALC): writes go through the
+/// wizard-only <c>scene…()</c> side-effect functions and the resolved dbref is read back through the
+/// <c>scene…()</c> read functions. Object references are <c>#1</c> (the seeded God object), so a correct
+/// resolution must come back as <c>#1</c>. Runs identically on all three providers.
 /// </summary>
 [NotInParallel]
 public class SceneDbrefResolutionTests
@@ -18,48 +16,51 @@ public class SceneDbrefResolutionTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactory { get; init; }
 
-	private ISceneService Scenes => WebAppFactory.Services.GetRequiredService<ISceneService>();
+	private IMUSHCodeParser FunctionParser => WebAppFactory.FunctionParser;
 
 	private const string God = "#1";
+
+	private async Task<string> Eval(string expression) =>
+		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText().Trim();
+
+	private async Task<string> NewPublicSceneAsync(string title)
+	{
+		var id = await Eval($"scenecreate(,{God},{title} {Guid.NewGuid():N})");
+		await Eval($"sceneset({id},public,1)");
+		return id;
+	}
 
 	[Test]
 	public async Task CreateScene_ResolvesOwnerDbref_BackToGod()
 	{
-		var created = await Scenes.CreateSceneAsync(roomDbref: "", ownerDbref: God, title: "Dbref owner");
+		var id = await NewPublicSceneAsync("Dbref owner");
 
-		// Read it back through the resolution path.
-		var got = await Scenes.GetSceneAsync(created.Id);
-		await Assert.That(got.IsT0).IsTrue();
-
-		// The name snapshot should be captured (this already works)...
-		await Assert.That(got.AsT0.OwnerName).IsNotEmpty();
-		// ...and the live dbref must resolve back to #1 (this is the bug under test).
-		await Assert.That(got.AsT0.OwnerDbref).IsEqualTo(God);
+		// The name snapshot should be captured...
+		await Assert.That(await Eval($"scene({id}, ownername)")).IsNotEmpty();
+		// ...and the live dbref must resolve back to #1.
+		await Assert.That(await Eval($"scene({id}, owner)")).IsEqualTo(God);
 	}
 
 	[Test]
 	public async Task AddPose_ResolvesAuthorDbref_BackToGod()
 	{
-		var scene = await Scenes.CreateSceneAsync(roomDbref: "", ownerDbref: God, title: "Dbref author");
-		var added = await Scenes.AddPoseAsync(scene.Id, God, "", God, "pose", [], "dbref author check");
-		await Assert.That(added.IsT0).IsTrue();
+		var id = await NewPublicSceneAsync("Dbref author");
+		var poseId = await Eval($"sceneaddpose({id},{God},,{God},pose,,dbref author check)");
+		await Assert.That(poseId).DoesNotStartWith("#-1");
 
-		var got = await Scenes.GetPoseAsync(added.AsT0.Id);
-		await Assert.That(got.IsT0).IsTrue();
-		await Assert.That(got.AsT0.AuthorName).IsNotEmpty();
-		await Assert.That(got.AsT0.AuthorDbref).IsEqualTo(God);
+		await Assert.That(await Eval($"scenepose({id}, {poseId}, authorname)")).IsNotEmpty();
+		await Assert.That(await Eval($"scenepose({id}, {poseId}, author)")).IsEqualTo(God);
 	}
 
 	[Test]
 	public async Task AddMember_ResolvesMemberDbref_BackToGod()
 	{
-		var scene = await Scenes.CreateSceneAsync(roomDbref: "", ownerDbref: God, title: "Dbref member");
-		var member = await Scenes.AddMemberAsync(scene.Id, God, "participant");
-		await Assert.That(member.IsT0).IsTrue();
-		await Assert.That(member.AsT0.MemberDbref).IsEqualTo(God);
+		var id = await NewPublicSceneAsync("Dbref member");
 
-		var members = await Scenes.GetMembersAsync(scene.Id);
-		await Assert.That(members.IsT0).IsTrue();
-		await Assert.That(members.AsT0.Select(m => m.MemberDbref)).Contains(God);
+		// sceneaddmember returns the resolved member dbref on success.
+		await Assert.That(await Eval($"sceneaddmember({id},{God},participant)")).IsEqualTo(God);
+
+		// scenemembers lists members as their resolved dbref.
+		await Assert.That(await Eval($"scenemembers({id})")).Contains(God);
 	}
 }

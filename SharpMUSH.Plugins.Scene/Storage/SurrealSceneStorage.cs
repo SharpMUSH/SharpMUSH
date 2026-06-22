@@ -1,7 +1,7 @@
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Models;
-using SceneModel = SharpMUSH.Plugins.Scene.Contracts.Scene;
+using SceneModel = SharpMUSH.Plugins.Scene.Models.Scene;
 using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net.Models;

@@ -1,9 +1,9 @@
-namespace SharpMUSH.Plugins.Scene.Contracts;
+namespace SharpMUSH.Plugins.Scene.Models;
 
 /// <summary>
 /// A real-time scene mutation broadcast on <c>game.scene.{id}</c> (NATS) and
 /// forwarded to the SignalR <c>scene:{id}</c> group. Mirrors
-/// <see cref="RoomEventMessage"/>. Carries the pose payload plus opaque tags so
+/// <c>RoomEventMessage</c>. Carries the pose payload plus opaque tags so
 /// the portal can filter client-side with no round-trip; the wire is plain
 /// <see cref="Content"/> + raw <see cref="Markup"/> (rendered client-side).
 /// </summary>

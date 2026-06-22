@@ -5,11 +5,11 @@ using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Plugins.Scene.Contracts;
+using SharpMUSH.Plugins.Scene.Models;
 using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Scene.Storage;
-using Scene = SharpMUSH.Plugins.Scene.Contracts.Scene;
+using Scene = SharpMUSH.Plugins.Scene.Models.Scene;
 
 namespace SharpMUSH.Tests.ScenePlugin;
 

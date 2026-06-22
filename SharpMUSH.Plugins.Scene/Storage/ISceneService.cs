@@ -1,7 +1,12 @@
 using OneOf;
 using OneOf.Types;
+using SharpMUSH.Plugins.Scene.Models;
+// The `Scene` MODEL record collides by simple name with the `SharpMUSH.Plugins.Scene` namespace segment
+// (this file lives in the .Storage child namespace), so the bare name `Scene` binds to the namespace.
+// The `Contracts` global alias (= SharpMUSH.Plugins.Scene.Models) disambiguates it as `Contracts.Scene`,
+// matching the storage files' convention.
 
-namespace SharpMUSH.Plugins.Scene.Contracts;
+namespace SharpMUSH.Plugins.Scene.Storage;
 
 /// <summary>
 /// The wizard-only primitive surface for the graph-native Scene System
@@ -32,10 +37,10 @@ public interface ISceneService
 	/// the owner). Pass an empty <paramref name="roomDbref"/> for a roomless
 	/// scheduled scene; a room is bound later via <c>SetSceneMetaAsync(id,"room",…)</c>.
 	/// </summary>
-	Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "");
+	Task<Contracts.Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "");
 
 	/// <summary>Returns a scene by id, or <c>NotFound</c>.</summary>
-	Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId);
+	Task<OneOf<Contracts.Scene, NotFound>> GetSceneAsync(string sceneId);
 
 	/// <summary>
 	/// Sets one scene metadata key. Known keys (<c>status</c>, <c>public</c>,
@@ -44,7 +49,7 @@ public interface ISceneService
 	/// <c>warning</c>) route to the first-class field/edge; any other key lands in
 	/// the opaque <see cref="Scene.Meta"/> bag. Returns <c>NotFound</c> if missing.
 	/// </summary>
-	Task<OneOf<Scene, NotFound>> SetSceneMetaAsync(string sceneId, string key, string value);
+	Task<OneOf<Contracts.Scene, NotFound>> SetSceneMetaAsync(string sceneId, string key, string value);
 
 	/// <summary>
 	/// Lists scenes by <paramref name="filter"/> (<c>active</c> | <c>recent</c> |
@@ -53,14 +58,14 @@ public interface ISceneService
 	/// UTC-millis bounds. <paramref name="viewerDbref"/> scopes <c>mine</c> and
 	/// visibility filtering.
 	/// </summary>
-	Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null,
+	Task<IReadOnlyList<Contracts.Scene>> ListScenesAsync(string filter, string? viewerDbref = null,
 		long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50);
 
 	/// <summary>
 	/// Returns the <c>active</c> scene bound to <paramref name="roomDbref"/> (the
 	/// <c>in_room</c> edge + <c>status=active</c>), or <c>NotFound</c>. (<c>scenewhere</c>.)
 	/// </summary>
-	Task<OneOf<Scene, NotFound>> GetActiveSceneInRoomAsync(string roomDbref);
+	Task<OneOf<Contracts.Scene, NotFound>> GetActiveSceneInRoomAsync(string roomDbref);
 
 	// ── Poses ─────────────────────────────────────────────────────────────────
 
@@ -141,7 +146,7 @@ public interface ISceneService
 	Task<OneOf<None, NotFound>> SetFocusAsync(string playerDbref, string? sceneId = null);
 
 	/// <summary>Returns the player's currently-focused scene, or <c>NotFound</c>. (<c>scenefocus</c>.)</summary>
-	Task<OneOf<Scene, NotFound>> GetCurrentSceneAsync(string playerDbref);
+	Task<OneOf<Contracts.Scene, NotFound>> GetCurrentSceneAsync(string playerDbref);
 
 	/// <summary>Sets the player's per-scene display persona on the <c>member</c> edge. <c>NotFound</c> if missing.</summary>
 	Task<OneOf<SceneMember, NotFound>> SetShowAsAsync(string sceneId, string playerDbref, string showAs);
