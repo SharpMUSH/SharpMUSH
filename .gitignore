@@ -419,3 +419,6 @@ pennmush
 
 # AI Helpers
 .hermes
+
+# Agent worktrees (created by the Agent tool; never commit)
+.claude/worktrees/
