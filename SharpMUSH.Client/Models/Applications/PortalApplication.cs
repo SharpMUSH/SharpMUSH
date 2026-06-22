@@ -20,8 +20,16 @@ public sealed record PortalApplication(
 	string MinimumRole,
 	string? NavPlacement,
 	string[] Zones,
-	int Order)
+	int Order,
+	string? OwningPackage = null,
+	string RenderKind = ApplicationRenderKind.Schema,
+	string? ComponentAssemblyUrl = null,
+	string? ComponentTypeName = null)
 {
+	/// <summary>True when this app is rendered by a plugin-shipped compiled component (not the schema renderer).</summary>
+	public bool IsComponent =>
+		string.Equals(RenderKind, ApplicationRenderKind.Component, StringComparison.OrdinalIgnoreCase);
+
 	/// <summary>Parsed kind; defaults to <see cref="ApplicationKind.Page"/> on an unknown value.</summary>
 	public ApplicationKind KindEnum =>
 		Enum.TryParse<ApplicationKind>(Kind, ignoreCase: true, out var k) ? k : ApplicationKind.Page;

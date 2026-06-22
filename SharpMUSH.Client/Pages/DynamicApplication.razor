@@ -5,6 +5,7 @@
 @using SharpMUSH.Library.Authorization
 @inject ApplicationRegistryClient Registry
 @inject SchemaAppService Schema
+@inject PluginComponentLoader ComponentLoader
 
 @* Renders a full-page Dynamic Application (Area 21): resolves the registry entry, fetches its
    softcode-served Portal Schema Document, role-gates it, and picks the form or view renderer. *@
@@ -35,6 +36,21 @@
         <div class="app-alert app-alert-error">
             You do not have access to this application.
         </div>
+    }
+    else if (_app.IsComponent)
+    {
+        @* Compiled-component app: render the plugin-shipped Blazor component resolved by reflection. *@
+        @if (_componentType is not null)
+        {
+            <DynamicComponent Type="_componentType" />
+        }
+        else
+        {
+            <div class="app-alert app-alert-error">
+                This application's compiled component could not be loaded. Browser code may be disabled
+                (<code>allow_browser_code</code>), or the assembly failed verification.
+            </div>
+        }
     }
     else if (_schema is null)
     {
@@ -145,10 +161,14 @@
     private PortalApplication? _app;
     private PortalSchemaDocument? _schema;
     private SchemaData? _data;
+    private Type? _componentType;
 
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
+        _schema = null;
+        _data = null;
+        _componentType = null;
         _app = await Registry.GetAsync(Slug);
 
         if (_app is not null)
@@ -156,10 +176,24 @@
             _authorized = await IsAuthorizedAsync(_app.MinimumRoleEnum);
             if (_authorized)
             {
-                _schema = await Schema.GetSchemaAsync(_app.SchemaUrl);
-                if (!string.IsNullOrWhiteSpace(_app.DataUrl))
+                if (_app.IsComponent)
                 {
-                    _data = await Schema.GetDataAsync(_app.DataUrl!);
+                    // Compiled-component app: fetch + load the plugin assembly and resolve the Type by
+                    // reflection (no plugin types referenced here). The loader no-ops when the gate is off.
+                    if (!string.IsNullOrWhiteSpace(_app.ComponentAssemblyUrl)
+                        && !string.IsNullOrWhiteSpace(_app.ComponentTypeName))
+                    {
+                        _componentType = await ComponentLoader.ResolveComponentAsync(
+                            _app.ComponentAssemblyUrl!, _app.ComponentTypeName!);
+                    }
+                }
+                else
+                {
+                    _schema = await Schema.GetSchemaAsync(_app.SchemaUrl);
+                    if (!string.IsNullOrWhiteSpace(_app.DataUrl))
+                    {
+                        _data = await Schema.GetDataAsync(_app.DataUrl!);
+                    }
                 }
             }
         }

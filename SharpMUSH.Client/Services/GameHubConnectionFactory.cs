@@ -110,6 +110,9 @@ internal sealed class RealGameHubConnection(HubConnection inner) : IGameHubConne
 	public IDisposable On(string methodName, Action<SceneEventMessage> handler)
 		=> inner.On(methodName, handler);
 
+	public IDisposable On(string methodName, Action handler)
+		=> inner.On(methodName, handler);
+
 	public event Func<Exception?, Task>? Closed
 	{
 		add => inner.Closed += value;

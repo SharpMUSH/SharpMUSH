@@ -21,6 +21,13 @@ public interface IGameHubClient
 
 	/// <summary>Broadcasts a room event (arrive, depart, say, pose) to room observers.</summary>
 	Task ReceiveRoomEvent(RoomEventMessage msg);
+
+	/// <summary>
+	/// Generic signal that the server's loaded-plugin set changed (a plugin DLL was unloaded or reloaded).
+	/// Carries no plugin-specific payload by design: the client reacts by forcing a hard browser refresh,
+	/// the only way to reclaim a compiled component assembly the WASM runtime may have loaded.
+	/// </summary>
+	Task ReceivePluginsChanged();
 }
 
 /// <summary>
@@ -175,6 +182,16 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGam
 			Content: content,
 			Timestamp: DateTimeOffset.UtcNow,
 			MessageType: MessageType.System));
+
+	/// <summary>
+	/// Broadcasts the generic "plugins changed" signal to every connected client. Called by the server's
+	/// <see cref="SharpMUSH.Library.Services.Interfaces.IPluginChangeNotifier"/> implementation after a plugin
+	/// unload/reload; the client forces a hard refresh on receipt.
+	/// </summary>
+	/// <param name="hubContext">The hub context injected by the calling service.</param>
+	public static Task BroadcastPluginsChangedAsync(
+		IHubContext<GameHub, IGameHubClient> hubContext) =>
+		hubContext.Clients.All.ReceivePluginsChanged();
 
 	/// <summary>
 	/// Returns the DBRef claim value for the connection that is currently executing a hub method.

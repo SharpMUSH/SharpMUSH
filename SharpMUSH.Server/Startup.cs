@@ -264,6 +264,12 @@ public class Startup(
 			sp.GetRequiredService<IPluginManager>(),
 			sp.GetRequiredService<ManagedPackageTrustOptions>(),
 			sp.GetRequiredService<ILogger<ManagedPackageInstaller>>()));
+		// Serves a managed plugin's compiled UI assembly bytes to the WASM client, re-verifying them against
+		// the Phase-4 install-time SHA-256 sidecar before serving. The PluginsUiController gates it on
+		// allow_browser_code; this provider enforces the hash/traversal guards regardless.
+		services.AddSingleton<IPluginUiAssemblyProvider>(sp =>
+			new FileSystemPluginUiAssemblyProvider(
+				sp.GetRequiredService<ILogger<FileSystemPluginUiAssemblyProvider>>()));
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
 		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();
 		services.AddSingleton<IPackageSourceService>(sp =>
@@ -330,6 +336,11 @@ public class Startup(
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 
+		// Generic "plugins changed" notifier: after a plugin unload/reload, the PluginManager fires this to
+		// broadcast ReceivePluginsChanged to every connected portal client, which forces a hard browser refresh
+		// (the only way to reclaim a compiled component assembly loaded into the WASM runtime). Registered
+		// before the PluginManager so its optional IPluginChangeNotifier ctor param resolves.
+		services.AddSingleton<IPluginChangeNotifier, Server.Services.SignalRPluginChangeNotifier>();
 		// C# plugin loader: discovers plugins/ DLLs at boot and registers their [SharpCommand]/[SharpFunction]
 		// into the live command/function libraries with IsSystem=true (see PluginBootstrapService below).
 		services.AddSingleton<IPluginManager, Implementation.Services.PluginManager>();

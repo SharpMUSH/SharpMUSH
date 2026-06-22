@@ -76,6 +76,29 @@ public class ApplicationRegistryTests
 	}
 
 	[Test, NotInParallel]
+	public async Task ComponentApplication_RoundTripsRenderKindAndComponentFields()
+	{
+		var component = new RegisteredApplication(
+			"app-component", "Component App", null, ApplicationKind.Page,
+			"http/app-component/schema", null, null, PortalRole.Player, "Plugins", null, 3,
+			OwningPackage: "demo-pkg",
+			RenderKind: ApplicationRenderKind.Component,
+			ComponentAssemblyUrl: "api/plugins/demo-pkg/ui/Demo.Ui.dll",
+			ComponentTypeName: "Demo.Ui.Widget");
+
+		await Registry.UpsertApplicationAsync(component);
+
+		var fetched = await Registry.GetApplicationAsync("app-component");
+		await Assert.That(fetched.IsT0).IsTrue();
+		var app = fetched.AsT0;
+		await Assert.That(app.RenderKind).IsEqualTo(ApplicationRenderKind.Component);
+		await Assert.That(app.ComponentAssemblyUrl).IsEqualTo("api/plugins/demo-pkg/ui/Demo.Ui.dll");
+		await Assert.That(app.ComponentTypeName).IsEqualTo("Demo.Ui.Widget");
+
+		await Registry.RemoveApplicationAsync("app-component");
+	}
+
+	[Test, NotInParallel]
 	public async Task GetApplication_Missing_ReturnsNotFound()
 	{
 		var missing = await Registry.GetApplicationAsync("does-not-exist");

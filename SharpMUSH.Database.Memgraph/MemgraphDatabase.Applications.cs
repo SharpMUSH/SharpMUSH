@@ -19,7 +19,9 @@ public partial class MemgraphDatabase : IApplicationRegistryService
 			MERGE (a:SysApplication {slug: $slug})
 			SET a.displayName = $displayName, a.icon = $icon, a.kind = $kind, a.schemaUrl = $schemaUrl,
 			    a.dataUrl = $dataUrl, a.submitRoute = $submitRoute, a.minimumRole = $minimumRole,
-			    a.navPlacement = $navPlacement, a.zones = $zones, a.order = $order, a.owningPackage = $owningPackage
+			    a.navPlacement = $navPlacement, a.zones = $zones, a.order = $order, a.owningPackage = $owningPackage,
+			    a.renderKind = $renderKind, a.componentAssemblyUrl = $componentAssemblyUrl,
+			    a.componentTypeName = $componentTypeName
 			""",
 			new
 			{
@@ -34,7 +36,10 @@ public partial class MemgraphDatabase : IApplicationRegistryService
 				navPlacement = application.NavPlacement,
 				zones = ApplicationRegistryMapping.ZonesToString(application.Zones),
 				order = application.Order,
-				owningPackage = application.OwningPackage
+				owningPackage = application.OwningPackage,
+				renderKind = application.RenderKind,
+				componentAssemblyUrl = application.ComponentAssemblyUrl,
+				componentTypeName = application.ComponentTypeName
 			});
 	}
 
@@ -73,7 +78,10 @@ public partial class MemgraphDatabase : IApplicationRegistryService
 		OptionalString(node, "navPlacement"),
 		ApplicationRegistryMapping.ZonesFromString(OptionalString(node, "zones")),
 		node.Properties["order"].As<int>(),
-		OptionalString(node, "owningPackage"));
+		OptionalString(node, "owningPackage"),
+		OptionalString(node, "renderKind") ?? ApplicationRenderKind.Schema,
+		OptionalString(node, "componentAssemblyUrl"),
+		OptionalString(node, "componentTypeName"));
 
 	#endregion
 }

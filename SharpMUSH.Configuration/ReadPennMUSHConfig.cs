@@ -131,7 +131,8 @@ public static partial class ReadPennMushConfig
 				DatabaseReference(Get(nameof(DatabaseOptions.EventHandler)), 9u),
 				DatabaseReference(Get(nameof(DatabaseOptions.HttpHandler)), 8u),
 				DatabaseReference(Get(nameof(DatabaseOptions.PackageManager)), 7u),
-				UnsignedInteger(Get(nameof(DatabaseOptions.HttpRequestsPerSecond)), 30)
+				UnsignedInteger(Get(nameof(DatabaseOptions.HttpRequestsPerSecond)), 30),
+				Boolean(Get(nameof(DatabaseOptions.AllowBrowserCode)), false)
 			),
 			Dump = new DumpOptions(
 				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), "10m1s")

@@ -141,5 +141,14 @@ public record DatabaseOptions(
 		Order = 3,
 		Min = 1,
 		Max = 1000)]
-	uint HttpRequestsPerSecond
+	uint HttpRequestsPerSecond,
+
+	[property: SharpConfig(
+		Name = "allow_browser_code",
+		Category = "Database",
+		Description = "Allow plugins to ship compiled Blazor components that load into the browser portal",
+		Group = "Behavior",
+		Order = 3,
+		Tooltip = "Off by default. Enabling lets operator-trusted plugins run arbitrary compiled C# in the browser; gives up client AOT/trimming.")]
+	bool AllowBrowserCode = false
 );

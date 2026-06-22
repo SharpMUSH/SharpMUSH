@@ -115,7 +115,8 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				HttpRequestsPerSecond: 10,
 				MasterRoom: 2,
 				PlayerStart: 0,
-				ZoneControlZmpOnly: true
+				ZoneControlZmpOnly: true,
+				AllowBrowserCode: false
 			),
 			Debug = new DebugOptions(
 				DebugSharpParser: false

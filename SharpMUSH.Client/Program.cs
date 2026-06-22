@@ -27,6 +27,9 @@ builder.Services.AddSingleton<WikiAssetService>();
 builder.Services.AddSingleton<CharacterDirectoryService>();
 builder.Services.AddSingleton<SchemaAppService>();
 builder.Services.AddSingleton<ApplicationRegistryClient>();
+// Loads + resolves plugin-shipped compiled Blazor components at runtime (gate-guarded server-side; renders
+// by reflection only — references zero plugin types). Caches loaded assemblies (no unload, by design).
+builder.Services.AddSingleton<PluginComponentLoader>();
 builder.Services.AddSingleton<RoleRegistryClient>();
 builder.Services.AddSingleton<GalleryService>();
 builder.Services.AddSingleton<MailService>();

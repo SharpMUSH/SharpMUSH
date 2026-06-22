@@ -31,6 +31,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	public event Action<GameOutputMessage>? OnOutputReceived;
 	public event Action<RoomEventMessage>? OnRoomEventReceived;
 	public event Action<SceneEventMessage>? OnSceneEventReceived;
+	public event Action? OnPluginsChanged;
 
 	public ConnectionStateService(
 		IGameHubConnectionFactory factory,
@@ -70,6 +71,14 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		{
 			_logger.LogDebug("[ConnectionStateService] ReceiveRoomEvent: {EventType}", msg.EventType);
 			OnRoomEventReceived?.Invoke(msg);
+		}));
+
+		// Generic plugins-changed signal: the server unloaded/reloaded a plugin DLL. Surface it so the portal
+		// shell can force a hard browser refresh (the only way to reclaim a browser-loaded component assembly).
+		_subscriptions.Add(_hub.On("ReceivePluginsChanged", () =>
+		{
+			_logger.LogInformation("[ConnectionStateService] ReceivePluginsChanged — a plugin changed; signalling a reload");
+			OnPluginsChanged?.Invoke();
 		}));
 
 		_hub.Closed += ex =>

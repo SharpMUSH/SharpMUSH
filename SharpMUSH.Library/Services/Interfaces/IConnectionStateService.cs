@@ -25,6 +25,13 @@ public interface IConnectionStateService
 	event Action<RoomEventMessage>? OnRoomEventReceived;
 
 	/// <summary>
+	/// Raised when the server signals that its loaded-plugin set changed (a plugin DLL was unloaded or
+	/// reloaded). The portal reacts by forcing a hard browser refresh, which fully tears down and rebuilds
+	/// the WASM runtime — the only way to reclaim a compiled component assembly that was loaded in-browser.
+	/// </summary>
+	event Action? OnPluginsChanged;
+
+	/// <summary>
 	/// Opens the hub connection authenticated with <paramref name="accessToken"/>.
 	/// The token is passed as the <c>access_token</c> query parameter so the hub
 	/// can authenticate the Blazor WASM client without cookies.

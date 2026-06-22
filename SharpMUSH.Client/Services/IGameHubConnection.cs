@@ -40,6 +40,11 @@ public interface IGameHubConnection : IAsyncDisposable
 	IDisposable On(string methodName, Action<SceneEventMessage> handler);
 
 	/// <summary>
+	/// Registers a handler for a payload-free hub client method (e.g. <c>ReceivePluginsChanged</c>).
+	/// </summary>
+	IDisposable On(string methodName, Action handler);
+
+	/// <summary>
 	/// Raised when the connection drops unexpectedly.
 	/// The exception may be null for a graceful close.
 	/// </summary>

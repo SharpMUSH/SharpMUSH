@@ -20,7 +20,9 @@ public class ApplicationsControllerOverlayTests
 	private const string PluginSlug = "plugin-widget-demo";
 
 	private static ApplicationsController NewController(IApplicationRegistryService registry) =>
-		new(registry, new ThrowingDispatcher(), NullLogger<ApplicationsController>.Instance);
+		new(registry, new ThrowingDispatcher(),
+			new TestSharpMushOptions.FixedWrapper(TestSharpMushOptions.Create(allowBrowserCode: true)),
+			NullLogger<ApplicationsController>.Instance);
 
 	[Test]
 	public async Task List_IncludesPluginOverlayApp()

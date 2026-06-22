@@ -35,7 +35,8 @@ public sealed class PluginManager(
 	LibraryService<string, CommandDefinition> commandLibrary,
 	LibraryService<string, FunctionDefinition> functionLibrary,
 	IServiceProvider serviceProvider,
-	ILogger<PluginManager> logger) : IPluginManager
+	ILogger<PluginManager> logger,
+	IPluginChangeNotifier? changeNotifier = null) : IPluginManager
 {
 	/// <summary>What the manager remembers about a registered plugin so it can unload/reload it.</summary>
 	private sealed class TrackedPlugin(
@@ -116,30 +117,39 @@ public sealed class PluginManager(
 	}
 
 	/// <inheritdoc />
-	public Task<OneOf<Success, Error<string>>> UnloadAsync(string pluginId)
-		=> Task.FromResult(Unload(pluginId, forReload: false));
+	public async Task<OneOf<Success, Error<string>>> UnloadAsync(string pluginId)
+	{
+		var result = Unload(pluginId, forReload: false);
+		if (result.IsT0)
+		{
+			// A plugin DLL really left the running set: tell connected browsers to force a hard refresh, the
+			// only way to reclaim any compiled component assembly the WASM client may have loaded.
+			await NotifyPluginsChangedAsync();
+		}
+
+		return result;
+	}
 
 	/// <inheritdoc />
-	public Task<OneOf<Success, Error<string>>> ReloadAsync(string pluginId)
+	public async Task<OneOf<Success, Error<string>>> ReloadAsync(string pluginId)
 	{
 		string dllPath;
 		lock (_gate)
 		{
 			if (!_tracked.TryGetValue(pluginId, out var existing))
 			{
-				return Task.FromResult<OneOf<Success, Error<string>>>(
-					new Error<string>($"Plugin '{pluginId}' is not loaded; nothing to reload."));
+				return new Error<string>($"Plugin '{pluginId}' is not loaded; nothing to reload.");
 			}
 
 			if (!existing.IsUnloadable)
 			{
-				return Task.FromResult<OneOf<Success, Error<string>>>(LoadOnceRefusal(pluginId));
+				return LoadOnceRefusal(pluginId);
 			}
 
 			if (existing.DllPath is null)
 			{
-				return Task.FromResult<OneOf<Success, Error<string>>>(new Error<string>(
-					$"Plugin '{pluginId}' was not loaded from disk (no DLL path); it cannot be reloaded."));
+				return new Error<string>(
+					$"Plugin '{pluginId}' was not loaded from disk (no DLL path); it cannot be reloaded.");
 			}
 
 			dllPath = existing.DllPath;
@@ -149,14 +159,17 @@ public sealed class PluginManager(
 		var unload = Unload(pluginId, forReload: true);
 		if (unload.IsT1)
 		{
-			return Task.FromResult(unload);
+			return unload;
 		}
 
 		var reloaded = PluginLoaderService.LoadOne(dllPath, logger);
 		if (reloaded is null)
 		{
-			return Task.FromResult<OneOf<Success, Error<string>>>(new Error<string>(
-				$"Plugin '{pluginId}' failed to reload from '{dllPath}'; it is now unloaded."));
+			// The plugin really left the running set (unloaded, failed to come back): signal a refresh so any
+			// browser-loaded compiled component is reclaimed.
+			await NotifyPluginsChangedAsync();
+			return new Error<string>(
+				$"Plugin '{pluginId}' failed to reload from '{dllPath}'; it is now unloaded.");
 		}
 
 		var (commandCount, functionCount) = RegisterPlugin(reloaded.Plugin);
@@ -164,7 +177,31 @@ public sealed class PluginManager(
 			"Reloaded plugin '{Id}' v{Version}: {Commands} command(s), {Functions} function(s).",
 			reloaded.Plugin.Id, reloaded.Plugin.Version, commandCount, functionCount);
 
-		return Task.FromResult<OneOf<Success, Error<string>>>(new Success());
+		// A reload swapped the running DLL: force a browser refresh so the client re-fetches the catalog and
+		// reloads any compiled component freshly.
+		await NotifyPluginsChangedAsync();
+		return new Success();
+	}
+
+	/// <summary>
+	/// Fire the generic "plugins changed" signal (if a notifier is wired), isolated so a transport failure
+	/// can never abort the unload/reload that triggered it. No-op when no notifier is registered (unit tests).
+	/// </summary>
+	private async Task NotifyPluginsChangedAsync()
+	{
+		if (changeNotifier is null)
+		{
+			return;
+		}
+
+		try
+		{
+			await changeNotifier.NotifyPluginsChangedAsync();
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "Plugin-change notification failed; the unload/reload itself succeeded.");
+		}
 	}
 
 	/// <summary>

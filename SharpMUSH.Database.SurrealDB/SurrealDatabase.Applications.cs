@@ -24,6 +24,9 @@ internal class SysApplicationDbRecord : Record
 	public string zones { get; set; } = "";
 	public int sortOrder { get; set; }
 	public string? owningPackage { get; set; }
+	public string? renderKind { get; set; }
+	public string? componentAssemblyUrl { get; set; }
+	public string? componentTypeName { get; set; }
 }
 
 public partial class SurrealDatabase : IApplicationRegistryService
@@ -31,7 +34,7 @@ public partial class SurrealDatabase : IApplicationRegistryService
 	#region Application Registry
 
 	private const string SysApplicationFields =
-		"id, slug, displayName, icon, kind, schemaUrl, dataUrl, submitRoute, minimumRole, navPlacement, zones, sortOrder, owningPackage";
+		"id, slug, displayName, icon, kind, schemaUrl, dataUrl, submitRoute, minimumRole, navPlacement, zones, sortOrder, owningPackage, renderKind, componentAssemblyUrl, componentTypeName";
 
 	public async Task UpsertApplicationAsync(RegisteredApplication application)
 	{
@@ -48,13 +51,18 @@ public partial class SurrealDatabase : IApplicationRegistryService
 			["navPlacement"] = application.NavPlacement,
 			["zones"] = ApplicationRegistryMapping.ZonesToString(application.Zones),
 			["sortOrder"] = application.Order,
-			["owningPackage"] = application.OwningPackage
+			["owningPackage"] = application.OwningPackage,
+			["renderKind"] = application.RenderKind,
+			["componentAssemblyUrl"] = application.ComponentAssemblyUrl,
+			["componentTypeName"] = application.ComponentTypeName
 		};
 		await ExecuteAsync("""
 			UPSERT type::thing('sys_application', $slug) SET slug = $slug, displayName = $displayName,
 				icon = $icon, kind = $kind, schemaUrl = $schemaUrl, dataUrl = $dataUrl,
 				submitRoute = $submitRoute, minimumRole = $minimumRole, navPlacement = $navPlacement,
-				zones = $zones, sortOrder = $sortOrder, owningPackage = $owningPackage
+				zones = $zones, sortOrder = $sortOrder, owningPackage = $owningPackage,
+				renderKind = $renderKind, componentAssemblyUrl = $componentAssemblyUrl,
+				componentTypeName = $componentTypeName
 			""", parameters);
 	}
 
@@ -94,7 +102,10 @@ public partial class SurrealDatabase : IApplicationRegistryService
 		r.navPlacement,
 		ApplicationRegistryMapping.ZonesFromString(r.zones),
 		r.sortOrder,
-		r.owningPackage);
+		r.owningPackage,
+		r.renderKind ?? ApplicationRenderKind.Schema,
+		r.componentAssemblyUrl,
+		r.componentTypeName);
 
 	#endregion
 }
