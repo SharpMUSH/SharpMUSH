@@ -150,7 +150,11 @@ public static class MessageHelpers
 			var attr = await attributeService.GetAttributeAsync(
 				executor, objToEvaluate, attrToEvaluate, IAttributeService.AttributeMode.Execute);
 
-			if (!attr.IsError)
+			// Only pin a real attribute. attr is OneOf<SharpAttribute[], None, Error>: when the
+			// attribute is absent (None), !IsError is still true but AsAttribute (AsT0) throws,
+			// which silently aborts the whole @message (no recipients notified). Guard on IsAttribute
+			// so a missing format attr falls through to the per-recipient default (defmsg) instead.
+			if (attr.IsAttribute)
 			{
 				pinnedAttribute = attr.AsAttribute;
 			}
@@ -299,7 +303,13 @@ public static class MessageHelpers
 					Executor = finalObjToEvaluate.Object().DBRef,
 					Enactor = enactor.Object().DBRef,
 					Caller = state.Executor,
-					Arguments = processedArgs
+					Arguments = processedArgs,
+					// %0..%9 resolve from EnvironmentRegisters (see Substitutions), not Arguments,
+					// so the per-recipient format args (message text + the ## recipient-dbref token)
+					// must be placed here too — mirroring EvaluateAttributeFunctionAsync, which sets
+					// both. Without this, an explicit <obj>/<attr> format (the pinned path) renders
+					// with empty %N, dropping the message and recipient token.
+					EnvironmentRegisters = processedArgs
 				},
 				newParser => newParser.FunctionParse(pinnedAttribute.Last().Value));
 

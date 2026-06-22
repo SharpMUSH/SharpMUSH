@@ -45,38 +45,66 @@ objects:
         or(orflags(%0,Wz),strmatch(scene(%1,owner),%0))
 
       # ---- capture hooks --------------------------------------------------------
-      # Each hook reproduces its type-specific built-in room emit byte-for-byte, then
-      # records the rendered line. The capture tail is INLINED into each hook (not
-      # factored into an @include attribute): @include cannot resolve an attribute
-      # name that contains a backtick (e.g. INCLUDE`CAPTURE) — only get()/u() do — so
-      # an @include of the shared tail silently no-ops and nothing is captured.
+      # Each hook RE-BROADCASTS its type-specific speech via @message/spoof, then records
+      # the rendered line. The capture tail is INLINED into each hook (not factored into
+      # an @include attribute): @include cannot resolve an attribute name that contains a
+      # backtick (e.g. INCLUDE`CAPTURE) — only get()/u() do — so an @include of the shared
+      # tail silently no-ops and nothing is captured.
+      #
+      # Why @message/spoof instead of hand-rolled @remit/@pemit/@oemit (the old form):
+      #   • /spoof makes the notification SENDER the real speaker (%# / enactor), NOT the
+      #     WIZARD Scene Logger that runs the hook — restoring correct attribution (the
+      #     old @oemit-as-Logger form broke @emit attribution). The Logger is WIZARD, so it
+      #     passes the /spoof permission check.
+      #   • @message evaluates the format attribute ONCE PER RECIPIENT, so a single call
+      #     renders speaker-specific ("You say…") and observer-specific ("Name says…") text.
+      #
+      # Form: @message/spoof <recipients>=<default>,<obj>/<attr>,<args...>
+      #   recipients = lcon(loc(%#)) — everyone in the speaker's room hears it (per-recipient).
+      #   <default>  = the built-in third-person literal, used verbatim when the speaker has
+      #                no FORMAT`<TYPE>` attribute (it is NOT re-evaluated per recipient, so the
+      #                fallback is a single observer-form line for everyone, including %#).
+      #   <obj>/<attr> = %#/FORMAT`<TYPE>` — the per-player render read off the SPEAKER. When set,
+      #                it receives %0 = the message text and %1 = the recipient's FULL objid
+      #                (#N:creation, via the @message `##` recipient token), and %# = the speaker
+      #                (short #N). To split "You…" vs "Name…", compare the dbref NUMBER:
+      #                strmatch(before(%1,:),%#) — true only for the speaker's own copy. FORMAT`<TYPE>`
+      #                defaults are seeded by the Ancestor Player (sibling effort); absent it, the
+      #                <default> literal (a single third-person line) is used for everyone.
+      #   commas inside the <default> literal use [chr(44)] (NOT a literal `,`): @message is
+      #   CB.RSArgs and splits its RHS on commas BEFORE evaluating each arg, and a backslash-escaped
+      #   `\,` does not survive the $-command body parse + RSArgs split (it shifts the obj/attr arg,
+      #   so FORMAT is never read). chr(44) emits the comma during per-arg evaluation, after the split.
+      #   The recorded @scene/addpose line below is NOT RSArgs in the same way, so it still uses \,.
       #
       # The tail (a) @asserts a scene is active in this room AND the poser is focused on
-      # it, then (b) records the rendered line with @scene/addpose (explicit author %#).
-      # The two @asserts halt the command list AFTER the emit already fired, so a pose
-      # outside any scene behaves exactly like the un-hooked built-in.
+      # it, then (b) records the third-person rendered line with @scene/addpose (explicit
+      # author %#). The two @asserts halt the command list AFTER the emit already fired, so a
+      # pose outside any scene behaves exactly like the un-hooked built-in.
 
       # Built-in POSE (MoreCommands.Pose) emits: "<name> <message>" to the room.
       CMD`CAPTURE`POSE:
         value: |-
-          $(?i)^(pose |\:)(.*)$: @remit [setr(here,loc(%#))]=[name(%#)] %2; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,pose,,[name(%#)] %2
+          $(?i)^(pose |\:)(.*)$: @message/spoof [lcon(setr(here,loc(%#)))]=[name(%#)] %2,%#/FORMAT`POSE,%2,##; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,pose,,[name(%#)] %2
         flags: [REGEXP]
 
       # Built-in SAY (MoreCommands.Say) emits "You say, \"<msg>\"" to the speaker
       # and "<name> says, \"<msg>\"" to everyone else in the room.
       CMD`CAPTURE`SAY:
         value: |-
-          $(?i)^(say |")(.*)$: @pemit %#=You say, "%2"; @oemit [setr(here,loc(%#))]/%#=[name(%#)] says, "%2"; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,say,,[name(%#)] says\, "%2"
+          $(?i)^(say |")(.*)$: @message/spoof [lcon(setr(here,loc(%#)))]=[name(%#)] says[chr(44)] "%2",%#/FORMAT`SAY,%2,##; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,say,,[name(%#)] says\, "%2"
         flags: [REGEXP]
 
       # Built-in SEMIPOSE (MoreCommands.SemiPose) emits "<name><message>" (no space).
       CMD`CAPTURE`SEMI:
         value: |-
-          $(?i)^(semipose |;)(.*)$: @remit [setr(here,loc(%#))]=[name(%#)]%2; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,semipose,,[name(%#)]%2
+          $(?i)^(semipose |;)(.*)$: @message/spoof [lcon(setr(here,loc(%#)))]=[name(%#)]%2,%#/FORMAT`SEMIPOSE,%2,##; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,semipose,,[name(%#)]%2
         flags: [REGEXP]
+
+      # Built-in @EMIT emits "<message>" verbatim (no name) to the room.
       CMD`CAPTURE`EMIT:
         value: |-
-          $(?i)^@emit (.*)$: @remit [setr(here,loc(%#))]=%1; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,emit,,%1
+          $(?i)^@emit (.*)$: @message/spoof [lcon(setr(here,loc(%#)))]=%1,%#/FORMAT`EMIT,%1,##; @assert words(setr(sid,scenewhere(%q<here>))); @assert strmatch(scenefocus(%#),%q<sid>); @scene/addpose %q<sid>=%#,[scenemember(%q<sid>,%#,showas)],%q<here>,emit,,%1
         flags: [REGEXP]
 
       # ---- create / lifecycle ---------------------------------------------------
