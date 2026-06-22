@@ -785,9 +785,33 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			return new NotFound();
 
 		var sceneKey = SceneKey(sceneId);
-		await _accessor.ExecuteAsync(
-			"UPDATE scene_member SET isCurrent = true WHERE in = object:$pk AND out = scene:⟨$sid⟩",
-			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
+		var sid = sceneKey.Split(':')[1];
+
+		// Ensure a member edge exists, then mark it current — matches ArangoDB/Memgraph: focusing a
+		// player who is not yet a member auto-creates a role-less member edge so the focus sticks (a bare
+		// UPDATE would no-op for a non-member, leaving the player with no current scene).
+		var member = await GetMemberAsync(sceneId, playerDbref);
+		if (member.IsT1)
+		{
+			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+			var memberName = await ResolveObjectNameAsync(playerDbref) ?? "";
+			await _accessor.ExecuteAsync(
+				"RELATE object:$pk->scene_member->scene:⟨$sid⟩ SET " +
+				"role = '', showAs = '', isCurrent = true, grantedAt = $now, memberName = $name",
+				new Dictionary<string, object?>
+				{
+					["pk"] = playerKey.Value,
+					["sid"] = sid,
+					["now"] = now,
+					["name"] = memberName
+				});
+		}
+		else
+		{
+			await _accessor.ExecuteAsync(
+				"UPDATE scene_member SET isCurrent = true WHERE in = object:$pk AND out = scene:⟨$sid⟩",
+				new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sid });
+		}
 
 		return new OkNone();
 	}

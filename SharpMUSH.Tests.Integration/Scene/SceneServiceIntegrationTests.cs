@@ -168,4 +168,19 @@ public class SceneServiceIntegrationTests
 
 		await Assert.That(await Eval($"scenefocus({God})")).IsEqualTo(id);
 	}
+
+	[Test]
+	public async Task SetFocus_OnNonMember_AutoJoinsAndFocuses()
+	{
+		// Focusing a player who is NOT yet a member must auto-create a (role-less) member edge and stick,
+		// identically on all three providers. SurrealDB previously only UPDATEd an existing edge, so the
+		// focus silently no-opped for a non-member; ArangoDB/Memgraph created the edge. This pins the
+		// Arango behavior across the board (no explicit sceneaddmember first).
+		var id = await NewSceneAsync("NonMember focus");
+
+		await Eval($"scenesetfocus({God},{id})");
+
+		await Assert.That(await Eval($"scenefocus({God})")).IsEqualTo(id);
+		await Assert.That(await Eval($"scenemembers({id})")).Contains(God);
+	}
 }

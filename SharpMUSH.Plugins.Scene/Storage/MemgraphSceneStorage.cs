@@ -802,7 +802,7 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 			await tx.RunAsync($$"""
 				MATCH (o:Object {key: $key}), (s:{{SceneLabel}} {sceneId: $sceneId})
 				MERGE (o)-[m:{{RelMember}}]->(s)
-				ON CREATE SET m.role = 'participant', m.showAs = '', m.grantedAt = $now, m.memberName = o.name
+				ON CREATE SET m.role = '', m.showAs = '', m.grantedAt = $now, m.memberName = o.name
 				SET m.isCurrent = true
 				""",
 				new { key = key.Value, sceneId, now });
