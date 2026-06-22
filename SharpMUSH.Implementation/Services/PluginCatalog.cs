@@ -29,6 +29,7 @@ public sealed class PluginCatalog
 	private readonly List<IMigrationSource> _migrationSources = [];
 	private readonly List<IBridgeSubscriptionSource> _bridgeSources = [];
 	private readonly List<IEndpointContributor> _endpointContributors = [];
+	private readonly List<IApplicationSource> _applicationSources = [];
 	private readonly List<ICommandInterceptor> _commandInterceptors = [];
 	private readonly List<IConnectionHook> _connectionHooks = [];
 	private readonly List<IObjectLifecycleHook> _objectLifecycleHooks = [];
@@ -49,6 +50,9 @@ public sealed class PluginCatalog
 
 	/// <summary>Phase 9: endpoint contributions from plugins implementing <see cref="IEndpointContributor"/>, in load order.</summary>
 	public IReadOnlyList<IEndpointContributor> EndpointContributors => _endpointContributors;
+
+	/// <summary>Portal UI contributions from plugins implementing <see cref="IApplicationSource"/>, in load order. Overlaid (read-only) onto the Area-21 application registry while the plugin is loaded.</summary>
+	public IReadOnlyList<IApplicationSource> ApplicationSources => _applicationSources;
 
 	/// <summary>Phase 2b: command interceptors from plugins implementing <see cref="ICommandInterceptor"/>, in load order.</summary>
 	public IReadOnlyList<ICommandInterceptor> CommandInterceptors => _commandInterceptors;
@@ -109,6 +113,12 @@ public sealed class PluginCatalog
 					catalog._endpointContributors.Add(endpointContributor);
 				}
 
+				// Portal UI contributions (Area-21 applications overlaid onto the registry while loaded).
+				if (plugin is IApplicationSource applicationSource)
+				{
+					catalog._applicationSources.Add(applicationSource);
+				}
+
 				// Phase 2b: engine-extension hooks (the C# analog of softcode @hook).
 				if (plugin is ICommandInterceptor commandInterceptor)
 				{
@@ -126,10 +136,10 @@ public sealed class PluginCatalog
 				}
 
 				logger.LogInformation(
-					"Catalogued plugin '{Id}' v{Version} from {DllPath} (services:{Svc} flags:{Flag} migrations:{Mig} bridge:{Bridge} cmdHook:{Cmd} connHook:{Conn} objHook:{Obj}).",
+					"Catalogued plugin '{Id}' v{Version} from {DllPath} (services:{Svc} flags:{Flag} migrations:{Mig} bridge:{Bridge} apps:{App} cmdHook:{Cmd} connHook:{Conn} objHook:{Obj}).",
 					plugin.Id, plugin.Version, dllPath,
 					plugin is IServiceRegistrar, plugin is IFlagSource, plugin is IMigrationSource,
-					plugin is IBridgeSubscriptionSource,
+					plugin is IBridgeSubscriptionSource, plugin is IApplicationSource,
 					plugin is ICommandInterceptor, plugin is IConnectionHook, plugin is IObjectLifecycleHook);
 			}
 			catch (Exception ex)
@@ -143,4 +153,29 @@ public sealed class PluginCatalog
 
 	/// <summary>An empty catalog, for hosts (or tests) that do not load plugins.</summary>
 	public static PluginCatalog Empty() => new();
+
+	/// <summary>
+	/// Build a catalog directly from already-instantiated plugins, classifying each into the same
+	/// contribution buckets <see cref="Build"/> uses but without any DLL load or DI application. For tests
+	/// that need a populated catalog (e.g. an <see cref="IApplicationSource"/> overlay) without the
+	/// pre-build disk scan.
+	/// </summary>
+	public static PluginCatalog ForPlugins(IEnumerable<IPlugin> plugins)
+	{
+		var catalog = new PluginCatalog();
+		foreach (var plugin in plugins)
+		{
+			catalog._plugins.Add(plugin);
+			if (plugin is IFlagSource flagSource) catalog._flagSources.Add(flagSource);
+			if (plugin is IMigrationSource migrationSource) catalog._migrationSources.Add(migrationSource);
+			if (plugin is IBridgeSubscriptionSource bridgeSource) catalog._bridgeSources.Add(bridgeSource);
+			if (plugin is IEndpointContributor endpointContributor) catalog._endpointContributors.Add(endpointContributor);
+			if (plugin is IApplicationSource applicationSource) catalog._applicationSources.Add(applicationSource);
+			if (plugin is ICommandInterceptor commandInterceptor) catalog._commandInterceptors.Add(commandInterceptor);
+			if (plugin is IConnectionHook connectionHook) catalog._connectionHooks.Add(connectionHook);
+			if (plugin is IObjectLifecycleHook objectLifecycleHook) catalog._objectLifecycleHooks.Add(objectLifecycleHook);
+		}
+
+		return catalog;
+	}
 }

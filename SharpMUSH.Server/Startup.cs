@@ -294,7 +294,14 @@ public class Startup(
 		services.AddSingleton<IPackageRegistryService>(sp => (IPackageRegistryService)sp.GetRequiredService<ISharpDatabase>());
 
 // Dynamic Application registry (Area 21) — same pattern; every DB backend implements IApplicationRegistryService.
-		services.AddSingleton<IApplicationRegistryService>(sp => (IApplicationRegistryService)sp.GetRequiredService<ISharpDatabase>());
+// Wrapped in a read-only overlay decorator so the PluginCatalog's IApplicationSource contributions are unioned
+// into reads while their plugins are loaded (DB/built-in wins on a slug collision; plugin apps are not
+// persisted and not admin-editable). The DB-backed impl is the decorator's inner.
+		services.AddSingleton<IApplicationRegistryService>(sp =>
+			new Implementation.Services.PluginApplicationRegistryDecorator(
+				(IApplicationRegistryService)sp.GetRequiredService<ISharpDatabase>(),
+				sp.GetRequiredService<Implementation.Services.PluginCatalog>(),
+				sp.GetRequiredService<ILogger<Implementation.Services.PluginApplicationRegistryDecorator>>()));
 // Admin-customized layout registry — same cast pattern; every DB backend implements ILayoutRegistryService.
 		services.AddSingleton<ILayoutRegistryService>(sp => (ILayoutRegistryService)sp.GetRequiredService<ISharpDatabase>());
 // Portal RBAC role registry — same cast pattern; every DB backend implements IRoleRegistryService.

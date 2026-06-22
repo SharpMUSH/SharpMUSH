@@ -53,6 +53,9 @@ public static class PluginLoaderService
 		typeof(IBridgeSubscriptionSource),
 		// Phase 9 web-contribution seam — must unify so the catalog's pattern-match sees the host's type.
 		typeof(IEndpointContributor),
+		// Portal UI seam — must unify so the catalog's pattern-match sees the host's type, and so the
+		// RegisteredApplication values a plugin returns cast cleanly across the isolation boundary.
+		typeof(IApplicationSource),
 		typeof(PluginFlag)
 	];
 
@@ -395,7 +398,8 @@ public static class PluginLoaderService
 	/// sources, when present, are equally removable) — and <b>none</b> of the load-once seams whose effects
 	/// are captured by the DI container, the database, the flag set, or the NATS bridge and therefore cannot
 	/// be torn down without a server restart: <see cref="IServiceRegistrar"/>, <see cref="IMigrationSource"/>,
-	/// <see cref="IFlagSource"/>, <see cref="IBridgeSubscriptionSource"/>, <see cref="IEndpointContributor"/>.
+	/// <see cref="IFlagSource"/>, <see cref="IBridgeSubscriptionSource"/>, <see cref="IEndpointContributor"/>,
+	/// <see cref="IApplicationSource"/>.
 	/// </summary>
 	public static bool IsUnloadablePlugin(IPlugin plugin)
 	{
@@ -406,7 +410,10 @@ public static class PluginLoaderService
 			|| plugin is IFlagSource
 			|| plugin is IBridgeSubscriptionSource
 			// A mapped endpoint (hub/route) is part of the built pipeline and cannot be unmapped at runtime.
-			|| plugin is IEndpointContributor;
+			|| plugin is IEndpointContributor
+			// A contributed UI app overlays the registry (and its controller is mapped into the pipeline);
+			// removing it cleanly is the same load-once problem as a mapped endpoint.
+			|| plugin is IApplicationSource;
 
 		return contributesCommandsOrFunctions && !contributesLoadOnceState;
 	}

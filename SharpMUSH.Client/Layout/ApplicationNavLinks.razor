@@ -4,8 +4,9 @@
 @using Microsoft.AspNetCore.Components.Routing
 @inject ApplicationRegistryClient Registry
 
-@* Dynamic nav links for registered full-page applications the current user may access. Page apps
-   with a NavPlacement appear here; widget apps are placed via the layout editor instead. *@
+@* Dynamic nav links for registered full-page applications the current user may access, placed under the
+   sidebar section named by each app's NavPlacement. Pass a Section to render only the apps for that section;
+   widget apps are placed via the layout editor instead. *@
 
 @foreach (var app in _apps)
 {
@@ -22,23 +23,23 @@
 @code {
     [Parameter] public bool IsCollapsed { get; set; }
 
+    /// <summary>The sidebar section (NavPlacement) whose apps this instance renders. Built-in or novel.</summary>
+    [Parameter] public string Section { get; set; } = "Build";
+
+    /// <summary>Pre-fetched application list; when null the component fetches it from the registry itself.</summary>
+    [Parameter] public IReadOnlyList<PortalApplication>? Applications { get; set; }
+
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
     private IReadOnlyList<PortalApplication> _apps = [];
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
         var role = AuthState is null
             ? SharpMUSH.Library.Authorization.PortalRole.Guest
             : PortalRoleHelper.CurrentRole((await AuthState).User);
 
-        var all = await Registry.ListAsync();
-        _apps = all
-            .Where(a => a.KindEnum == ApplicationKind.Page
-                        && !string.IsNullOrWhiteSpace(a.NavPlacement)
-                        && role >= a.MinimumRoleEnum)
-            .OrderBy(a => a.Order)
-            .ThenBy(a => a.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var all = Applications ?? await Registry.ListAsync();
+        _apps = PortalNavSections.AppsForSection(all, role, Section);
     }
 }
