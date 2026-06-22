@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.Integration.Scenes;
 /// HTTP-level integration tests for <c>SceneController</c> (the read-only Scene REST API the
 /// Blazor WASM portal consumes). Requests travel through the full ASP.NET Core pipeline via
 /// the in-process <see cref="ServerWebAppFactory"/>; scenes are seeded directly through the DI
-/// <see cref="ISceneService"/> (the active <c>ISharpDatabase</c> provider), mirroring how the
+/// <see cref="ISceneService"/> (the Scene plugin's per-provider storage, Phase 8), mirroring how the
 /// wiki HTTP tests seed pages through <c>IWikiService</c>.
 ///
 /// DebugAuthenticationHandler auto-authenticates every request as the bootstrap admin — player
@@ -60,8 +60,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 
 	private const string God = "#1";
 
-	private ISceneService Scenes => factory.Services.GetRequiredService<ISharpDatabase>() as ISceneService
-		?? throw new InvalidOperationException("ISharpDatabase does not implement ISceneService in this configuration.");
+	private ISceneService Scenes => factory.Services.GetRequiredService<ISceneService>();
 
 	/// <summary>
 	/// Client pinned to https so the DebugAuth principal survives the http→https redirect

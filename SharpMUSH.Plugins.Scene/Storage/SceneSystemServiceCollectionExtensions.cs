@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Plugins.Scene.Storage;
@@ -25,11 +26,16 @@ public static class SceneSystemServiceCollectionExtensions
 	/// </summary>
 	public static ISceneSystemBuilder AddSceneSystem(this IServiceCollection services, IConfiguration configuration)
 	{
-		// Keyed storage cores — each lazily resolves its own host-shared accessor, so only the active
-		// provider's accessor must actually be registered (the others are never resolved).
-		services.AddKeyedSingleton<ISceneStorage, ArangoSceneStorage>(ArangoKey);
-		services.AddKeyedSingleton<ISceneStorage, MemgraphSceneStorage>(MemgraphKey);
-		services.AddKeyedSingleton<ISceneStorage, SurrealSceneStorage>(SurrealKey);
+		// Keyed storage cores — registered via FACTORY lambdas (not implementation types) so the host's
+		// ValidateOnBuild does not eagerly require every provider's accessor to be constructable. Only the
+		// active provider's accessor is registered by core; the other two keys are never resolved, so their
+		// missing accessors never error.
+		services.AddKeyedSingleton<ISceneStorage>(ArangoKey,
+			(sp, _) => new ArangoSceneStorage(sp.GetRequiredService<IArangoStorageAccessor>()));
+		services.AddKeyedSingleton<ISceneStorage>(MemgraphKey,
+			(sp, _) => new MemgraphSceneStorage(sp.GetRequiredService<IMemgraphStorageAccessor>()));
+		services.AddKeyedSingleton<ISceneStorage>(SurrealKey,
+			(sp, _) => new SurrealSceneStorage(sp.GetRequiredService<ISurrealStorageAccessor>()));
 
 		var builder = new SceneSystemBuilder(services);
 		services.AddSingleton<ISceneSystemBuilder>(builder);
