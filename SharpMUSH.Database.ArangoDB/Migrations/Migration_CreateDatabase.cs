@@ -932,10 +932,57 @@ public class Migration_CreateDatabase : IArangoMigration
 			Quota = 999999 // God has unlimited quota
 		});
 
-		/* Create Player Three - Package Manager (softcode-package owner; config package_manager) */
-		var packageManagerObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
+		/* Create Room Three - Ancestor Room (config ancestor_room) — attribute holder, lives in Master Room */
+		var ancestorRoomObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
 		{
 			_key = 3.ToString(),
+			Name = "Ancestor Room",
+			Type = DatabaseConstants.TypeRoom,
+			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+			ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		});
+		var ancestorRoomRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Rooms, new { });
+
+		/* Create Thing Four - Ancestor Player (config ancestor_player) — a THING attribute holder */
+		var ancestorPlayerObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
+		{
+			_key = 4.ToString(),
+			Name = "Ancestor Player",
+			Type = DatabaseConstants.TypeThing,
+			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+			ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		});
+		var ancestorPlayerThing = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Things,
+			new { Aliases = Array.Empty<string>() });
+
+		/* Create Thing Five - Ancestor Exit (config ancestor_exit) — a THING attribute holder */
+		var ancestorExitObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
+		{
+			_key = 5.ToString(),
+			Name = "Ancestor Exit",
+			Type = DatabaseConstants.TypeThing,
+			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+			ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		});
+		var ancestorExitThing = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Things,
+			new { Aliases = Array.Empty<string>() });
+
+		/* Create Thing Six - Ancestor Thing (config ancestor_thing) — a THING attribute holder */
+		var ancestorThingObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
+		{
+			_key = 6.ToString(),
+			Name = "Ancestor Thing",
+			Type = DatabaseConstants.TypeThing,
+			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+			ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		});
+		var ancestorThingThing = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Things,
+			new { Aliases = Array.Empty<string>() });
+
+		/* Create Player Seven - Package Manager (softcode-package owner; config package_manager) */
+		var packageManagerObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
+		{
+			_key = 7.ToString(),
 			Name = "Package Manager",
 			Type = DatabaseConstants.TypePlayer,
 			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
@@ -948,10 +995,10 @@ public class Migration_CreateDatabase : IArangoMigration
 			Quota = 999999
 		});
 
-		/* Create Thing Four - HTTP Handler (config http_handler) */
+		/* Create Thing Eight - HTTP Handler (config http_handler) */
 		var httpHandlerObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
 		{
-			_key = 4.ToString(),
+			_key = 8.ToString(),
 			Name = "HTTP Handler",
 			Type = DatabaseConstants.TypeThing,
 			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
@@ -960,10 +1007,10 @@ public class Migration_CreateDatabase : IArangoMigration
 		var httpHandlerThing = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Things,
 			new { Aliases = Array.Empty<string>() });
 
-		/* Create Thing Five - Event Handler (config event_handler) */
+		/* Create Thing Nine - Event Handler (config event_handler) */
 		var eventHandlerObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
 		{
-			_key = 5.ToString(),
+			_key = 9.ToString(),
 			Name = "Event Handler",
 			Type = DatabaseConstants.TypeThing,
 			CreationTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
@@ -988,20 +1035,43 @@ public class Migration_CreateDatabase : IArangoMigration
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = playerOneObj.Id, To = playerOnePlayer.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = playerOneObj.Id, To = wizard.Id });
 
-		// Package Manager (#3): wizard player, owns itself, lives in Room Zero
+		// Ancestor Room (#3): a room owned by God. Like Room Zero (#0) and the Master Room (#2), a room
+		// has no location/home edges — it is a pure attribute holder, not contained by anything.
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = ancestorRoomRoom.Id, To = ancestorRoomObj.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = ancestorRoomObj.Id, To = playerOnePlayer.Id });
+
+		// Ancestor Player (#4): thing owned by God, lives in Master Room
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = ancestorPlayerThing.Id, To = ancestorPlayerObj.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = ancestorPlayerThing.Id, To = roomTwoRoom.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = ancestorPlayerThing.Id, To = roomTwoRoom.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = ancestorPlayerObj.Id, To = playerOnePlayer.Id });
+
+		// Ancestor Exit (#5): thing owned by God, lives in Master Room
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = ancestorExitThing.Id, To = ancestorExitObj.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = ancestorExitThing.Id, To = roomTwoRoom.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = ancestorExitThing.Id, To = roomTwoRoom.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = ancestorExitObj.Id, To = playerOnePlayer.Id });
+
+		// Ancestor Thing (#6): thing owned by God, lives in Master Room
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = ancestorThingThing.Id, To = ancestorThingObj.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = ancestorThingThing.Id, To = roomTwoRoom.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = ancestorThingThing.Id, To = roomTwoRoom.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = ancestorThingObj.Id, To = playerOnePlayer.Id });
+
+		// Package Manager (#7): wizard player, owns itself, lives in Room Zero
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = packageManagerPlayer.Id, To = packageManagerObj.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = packageManagerPlayer.Id, To = roomZeroRoom.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = packageManagerPlayer.Id, To = roomZeroRoom.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = packageManagerObj.Id, To = packageManagerPlayer.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = packageManagerObj.Id, To = wizard.Id });
 
-		// HTTP Handler (#4): thing owned by God, lives in Master Room
+		// HTTP Handler (#8): thing owned by God, lives in Master Room
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = httpHandlerThing.Id, To = httpHandlerObj.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = httpHandlerThing.Id, To = roomTwoRoom.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = httpHandlerThing.Id, To = roomTwoRoom.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = httpHandlerObj.Id, To = playerOnePlayer.Id });
 
-		// Event Handler (#5): thing owned by God, lives in Master Room
+		// Event Handler (#9): thing owned by God, lives in Master Room
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = eventHandlerThing.Id, To = eventHandlerObj.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = eventHandlerThing.Id, To = roomTwoRoom.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = eventHandlerThing.Id, To = roomTwoRoom.Id });

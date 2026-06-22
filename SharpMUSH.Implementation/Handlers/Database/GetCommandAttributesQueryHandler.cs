@@ -1,8 +1,10 @@
 using Mediator;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
@@ -10,9 +12,13 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 /// <summary>
 /// Handler that builds command attribute cache by scanning object attributes once
 /// and pre-compiling all regex patterns. Results are cached automatically by QueryCachingBehavior.
-/// Traverses parent chain for inherited $commands (respecting no_inherit and tree-level no_command).
+/// Traverses the parent chain, then the type ancestor (PennMUSH ANCESTOR_*), for inherited
+/// $commands (respecting no_inherit and tree-level no_command).
 /// </summary>
-public class GetCommandAttributesQueryHandler : IQueryHandler<GetCommandAttributesQuery, CommandAttributeCache[]>
+public class GetCommandAttributesQueryHandler(
+	IMediator mediator,
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
+	: IQueryHandler<GetCommandAttributesQuery, CommandAttributeCache[]>
 {
 	public async ValueTask<CommandAttributeCache[]> Handle(GetCommandAttributesQuery request, CancellationToken cancellationToken)
 	{
@@ -37,6 +43,35 @@ public class GetCommandAttributesQueryHandler : IQueryHandler<GetCommandAttribut
 				noCommandPrefixes, isLocal: false, cancellationToken);
 
 			current = parentObj;
+		}
+
+		// PennMUSH ancestor fall-through: after the object's own @parent chain, scan the type
+		// ancestor and its own @parent chain (but no ancestor-of-ancestor). Skip when disabled,
+		// or when the object IS its own type ancestor (no self-loop).
+		var ancestorRef = await sharpObj.Ancestor(configuration);
+		if (ancestorRef is not null && ancestorRef.Value.Number != sharpObj.Object().DBRef.Number)
+		{
+			var ancestorNode = await mediator.Send(new GetObjectNodeQuery(ancestorRef.Value), cancellationToken);
+			if (!ancestorNode.IsNone)
+			{
+				var ancestorObj = ancestorNode.Known.Object();
+				await ScanAttributes(ancestorObj.AllAttributes.Value, commandAttributes, seenNames,
+					noCommandPrefixes, isLocal: false, cancellationToken);
+
+				// Honor the ancestor's own parent chain, then stop.
+				var ancestorCurrent = ancestorObj;
+				while (true)
+				{
+					var ancestorParent = await ancestorCurrent.Parent.WithCancellation(cancellationToken);
+					if (ancestorParent.IsNone) break;
+
+					var ancestorParentObj = ancestorParent.Known.Object();
+					await ScanAttributes(ancestorParentObj.AllAttributes.Value, commandAttributes, seenNames,
+						noCommandPrefixes, isLocal: false, cancellationToken);
+
+					ancestorCurrent = ancestorParentObj;
+				}
+			}
 		}
 
 		return [.. commandAttributes];

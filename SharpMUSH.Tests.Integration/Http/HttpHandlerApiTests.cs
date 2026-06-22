@@ -11,7 +11,7 @@ namespace SharpMUSH.Tests.Integration.Http;
 
 /// <summary>
 /// End-to-end tests for the command-based inbound HTTP handler (help sharphttp): a request to
-/// <c>/http/&lt;path&gt;</c> runs the http_handler's (#4) <c>&lt;METHOD&gt;</c> attribute as a command list —
+/// <c>/http/&lt;path&gt;</c> runs the http_handler's (#8) <c>&lt;METHOD&gt;</c> attribute as a command list —
 /// PennMUSH's invisible-login + <c>@include #handler/&lt;method&gt;</c>. <c>%0</c> is the path+query,
 /// <c>%1</c> the body, headers arrive as <c>%q&lt;hdr.name&gt;</c> registers, everything emitted to the
 /// handler becomes the response body, and <c>@respond</c> shapes status/content-type/headers.
@@ -19,14 +19,14 @@ namespace SharpMUSH.Tests.Integration.Http;
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class HttpHandlerApiTests(ServerWebAppFactory factory)
 {
-	/// <summary>Seeds (or overwrites) a method attribute on the configured handler (#4), as God.</summary>
+	/// <summary>Seeds (or overwrites) a method attribute on the configured handler (#8), as God.</summary>
 	private async Task SeedHandlerAttribute(string method, string commandList)
 	{
 		var mediator = factory.Services.GetRequiredService<IMediator>();
 		var attributeService = factory.Services.GetRequiredService<IAttributeService>();
 
 		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1, null)))).Known;
-		var handler = (await mediator.Send(new GetObjectNodeQuery(new DBRef(4, null)))).Known;
+		var handler = (await mediator.Send(new GetObjectNodeQuery(new DBRef(8, null)))).Known;
 
 		var result = await attributeService.SetAttributeAsync(god, handler, method, MModule.single(commandList));
 		await Assert.That(result.IsT0).IsTrue();

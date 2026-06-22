@@ -61,6 +61,22 @@ public class AttributeService(
 
 		var result = await attributeResult.FirstOrDefaultAsync();
 
+		// PennMUSH ancestor fall-through: after the object's own @parent chain is exhausted,
+		// consult the type ancestor (ANCESTOR_ROOM/PLAYER/EXIT/THING). Only when parent-checking
+		// is enabled and nothing was found on the object or its parents.
+		if (result == null && checkParent)
+		{
+			var ancestorAttributes = await GetAncestorAttributeAsync(obj, attributePath);
+			if (ancestorAttributes == null)
+			{
+				return new None();
+			}
+
+			return await permissionPredicate(executor, obj, ancestorAttributes)
+				? ancestorAttributes
+				: new Error<string>(permissionFailureType);
+		}
+
 		if (result == null)
 		{
 			return new None();
@@ -69,6 +85,46 @@ public class AttributeService(
 		return await permissionPredicate(executor, obj, result.Attributes)
 			? result.Attributes
 			: new Error<string>(permissionFailureType);
+	}
+
+	/// <summary>
+	/// Resolves an attribute from the object's type ancestor (PennMUSH ANCESTOR_*), honoring the
+	/// ancestor's own <c>@parent</c> chain but no further (no ancestor-of-ancestor). Returns null when:
+	/// the ancestor is disabled, the object IS its own type ancestor (no self-loop), the ancestor
+	/// object does not exist, or the attribute is flagged <c>no_inherit</c> on the ancestor.
+	/// </summary>
+	private async ValueTask<SharpAttribute[]?> GetAncestorAttributeAsync(AnySharpObject obj, string[] attributePath)
+	{
+		var ancestorRef = await obj.Ancestor(configuration);
+		if (ancestorRef is null)
+		{
+			return null;
+		}
+
+		// No self-loop: an object that is its own type ancestor does not inherit from itself.
+		if (ancestorRef.Value.Number == obj.Object().DBRef.Number)
+		{
+			return null;
+		}
+
+		var ancestorResult = await mediator
+			.CreateStream(new GetAttributeWithInheritanceQuery(ancestorRef.Value, attributePath, true))
+			.FirstOrDefaultAsync();
+
+		if (ancestorResult == null)
+		{
+			return null;
+		}
+
+		// The attribute is being inherited by the child: a no_inherit flag on the resolved
+		// (leaf) attribute blocks inheritance, matching the parent-chain semantics.
+		var leaf = ancestorResult.Attributes.Last();
+		if (leaf.Flags.Any(f => f.Name == "no_inherit"))
+		{
+			return null;
+		}
+
+		return ancestorResult.Attributes;
 	}
 
 	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor,
@@ -100,6 +156,20 @@ public class AttributeService(
 
 		var result = await attributeResult.FirstOrDefaultAsync();
 
+		// PennMUSH ancestor fall-through (lazy): see GetAttributeAsync for full semantics.
+		if (result == null && checkParent)
+		{
+			var ancestorAttributes = await GetLazyAncestorAttributeAsync(obj, attributePath);
+			if (ancestorAttributes == null)
+			{
+				return new None();
+			}
+
+			return await permissionPredicate(executor, obj, ancestorAttributes)
+				? ancestorAttributes
+				: new Error<string>(permissionFailureType);
+		}
+
 		if (result == null)
 		{
 			return new None();
@@ -108,6 +178,40 @@ public class AttributeService(
 		return await permissionPredicate(executor, obj, result.Attributes)
 			? result.Attributes
 			: new Error<string>(permissionFailureType);
+	}
+
+	/// <summary>
+	/// Lazy variant of <see cref="GetAncestorAttributeAsync"/>.
+	/// </summary>
+	private async ValueTask<LazySharpAttribute[]?> GetLazyAncestorAttributeAsync(AnySharpObject obj, string[] attributePath)
+	{
+		var ancestorRef = await obj.Ancestor(configuration);
+		if (ancestorRef is null)
+		{
+			return null;
+		}
+
+		if (ancestorRef.Value.Number == obj.Object().DBRef.Number)
+		{
+			return null;
+		}
+
+		var ancestorResult = await mediator
+			.CreateStream(new GetLazyAttributeWithInheritanceQuery(ancestorRef.Value, attributePath, true))
+			.FirstOrDefaultAsync();
+
+		if (ancestorResult == null)
+		{
+			return null;
+		}
+
+		var leaf = ancestorResult.Attributes.Last();
+		if (leaf.Flags.Any(f => f.Name == "no_inherit"))
+		{
+			return null;
+		}
+
+		return ancestorResult.Attributes;
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,

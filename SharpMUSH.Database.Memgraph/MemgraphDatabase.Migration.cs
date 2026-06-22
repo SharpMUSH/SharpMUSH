@@ -141,8 +141,8 @@ public partial class MemgraphDatabase
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-			// Create Counter for auto-increment object keys (migration seeds keys 0-5)
-			await ExecuteWithRetryAsync("MERGE (c:Counter {name: 'object_key'}) ON CREATE SET c.value = 5", ct: cancellationToken);
+			// Create Counter for auto-increment object keys (migration seeds keys 0-9)
+			await ExecuteWithRetryAsync("MERGE (c:Counter {name: 'object_key'}) ON CREATE SET c.value = 9", ct: cancellationToken);
 
 			// Create Room Zero (key=0)
 			await ExecuteWithRetryAsync("""
@@ -171,23 +171,20 @@ ON CREATE SET r.aliases = []
 MERGE (r)-[:IS_OBJECT]->(o)
 """, new { now }, cancellationToken);
 
-			// Create Player Three - Package Manager (config package_manager) at Room Zero
+			// Create Room Three - Ancestor Room (config ancestor_room). Like Room Zero / Master Room,
+			// a room has no location/home edges — it is a pure attribute holder.
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 3})
-ON CREATE SET o.name = 'Package Manager', o.type = 'PLAYER', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
-MERGE (p:Player {key: 3})
-ON CREATE SET p.passwordHash = '', p.passwordSalt = '', p.aliases = [], p.quota = 999999
-MERGE (p)-[:IS_OBJECT]->(o)
-WITH p
-MATCH (r:Room {key: 0})
-MERGE (p)-[:AT_LOCATION]->(r)
-MERGE (p)-[:HAS_HOME]->(r)
+ON CREATE SET o.name = 'Ancestor Room', o.type = 'ROOM', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
+MERGE (r:Room {key: 3})
+ON CREATE SET r.aliases = []
+MERGE (r)-[:IS_OBJECT]->(o)
 """, new { now }, cancellationToken);
 
-			// Create Thing Four - HTTP Handler (config http_handler) in Master Room
+			// Create Thing Four - Ancestor Player (config ancestor_player) in Master Room
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 4})
-ON CREATE SET o.name = 'HTTP Handler', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
+ON CREATE SET o.name = 'Ancestor Player', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
 MERGE (t:Thing {key: 4})
 ON CREATE SET t.aliases = []
 MERGE (t)-[:IS_OBJECT]->(o)
@@ -197,11 +194,63 @@ MERGE (t)-[:AT_LOCATION]->(r)
 MERGE (t)-[:HAS_HOME]->(r)
 """, new { now }, cancellationToken);
 
-			// Create Thing Five - Event Handler (config event_handler) in Master Room
+			// Create Thing Five - Ancestor Exit (config ancestor_exit) in Master Room
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 5})
-ON CREATE SET o.name = 'Event Handler', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
+ON CREATE SET o.name = 'Ancestor Exit', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
 MERGE (t:Thing {key: 5})
+ON CREATE SET t.aliases = []
+MERGE (t)-[:IS_OBJECT]->(o)
+WITH t
+MATCH (r:Room {key: 2})
+MERGE (t)-[:AT_LOCATION]->(r)
+MERGE (t)-[:HAS_HOME]->(r)
+""", new { now }, cancellationToken);
+
+			// Create Thing Six - Ancestor Thing (config ancestor_thing) in Master Room
+			await ExecuteWithRetryAsync("""
+MERGE (o:Object {key: 6})
+ON CREATE SET o.name = 'Ancestor Thing', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
+MERGE (t:Thing {key: 6})
+ON CREATE SET t.aliases = []
+MERGE (t)-[:IS_OBJECT]->(o)
+WITH t
+MATCH (r:Room {key: 2})
+MERGE (t)-[:AT_LOCATION]->(r)
+MERGE (t)-[:HAS_HOME]->(r)
+""", new { now }, cancellationToken);
+
+			// Create Player Seven - Package Manager (config package_manager) at Room Zero
+			await ExecuteWithRetryAsync("""
+MERGE (o:Object {key: 7})
+ON CREATE SET o.name = 'Package Manager', o.type = 'PLAYER', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
+MERGE (p:Player {key: 7})
+ON CREATE SET p.passwordHash = '', p.passwordSalt = '', p.aliases = [], p.quota = 999999
+MERGE (p)-[:IS_OBJECT]->(o)
+WITH p
+MATCH (r:Room {key: 0})
+MERGE (p)-[:AT_LOCATION]->(r)
+MERGE (p)-[:HAS_HOME]->(r)
+""", new { now }, cancellationToken);
+
+			// Create Thing Eight - HTTP Handler (config http_handler) in Master Room
+			await ExecuteWithRetryAsync("""
+MERGE (o:Object {key: 8})
+ON CREATE SET o.name = 'HTTP Handler', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
+MERGE (t:Thing {key: 8})
+ON CREATE SET t.aliases = []
+MERGE (t)-[:IS_OBJECT]->(o)
+WITH t
+MATCH (r:Room {key: 2})
+MERGE (t)-[:AT_LOCATION]->(r)
+MERGE (t)-[:HAS_HOME]->(r)
+""", new { now }, cancellationToken);
+
+			// Create Thing Nine - Event Handler (config event_handler) in Master Room
+			await ExecuteWithRetryAsync("""
+MERGE (o:Object {key: 9})
+ON CREATE SET o.name = 'Event Handler', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
+MERGE (t:Thing {key: 9})
 ON CREATE SET t.aliases = []
 MERGE (t)-[:IS_OBJECT]->(o)
 WITH t
@@ -222,14 +271,14 @@ MATCH (p:Player {key: 1}), (r:Room {key: 0})
 MERGE (p)-[:HAS_HOME]->(r)
 """, ct: cancellationToken);
 
-			// Ownership: God owns the core objects and the handler things; PM owns itself
+			// Ownership: God owns the core objects, the ancestors, and the handler things; PM owns itself
 			await ExecuteWithRetryAsync("""
 MATCH (ownerPlayer:Player {key: 1})
-MATCH (o:Object) WHERE o.key IN [0, 1, 2, 4, 5]
+MATCH (o:Object) WHERE o.key IN [0, 1, 2, 3, 4, 5, 6, 8, 9]
 MERGE (o)-[:HAS_OWNER]->(ownerPlayer)
 """, ct: cancellationToken);
 			await ExecuteWithRetryAsync("""
-MATCH (pm:Player {key: 3}), (o:Object {key: 3})
+MATCH (pm:Player {key: 7}), (o:Object {key: 7})
 MERGE (o)-[:HAS_OWNER]->(pm)
 """, ct: cancellationToken);
 
@@ -251,9 +300,9 @@ MATCH (o:Object {key: 1}), (f:ObjectFlag {name: 'WIZARD'})
 MERGE (o)-[:HAS_FLAG]->(f)
 """, ct: cancellationToken);
 
-			// Give the Package Manager (#3) the WIZARD flag
+			// Give the Package Manager (#7) the WIZARD flag
 			await ExecuteWithRetryAsync("""
-MATCH (o:Object {key: 3}), (f:ObjectFlag {name: 'WIZARD'})
+MATCH (o:Object {key: 7}), (f:ObjectFlag {name: 'WIZARD'})
 MERGE (o)-[:HAS_FLAG]->(f)
 """, ct: cancellationToken);
 
@@ -261,6 +310,10 @@ MERGE (o)-[:HAS_FLAG]->(f)
 			// (IMigrationSource). Both ride the same plumbing as the built-in seed batch above.
 			await SeedPluginFlags(cancellationToken);
 			await RunPluginCypherMigrations(cancellationToken);
+
+			// Seed the default FORMAT`* attributes on the Ancestor Player (#4) so a plain player inherits
+			// the PennMUSH-style say/pose/semipose/emit render templates. Idempotent.
+			await AncestorSeed.SeedAncestorPlayerFormatsAsync(this, cancellationToken);
 
 			logger.LogInformation("Memgraph Migration Completed");
 			_migrated = true;

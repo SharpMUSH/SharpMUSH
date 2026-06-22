@@ -101,6 +101,10 @@ public partial class ArangoDatabase
 			// Idempotent UPSERT keyed on Name so re-migration (or a flag also seeded by a migration) is safe.
 			await SeedPluginFlagsAsync(ct);
 
+			// Seed the default FORMAT`* attributes on the Ancestor Player (#4) so a plain player inherits
+			// the PennMUSH-style say/pose/semipose/emit render templates. Idempotent.
+			await AncestorSeed.SeedAncestorPlayerFormatsAsync(this, ct);
+
 			logger.LogInformation("Migration Completed.");
 		}
 		catch (Exception ex)

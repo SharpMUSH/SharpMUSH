@@ -10,7 +10,7 @@ namespace SharpMUSH.Tests.Integration.Http;
 /// Proof of concept: the default HTTP handler softcode is delivered by the
 /// package manager (the <c>http-hooks</c> package, attach mode — decision 20.3),
 /// not by hardcoded C#. These assertions are read-only / additive so they run
-/// safely alongside the other HTTP and profile tests that share handler #4.
+/// safely alongside the other HTTP and profile tests that share handler #8.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class HttpHooksPackageTests(ServerWebAppFactory factory)
@@ -27,7 +27,7 @@ public class HttpHooksPackageTests(ServerWebAppFactory factory)
 		await Assert.That(http.IsT0).IsTrue();
 		await Assert.That(profile.IsT0).IsTrue();
 
-		// Attach mode: neither owns objects (#4 is infrastructure).
+		// Attach mode: neither owns objects (#8 is infrastructure).
 		await Assert.That((await Registry.GetPackageObjectsAsync("http-handler")).Count).IsEqualTo(0);
 		await Assert.That((await Registry.GetPackageObjectsAsync("profile-handler")).Count).IsEqualTo(0);
 

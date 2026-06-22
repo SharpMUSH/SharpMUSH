@@ -18,7 +18,12 @@ public enum AttributeSource
 	/// <summary>
 	/// Attribute is inherited from a zone.
 	/// </summary>
-	Zone
+	Zone,
+
+	/// <summary>
+	/// Attribute is inherited from the object's type ancestor (PennMUSH ANCESTOR_*).
+	/// </summary>
+	Ancestor
 }
 
 /// <summary>

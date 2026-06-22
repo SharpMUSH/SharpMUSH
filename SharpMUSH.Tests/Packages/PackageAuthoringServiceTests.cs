@@ -25,7 +25,7 @@ public class PackageAuthoringServiceTests
 	public async Task ScanAndExport_RoundTripsToValidManifest()
 	{
 		// Build two live things: one references the other AND an external object (#0).
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(3))).Known();
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
 		var pm = pmNode.Match(p => p, _ => null!, _ => null!, _ => null!);
 		var location = pmNode.Match<AnySharpContainer>(p => p, _ => null!, _ => null!, t => t);
 
@@ -80,7 +80,7 @@ public class PackageAuthoringServiceTests
 	{
 		// The Testing-checklist capstone: author from live objects → export →
 		// install the exported manifest as a NEW package → verify the clone.
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(3))).Known();
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
 		var pm = pmNode.Match(p => p, _ => null!, _ => null!, _ => null!);
 		var location = pmNode.Match<AnySharpContainer>(p => p, _ => null!, _ => null!, t => t);
 
@@ -126,7 +126,7 @@ public class PackageAuthoringServiceTests
 	[Test, NotInParallel]
 	public async Task Export_FailsOnUnclassifiedDbrefs()
 	{
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(3))).Known();
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
 		var pm = pmNode.Match(p => p, _ => null!, _ => null!, _ => null!);
 		var location = pmNode.Match<AnySharpContainer>(p => p, _ => null!, _ => null!, t => t);
 
@@ -147,7 +147,7 @@ public class PackageAuthoringServiceTests
 	[Test, NotInParallel]
 	public async Task Export_BlankAndWhitespaceAttributeValues_ProduceValidManifest()
 	{
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(3))).Known();
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
 		var pm = pmNode.Match(p => p, _ => null!, _ => null!, _ => null!);
 		var location = pmNode.Match<AnySharpContainer>(p => p, _ => null!, _ => null!, t => t);
 

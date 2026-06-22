@@ -145,8 +145,8 @@ public partial class SurrealDatabase
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-			// Initialize in-memory counter for auto-increment object keys (migration creates keys 0-5)
-			_nextObjectKey = 5;
+			// Initialize in-memory counter for auto-increment object keys (migration creates keys 0-9)
+			_nextObjectKey = 9;
 
 			// Seed the 1-based scene/pose id counters at 0; runtime UPDATE increments them atomically.
 			await ExecuteAsync("UPSERT counter:scene_id SET seq = 0", cancellationToken);
@@ -188,21 +188,18 @@ public partial class SurrealDatabase
 				"RELATE room:2->is_object->object:2",
 				cancellationToken);
 
-			// Create Player Three - Package Manager (config package_manager) at Room Zero
+			// Create Room Three - Ancestor Room (config ancestor_room). Like Room Zero / Master Room,
+			// a room has no location/home edges — it is a pure attribute holder.
 			await ExecuteAsync(
-				"UPSERT object:3 SET name = 'Package Manager', type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 3",
+				"UPSERT object:3 SET name = 'Ancestor Room', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 3",
 				new Dictionary<string, object?> { ["now"] = now },
 				cancellationToken);
-			await ExecuteAsync(
-				"UPSERT player:3 SET key = 3, passwordHash = '', passwordSalt = '', aliases = [], quota = 999999",
-				cancellationToken);
-			await ExecuteAsync("RELATE player:3->is_object->object:3", cancellationToken);
-			await ExecuteAsync("RELATE player:3->at_location->room:0", cancellationToken);
-			await ExecuteAsync("RELATE player:3->has_home->room:0", cancellationToken);
+			await ExecuteAsync("UPSERT room:3 SET key = 3, aliases = []", cancellationToken);
+			await ExecuteAsync("RELATE room:3->is_object->object:3", cancellationToken);
 
-			// Create Thing Four - HTTP Handler (config http_handler) in Master Room
+			// Create Thing Four - Ancestor Player (config ancestor_player) in Master Room
 			await ExecuteAsync(
-				"UPSERT object:4 SET name = 'HTTP Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 4",
+				"UPSERT object:4 SET name = 'Ancestor Player', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 4",
 				new Dictionary<string, object?> { ["now"] = now },
 				cancellationToken);
 			await ExecuteAsync("UPSERT thing:4 SET key = 4, aliases = []", cancellationToken);
@@ -210,15 +207,57 @@ public partial class SurrealDatabase
 			await ExecuteAsync("RELATE thing:4->at_location->room:2", cancellationToken);
 			await ExecuteAsync("RELATE thing:4->has_home->room:2", cancellationToken);
 
-			// Create Thing Five - Event Handler (config event_handler) in Master Room
+			// Create Thing Five - Ancestor Exit (config ancestor_exit) in Master Room
 			await ExecuteAsync(
-				"UPSERT object:5 SET name = 'Event Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 5",
+				"UPSERT object:5 SET name = 'Ancestor Exit', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 5",
 				new Dictionary<string, object?> { ["now"] = now },
 				cancellationToken);
 			await ExecuteAsync("UPSERT thing:5 SET key = 5, aliases = []", cancellationToken);
 			await ExecuteAsync("RELATE thing:5->is_object->object:5", cancellationToken);
 			await ExecuteAsync("RELATE thing:5->at_location->room:2", cancellationToken);
 			await ExecuteAsync("RELATE thing:5->has_home->room:2", cancellationToken);
+
+			// Create Thing Six - Ancestor Thing (config ancestor_thing) in Master Room
+			await ExecuteAsync(
+				"UPSERT object:6 SET name = 'Ancestor Thing', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 6",
+				new Dictionary<string, object?> { ["now"] = now },
+				cancellationToken);
+			await ExecuteAsync("UPSERT thing:6 SET key = 6, aliases = []", cancellationToken);
+			await ExecuteAsync("RELATE thing:6->is_object->object:6", cancellationToken);
+			await ExecuteAsync("RELATE thing:6->at_location->room:2", cancellationToken);
+			await ExecuteAsync("RELATE thing:6->has_home->room:2", cancellationToken);
+
+			// Create Player Seven - Package Manager (config package_manager) at Room Zero
+			await ExecuteAsync(
+				"UPSERT object:7 SET name = 'Package Manager', type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 7",
+				new Dictionary<string, object?> { ["now"] = now },
+				cancellationToken);
+			await ExecuteAsync(
+				"UPSERT player:7 SET key = 7, passwordHash = '', passwordSalt = '', aliases = [], quota = 999999",
+				cancellationToken);
+			await ExecuteAsync("RELATE player:7->is_object->object:7", cancellationToken);
+			await ExecuteAsync("RELATE player:7->at_location->room:0", cancellationToken);
+			await ExecuteAsync("RELATE player:7->has_home->room:0", cancellationToken);
+
+			// Create Thing Eight - HTTP Handler (config http_handler) in Master Room
+			await ExecuteAsync(
+				"UPSERT object:8 SET name = 'HTTP Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 8",
+				new Dictionary<string, object?> { ["now"] = now },
+				cancellationToken);
+			await ExecuteAsync("UPSERT thing:8 SET key = 8, aliases = []", cancellationToken);
+			await ExecuteAsync("RELATE thing:8->is_object->object:8", cancellationToken);
+			await ExecuteAsync("RELATE thing:8->at_location->room:2", cancellationToken);
+			await ExecuteAsync("RELATE thing:8->has_home->room:2", cancellationToken);
+
+			// Create Thing Nine - Event Handler (config event_handler) in Master Room
+			await ExecuteAsync(
+				"UPSERT object:9 SET name = 'Event Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 9",
+				new Dictionary<string, object?> { ["now"] = now },
+				cancellationToken);
+			await ExecuteAsync("UPSERT thing:9 SET key = 9, aliases = []", cancellationToken);
+			await ExecuteAsync("RELATE thing:9->is_object->object:9", cancellationToken);
+			await ExecuteAsync("RELATE thing:9->at_location->room:2", cancellationToken);
+			await ExecuteAsync("RELATE thing:9->has_home->room:2", cancellationToken);
 
 			// Player One at Room Zero
 			await ExecuteAsync(
@@ -240,10 +279,14 @@ public partial class SurrealDatabase
 			await ExecuteAsync(
 				"RELATE object:2->has_owner->player:1",
 				cancellationToken);
-			// God owns the handler things; PM (#3) owns itself
+			// God owns the ancestors (#3-#6) and the handler things (#8, #9); PM (#7) owns itself
+			await ExecuteAsync("RELATE object:3->has_owner->player:1", cancellationToken);
 			await ExecuteAsync("RELATE object:4->has_owner->player:1", cancellationToken);
 			await ExecuteAsync("RELATE object:5->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:3->has_owner->player:3", cancellationToken);
+			await ExecuteAsync("RELATE object:6->has_owner->player:1", cancellationToken);
+			await ExecuteAsync("RELATE object:8->has_owner->player:1", cancellationToken);
+			await ExecuteAsync("RELATE object:9->has_owner->player:1", cancellationToken);
+			await ExecuteAsync("RELATE object:7->has_owner->player:7", cancellationToken);
 
 			// Create initial flags
 			await CreateInitialFlags(cancellationToken);
@@ -261,9 +304,9 @@ public partial class SurrealDatabase
 			await ExecuteAsync(
 				"RELATE object:1->has_flags->object_flag:WIZARD",
 				cancellationToken);
-			// Give the Package Manager (#3) the WIZARD flag
+			// Give the Package Manager (#7) the WIZARD flag
 			await ExecuteAsync(
-				"RELATE object:3->has_flags->object_flag:WIZARD",
+				"RELATE object:7->has_flags->object_flag:WIZARD",
 				cancellationToken);
 
 			// Phase 2a: seed plugin-contributed flags (IFlagSource), then run plugin SurrealQL migrations
@@ -271,8 +314,13 @@ public partial class SurrealDatabase
 			await SeedPluginFlags(cancellationToken);
 			await RunPluginSurrealMigrations(cancellationToken);
 
-			logger.LogInformation("SurrealDB Migration Completed");
+			// Seed the default FORMAT`* attributes on the Ancestor Player (#4) so a plain player inherits
+			// the PennMUSH-style say/pose/semipose/emit render templates. Idempotent.
+			// _migrated is set first so SetAttributeAsync's internal Migrate() guard short-circuits.
 			_migrated = true;
+			await AncestorSeed.SeedAncestorPlayerFormatsAsync(this, cancellationToken);
+
+			logger.LogInformation("SurrealDB Migration Completed");
 		}
 		catch (Exception ex)
 		{
