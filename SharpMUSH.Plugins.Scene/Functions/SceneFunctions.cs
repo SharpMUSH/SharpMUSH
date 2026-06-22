@@ -184,7 +184,8 @@ public static class SceneFunctions
 		ParameterNames = ["roomDbref"])]
 	public static async ValueTask<CallState> SceneWhere(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var room = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
+		var roomArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
+		var room = await SceneLocate.ObjectOrSelf(parser, roomArg);
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var lookup = await service.GetActiveSceneInRoomAsync(room);
 		if (lookup.IsT1)
@@ -220,7 +221,7 @@ public static class SceneFunctions
 			var authorText = authorArg.Message!.ToPlainText().Trim();
 			if (authorText.Length > 0)
 			{
-				author = authorText;
+				author = await SceneLocate.PlayerOrSelf(parser, authorText);
 			}
 		}
 
@@ -420,7 +421,8 @@ public static class SceneFunctions
 	{
 		var args = parser.CurrentState.Arguments;
 		var id = args["0"].Message!.ToPlainText().Trim();
-		var player = args["1"].Message!.ToPlainText().Trim();
+		var playerArg = args["1"].Message!.ToPlainText().Trim();
+		var player = await SceneLocate.PlayerOrSelf(parser, playerArg);
 		var field = args.TryGetValue("2", out var fieldArg)
 			? fieldArg.Message!.ToPlainText().Trim().ToLowerInvariant()
 			: "role";
@@ -464,7 +466,8 @@ public static class SceneFunctions
 		ParameterNames = ["player"])]
 	public static async ValueTask<CallState> SceneFocus(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var player = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
+		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
+		var player = await SceneLocate.PlayerOrSelf(parser, playerArg);
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var lookup = await service.GetCurrentSceneAsync(player);
 		if (lookup.IsT1)
@@ -560,8 +563,8 @@ public static class SceneFunctions
 		}
 
 		var args = parser.CurrentState.Arguments;
-		var room = args["0"].Message!.ToPlainText().Trim();
-		var owner = args["1"].Message!.ToPlainText().Trim();
+		var room = await SceneLocate.ObjectOrSelf(parser, args["0"].Message!.ToPlainText().Trim());
+		var owner = await SceneLocate.PlayerOrSelf(parser, args["1"].Message!.ToPlainText().Trim());
 		var title = args.TryGetValue("2", out var titleArg)
 			? titleArg.Message!.ToPlainText()
 			: string.Empty;
@@ -614,9 +617,9 @@ public static class SceneFunctions
 
 		var args = parser.CurrentState.Arguments;
 		var id = args["0"].Message!.ToPlainText().Trim();
-		var author = args["1"].Message!.ToPlainText().Trim();
+		var author = await SceneLocate.PlayerOrSelf(parser, args["1"].Message!.ToPlainText().Trim());
 		var showAs = args["2"].Message!.ToPlainText();
-		var origin = args["3"].Message!.ToPlainText().Trim();
+		var origin = await SceneLocate.ObjectOrSelf(parser, args["3"].Message!.ToPlainText().Trim());
 		var source = args["4"].Message!.ToPlainText();
 		var tagsText = args["5"].Message!.ToPlainText().Trim();
 		var content = args["6"].Message!.ToPlainText();
@@ -676,7 +679,7 @@ public static class SceneFunctions
 
 		var args = parser.CurrentState.Arguments;
 		var poseId = args["0"].Message!.ToPlainText().Trim();
-		var editor = args["1"].Message!.ToPlainText().Trim();
+		var editor = await SceneLocate.PlayerOrSelf(parser, args["1"].Message!.ToPlainText().Trim());
 		var content = args["2"].Message!.ToPlainText();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
@@ -802,7 +805,7 @@ public static class SceneFunctions
 
 		var args = parser.CurrentState.Arguments;
 		var id = args["0"].Message!.ToPlainText().Trim();
-		var player = args["1"].Message!.ToPlainText().Trim();
+		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message!.ToPlainText().Trim());
 		var role = args["2"].Message!.ToPlainText().Trim();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
@@ -828,7 +831,7 @@ public static class SceneFunctions
 
 		var args = parser.CurrentState.Arguments;
 		var id = args["0"].Message!.ToPlainText().Trim();
-		var player = args["1"].Message!.ToPlainText().Trim();
+		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message!.ToPlainText().Trim());
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var result = await service.RemoveMemberAsync(id, player);
@@ -853,7 +856,7 @@ public static class SceneFunctions
 		}
 
 		var args = parser.CurrentState.Arguments;
-		var player = args["0"].Message!.ToPlainText().Trim();
+		var player = await SceneLocate.PlayerOrSelf(parser, args["0"].Message!.ToPlainText().Trim());
 		var id = args.TryGetValue("1", out var idArg)
 			? idArg.Message!.ToPlainText().Trim()
 			: string.Empty;
@@ -881,7 +884,7 @@ public static class SceneFunctions
 
 		var args = parser.CurrentState.Arguments;
 		var id = args["0"].Message!.ToPlainText().Trim();
-		var player = args["1"].Message!.ToPlainText().Trim();
+		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message!.ToPlainText().Trim());
 		var name = args["2"].Message!.ToPlainText();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
@@ -924,7 +927,7 @@ public static class SceneFunctions
 				var parts = plot.Split('|');
 				var title = parts.Length > 0 ? parts[0] : string.Empty;
 				var description = parts.Length > 1 ? parts[1] : string.Empty;
-				var owner = parts.Length > 2 ? parts[2] : string.Empty;
+				var owner = parts.Length > 2 ? await SceneLocate.PlayerOrSelf(parser, parts[2]) : string.Empty;
 				var plotId = string.IsNullOrEmpty(id) ? null : id;
 				var result = await service.UpsertPlotAsync(plotId, title, description, owner);
 				return new CallState(result.Id);

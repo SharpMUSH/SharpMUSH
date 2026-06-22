@@ -27,7 +27,7 @@ public static class ScenePlotHandlers
 			{
 				// /plot/create <ownerDbref>,<title>[,<description>]
 				var fields = SceneCommandHelper.SplitFields(plotArg, 3);
-				var ownerDbref = fields[0];
+				var ownerDbref = await SceneLocate.PlayerOrSelf(parser, fields[0]);
 				var title = fields[1];
 				var description = fields[2];
 
