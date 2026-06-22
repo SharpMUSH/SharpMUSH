@@ -1,11 +1,8 @@
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
@@ -28,7 +25,7 @@ public class GetCommandAttributesQueryHandler(
 		var noCommandPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		// Scan local attributes first
-		await ScanAttributes(sharpObj.Object().AllAttributes.Value, commandAttributes, seenNames,
+		await CommandAttributeScanner.ScanAttributes(sharpObj.Object().AllAttributes.Value, commandAttributes, seenNames,
 			noCommandPrefixes, isLocal: true, cancellationToken);
 
 		// Walk parent chain for inherited commands
@@ -39,141 +36,58 @@ public class GetCommandAttributesQueryHandler(
 			if (parent.IsNone) break;
 
 			var parentObj = parent.Known.Object();
-			await ScanAttributes(parentObj.AllAttributes.Value, commandAttributes, seenNames,
+			await CommandAttributeScanner.ScanAttributes(parentObj.AllAttributes.Value, commandAttributes, seenNames,
 				noCommandPrefixes, isLocal: false, cancellationToken);
 
 			current = parentObj;
 		}
 
-		// PennMUSH ancestor fall-through: after the object's own @parent chain, scan the type
-		// ancestor and its own @parent chain (but no ancestor-of-ancestor). Skip when disabled,
-		// or when the object IS its own type ancestor (no self-loop).
+		// PennMUSH ancestor fall-through: after the object's own @parent chain, merge in the type
+		// ancestor's contribution (its own $commands + its own @parent chain, no ancestor-of-ancestor).
+		//
+		// Short-circuit cheapest-first: Ancestor() resolves the configured ancestor from type + config
+		// with no DB access and returns null when disabled, so a disabled ancestor costs nothing here.
+		// The ancestor's derived command set is itself cached (keyed by ancestor dbref) via
+		// GetAncestorCommandAttributesQuery, so it is computed once per ancestor instead of being
+		// rescanned for every child object that falls through to it.
 		var ancestorRef = await sharpObj.Ancestor(configuration);
 		if (ancestorRef is not null && ancestorRef.Value.Number != sharpObj.Object().DBRef.Number)
 		{
-			var ancestorNode = await mediator.Send(new GetObjectNodeQuery(ancestorRef.Value), cancellationToken);
-			if (!ancestorNode.IsNone)
-			{
-				var ancestorObj = ancestorNode.Known.Object();
-				await ScanAttributes(ancestorObj.AllAttributes.Value, commandAttributes, seenNames,
-					noCommandPrefixes, isLocal: false, cancellationToken);
+			var ancestorCommands =
+				await mediator.Send(new GetAncestorCommandAttributesQuery(ancestorRef.Value), cancellationToken);
 
-				// Honor the ancestor's own parent chain, then stop.
-				var ancestorCurrent = ancestorObj;
-				while (true)
-				{
-					var ancestorParent = await ancestorCurrent.Parent.WithCancellation(cancellationToken);
-					if (ancestorParent.IsNone) break;
-
-					var ancestorParentObj = ancestorParent.Known.Object();
-					await ScanAttributes(ancestorParentObj.AllAttributes.Value, commandAttributes, seenNames,
-						noCommandPrefixes, isLocal: false, cancellationToken);
-
-					ancestorCurrent = ancestorParentObj;
-				}
-			}
+			MergeAncestorCommands(ancestorCommands, commandAttributes, seenNames, noCommandPrefixes);
 		}
 
 		return [.. commandAttributes];
 	}
 
-	private static async ValueTask ScanAttributes(
-		IAsyncEnumerable<SharpAttribute> attributes,
+	/// <summary>
+	/// Merge the (cached, isolated) ancestor command contribution into the accumulator, applying the
+	/// same gating the original single-pass scan applied when the ancestor was scanned last:
+	/// child/parent attributes of the same name shadow the ancestor (<paramref name="seenNames"/>),
+	/// and any <c>no_command</c> tree prefix accumulated from the object/parents blocks ancestor
+	/// descendants (<paramref name="noCommandPrefixes"/>).
+	/// </summary>
+	private static void MergeAncestorCommands(
+		CommandAttributeCache[] ancestorCommands,
 		List<CommandAttributeCache> commandAttributes,
 		HashSet<string> seenNames,
-		HashSet<string> noCommandPrefixes,
-		bool isLocal,
-		CancellationToken cancellationToken)
+		HashSet<string> noCommandPrefixes)
 	{
-		// Collect all attributes first so we can do proper tree-level flag checks
-		// regardless of enumeration order.
-		var attrList = new List<SharpAttribute>();
-		await foreach (var attr in attributes.WithCancellation(cancellationToken))
-			attrList.Add(attr);
-
-		// Build no_inherit prefixes (only matters for parent attrs)
-		var noInheritPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-		if (!isLocal)
+		foreach (var cached in ancestorCommands)
 		{
-			foreach (var attr in attrList)
-			{
-				if (attr.Flags.Any(f => f.Name == "no_inherit"))
-					noInheritPrefixes.Add((attr.LongName ?? "") + "`");
-			}
-		}
+			var longName = cached.Attribute.LongName ?? "";
 
-		// Build no_command prefixes from this object's attrs
-		var localNoCommandPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-		foreach (var attr in attrList)
-		{
-			if (attr.Flags.Any(flag => flag.Name == "no_command"))
-				localNoCommandPrefixes.Add((attr.LongName ?? "") + "`");
-		}
-
-		foreach (var attr in attrList)
-		{
-			var longName = attr.LongName ?? "";
-
-			// Skip if no_inherit (or descendant of no_inherit) and we're looking at parent attributes
-			if (!isLocal)
-			{
-				if (attr.Flags.Any(f => f.Name == "no_inherit"))
-					continue;
-				if (noInheritPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
-					continue;
-			}
-
-			// Track names we've already processed (child overrides parent)
+			// Child/parent attribute of the same name already won — ancestor is shadowed.
 			if (!seenNames.Add(longName))
 				continue;
 
-			// Check if this attribute has no_command flag
-			if (attr.Flags.Any(flag => flag.Name == "no_command"))
-			{
-				// Block this attribute AND all tree descendants (propagate to cross-object noCommandPrefixes)
-				noCommandPrefixes.Add(longName + "`");
-				continue;
-			}
-
-			// Check if blocked by ancestor's no_command (tree-level blocking) — both local and cross-object
+			// Blocked by a no_command tree prefix contributed by the object or its parents.
 			if (noCommandPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 				continue;
-			if (localNoCommandPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
-				continue;
 
-			var plainValue = attr.Value.ToPlainText();
-			var match = CommandDiscoveryService.CommandPatternRegex().Match(plainValue);
-
-			if (!match.Success)
-				continue;
-
-			// Extract command pattern and determine if it's REGEX or wildcard
-			var pattern = match.Value.Remove(match.Length - 1, 1).Remove(0, 1);
-			var isRegex = attr.Flags.Any(flag => flag.Name.Equals("REGEXP", StringComparison.OrdinalIgnoreCase));
-			// Skip any optional leading whitespace so that "$cmd: @pemit" and "$cmd:@pemit" are
-			// both handled correctly — a leading space would otherwise cause an empty command name
-			// when EvaluateCommands strips the first token at its space boundary.
-			var commandBodyStart = match.Length;
-			while (commandBodyStart < plainValue.Length && plainValue[commandBodyStart] == ' ')
-				commandBodyStart++;
-
-			try
-			{
-				// Pre-compile the regex pattern
-				var regex = isRegex
-					? new Regex(pattern, RegexOptions.Compiled)
-					: new Regex(MModule.getWildcardMatchAsRegex(MModule.single(pattern)), RegexOptions.Compiled);
-
-				commandAttributes.Add(new CommandAttributeCache(
-					attr with { CommandListIndex = commandBodyStart },
-					regex,
-					isRegex));
-			}
-			catch (ArgumentException)
-			{
-				// Invalid regex pattern, skip this attribute
-				continue;
-			}
+			commandAttributes.Add(cached);
 		}
 	}
 }

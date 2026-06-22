@@ -8,6 +8,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -27,6 +28,7 @@ public class AncestorInheritanceTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+	private IFusionCache Cache => WebAppFactoryArg.Services.GetRequiredService<IFusionCache>();
 
 	private static readonly DBRef AncestorThing = new(6);
 	private static readonly DBRef God = new(1);
@@ -157,5 +159,61 @@ public class AncestorInheritanceTests
 
 		await Assert.That(attr.IsAttribute).IsTrue();
 		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).Contains("You say");
+	}
+
+	[Test]
+	[NotInParallel]
+	public async Task AncestorCommandContribution_IsCachedPerAncestor()
+	{
+		// Regression guard for the CI performance fix: the type ancestor's derived command set must be
+		// computed once and cached keyed by ancestor dbref, so that every child object falling through
+		// to it reuses the cached contribution instead of re-scanning #6 + its @parent chain per object.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD`CACHEGUARD {AncestorThing}=$cacheguardcmd:@pemit %#=OK"));
+
+		// Touch the derived-ancestor query directly; this must populate the per-ancestor cache key.
+		var cacheKey = $"ancestor-commands:#{AncestorThing.Number}";
+		await Cache.RemoveAsync(cacheKey);
+		_ = await Mediator.Send(new GetAncestorCommandAttributesQuery(AncestorThing));
+
+		var cached = await Cache.TryGetAsync<CommandAttributeCache[]>(cacheKey);
+		await Assert.That(cached.HasValue).IsTrue();
+		await Assert.That(cached.Value.Select(c => c.Attribute.LongName ?? string.Empty))
+			.Contains(x => x.Equals("CMD`CACHEGUARD", StringComparison.OrdinalIgnoreCase));
+
+		// Two distinct child things both inherit the ancestor command — proving the cached contribution
+		// is shared rather than recomputed per object.
+		var thingARef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AncCacheA");
+		var thingBRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AncCacheB");
+		var commandsA = await Mediator.Send(new GetCommandAttributesQuery(await Known(thingARef)));
+		var commandsB = await Mediator.Send(new GetCommandAttributesQuery(await Known(thingBRef)));
+
+		await Assert.That(commandsA.Select(c => c.Attribute.LongName ?? string.Empty))
+			.Contains(x => x.Equals("CMD`CACHEGUARD", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(commandsB.Select(c => c.Attribute.LongName ?? string.Empty))
+			.Contains(x => x.Equals("CMD`CACHEGUARD", StringComparison.OrdinalIgnoreCase));
+	}
+
+	[Test]
+	[NotInParallel]
+	public async Task AncestorCommandCache_IsInvalidatedOnAncestorWrite()
+	{
+		// A @set on the ancestor must remain visible: the per-ancestor derived cache is invalidated by
+		// the attribute-mutating commands (they carry the ancestor-commands:{dbref} key), so a fresh
+		// scan picks up the newly defined $command.
+		var cacheKey = $"ancestor-commands:#{AncestorThing.Number}";
+
+		// Populate the cache without the new command present.
+		_ = await Mediator.Send(new GetAncestorCommandAttributesQuery(AncestorThing));
+		var before = await Cache.TryGetAsync<CommandAttributeCache[]>(cacheKey);
+		await Assert.That(before.HasValue).IsTrue();
+
+		// Define a brand-new $command on the ancestor — this must invalidate the cached contribution.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD`INVALIDATE {AncestorThing}=$invalidatecmd:@pemit %#=OK"));
+
+		var commands = await Mediator.Send(new GetAncestorCommandAttributesQuery(AncestorThing));
+		await Assert.That(commands.Select(c => c.Attribute.LongName ?? string.Empty))
+			.Contains(x => x.Equals("CMD`INVALIDATE", StringComparison.OrdinalIgnoreCase));
 	}
 }

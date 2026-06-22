@@ -272,24 +272,45 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> CanHide(this AnySharpObject obj)
 		=> await obj.HasPower("Hide") || await obj.IsPriv();
 
+	/// <summary>
+	/// The configured type ancestor (ANCESTOR_ROOM/PLAYER/EXIT/THING) for this object's type, derived
+	/// purely from configuration and the object's union type. This is the cheapest possible check —
+	/// no database access, no flag/power lookup — so callers can short-circuit the whole ancestor
+	/// fall-through before touching the DB when the ancestor is disabled (null / -1 in config).
+	/// Note: this does NOT honor the per-object ORPHAN power; use <see cref="Ancestor"/> for the
+	/// orphan-aware result.
+	/// </summary>
+	public static DBRef? TypeAncestor(this AnySharpObject obj,
+		IOptionsWrapper<SharpMUSHOptions> configuration)
+		=> obj.Match(
+			_ => configuration.CurrentValue.Database.AncestorPlayer is null
+				? null
+				: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorPlayer)),
+			_ => configuration.CurrentValue.Database.AncestorRoom is null
+				? null
+				: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorRoom)),
+			_ => configuration.CurrentValue.Database.AncestorExit is null
+				? null
+				: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorExit)),
+			_ => configuration.CurrentValue.Database.AncestorThing is null
+				? (DBRef?)null
+				: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorThing))
+		);
+
 	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj,
 		IOptionsWrapper<SharpMUSHOptions> configuration)
-		=> await obj.IsOrphan()
-			? null
-			: obj.Match(
-				_ => configuration.CurrentValue.Database.AncestorPlayer is null
-					? null
-					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorPlayer)),
-				_ => configuration.CurrentValue.Database.AncestorRoom is null
-					? null
-					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorRoom)),
-				_ => configuration.CurrentValue.Database.AncestorExit is null
-					? null
-					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorExit)),
-				_ => configuration.CurrentValue.Database.AncestorThing is null
-					? (DBRef?)null
-					: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorThing))
-			);
+	{
+		// Cheapest-first: resolve the configured type ancestor (no DB, no power check). When the
+		// ancestor is disabled for this type there is nothing to inherit, so skip the ORPHAN power
+		// lookup entirely — this keeps the hot path free of any I/O when ancestors are off.
+		var typeAncestor = obj.TypeAncestor(configuration);
+		if (typeAncestor is null)
+		{
+			return null;
+		}
+
+		return await obj.IsOrphan() ? null : typeAncestor;
+	}
 
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer

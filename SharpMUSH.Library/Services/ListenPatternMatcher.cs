@@ -68,47 +68,21 @@ public class ListenPatternMatcher(
 			}
 
 			// PennMUSH ancestor fall-through: after the object's own @parent chain, consult the
-			// type ancestor and its own LISTEN_PARENT chain (but no ancestor-of-ancestor). Skip
-			// when disabled, missing, or when the object IS its own type ancestor (no self-loop).
+			// type ancestor and its own LISTEN_PARENT chain (but no ancestor-of-ancestor).
+			//
+			// Short-circuit cheapest-first: Ancestor() resolves the configured ancestor purely from
+			// type + config with no DB access and returns null when disabled, so a disabled ancestor
+			// costs nothing here. Skip too when the object IS its own type ancestor (no self-loop) or
+			// when the ancestor was already visited along the @parent chain. The ancestor's listen
+			// contribution (its own listens + its LISTEN_PARENT chain) is itself cached keyed by
+			// ancestor dbref, so it is computed once per ancestor rather than re-walked per listener.
 			var ancestorRef = await listener.Ancestor(configuration);
 			if (ancestorRef is not null && ancestorRef.Value.Number != listener.Object().DBRef.Number
 			    && !visitedObjects.Contains(ancestorRef.Value.Number))
 			{
-				var ancestorNode = await mediator.Send(new GetObjectNodeQuery(ancestorRef.Value));
-				if (!ancestorNode.IsNone)
-				{
-					var ancestor = ancestorNode.Known;
-					visitedObjects.Add(ancestor.Object().DBRef.Number);
-
-					var ancestorListenAttributes = await mediator.Send(new GetListenAttributesQuery(ancestor));
-					CollectMatches(ancestorListenAttributes, listener, message, speaker, matches);
-
-					// Honor the ancestor's own LISTEN_PARENT chain, then stop.
-					var ancestorCurrent = ancestor;
-					var ancestorDepth = 0;
-					while (ancestorDepth < maxParentDepth)
-					{
-						var apAsync = await ancestorCurrent.Object().Parent.WithCancellation(CancellationToken.None);
-						if (apAsync.IsNone)
-							break;
-
-						var ap = apAsync.Known;
-						var apObject = ap.Object();
-						if (visitedObjects.Contains(apObject.DBRef.Number))
-							break;
-						visitedObjects.Add(apObject.DBRef.Number);
-
-						var apHasListenParent = await apObject.Flags.Value.AnyAsync(f => f.Name == "LISTEN_PARENT");
-						if (!apHasListenParent)
-							break;
-
-						var apListenAttributes = await mediator.Send(new GetListenAttributesQuery(ap));
-						CollectMatches(apListenAttributes, listener, message, speaker, matches);
-
-						ancestorCurrent = ap;
-						ancestorDepth++;
-					}
-				}
+				var ancestorListenAttributes =
+					await mediator.Send(new GetAncestorListenAttributesQuery(ancestorRef.Value));
+				CollectMatches(ancestorListenAttributes, listener, message, speaker, matches);
 			}
 		}
 

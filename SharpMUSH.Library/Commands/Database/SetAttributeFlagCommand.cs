@@ -10,7 +10,9 @@ public record SetAttributeFlagCommand(DBRef DBRef, SharpAttribute Target, SharpA
 	public string[] CacheKeys =>
 	[
 		$"attribute:{DBRef}:{Target.LongName})",
-		$"commands:{DBRef}"
+		$"commands:{DBRef}",
+		$"ancestor-commands:#{DBRef.Number}",
+		$"ancestor-listens:#{DBRef.Number}"
 	];
 	public string[] CacheTags => [Definitions.CacheTags.ObjectAttributes];
 }
