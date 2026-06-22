@@ -58,6 +58,7 @@ public sealed class Plugin : PluginBase
 	// extend the host further. Each is wired by the host's PluginCatalog — you register nothing.
 	//
 	//   IServiceRegistrar        → register your own DI services (pre-build, into the host container)
+	//   IEndpointContributor     → map your own ASP.NET endpoints/SignalR hubs into the host pipeline
 	//   IFlagSource              → seed engine object flags during DB migration
 	//   IMigrationSource         → provider-tagged DB migrations (Arango/Memgraph/Surreal)
 	//   IBridgeSubscriptionSource→ a NATS→SignalR background subscription
@@ -66,12 +67,36 @@ public sealed class Plugin : PluginBase
 	//   IObjectLifecycleHook     → object created/destroying
 	//
 	// NOTE: a plugin that implements ONLY command/function/hook seams can be hot-unloaded at runtime.
-	// Implementing any of IServiceRegistrar / IFlagSource / IMigrationSource / IBridgeSubscriptionSource
-	// captures load-once state, so such a plugin is load-once (restart to reload). See
-	// docs/guides/writing-a-plugin.md for the full worked examples.
+	// Implementing any of IServiceRegistrar / IEndpointContributor / IFlagSource / IMigrationSource /
+	// IBridgeSubscriptionSource captures load-once state, so such a plugin is load-once (restart to
+	// reload). See docs/guides/writing-a-plugin.md for the full worked examples.
 	//
 	// Example — register one DI service:
 	//
 	// public void RegisterServices(IServiceCollection services)
 	// 	=> services.AddSingleton<MyPluginService>();
+
+	// ── Contributing a web surface (controllers + hubs/endpoints), ASP.NET-style ──────────────────
+	//   1) ConfigureServices — from RegisterServices, call ordinary ASP.NET extensions. Expose MVC
+	//      controllers defined in THIS assembly by adding it as an ApplicationPart (the "FromAssembly"
+	//      load); add SignalR if you map a hub:
+	//
+	//      public void RegisterServices(IServiceCollection services)
+	//      {
+	//      	services.AddControllers().AddApplicationPart(typeof(Plugin).Assembly); // your [ApiController]s
+	//      	services.AddSignalR();                                                 // needed if you map a hub
+	//      }
+	//
+	//   2) Pipeline — implement IEndpointContributor to MAP hubs/routes (host calls this post-build,
+	//      after mapping its own controllers/hubs):
+	//
+	//      public void MapEndpoints(IEndpointRouteBuilder endpoints)
+	//      {
+	//      	endpoints.MapHub<MyHub>("/hubs/mine");
+	//      	endpoints.MapGet("/api/myplugin/ping", () => "pong");
+	//      }
+	//
+	// DTOs/service interfaces shared by your controller/hub AND the host belong in a small "contracts"
+	// assembly that is host-shared in the plugin ALC — see SharpMUSH.Plugins.Scene.Contracts and
+	// docs/design/plugin-system.md (Phase 9) for the canonical end-to-end example.
 }

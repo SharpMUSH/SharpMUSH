@@ -277,6 +277,49 @@ The worked Phase 2b fixture is again `SamplePlugin`: it observes every command (
 `ICommandInterceptor`, and records created objects via `IObjectLifecycleHook`; the integration tests assert
 the interceptor fires, the veto skips the command body, and the create hook is invoked.
 
+## 8.5. Contributing a web surface — controllers, hubs, endpoints (Phase 9)
+
+A plugin can extend the ASP.NET host the same way an app would, across the two phases — both piped through
+the loader, so you `MapX`/`AddX` and the host wires the rest.
+
+**Services + controllers (ConfigureServices).** Your `IServiceRegistrar.RegisterServices` receives the real
+`IServiceCollection`. Register services, and expose MVC controllers defined in *your* assembly by adding it
+as an `ApplicationPart` (the "FromAssembly" load). Add SignalR if you map a hub:
+
+```csharp
+public sealed class Plugin : PluginBase, IServiceRegistrar, IEndpointContributor
+{
+	public void RegisterServices(IServiceCollection services)
+	{
+		services.AddControllers().AddApplicationPart(typeof(Plugin).Assembly); // discovers your [ApiController]s
+		services.AddSignalR();                                                 // only if you map a hub below
+		services.AddSingleton<MyService>();
+	}
+
+	// Endpoints/hubs (pipeline) — host calls this after mapping its own controllers/hubs:
+	public void MapEndpoints(IEndpointRouteBuilder endpoints)
+	{
+		endpoints.MapHub<MyHub>("/hubs/mine");
+		endpoints.MapGet("/api/myplugin/ping", () => "pong");
+	}
+}
+```
+
+**Shared types (contracts).** Anything your controller/hub *and* the host (or client) must both reference —
+DTOs, a service interface, an event message — goes in a tiny **contracts assembly** that the plugin loader
+shares into your ALC, so host and plugin unify on the same `Type`. Add its assembly name to the loader's
+shared set (the framework does this for `SharpMUSH.Plugins.Scene.Contracts`); reference it `Private=false`/
+`ExcludeAssets=runtime` from the plugin so the host owns the runtime copy.
+
+**Hub caveat.** Map a **plain `Hub`** (not `Hub<TClient>`): SignalR's strongly-typed client builds a proxy
+in a non-collectible assembly that can't reference your collectible plugin type. Use a non-generic
+`IHubContext<MyHub>` + `SendAsync("MethodName", payload)` for server→client pushes — same wire contract.
+
+> A plugin that contributes endpoints/controllers captures load-once state, so it is **load-once** (restart
+> to reload), like the migration/flag/bridge seams. `SharpMUSH.Plugins.Scene` is the canonical end-to-end
+> example: REST `SceneController`, a `/hubs/scene` `SceneHub`, and a `…Scene.Contracts` assembly. See
+> `docs/design/plugin-system.md` (Phase 8/9).
+
 ## 9. Publishing a managed package (Phase 4 — package-manager DLL distribution)
 
 Instead of asking operators to hand-copy your DLL into `plugins/`, you can ship it through the **package

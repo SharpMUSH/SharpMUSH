@@ -35,8 +35,9 @@ public interface IGameHubClient
 ///   SendCommand  — forwards a player command to the game engine via NATS
 ///   JoinRoom     — adds the client to group "room:{roomDbref}"
 ///   LeaveRoom    — removes the client from group "room:{roomDbref}"
-///   JoinScene    — adds the client to group "scene:{sceneId}"
-///   LeaveScene   — removes the client from group "scene:{sceneId}"
+///
+/// (Scene realtime — JoinScene/LeaveScene/ReceiveSceneMessage — moved out of this hub into the Scene
+/// plugin's own SceneHub at /hubs/scene; see SharpMUSH.Plugins.Scene/Web. This hub is scene-agnostic.)
 /// </summary>
 [Authorize]
 public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGameHubClient>
