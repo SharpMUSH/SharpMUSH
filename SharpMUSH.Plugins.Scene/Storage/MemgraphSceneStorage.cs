@@ -3,18 +3,20 @@ using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Scene;
+using SceneModel = SharpMUSH.Library.Models.Scene.Scene;
+using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.Json;
 
-namespace SharpMUSH.Database.Memgraph;
+namespace SharpMUSH.Plugins.Scene.Storage;
 
 /// <summary>
-/// Memgraph (Neo4j Bolt) implementation of <see cref="ISceneService"/> for the
-/// graph-native Scene System (<c>graph_sharp_sys_scene</c>).
+/// Memgraph (Neo4j Bolt) storage for the graph-native SceneModel System (<c>graph_sharp_sys_scene</c>),
+/// relocated out of the core Memgraph provider into the SceneModel plugin (Phase 8). The live Neo4j driver
+/// arrives through the host-shared <see cref="IMemgraphStorageAccessor"/>; the Cypher is verbatim.
 /// </summary>
 /// <remarks>
-/// Node labels follow the <c>DatabaseConstants</c> collection names (camelCased,
-/// PascalCase label), keyed by a generated <c>sceneId</c>/<c>poseId</c>/<c>editId</c>/
+/// Node labels are PascalCase scene labels, keyed by a generated <c>sceneId</c>/<c>poseId</c>/<c>editId</c>/
 /// <c>plotId</c> string. Object references (room/owner/starter/author/origin/editor/
 /// plotowner/member) are relationships into the live <c>:Object</c> node (resolved
 /// from the passed dbref's key) <b>plus</b> a <c>*Name</c> snapshot property on the
@@ -23,9 +25,16 @@ namespace SharpMUSH.Database.Memgraph;
 /// versioned in <c>:SharpScenePoseEdit</c> nodes with a <c>current_edit</c> pointer.
 /// All timestamps are UTC Unix-millis.
 /// </remarks>
-public partial class MemgraphDatabase : ISceneService
+public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : ISceneStorage
 {
-	#region Scene
+	// Mirror of the provider's JsonOptions (the meta bag is (de)serialized as a JSON string).
+	private static readonly JsonSerializerOptions JsonOptions = new()
+	{
+		PropertyNamingPolicy = null,
+		WriteIndented = false
+	};
+
+	#region SceneModel
 
 	// ── Label / relationship constants (mapped from DatabaseConstants) ──────────
 	// Node labels — PascalCased from the node_* collection names.
@@ -57,7 +66,7 @@ public partial class MemgraphDatabase : ISceneService
 	// Sentinel for an unset nullable long property (Memgraph has no SQL NULL on a typed prop here).
 	private const long NoMillis = -1L;
 
-	// Scene keys that route to first-class fields/edges rather than the Meta bag.
+	// SceneModel keys that route to first-class fields/edges rather than the Meta bag.
 	private static readonly HashSet<string> KnownSceneKeys = new(StringComparer.OrdinalIgnoreCase)
 	{
 		"status", "public", "scheduledfor", "istemp", "room", "owner", "plot",
@@ -72,12 +81,12 @@ public partial class MemgraphDatabase : ISceneService
 
 	// ── Scenes ──────────────────────────────────────────────────────────────────
 
-	public async Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "")
+	public async Task<SceneModel> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "")
 	{
 		var sceneId = Guid.NewGuid().ToString("N");
 		var now = NowMillis();
 
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		await session.ExecuteWriteAsync(async tx =>
 		{
 			await tx.RunAsync($$"""
@@ -115,16 +124,16 @@ public partial class MemgraphDatabase : ISceneService
 		return read.AsT0;
 	}
 
-	public async Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId)
+	public async Task<OneOf<SceneModel, NotFound>> GetSceneAsync(string sceneId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var record = await ReadSceneRecordAsync(session, sceneId);
 		return record is null ? new NotFound() : MapScene(record);
 	}
 
-	public async Task<OneOf<Scene, NotFound>> SetSceneMetaAsync(string sceneId, string key, string value)
+	public async Task<OneOf<SceneModel, NotFound>> SetSceneMetaAsync(string sceneId, string key, string value)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var exists = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await SceneExistsAsync(tx, sceneId)) return false;
@@ -178,10 +187,10 @@ public partial class MemgraphDatabase : ISceneService
 		return await GetSceneAsync(sceneId);
 	}
 
-	public async Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null,
+	public async Task<IReadOnlyList<SceneModel>> ListScenesAsync(string filter, string? viewerDbref = null,
 		long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var f = (filter ?? "").Trim().ToLowerInvariant();
 
 		string cypher;
@@ -234,7 +243,7 @@ public partial class MemgraphDatabase : ISceneService
 		var result = await session.RunAsync(cypher, parameters);
 		var records = await result.ToListAsync();
 
-		var scenes = new List<Scene>(records.Count);
+		var scenes = new List<SceneModel>(records.Count);
 		foreach (var r in records)
 		{
 			var sceneId = r["s"].As<INode>()["sceneId"].As<string>();
@@ -245,12 +254,12 @@ public partial class MemgraphDatabase : ISceneService
 		return scenes.AsReadOnly();
 	}
 
-	public async Task<OneOf<Scene, NotFound>> GetActiveSceneInRoomAsync(string roomDbref)
+	public async Task<OneOf<SceneModel, NotFound>> GetActiveSceneInRoomAsync(string roomDbref)
 	{
 		var key = ResolveKey(roomDbref);
 		if (key is null) return new NotFound();
 
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var result = await session.RunAsync($$"""
 			MATCH (s:{{SceneLabel}})-[:{{RelInRoom}}]->(o:Object {key: $key})
 			WHERE s.status = 'active'
@@ -274,7 +283,7 @@ public partial class MemgraphDatabase : ISceneService
 		var (plain, markup) = SplitContent(content);
 		var tagList = (tags ?? []).ToList();
 
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var outcome = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await SceneExistsAsync(tx, sceneId))
@@ -350,7 +359,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<ScenePose, NotFound>> GetPoseAsync(string poseId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var record = await ReadPoseRecordAsync(session, poseId);
 		return record is null ? new NotFound() : MapPose(record);
 	}
@@ -358,7 +367,7 @@ public partial class MemgraphDatabase : ISceneService
 	public async Task<OneOf<IReadOnlyList<ScenePose>, NotFound>> GetPosesAsync(string sceneId,
 		string? authorDbref = null, int? count = null)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 
 		if (!await SceneExistsSessionAsync(session, sceneId))
 			return new NotFound();
@@ -396,7 +405,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<ScenePose, NotFound>> SetPoseMetaAsync(string poseId, string key, string value)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var exists = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await PoseExistsAsync(tx, poseId)) return false;
@@ -453,7 +462,7 @@ public partial class MemgraphDatabase : ISceneService
 		var now = NowMillis();
 		var (plain, markup) = SplitContent(content);
 
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var exists = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await PoseExistsAsync(tx, poseId)) return false;
@@ -498,7 +507,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<ScenePose, NotFound, Error<string>>> UndoPoseAsync(string poseId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var outcome = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await PoseExistsAsync(tx, poseId))
@@ -529,7 +538,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<ScenePose, NotFound, Error<string>>> RedoPoseAsync(string poseId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var outcome = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await PoseExistsAsync(tx, poseId))
@@ -559,7 +568,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<ScenePose, NotFound, Error<string>>> MovePoseAsync(string poseId, string afterPoseId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var outcome = await session.ExecuteWriteAsync(async tx =>
 		{
 			// Resolve the moving pose's scene.
@@ -608,7 +617,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<ScenePose, NotFound>> DeletePoseAsync(string poseId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var exists = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await PoseExistsAsync(tx, poseId)) return false;
@@ -636,7 +645,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<IReadOnlyList<ScenePoseEdit>, NotFound>> GetPoseEditsAsync(string poseId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		if (!await PoseExistsSessionAsync(session, poseId))
 			return new NotFound();
 
@@ -662,7 +671,7 @@ public partial class MemgraphDatabase : ISceneService
 	public async Task<OneOf<SceneMember, NotFound>> AddMemberAsync(string sceneId, string playerDbref, string role)
 	{
 		var key = ResolveKey(playerDbref);
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var exists = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await SceneExistsAsync(tx, sceneId)) return false;
@@ -687,7 +696,7 @@ public partial class MemgraphDatabase : ISceneService
 	public async Task<OneOf<None, NotFound>> RemoveMemberAsync(string sceneId, string playerDbref)
 	{
 		var key = ResolveKey(playerDbref);
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var exists = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await SceneExistsAsync(tx, sceneId)) return false;
@@ -708,7 +717,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<IReadOnlyList<SceneMember>, NotFound>> GetMembersAsync(string sceneId, string? role = null)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		if (!await SceneExistsSessionAsync(session, sceneId))
 			return new NotFound();
 
@@ -734,7 +743,7 @@ public partial class MemgraphDatabase : ISceneService
 		var key = ResolveKey(playerDbref);
 		if (key is null) return new NotFound();
 
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var result = await session.RunAsync($$"""
 			MATCH (o:Object {key: $key})-[m:{{RelMember}}]->(s:{{SceneLabel}} {sceneId: $sceneId})
 			RETURN m, o.key AS memberKey
@@ -751,7 +760,7 @@ public partial class MemgraphDatabase : ISceneService
 		var key = ResolveKey(playerDbref);
 		if (key is null) return new NotFound();
 
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var outcome = await session.ExecuteWriteAsync(async tx =>
 		{
 			// Clear isCurrent on all the player's member edges first.
@@ -784,12 +793,12 @@ public partial class MemgraphDatabase : ISceneService
 			: new NotFound();
 	}
 
-	public async Task<OneOf<Scene, NotFound>> GetCurrentSceneAsync(string playerDbref)
+	public async Task<OneOf<SceneModel, NotFound>> GetCurrentSceneAsync(string playerDbref)
 	{
 		var key = ResolveKey(playerDbref);
 		if (key is null) return new NotFound();
 
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var result = await session.RunAsync($$"""
 			MATCH (o:Object {key: $key})-[m:{{RelMember}} {isCurrent: true}]->(s:{{SceneLabel}})
 			RETURN s.sceneId AS sceneId LIMIT 1
@@ -804,7 +813,7 @@ public partial class MemgraphDatabase : ISceneService
 	public async Task<OneOf<SceneMember, NotFound>> SetShowAsAsync(string sceneId, string playerDbref, string showAs)
 	{
 		var key = ResolveKey(playerDbref);
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var exists = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await SceneExistsAsync(tx, sceneId)) return false;
@@ -829,7 +838,7 @@ public partial class MemgraphDatabase : ISceneService
 		var id = string.IsNullOrEmpty(plotId) ? Guid.NewGuid().ToString("N") : plotId;
 		var now = NowMillis();
 
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		await session.ExecuteWriteAsync(async tx =>
 		{
 			await tx.RunAsync($$"""
@@ -849,7 +858,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<ScenePlot, NotFound>> GetPlotAsync(string plotId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var result = await session.RunAsync($$"""
 			MATCH (pl:{{ScenePlotLabel}} {plotId: $id})
 			OPTIONAL MATCH (pl)-[:{{RelPlotOwner}}]->(o:Object)
@@ -864,7 +873,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<None, NotFound>> LinkSceneToPlotAsync(string plotId, string sceneId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var ok = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await PlotExistsAsync(tx, plotId)) return false;
@@ -885,7 +894,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<None, NotFound>> UnlinkSceneFromPlotAsync(string plotId, string sceneId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		var ok = await session.ExecuteWriteAsync(async tx =>
 		{
 			if (!await PlotExistsAsync(tx, plotId)) return false;
@@ -908,7 +917,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<IReadOnlyList<string>, NotFound>> GetTagsAsync(string sceneId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		if (!await SceneExistsSessionAsync(session, sceneId))
 			return new NotFound();
 
@@ -931,7 +940,7 @@ public partial class MemgraphDatabase : ISceneService
 
 	public async Task<OneOf<IReadOnlyList<string>, NotFound>> GetCastAsync(string sceneId)
 	{
-		await using var session = driver.AsyncSession();
+		await using var session = _accessor.Driver.AsyncSession();
 		if (!await SceneExistsSessionAsync(session, sceneId))
 			return new NotFound();
 
@@ -1313,11 +1322,11 @@ public partial class MemgraphDatabase : ISceneService
 
 	// ── Mappers ────────────────────────────────────────────────────────────────
 
-	private static Scene MapScene(SceneRow row)
+	private static SceneModel MapScene(SceneRow row)
 	{
 		var n = row.Node;
 		var scheduled = n["scheduledFor"].As<long>();
-		return new Scene(
+		return new SceneModel(
 			Id: n["sceneId"].As<string>(),
 			Status: n["status"].As<string>(),
 			IsPublic: n["isPublic"].As<bool>(),

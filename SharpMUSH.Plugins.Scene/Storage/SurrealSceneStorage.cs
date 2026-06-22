@@ -2,12 +2,14 @@ using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Scene;
+using SceneModel = SharpMUSH.Library.Models.Scene.Scene;
+using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net.Models;
 using System.Text.Json;
 using OkNone = OneOf.Types.None;
 
-namespace SharpMUSH.Database.SurrealDB;
+namespace SharpMUSH.Plugins.Scene.Storage;
 
 // IMPORTANT: SurrealDb.Net's embedded CBOR serializer ignores [JsonPropertyName].
 // Every *DbRecord property name below MUST be the stored camelCase field name verbatim
@@ -70,9 +72,28 @@ internal class ScenePlotDbRecord : Record
 	public long updatedAt { get; set; }
 }
 
-public partial class SurrealDatabase : ISceneService
+// Minimal projection of the live game object for name-snapshot reads (SELECT name FROM object:<key>).
+// Field name MUST match the stored camelCase verbatim (CBOR serializer ignores [JsonPropertyName]).
+internal class SceneObjectNameRecord
 {
-	#region Scene
+	public string name { get; set; } = "";
+}
+
+/// <summary>
+/// SurrealDB storage for the graph-native SceneModel System, relocated out of the core SurrealDB provider into
+/// the SceneModel plugin (Phase 8). The provider's query entry points (parameter-inlining + escaping) and id
+/// helper arrive through the host-shared <see cref="ISurrealStorageAccessor"/>; the SurrealQL is verbatim.
+/// </summary>
+public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISceneStorage
+{
+	// Mirror of the provider's JsonOptions (the meta bag is (de)serialized as a JSON string).
+	private static readonly JsonSerializerOptions JsonOptions = new()
+	{
+		PropertyNamingPolicy = null,
+		WriteIndented = false
+	};
+
+	#region SceneModel
 
 	private const string SceneFields =
 		"id, status, isPublic, isTempRoom, scheduledFor, startedAt, lastActivityAt, poseCount, " +
@@ -89,7 +110,7 @@ public partial class SurrealDatabase : ISceneService
 
 	// ── Scenes ──────────────────────────────────────────────────────────────────
 
-	public async Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "")
+	public async Task<SceneModel> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "")
 	{
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var sceneId = Guid.NewGuid().ToString("N");
@@ -116,7 +137,7 @@ public partial class SurrealDatabase : ISceneService
 			["meta"] = JsonSerializer.Serialize(meta, JsonOptions)
 		};
 
-		await ExecuteAsync("""
+		await _accessor.ExecuteAsync("""
 			CREATE scene:⟨$id⟩ SET
 				status = $status,
 				isPublic = false,
@@ -154,11 +175,11 @@ public partial class SurrealDatabase : ISceneService
 			}, $"scene:{sceneId}", DbRefToString(ownerDbref), DbRefToString(ownerDbref), DbRefToString(roomDbref));
 	}
 
-	public async Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId)
+	public async Task<OneOf<SceneModel, NotFound>> GetSceneAsync(string sceneId)
 	{
 		var keySegment = SceneKey(sceneId).Split(':')[1];
 		var parameters = new Dictionary<string, object?> { ["k"] = keySegment };
-		var response = await ExecuteAsync($"SELECT {SceneFields} FROM scene:⟨$k⟩", parameters);
+		var response = await _accessor.ExecuteAsync($"SELECT {SceneFields} FROM scene:⟨$k⟩", parameters);
 		var rows = response.GetValue<List<SceneDbRecord>>(0);
 		if (rows is null or { Count: 0 })
 			return new NotFound();
@@ -171,7 +192,7 @@ public partial class SurrealDatabase : ISceneService
 		return ProjectScene(rec, idKey, ownerDbref, starterDbref, roomDbref);
 	}
 
-	public async Task<OneOf<Scene, NotFound>> SetSceneMetaAsync(string sceneId, string key, string value)
+	public async Task<OneOf<SceneModel, NotFound>> SetSceneMetaAsync(string sceneId, string key, string value)
 	{
 		var existing = await GetSceneAsync(sceneId);
 		if (existing.IsT1)
@@ -185,36 +206,36 @@ public partial class SurrealDatabase : ISceneService
 		switch (normalized)
 		{
 			case "status":
-				await ExecuteAsync("UPDATE $id MERGE { status: $v, lastActivityAt: $now }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { status: $v, lastActivityAt: $now }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["v"] = value, ["now"] = now });
 				break;
 			case "public":
-				await ExecuteAsync("UPDATE $id MERGE { isPublic: $v, lastActivityAt: $now }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { isPublic: $v, lastActivityAt: $now }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["v"] = ParseBool(value), ["now"] = now });
 				break;
 			case "istemp":
-				await ExecuteAsync("UPDATE $id MERGE { isTempRoom: $v, lastActivityAt: $now }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { isTempRoom: $v, lastActivityAt: $now }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["v"] = ParseBool(value), ["now"] = now });
 				break;
 			case "scheduledfor":
 				var sched = long.TryParse(value, out var ms) ? (long?)ms : null;
-				await ExecuteAsync("UPDATE $id MERGE { scheduledFor: $v, lastActivityAt: $now }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { scheduledFor: $v, lastActivityAt: $now }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["v"] = sched, ["now"] = now });
 				break;
 			case "room":
 				await ReplaceSceneObjectEdgeAsync("scene_in_room", sceneKey, value);
-				await ExecuteAsync("UPDATE $id MERGE { roomName: $name, lastActivityAt: $now }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { roomName: $name, lastActivityAt: $now }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["name"] = await ResolveObjectNameAsync(value) ?? "", ["now"] = now });
 				break;
 			case "owner":
 				await ReplaceSceneObjectEdgeAsync("scene_owner", sceneKey, value);
-				await ExecuteAsync("UPDATE $id MERGE { ownerName: $name, lastActivityAt: $now }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { ownerName: $name, lastActivityAt: $now }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["name"] = await ResolveObjectNameAsync(value) ?? "", ["now"] = now });
 				break;
 			case "plot":
 				// Treat the value as a plot id and link the scene under it.
 				await LinkSceneToPlotAsync(value, sceneId);
-				await ExecuteAsync("UPDATE $id MERGE { lastActivityAt: $now }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { lastActivityAt: $now }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["now"] = now });
 				break;
 			default:
@@ -227,7 +248,7 @@ public partial class SurrealDatabase : ISceneService
 		return await GetSceneAsync(sceneId);
 	}
 
-	public async Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null,
+	public async Task<IReadOnlyList<SceneModel>> ListScenesAsync(string filter, string? viewerDbref = null,
 		long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50)
 	{
 		var normalized = (filter ?? "").Trim().ToLowerInvariant();
@@ -254,7 +275,7 @@ public partial class SurrealDatabase : ISceneService
 				// Scenes where the viewer is a member (member edge) — recent-first.
 				var viewerKey = DbRefToKey(viewerDbref);
 				if (viewerKey is null)
-					return Array.Empty<Scene>();
+					return Array.Empty<SceneModel>();
 				parameters["pk"] = viewerKey.Value;
 				query = $"SELECT {SceneFields} FROM scene WHERE id IN " +
 						"(SELECT VALUE out FROM scene_member WHERE in = object:$pk) " +
@@ -269,19 +290,19 @@ public partial class SurrealDatabase : ISceneService
 				break;
 		}
 
-		var response = await ExecuteAsync(query, parameters);
+		var response = await _accessor.ExecuteAsync(query, parameters);
 		var rows = response.GetValue<List<SceneDbRecord>>(0) ?? [];
 		return await ProjectScenesAsync(rows);
 	}
 
-	public async Task<OneOf<Scene, NotFound>> GetActiveSceneInRoomAsync(string roomDbref)
+	public async Task<OneOf<SceneModel, NotFound>> GetActiveSceneInRoomAsync(string roomDbref)
 	{
 		var roomKey = DbRefToKey(roomDbref);
 		if (roomKey is null)
 			return new NotFound();
 
 		var parameters = new Dictionary<string, object?> { ["rk"] = roomKey.Value };
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			$"SELECT {SceneFields} FROM scene WHERE status = 'active' AND id IN " +
 			"(SELECT VALUE in FROM scene_in_room WHERE out = object:$rk) " +
 			"ORDER BY lastActivityAt DESC LIMIT 1",
@@ -314,7 +335,7 @@ public partial class SurrealDatabase : ISceneService
 		var plain = StripMarkup(content);
 
 		// Create the pose slot.
-		await ExecuteAsync("""
+		await _accessor.ExecuteAsync("""
 			CREATE scene_pose:⟨$id⟩ SET
 				authorName = $authorName,
 				showAsName = $showAs,
@@ -338,7 +359,7 @@ public partial class SurrealDatabase : ISceneService
 			});
 
 		// Create the first content edit.
-		await ExecuteAsync("""
+		await _accessor.ExecuteAsync("""
 			CREATE scene_pose_edit:⟨$id⟩ SET
 				content = $content,
 				markup = $markup,
@@ -367,7 +388,7 @@ public partial class SurrealDatabase : ISceneService
 		await AppendPoseToChainAsync(sceneKey, poseId);
 
 		// Bump scene counters.
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"UPDATE $id SET poseCount = poseCount + 1, lastActivityAt = $now",
 			new Dictionary<string, object?> { ["id"] = new StringRecordId(sceneKey), ["now"] = now });
 
@@ -380,7 +401,7 @@ public partial class SurrealDatabase : ISceneService
 	public async Task<OneOf<ScenePose, NotFound>> GetPoseAsync(string poseId)
 	{
 		var key = PoseKey(poseId);
-		var response = await ExecuteAsync($"SELECT {ScenePoseFields} FROM $id",
+		var response = await _accessor.ExecuteAsync($"SELECT {ScenePoseFields} FROM $id",
 			new Dictionary<string, object?> { ["id"] = new StringRecordId(key) });
 		var rows = response.GetValue<List<ScenePoseDbRecord>>(0);
 		if (rows is null or { Count: 0 })
@@ -435,34 +456,34 @@ public partial class SurrealDatabase : ISceneService
 		switch (normalized)
 		{
 			case "showas":
-				await ExecuteAsync("UPDATE $id MERGE { showAsName: $v }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { showAsName: $v }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["v"] = value });
 				break;
 			case "authorname":
-				await ExecuteAsync("UPDATE $id MERGE { authorName: $v }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { authorName: $v }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["v"] = value });
 				break;
 			case "author":
 				await ReplacePoseObjectEdgeAsync("scene_pose_author", poseKey, value);
-				await ExecuteAsync("UPDATE $id MERGE { authorName: $v }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { authorName: $v }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["v"] = await ResolveObjectNameAsync(value) ?? "" });
 				break;
 			case "origin":
 				await ReplacePoseObjectEdgeAsync("scene_pose_origin", poseKey, value);
-				await ExecuteAsync("UPDATE $id MERGE { originName: $v }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { originName: $v }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["v"] = await ResolveObjectNameAsync(value) ?? "" });
 				break;
 			case "originname":
-				await ExecuteAsync("UPDATE $id MERGE { originName: $v }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { originName: $v }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["v"] = value });
 				break;
 			case "source":
-				await ExecuteAsync("UPDATE $id MERGE { source: $v }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { source: $v }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["v"] = value });
 				break;
 			case "tags":
 				var tags = value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-				await ExecuteAsync("UPDATE $id MERGE { tags: $v }",
+				await _accessor.ExecuteAsync("UPDATE $id MERGE { tags: $v }",
 					new Dictionary<string, object?> { ["id"] = idParam, ["v"] = tags });
 				break;
 			default:
@@ -493,7 +514,7 @@ public partial class SurrealDatabase : ISceneService
 			await TruncateForwardEditsAsync(currentEdit);
 
 		// Create the new edit.
-		await ExecuteAsync("""
+		await _accessor.ExecuteAsync("""
 			CREATE scene_pose_edit:⟨$id⟩ SET
 				content = $content,
 				markup = $markup,
@@ -593,7 +614,7 @@ public partial class SurrealDatabase : ISceneService
 		await UnlinkPoseAsync(sceneKey, poseKey);
 		await InsertPoseAfterAsync(sceneKey, poseKey, afterKey);
 
-		await ExecuteAsync("UPDATE $id SET lastActivityAt = $now",
+		await _accessor.ExecuteAsync("UPDATE $id SET lastActivityAt = $now",
 			new Dictionary<string, object?>
 			{
 				["id"] = new StringRecordId(sceneKey),
@@ -613,13 +634,13 @@ public partial class SurrealDatabase : ISceneService
 			return new NotFound();
 
 		var poseKey = PoseKey(poseId);
-		await ExecuteAsync("UPDATE $id MERGE { isDeleted: true }",
+		await _accessor.ExecuteAsync("UPDATE $id MERGE { isDeleted: true }",
 			new Dictionary<string, object?> { ["id"] = new StringRecordId(poseKey) });
 
 		// Decrement the denormalized count on the owning scene.
 		var sceneKey = await ResolvePoseSceneKeyAsync(poseKey);
 		if (sceneKey is not null)
-			await ExecuteAsync(
+			await _accessor.ExecuteAsync(
 				"UPDATE $id SET poseCount = math::max([0, poseCount - 1]), lastActivityAt = $now",
 				new Dictionary<string, object?>
 				{
@@ -666,11 +687,11 @@ public partial class SurrealDatabase : ISceneService
 		var memberName = await ResolveObjectNameAsync(playerDbref) ?? "";
 
 		// At most one member edge per (player, scene): delete then RELATE.
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"DELETE scene_member WHERE in = object:$pk AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
 
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"RELATE object:$pk->scene_member->scene:⟨$sid⟩ SET " +
 			"role = $role, showAs = '', isCurrent = false, grantedAt = $now, memberName = $name",
 			new Dictionary<string, object?>
@@ -696,7 +717,7 @@ public partial class SurrealDatabase : ISceneService
 			return new OkNone();
 
 		var sceneKey = SceneKey(sceneId);
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"DELETE scene_member WHERE in = object:$pk AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
 
@@ -718,7 +739,7 @@ public partial class SurrealDatabase : ISceneService
 			parameters["role"] = role;
 		}
 
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			$"SELECT role, showAs, isCurrent, grantedAt, memberName, in.key AS memberKey FROM scene_member WHERE {where}",
 			parameters);
 		var rows = response.GetValue<List<SceneMemberEdgeRecord>>(0) ?? [];
@@ -737,7 +758,7 @@ public partial class SurrealDatabase : ISceneService
 			return new NotFound();
 
 		var sceneKey = SceneKey(sceneId);
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			"SELECT role, showAs, isCurrent, grantedAt, memberName, in.key AS memberKey FROM scene_member " +
 			"WHERE in = object:$pk AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
@@ -755,7 +776,7 @@ public partial class SurrealDatabase : ISceneService
 			return new NotFound();
 
 		// Clear isCurrent on all of the player's member edges first.
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"UPDATE scene_member SET isCurrent = false WHERE in = object:$pk",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value });
 
@@ -767,20 +788,20 @@ public partial class SurrealDatabase : ISceneService
 			return new NotFound();
 
 		var sceneKey = SceneKey(sceneId);
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"UPDATE scene_member SET isCurrent = true WHERE in = object:$pk AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
 
 		return new OkNone();
 	}
 
-	public async Task<OneOf<Scene, NotFound>> GetCurrentSceneAsync(string playerDbref)
+	public async Task<OneOf<SceneModel, NotFound>> GetCurrentSceneAsync(string playerDbref)
 	{
 		var playerKey = DbRefToKey(playerDbref);
 		if (playerKey is null)
 			return new NotFound();
 
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			"SELECT VALUE meta::id(out) FROM scene_member WHERE in = object:$pk AND isCurrent = true LIMIT 1",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value });
 		var ids = response.GetValue<List<string>>(0);
@@ -798,7 +819,7 @@ public partial class SurrealDatabase : ISceneService
 
 		var playerKey = DbRefToKey(playerDbref);
 		var sceneKey = SceneKey(sceneId);
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"UPDATE scene_member SET showAs = $v WHERE in = object:$pk AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?>
 			{
@@ -820,7 +841,7 @@ public partial class SurrealDatabase : ISceneService
 		if (string.IsNullOrWhiteSpace(plotId))
 		{
 			var newId = Guid.NewGuid().ToString("N");
-			await ExecuteAsync("""
+			await _accessor.ExecuteAsync("""
 				CREATE scene_plot:⟨$id⟩ SET
 					title = $title, description = $description,
 					ownerName = $ownerName, createdAt = $now, updatedAt = $now
@@ -841,7 +862,7 @@ public partial class SurrealDatabase : ISceneService
 		}
 
 		var plotKey = PlotKey(plotId);
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"UPDATE $id MERGE { title: $title, description: $description, ownerName: $ownerName, updatedAt: $now }",
 			new Dictionary<string, object?>
 			{
@@ -862,7 +883,7 @@ public partial class SurrealDatabase : ISceneService
 	public async Task<OneOf<ScenePlot, NotFound>> GetPlotAsync(string plotId)
 	{
 		var key = PlotKey(plotId);
-		var response = await ExecuteAsync($"SELECT {ScenePlotFields} FROM $id",
+		var response = await _accessor.ExecuteAsync($"SELECT {ScenePlotFields} FROM $id",
 			new Dictionary<string, object?> { ["id"] = new StringRecordId(key) });
 		var rows = response.GetValue<List<ScenePlotDbRecord>>(0);
 		if (rows is null or { Count: 0 })
@@ -886,10 +907,10 @@ public partial class SurrealDatabase : ISceneService
 		var plotKey = PlotKey(plotId).Split(':')[1];
 		var sceneKey = SceneKey(sceneId).Split(':')[1];
 		// Idempotent: clear any existing edge first.
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"DELETE scene_plot_includes WHERE in = scene_plot:⟨$pid⟩ AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pid"] = plotKey, ["sid"] = sceneKey });
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"RELATE scene_plot:⟨$pid⟩->scene_plot_includes->scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pid"] = plotKey, ["sid"] = sceneKey });
 
@@ -907,7 +928,7 @@ public partial class SurrealDatabase : ISceneService
 
 		var plotKey = PlotKey(plotId).Split(':')[1];
 		var sceneKey = SceneKey(sceneId).Split(':')[1];
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"DELETE scene_plot_includes WHERE in = scene_plot:⟨$pid⟩ AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pid"] = plotKey, ["sid"] = sceneKey });
 
@@ -948,7 +969,7 @@ public partial class SurrealDatabase : ISceneService
 
 	#endregion
 
-	#region Scene Internals
+	#region SceneModel Internals
 
 	// Edge projection for member edges.
 	internal class SceneMemberEdgeRecord
@@ -969,10 +990,11 @@ public partial class SurrealDatabase : ISceneService
 
 	// ── id helpers ────────────────────────────────────────────────────────────────
 
-	private static string SceneKey(string id) => NormalizeSurrealId(id, "scene");
-	private static string PoseKey(string id) => NormalizeSurrealId(id, "scene_pose");
-	private static string PlotKey(string id) => NormalizeSurrealId(id, "scene_plot");
-	private static string EditKeyToId(string editKeyOrId) => NormalizeSurrealId(editKeyOrId, "scene_pose_edit");
+	// Instance (not static): NormalizeId is now an instance call on the host-shared accessor.
+	private string SceneKey(string id) => _accessor.NormalizeId(id, "scene");
+	private string PoseKey(string id) => _accessor.NormalizeId(id, "scene_pose");
+	private string PlotKey(string id) => _accessor.NormalizeId(id, "scene_plot");
+	private string EditKeyToId(string editKeyOrId) => _accessor.NormalizeId(editKeyOrId, "scene_pose_edit");
 
 	private static string NormalizeSceneId(RecordId? id) => NormalizeRecordId(id, "scene");
 	private static string NormalizePoseId(RecordId? id) => NormalizeRecordId(id, "scene_pose");
@@ -1013,9 +1035,9 @@ public partial class SurrealDatabase : ISceneService
 		var key = DbRefToKey(dbref);
 		if (key is null)
 			return null;
-		var response = await ExecuteAsync("SELECT name FROM object:$key",
+		var response = await _accessor.ExecuteAsync("SELECT name FROM object:$key",
 			new Dictionary<string, object?> { ["key"] = key.Value });
-		var rows = response.GetValue<List<ObjectRecord>>(0);
+		var rows = response.GetValue<List<SceneObjectNameRecord>>(0);
 		return rows is { Count: > 0 } ? rows[0].name : null;
 	}
 
@@ -1025,7 +1047,7 @@ public partial class SurrealDatabase : ISceneService
 		var key = DbRefToKey(objectDbref);
 		if (key is null)
 			return;
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			$"RELATE scene:⟨$sid⟩->{edge}->object:$ok",
 			new Dictionary<string, object?> { ["sid"] = sceneId, ["ok"] = key.Value });
 	}
@@ -1033,7 +1055,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task ReplaceSceneObjectEdgeAsync(string edge, string sceneKey, string? objectDbref)
 	{
 		var sid = sceneKey.Split(':')[1];
-		await ExecuteAsync($"DELETE {edge} WHERE in = scene:⟨$sid⟩",
+		await _accessor.ExecuteAsync($"DELETE {edge} WHERE in = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["sid"] = sid });
 		await RelateSceneToObjectAsync(edge, sid, objectDbref);
 	}
@@ -1042,7 +1064,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task<(string? Dbref, string? Name)> ResolveSceneObjectEdgeAsync(string edge, string sceneKey)
 	{
 		var sid = sceneKey.Split(':')[1];
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			$"SELECT out.key AS key FROM {edge} WHERE in = scene:⟨$sid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["sid"] = sid });
 		var rows = response.GetValue<List<SceneKeyRow>>(0);
@@ -1057,7 +1079,7 @@ public partial class SurrealDatabase : ISceneService
 		var key = DbRefToKey(objectDbref);
 		if (key is null)
 			return;
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			$"RELATE scene_pose:⟨$pid⟩->{edge}->object:$ok",
 			new Dictionary<string, object?> { ["pid"] = poseId, ["ok"] = key.Value });
 	}
@@ -1065,7 +1087,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task ReplacePoseObjectEdgeAsync(string edge, string poseKey, string? objectDbref)
 	{
 		var pid = poseKey.Split(':')[1];
-		await ExecuteAsync($"DELETE {edge} WHERE in = scene_pose:⟨$pid⟩",
+		await _accessor.ExecuteAsync($"DELETE {edge} WHERE in = scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		await RelatePoseToObjectAsync(edge, pid, objectDbref);
 	}
@@ -1073,7 +1095,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task<(string? Dbref, string? Name)> ResolvePoseObjectEdgeAsync(string edge, string poseKey)
 	{
 		var pid = poseKey.Split(':')[1];
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			$"SELECT out.key AS key FROM {edge} WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var rows = response.GetValue<List<SceneKeyRow>>(0);
@@ -1087,7 +1109,7 @@ public partial class SurrealDatabase : ISceneService
 		var key = DbRefToKey(objectDbref);
 		if (key is null)
 			return;
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			$"RELATE scene_pose_edit:⟨$eid⟩->{edge}->object:$ok",
 			new Dictionary<string, object?> { ["eid"] = editId, ["ok"] = key.Value });
 	}
@@ -1095,7 +1117,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task<(string? Dbref, string? Name)> ResolveEditObjectEdgeAsync(string edge, string editKey)
 	{
 		var eid = editKey.Split(':')[1];
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			$"SELECT out.key AS key FROM {edge} WHERE in = scene_pose_edit:⟨$eid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["eid"] = eid });
 		var rows = response.GetValue<List<SceneKeyRow>>(0);
@@ -1106,12 +1128,12 @@ public partial class SurrealDatabase : ISceneService
 
 	private async Task ReplacePlotObjectEdgeAsync(string plotIdSegment, string? objectDbref)
 	{
-		await ExecuteAsync("DELETE scene_plot_owner WHERE in = scene_plot:⟨$pid⟩",
+		await _accessor.ExecuteAsync("DELETE scene_plot_owner WHERE in = scene_plot:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = plotIdSegment });
 		var key = DbRefToKey(objectDbref);
 		if (key is null)
 			return;
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"RELATE scene_plot:⟨$pid⟩->scene_plot_owner->object:$ok",
 			new Dictionary<string, object?> { ["pid"] = plotIdSegment, ["ok"] = key.Value });
 	}
@@ -1119,7 +1141,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task<(string? Dbref, string? Name)> ResolvePlotOwnerEdgeAsync(string plotKey)
 	{
 		var pid = plotKey.Split(':')[1];
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			"SELECT out.key AS key FROM scene_plot_owner WHERE in = scene_plot:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var rows = response.GetValue<List<SceneKeyRow>>(0);
@@ -1132,7 +1154,7 @@ public partial class SurrealDatabase : ISceneService
 
 	private async Task RelatePoseToSceneAsync(string poseId, string sceneKey)
 	{
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"RELATE scene_pose:⟨$pid⟩->scene_pose_in_scene->scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pid"] = poseId, ["sid"] = sceneKey.Split(':')[1] });
 	}
@@ -1140,7 +1162,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task<string?> ResolvePoseSceneKeyAsync(string poseKey)
 	{
 		var pid = poseKey.Split(':')[1];
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			"SELECT VALUE meta::id(out) FROM scene_pose_in_scene WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var ids = response.GetValue<List<string>>(0);
@@ -1158,22 +1180,22 @@ public partial class SurrealDatabase : ISceneService
 		if (lastPoseKey is null)
 		{
 			// Empty chain: this is also the first pose.
-			await ExecuteAsync(
+			await _accessor.ExecuteAsync(
 				"RELATE scene:⟨$sid⟩->scene_first_pose->scene_pose:⟨$pid⟩",
 				new Dictionary<string, object?> { ["sid"] = sid, ["pid"] = poseId });
 		}
 		else
 		{
 			// Link last -> new via pose_next.
-			await ExecuteAsync(
+			await _accessor.ExecuteAsync(
 				"RELATE scene_pose:⟨$last⟩->scene_pose_next->scene_pose:⟨$pid⟩",
 				new Dictionary<string, object?> { ["last"] = lastPoseKey.Split(':')[1], ["pid"] = poseId });
 		}
 
 		// Repoint last_pose -> new.
-		await ExecuteAsync("DELETE scene_last_pose WHERE in = scene:⟨$sid⟩",
+		await _accessor.ExecuteAsync("DELETE scene_last_pose WHERE in = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["sid"] = sid });
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"RELATE scene:⟨$sid⟩->scene_last_pose->scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["sid"] = sid, ["pid"] = poseId });
 	}
@@ -1199,7 +1221,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task<string?> ResolvePoseNextAsync(string poseKey)
 	{
 		var pid = poseKey.Split(':')[1];
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			"SELECT VALUE meta::id(out) FROM scene_pose_next WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var ids = response.GetValue<List<string>>(0);
@@ -1212,7 +1234,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		// The predecessor is whichever pose has pose_next -> poseKey, scoped to this scene's chain.
 		var pid = poseKey.Split(':')[1];
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			"SELECT VALUE meta::id(in) FROM scene_pose_next WHERE out = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var ids = response.GetValue<List<string>>(0);
@@ -1230,24 +1252,24 @@ public partial class SurrealDatabase : ISceneService
 		var next = await ResolvePoseNextAsync(poseKey);
 
 		// Drop the pose's outgoing/incoming next edges.
-		await ExecuteAsync("DELETE scene_pose_next WHERE in = scene_pose:⟨$pid⟩",
+		await _accessor.ExecuteAsync("DELETE scene_pose_next WHERE in = scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid });
-		await ExecuteAsync("DELETE scene_pose_next WHERE out = scene_pose:⟨$pid⟩",
+		await _accessor.ExecuteAsync("DELETE scene_pose_next WHERE out = scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid });
 
 		// Stitch prev -> next.
 		if (prev is not null && next is not null)
-			await ExecuteAsync(
+			await _accessor.ExecuteAsync(
 				"RELATE scene_pose:⟨$a⟩->scene_pose_next->scene_pose:⟨$b⟩",
 				new Dictionary<string, object?> { ["a"] = prev.Split(':')[1], ["b"] = next.Split(':')[1] });
 
 		// Fix first_pose if we removed the head.
 		if (prev is null)
 		{
-			await ExecuteAsync("DELETE scene_first_pose WHERE in = scene:⟨$sid⟩",
+			await _accessor.ExecuteAsync("DELETE scene_first_pose WHERE in = scene:⟨$sid⟩",
 				new Dictionary<string, object?> { ["sid"] = sid });
 			if (next is not null)
-				await ExecuteAsync(
+				await _accessor.ExecuteAsync(
 					"RELATE scene:⟨$sid⟩->scene_first_pose->scene_pose:⟨$b⟩",
 					new Dictionary<string, object?> { ["sid"] = sid, ["b"] = next.Split(':')[1] });
 		}
@@ -1255,10 +1277,10 @@ public partial class SurrealDatabase : ISceneService
 		// Fix last_pose if we removed the tail.
 		if (next is null)
 		{
-			await ExecuteAsync("DELETE scene_last_pose WHERE in = scene:⟨$sid⟩",
+			await _accessor.ExecuteAsync("DELETE scene_last_pose WHERE in = scene:⟨$sid⟩",
 				new Dictionary<string, object?> { ["sid"] = sid });
 			if (prev is not null)
-				await ExecuteAsync(
+				await _accessor.ExecuteAsync(
 					"RELATE scene:⟨$sid⟩->scene_last_pose->scene_pose:⟨$a⟩",
 					new Dictionary<string, object?> { ["sid"] = sid, ["a"] = prev.Split(':')[1] });
 		}
@@ -1274,13 +1296,13 @@ public partial class SurrealDatabase : ISceneService
 		{
 			// Move to front.
 			var oldHead = await ResolveStructuralPointerAsync("scene_first_pose", "scene", sid);
-			await ExecuteAsync("DELETE scene_first_pose WHERE in = scene:⟨$sid⟩",
+			await _accessor.ExecuteAsync("DELETE scene_first_pose WHERE in = scene:⟨$sid⟩",
 				new Dictionary<string, object?> { ["sid"] = sid });
-			await ExecuteAsync(
+			await _accessor.ExecuteAsync(
 				"RELATE scene:⟨$sid⟩->scene_first_pose->scene_pose:⟨$pid⟩",
 				new Dictionary<string, object?> { ["sid"] = sid, ["pid"] = pid });
 			if (oldHead is not null)
-				await ExecuteAsync(
+				await _accessor.ExecuteAsync(
 					"RELATE scene_pose:⟨$a⟩->scene_pose_next->scene_pose:⟨$b⟩",
 					new Dictionary<string, object?> { ["a"] = pid, ["b"] = oldHead.Split(':')[1] });
 			else
@@ -1293,15 +1315,15 @@ public partial class SurrealDatabase : ISceneService
 		var afterNext = await ResolvePoseNextAsync(afterKey);
 
 		// after -> pose
-		await ExecuteAsync("DELETE scene_pose_next WHERE in = scene_pose:⟨$a⟩",
+		await _accessor.ExecuteAsync("DELETE scene_pose_next WHERE in = scene_pose:⟨$a⟩",
 			new Dictionary<string, object?> { ["a"] = afterId });
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"RELATE scene_pose:⟨$a⟩->scene_pose_next->scene_pose:⟨$b⟩",
 			new Dictionary<string, object?> { ["a"] = afterId, ["b"] = pid });
 
 		if (afterNext is not null)
 			// pose -> afterNext
-			await ExecuteAsync(
+			await _accessor.ExecuteAsync(
 				"RELATE scene_pose:⟨$a⟩->scene_pose_next->scene_pose:⟨$b⟩",
 				new Dictionary<string, object?> { ["a"] = pid, ["b"] = afterNext.Split(':')[1] });
 		else
@@ -1311,9 +1333,9 @@ public partial class SurrealDatabase : ISceneService
 
 	private async Task RepointLastPoseAsync(string sceneIdSegment, string poseIdSegment)
 	{
-		await ExecuteAsync("DELETE scene_last_pose WHERE in = scene:⟨$sid⟩",
+		await _accessor.ExecuteAsync("DELETE scene_last_pose WHERE in = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["sid"] = sceneIdSegment });
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			"RELATE scene:⟨$sid⟩->scene_last_pose->scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["sid"] = sceneIdSegment, ["pid"] = poseIdSegment });
 	}
@@ -1321,7 +1343,7 @@ public partial class SurrealDatabase : ISceneService
 	/// <summary>Resolves a one-hop structural pointer edge (e.g. first_pose/last_pose) to a "table:&lt;key&gt;" id.</summary>
 	private async Task<string?> ResolveStructuralPointerAsync(string edge, string fromTable, string fromKeySegment)
 	{
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			$"SELECT VALUE meta::id(out) FROM {edge} WHERE in = {fromTable}:⟨$k⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["k"] = fromKeySegment });
 		var ids = response.GetValue<List<string>>(0);
@@ -1334,14 +1356,14 @@ public partial class SurrealDatabase : ISceneService
 
 	private async Task RelatePoseToEditAsync(string edge, string poseId, string editId)
 	{
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			$"RELATE scene_pose:⟨$pid⟩->{edge}->scene_pose_edit:⟨$eid⟩",
 			new Dictionary<string, object?> { ["pid"] = poseId, ["eid"] = editId });
 	}
 
 	private async Task RelateEditToEditAsync(string edge, string fromEditKey, string toEditId)
 	{
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			$"RELATE scene_pose_edit:⟨$a⟩->{edge}->scene_pose_edit:⟨$b⟩",
 			new Dictionary<string, object?> { ["a"] = fromEditKey.Split(':')[1], ["b"] = toEditId });
 	}
@@ -1350,7 +1372,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task<string?> ResolveEditPointerAsync(string edge, string poseKey)
 	{
 		var pid = poseKey.Split(':')[1];
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			$"SELECT VALUE meta::id(out) FROM {edge} WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		var ids = response.GetValue<List<string>>(0);
@@ -1362,9 +1384,9 @@ public partial class SurrealDatabase : ISceneService
 	private async Task RepointEditPointerAsync(string edge, string poseKey, string editId)
 	{
 		var pid = poseKey.Split(':')[1];
-		await ExecuteAsync($"DELETE {edge} WHERE in = scene_pose:⟨$pid⟩",
+		await _accessor.ExecuteAsync($"DELETE {edge} WHERE in = scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid });
-		await ExecuteAsync(
+		await _accessor.ExecuteAsync(
 			$"RELATE scene_pose:⟨$pid⟩->{edge}->scene_pose_edit:⟨$eid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid, ["eid"] = editId });
 	}
@@ -1392,7 +1414,7 @@ public partial class SurrealDatabase : ISceneService
 	private async Task<string?> ResolveEditNextAsync(string editKey)
 	{
 		var eid = editKey.Split(':')[1];
-		var response = await ExecuteAsync(
+		var response = await _accessor.ExecuteAsync(
 			"SELECT VALUE meta::id(out) FROM scene_next_edit WHERE in = scene_pose_edit:⟨$eid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["eid"] = eid });
 		var ids = response.GetValue<List<string>>(0);
@@ -1416,22 +1438,22 @@ public partial class SurrealDatabase : ISceneService
 		foreach (var editKey in forward)
 		{
 			var eid = editKey.Split(':')[1];
-			await ExecuteAsync("DELETE scene_next_edit WHERE in = scene_pose_edit:⟨$eid⟩",
+			await _accessor.ExecuteAsync("DELETE scene_next_edit WHERE in = scene_pose_edit:⟨$eid⟩",
 				new Dictionary<string, object?> { ["eid"] = eid });
-			await ExecuteAsync("DELETE scene_edit_editor WHERE in = scene_pose_edit:⟨$eid⟩",
+			await _accessor.ExecuteAsync("DELETE scene_edit_editor WHERE in = scene_pose_edit:⟨$eid⟩",
 				new Dictionary<string, object?> { ["eid"] = eid });
-			await ExecuteAsync("DELETE scene_pose_edit:⟨$eid⟩",
+			await _accessor.ExecuteAsync("DELETE scene_pose_edit:⟨$eid⟩",
 				new Dictionary<string, object?> { ["eid"] = eid });
 		}
 
 		// Drop the now-dangling next edge off the surviving tail.
-		await ExecuteAsync("DELETE scene_next_edit WHERE in = scene_pose_edit:⟨$eid⟩",
+		await _accessor.ExecuteAsync("DELETE scene_next_edit WHERE in = scene_pose_edit:⟨$eid⟩",
 			new Dictionary<string, object?> { ["eid"] = fromEditKey.Split(':')[1] });
 	}
 
 	private async Task<ScenePoseEdit?> ReadEditAsync(string editKey, string poseKey)
 	{
-		var response = await ExecuteAsync($"SELECT {ScenePoseEditFields} FROM $id",
+		var response = await _accessor.ExecuteAsync($"SELECT {ScenePoseEditFields} FROM $id",
 			new Dictionary<string, object?> { ["id"] = new StringRecordId(editKey) });
 		var rows = response.GetValue<List<ScenePoseEditDbRecord>>(0);
 		if (rows is null or { Count: 0 })
@@ -1448,7 +1470,7 @@ public partial class SurrealDatabase : ISceneService
 	{
 		var existing = await ReadSceneMetaAsync(sceneKey);
 		existing[key] = value;
-		await ExecuteAsync("UPDATE $id MERGE { meta: $meta, lastActivityAt: $now }",
+		await _accessor.ExecuteAsync("UPDATE $id MERGE { meta: $meta, lastActivityAt: $now }",
 			new Dictionary<string, object?>
 			{
 				["id"] = new StringRecordId(sceneKey),
@@ -1459,7 +1481,7 @@ public partial class SurrealDatabase : ISceneService
 
 	private async Task<Dictionary<string, string>> ReadSceneMetaAsync(string sceneKey)
 	{
-		var response = await ExecuteAsync("SELECT meta FROM $id",
+		var response = await _accessor.ExecuteAsync("SELECT meta FROM $id",
 			new Dictionary<string, object?> { ["id"] = new StringRecordId(sceneKey) });
 		var rows = response.GetValue<List<SceneDbRecord>>(0);
 		return rows is { Count: > 0 } ? DeserializeMeta(rows[0].meta) : new Dictionary<string, string>();
@@ -1467,12 +1489,12 @@ public partial class SurrealDatabase : ISceneService
 
 	private async Task UpdatePoseMetaKeyAsync(string poseKey, string key, string value)
 	{
-		var response = await ExecuteAsync("SELECT meta FROM $id",
+		var response = await _accessor.ExecuteAsync("SELECT meta FROM $id",
 			new Dictionary<string, object?> { ["id"] = new StringRecordId(poseKey) });
 		var rows = response.GetValue<List<ScenePoseDbRecord>>(0);
 		var meta = rows is { Count: > 0 } ? DeserializeMeta(rows[0].meta) : new Dictionary<string, string>();
 		meta[key] = value;
-		await ExecuteAsync("UPDATE $id MERGE { meta: $meta }",
+		await _accessor.ExecuteAsync("UPDATE $id MERGE { meta: $meta }",
 			new Dictionary<string, object?>
 			{
 				["id"] = new StringRecordId(poseKey),
@@ -1516,9 +1538,9 @@ public partial class SurrealDatabase : ISceneService
 
 	// ── projections ──────────────────────────────────────────────────────────────
 
-	private async Task<IReadOnlyList<Scene>> ProjectScenesAsync(List<SceneDbRecord> rows)
+	private async Task<IReadOnlyList<SceneModel>> ProjectScenesAsync(List<SceneDbRecord> rows)
 	{
-		var result = new List<Scene>(rows.Count);
+		var result = new List<SceneModel>(rows.Count);
 		foreach (var rec in rows)
 		{
 			var idKey = NormalizeSceneId(rec.Id);
@@ -1530,7 +1552,7 @@ public partial class SurrealDatabase : ISceneService
 		return result;
 	}
 
-	private static Scene ProjectScene(SceneDbRecord rec, string idKey,
+	private static SceneModel ProjectScene(SceneDbRecord rec, string idKey,
 		string? ownerDbref, string? starterDbref, string? roomDbref) => new(
 		Id: idKey,
 		Status: rec.status,

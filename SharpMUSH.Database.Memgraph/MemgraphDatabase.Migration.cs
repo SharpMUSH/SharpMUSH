@@ -137,7 +137,8 @@ public partial class MemgraphDatabase
 
 				// Scene System schema (graph_sharp_sys_scene) is no longer seeded here — Phase 5 moved it
 				// into the Scene plugin's IMigrationSource.CypherStatements, run after this built-in batch
-				// (see RunPluginCypherMigrations). The provider's ISceneService storage stays in-tree.
+				// (see RunPluginCypherMigrations). The ISceneService storage moved into the plugin too (Phase 8),
+				// reaching this provider's driver through the host-shared IMemgraphStorageAccessor.
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 

@@ -149,6 +149,10 @@ public class Startup(
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
+			// Host-shared storage accessor for storage plugins (e.g. the Scene plugin). Generic seam over the
+			// active provider's connection; carries no subsystem concept.
+			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.IMemgraphStorageAccessor>(sp =>
+				(SharpMUSH.Library.Plugins.Storage.IMemgraphStorageAccessor)sp.GetRequiredService<ISharpDatabase>());
 		}
 		else if (databaseProvider == DatabaseProvider.SurrealDB)
 		{
@@ -164,6 +168,8 @@ public class Startup(
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
+			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ISurrealStorageAccessor>(sp =>
+				(SharpMUSH.Library.Plugins.Storage.ISurrealStorageAccessor)sp.GetRequiredService<ISharpDatabase>());
 		}
 		else
 		{
@@ -178,6 +184,8 @@ public class Startup(
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
+			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.IArangoStorageAccessor>(sp =>
+				(SharpMUSH.Library.Plugins.Storage.IArangoStorageAccessor)sp.GetRequiredService<ISharpDatabase>());
 		}
 
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
@@ -285,10 +293,10 @@ public class Startup(
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
-		// Scene subsystem — ISceneService is implemented by the active ISharpDatabase
-		// provider (Arango/Memgraph/Surreal), cast like the IWikiService tri-cast above.
-		// There is no in-memory implementation.
-		services.AddSingleton<ISceneService>(sp => (ISceneService)sp.GetRequiredService<ISharpDatabase>());
+		// Scene subsystem — ISceneService is NO LONGER implemented by core providers. It is registered by
+		// the Scene plugin's IServiceRegistrar (ScenePlugin.RegisterServices -> services.AddSceneSystem),
+		// which keys per-provider storage over the host-shared storage accessors registered above and wraps
+		// it with any registered behaviors. Removing the plugin leaves core with no scene storage.
 
 // Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
 		services.AddMemoryCache();

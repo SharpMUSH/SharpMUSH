@@ -1,10 +1,13 @@
 using System.Reflection;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using NATS.Client.Core;
 using NATS.Client.Serializers.Json;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Plugins;
+using SharpMUSH.Plugins.Scene.Storage;
 
 namespace SharpMUSH.Plugins.Scene;
 
@@ -20,17 +23,32 @@ namespace SharpMUSH.Plugins.Scene;
 ///   <item><see cref="IFlagSource"/> contributes the informational <c>SCENE_ROOM</c> object flag.</item>
 ///   <item><see cref="IBridgeSubscriptionSource"/> contributes the <c>game.scene.*</c> NATS→SignalR leg.</item>
 /// </list>
-/// Because it contributes load-once state (a migration, a flag, and a long-lived bridge subscription) it is
-/// deliberately a <b>non-unloadable</b> plugin: <c>PluginLoaderService.IsUnloadablePlugin</c> returns false
-/// for any plugin implementing <see cref="IMigrationSource"/>/<see cref="IFlagSource"/>/
-/// <see cref="IBridgeSubscriptionSource"/>.
+/// Phase 8 additionally makes it an <see cref="IServiceRegistrar"/>: it registers the Scene storage
+/// (relocated out of the core DB providers into this plugin's <c>Storage/</c>) via
+/// <c>services.AddSceneSystem(configuration)</c>, keyed per provider over the host-shared storage accessors.
+/// Because it contributes load-once state (a migration, a flag, a long-lived bridge subscription, and DI
+/// registration) it is deliberately a <b>non-unloadable</b> plugin: <c>PluginLoaderService.IsUnloadablePlugin</c>
+/// returns false for any plugin implementing <see cref="IServiceRegistrar"/>/<see cref="IMigrationSource"/>/
+/// <see cref="IFlagSource"/>/<see cref="IBridgeSubscriptionSource"/>.
 /// </summary>
 [SharpPlugin]
 public sealed class ScenePlugin
-	: PluginBase, IMigrationSource, IFlagSource, IBridgeSubscriptionSource
+	: PluginBase, IServiceRegistrar, IMigrationSource, IFlagSource, IBridgeSubscriptionSource
 {
 	public override string Id => "scene";
 	public override string Version => "1.0.0";
+
+	// ── IServiceRegistrar ─────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Registers the Scene System's storage (this plugin owns it as of Phase 8) into the host container:
+	/// keyed per-provider <see cref="ISceneStorage"/> over the host-shared storage accessors, plus the
+	/// active-provider <c>ISceneService</c> composed with any registered behaviors. No behaviors ship by
+	/// default. An empty configuration is passed as a fallback; the factory prefers the host's real
+	/// <see cref="IConfiguration"/> resolved from the container at runtime.
+	/// </summary>
+	public void RegisterServices(IServiceCollection services) =>
+		services.AddSceneSystem(new ConfigurationBuilder().Build());
 
 	// ── IMigrationSource ──────────────────────────────────────────────────────────
 

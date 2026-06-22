@@ -20,6 +20,20 @@
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 	</ItemGroup>
 
+	<!-- DB-client packages the relocated Scene storage (Storage/*SceneStorage.cs) compiles against. The host
+	     already loads these (it references all three providers) and the plugin loader shares them BY NAME into
+	     this plugin's ALC (PluginLoaderService.DefaultSharedAssemblyNames), so the host's copy is authoritative
+	     at runtime and an accessor-returned connection casts/uses cleanly. ExcludeAssets=runtime keeps them out
+	     of the plugin's private bin. SurrealDb.Net is the client only (NOT the embedded provider), and its
+	     System.Linq.Async transitive is dropped at compile time to avoid colliding with .NET 10's built-in
+	     System.Linq.AsyncEnumerable. -->
+	<ItemGroup>
+		<PackageReference Include="Core.Arango" Version="3.12.2" ExcludeAssets="runtime" />
+		<PackageReference Include="Neo4j.Driver" Version="6.0.0" ExcludeAssets="runtime" />
+		<PackageReference Include="SurrealDb.Net" Version="0.9.0" ExcludeAssets="runtime" />
+		<PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile;runtime" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<!-- Contract surface (IPlugin/PluginBase/CommandDefinition/ISceneService/SceneEventMessage/...).
 		     Private=false + ExcludeAssets=runtime keeps SharpMUSH.Library out of the plugin's output so the

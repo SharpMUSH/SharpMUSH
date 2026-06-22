@@ -1,25 +1,31 @@
-using Core.Arango;
 using Core.Arango.Protocol;
 using OneOf;
 using OneOf.Types;
+using SharpMUSH.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Scene;
+using SceneModel = SharpMUSH.Library.Models.Scene.Scene;
+using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.Json;
 
-namespace SharpMUSH.Database.ArangoDB;
+namespace SharpMUSH.Plugins.Scene.Storage;
 
 /// <summary>
-/// ArangoDB provider for the graph-native Scene System (<c>graph_sharp_sys_scene</c>).
-/// Object references are graph edges to the live typed vertex plus a <c>*Name</c>
-/// snapshot stored on the scene-side vertex. Pose order is the
-/// <c>first_pose</c>/<c>last_pose</c> + <c>pose_next</c> linked list. Pose content
-/// is versioned in <c>pose_edits</c> with a <c>current_edit</c> pointer.
+/// ArangoDB storage for the graph-native SceneModel System (<c>graph_sharp_sys_scene</c>), relocated out of the
+/// core ArangoDB provider into the SceneModel plugin (Phase 8). Object references are graph edges to the live
+/// typed vertex plus a <c>*Name</c> snapshot stored on the scene-side vertex. Pose order is the
+/// <c>first_pose</c>/<c>last_pose</c> + <c>pose_next</c> linked list. Pose content is versioned in
+/// <c>pose_edits</c> with a <c>current_edit</c> pointer. The provider connection (plus the object-resolution
+/// primitive) arrives through the host-shared <see cref="IArangoStorageAccessor"/>; the AQL is verbatim.
 /// </summary>
-public partial class ArangoDatabase : ISceneService
+public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : ISceneStorage
 {
-	#region Scene
+	#region SceneModel
+
+	/// <summary>Strips an Arango <c>collection/key</c> prefix to the bare key (local copy of the provider helper).</summary>
+	private static string ExtractKey(string id) => id.Contains('/') ? id.Split('/')[1] : id;
 
 	// ── Object reference helpers ──────────────────────────────────────────────
 
@@ -33,7 +39,7 @@ public partial class ArangoDatabase : ISceneService
 		if (string.IsNullOrWhiteSpace(dbref) || !DBRef.TryParse(dbref, out var parsed) || parsed is null)
 			return (null, string.Empty);
 
-		var node = await GetObjectNodeAsync(parsed.Value);
+		var node = await _accessor.GetObjectNodeAsync(parsed.Value);
 		if (node.IsNone())
 			return (null, string.Empty);
 
@@ -60,7 +66,7 @@ public partial class ArangoDatabase : ISceneService
 
 		// Defensive fallback: a typed vertex (node_players/node_rooms/…) links OUTBOUND
 		// to its object via the IsObject edge.
-		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			$"FOR o IN 1..1 OUTBOUND @v GRAPH {DatabaseConstants.GraphObjects} " +
 			$"FILTER IS_SAME_COLLECTION(@objects, o) RETURN o._key",
 			new Dictionary<string, object>
@@ -83,7 +89,7 @@ public partial class ArangoDatabase : ISceneService
 	private async Task<string> SetObjectEdgeAsync(string edgeCollection, string fromVertexId, string dbref)
 	{
 		// Drop any existing edge of this collection from the source vertex.
-		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from REMOVE e IN @@e",
 			new Dictionary<string, object>
 			{
@@ -95,7 +101,7 @@ public partial class ArangoDatabase : ISceneService
 		if (vertexId is null)
 			return string.Empty;
 
-		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"INSERT { _from: @from, _to: @to } INTO @@e",
 			new Dictionary<string, object>
 			{
@@ -110,7 +116,7 @@ public partial class ArangoDatabase : ISceneService
 	/// <summary>Returns the live dbref resolved from the single object-reference edge of a source vertex, or null.</summary>
 	private async Task<string?> ReadObjectEdgeDbrefAsync(string edgeCollection, string fromVertexId)
 	{
-		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from LIMIT 1 RETURN e._to",
 			new Dictionary<string, object>
 			{
@@ -124,14 +130,14 @@ public partial class ArangoDatabase : ISceneService
 
 	private static long NowMillis() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-	private static string SceneVertexId(string sceneKey) => $"{DatabaseConstants.SharpScenes}/{sceneKey}";
-	private static string PoseVertexId(string poseKey) => $"{DatabaseConstants.SharpScenePoses}/{poseKey}";
-	private static string EditVertexId(string editKey) => $"{DatabaseConstants.SharpScenePoseEdits}/{editKey}";
-	private static string PlotVertexId(string plotKey) => $"{DatabaseConstants.SharpScenePlots}/{plotKey}";
+	private static string SceneVertexId(string sceneKey) => $"{SceneArangoConstants.SharpScenes}/{sceneKey}";
+	private static string PoseVertexId(string poseKey) => $"{SceneArangoConstants.SharpScenePoses}/{poseKey}";
+	private static string EditVertexId(string editKey) => $"{SceneArangoConstants.SharpScenePoseEdits}/{editKey}";
+	private static string PlotVertexId(string plotKey) => $"{SceneArangoConstants.SharpScenePlots}/{plotKey}";
 
 	// ── Scenes ─────────────────────────────────────────────────────────────────
 
-	public async Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "")
+	public async Task<SceneModel> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "")
 	{
 		var now = NowMillis();
 		var meta = new Dictionary<string, string>();
@@ -153,34 +159,34 @@ public partial class ArangoDatabase : ISceneService
 			Meta = meta
 		};
 
-		var created = await arangoDb.Document.CreateAsync<object, JsonElement>(
-			handle, DatabaseConstants.SharpScenes, doc, returnNew: true);
+		var created = await _accessor.Context.Document.CreateAsync<object, JsonElement>(
+			_accessor.Handle, SceneArangoConstants.SharpScenes, doc, returnNew: true);
 
 		var key = created.New.GetProperty("_key").GetString()!;
 		var vertexId = SceneVertexId(key);
 
 		// Owner edge + snapshot. Starter defaults to the owner.
-		var ownerName = await SetObjectEdgeAsync(DatabaseConstants.SceneOwner, vertexId, ownerDbref);
-		var starterName = await SetObjectEdgeAsync(DatabaseConstants.SceneStarter, vertexId, ownerDbref);
+		var ownerName = await SetObjectEdgeAsync(SceneArangoConstants.SceneOwner, vertexId, ownerDbref);
+		var starterName = await SetObjectEdgeAsync(SceneArangoConstants.SceneStarter, vertexId, ownerDbref);
 		var roomName = string.IsNullOrWhiteSpace(roomDbref)
 			? string.Empty
-			: await SetObjectEdgeAsync(DatabaseConstants.SceneInRoom, vertexId, roomDbref);
+			: await SetObjectEdgeAsync(SceneArangoConstants.SceneInRoom, vertexId, roomDbref);
 
-		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenes,
+		await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenes,
 			new { _key = key, OwnerName = ownerName, StarterName = starterName, RoomName = roomName },
 			mergeObjects: true);
 
 		return (await GetSceneAsync(key)).AsT0;
 	}
 
-	public async Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId)
+	public async Task<OneOf<SceneModel, NotFound>> GetSceneAsync(string sceneId)
 	{
 		var key = ExtractKey(sceneId);
-		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<JsonElement>(_accessor.Handle,
 			"FOR s IN @@c FILTER s._key == @key RETURN s",
 			new Dictionary<string, object>
 			{
-				{ "@c", DatabaseConstants.SharpScenes },
+				{ "@c", SceneArangoConstants.SharpScenes },
 				{ "key", key }
 			});
 
@@ -190,7 +196,7 @@ public partial class ArangoDatabase : ISceneService
 		return await SceneFromJsonAsync(elem);
 	}
 
-	public async Task<OneOf<Scene, NotFound>> SetSceneMetaAsync(string sceneId, string key, string value)
+	public async Task<OneOf<SceneModel, NotFound>> SetSceneMetaAsync(string sceneId, string key, string value)
 	{
 		var sceneResult = await GetSceneAsync(sceneId);
 		if (sceneResult.IsT1)
@@ -218,23 +224,23 @@ public partial class ArangoDatabase : ISceneService
 				break;
 			case "room":
 			{
-				var name = await SetObjectEdgeAsync(DatabaseConstants.SceneInRoom, vertexId, value);
+				var name = await SetObjectEdgeAsync(SceneArangoConstants.SceneInRoom, vertexId, value);
 				await UpdateSceneFieldsAsync(sceneKey, new { RoomName = name, LastActivityAt = now });
 				break;
 			}
 			case "owner":
 			{
-				var name = await SetObjectEdgeAsync(DatabaseConstants.SceneOwner, vertexId, value);
+				var name = await SetObjectEdgeAsync(SceneArangoConstants.SceneOwner, vertexId, value);
 				await UpdateSceneFieldsAsync(sceneKey, new { OwnerName = name, LastActivityAt = now });
 				break;
 			}
 			case "plot":
 				// Link this scene into the given plot (value = plot id). Empty unlinks all.
-				await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+				await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 					"FOR e IN @@e FILTER e._to == @to REMOVE e IN @@e",
 					new Dictionary<string, object>
 					{
-						{ "@e", DatabaseConstants.ScenePlotIncludes },
+						{ "@e", SceneArangoConstants.ScenePlotIncludes },
 						{ "to", vertexId }
 					});
 				if (!string.IsNullOrWhiteSpace(value))
@@ -255,13 +261,13 @@ public partial class ArangoDatabase : ISceneService
 		return await GetSceneAsync(sceneKey);
 	}
 
-	public async Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null,
+	public async Task<IReadOnlyList<SceneModel>> ListScenesAsync(string filter, string? viewerDbref = null,
 		long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50)
 	{
 		var loweredFilter = (filter ?? string.Empty).Trim().ToLowerInvariant();
 		var bindVars = new Dictionary<string, object>
 		{
-			{ "@c", DatabaseConstants.SharpScenes },
+			{ "@c", SceneArangoConstants.SharpScenes },
 			{ "count", count }
 		};
 
@@ -296,9 +302,9 @@ public partial class ArangoDatabase : ISceneService
 				if (viewerVertex is null)
 					return [];
 				bindVars["viewer"] = viewerVertex;
-				bindVars["@owner"] = DatabaseConstants.SceneOwner;
-				bindVars["@starter"] = DatabaseConstants.SceneStarter;
-				bindVars["@member"] = DatabaseConstants.SceneMember;
+				bindVars["@owner"] = SceneArangoConstants.SceneOwner;
+				bindVars["@starter"] = SceneArangoConstants.SceneStarter;
+				bindVars["@member"] = SceneArangoConstants.SceneMember;
 				aql =
 					"FOR s IN @@c " +
 					"LET owned = LENGTH(FOR e IN @@owner FILTER e._from == s._id AND e._to == @viewer RETURN 1) > 0 " +
@@ -313,9 +319,9 @@ public partial class ArangoDatabase : ISceneService
 				break;
 		}
 
-		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle, aql, bindVars);
+		var result = await _accessor.Context.Query.ExecuteAsync<JsonElement>(_accessor.Handle, aql, bindVars);
 
-		var scenes = new List<Scene>();
+		var scenes = new List<SceneModel>();
 		foreach (var elem in result.Where(e => e.ValueKind != JsonValueKind.Undefined))
 		{
 			var scene = await SceneFromJsonAsync(elem);
@@ -336,14 +342,14 @@ public partial class ArangoDatabase : ISceneService
 			return false;
 
 		var vertexId = SceneVertexId(sceneKey);
-		var result = await arangoDb.Query.ExecuteAsync<int>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<int>(_accessor.Handle,
 			"LET owned = LENGTH(FOR e IN @@owner FILTER e._from == @s AND e._to == @v RETURN 1) " +
 			"LET joined = LENGTH(FOR e IN @@member FILTER e._to == @s AND e._from == @v RETURN 1) " +
 			"RETURN owned + joined",
 			new Dictionary<string, object>
 			{
-				{ "@owner", DatabaseConstants.SceneOwner },
-				{ "@member", DatabaseConstants.SceneMember },
+				{ "@owner", SceneArangoConstants.SceneOwner },
+				{ "@member", SceneArangoConstants.SceneMember },
 				{ "s", vertexId },
 				{ "v", viewerVertex }
 			});
@@ -351,20 +357,20 @@ public partial class ArangoDatabase : ISceneService
 		return result.FirstOrDefault() > 0;
 	}
 
-	public async Task<OneOf<Scene, NotFound>> GetActiveSceneInRoomAsync(string roomDbref)
+	public async Task<OneOf<SceneModel, NotFound>> GetActiveSceneInRoomAsync(string roomDbref)
 	{
 		var (roomVertex, _) = await ResolveObjectRefAsync(roomDbref);
 		if (roomVertex is null)
 			return new NotFound();
 
-		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<JsonElement>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._to == @room " +
 			"FOR s IN @@c FILTER s._id == e._from AND s.Status == 'active' " +
 			"SORT s.LastActivityAt DESC LIMIT 1 RETURN s",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneInRoom },
-				{ "@c", DatabaseConstants.SharpScenes },
+				{ "@e", SceneArangoConstants.SceneInRoom },
+				{ "@c", SceneArangoConstants.SharpScenes },
 				{ "room", roomVertex }
 			});
 
@@ -401,30 +407,30 @@ public partial class ArangoDatabase : ISceneService
 			OriginName = string.Empty
 		};
 
-		var createdPose = await arangoDb.Document.CreateAsync<object, JsonElement>(
-			handle, DatabaseConstants.SharpScenePoses, poseDoc, returnNew: true);
+		var createdPose = await _accessor.Context.Document.CreateAsync<object, JsonElement>(
+			_accessor.Handle, SceneArangoConstants.SharpScenePoses, poseDoc, returnNew: true);
 		var poseKey = createdPose.New.GetProperty("_key").GetString()!;
 		var poseVertex = PoseVertexId(poseKey);
 
 		// pose_in_scene back-reference.
-		await InsertEdgeAsync(DatabaseConstants.ScenePoseInScene, poseVertex, sceneVertex);
+		await InsertEdgeAsync(SceneArangoConstants.ScenePoseInScene, poseVertex, sceneVertex);
 
 		// author edge + origin edge (snapshots already partly captured).
 		if (authorVertex is not null)
-			await InsertEdgeAsync(DatabaseConstants.ScenePoseAuthor, poseVertex, authorVertex);
+			await InsertEdgeAsync(SceneArangoConstants.ScenePoseAuthor, poseVertex, authorVertex);
 		var originName = string.IsNullOrWhiteSpace(originDbref)
 			? string.Empty
-			: await SetObjectEdgeAsync(DatabaseConstants.ScenePoseOrigin, poseVertex, originDbref);
+			: await SetObjectEdgeAsync(SceneArangoConstants.ScenePoseOrigin, poseVertex, originDbref);
 		if (!string.IsNullOrEmpty(originName))
-			await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenePoses,
+			await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
 				new { _key = poseKey, OriginName = originName }, mergeObjects: true);
 
 		// First content version + current_edit pointer. The editor of the first
 		// version is the author (resolved above; null when the object is gone).
 		var editKey = await CreateEditAsync(poseKey, content, authorVertex, authorName, now);
 		var editVertex = EditVertexId(editKey);
-		await InsertEdgeAsync(DatabaseConstants.SceneFirstEdit, poseVertex, editVertex);
-		await InsertEdgeAsync(DatabaseConstants.SceneCurrentEdit, poseVertex, editVertex);
+		await InsertEdgeAsync(SceneArangoConstants.SceneFirstEdit, poseVertex, editVertex);
+		await InsertEdgeAsync(SceneArangoConstants.SceneCurrentEdit, poseVertex, editVertex);
 
 		// Append to the scene's pose_next chain.
 		await AppendPoseToChainAsync(sceneVertex, poseVertex);
@@ -440,11 +446,11 @@ public partial class ArangoDatabase : ISceneService
 	public async Task<OneOf<ScenePose, NotFound>> GetPoseAsync(string poseId)
 	{
 		var key = ExtractKey(poseId);
-		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<JsonElement>(_accessor.Handle,
 			"FOR p IN @@c FILTER p._key == @key RETURN p",
 			new Dictionary<string, object>
 			{
-				{ "@c", DatabaseConstants.SharpScenePoses },
+				{ "@c", SceneArangoConstants.SharpScenePoses },
 				{ "key", key }
 			});
 
@@ -502,41 +508,41 @@ public partial class ArangoDatabase : ISceneService
 		switch (lowered)
 		{
 			case "showas":
-				await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenePoses,
+				await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
 					new { _key = poseKey, ShowAsName = value }, mergeObjects: true);
 				break;
 			case "authorname":
-				await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenePoses,
+				await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
 					new { _key = poseKey, AuthorName = value }, mergeObjects: true);
 				break;
 			case "author":
 			{
-				var name = await SetObjectEdgeAsync(DatabaseConstants.ScenePoseAuthor, poseVertex, value);
+				var name = await SetObjectEdgeAsync(SceneArangoConstants.ScenePoseAuthor, poseVertex, value);
 				if (!string.IsNullOrEmpty(name))
-					await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenePoses,
+					await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
 						new { _key = poseKey, AuthorName = name }, mergeObjects: true);
 				break;
 			}
 			case "origin":
 			{
-				var name = await SetObjectEdgeAsync(DatabaseConstants.ScenePoseOrigin, poseVertex, value);
-				await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenePoses,
+				var name = await SetObjectEdgeAsync(SceneArangoConstants.ScenePoseOrigin, poseVertex, value);
+				await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
 					new { _key = poseKey, OriginName = name }, mergeObjects: true);
 				break;
 			}
 			case "originname":
-				await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenePoses,
+				await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
 					new { _key = poseKey, OriginName = value }, mergeObjects: true);
 				break;
 			case "source":
-				await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenePoses,
+				await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
 					new { _key = poseKey, Source = value }, mergeObjects: true);
 				break;
 			case "tags":
 			{
 				var tagList = value
 					.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-				await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenePoses,
+				await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
 					new { _key = poseKey, Tags = tagList }, mergeObjects: true);
 				break;
 			}
@@ -570,7 +576,7 @@ public partial class ArangoDatabase : ISceneService
 		var newEditVertex = EditVertexId(newEditKey);
 
 		// Link current -> new via next_edit, then move current_edit pointer.
-		await InsertEdgeAsync(DatabaseConstants.SceneNextEdit, EditVertexId(currentEditKey), newEditVertex);
+		await InsertEdgeAsync(SceneArangoConstants.SceneNextEdit, EditVertexId(currentEditKey), newEditVertex);
 		await RepointCurrentEditAsync(poseVertex, newEditVertex);
 
 		await BumpSceneActivityForPoseAsync(poseVertex, now);
@@ -592,11 +598,11 @@ public partial class ArangoDatabase : ISceneService
 			return new Error<string>("Pose has no content version.");
 
 		// Find the edit whose next_edit points to current.
-		var prev = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var prev = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._to == @cur LIMIT 1 RETURN e._from",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneNextEdit },
+				{ "@e", SceneArangoConstants.SceneNextEdit },
 				{ "cur", EditVertexId(currentEditKey) }
 			});
 
@@ -626,11 +632,11 @@ public partial class ArangoDatabase : ISceneService
 			return new Error<string>("Pose has no content version.");
 
 		// Find next_edit from current.
-		var next = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var next = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @cur LIMIT 1 RETURN e._to",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneNextEdit },
+				{ "@e", SceneArangoConstants.SceneNextEdit },
 				{ "cur", EditVertexId(currentEditKey) }
 			});
 
@@ -694,7 +700,7 @@ public partial class ArangoDatabase : ISceneService
 
 		if (!poseResult.AsT0.IsDeleted)
 		{
-			await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenePoses,
+			await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
 				new { _key = poseKey, IsDeleted = true }, mergeObjects: true);
 
 			// Decrement the denormalized pose count on the owning scene.
@@ -720,21 +726,21 @@ public partial class ArangoDatabase : ISceneService
 		// Lightweight existence check. We must NOT call GetPoseAsync here: that projects the
 		// full pose via PoseFromJsonAsync, which itself calls GetPoseEditsAsync — producing
 		// unbounded mutual recursion. A direct document lookup preserves the NotFound contract.
-		var exists = await arangoDb.Query.ExecuteAsync<int>(handle,
+		var exists = await _accessor.Context.Query.ExecuteAsync<int>(_accessor.Handle,
 			"FOR p IN @@c FILTER p._key == @key LIMIT 1 RETURN 1",
 			new Dictionary<string, object>
 			{
-				{ "@c", DatabaseConstants.SharpScenePoses },
+				{ "@c", SceneArangoConstants.SharpScenePoses },
 				{ "key", poseKey }
 			});
 		if (exists.FirstOrDefault() == 0)
 			return new NotFound();
 
-		var firstEdit = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var firstEdit = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @p LIMIT 1 RETURN e._to",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneFirstEdit },
+				{ "@e", SceneArangoConstants.SceneFirstEdit },
 				{ "p", poseVertex }
 			});
 
@@ -748,11 +754,11 @@ public partial class ArangoDatabase : ISceneService
 			if (editResult is not null)
 				edits.Add(editResult);
 
-			var nextResult = await arangoDb.Query.ExecuteAsync<string>(handle,
+			var nextResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 				"FOR e IN @@e FILTER e._from == @c LIMIT 1 RETURN e._to",
 				new Dictionary<string, object>
 				{
-					{ "@e", DatabaseConstants.SceneNextEdit },
+					{ "@e", SceneArangoConstants.SceneNextEdit },
 					{ "c", cursor }
 				});
 			cursor = nextResult.FirstOrDefault();
@@ -780,11 +786,11 @@ public partial class ArangoDatabase : ISceneService
 		var existing = await GetMemberEdgeAsync(sceneVertex, playerVertex);
 		if (existing is null)
 		{
-			await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+			await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 				"INSERT { _from: @from, _to: @to, role: @role, showAs: '', isCurrent: false, grantedAt: @now, memberName: @name } INTO @@e",
 				new Dictionary<string, object>
 				{
-					{ "@e", DatabaseConstants.SceneMember },
+					{ "@e", SceneArangoConstants.SceneMember },
 					{ "from", playerVertex },
 					{ "to", sceneVertex },
 					{ "role", role ?? string.Empty },
@@ -794,11 +800,11 @@ public partial class ArangoDatabase : ISceneService
 		}
 		else
 		{
-			await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+			await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 				"UPDATE @key WITH { role: @role, memberName: @name } IN @@e",
 				new Dictionary<string, object>
 				{
-					{ "@e", DatabaseConstants.SceneMember },
+					{ "@e", SceneArangoConstants.SceneMember },
 					{ "key", existing.Value.Key },
 					{ "role", role ?? string.Empty },
 					{ "name", playerName }
@@ -819,11 +825,11 @@ public partial class ArangoDatabase : ISceneService
 		if (playerVertex is null)
 			return new None();
 
-		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from AND e._to == @to REMOVE e IN @@e",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneMember },
+				{ "@e", SceneArangoConstants.SceneMember },
 				{ "from", playerVertex },
 				{ "to", sceneVertex }
 			});
@@ -842,7 +848,7 @@ public partial class ArangoDatabase : ISceneService
 
 		var bindVars = new Dictionary<string, object>
 		{
-			{ "@e", DatabaseConstants.SceneMember },
+			{ "@e", SceneArangoConstants.SceneMember },
 			{ "to", sceneVertex }
 		};
 		var roleFilter = string.Empty;
@@ -852,7 +858,7 @@ public partial class ArangoDatabase : ISceneService
 			bindVars["role"] = role;
 		}
 
-		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<JsonElement>(_accessor.Handle,
 			$"FOR e IN @@e FILTER e._to == @to{roleFilter} RETURN e", bindVars);
 
 		var members = new List<SceneMember>();
@@ -874,11 +880,11 @@ public partial class ArangoDatabase : ISceneService
 		if (playerVertex is null)
 			return new NotFound();
 
-		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<JsonElement>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from AND e._to == @to LIMIT 1 RETURN e",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneMember },
+				{ "@e", SceneArangoConstants.SceneMember },
 				{ "from", playerVertex },
 				{ "to", sceneVertex }
 			});
@@ -896,11 +902,11 @@ public partial class ArangoDatabase : ISceneService
 			return new NotFound();
 
 		// Clear isCurrent on all of the player's member edges.
-		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from UPDATE e WITH { isCurrent: false } IN @@e",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneMember },
+				{ "@e", SceneArangoConstants.SceneMember },
 				{ "from", playerVertex }
 			});
 
@@ -918,11 +924,11 @@ public partial class ArangoDatabase : ISceneService
 		if (existing is null)
 		{
 			var (_, playerName) = await ResolveObjectRefAsync(playerDbref);
-			await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+			await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 				"INSERT { _from: @from, _to: @to, role: '', showAs: '', isCurrent: true, grantedAt: @now, memberName: @name } INTO @@e",
 				new Dictionary<string, object>
 				{
-					{ "@e", DatabaseConstants.SceneMember },
+					{ "@e", SceneArangoConstants.SceneMember },
 					{ "from", playerVertex },
 					{ "to", sceneVertex },
 					{ "now", NowMillis() },
@@ -931,11 +937,11 @@ public partial class ArangoDatabase : ISceneService
 		}
 		else
 		{
-			await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+			await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 				"UPDATE @key WITH { isCurrent: true } IN @@e",
 				new Dictionary<string, object>
 				{
-					{ "@e", DatabaseConstants.SceneMember },
+					{ "@e", SceneArangoConstants.SceneMember },
 					{ "key", existing.Value.Key }
 				});
 		}
@@ -943,17 +949,17 @@ public partial class ArangoDatabase : ISceneService
 		return new None();
 	}
 
-	public async Task<OneOf<Scene, NotFound>> GetCurrentSceneAsync(string playerDbref)
+	public async Task<OneOf<SceneModel, NotFound>> GetCurrentSceneAsync(string playerDbref)
 	{
 		var (playerVertex, _) = await ResolveObjectRefAsync(playerDbref);
 		if (playerVertex is null)
 			return new NotFound();
 
-		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from AND e.isCurrent == true LIMIT 1 RETURN e._to",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneMember },
+				{ "@e", SceneArangoConstants.SceneMember },
 				{ "from", playerVertex }
 			});
 
@@ -979,11 +985,11 @@ public partial class ArangoDatabase : ISceneService
 		if (existing is null)
 			return new NotFound();
 
-		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"UPDATE @key WITH { showAs: @showAs } IN @@e",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneMember },
+				{ "@e", SceneArangoConstants.SceneMember },
 				{ "key", existing.Value.Key },
 				{ "showAs", showAs ?? string.Empty }
 			});
@@ -1008,13 +1014,13 @@ public partial class ArangoDatabase : ISceneService
 				UpdatedAt = now
 			};
 
-			var created = await arangoDb.Document.CreateAsync<object, JsonElement>(
-				handle, DatabaseConstants.SharpScenePlots, doc, returnNew: true);
+			var created = await _accessor.Context.Document.CreateAsync<object, JsonElement>(
+				_accessor.Handle, SceneArangoConstants.SharpScenePlots, doc, returnNew: true);
 			var key = created.New.GetProperty("_key").GetString()!;
 			var vertexId = PlotVertexId(key);
 
-			var ownerName = await SetObjectEdgeAsync(DatabaseConstants.ScenePlotOwner, vertexId, ownerDbref);
-			await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenePlots,
+			var ownerName = await SetObjectEdgeAsync(SceneArangoConstants.ScenePlotOwner, vertexId, ownerDbref);
+			await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePlots,
 				new { _key = key, OwnerName = ownerName }, mergeObjects: true);
 
 			return (await GetPlotAsync(key)).AsT0;
@@ -1024,8 +1030,8 @@ public partial class ArangoDatabase : ISceneService
 			var key = ExtractKey(plotId);
 			var vertexId = PlotVertexId(key);
 
-			var ownerName = await SetObjectEdgeAsync(DatabaseConstants.ScenePlotOwner, vertexId, ownerDbref);
-			await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.SharpScenePlots,
+			var ownerName = await SetObjectEdgeAsync(SceneArangoConstants.ScenePlotOwner, vertexId, ownerDbref);
+			await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePlots,
 				new
 				{
 					_key = key,
@@ -1042,11 +1048,11 @@ public partial class ArangoDatabase : ISceneService
 	public async Task<OneOf<ScenePlot, NotFound>> GetPlotAsync(string plotId)
 	{
 		var key = ExtractKey(plotId);
-		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<JsonElement>(_accessor.Handle,
 			"FOR p IN @@c FILTER p._key == @key RETURN p",
 			new Dictionary<string, object>
 			{
-				{ "@c", DatabaseConstants.SharpScenePlots },
+				{ "@c", SceneArangoConstants.SharpScenePlots },
 				{ "key", key }
 			});
 
@@ -1069,17 +1075,17 @@ public partial class ArangoDatabase : ISceneService
 		var sceneVertex = SceneVertexId(ExtractKey(sceneId));
 
 		// Idempotent: only insert when no such edge exists.
-		var exists = await arangoDb.Query.ExecuteAsync<int>(handle,
+		var exists = await _accessor.Context.Query.ExecuteAsync<int>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from AND e._to == @to COLLECT WITH COUNT INTO cnt RETURN cnt",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.ScenePlotIncludes },
+				{ "@e", SceneArangoConstants.ScenePlotIncludes },
 				{ "from", plotVertex },
 				{ "to", sceneVertex }
 			});
 
 		if (exists.FirstOrDefault() == 0)
-			await InsertEdgeAsync(DatabaseConstants.ScenePlotIncludes, plotVertex, sceneVertex);
+			await InsertEdgeAsync(SceneArangoConstants.ScenePlotIncludes, plotVertex, sceneVertex);
 
 		return new None();
 	}
@@ -1096,11 +1102,11 @@ public partial class ArangoDatabase : ISceneService
 		var plotVertex = PlotVertexId(ExtractKey(plotId));
 		var sceneVertex = SceneVertexId(ExtractKey(sceneId));
 
-		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from AND e._to == @to REMOVE e IN @@e",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.ScenePlotIncludes },
+				{ "@e", SceneArangoConstants.ScenePlotIncludes },
 				{ "from", plotVertex },
 				{ "to", sceneVertex }
 			});
@@ -1144,7 +1150,7 @@ public partial class ArangoDatabase : ISceneService
 
 	#endregion
 
-	#region Scene Internals
+	#region SceneModel Internals
 
 	private async Task UpdateSceneFieldsAsync(string sceneKey, object fields)
 	{
@@ -1154,40 +1160,40 @@ public partial class ArangoDatabase : ISceneService
 		foreach (var prop in fields.GetType().GetProperties())
 			patch[prop.Name] = prop.GetValue(fields);
 
-		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"UPDATE @key WITH @patch IN @@c OPTIONS { keepNull: true, mergeObjects: true }",
 			new Dictionary<string, object>
 			{
-				{ "@c", DatabaseConstants.SharpScenes },
+				{ "@c", SceneArangoConstants.SharpScenes },
 				{ "key", sceneKey },
 				{ "patch", patch }
 			});
 	}
 
 	private async Task SetSceneMetaKeyAsync(string sceneKey, string metaKey, string value)
-		=> await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		=> await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"UPDATE @key WITH { Meta: { [@mk]: @mv } } IN @@c OPTIONS { mergeObjects: true }",
 			new Dictionary<string, object>
 			{
-				{ "@c", DatabaseConstants.SharpScenes },
+				{ "@c", SceneArangoConstants.SharpScenes },
 				{ "key", sceneKey },
 				{ "mk", metaKey },
 				{ "mv", value }
 			});
 
 	private async Task SetPoseMetaKeyAsync(string poseKey, string metaKey, string value)
-		=> await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		=> await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"UPDATE @key WITH { Meta: { [@mk]: @mv } } IN @@c OPTIONS { mergeObjects: true }",
 			new Dictionary<string, object>
 			{
-				{ "@c", DatabaseConstants.SharpScenePoses },
+				{ "@c", SceneArangoConstants.SharpScenePoses },
 				{ "key", poseKey },
 				{ "mk", metaKey },
 				{ "mv", value }
 			});
 
 	private async Task InsertEdgeAsync(string edgeCollection, string from, string to)
-		=> await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		=> await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"INSERT { _from: @from, _to: @to } INTO @@e",
 			new Dictionary<string, object>
 			{
@@ -1207,23 +1213,23 @@ public partial class ArangoDatabase : ISceneService
 			EditorName = editorName
 		};
 
-		var created = await arangoDb.Document.CreateAsync<object, JsonElement>(
-			handle, DatabaseConstants.SharpScenePoseEdits, doc, returnNew: true);
+		var created = await _accessor.Context.Document.CreateAsync<object, JsonElement>(
+			_accessor.Handle, SceneArangoConstants.SharpScenePoseEdits, doc, returnNew: true);
 		var editKey = created.New.GetProperty("_key").GetString()!;
 
 		if (editorVertex is not null)
-			await InsertEdgeAsync(DatabaseConstants.SceneEditEditor, EditVertexId(editKey), editorVertex);
+			await InsertEdgeAsync(SceneArangoConstants.SceneEditEditor, EditVertexId(editKey), editorVertex);
 
 		return editKey;
 	}
 
 	private async Task<string?> GetCurrentEditKeyAsync(string poseVertex)
 	{
-		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @p LIMIT 1 RETURN e._to",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneCurrentEdit },
+				{ "@e", SceneArangoConstants.SceneCurrentEdit },
 				{ "p", poseVertex }
 			});
 
@@ -1232,11 +1238,11 @@ public partial class ArangoDatabase : ISceneService
 	}
 
 	private async Task RepointCurrentEditAsync(string poseVertex, string newEditVertex)
-		=> await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		=> await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @p UPDATE e WITH { _to: @to } IN @@e",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneCurrentEdit },
+				{ "@e", SceneArangoConstants.SceneCurrentEdit },
 				{ "p", poseVertex },
 				{ "to", newEditVertex }
 			});
@@ -1248,11 +1254,11 @@ public partial class ArangoDatabase : ISceneService
 		var guard = 0;
 		while (guard++ < 100_000)
 		{
-			var nextResult = await arangoDb.Query.ExecuteAsync<string>(handle,
+			var nextResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 				"FOR e IN @@e FILTER e._from == @c LIMIT 1 RETURN e._to",
 				new Dictionary<string, object>
 				{
-					{ "@e", DatabaseConstants.SceneNextEdit },
+					{ "@e", SceneArangoConstants.SceneNextEdit },
 					{ "c", cursor }
 				});
 			var next = nextResult.FirstOrDefault();
@@ -1260,27 +1266,27 @@ public partial class ArangoDatabase : ISceneService
 				break;
 
 			// Remove the next_edit edge from cursor.
-			await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+			await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 				"FOR e IN @@e FILTER e._from == @c REMOVE e IN @@e",
 				new Dictionary<string, object>
 				{
-					{ "@e", DatabaseConstants.SceneNextEdit },
+					{ "@e", SceneArangoConstants.SceneNextEdit },
 					{ "c", cursor }
 				});
 
 			// Remove the forward edit's editor edge and the edit document itself.
-			await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+			await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 				"FOR e IN @@e FILTER e._from == @n REMOVE e IN @@e",
 				new Dictionary<string, object>
 				{
-					{ "@e", DatabaseConstants.SceneEditEditor },
+					{ "@e", SceneArangoConstants.SceneEditEditor },
 					{ "n", next }
 				});
-			await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+			await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 				"REMOVE @key IN @@c",
 				new Dictionary<string, object>
 				{
-					{ "@c", DatabaseConstants.SharpScenePoseEdits },
+					{ "@c", SceneArangoConstants.SharpScenePoseEdits },
 					{ "key", next.Split('/')[1] }
 				});
 
@@ -1297,11 +1303,11 @@ public partial class ArangoDatabase : ISceneService
 
 	private async Task<string?> GetSceneVertexForPoseAsync(string poseVertex)
 	{
-		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @p LIMIT 1 RETURN e._to",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.ScenePoseInScene },
+				{ "@e", SceneArangoConstants.ScenePoseInScene },
 				{ "p", poseVertex }
 			});
 		return result.FirstOrDefault();
@@ -1309,11 +1315,11 @@ public partial class ArangoDatabase : ISceneService
 
 	private async Task<bool> PoseHasAuthorAsync(string poseKey, string authorVertex)
 	{
-		var result = await arangoDb.Query.ExecuteAsync<int>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<int>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @p AND e._to == @a COLLECT WITH COUNT INTO cnt RETURN cnt",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.ScenePoseAuthor },
+				{ "@e", SceneArangoConstants.ScenePoseAuthor },
 				{ "p", PoseVertexId(poseKey) },
 				{ "a", authorVertex }
 			});
@@ -1324,11 +1330,11 @@ public partial class ArangoDatabase : ISceneService
 
 	private async Task AppendPoseToChainAsync(string sceneVertex, string poseVertex)
 	{
-		var lastResult = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var lastResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @s LIMIT 1 RETURN e._to",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneLastPose },
+				{ "@e", SceneArangoConstants.SceneLastPose },
 				{ "s", sceneVertex }
 			});
 		var last = lastResult.FirstOrDefault();
@@ -1336,18 +1342,18 @@ public partial class ArangoDatabase : ISceneService
 		if (last is null)
 		{
 			// Empty chain: this is both first and last.
-			await InsertEdgeAsync(DatabaseConstants.SceneFirstPose, sceneVertex, poseVertex);
-			await InsertEdgeAsync(DatabaseConstants.SceneLastPose, sceneVertex, poseVertex);
+			await InsertEdgeAsync(SceneArangoConstants.SceneFirstPose, sceneVertex, poseVertex);
+			await InsertEdgeAsync(SceneArangoConstants.SceneLastPose, sceneVertex, poseVertex);
 		}
 		else
 		{
-			await InsertEdgeAsync(DatabaseConstants.ScenePoseNext, last, poseVertex);
-			await RepointSingletonEdgeAsync(DatabaseConstants.SceneLastPose, sceneVertex, poseVertex);
+			await InsertEdgeAsync(SceneArangoConstants.ScenePoseNext, last, poseVertex);
+			await RepointSingletonEdgeAsync(SceneArangoConstants.SceneLastPose, sceneVertex, poseVertex);
 		}
 	}
 
 	private async Task RepointSingletonEdgeAsync(string edgeCollection, string from, string to)
-		=> await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		=> await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from UPDATE e WITH { _to: @to } IN @@e",
 			new Dictionary<string, object>
 			{
@@ -1358,11 +1364,11 @@ public partial class ArangoDatabase : ISceneService
 
 	private async Task<List<string>> GetOrderedPoseKeysAsync(string sceneVertex)
 	{
-		var firstResult = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var firstResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @s LIMIT 1 RETURN e._to",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneFirstPose },
+				{ "@e", SceneArangoConstants.SceneFirstPose },
 				{ "s", sceneVertex }
 			});
 
@@ -1372,11 +1378,11 @@ public partial class ArangoDatabase : ISceneService
 		while (cursor is not null && guard++ < 1_000_000)
 		{
 			keys.Add(cursor.Split('/')[1]);
-			var nextResult = await arangoDb.Query.ExecuteAsync<string>(handle,
+			var nextResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 				"FOR e IN @@e FILTER e._from == @c LIMIT 1 RETURN e._to",
 				new Dictionary<string, object>
 				{
-					{ "@e", DatabaseConstants.ScenePoseNext },
+					{ "@e", SceneArangoConstants.ScenePoseNext },
 					{ "c", cursor }
 				});
 			cursor = nextResult.FirstOrDefault();
@@ -1388,53 +1394,53 @@ public partial class ArangoDatabase : ISceneService
 	private async Task UnlinkPoseFromChainAsync(string sceneVertex, string poseVertex)
 	{
 		// Find predecessor (pose_next -> poseVertex) and successor (poseVertex -> pose_next).
-		var prevResult = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var prevResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._to == @p LIMIT 1 RETURN e._from",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.ScenePoseNext },
+				{ "@e", SceneArangoConstants.ScenePoseNext },
 				{ "p", poseVertex }
 			});
 		var prev = prevResult.FirstOrDefault();
 
-		var nextResult = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var nextResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @p LIMIT 1 RETURN e._to",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.ScenePoseNext },
+				{ "@e", SceneArangoConstants.ScenePoseNext },
 				{ "p", poseVertex }
 			});
 		var next = nextResult.FirstOrDefault();
 
 		// Remove pose_next edges touching poseVertex.
-		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @p OR e._to == @p REMOVE e IN @@e",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.ScenePoseNext },
+				{ "@e", SceneArangoConstants.ScenePoseNext },
 				{ "p", poseVertex }
 			});
 
 		// Bridge predecessor to successor.
 		if (prev is not null && next is not null)
-			await InsertEdgeAsync(DatabaseConstants.ScenePoseNext, prev, next);
+			await InsertEdgeAsync(SceneArangoConstants.ScenePoseNext, prev, next);
 
 		// Fix head/tail pointers.
 		if (prev is null)
 		{
 			// poseVertex was the head.
 			if (next is not null)
-				await RepointSingletonEdgeAsync(DatabaseConstants.SceneFirstPose, sceneVertex, next);
+				await RepointSingletonEdgeAsync(SceneArangoConstants.SceneFirstPose, sceneVertex, next);
 			else
-				await RemoveSingletonEdgeAsync(DatabaseConstants.SceneFirstPose, sceneVertex);
+				await RemoveSingletonEdgeAsync(SceneArangoConstants.SceneFirstPose, sceneVertex);
 		}
 		if (next is null)
 		{
 			// poseVertex was the tail.
 			if (prev is not null)
-				await RepointSingletonEdgeAsync(DatabaseConstants.SceneLastPose, sceneVertex, prev);
+				await RepointSingletonEdgeAsync(SceneArangoConstants.SceneLastPose, sceneVertex, prev);
 			else
-				await RemoveSingletonEdgeAsync(DatabaseConstants.SceneLastPose, sceneVertex);
+				await RemoveSingletonEdgeAsync(SceneArangoConstants.SceneLastPose, sceneVertex);
 		}
 	}
 
@@ -1443,58 +1449,58 @@ public partial class ArangoDatabase : ISceneService
 		if (afterVertex is null)
 		{
 			// Move to front.
-			var firstResult = await arangoDb.Query.ExecuteAsync<string>(handle,
+			var firstResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 				"FOR e IN @@e FILTER e._from == @s LIMIT 1 RETURN e._to",
 				new Dictionary<string, object>
 				{
-					{ "@e", DatabaseConstants.SceneFirstPose },
+					{ "@e", SceneArangoConstants.SceneFirstPose },
 					{ "s", sceneVertex }
 				});
 			var oldFirst = firstResult.FirstOrDefault();
 
 			if (oldFirst is null)
 			{
-				await InsertEdgeAsync(DatabaseConstants.SceneFirstPose, sceneVertex, poseVertex);
-				await RepointSingletonEdgeOrInsertAsync(DatabaseConstants.SceneLastPose, sceneVertex, poseVertex);
+				await InsertEdgeAsync(SceneArangoConstants.SceneFirstPose, sceneVertex, poseVertex);
+				await RepointSingletonEdgeOrInsertAsync(SceneArangoConstants.SceneLastPose, sceneVertex, poseVertex);
 			}
 			else
 			{
-				await InsertEdgeAsync(DatabaseConstants.ScenePoseNext, poseVertex, oldFirst);
-				await RepointSingletonEdgeAsync(DatabaseConstants.SceneFirstPose, sceneVertex, poseVertex);
+				await InsertEdgeAsync(SceneArangoConstants.ScenePoseNext, poseVertex, oldFirst);
+				await RepointSingletonEdgeAsync(SceneArangoConstants.SceneFirstPose, sceneVertex, poseVertex);
 			}
 			return;
 		}
 
 		// Insert after afterVertex: afterVertex -> [old successor]; becomes afterVertex -> pose -> successor.
-		var succResult = await arangoDb.Query.ExecuteAsync<string>(handle,
+		var succResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @a LIMIT 1 RETURN e._to",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.ScenePoseNext },
+				{ "@e", SceneArangoConstants.ScenePoseNext },
 				{ "a", afterVertex }
 			});
 		var successor = succResult.FirstOrDefault();
 
 		// Remove after -> successor (if any).
-		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @a REMOVE e IN @@e",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.ScenePoseNext },
+				{ "@e", SceneArangoConstants.ScenePoseNext },
 				{ "a", afterVertex }
 			});
 
-		await InsertEdgeAsync(DatabaseConstants.ScenePoseNext, afterVertex, poseVertex);
+		await InsertEdgeAsync(SceneArangoConstants.ScenePoseNext, afterVertex, poseVertex);
 		if (successor is not null)
-			await InsertEdgeAsync(DatabaseConstants.ScenePoseNext, poseVertex, successor);
+			await InsertEdgeAsync(SceneArangoConstants.ScenePoseNext, poseVertex, successor);
 		else
 			// afterVertex was the tail; pose is the new tail.
-			await RepointSingletonEdgeOrInsertAsync(DatabaseConstants.SceneLastPose, sceneVertex, poseVertex);
+			await RepointSingletonEdgeOrInsertAsync(SceneArangoConstants.SceneLastPose, sceneVertex, poseVertex);
 	}
 
 	private async Task RepointSingletonEdgeOrInsertAsync(string edgeCollection, string from, string to)
 	{
-		var exists = await arangoDb.Query.ExecuteAsync<int>(handle,
+		var exists = await _accessor.Context.Query.ExecuteAsync<int>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from COLLECT WITH COUNT INTO cnt RETURN cnt",
 			new Dictionary<string, object>
 			{
@@ -1509,7 +1515,7 @@ public partial class ArangoDatabase : ISceneService
 	}
 
 	private async Task RemoveSingletonEdgeAsync(string edgeCollection, string from)
-		=> await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
+		=> await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from REMOVE e IN @@e",
 			new Dictionary<string, object>
 			{
@@ -1521,11 +1527,11 @@ public partial class ArangoDatabase : ISceneService
 
 	private async Task<(string Key, JsonElement Edge)?> GetMemberEdgeAsync(string sceneVertex, string playerVertex)
 	{
-		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<JsonElement>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from AND e._to == @to LIMIT 1 RETURN e",
 			new Dictionary<string, object>
 			{
-				{ "@e", DatabaseConstants.SceneMember },
+				{ "@e", SceneArangoConstants.SceneMember },
 				{ "from", playerVertex },
 				{ "to", sceneVertex }
 			});
@@ -1538,16 +1544,16 @@ public partial class ArangoDatabase : ISceneService
 
 	// ── Projection helpers ──────────────────────────────────────────────────────────
 
-	private async Task<Scene> SceneFromJsonAsync(JsonElement elem)
+	private async Task<SceneModel> SceneFromJsonAsync(JsonElement elem)
 	{
 		var key = elem.GetProperty("_key").GetString()!;
 		var vertexId = SceneVertexId(key);
 
-		var ownerDbref = await ReadObjectEdgeDbrefAsync(DatabaseConstants.SceneOwner, vertexId);
-		var starterDbref = await ReadObjectEdgeDbrefAsync(DatabaseConstants.SceneStarter, vertexId);
-		var roomDbref = await ReadObjectEdgeDbrefAsync(DatabaseConstants.SceneInRoom, vertexId);
+		var ownerDbref = await ReadObjectEdgeDbrefAsync(SceneArangoConstants.SceneOwner, vertexId);
+		var starterDbref = await ReadObjectEdgeDbrefAsync(SceneArangoConstants.SceneStarter, vertexId);
+		var roomDbref = await ReadObjectEdgeDbrefAsync(SceneArangoConstants.SceneInRoom, vertexId);
 
-		return new Scene(
+		return new SceneModel(
 			Id: key,
 			Status: GetString(elem, "Status", "new"),
 			IsPublic: GetBool(elem, "IsPublic"),
@@ -1573,8 +1579,8 @@ public partial class ArangoDatabase : ISceneService
 		var sceneVertex = await GetSceneVertexForPoseAsync(poseVertex);
 		var sceneKey = sceneVertex?.Split('/')[1] ?? string.Empty;
 
-		var authorDbref = await ReadObjectEdgeDbrefAsync(DatabaseConstants.ScenePoseAuthor, poseVertex);
-		var originDbref = await ReadObjectEdgeDbrefAsync(DatabaseConstants.ScenePoseOrigin, poseVertex);
+		var authorDbref = await ReadObjectEdgeDbrefAsync(SceneArangoConstants.ScenePoseAuthor, poseVertex);
+		var originDbref = await ReadObjectEdgeDbrefAsync(SceneArangoConstants.ScenePoseOrigin, poseVertex);
 
 		// Project the current edit's content + edit history.
 		var content = string.Empty;
@@ -1635,18 +1641,18 @@ public partial class ArangoDatabase : ISceneService
 
 	private async Task<ScenePoseEdit?> GetEditAsync(string editKey, string poseKey)
 	{
-		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+		var result = await _accessor.Context.Query.ExecuteAsync<JsonElement>(_accessor.Handle,
 			"FOR e IN @@c FILTER e._key == @key RETURN e",
 			new Dictionary<string, object>
 			{
-				{ "@c", DatabaseConstants.SharpScenePoseEdits },
+				{ "@c", SceneArangoConstants.SharpScenePoseEdits },
 				{ "key", editKey }
 			});
 
 		if (result.FirstOrDefault() is not { ValueKind: not JsonValueKind.Undefined } elem)
 			return null;
 
-		var editorDbref = await ReadObjectEdgeDbrefAsync(DatabaseConstants.SceneEditEditor, EditVertexId(editKey));
+		var editorDbref = await ReadObjectEdgeDbrefAsync(SceneArangoConstants.SceneEditEditor, EditVertexId(editKey));
 
 		return new ScenePoseEdit(
 			Id: editKey,
@@ -1663,7 +1669,7 @@ public partial class ArangoDatabase : ISceneService
 		var key = elem.GetProperty("_key").GetString()!;
 		var vertexId = PlotVertexId(key);
 
-		var ownerDbref = await ReadObjectEdgeDbrefAsync(DatabaseConstants.ScenePlotOwner, vertexId);
+		var ownerDbref = await ReadObjectEdgeDbrefAsync(SceneArangoConstants.ScenePlotOwner, vertexId);
 
 		return new ScenePlot(
 			Id: key,
