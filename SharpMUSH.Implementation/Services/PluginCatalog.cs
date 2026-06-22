@@ -28,6 +28,7 @@ public sealed class PluginCatalog
 	private readonly List<IFlagSource> _flagSources = [];
 	private readonly List<IMigrationSource> _migrationSources = [];
 	private readonly List<IBridgeSubscriptionSource> _bridgeSources = [];
+	private readonly List<IEndpointContributor> _endpointContributors = [];
 	private readonly List<ICommandInterceptor> _commandInterceptors = [];
 	private readonly List<IConnectionHook> _connectionHooks = [];
 	private readonly List<IObjectLifecycleHook> _objectLifecycleHooks = [];
@@ -45,6 +46,9 @@ public sealed class PluginCatalog
 
 	/// <summary>Bridge subscription contributions from plugins implementing <see cref="IBridgeSubscriptionSource"/>.</summary>
 	public IReadOnlyList<IBridgeSubscriptionSource> BridgeSources => _bridgeSources;
+
+	/// <summary>Phase 9: endpoint contributions from plugins implementing <see cref="IEndpointContributor"/>, in load order.</summary>
+	public IReadOnlyList<IEndpointContributor> EndpointContributors => _endpointContributors;
 
 	/// <summary>Phase 2b: command interceptors from plugins implementing <see cref="ICommandInterceptor"/>, in load order.</summary>
 	public IReadOnlyList<ICommandInterceptor> CommandInterceptors => _commandInterceptors;
@@ -97,6 +101,12 @@ public sealed class PluginCatalog
 				if (plugin is IBridgeSubscriptionSource bridgeSource)
 				{
 					catalog._bridgeSources.Add(bridgeSource);
+				}
+
+				// Phase 9: ASP.NET endpoint contributions (hubs/routes mapped post-build in ConfigureApp).
+				if (plugin is IEndpointContributor endpointContributor)
+				{
+					catalog._endpointContributors.Add(endpointContributor);
 				}
 
 				// Phase 2b: engine-extension hooks (the C# analog of softcode @hook).

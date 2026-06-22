@@ -149,9 +149,9 @@ public partial class SurrealDatabase
 			// Initialize in-memory counter for auto-increment object keys (migration creates keys 0-9)
 			_nextObjectKey = 9;
 
-			// Seed the 1-based scene/pose id counters at 0; runtime UPDATE increments them atomically.
-			await ExecuteAsync("UPSERT counter:scene_id SET seq = 0", cancellationToken);
-			await ExecuteAsync("UPSERT counter:pose_id SET seq = 0", cancellationToken);
+			// The 1-based scene/pose id counters (counter:scene_id / counter:pose_id) are no longer seeded
+			// here — Phase 9 moved that seed into the Scene plugin's IMigrationSource.SurrealStatements,
+			// run after this built-in batch (see RunPluginSurrealMigrations).
 
 			// Create Room Zero (key=0)
 			await ExecuteAsync(

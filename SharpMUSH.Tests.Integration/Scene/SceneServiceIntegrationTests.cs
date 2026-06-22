@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Models.Scene;
+using SharpMUSH.Plugins.Scene.Contracts;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Integration.Scenes;

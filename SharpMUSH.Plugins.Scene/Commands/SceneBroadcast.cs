@@ -1,8 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NATS.Client.Core;
 using NATS.Client.Serializers.Json;
-using SharpMUSH.Library.Models.Portal;
-using SharpMUSH.Library.Models.Scene;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Messaging.NATS;
 

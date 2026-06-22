@@ -1,4 +1,4 @@
-namespace SharpMUSH.Library.Models.Scene;
+namespace SharpMUSH.Plugins.Scene.Contracts;
 
 /// <summary>
 /// A plot (story arc) — the <c>node_sharp_sys_scene_plots</c> vertex. Groups scenes

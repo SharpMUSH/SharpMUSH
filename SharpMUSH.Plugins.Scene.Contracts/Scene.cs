@@ -1,4 +1,4 @@
-namespace SharpMUSH.Library.Models.Scene;
+namespace SharpMUSH.Plugins.Scene.Contracts;
 
 /// <summary>
 /// A scene — the <c>node_sharp_sys_scene_scenes</c> vertex. References to game

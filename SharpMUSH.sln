@@ -69,6 +69,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.PackageTool", "Sh
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Tests.ScenePlugin", "SharpMUSH.Tests.ScenePlugin\SharpMUSH.Tests.ScenePlugin.csproj", "{AFAC7BA0-2C4A-4B24-A5CD-AE3FBB662329}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Plugins.Scene.Contracts", "SharpMUSH.Plugins.Scene.Contracts\SharpMUSH.Plugins.Scene.Contracts.csproj", "{46A95D6C-1056-4AE2-AF77-D32536C47E8B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -391,6 +393,18 @@ Global
 		{AFAC7BA0-2C4A-4B24-A5CD-AE3FBB662329}.Release|x64.Build.0 = Release|Any CPU
 		{AFAC7BA0-2C4A-4B24-A5CD-AE3FBB662329}.Release|x86.ActiveCfg = Release|Any CPU
 		{AFAC7BA0-2C4A-4B24-A5CD-AE3FBB662329}.Release|x86.Build.0 = Release|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Debug|x64.Build.0 = Debug|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Debug|x86.Build.0 = Debug|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Release|x64.ActiveCfg = Release|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Release|x64.Build.0 = Release|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Release|x86.ActiveCfg = Release|Any CPU
+		{46A95D6C-1056-4AE2-AF77-D32536C47E8B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,4 @@
-namespace SharpMUSH.Library.Models.Scene;
+namespace SharpMUSH.Plugins.Scene.Contracts;
 
 /// <summary>
 /// A pose — the <c>node_sharp_sys_scene_poses</c> vertex. The pose is the ordered

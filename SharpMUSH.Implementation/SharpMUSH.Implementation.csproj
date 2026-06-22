@@ -7,7 +7,9 @@
 		<LangVersion>default</LangVersion>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<NoWarn>CS8425</NoWarn>
+		<!-- NU1510: packages now provided by the Microsoft.AspNetCore.App FrameworkReference (added for the
+		     IEndpointContributor seam) are flagged "prunable"; that is expected and harmless here. -->
+		<NoWarn>CS8425;NU1510</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -42,6 +44,12 @@
 		<ProjectReference Include="..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
 		<ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
+	</ItemGroup>
+
+	<!-- PluginCatalog collects IEndpointContributor (Phase 9), whose signature references
+	     IEndpointRouteBuilder from the ASP.NET Core shared framework. Compile-time only; the host loads it. -->
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" PrivateAssets="all" />
 	</ItemGroup>
 
 </Project>

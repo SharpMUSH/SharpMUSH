@@ -175,39 +175,9 @@ public class GameHubTests
 			Arg.Any<CancellationToken>());
 	}
 
-	// ── JoinScene / LeaveScene ───────────────────────────────────────────────────
-
-	[Test]
-	public async Task JoinScene_WithSceneId_AddsToSceneGroup()
-	{
-		// Arrange
-		var (hub, groups) = BuildHub();
-
-		// Act
-		await hub.JoinScene("12");
-
-		// Assert
-		await groups.Received(1).AddToGroupAsync(
-			"conn-001",
-			"scene:12",
-			Arg.Any<CancellationToken>());
-	}
-
-	[Test]
-	public async Task LeaveScene_WithSceneId_RemovesFromSceneGroup()
-	{
-		// Arrange
-		var (hub, groups) = BuildHub();
-
-		// Act
-		await hub.LeaveScene("12");
-
-		// Assert
-		await groups.Received(1).RemoveFromGroupAsync(
-			"conn-001",
-			"scene:12",
-			Arg.Any<CancellationToken>());
-	}
+	// Phase 9: JoinScene/LeaveScene/SceneGroupName moved to the plugin-owned SceneHub
+	// (SharpMUSH.Plugins.Scene.Web.SceneHub). GameHub no longer carries any scene surface, so the GameHub
+	// scene-group tests were removed.
 
 	// ── Group name helpers ───────────────────────────────────────────────────────
 
@@ -221,11 +191,5 @@ public class GameHubTests
 	public async Task RoomGroupName_ReturnsExpectedFormat()
 	{
 		await Assert.That(GameHub.RoomGroupName("7")).IsEqualTo("room:7");
-	}
-
-	[Test]
-	public async Task SceneGroupName_ReturnsExpectedFormat()
-	{
-		await Assert.That(GameHub.SceneGroupName("3")).IsEqualTo("scene:3");
 	}
 }

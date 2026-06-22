@@ -2,6 +2,7 @@ using System.Runtime.Loader;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.Scene.Contracts;
 
 namespace SharpMUSH.Tests.Integration.Scenes;
 

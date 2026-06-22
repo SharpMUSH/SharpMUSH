@@ -31,16 +31,11 @@
 		<ProjectReference Include="..\SharpMUSH.Tests.Infrastructure\SharpMUSH.Tests.Infrastructure.csproj" />
 		<!-- Build the SamplePlugin fixture before this project so its DLL exists to copy into plugins/.
 		     ReferenceOutputAssembly=false: we do NOT link the plugin; we load it at runtime from plugins/. -->
-		<ProjectReference Include="..\SharpMUSH.Tests\Fixtures\SamplePlugin\SamplePlugin.csproj"
-			ReferenceOutputAssembly="false"
-			Private="false"
-			SkipGetTargetFrameworkProperties="true" />
+		<ProjectReference Include="..\SharpMUSH.Tests\Fixtures\SamplePlugin\SamplePlugin.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
 		<!-- Build the Scene plugin (the Phase-5 reference plugin) before this project so its DLL exists to
 		     copy into plugins/scene/. ReferenceOutputAssembly=false: it is loaded at runtime, not linked. -->
-		<ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj"
-			ReferenceOutputAssembly="false"
-			Private="false"
-			SkipGetTargetFrameworkProperties="true" />
+		<ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
+		<ProjectReference Include="..\SharpMUSH.Plugins.Scene.Contracts\SharpMUSH.Plugins.Scene.Contracts.csproj" />
 	</ItemGroup>
 
 	<!-- Drop the built SamplePlugin (DLL + manifest only — its SharpMUSH deps resolve from the host's

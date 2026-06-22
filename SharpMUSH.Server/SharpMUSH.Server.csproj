@@ -60,10 +60,8 @@
     <!-- The Scene plugin (Phase-5 reference plugin) is loaded at runtime from plugins/scene/, NOT linked.
          ReferenceOutputAssembly=false keeps it out of the host's compile graph; the CopyScenePlugin target
          below drops it into the output's plugins/scene/ where PluginBootstrapService discovers it. -->
-    <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj"
-      ReferenceOutputAssembly="false"
-      Private="false"
-      SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.Scene.Contracts\SharpMUSH.Plugins.Scene.Contracts.csproj" />
   </ItemGroup>
 
   <!-- Drop the built Scene plugin (DLL + deps.json + manifest) into plugins/scene/ beside the server binary

@@ -4,6 +4,7 @@ using NSubstitute.ExceptionExtensions;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.Scene.Contracts;
 
 namespace SharpMUSH.Tests.ClientState;
 

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.Scene.Contracts;
 using SignalRState = Microsoft.AspNetCore.SignalR.Client.HubConnectionState;
 using LibraryState = SharpMUSH.Library.Services.Interfaces.HubConnectionState;
 
@@ -20,6 +21,9 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	private readonly ILogger<ConnectionStateService> _logger;
 
 	private IGameHubConnection? _hub;
+	// Phase 9: scene realtime now rides a SEPARATE connection to the plugin-owned hub at /hubs/scene
+	// (ReceiveSceneMessage + JoinScene/LeaveScene), not the GameHub connection.
+	private IGameHubConnection? _sceneHub;
 	private SignalRState _innerState = SignalRState.Disconnected;
 	private readonly List<IDisposable> _subscriptions = [];
 
@@ -68,12 +72,6 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 			OnRoomEventReceived?.Invoke(msg);
 		}));
 
-		_subscriptions.Add(_hub.On("ReceiveSceneMessage", (SceneEventMessage msg) =>
-		{
-			_logger.LogDebug("[ConnectionStateService] ReceiveSceneMessage: {EventType}", msg.EventType);
-			OnSceneEventReceived?.Invoke(msg);
-		}));
-
 		_hub.Closed += ex =>
 		{
 			_logger.LogWarning(ex, "[ConnectionStateService] Hub closed");
@@ -99,6 +97,10 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		{
 			await _hub.StartAsync();
 			SetState(SignalRState.Connected);
+
+			// Phase 9: open the separate scene realtime connection (/hubs/scene). Best-effort — a scene-hub
+			// failure must not break the primary game connection; scene pages simply receive no live events.
+			await ConnectSceneHubAsync(accessToken);
 		}
 		catch (InvalidOperationException ex)
 		{
@@ -170,20 +172,53 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		return _hub.InvokeAsync("SendCommand", command);
 	}
 
+	// ── Scene realtime hub (/hubs/scene) ───────────────────────────────────────
+
+	/// <summary>
+	/// Opens the separate scene realtime connection and wires <c>ReceiveSceneMessage</c> to
+	/// <see cref="OnSceneEventReceived"/>. No-ops when the factory provides no scene hub URL (e.g. the
+	/// test factory). Best-effort: any failure is swallowed so the primary game connection is unaffected.
+	/// </summary>
+	private async Task ConnectSceneHubAsync(string accessToken)
+	{
+		if (_sceneHub is not null) return;
+
+		var sceneHub = _factory.CreateScene(accessToken);
+		if (sceneHub is null) return; // No scene hub configured — scene realtime simply stays inert.
+
+		sceneHub.On("ReceiveSceneMessage", (SceneEventMessage msg) =>
+		{
+			_logger.LogDebug("[ConnectionStateService] ReceiveSceneMessage: {EventType}", msg.EventType);
+			OnSceneEventReceived?.Invoke(msg);
+		});
+
+		try
+		{
+			await sceneHub.StartAsync();
+			_sceneHub = sceneHub;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[ConnectionStateService] Scene hub StartAsync failed; scene realtime disabled");
+			await sceneHub.DisposeAsync();
+		}
+	}
+
 	// ── Scene group membership (ISceneHubControl) ──────────────────────────────
 
 	/// <inheritdoc/>
 	public Task JoinSceneAsync(string sceneId)
 	{
-		if (_hub is null || !IsConnected) return Task.CompletedTask;
-		return _hub.InvokeAsync("JoinScene", sceneId);
+		// Join on the scene hub if it is up; fall back silently when scene realtime is unavailable.
+		if (_sceneHub is null || _sceneHub.State != SignalRState.Connected) return Task.CompletedTask;
+		return _sceneHub.InvokeAsync("JoinScene", sceneId);
 	}
 
 	/// <inheritdoc/>
 	public Task LeaveSceneAsync(string sceneId)
 	{
-		if (_hub is null || !IsConnected) return Task.CompletedTask;
-		return _hub.InvokeAsync("LeaveScene", sceneId);
+		if (_sceneHub is null || _sceneHub.State != SignalRState.Connected) return Task.CompletedTask;
+		return _sceneHub.InvokeAsync("LeaveScene", sceneId);
 	}
 
 	// ── State helpers ────────────────────────────────────────────────────────
@@ -214,6 +249,12 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		{
 			await _hub.DisposeAsync();
 			_hub = null;
+		}
+
+		if (_sceneHub is not null)
+		{
+			await _sceneHub.DisposeAsync();
+			_sceneHub = null;
 		}
 	}
 

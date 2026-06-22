@@ -39,6 +39,7 @@
 		<ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
 		<ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
+		<ProjectReference Include="..\SharpMUSH.Plugins.Scene.Contracts\SharpMUSH.Plugins.Scene.Contracts.csproj" />
 	</ItemGroup>
 
 </Project>

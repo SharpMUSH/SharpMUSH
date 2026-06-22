@@ -1,8 +1,7 @@
 using OneOf;
 using OneOf.Types;
-using SharpMUSH.Library.Models.Scene;
 
-namespace SharpMUSH.Library.Services.Interfaces;
+namespace SharpMUSH.Plugins.Scene.Contracts;
 
 /// <summary>
 /// The wizard-only primitive surface for the graph-native Scene System

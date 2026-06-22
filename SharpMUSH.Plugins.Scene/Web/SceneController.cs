@@ -1,15 +1,19 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SharpMUSH.Library.Models.Scene;
-using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Server.Hubs;
+using SharpMUSH.Plugins.Scene.Contracts;
 
-namespace SharpMUSH.Server.Controllers;
+namespace SharpMUSH.Plugins.Scene.Web;
 
 /// <summary>
 /// Read-only REST API for the graph-native Scene System, consumed by the Blazor WASM
 /// portal (which has no local scene service of its own). Writes happen exclusively through
 /// the game (the wizard-only <c>@scene</c> command / softcode) — these endpoints only read.
+///
+/// <para>Phase 9: this controller moved OUT of <c>SharpMUSH.Server</c> into the Scene plugin. It is
+/// discovered through the MVC ApplicationPart the plugin registers in its
+/// <c>IServiceRegistrar.RegisterServices</c> (<c>AddControllers().AddApplicationPart(thisAssembly)</c>),
+/// so the route <c>api/scenes</c> is served identically — but the host carries no scene controller, and
+/// removing the plugin removes the scene REST surface entirely.</para>
 ///
 /// Routes:
 ///   GET /api/scenes?filter=active|recent|scheduled[&amp;count=] — list scene DTOs
@@ -21,16 +25,23 @@ namespace SharpMUSH.Server.Controllers;
 ///
 /// VISIBILITY: a public scene is readable by anyone; a non-public scene is readable only by
 /// its owner or a member. The caller's character dbref is taken from the JWT (the same
-/// <c>character_dbref</c> claim <see cref="GameHub"/> uses for SignalR routing); an anonymous
-/// caller sees only public scenes.
-/// <see cref="ISceneService"/> is implemented by the active <c>ISharpDatabase</c> provider and
-/// DI-registered in <c>Startup</c>, so it is injected directly here.
+/// <c>character_dbref</c> claim the host's SignalR routing uses); an anonymous caller sees only
+/// public scenes.
+/// <see cref="ISceneService"/> is registered by the plugin's <c>IServiceRegistrar</c> over the active
+/// provider's host-shared storage accessor, so it is injected directly here.
 /// </summary>
 [ApiController]
 [Route("api/scenes")]
 [AllowAnonymous]
 public class SceneController(ISceneService sceneService) : ControllerBase
 {
+	/// <summary>
+	/// Claim name that carries the authenticated character's dbref — mirrors the host's
+	/// <c>GameHub.CharacterDbrefClaim</c>. Inlined here so the plugin controller takes no dependency
+	/// on the Server's hub types.
+	/// </summary>
+	private const string CharacterDbrefClaim = "character_dbref";
+
 	// ── DTO record types (long Unix-millis timestamps, passed straight through) ──
 
 	/// <summary>Scene data returned by the API. Timestamps are UTC Unix-millis (long).</summary>
@@ -84,7 +95,7 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 
 	// ── DTO mapping ────────────────────────────────────────────────────────────
 
-	private static SceneDto ToDto(Scene s) => new(
+	private static SceneDto ToDto(Contracts.Scene s) => new(
 		s.Id, s.Status, s.IsPublic, s.IsTempRoom, s.ScheduledFor, s.StartedAt, s.LastActivityAt,
 		s.PoseCount, s.OwnerDbref, s.OwnerName, s.StarterDbref, s.StarterName, s.RoomDbref, s.RoomName, s.Meta);
 
@@ -99,11 +110,10 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	// ── Visibility ───────────────────────────────────────────────────────────
 
 	/// <summary>
-	/// The caller's character dbref, taken from the <c>character_dbref</c> JWT claim (the same
-	/// claim <see cref="GameHub"/> uses for SignalR character-group routing). Null when the
+	/// The caller's character dbref, taken from the <c>character_dbref</c> JWT claim. Null when the
 	/// caller is anonymous or carries no character — such callers may only see public scenes.
 	/// </summary>
-	private string? CallerDbref => User.FindFirst(GameHub.CharacterDbrefClaim)?.Value;
+	private string? CallerDbref => User.FindFirst(CharacterDbrefClaim)?.Value;
 
 	/// <summary>
 	/// Normalises a dbref for comparison. The owner edge resolves to a bare object key
@@ -117,7 +127,7 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	/// True when <paramref name="scene"/> is visible to the caller: it is public, the caller owns
 	/// it, or the caller is a member of it. Non-public scenes require an authenticated character.
 	/// </summary>
-	private async Task<bool> CanSeeAsync(Scene scene)
+	private async Task<bool> CanSeeAsync(Contracts.Scene scene)
 	{
 		if (scene.IsPublic) return true;
 

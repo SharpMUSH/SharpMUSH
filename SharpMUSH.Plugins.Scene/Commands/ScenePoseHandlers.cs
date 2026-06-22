@@ -163,7 +163,7 @@ public static class ScenePoseHandlers
 		INotifyService notifyService,
 		AnySharpObject executor,
 		string poseId,
-		OneOf.OneOf<Library.Models.Scene.ScenePose, NotFound> result,
+		OneOf.OneOf<Contracts.ScenePose, NotFound> result,
 		string successMessage,
 		IMUSHCodeParser? parser = null,
 		string? eventType = null)
@@ -185,7 +185,7 @@ public static class ScenePoseHandlers
 		INotifyService notifyService,
 		AnySharpObject executor,
 		string poseId,
-		OneOf.OneOf<Library.Models.Scene.ScenePose, NotFound, Error<string>> result,
+		OneOf.OneOf<Contracts.ScenePose, NotFound, Error<string>> result,
 		string successMessage,
 		IMUSHCodeParser? parser = null,
 		string? eventType = null)

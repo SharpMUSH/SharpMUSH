@@ -1,4 +1,4 @@
-namespace SharpMUSH.Library.Models.Portal;
+namespace SharpMUSH.Plugins.Scene.Contracts;
 
 /// <summary>
 /// A real-time scene mutation broadcast on <c>game.scene.{id}</c> (NATS) and

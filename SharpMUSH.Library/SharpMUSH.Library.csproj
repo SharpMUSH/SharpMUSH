@@ -58,8 +58,7 @@
 	     ensures @(ReferenceCopyLocalPaths) is populated when pack invokes this. -->
 	<Target Name="IncludeReferencedProjectsInPackage" DependsOnTargets="ResolveReferences">
 		<ItemGroup>
-			<BuildOutputInPackage Include="@(ReferenceCopyLocalPaths)"
-				Condition="'%(ReferenceCopyLocalPaths.ReferenceSourceTarget)' == 'ProjectReference' And '%(Extension)' == '.dll'" />
+			<BuildOutputInPackage Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.ReferenceSourceTarget)' == 'ProjectReference' And '%(Extension)' == '.dll'" />
 		</ItemGroup>
 	</Target>
 
@@ -112,6 +111,16 @@
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" PrivateAssets="all" />
   </ItemGroup>
 
+  <!-- The IEndpointContributor plugin seam (Plugins/IEndpointContributor.cs) takes an
+       IEndpointRouteBuilder so a plugin can map controllers/hubs/routes into the ASP.NET pipeline.
+       That type lives in the ASP.NET Core shared framework. Compile-time only — PrivateAssets="all"
+       keeps the framework reference out of Library's published dependency closure and stops it flowing
+       transitively to non-web consumers (e.g. the Blazor WASM client / ConnectionServer), which never
+       use the seam. The host (SharpMUSH.Server) already loads this shared framework. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" PrivateAssets="all" />
+  </ItemGroup>
+
   <ItemGroup>
 	  <!-- These four are NOT published NuGet packages. PrivateAssets="all" keeps them out of the generated
 	       .nuspec <dependencies> (the only reliable NuGet lever, since the dependency list is projected from
@@ -123,6 +132,11 @@
 	  <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" PrivateAssets="all" />
 	  <ProjectReference Include="..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" PrivateAssets="all" />
 	  <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" PrivateAssets="all" />
+	  <!-- The scene contract surface (Scene/ScenePose/.../ISceneService/SceneEventMessage) that the deferred
+	       Client realtime members on IConnectionStateService + NotificationType reference. PrivateAssets="all"
+	       bundles its DLL into lib/ (via IncludeReferencedProjectsInPackage) without adding a NuGet dependency,
+	       and stops it flowing transitively — the host (Server/Client) and the Scene plugin reference it directly. -->
+	  <ProjectReference Include="..\SharpMUSH.Plugins.Scene.Contracts\SharpMUSH.Plugins.Scene.Contracts.csproj" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

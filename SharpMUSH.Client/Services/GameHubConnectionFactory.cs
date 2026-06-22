@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Plugins.Scene.Contracts;
 
 namespace SharpMUSH.Client.Services;
 
@@ -16,6 +17,13 @@ public interface IGameHubConnectionFactory
 	/// and disposing the returned connection.
 	/// </summary>
 	IGameHubConnection Create(string accessToken);
+
+	/// <summary>
+	/// Creates a connection to the plugin-owned scene realtime hub (<c>/hubs/scene</c>), where the
+	/// Scene plugin's <c>SceneHub</c> is mapped (Phase 9). Returns <c>null</c> when no scene hub URL is
+	/// configured. The caller starts and disposes the returned connection.
+	/// </summary>
+	IGameHubConnection? CreateScene(string accessToken);
 }
 
 /// <summary>
@@ -25,15 +33,27 @@ public interface IGameHubConnectionFactory
 public sealed class GameHubConnectionFactory : IGameHubConnectionFactory
 {
 	private readonly string _hubUrl;
+	private readonly string? _sceneHubUrl;
 
-	/// <param name="hubUrl">Absolute URL of the hub endpoint, e.g. "https://host/hubs/game".</param>
-	public GameHubConnectionFactory(string hubUrl) => _hubUrl = hubUrl;
+	/// <param name="hubUrl">Absolute URL of the game hub endpoint, e.g. "https://host/hubs/game".</param>
+	/// <param name="sceneHubUrl">Absolute URL of the scene hub endpoint, e.g. "https://host/hubs/scene".</param>
+	public GameHubConnectionFactory(string hubUrl, string? sceneHubUrl = null)
+	{
+		_hubUrl = hubUrl;
+		_sceneHubUrl = sceneHubUrl;
+	}
 
 	/// <inheritdoc/>
-	public IGameHubConnection Create(string accessToken)
+	public IGameHubConnection Create(string accessToken) => Build(_hubUrl, accessToken);
+
+	/// <inheritdoc/>
+	public IGameHubConnection? CreateScene(string accessToken) =>
+		_sceneHubUrl is null ? null : Build(_sceneHubUrl, accessToken);
+
+	private static IGameHubConnection Build(string url, string accessToken)
 	{
 		var connection = new HubConnectionBuilder()
-			.WithUrl(_hubUrl, opts =>
+			.WithUrl(url, opts =>
 			{
 				opts.AccessTokenProvider = () => Task.FromResult<string?>(accessToken);
 			})

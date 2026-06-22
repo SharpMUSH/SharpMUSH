@@ -51,6 +51,8 @@ public static class PluginLoaderService
 		typeof(IFlagSource),
 		typeof(IMigrationSource),
 		typeof(IBridgeSubscriptionSource),
+		// Phase 9 web-contribution seam — must unify so the catalog's pattern-match sees the host's type.
+		typeof(IEndpointContributor),
 		typeof(PluginFlag)
 	];
 
@@ -83,7 +85,12 @@ public static class PluginLoaderService
 	[
 		"Core.Arango",
 		"Neo4j.Driver",
-		"SurrealDb.Net"
+		"SurrealDb.Net",
+		// Phase 9: the Scene plugin's contract surface (Scene/ScenePose/.../ISceneService/SceneEventMessage).
+		// The host references this assembly (SharpMUSH.Server / SharpMUSH.Client), so sharing it BY NAME makes
+		// the host's copy authoritative for both sides — a plugin-hosted controller/hub returns/serializes the
+		// SAME contract Type the host's DI and SignalR wire expect, across the collectible plugin ALC.
+		"SharpMUSH.Plugins.Scene.Contracts"
 	];
 
 	/// <summary>A plugin DLL found on disk together with its (manifest-or-fallback) ordering metadata.</summary>
@@ -389,7 +396,7 @@ public static class PluginLoaderService
 	/// sources, when present, are equally removable) — and <b>none</b> of the load-once seams whose effects
 	/// are captured by the DI container, the database, the flag set, or the NATS bridge and therefore cannot
 	/// be torn down without a server restart: <see cref="IServiceRegistrar"/>, <see cref="IMigrationSource"/>,
-	/// <see cref="IFlagSource"/>, <see cref="IBridgeSubscriptionSource"/>.
+	/// <see cref="IFlagSource"/>, <see cref="IBridgeSubscriptionSource"/>, <see cref="IEndpointContributor"/>.
 	/// </summary>
 	public static bool IsUnloadablePlugin(IPlugin plugin)
 	{
@@ -398,7 +405,9 @@ public static class PluginLoaderService
 			plugin is IServiceRegistrar
 			|| plugin is IMigrationSource
 			|| plugin is IFlagSource
-			|| plugin is IBridgeSubscriptionSource;
+			|| plugin is IBridgeSubscriptionSource
+			// A mapped endpoint (hub/route) is part of the built pipeline and cannot be unmapped at runtime.
+			|| plugin is IEndpointContributor;
 
 		return contributesCommandsOrFunctions && !contributesLoadOnceState;
 	}

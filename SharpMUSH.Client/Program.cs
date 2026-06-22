@@ -92,7 +92,9 @@ builder.Services.AddSingleton<ICharacterStateService, CharacterStateService>();
 builder.Services.AddSingleton<INotificationService, NotificationService>();
 builder.Services.AddSingleton<IGameHubConnectionFactory>(_ =>
 	new GameHubConnectionFactory(
-		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/game"));
+		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/game",
+		// Phase 9: scene realtime is a separate connection to the plugin-owned SceneHub at /hubs/scene.
+		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/scene"));
 builder.Services.AddSingleton<ConnectionStateService>();
 builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredService<ConnectionStateService>());
 // Same singleton, exposed for scene group join/leave (client-only control surface).

@@ -29,7 +29,7 @@ public static class SceneFunctions
 	/// to anyone; non-public scenes are visible only to their members. Mirrors the
 	/// wiki draft-visibility convention.
 	/// </summary>
-	private static async ValueTask<bool> SceneVisibleToAsync(ISceneService service, Library.Models.Scene.Scene scene, IMUSHCodeParser parser)
+	private static async ValueTask<bool> SceneVisibleToAsync(ISceneService service, Contracts.Scene scene, IMUSHCodeParser parser)
 	{
 		if (scene.IsPublic)
 		{

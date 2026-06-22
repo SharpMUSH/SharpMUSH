@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Plugins.Scene.Contracts;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
