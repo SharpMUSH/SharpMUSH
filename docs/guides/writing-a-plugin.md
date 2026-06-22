@@ -305,20 +305,22 @@ public sealed class Plugin : PluginBase, IServiceRegistrar, IEndpointContributor
 }
 ```
 
-**Shared types (contracts).** Anything your controller/hub *and* the host (or client) must both reference —
-DTOs, a service interface, an event message — goes in a tiny **contracts assembly** that the plugin loader
-shares into your ALC, so host and plugin unify on the same `Type`. Add its assembly name to the loader's
-shared set (the framework does this for `SharpMUSH.Plugins.Scene.Contracts`); reference it `Private=false`/
-`ExcludeAssets=runtime` from the plugin so the host owns the runtime copy.
+**Keep your types inside the plugin (no shared contract assembly).** Your DTOs, service interfaces, and
+event messages live **in the plugin assembly**. Do *not* put them in a shared assembly that the host or
+client references: the host can't compile-reference a runtime-loaded plugin, and a third-party plugin
+can't make the host (or the separately-built WASM client) recompile against its types. So the only
+boundaries you get are the **generic seams** (`IServiceRegistrar`, `IEndpointContributor`, the `I*Source`
+contributions — they name no plugin type) and **serialization** (HTTP / SignalR JSON). For a server→client
+push, send a payload over your hub and let the **client define its own DTO** matching your wire shape.
 
 **Hub caveat.** Map a **plain `Hub`** (not `Hub<TClient>`): SignalR's strongly-typed client builds a proxy
 in a non-collectible assembly that can't reference your collectible plugin type. Use a non-generic
-`IHubContext<MyHub>` + `SendAsync("MethodName", payload)` for server→client pushes — same wire contract.
+`IHubContext<MyHub>` + `SendAsync("MethodName", payload)` for server→client pushes.
 
 > A plugin that contributes endpoints/controllers captures load-once state, so it is **load-once** (restart
 > to reload), like the migration/flag/bridge seams. `SharpMUSH.Plugins.Scene` is the canonical end-to-end
-> example: REST `SceneController`, a `/hubs/scene` `SceneHub`, and a `…Scene.Contracts` assembly. See
-> `docs/design/plugin-system.md` (Phase 8/9).
+> example: REST `SceneController`, a `/hubs/scene` `SceneHub`, scene types kept internal to the plugin, and a
+> client that owns its own `SceneEventMessage` DTO. See `docs/design/plugin-system.md` (Phases 8–10).
 
 ## 9. Publishing a managed package (Phase 4 — package-manager DLL distribution)
 

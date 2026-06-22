@@ -292,6 +292,9 @@ The architecture leaves these seams for the committed later phases:
 - **Phase 9** — *implemented* — plugin-owned **web surface**: a plugin contributes MVC controllers
   (`AddControllers().AddApplicationPart(...)` from `IServiceRegistrar`) and maps its own hubs/endpoints via the
   new `IEndpointContributor` seam. Scene's REST controller + realtime hub now live in the plugin (see below).
+- **Phase 10** — *implemented* — **no shared contracts**: `Scene.Contracts` deleted; `ISceneService` + scene
+  models + `SceneEventMessage` moved *inside* the plugin; `Library`/`Server`/`Client` reference zero scene types.
+  Host↔plugin is generic seams + serialization only — the boundary a third-party, hot-loaded plugin needs (see below).
 
 ## Phase 4 — package-manager DLL distribution
 
@@ -408,11 +411,12 @@ host's copies load. The bridge leg forwards through the **non-generic** `IHubCon
 `SendAsync("ReceiveSceneMessage", …)` and builds the `scene:{id}` group key itself, so the plugin needs no
 reference to the Server's `GameHub`/`IGameHubClient`.
 
-**What stayed in the engine (as of Phase 9).** Almost nothing scene-specific: `NotificationType.Scene`
-(one enum value — an enum cannot be partially extended) and `IConnectionStateService.OnSceneEventReceived`
-(a Client-realtime interface member). Both reference the `SharpMUSH.Plugins.Scene.Contracts` types. The
-WASM client keeps its scene pages/widgets (deferred). Everything else — storage, contracts, REST, realtime
-— is in the plugin (Phase 8/9).
+**What stayed in the engine (as of Phase 10).** **Nothing.** `SharpMUSH.Library`, `SharpMUSH.Server`,
+and `SharpMUSH.Client` reference **zero** scene types — `ISceneService`, the models, and `SceneEventMessage`
+all moved *into* the plugin assembly; `NotificationType.Scene` and `IConnectionStateService.OnSceneEventReceived`
+were removed; the `SharpMUSH.Plugins.Scene.Contracts` assembly was **deleted**. The WASM client keeps its
+own scene pages/widgets and its **own** `SceneEventMessage` DTO (it deserializes the SignalR wire). See
+**Phase 10** below for why a shared contract assembly is incompatible with the dynamic third-party goal.
 
 **Boot ordering.** The bundled `scene` softcode package (`examples/packages/scene`) drives `@scene`/`scene…`,
 so the plugin must register its commands/functions *before* the package installs and `@STARTUP` runs.
@@ -467,14 +471,39 @@ a **load-once** seam (a plugin that maps endpoints is not hot-unloadable).
 
 **Scene as the reference:** the REST `SceneController` moved to `SharpMUSH.Plugins.Scene/Web/` and is
 discovered via `AddApplicationPart`; the realtime hub is a plugin-owned `SceneHub` mapped at
-`/hubs/scene` via `MapEndpoints`. The shared scene types — models, `SceneEventMessage`, `ISceneService` —
-live in a dedicated **`SharpMUSH.Plugins.Scene.Contracts`** assembly that the host, plugin, and Client all
-reference and that is host-shared in the ALC.
+`/hubs/scene` via `MapEndpoints`. The scene types (models, `SceneEventMessage`, `ISceneService`) live
+**inside the plugin assembly** — see Phase 10 for why they are *not* in a shared contract assembly.
 
 > **Hub gotcha (documented):** `SceneHub` is a plain `Hub` (not `Hub<TClient>`). SignalR's strongly-typed
 > client emits a proxy in a **non-collectible** dynamic assembly that would reference the **collectible**
 > plugin type — `NotSupportedException` at startup. A plain `Hub` + non-generic `IHubContext<SceneHub>` +
 > `SendAsync("ReceiveSceneMessage", …)` keeps the plugin collectible with the same wire contract.
+
+## Phase 10 — no shared contracts: the third-party / hot-load boundary
+
+Phases 8–9 left one residual coupling: a `SharpMUSH.Plugins.Scene.Contracts` assembly holding
+`ISceneService`, the scene models, and `SceneEventMessage`, **referenced by the host and Client** so their
+`Type` could unify with the ALC-loaded plugin. That pattern works only for **first-party** plugins compiled
+alongside the host. For the actual goal — **third-party plugins, hot-loaded from other repos without a
+server restart** — the host (and the separately-built WASM client) can reference **zero** plugin types:
+otherwise "add a plugin" means "recompile the host", which defeats dynamic loading.
+
+So Phase 10 deletes `Scene.Contracts`. The rule:
+
+> **A plugin's types live inside the plugin. The only boundaries the host/client may use are (a) the
+> generic seams — `IServiceRegistrar`, `IEndpointContributor`, the `I*Source` contributions — which name
+> no plugin type, and (b) serialization (HTTP / SignalR JSON), where the client defines its *own* DTO
+> matching the wire shape. A shared contract assembly the host references is a first-party-only shortcut.**
+
+Concretely for Scene: `ISceneService` + models are now plugin-internal; the host talks to scene only over
+`/api/scenes` and `/hubs/scene`; the Client has its own `SceneEventMessage` record and deserializes the
+hub payload itself. `Library`/`Server`/`Client` name nothing scene.
+
+**Testing consequence.** Because the host can no longer name `ISceneService` type-compatibly with the
+ALC-loaded plugin, host-side scene coverage is **wire-based** (drive `@scene`/`scene…()` and read back via
+the public surface). A plugin's *internal* unit tests belong in a project that compile-references the
+plugin and loads it in the **default** context (no ALC). This is exactly how a third-party plugin author
+tests their own plugin while the host tests only the wire.
 
 ## See also
 
