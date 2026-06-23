@@ -26,6 +26,7 @@ public class WebSocketControlFrameTests
 	[Arguments("{not json")]
 	[Arguments("{\"type\":\"chat\",\"msg\":\"hi\"}")]
 	[Arguments("{\"hello\":1}")]
+	[Arguments("{\"type\":\"naws\",\"cols\":1.5,\"rows\":40}")]
 	public async Task NonNawsReturnsFalse(string message)
 	{
 		await Assert.That(WebSocketControlFrame.TryParseNaws(message, out _, out _)).IsFalse();

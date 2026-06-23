@@ -31,8 +31,11 @@ public static class WebSocketControlFrame
 				|| !root.TryGetProperty("rows", out var rowsEl) || rowsEl.ValueKind != JsonValueKind.Number)
 				return false;
 
-			cols = Clamp(colsEl.GetInt32());
-			rows = Clamp(rowsEl.GetInt32());
+			if (!colsEl.TryGetInt32(out var rawCols) || !rowsEl.TryGetInt32(out var rawRows))
+				return false;
+
+			cols = Clamp(rawCols);
+			rows = Clamp(rawRows);
 			return true;
 		}
 		catch (JsonException)
