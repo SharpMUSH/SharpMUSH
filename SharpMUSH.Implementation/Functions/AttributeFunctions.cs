@@ -56,7 +56,7 @@ public partial class Functions
 		var (dbref, attribute) = details;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, enactor, executor, dbref, LocateFlags.All, async realLocated =>
+			parser, executor, executor, dbref, LocateFlags.All, async realLocated =>
 			{
 				var contents = args.TryGetValue("1", out var tmpContents)
 					? tmpContents.Message!
@@ -97,7 +97,7 @@ public partial class Functions
 		var (dbref, attribute) = details;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, enactor, executor, dbref, LocateFlags.All, async realLocated =>
+			parser, executor, executor, dbref, LocateFlags.All, async realLocated =>
 			{
 				var contents = args.TryGetValue("1", out var tmpContents)
 					? tmpContents.Message!

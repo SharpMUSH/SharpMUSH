@@ -39,7 +39,7 @@ public partial class Commands
 
 		// Locate object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, dbref, LocateFlags.All);
+		executor, executor, dbref, LocateFlags.All);
 
 		if (locate.IsError)
 		{
@@ -150,7 +150,7 @@ public partial class Commands
 
 		// Locate source object
 		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, sourceDbref, LocateFlags.All);
+		executor, executor, sourceDbref, LocateFlags.All);
 
 		if (sourceLocate.IsError)
 		{
@@ -198,7 +198,7 @@ public partial class Commands
 
 			// Locate destination object
 			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor, executor, destDbref, LocateFlags.All);
+			executor, executor, destDbref, LocateFlags.All);
 
 			if (destLocate.IsError)
 			{
@@ -280,7 +280,7 @@ public partial class Commands
 
 		// Locate source object
 		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, sourceDbref, LocateFlags.All);
+		executor, executor, sourceDbref, LocateFlags.All);
 
 		if (sourceLocate.IsError)
 		{
@@ -328,7 +328,7 @@ public partial class Commands
 
 			// Locate destination object
 			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor, executor, destDbref, LocateFlags.All);
+			executor, executor, destDbref, LocateFlags.All);
 
 			if (destLocate.IsError)
 			{
@@ -420,7 +420,7 @@ public partial class Commands
 
 		// Locate object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, dbref, LocateFlags.All);
+		executor, executor, dbref, LocateFlags.All);
 
 		if (locate.IsError)
 		{
@@ -442,7 +442,7 @@ public partial class Commands
 		// Locate new owner
 		var newOwnerText = MModule.plainText(ownerArg.Message!);
 		var ownerLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor, executor, newOwnerText, LocateFlags.All);
+		executor, executor, newOwnerText, LocateFlags.All);
 
 		if (ownerLocate.IsError)
 		{
@@ -535,7 +535,7 @@ public partial class Commands
 
 		// Locate the object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-		enactor,
+		executor,
 		executor,
 		dbref,
 		LocateFlags.All);
