@@ -175,6 +175,12 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	}
 
 	/// <inheritdoc/>
+	public async Task SendControlAsync(string controlJson)
+	{
+		await wsService.SendAsync(controlJson);
+	}
+
+	/// <inheritdoc/>
 	public async Task InitializePortAsync()
 	{
 		try

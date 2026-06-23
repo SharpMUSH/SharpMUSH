@@ -48,6 +48,12 @@ public interface ITerminalService
 	Task SendAsync(string command);
 
 	/// <summary>
+	/// Send a raw control frame (JSON envelope) to the server without echoing it as a terminal
+	/// line. Used for client→server control messages such as NAWS window-size reports.
+	/// </summary>
+	Task SendControlAsync(string controlJson);
+
+	/// <summary>
 	/// Queries the server for the current connection's port descriptor and stores it in
 	/// <see cref="MyPort"/>.  Should be called once, ~1.5 s after a successful login, so that
 	/// subsequent <see cref="SendCommandAsync"/> calls route their end-markers — and
