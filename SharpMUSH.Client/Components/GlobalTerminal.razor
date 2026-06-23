@@ -237,6 +237,8 @@
 
     private DotNetObjectReference<GlobalTerminal>? _selfRef;
     private IJSObjectReference? _cmdLinkHandle;
+    private DotNetObjectReference<GlobalTerminal>? _metricsRef;
+    private IJSObjectReference? _metricsHandle;
 
     protected override async Task OnInitializedAsync()
     {
@@ -330,6 +332,14 @@
                     "SharpMUSH.Terminal.attachCommandLinks", _outputId, _selfRef);
             }
             catch (JSException) { /* ignore if JS not ready */ }
+
+            _metricsRef = DotNetObjectReference.Create(this);
+            try
+            {
+                _metricsHandle = await JsRuntime.InvokeAsync<IJSObjectReference>(
+                    "SharpMUSH.Metrics.observe", _outputId, _metricsRef);
+            }
+            catch (JSException) { /* ignore if JS not ready */ }
         }
 
         if (_autoScroll)
@@ -345,6 +355,18 @@
     {
         if (string.IsNullOrWhiteSpace(command) || !_connected) return;
         await Terminal.SendAsync(command);
+    }
+
+    /// <summary>
+    /// Invoked from JS (via SharpMUSH.Metrics.observe) when the terminal output
+    /// element is resized. Sends a NAWS control frame so the server knows the
+    /// client's character-grid dimensions.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnTerminalResize(int cols, int rows)
+    {
+        if (!Terminal.IsConnected) return;
+        await Terminal.SendControlAsync($"{{\"type\":\"naws\",\"cols\":{cols},\"rows\":{rows}}}");
     }
 
     // ── Account login / register ─────────────────────────────────────────────
@@ -543,5 +565,14 @@
             catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
         }
         _selfRef?.Dispose();
+
+        if (_metricsHandle is not null)
+        {
+            try { await _metricsHandle.InvokeVoidAsync("dispose"); }
+            catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
+            try { await _metricsHandle.DisposeAsync(); }
+            catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
+        }
+        _metricsRef?.Dispose();
     }
 }
