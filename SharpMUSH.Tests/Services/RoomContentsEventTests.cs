@@ -97,4 +97,46 @@ public class RoomContentsEventTests
 		await Cmd("&LAST_MOVEIN_move-in #9=");
 		await Cmd("&LAST_MOVEIN_move-out #9=");
 	}
+
+	[Test]
+	public async ValueTask HandlerEnactorIsRealTriggeringObject()
+	{
+		// Regression test: before the fix, EventService hard-set Enactor = handlerRef (#9),
+		// so %# inside any event handler was always #9 rather than the object that caused
+		// the event. This test proves the enactor (%#) passed into the handler equals the
+		// executor of the @tel command (God, #1), NOT the handler object (#9).
+
+		// Install handler: capture %# (the enactor) into SAW_ENACTOR on #9.
+		await Cmd("&ROOM`CONTENTS #9=&SAW_ENACTOR #9=%#");
+
+		var token = TestIsolationHelpers.GenerateUniqueName("enc");
+		var roomName = $"EncRoom_{token}";
+		var thingName = $"EncThing_{token}";
+
+		var digResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomDbref = digResult.Message!.ToPlainText()!.Trim();
+
+		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {thingName}"));
+		var thingDbref = createResult.Message!.ToPlainText()!.Trim();
+
+		await Assert.That(roomDbref).StartsWith("#");
+		await Assert.That(thingDbref).StartsWith("#");
+
+		// @tel is run as God (#1) via CommandParser.CommandParse(handle=1, ...).
+		// MoveObjectCommand.Enactor is set to executor.DBRef = #1 by @TELEPORT.
+		// After the fix, %# inside the handler must be #1.
+		await Cmd($"@tel {thingDbref}={roomDbref}");
+
+		var sawEnactor = await Eval("get(#9/SAW_ENACTOR)");
+
+		// The triggering enactor is #1 (God), NOT #9 (the handler object).
+		var expectedEnactor = "#1";
+		var handlerObject = "#9";
+		await Assert.That(sawEnactor).IsEqualTo(expectedEnactor);
+		await Assert.That(sawEnactor).IsNotEqualTo(handlerObject);
+
+		// Cleanup.
+		await Cmd("&ROOM`CONTENTS #9=");
+		await Cmd("&SAW_ENACTOR #9=");
+	}
 }

@@ -76,6 +76,36 @@ public class EventService(
 				argsDict[i.ToString()] = new CallState(args[i]);
 			}
 
+			// Resolve the enactor (%#) for this event.
+			// PennMUSH contract: %# is the object that caused the event (e.g. the player who
+			// connected, the wizard who ran @tel). For system events with no real actor, enactor
+			// is null → we fall back to #-1, and then to the handler object itself so that
+			// %# is never a non-existent dbref inside handler code.
+			var eventEnactorRef = enactor ?? new DBRef(-1, null);
+			DBRef resolvedEnactorRef;
+			if (eventEnactorRef.Number < 0)
+			{
+				// System event: no real actor — handler runs as God (elevated).
+				resolvedEnactorRef = new DBRef(1, null);
+			}
+			else
+			{
+				var enactorResult = await mediator.Send(new GetObjectNodeQuery(eventEnactorRef));
+				if (enactorResult.IsNone)
+				{
+					// Enactor no longer exists — fall back to God.
+					logger.LogWarning(
+						"Event enactor {Enactor} not found for event {EventName}, using God as enactor",
+						eventEnactorRef,
+						eventName);
+					resolvedEnactorRef = new DBRef(1, null);
+				}
+				else
+				{
+					resolvedEnactorRef = eventEnactorRef;
+				}
+			}
+
 			// Build a fresh parser state with the event arguments bound as %0, %1, ...
 			// This mirrors the HTTP handler pattern (HttpHandlerCommandService) and the startup
 			// bootstrap pattern (StartupAttributeBootstrapService): when there is no ambient parse
@@ -83,56 +113,44 @@ public class EventService(
 			// on an empty ImmutableStack). Using CommandListParse (not FunctionParse) so that the
 			// attribute body can run commands such as &attr obj=val, @emit, @switch, etc.
 			//
-			// Both Executor and Enactor are set to handlerRef (the event_handler object) so that:
-			// 1. The event handler runs as itself (%! = %# = handler), matching PennMUSH semantics.
-			// 2. Locate() permission checks pass: Nearby(handler, handler) is always true, allowing
-			//    the handler's attribute code to find and modify objects like itself.
-			// The real "who caused this event" is already carried in the event args (%0, %1, …).
-			var evalParser = parser.State.IsEmpty
-				? parser.Push(new ParserState(
-					Registers: new([[]]),
-					IterationRegisters: [],
-					RegexRegisters: [],
-					SwitchStack: [],
-					ExecutionStack: [],
-					EnvironmentRegisters: argsDict,
-					CurrentEvaluation: null,
-					ParserFunctionDepth: 0,
-					Function: null,
-					Command: null,
-					CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-					Switches: [],
-					Arguments: argsDict,
-					Executor: handlerRef,
-					Enactor: handlerRef,
-					Caller: handlerRef,
-					Handle: null,
-					CallDepth: new InvocationCounter(),
-					FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-					TotalInvocations: new InvocationCounter(),
-					LimitExceeded: new LimitExceededFlag()))
-				: parser.Push(new ParserState(
-					Registers: new([[]]),
-					IterationRegisters: [],
-					RegexRegisters: [],
-					SwitchStack: [],
-					ExecutionStack: [],
-					EnvironmentRegisters: argsDict,
-					CurrentEvaluation: null,
-					ParserFunctionDepth: 0,
-					Function: null,
-					Command: null,
-					CommandInvoker: parser.CurrentState.CommandInvoker,
-					Switches: [],
-					Arguments: argsDict,
-					Executor: handlerRef,
-					Enactor: handlerRef,
-					Caller: handlerRef,
-					Handle: parser.CurrentState.Handle,
-					CallDepth: parser.CurrentState.CallDepth ?? new InvocationCounter(),
-					FunctionRecursionDepths: parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-					TotalInvocations: parser.CurrentState.TotalInvocations ?? new InvocationCounter(),
-					LimitExceeded: parser.CurrentState.LimitExceeded ?? new LimitExceededFlag()));
+			// Executor = God (#1) — the "ignorePermissions: true" mechanism from the original
+			//   EvaluateAttributeFunctionAsync path: God is IsSee_All and IsGod, so the Nearby
+			//   check in Locate() is bypassed and CanSet() always succeeds. This matches the
+			//   elevated-permissions semantics events require.
+			// Enactor = resolvedEnactorRef (%# — the object that caused the event)
+			// Caller  = handlerRef (%@ — who triggered this evaluation; the handler itself)
+			//
+			// Note: %! inside the handler will be #1 (God). If softcode needs the handler object,
+			// it can use num(handler_name) or a named q-register. This is the same trade-off as
+			// the original EvaluateAttributeFunctionAsync(ignorePermissions:true) path.
+			var godRef = new DBRef(1, null);
+			var isEmpty = parser.State.IsEmpty;
+			var evalParser = parser.Push(new ParserState(
+				Registers: new([[]]),
+				IterationRegisters: [],
+				RegexRegisters: [],
+				SwitchStack: [],
+				ExecutionStack: [],
+				EnvironmentRegisters: argsDict,
+				CurrentEvaluation: null,
+				ParserFunctionDepth: 0,
+				Function: null,
+				Command: null,
+				CommandInvoker: isEmpty
+					? _ => ValueTask.FromResult(new Option<CallState>(new None()))
+					: parser.CurrentState.CommandInvoker,
+				Switches: [],
+				Arguments: argsDict,
+				Executor: godRef,
+				Enactor: resolvedEnactorRef,
+				Caller: handlerRef,
+				Handle: isEmpty ? null : parser.CurrentState.Handle,
+				CallDepth: isEmpty ? new InvocationCounter() : parser.CurrentState.CallDepth ?? new InvocationCounter(),
+				FunctionRecursionDepths: isEmpty
+					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+					: parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+				TotalInvocations: isEmpty ? new InvocationCounter() : parser.CurrentState.TotalInvocations ?? new InvocationCounter(),
+				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag()));
 
 			// Run the attribute body as a command list (same as @include, HTTP handler, @startup).
 			// This allows commands such as & (attribute set), @emit, @switch, etc.
