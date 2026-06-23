@@ -560,17 +560,24 @@ public partial class Functions
 
 			await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
 			{
-				if (connection.Metadata.GetValueOrDefault("GMCP", "0") != "1")
+				// WebSocket (portal) connections receive a structured OOB envelope the browser
+				// routes by package; GMCP-negotiated telnet connections receive a GMCP package.
+				// Any other connection (plain telnet without GMCP) is skipped.
+				if (connection.ConnectionType == "websocket")
 				{
-					continue;
+					await MessageBus!.Publish(new WebSocketOutputMessage(
+						connection.Handle,
+						WebSocketOobEnvelope.Build(package, message)));
+					sentCount++;
 				}
-
-				await MessageBus!.Publish(new GMCPOutputMessage(
-					connection.Handle,
-					package,
-					message));
-
-				sentCount++;
+				else if (connection.Metadata.GetValueOrDefault("GMCP", "0") == "1")
+				{
+					await MessageBus!.Publish(new GMCPOutputMessage(
+						connection.Handle,
+						package,
+						message));
+					sentCount++;
+				}
 			}
 		}
 
