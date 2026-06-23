@@ -277,6 +277,84 @@ The worked Phase 2b fixture is again `SamplePlugin`: it observes every command (
 `ICommandInterceptor`, and records created objects via `IObjectLifecycleHook`; the integration tests assert
 the interceptor fires, the veto skips the command body, and the create hook is invoked.
 
+## 8.5. Contributing a web surface — controllers, hubs, endpoints (Phase 9)
+
+A plugin can extend the ASP.NET host the same way an app would, across the two phases — both piped through
+the loader, so you `MapX`/`AddX` and the host wires the rest.
+
+**Services + controllers (ConfigureServices).** Your `IServiceRegistrar.RegisterServices` receives the real
+`IServiceCollection`. Register services, and expose MVC controllers defined in *your* assembly by adding it
+as an `ApplicationPart` (the "FromAssembly" load). Add SignalR if you map a hub:
+
+```csharp
+public sealed class Plugin : PluginBase, IServiceRegistrar, IEndpointContributor
+{
+	public void RegisterServices(IServiceCollection services)
+	{
+		services.AddControllers().AddApplicationPart(typeof(Plugin).Assembly); // discovers your [ApiController]s
+		services.AddSignalR();                                                 // only if you map a hub below
+		services.AddSingleton<MyService>();
+	}
+
+	// Endpoints/hubs (pipeline) — host calls this after mapping its own controllers/hubs:
+	public void MapEndpoints(IEndpointRouteBuilder endpoints)
+	{
+		endpoints.MapHub<MyHub>("/hubs/mine");
+		endpoints.MapGet("/api/myplugin/ping", () => "pong");
+	}
+}
+```
+
+**Keep your types inside the plugin (no shared contract assembly).** Your DTOs, service interfaces, and
+event messages live **in the plugin assembly**. Do *not* put them in a shared assembly that the host or
+client references: the host can't compile-reference a runtime-loaded plugin, and a third-party plugin
+can't make the host (or the separately-built WASM client) recompile against its types. So the only
+boundaries you get are the **generic seams** (`IServiceRegistrar`, `IEndpointContributor`, the `I*Source`
+contributions — they name no plugin type) and **serialization** (HTTP / SignalR JSON). For a server→client
+push, send a payload over your hub and let the **client define its own DTO** matching your wire shape.
+
+**Hub caveat.** Map a **plain `Hub`** (not `Hub<TClient>`): SignalR's strongly-typed client builds a proxy
+in a non-collectible assembly that can't reference your collectible plugin type. Use a non-generic
+`IHubContext<MyHub>` + `SendAsync("MethodName", payload)` for server→client pushes.
+
+> A plugin that contributes endpoints/controllers captures load-once state, so it is **load-once** (restart
+> to reload), like the migration/flag/bridge seams. `SharpMUSH.Plugins.Scene` is the canonical end-to-end
+> example: REST `SceneController`, a `/hubs/scene` `SceneHub`, scene types kept internal to the plugin, and a
+> client that owns its own `SceneEventMessage` DTO. See `docs/design/plugin-system.md` (Phases 8–10).
+
+## 8.6. Contributing portal UI + a NavBar section (Phase 11)
+
+You can add pages and NavBar entries to the WASM client **without shipping a browser assembly** — by
+contributing a schema-driven Area-21 *Application* and serving its schema/data from your own controller
+(§8.5). Implement `IApplicationSource`:
+
+```csharp
+public sealed class Plugin : PluginBase, IServiceRegistrar, IEndpointContributor, IApplicationSource
+{
+	public IEnumerable<RegisteredApplication> GetApplications() =>
+	[
+		new RegisteredApplication(
+			Slug: "myplugin",
+			DisplayName: "My Plugin",
+			Icon: null,
+			Kind: "Page",                       // Page → a /apps/{slug} route; Widget → a layout-zone tile
+			SchemaUrl: "/api/myplugin/schema",  // served by YOUR controller (AddApplicationPart)
+			DataUrl: "/api/myplugin/data",
+			SubmitRoute: null,
+			MinimumRole: "Player",
+			NavPlacement: "World",              // a built-in group, or a NEW name to create your own section
+			Zones: [],
+			Order: 100)
+	];
+}
+```
+
+The host overlays your apps onto the registry **in memory while you're loaded** (nothing is persisted), so
+they appear in `/api/applications`, render at `/apps/myplugin` via the client's generic schema renderer, and
+show up in the NavBar — under `World` here, or as their own section if `NavPlacement` is a new name. Unload
+the plugin and they vanish. Access is filtered by `MinimumRole`. Custom compiled Blazor components are not
+supported (declarative/schema-driven only). See `docs/design/plugin-system.md` (Phase 11).
+
 ## 9. Publishing a managed package (Phase 4 — package-manager DLL distribution)
 
 Instead of asking operators to hand-copy your DLL into `plugins/`, you can ship it through the **package

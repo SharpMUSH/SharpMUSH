@@ -1,7 +1,6 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models.Scene;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -104,12 +103,12 @@ public static class SceneRead
 			});
 	}
 
-	private static string FormatSummary(Library.Models.Scene.Scene scene)
+	private static string FormatSummary(Contracts.Scene scene)
 		=> $"SCENE #{scene.Id} [{scene.Status}] {(scene.Meta.TryGetValue("title", out var t) ? t : "(untitled)")}" +
 		   $" — owner {scene.OwnerName}, room {(string.IsNullOrEmpty(scene.RoomName) ? "(roomless)" : scene.RoomName)}," +
 		   $" {scene.PoseCount} pose(s)";
 
-	private static string ReadKey(Library.Models.Scene.Scene scene, string key)
+	private static string ReadKey(Contracts.Scene scene, string key)
 		=> key.ToLowerInvariant() switch
 		{
 			"status" => scene.Status,

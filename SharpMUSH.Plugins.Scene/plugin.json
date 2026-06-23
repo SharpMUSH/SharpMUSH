@@ -3,5 +3,6 @@
   "version": "1.0.0",
   "dependencies": [],
   "priority": 0,
-  "minServerVersion": null
+  "minServerVersion": null,
+  "sharedAssemblies": ["Core.Arango", "Neo4j.Driver", "SurrealDb.Net"]
 }

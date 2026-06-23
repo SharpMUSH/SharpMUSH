@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Models.Portal.Widgets;
@@ -30,6 +31,7 @@ namespace SharpMUSH.Server.Controllers;
 public class ApplicationsController(
 	IApplicationRegistryService registry,
 	IHttpHandlerCommandDispatcher dispatcher,
+	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<ApplicationsController> logger) : ControllerBase
 {
 	public record ApplicationDto(
@@ -44,7 +46,10 @@ public class ApplicationsController(
 		string? NavPlacement,
 		string[] Zones,
 		int Order,
-		string? OwningPackage = null);
+		string? OwningPackage = null,
+		string RenderKind = ApplicationRenderKind.Schema,
+		string? ComponentAssemblyUrl = null,
+		string? ComponentTypeName = null);
 
 	// Reads are anonymous: these records are nav/widget metadata (the actual data and actions are
 	// authorized by the in-game handler), and the portal needs them to render widgets on public pages
@@ -54,7 +59,10 @@ public class ApplicationsController(
 	public async Task<ActionResult<IReadOnlyList<ApplicationDto>>> List()
 	{
 		var apps = await registry.GetApplicationsAsync();
-		return Ok(apps.Select(ToDto).ToList());
+		var allowBrowserCode = options.CurrentValue.Database.AllowBrowserCode;
+		// Gate: Component-kind apps (browser-loaded compiled components) are omitted from the catalog when
+		// allow_browser_code is off, so the client never even learns of them. Schema apps are unaffected.
+		return Ok(apps.Where(a => allowBrowserCode || !IsComponent(a)).Select(ToDto).ToList());
 	}
 
 	[HttpGet("{slug}")]
@@ -63,9 +71,14 @@ public class ApplicationsController(
 	{
 		var result = await registry.GetApplicationAsync(slug);
 		return result.Match<ActionResult<ApplicationDto>>(
-			app => Ok(ToDto(app)),
+			app => IsComponent(app) && !options.CurrentValue.Database.AllowBrowserCode
+				? NotFound()
+				: Ok(ToDto(app)),
 			_ => NotFound());
 	}
+
+	private static bool IsComponent(RegisteredApplication a) =>
+		string.Equals(a.RenderKind, ApplicationRenderKind.Component, StringComparison.OrdinalIgnoreCase);
 
 	[HttpPost]
 	[Authorize(Policy = PortalPermission.ApplicationsAdmin)]
@@ -100,6 +113,10 @@ public class ApplicationsController(
 		var existing = await registry.GetApplicationAsync(dto.Slug.Trim());
 		var owningPackage = existing.Match(app => app.OwningPackage, _ => null);
 
+		var renderKind = string.Equals(dto.RenderKind, ApplicationRenderKind.Component, StringComparison.OrdinalIgnoreCase)
+			? ApplicationRenderKind.Component
+			: ApplicationRenderKind.Schema;
+
 		var application = new RegisteredApplication(
 			dto.Slug.Trim(),
 			dto.DisplayName.Trim(),
@@ -112,7 +129,10 @@ public class ApplicationsController(
 			string.IsNullOrWhiteSpace(dto.NavPlacement) ? null : dto.NavPlacement.Trim(),
 			ParseZones(dto.Zones),
 			dto.Order,
-			owningPackage);
+			owningPackage,
+			renderKind,
+			string.IsNullOrWhiteSpace(dto.ComponentAssemblyUrl) ? null : dto.ComponentAssemblyUrl.Trim(),
+			string.IsNullOrWhiteSpace(dto.ComponentTypeName) ? null : dto.ComponentTypeName.Trim());
 
 		await registry.UpsertApplicationAsync(application);
 		logger.LogInformation("Registered application '{Slug}' ({Kind}).", application.Slug, application.Kind);
@@ -205,5 +225,8 @@ public class ApplicationsController(
 		a.NavPlacement,
 		(a.Zones ?? []).Select(z => z.ToString()).ToArray(),
 		a.Order,
-		a.OwningPackage);
+		a.OwningPackage,
+		a.RenderKind,
+		a.ComponentAssemblyUrl,
+		a.ComponentTypeName);
 }

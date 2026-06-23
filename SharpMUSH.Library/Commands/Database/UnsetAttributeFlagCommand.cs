@@ -10,7 +10,9 @@ public record UnsetAttributeFlagCommand(DBRef DbRef, SharpAttribute Target, Shar
 	public string[] CacheKeys =>
 	[
 		$"attribute:{DbRef}:{Target.LongName})",
-		$"commands:{DbRef}"
+		$"commands:{DbRef}",
+		$"ancestor-commands:#{DbRef.Number}",
+		$"ancestor-listens:#{DbRef.Number}"
 	];
 	public string[] CacheTags => [Definitions.CacheTags.ObjectAttributes];
 }

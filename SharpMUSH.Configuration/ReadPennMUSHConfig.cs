@@ -119,16 +119,20 @@ public static partial class ReadPennMushConfig
 				RequiredDatabaseReference(Get(nameof(DatabaseOptions.DefaultHome)), 0),
 				Boolean(Get(nameof(DatabaseOptions.ExitsConnectRooms)), false),
 				Boolean(Get(nameof(DatabaseOptions.ZoneControlZmpOnly)), true),
-				DatabaseReference(Get(nameof(DatabaseOptions.AncestorRoom)), null),
-				DatabaseReference(Get(nameof(DatabaseOptions.AncestorExit)), null),
-				DatabaseReference(Get(nameof(DatabaseOptions.AncestorThing)), null),
-				DatabaseReference(Get(nameof(DatabaseOptions.AncestorPlayer)), null),
+				// Default to the ancestor objects seeded by Migration_CreateDatabase:
+				// #3 Ancestor Room, #4 Ancestor Player, #5 Ancestor Exit, #6 Ancestor Thing.
+				// Matches OptionsService.Default(). A value of -1 in the config disables that ancestor.
+				DatabaseReference(Get(nameof(DatabaseOptions.AncestorRoom)), 3u),
+				DatabaseReference(Get(nameof(DatabaseOptions.AncestorExit)), 5u),
+				DatabaseReference(Get(nameof(DatabaseOptions.AncestorThing)), 6u),
+				DatabaseReference(Get(nameof(DatabaseOptions.AncestorPlayer)), 4u),
 				// Default to the system objects seeded by Migration_CreateDatabase:
-				// #3 Package Manager, #4 HTTP Handler, #5 Event Handler. Matches OptionsService.Default().
-				DatabaseReference(Get(nameof(DatabaseOptions.EventHandler)), 5u),
-				DatabaseReference(Get(nameof(DatabaseOptions.HttpHandler)), 4u),
-				DatabaseReference(Get(nameof(DatabaseOptions.PackageManager)), 3u),
-				UnsignedInteger(Get(nameof(DatabaseOptions.HttpRequestsPerSecond)), 30)
+				// #7 Package Manager, #8 HTTP Handler, #9 Event Handler. Matches OptionsService.Default().
+				DatabaseReference(Get(nameof(DatabaseOptions.EventHandler)), 9u),
+				DatabaseReference(Get(nameof(DatabaseOptions.HttpHandler)), 8u),
+				DatabaseReference(Get(nameof(DatabaseOptions.PackageManager)), 7u),
+				UnsignedInteger(Get(nameof(DatabaseOptions.HttpRequestsPerSecond)), 30),
+				Boolean(Get(nameof(DatabaseOptions.AllowBrowserCode)), false)
 			),
 			Dump = new DumpOptions(
 				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), "10m1s")
@@ -345,12 +349,26 @@ public static partial class ReadPennMushConfig
 				? result
 				: fallback;
 
-	private static uint? DatabaseReference(string value, uint? fallback) =>
-		string.IsNullOrWhiteSpace(value)
-			? fallback
-			: uint.TryParse(value, out var result)
-				? result
-				: fallback;
+	private static uint? DatabaseReference(string value, uint? fallback)
+	{
+		// Unset -> fallback default.
+		if (string.IsNullOrWhiteSpace(value))
+		{
+			return fallback;
+		}
+
+		// PennMUSH dbref-disable semantics: a negative value (canonically -1) means "no object"
+		// (e.g. ANCESTOR_* disabled). Negatives never parse as uint, so handle them explicitly
+		// rather than silently falling back to the default.
+		if (int.TryParse(value, out var signed) && signed < 0)
+		{
+			return null;
+		}
+
+		return uint.TryParse(value, out var result)
+			? result
+			: fallback;
+	}
 
 	private static uint RequiredDatabaseReference(string value, uint fallback) =>
 		UnsignedInteger(value, fallback);

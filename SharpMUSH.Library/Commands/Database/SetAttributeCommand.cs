@@ -9,7 +9,9 @@ public record SetAttributeCommand(DBRef DBRef, string[] Attribute, MString Value
 	public string[] CacheKeys =>
 	[
 		$"attribute:{DBRef}:{string.Join("`", Attribute)})",
-		$"commands:{DBRef}"
+		$"commands:{DBRef}",
+		$"ancestor-commands:#{DBRef.Number}",
+		$"ancestor-listens:#{DBRef.Number}"
 	];
 	public string[] CacheTags => [Definitions.CacheTags.ObjectAttributes];
 }

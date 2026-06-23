@@ -149,11 +149,24 @@ public class Startup(
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
+			// Host-shared storage accessor for storage plugins (e.g. the Scene plugin). Generic seam over the
+			// active provider's connection; carries no subsystem concept.
+			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.IMemgraphStorageAccessor>(sp =>
+				(SharpMUSH.Library.Plugins.Storage.IMemgraphStorageAccessor)sp.GetRequiredService<ISharpDatabase>());
 		}
 		else if (databaseProvider == DatabaseProvider.SurrealDB)
 		{
-			services.AddSurreal("Endpoint=mem://;Namespace=sharpmush;Database=world")
-				.AddInMemoryProvider();
+			// Config-driven endpoint so production persists to disk (RocksDB) while tests stay in-memory.
+			// Resolution: SHARPMUSH_SURREALDB_ENDPOINT env → appsettings "SurrealDb:Endpoint" → file-backed default.
+			// A pure mem:// store loses ALL data on restart, so production must default to a durable engine.
+			var surrealEndpoint = Environment.GetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT")
+				?? configuration["SurrealDb:Endpoint"]
+				?? "rocksdb://surrealdb-data";
+			// Register both embedded engines; the endpoint scheme selects which the live client uses, and the
+			// migration staging client (always mem://) needs the in-memory engine present regardless.
+			services.AddSurreal($"Endpoint={surrealEndpoint};Namespace=sharpmush;Database=world")
+				.AddInMemoryProvider()
+				.AddRocksDbProvider();
 			services.AddSingleton<ISharpDatabase, SurrealDatabase>(x =>
 			{
 				var dbLogger = x.GetRequiredService<ILogger<SurrealDatabase>>();
@@ -164,6 +177,8 @@ public class Startup(
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
+			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ISurrealStorageAccessor>(sp =>
+				(SharpMUSH.Library.Plugins.Storage.ISurrealStorageAccessor)sp.GetRequiredService<ISharpDatabase>());
 		}
 		else
 		{
@@ -178,6 +193,8 @@ public class Startup(
 				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 				return db;
 			});
+			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.IArangoStorageAccessor>(sp =>
+				(SharpMUSH.Library.Plugins.Storage.IArangoStorageAccessor)sp.GetRequiredService<ISharpDatabase>());
 		}
 
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
@@ -247,6 +264,12 @@ public class Startup(
 			sp.GetRequiredService<IPluginManager>(),
 			sp.GetRequiredService<ManagedPackageTrustOptions>(),
 			sp.GetRequiredService<ILogger<ManagedPackageInstaller>>()));
+		// Serves a managed plugin's compiled UI assembly bytes to the WASM client, re-verifying them against
+		// the Phase-4 install-time SHA-256 sidecar before serving. The PluginsUiController gates it on
+		// allow_browser_code; this provider enforces the hash/traversal guards regardless.
+		services.AddSingleton<IPluginUiAssemblyProvider>(sp =>
+			new FileSystemPluginUiAssemblyProvider(
+				sp.GetRequiredService<ILogger<FileSystemPluginUiAssemblyProvider>>()));
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
 		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();
 		services.AddSingleton<IPackageSourceService>(sp =>
@@ -277,7 +300,14 @@ public class Startup(
 		services.AddSingleton<IPackageRegistryService>(sp => (IPackageRegistryService)sp.GetRequiredService<ISharpDatabase>());
 
 // Dynamic Application registry (Area 21) — same pattern; every DB backend implements IApplicationRegistryService.
-		services.AddSingleton<IApplicationRegistryService>(sp => (IApplicationRegistryService)sp.GetRequiredService<ISharpDatabase>());
+// Wrapped in a read-only overlay decorator so the PluginCatalog's IApplicationSource contributions are unioned
+// into reads while their plugins are loaded (DB/built-in wins on a slug collision; plugin apps are not
+// persisted and not admin-editable). The DB-backed impl is the decorator's inner.
+		services.AddSingleton<IApplicationRegistryService>(sp =>
+			new Implementation.Services.PluginApplicationRegistryDecorator(
+				(IApplicationRegistryService)sp.GetRequiredService<ISharpDatabase>(),
+				sp.GetRequiredService<Implementation.Services.PluginCatalog>(),
+				sp.GetRequiredService<ILogger<Implementation.Services.PluginApplicationRegistryDecorator>>()));
 // Admin-customized layout registry — same cast pattern; every DB backend implements ILayoutRegistryService.
 		services.AddSingleton<ILayoutRegistryService>(sp => (ILayoutRegistryService)sp.GetRequiredService<ISharpDatabase>());
 // Portal RBAC role registry — same cast pattern; every DB backend implements IRoleRegistryService.
@@ -285,10 +315,10 @@ public class Startup(
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
-		// Scene subsystem — ISceneService is implemented by the active ISharpDatabase
-		// provider (Arango/Memgraph/Surreal), cast like the IWikiService tri-cast above.
-		// There is no in-memory implementation.
-		services.AddSingleton<ISceneService>(sp => (ISceneService)sp.GetRequiredService<ISharpDatabase>());
+		// Scene subsystem — ISceneService is NO LONGER implemented by core providers. It is registered by
+		// the Scene plugin's IServiceRegistrar (ScenePlugin.RegisterServices -> services.AddSceneSystem),
+		// which keys per-provider storage over the host-shared storage accessors registered above and wraps
+		// it with any registered behaviors. Removing the plugin leaves core with no scene storage.
 
 // Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
 		services.AddMemoryCache();
@@ -306,6 +336,11 @@ public class Startup(
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 
+		// Generic "plugins changed" notifier: after a plugin unload/reload, the PluginManager fires this to
+		// broadcast ReceivePluginsChanged to every connected portal client, which forces a hard browser refresh
+		// (the only way to reclaim a compiled component assembly loaded into the WASM runtime). Registered
+		// before the PluginManager so its optional IPluginChangeNotifier ctor param resolves.
+		services.AddSingleton<IPluginChangeNotifier, Server.Services.SignalRPluginChangeNotifier>();
 		// C# plugin loader: discovers plugins/ DLLs at boot and registers their [SharpCommand]/[SharpFunction]
 		// into the live command/function libraries with IsSystem=true (see PluginBootstrapService below).
 		services.AddSingleton<IPluginManager, Implementation.Services.PluginManager>();

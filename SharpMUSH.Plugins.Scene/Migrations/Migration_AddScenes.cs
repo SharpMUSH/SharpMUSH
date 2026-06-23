@@ -2,6 +2,7 @@ using Core.Arango;
 using Core.Arango.Migration;
 using Core.Arango.Protocol;
 using SharpMUSH.Database;
+using SharpMUSH.Plugins.Scene.Storage;
 
 namespace SharpMUSH.Plugins.Scene.Migrations;
 
@@ -29,13 +30,22 @@ public class Migration_AddScenes : IArangoMigration
 	public async Task Up(IArangoMigrator migrator, ArangoHandle handle)
 	{
 		// ── Vertex DOCUMENT collections ─────────────────────────────────────────
-		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.SharpScenes))
+		if (!await migrator.Context.Collection.ExistAsync(handle, SceneArangoConstants.SharpScenes))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection
 			{
-				Name = DatabaseConstants.SharpScenes,
+				Name = SceneArangoConstants.SharpScenes,
 				Type = ArangoCollectionType.Document,
 				WaitForSync = true,
+				// 1-based scene ids: keys come from this collection's own autoincrement
+				// sequence (1,2,3,…) rather than the server-wide HLC key generator.
+				KeyOptions = new ArangoKeyOptions
+				{
+					AllowUserKeys = true,
+					Type = ArangoKeyType.Autoincrement,
+					Increment = 1,
+					Offset = 0
+				},
 				Schema = new ArangoSchema
 				{
 					Rule = new
@@ -55,32 +65,40 @@ public class Migration_AddScenes : IArangoMigration
 				}
 			});
 
-			await migrator.Context.Index.CreateAsync(handle, DatabaseConstants.SharpScenes, new ArangoIndex
+			await migrator.Context.Index.CreateAsync(handle, SceneArangoConstants.SharpScenes, new ArangoIndex
 			{
 				Fields = ["Status"],
 				Type = ArangoIndexType.Persistent
 			});
 
-			await migrator.Context.Index.CreateAsync(handle, DatabaseConstants.SharpScenes, new ArangoIndex
+			await migrator.Context.Index.CreateAsync(handle, SceneArangoConstants.SharpScenes, new ArangoIndex
 			{
 				Fields = ["ScheduledFor"],
 				Type = ArangoIndexType.Persistent
 			});
 
-			await migrator.Context.Index.CreateAsync(handle, DatabaseConstants.SharpScenes, new ArangoIndex
+			await migrator.Context.Index.CreateAsync(handle, SceneArangoConstants.SharpScenes, new ArangoIndex
 			{
 				Fields = ["IsPublic"],
 				Type = ArangoIndexType.Persistent
 			});
 		}
 
-		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.SharpScenePoses))
+		if (!await migrator.Context.Collection.ExistAsync(handle, SceneArangoConstants.SharpScenePoses))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection
 			{
-				Name = DatabaseConstants.SharpScenePoses,
+				Name = SceneArangoConstants.SharpScenePoses,
 				Type = ArangoCollectionType.Document,
 				WaitForSync = true,
+				// 1-based pose ids: keys come from this collection's own autoincrement sequence.
+				KeyOptions = new ArangoKeyOptions
+				{
+					AllowUserKeys = true,
+					Type = ArangoKeyType.Autoincrement,
+					Increment = 1,
+					Offset = 0
+				},
 				Schema = new ArangoSchema
 				{
 					Rule = new
@@ -105,11 +123,11 @@ public class Migration_AddScenes : IArangoMigration
 			});
 		}
 
-		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.SharpScenePoseEdits))
+		if (!await migrator.Context.Collection.ExistAsync(handle, SceneArangoConstants.SharpScenePoseEdits))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection
 			{
-				Name = DatabaseConstants.SharpScenePoseEdits,
+				Name = SceneArangoConstants.SharpScenePoseEdits,
 				Type = ArangoCollectionType.Document,
 				WaitForSync = true,
 				Schema = new ArangoSchema
@@ -132,11 +150,11 @@ public class Migration_AddScenes : IArangoMigration
 			});
 		}
 
-		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.SharpScenePlots))
+		if (!await migrator.Context.Collection.ExistAsync(handle, SceneArangoConstants.SharpScenePlots))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection
 			{
-				Name = DatabaseConstants.SharpScenePlots,
+				Name = SceneArangoConstants.SharpScenePlots,
 				Type = ArangoCollectionType.Document,
 				WaitForSync = true,
 				Schema = new ArangoSchema
@@ -163,22 +181,22 @@ public class Migration_AddScenes : IArangoMigration
 		// ── Edge collections ────────────────────────────────────────────────────
 		string[] edgeCollections =
 		[
-			DatabaseConstants.SceneFirstPose,
-			DatabaseConstants.SceneLastPose,
-			DatabaseConstants.ScenePoseNext,
-			DatabaseConstants.ScenePoseInScene,
-			DatabaseConstants.SceneFirstEdit,
-			DatabaseConstants.SceneCurrentEdit,
-			DatabaseConstants.SceneNextEdit,
-			DatabaseConstants.ScenePlotIncludes,
-			DatabaseConstants.SceneMember,
-			DatabaseConstants.SceneInRoom,
-			DatabaseConstants.SceneOwner,
-			DatabaseConstants.SceneStarter,
-			DatabaseConstants.ScenePoseAuthor,
-			DatabaseConstants.ScenePoseOrigin,
-			DatabaseConstants.SceneEditEditor,
-			DatabaseConstants.ScenePlotOwner
+			SceneArangoConstants.SceneFirstPose,
+			SceneArangoConstants.SceneLastPose,
+			SceneArangoConstants.ScenePoseNext,
+			SceneArangoConstants.ScenePoseInScene,
+			SceneArangoConstants.SceneFirstEdit,
+			SceneArangoConstants.SceneCurrentEdit,
+			SceneArangoConstants.SceneNextEdit,
+			SceneArangoConstants.ScenePlotIncludes,
+			SceneArangoConstants.SceneMember,
+			SceneArangoConstants.SceneInRoom,
+			SceneArangoConstants.SceneOwner,
+			SceneArangoConstants.SceneStarter,
+			SceneArangoConstants.ScenePoseAuthor,
+			SceneArangoConstants.ScenePoseOrigin,
+			SceneArangoConstants.SceneEditEditor,
+			SceneArangoConstants.ScenePlotOwner
 		];
 
 		foreach (var edge in edgeCollections)
@@ -199,107 +217,107 @@ public class Migration_AddScenes : IArangoMigration
 		// GetStructureAsync, which fails to deserialize some existing collections' index
 		// metadata on ArangoDB 3.10+ (same reason Migration_AddAccounts/AddRoles do this).
 		var sceneGraphs = await migrator.Context.Graph.ListAsync(handle);
-		if (!sceneGraphs.Any(g => g.Name == DatabaseConstants.GraphScene))
+		if (!sceneGraphs.Any(g => g.Name == SceneArangoConstants.GraphScene))
 		{
 			await migrator.Context.Graph.CreateAsync(handle, new ArangoGraph
 			{
-				Name = DatabaseConstants.GraphScene,
+				Name = SceneArangoConstants.GraphScene,
 				EdgeDefinitions =
 				[
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.SceneFirstPose,
-							From = [DatabaseConstants.SharpScenes],
-							To = [DatabaseConstants.SharpScenePoses]
+							Collection = SceneArangoConstants.SceneFirstPose,
+							From = [SceneArangoConstants.SharpScenes],
+							To = [SceneArangoConstants.SharpScenePoses]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.SceneLastPose,
-							From = [DatabaseConstants.SharpScenes],
-							To = [DatabaseConstants.SharpScenePoses]
+							Collection = SceneArangoConstants.SceneLastPose,
+							From = [SceneArangoConstants.SharpScenes],
+							To = [SceneArangoConstants.SharpScenePoses]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.ScenePoseNext,
-							From = [DatabaseConstants.SharpScenePoses],
-							To = [DatabaseConstants.SharpScenePoses]
+							Collection = SceneArangoConstants.ScenePoseNext,
+							From = [SceneArangoConstants.SharpScenePoses],
+							To = [SceneArangoConstants.SharpScenePoses]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.ScenePoseInScene,
-							From = [DatabaseConstants.SharpScenePoses],
-							To = [DatabaseConstants.SharpScenes]
+							Collection = SceneArangoConstants.ScenePoseInScene,
+							From = [SceneArangoConstants.SharpScenePoses],
+							To = [SceneArangoConstants.SharpScenes]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.SceneFirstEdit,
-							From = [DatabaseConstants.SharpScenePoses],
-							To = [DatabaseConstants.SharpScenePoseEdits]
+							Collection = SceneArangoConstants.SceneFirstEdit,
+							From = [SceneArangoConstants.SharpScenePoses],
+							To = [SceneArangoConstants.SharpScenePoseEdits]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.SceneCurrentEdit,
-							From = [DatabaseConstants.SharpScenePoses],
-							To = [DatabaseConstants.SharpScenePoseEdits]
+							Collection = SceneArangoConstants.SceneCurrentEdit,
+							From = [SceneArangoConstants.SharpScenePoses],
+							To = [SceneArangoConstants.SharpScenePoseEdits]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.SceneNextEdit,
-							From = [DatabaseConstants.SharpScenePoseEdits],
-							To = [DatabaseConstants.SharpScenePoseEdits]
+							Collection = SceneArangoConstants.SceneNextEdit,
+							From = [SceneArangoConstants.SharpScenePoseEdits],
+							To = [SceneArangoConstants.SharpScenePoseEdits]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.ScenePlotIncludes,
-							From = [DatabaseConstants.SharpScenePlots],
-							To = [DatabaseConstants.SharpScenes]
+							Collection = SceneArangoConstants.ScenePlotIncludes,
+							From = [SceneArangoConstants.SharpScenePlots],
+							To = [SceneArangoConstants.SharpScenes]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.SceneMember,
+							Collection = SceneArangoConstants.SceneMember,
 							From = [DatabaseConstants.Players],
-							To = [DatabaseConstants.SharpScenes]
+							To = [SceneArangoConstants.SharpScenes]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.SceneInRoom,
-							From = [DatabaseConstants.SharpScenes],
+							Collection = SceneArangoConstants.SceneInRoom,
+							From = [SceneArangoConstants.SharpScenes],
 							To = [DatabaseConstants.Rooms]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.SceneOwner,
-							From = [DatabaseConstants.SharpScenes],
+							Collection = SceneArangoConstants.SceneOwner,
+							From = [SceneArangoConstants.SharpScenes],
 							To = [DatabaseConstants.Objects]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.SceneStarter,
-							From = [DatabaseConstants.SharpScenes],
+							Collection = SceneArangoConstants.SceneStarter,
+							From = [SceneArangoConstants.SharpScenes],
 							To = [DatabaseConstants.Players]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.ScenePoseAuthor,
-							From = [DatabaseConstants.SharpScenePoses],
+							Collection = SceneArangoConstants.ScenePoseAuthor,
+							From = [SceneArangoConstants.SharpScenePoses],
 							To = [DatabaseConstants.Players]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.ScenePoseOrigin,
-							From = [DatabaseConstants.SharpScenePoses],
+							Collection = SceneArangoConstants.ScenePoseOrigin,
+							From = [SceneArangoConstants.SharpScenePoses],
 							To = [DatabaseConstants.Rooms]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.SceneEditEditor,
-							From = [DatabaseConstants.SharpScenePoseEdits],
+							Collection = SceneArangoConstants.SceneEditEditor,
+							From = [SceneArangoConstants.SharpScenePoseEdits],
 							To = [DatabaseConstants.Players]
 						},
 						new ArangoEdgeDefinition
 						{
-							Collection = DatabaseConstants.ScenePlotOwner,
-							From = [DatabaseConstants.SharpScenePlots],
+							Collection = SceneArangoConstants.ScenePlotOwner,
+							From = [SceneArangoConstants.SharpScenePlots],
 							To = [DatabaseConstants.Objects]
 						}
 				]

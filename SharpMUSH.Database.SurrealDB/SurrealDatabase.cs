@@ -218,6 +218,7 @@ public partial class SurrealDatabase(
 		return ValueTask.FromResult(Interlocked.Increment(ref _nextObjectKey));
 	}
 
+
 	private static string SerializeLocks(IImmutableDictionary<string, SharpLockData>? locks)
 	{
 		if (locks == null || locks.Count == 0) return "{}";

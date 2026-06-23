@@ -24,8 +24,12 @@ public interface IConnectionStateService
 	/// <summary>Raised when the hub pushes a <see cref="RoomEventMessage"/> to this client.</summary>
 	event Action<RoomEventMessage>? OnRoomEventReceived;
 
-	/// <summary>Raised when the hub pushes a <see cref="SceneEventMessage"/> to this client.</summary>
-	event Action<SceneEventMessage>? OnSceneEventReceived;
+	/// <summary>
+	/// Raised when the server signals that its loaded-plugin set changed (a plugin DLL was unloaded or
+	/// reloaded). The portal reacts by forcing a hard browser refresh, which fully tears down and rebuilds
+	/// the WASM runtime — the only way to reclaim a compiled component assembly that was loaded in-browser.
+	/// </summary>
+	event Action? OnPluginsChanged;
 
 	/// <summary>
 	/// Opens the hub connection authenticated with <paramref name="accessToken"/>.

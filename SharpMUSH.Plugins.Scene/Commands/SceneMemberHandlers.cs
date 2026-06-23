@@ -25,7 +25,7 @@ public static class SceneMemberHandlers
 			return MModule.single(SceneCommandHelper.BadArguments);
 		}
 
-		var playerDbref = playerArg.ToPlainText().Trim();
+		var playerDbref = await SceneLocate.PlayerOrSelf(parser, playerArg.ToPlainText().Trim());
 		var result = await sceneService.AddMemberAsync(sceneId, playerDbref, role!);
 
 		return await result.Match(
@@ -52,7 +52,7 @@ public static class SceneMemberHandlers
 	{
 		// @scene/unmember <sceneId>=<playerDbref> (drops all the player's roles)
 		var sceneId = SceneCommandHelper.Plain(sceneIdArg);
-		var playerDbref = playerArg.ToPlainText().Trim();
+		var playerDbref = await SceneLocate.PlayerOrSelf(parser, playerArg.ToPlainText().Trim());
 		var result = await sceneService.RemoveMemberAsync(sceneId, playerDbref);
 
 		return await result.Match(
@@ -77,7 +77,7 @@ public static class SceneMemberHandlers
 		MString? sceneArg)
 	{
 		// @scene/focus <playerDbref>=<sceneId> (empty = clear)
-		var playerDbref = playerArg.ToPlainText().Trim();
+		var playerDbref = await SceneLocate.PlayerOrSelf(parser, playerArg.ToPlainText().Trim());
 		var sceneId = SceneCommandHelper.Plain(sceneArg);
 		var result = await sceneService.SetFocusAsync(playerDbref, string.IsNullOrEmpty(sceneId) ? null : sceneId);
 
@@ -112,7 +112,8 @@ public static class SceneMemberHandlers
 			return MModule.single(SceneCommandHelper.BadArguments);
 		}
 
-		var result = await sceneService.SetShowAsAsync(sceneId, playerDbref!, nameArg.ToPlainText());
+		var resolvedPlayer = await SceneLocate.PlayerOrSelf(parser, playerDbref!);
+		var result = await sceneService.SetShowAsAsync(sceneId, resolvedPlayer, nameArg.ToPlainText());
 
 		return await result.Match(
 			async member =>

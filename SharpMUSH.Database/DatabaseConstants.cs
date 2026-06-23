@@ -24,12 +24,9 @@ public static class DatabaseConstants
 	public const string WikiPages = "node_wiki_pages";
 	public const string WikiRevisions = "node_wiki_revisions";
 
-	// Scene System (Area 7) — graph-native subsystem in the sharp_sys_scene namespace.
-	// See docs/design/scene-system.md. Vertices:
-	public const string SharpScenes = "node_sharp_sys_scene_scenes";
-	public const string SharpScenePoses = "node_sharp_sys_scene_poses";
-	public const string SharpScenePoseEdits = "node_sharp_sys_scene_pose_edits";
-	public const string SharpScenePlots = "node_sharp_sys_scene_plots";
+	// Scene System (Area 7) collection/edge/graph names moved OUT of core into the Scene plugin
+	// (Phase 8): see SharpMUSH.Plugins.Scene.Storage.SceneArangoConstants. Removing the plugin leaves
+	// core with no knowledge of the scene graph.
 
 	// Softcode package manager system collections (decisions 20.3, 20.13).
 	// Not visible to softcode; travels with backups.
@@ -79,23 +76,8 @@ public static class DatabaseConstants
 	public const string HasZone = "edge_has_zone";
 	public const string AccountOwnsCharacter = "edge_account_owns_character";
 
-	// Scene System edges (graph_sharp_sys_scene). Comments note from -> to vertex collections.
-	public const string SceneFirstPose = "edge_sharp_sys_scene_first_pose";       // SharpScenes -> SharpScenePoses
-	public const string SceneLastPose = "edge_sharp_sys_scene_last_pose";         // SharpScenes -> SharpScenePoses
-	public const string ScenePoseNext = "edge_sharp_sys_scene_pose_next";         // SharpScenePoses -> SharpScenePoses
-	public const string ScenePoseInScene = "edge_sharp_sys_scene_pose_in_scene";  // SharpScenePoses -> SharpScenes
-	public const string SceneFirstEdit = "edge_sharp_sys_scene_first_edit";       // SharpScenePoses -> SharpScenePoseEdits
-	public const string SceneCurrentEdit = "edge_sharp_sys_scene_current_edit";   // SharpScenePoses -> SharpScenePoseEdits
-	public const string SceneNextEdit = "edge_sharp_sys_scene_next_edit";         // SharpScenePoseEdits -> SharpScenePoseEdits
-	public const string ScenePlotIncludes = "edge_sharp_sys_scene_plot_includes"; // SharpScenePlots -> SharpScenes
-	public const string SceneMember = "edge_sharp_sys_scene_member";              // Players -> SharpScenes
-	public const string SceneInRoom = "edge_sharp_sys_scene_in_room";             // SharpScenes -> Rooms
-	public const string SceneOwner = "edge_sharp_sys_scene_owner";                // SharpScenes -> Objects
-	public const string SceneStarter = "edge_sharp_sys_scene_starter";            // SharpScenes -> Players
-	public const string ScenePoseAuthor = "edge_sharp_sys_scene_author";          // SharpScenePoses -> Players
-	public const string ScenePoseOrigin = "edge_sharp_sys_scene_origin";          // SharpScenePoses -> Rooms
-	public const string SceneEditEditor = "edge_sharp_sys_scene_editor";          // SharpScenePoseEdits -> Players
-	public const string ScenePlotOwner = "edge_sharp_sys_scene_plotowner";        // SharpScenePlots -> Objects
+	// Scene System edges moved OUT of core into the Scene plugin (Phase 8):
+	// see SharpMUSH.Plugins.Scene.Storage.SceneArangoConstants.
 
 	/// <summary>
 	/// Describes the relationship between actualized types and their objects.
@@ -189,12 +171,9 @@ public static class DatabaseConstants
 	/// <see cref="Accounts"/> -> <see cref="AccountOwnsCharacter"/> -> <see cref="Players"/>
 	/// </summary>
 	public const string GraphAccounts = "graph_accounts";
-	/// <summary>
-	/// Scene System named graph (Area 7). Vertices SharpScenes/SharpScenePoses/
-	/// SharpScenePoseEdits/SharpScenePlots; edges as declared above, incl. cross-collection
-	/// edges into Rooms/Players/Objects. See docs/design/scene-system.md.
-	/// </summary>
-	public const string GraphScene = "graph_sharp_sys_scene";
+
+	// Scene System named graph (Area 7) moved OUT of core into the Scene plugin (Phase 8):
+	// see SharpMUSH.Plugins.Scene.Storage.SceneArangoConstants.GraphScene.
 
 	public const string TypeObject = "object";
 	public const string TypeString = "string";

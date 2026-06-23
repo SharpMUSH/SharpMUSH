@@ -5,6 +5,10 @@ using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Messaging.Abstractions;
 using System.Security.Claims;
 
+// Phase 9: the scene realtime leg (ReceiveSceneMessage / JoinScene / LeaveScene / SceneGroupName /
+// SendToSceneAsync) moved OUT of GameHub into the Scene plugin's SceneHub (mapped at /hubs/scene). GameHub
+// no longer carries any scene-specific surface.
+
 namespace SharpMUSH.Server.Hubs;
 
 /// <summary>
@@ -18,8 +22,12 @@ public interface IGameHubClient
 	/// <summary>Broadcasts a room event (arrive, depart, say, pose) to room observers.</summary>
 	Task ReceiveRoomEvent(RoomEventMessage msg);
 
-	/// <summary>Broadcasts a live scene mutation (pose, edit, delete, move) to scene observers.</summary>
-	Task ReceiveSceneMessage(SceneEventMessage msg);
+	/// <summary>
+	/// Generic signal that the server's loaded-plugin set changed (a plugin DLL was unloaded or reloaded).
+	/// Carries no plugin-specific payload by design: the client reacts by forcing a hard browser refresh,
+	/// the only way to reclaim a compiled component assembly the WASM runtime may have loaded.
+	/// </summary>
+	Task ReceivePluginsChanged();
 }
 
 /// <summary>
@@ -34,8 +42,9 @@ public interface IGameHubClient
 ///   SendCommand  — forwards a player command to the game engine via NATS
 ///   JoinRoom     — adds the client to group "room:{roomDbref}"
 ///   LeaveRoom    — removes the client from group "room:{roomDbref}"
-///   JoinScene    — adds the client to group "scene:{sceneId}"
-///   LeaveScene   — removes the client from group "scene:{sceneId}"
+///
+/// (Scene realtime — JoinScene/LeaveScene/ReceiveSceneMessage — moved out of this hub into the Scene
+/// plugin's own SceneHub at /hubs/scene; see SharpMUSH.Plugins.Scene/Web. This hub is scene-agnostic.)
 /// </summary>
 [Authorize]
 public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGameHubClient>
@@ -52,11 +61,6 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGam
 	/// Formats a SignalR group name for a room.
 	/// </summary>
 	public static string RoomGroupName(string dbref) => $"room:{dbref}";
-
-	/// <summary>
-	/// Formats a SignalR group name for a scene.
-	/// </summary>
-	public static string SceneGroupName(string sceneId) => $"scene:{sceneId}";
 
 	/// <inheritdoc/>
 	public override async Task OnConnectedAsync()
@@ -135,30 +139,6 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGam
 			Context.ConnectionId, RoomGroupName(roomDbref));
 	}
 
-	/// <summary>
-	/// Adds the calling connection to the SignalR group for the specified scene.
-	/// The client calls this when opening a live scene view.
-	/// </summary>
-	/// <param name="sceneId">The id of the scene to subscribe to.</param>
-	public async Task JoinScene(string sceneId)
-	{
-		await Groups.AddToGroupAsync(Context.ConnectionId, SceneGroupName(sceneId));
-		logger.LogDebug("[GameHub] Connection {ConnectionId} joined scene group {Group}",
-			Context.ConnectionId, SceneGroupName(sceneId));
-	}
-
-	/// <summary>
-	/// Removes the calling connection from the SignalR group for the specified scene.
-	/// The client calls this when leaving a live scene view.
-	/// </summary>
-	/// <param name="sceneId">The id of the scene to unsubscribe from.</param>
-	public async Task LeaveScene(string sceneId)
-	{
-		await Groups.RemoveFromGroupAsync(Context.ConnectionId, SceneGroupName(sceneId));
-		logger.LogDebug("[GameHub] Connection {ConnectionId} left scene group {Group}",
-			Context.ConnectionId, SceneGroupName(sceneId));
-	}
-
 	// ── Server-side write operations ────────────────────────────────────────
 	// These are called by internal services (e.g. NatsBridgeService, REST controllers)
 	// to push output to connected clients.  They are NOT exposed as client-invokable
@@ -189,18 +169,6 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGam
 		hubContext.Clients.Group(RoomGroupName(roomDbref)).ReceiveRoomEvent(message);
 
 	/// <summary>
-	/// Broadcasts a <see cref="SceneEventMessage"/> to all connections observing a scene.
-	/// </summary>
-	/// <param name="hubContext">The hub context injected by the calling service.</param>
-	/// <param name="sceneId">The scene's id (the SignalR group key).</param>
-	/// <param name="message">The scene event message to broadcast.</param>
-	public static Task SendToSceneAsync(
-		IHubContext<GameHub, IGameHubClient> hubContext,
-		string sceneId,
-		SceneEventMessage message) =>
-		hubContext.Clients.Group(SceneGroupName(sceneId)).ReceiveSceneMessage(message);
-
-	/// <summary>
 	/// Broadcasts a system <see cref="GameOutputMessage"/> to all currently connected clients.
 	/// Use sparingly — intended for server-wide announcements (e.g. scheduled maintenance).
 	/// </summary>
@@ -214,6 +182,16 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGam
 			Content: content,
 			Timestamp: DateTimeOffset.UtcNow,
 			MessageType: MessageType.System));
+
+	/// <summary>
+	/// Broadcasts the generic "plugins changed" signal to every connected client. Called by the server's
+	/// <see cref="SharpMUSH.Library.Services.Interfaces.IPluginChangeNotifier"/> implementation after a plugin
+	/// unload/reload; the client forces a hard refresh on receipt.
+	/// </summary>
+	/// <param name="hubContext">The hub context injected by the calling service.</param>
+	public static Task BroadcastPluginsChangedAsync(
+		IHubContext<GameHub, IGameHubClient> hubContext) =>
+		hubContext.Clients.All.ReceivePluginsChanged();
 
 	/// <summary>
 	/// Returns the DBRef claim value for the connection that is currently executing a hub method.

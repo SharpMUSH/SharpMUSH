@@ -1,0 +1,34 @@
+@using SharpMUSH.Library.Services.Interfaces
+@implements IDisposable
+@inject IConnectionStateService Connection
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+@* Renders nothing. Subscribes to the generic "plugins changed" signal the GameHub broadcasts after the
+   server unloads/reloads a plugin DLL, and forces a hard browser reload — the only way to reclaim a
+   compiled plugin component the WASM runtime may have loaded (Mono-WASM cannot unload an ALC). Generic by
+   design: it reacts to ANY plugin unload (declarative or compiled), never a NEW plugin load. *@
+
+@code {
+    protected override void OnInitialized()
+    {
+        Connection.OnPluginsChanged += HandlePluginsChanged;
+    }
+
+    private void HandlePluginsChanged()
+    {
+        // Marshal onto the renderer's sync context: the event may arrive on a hub callback thread.
+        _ = InvokeAsync(() =>
+        {
+            // A brief toast before the runtime tears down; the forceLoad reload re-fetches the app, the
+            // /api/applications catalog, and rebuilds the WASM runtime from scratch.
+            Snackbar.Add("A plugin changed — reloading…", Severity.Info);
+            Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+        });
+    }
+
+    public void Dispose()
+    {
+        Connection.OnPluginsChanged -= HandlePluginsChanged;
+    }
+}

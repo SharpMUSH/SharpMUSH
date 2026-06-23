@@ -286,6 +286,19 @@ The architecture leaves these seams for the committed later phases:
   hashed plugin DLL, verified + trust-gated + deposited into `plugins/<id>/` on install (see below).
 - **Phase 5** — *implemented* — the Scene system is extracted into the standalone `SharpMUSH.Plugins.Scene`
   plugin via the Phase-1/2a seams (see below).
+- **Phase 8** — *implemented* — plugin-owned **storage**: the `ISceneService` implementations moved out of
+  the core providers behind per-provider **connection-accessor** interfaces (`I{Arango,Memgraph,Surreal}StorageAccessor`),
+  registered ASP.NET-style via `AddSceneSystem(config)` (keyed storage + an `.AddBehavior<T>()` decorator chain).
+- **Phase 9** — *implemented* — plugin-owned **web surface**: a plugin contributes MVC controllers
+  (`AddControllers().AddApplicationPart(...)` from `IServiceRegistrar`) and maps its own hubs/endpoints via the
+  new `IEndpointContributor` seam. Scene's REST controller + realtime hub now live in the plugin (see below).
+- **Phase 10** — *implemented* — **no shared contracts**: `Scene.Contracts` deleted; `ISceneService` + scene
+  models + `SceneEventMessage` moved *inside* the plugin; `Library`/`Server`/`Client` reference zero scene types.
+  Host↔plugin is generic seams + serialization only — the boundary a third-party, hot-loaded plugin needs (see below).
+- **Phase 11** — *implemented* — plugin-contributed **portal UI**: the `IApplicationSource` seam lets a plugin
+  contribute schema-driven Area-21 `RegisteredApplication`(s) (page/widget) that overlay the app registry
+  in-memory while the plugin is loaded; the NavBar renders them per `NavPlacement` (slotting into the built-in
+  groups or forming new data-driven sections). No browser-loaded plugin assemblies (see below).
 
 ## Phase 4 — package-manager DLL distribution
 
@@ -373,10 +386,14 @@ packages so uninstall removes exactly what install deposited.
 ## Phase 5 — Scene as the reference plugin
 
 `SharpMUSH.Plugins.Scene` is the first **real** plugin: the whole `@SCENE` command/`scene…` function/
-migration/flag/bridge surface ships from a standalone DLL built into `plugins/scene/`, while the
-`ISceneService` *storage* stays in the three DB providers (graph-native, cannot move). It proves every
+migration/flag/bridge surface ships from a standalone DLL built into `plugins/scene/`. It proves every
 Phase-1/2a seam end-to-end against the existing Scene test suite, with no engine recompile to add the
 subsystem.
+
+> **Note (Phase 8/9):** the table below describes the Phase-5 extraction. The `ISceneService` *storage*
+> (then "stays in the providers") and the *web surface* (then "stayed in the engine") have since moved
+> into the plugin too — see **Phase 8** and **Phase 9** below. Scene is now a **full vertical**: storage,
+> commands/functions, REST controller, realtime hub, and contracts all ship from the plugin.
 
 | What | Seam used | Where it lives now |
 |------|-----------|--------------------|
@@ -398,10 +415,12 @@ host's copies load. The bridge leg forwards through the **non-generic** `IHubCon
 `SendAsync("ReceiveSceneMessage", …)` and builds the `scene:{id}` group key itself, so the plugin needs no
 reference to the Server's `GameHub`/`IGameHubClient`.
 
-**What stayed in the engine.** `ISceneService` + `Models/Scene/*` + `SceneEventMessage` (`SharpMUSH.Library`);
-the providers' `ISceneService` implementations (`*.Scene.cs` — graph storage); the `ISceneService` DI cast in
-`Startup`; `SceneController` (REST) + the client portal; the `DatabaseConstants` scene collection names (the
-providers' storage still references them).
+**What stayed in the engine (as of Phase 10).** **Nothing.** `SharpMUSH.Library`, `SharpMUSH.Server`,
+and `SharpMUSH.Client` reference **zero** scene types — `ISceneService`, the models, and `SceneEventMessage`
+all moved *into* the plugin assembly; `NotificationType.Scene` and `IConnectionStateService.OnSceneEventReceived`
+were removed; the `SharpMUSH.Plugins.Scene.Contracts` assembly was **deleted**. The WASM client keeps its
+own scene pages/widgets and its **own** `SceneEventMessage` DTO (it deserializes the SignalR wire). See
+**Phase 10** below for why a shared contract assembly is incompatible with the dynamic third-party goal.
 
 **Boot ordering.** The bundled `scene` softcode package (`examples/packages/scene`) drives `@scene`/`scene…`,
 so the plugin must register its commands/functions *before* the package installs and `@STARTUP` runs.
@@ -416,6 +435,102 @@ MSBuild target drops its DLL+`deps.json`+`plugin.json` into each output's `plugi
 `SamplePlugin` is built+copied). The existing Scene suite —`SceneServiceIntegrationTests`,
 `SceneCommandFunctionIntegrationTests`, `SceneDbrefResolutionTests`, `SceneHttpControllerTests`,
 `ScenePackageTests`— passes unchanged with Scene running as a plugin, which is the proof the seams are complete.
+
+## Phase 8 — plugin-owned storage (connection-accessor seam)
+
+The Phase-5 extraction left `ISceneService`'s *storage* in the core providers as `partial class
+<Provider>` files, because they share the provider's private connection and write provider-native
+AQL/Cypher/SurrealQL. Phase 8 closes that seam:
+
+- **Per-provider connection accessors** in `SharpMUSH.Library/Plugins/Storage/`
+  (`IArangoStorageAccessor`, `IMemgraphStorageAccessor`, `ISurrealStorageAccessor`) expose just the
+  connection + the primitive helpers a storage plugin needs. They are **generic** — no subsystem
+  concept. Each provider implements its own accessor and registers it in DI.
+- The three storage implementations moved into `SharpMUSH.Plugins.Scene/Storage/` as standalone classes
+  (`{Arango,Memgraph,Surreal}SceneStorage`) taking the matching accessor by constructor; the queries
+  moved **verbatim**. Core `DatabaseConstants` no longer names the scene graph.
+- **Registration is ASP.NET-style** (`SceneSystemServiceCollectionExtensions`): `AddSceneSystem(config)`
+  registers each provider's storage as a **keyed** `ISceneStorage` (`"arangodb"`/`"memgraph"`/
+  `"surrealdb"`), picks the active one from config, and composes `ISceneService` through an ordered
+  **decorator chain** — `ISceneSystemBuilder.AddBehavior<T>()` layers behavior (`T :
+  ISceneServiceBehavior`) like `IHttpClientBuilder.AddHttpMessageHandler`. Hand-rolled (no Scrutor).
+- **ALC type identity:** the accessor interfaces live in `SharpMUSH.Library` (already host-shared); the
+  DB-client assemblies (`Core.Arango`, `Neo4j.Driver`, `SurrealDb.Net`) are shared **by assembly name**
+  via `PluginLoaderService.DefaultSharedAssemblyNames` + `PluginConfig.SharedAssemblies` — the host owns
+  the runtime copy, the plugin references them compile-only, so an accessor-returned client unifies on
+  one `Type`. The plugin stays collectible.
+
+## Phase 9 — plugin-owned web surface (`IEndpointContributor`)
+
+A plugin configures the web app across **both ASP.NET phases**, piped through the loader:
+
+| Phase | Seam | What a plugin does |
+|-------|------|--------------------|
+| `ConfigureServices` (pre-build) | `IServiceRegistrar.RegisterServices(IServiceCollection)` | Standard ASP.NET config — `services.AddControllers().AddApplicationPart(thisAssembly)` (MVC discovers the plugin's controllers — the "FromAssembly" load), `AddSignalR()`, any `AddX(...)`. |
+| pipeline (post-build) | **`IEndpointContributor.MapEndpoints(IEndpointRouteBuilder)`** | Map hubs/routes — `endpoints.MapHub<MyHub>("/hubs/mine")`, `endpoints.MapGet(...)`, etc. The host invokes each contributor in `Program.ConfigureApp` after its own `MapControllers()`/`MapHub<GameHub>()`, each isolated in try/catch. |
+
+`IEndpointContributor` is the pipeline analog of `IServiceRegistrar` — it exists because a registrar only
+sees `IServiceCollection`, never the `IEndpointRouteBuilder`. Collected by `PluginCatalog` and treated as
+a **load-once** seam (a plugin that maps endpoints is not hot-unloadable).
+
+**Scene as the reference:** the REST `SceneController` moved to `SharpMUSH.Plugins.Scene/Web/` and is
+discovered via `AddApplicationPart`; the realtime hub is a plugin-owned `SceneHub` mapped at
+`/hubs/scene` via `MapEndpoints`. The scene types (models, `SceneEventMessage`, `ISceneService`) live
+**inside the plugin assembly** — see Phase 10 for why they are *not* in a shared contract assembly.
+
+> **Hub gotcha (documented):** `SceneHub` is a plain `Hub` (not `Hub<TClient>`). SignalR's strongly-typed
+> client emits a proxy in a **non-collectible** dynamic assembly that would reference the **collectible**
+> plugin type — `NotSupportedException` at startup. A plain `Hub` + non-generic `IHubContext<SceneHub>` +
+> `SendAsync("ReceiveSceneMessage", …)` keeps the plugin collectible with the same wire contract.
+
+## Phase 10 — no shared contracts: the third-party / hot-load boundary
+
+Phases 8–9 left one residual coupling: a `SharpMUSH.Plugins.Scene.Contracts` assembly holding
+`ISceneService`, the scene models, and `SceneEventMessage`, **referenced by the host and Client** so their
+`Type` could unify with the ALC-loaded plugin. That pattern works only for **first-party** plugins compiled
+alongside the host. For the actual goal — **third-party plugins, hot-loaded from other repos without a
+server restart** — the host (and the separately-built WASM client) can reference **zero** plugin types:
+otherwise "add a plugin" means "recompile the host", which defeats dynamic loading.
+
+So Phase 10 deletes `Scene.Contracts`. The rule:
+
+> **A plugin's types live inside the plugin. The only boundaries the host/client may use are (a) the
+> generic seams — `IServiceRegistrar`, `IEndpointContributor`, the `I*Source` contributions — which name
+> no plugin type, and (b) serialization (HTTP / SignalR JSON), where the client defines its *own* DTO
+> matching the wire shape. A shared contract assembly the host references is a first-party-only shortcut.**
+
+Concretely for Scene: `ISceneService` + models are now plugin-internal; the host talks to scene only over
+`/api/scenes` and `/hubs/scene`; the Client has its own `SceneEventMessage` record and deserializes the
+hub payload itself. `Library`/`Server`/`Client` name nothing scene.
+
+**Testing consequence.** Because the host can no longer name `ISceneService` type-compatibly with the
+ALC-loaded plugin, host-side scene coverage is **wire-based** (drive `@scene`/`scene…()` and read back via
+the public surface). A plugin's *internal* unit tests belong in a project that compile-references the
+plugin and loads it in the **default** context (no ALC). This is exactly how a third-party plugin author
+tests their own plugin while the host tests only the wire.
+
+## Phase 11 — plugin-contributed portal UI (`IApplicationSource`)
+
+A plugin contributes browser UI **without shipping a browser-loaded assembly** by reusing the Area-21
+"Dynamic Applications" pipeline (schema-driven views the WASM client renders generically) plus the Phase-9
+controller seam (the plugin serves its own schema/data endpoints):
+
+- **`IApplicationSource`** (`SharpMUSH.Library.Plugins`): `IEnumerable<RegisteredApplication> GetApplications()`.
+  `RegisteredApplication` is a general portal type in `Library` (host-shared), so this is a generic seam, not
+  a plugin-specific contract. `PluginCatalog` collects it into `ApplicationSources`; it is **load-once**.
+- **In-memory overlay:** `PluginApplicationRegistryDecorator` wraps `IApplicationRegistryService` and unions
+  the catalog's plugin apps over the DB-backed admin apps in `GetApplicationsAsync()`/`GetApplicationAsync()`.
+  Plugin apps are read-only and **not persisted** — they appear while the plugin is loaded and vanish on
+  unload (no orphaned rows). Slug collision: DB/admin wins, the plugin overlay entry is skipped with a warning.
+  `/api/applications` returns the merged set; the client catalog just sees more apps.
+- **NavBar:** `RegisteredApplication.NavPlacement` names a section. `NavMenu.razor` slots each accessible
+  app's link into the built-in group it names (`Play`/`World`/`Build`/`Manage`), or — for a novel name —
+  renders a new data-driven section ordered by `Order`. `MinimumRole` filters visibility.
+
+So a UI plugin ships end-to-end inside its own assembly: the app descriptor (`IApplicationSource`), the
+schema/data endpoints (its controller via `AddApplicationPart`), and the NavBar placement — appearing and
+disappearing with load/unload. Custom compiled Blazor/WASM components remain a later phase; Phase 11 is
+declarative/schema-driven only.
 
 ## See also
 

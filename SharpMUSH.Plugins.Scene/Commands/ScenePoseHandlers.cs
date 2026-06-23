@@ -22,9 +22,10 @@ public static class ScenePoseHandlers
 		// @scene/addpose <sceneId>=<authorDbref>,<showAs>,<originDbref>,<source>,<tags>,<content>
 		var sceneId = SceneCommandHelper.Plain(sceneIdArg);
 		var fields = SceneCommandHelper.SplitFields(rest, 6);
-		var authorDbref = fields[0];
+		// author/origin resolve through the engine LocateService (here/me/name -> dbref).
+		var authorDbref = await SceneLocate.PlayerOrSelf(parser, fields[0]);
 		var showAs = fields[1];
-		var originDbref = fields[2];
+		var originDbref = await SceneLocate.ObjectOrSelf(parser, fields[2]);
 		var source = fields[3];
 		var tagsRaw = fields[4];
 		var content = fields[5];
@@ -91,7 +92,7 @@ public static class ScenePoseHandlers
 		// @scene/editpose <poseId>=<editorDbref>,<content>
 		var poseId = SceneCommandHelper.Plain(poseIdArg);
 		var fields = SceneCommandHelper.SplitFields(rest, 2);
-		var editorDbref = fields[0];
+		var editorDbref = await SceneLocate.PlayerOrSelf(parser, fields[0]);
 		var content = fields[1];
 
 		if (string.IsNullOrEmpty(editorDbref))
@@ -163,7 +164,7 @@ public static class ScenePoseHandlers
 		INotifyService notifyService,
 		AnySharpObject executor,
 		string poseId,
-		OneOf.OneOf<Library.Models.Scene.ScenePose, NotFound> result,
+		OneOf.OneOf<Contracts.ScenePose, NotFound> result,
 		string successMessage,
 		IMUSHCodeParser? parser = null,
 		string? eventType = null)
@@ -185,7 +186,7 @@ public static class ScenePoseHandlers
 		INotifyService notifyService,
 		AnySharpObject executor,
 		string poseId,
-		OneOf.OneOf<Library.Models.Scene.ScenePose, NotFound, Error<string>> result,
+		OneOf.OneOf<Contracts.ScenePose, NotFound, Error<string>> result,
 		string successMessage,
 		IMUSHCodeParser? parser = null,
 		string? eventType = null)

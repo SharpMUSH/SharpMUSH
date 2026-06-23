@@ -6,6 +6,10 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record WipeAttributeCommand(DBRef DBRef, string[] Attribute) : ICommand<bool>, ICacheInvalidating
 {
-	public string[] CacheKeys => Attribute.Select(attr => $"attribute:{DBRef}:{attr})").Append($"commands:{DBRef}").ToArray();
+	public string[] CacheKeys => Attribute.Select(attr => $"attribute:{DBRef}:{attr})")
+		.Append($"commands:{DBRef}")
+		.Append($"ancestor-commands:#{DBRef.Number}")
+		.Append($"ancestor-listens:#{DBRef.Number}")
+		.ToArray();
 	public string[] CacheTags => [Definitions.CacheTags.ObjectAttributes];
 }

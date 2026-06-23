@@ -1,3 +1,4 @@
+using SharpMUSH.Client.Models;
 using SharpMUSH.Library.Models.Portal;
 
 namespace SharpMUSH.Client.Services;
@@ -37,6 +38,11 @@ public interface IGameHubConnection : IAsyncDisposable
 	/// <see cref="SceneEventMessage"/> payload.
 	/// </summary>
 	IDisposable On(string methodName, Action<SceneEventMessage> handler);
+
+	/// <summary>
+	/// Registers a handler for a payload-free hub client method (e.g. <c>ReceivePluginsChanged</c>).
+	/// </summary>
+	IDisposable On(string methodName, Action handler);
 
 	/// <summary>
 	/// Raised when the connection drops unexpectedly.

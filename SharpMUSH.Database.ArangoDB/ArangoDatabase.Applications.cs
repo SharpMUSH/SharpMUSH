@@ -25,6 +25,9 @@ public partial class ArangoDatabase : IApplicationRegistryService
 		public string Zones { get; set; } = "";
 		public int Order { get; set; }
 		public string? OwningPackage { get; set; }
+		public string? RenderKind { get; set; }
+		public string? ComponentAssemblyUrl { get; set; }
+		public string? ComponentTypeName { get; set; }
 	}
 
 	public async Task UpsertApplicationAsync(RegisteredApplication application)
@@ -52,7 +55,10 @@ public partial class ArangoDatabase : IApplicationRegistryService
 			["NavPlacement"] = a.NavPlacement,
 			["Zones"] = ApplicationRegistryMapping.ZonesToString(a.Zones),
 			["Order"] = a.Order,
-			["OwningPackage"] = a.OwningPackage
+			["OwningPackage"] = a.OwningPackage,
+			["RenderKind"] = a.RenderKind,
+			["ComponentAssemblyUrl"] = a.ComponentAssemblyUrl,
+			["ComponentTypeName"] = a.ComponentTypeName
 		};
 	}
 
@@ -101,7 +107,10 @@ public partial class ArangoDatabase : IApplicationRegistryService
 		d.NavPlacement,
 		ApplicationRegistryMapping.ZonesFromString(d.Zones),
 		d.Order,
-		d.OwningPackage);
+		d.OwningPackage,
+		d.RenderKind ?? ApplicationRenderKind.Schema,
+		d.ComponentAssemblyUrl,
+		d.ComponentTypeName);
 
 	#endregion
 }

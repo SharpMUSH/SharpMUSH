@@ -88,13 +88,18 @@ public class DbrefFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Arguments("create(some-silly-object)", "locate(%#,some-silly-object,*)")]
+	[Arguments("create({0})", "locate(%#,{0},*)")]
 	// TODO: Enable when tel() is implemented
 	// [Arguments("tel(create(content-object),create(container-object))", "locate(%#,container-object's content-object,*)")]
 	public async Task CreateAndLocate(string create, string locate)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(create)))?.Message!;
-		var located = (await Parser.FunctionParse(MModule.single(locate)))?.Message!;
+		// Unique object name per run. The unit suite shares ONE accumulating DB and CI retries re-run this
+		// test against it; with a fixed name a retry creates a SECOND object of the same name, so locate()
+		// then matches an ambiguous set and a single transient create->locate miss becomes a permanent
+		// failure. A per-invocation name keeps the create->locate mapping 1:1 and lets retries re-run clean.
+		var name = $"silly-object-{Guid.NewGuid():N}";
+		var result = (await Parser.FunctionParse(MModule.single(string.Format(create, name))))?.Message!;
+		var located = (await Parser.FunctionParse(MModule.single(string.Format(locate, name))))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo(located.ToPlainText());
 	}

@@ -1,12 +1,15 @@
 @* NavMenu — Phosphor Refined sidebar: logo · Play/World/Build/Manage groups · profile card *@
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Library.Authorization
 @using Microsoft.AspNetCore.Components.Routing
 @inject IStringLocalizer<SharedResource> Loc
 @inject ITerminalService Terminal
 @inject IPlayTerminalService PlayTerminal
 @inject NavigationManager Nav
 @inject AccountAuthService AccountAuth
+@inject ApplicationRegistryClient Registry
 @implements IDisposable
 
 <div class="phosphor-sidebar @(IsCollapsed ? "phosphor-sidebar--collapsed" : "")">
@@ -56,6 +59,7 @@
             {
                 @NavItem("/mail", Icons.Material.Filled.Mail, Loc["Mail"])
             }
+            <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Play" Applications="_apps" />
         </div>
 
         @* WORLD *@
@@ -63,13 +67,14 @@
             <div class="nav-group-label">World</div>
             @NavItem("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
             @NavItem("/characters", Icons.Material.Filled.Groups, Loc["Characters"])
+            <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="World" Applications="_apps" />
         </div>
 
         @* BUILD *@
         <div class="nav-group">
             <div class="nav-group-label">Build</div>
             @NavItem("/softcode", Icons.Material.Filled.Code, Loc["SoftcodeEditor"])
-            <ApplicationNavLinks IsCollapsed="IsCollapsed" />
+            <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Build" Applications="_apps" />
             <AuthorizeView Policy="applications.admin">
                 <Authorized>@NavItem("/admin/applications", Icons.Material.Filled.Apps, "Applications")</Authorized>
             </AuthorizeView>
@@ -100,7 +105,18 @@
                 <Authorized>@NavItem("/admin/config", Icons.Material.Filled.Tune, Loc["Config"])</Authorized>
             </AuthorizeView>
             @NavItem("/help", Icons.Material.Filled.Help, Loc["Help"])
+            <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Manage" Applications="_apps" />
         </div>
+
+        @* DATA-DRIVEN SECTIONS — any app whose NavPlacement is not a built-in section becomes its own
+           group, ordered by the minimum Order of its apps (ties broken by section name). *@
+        @foreach (var section in _novelSections)
+        {
+            <div class="nav-group" @key="section">
+                <div class="nav-group-label">@section</div>
+                <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="@section" Applications="_apps" />
+            </div>
+        }
     </nav>
 
     @* ── Bottom profile card ── *@
@@ -127,6 +143,13 @@
 @code {
     [Parameter]
     public bool IsCollapsed { get; set; } = true;
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    // The registered Page apps and the novel (non-built-in) sections derived from their NavPlacement.
+    // Fetched once and shared with every ApplicationNavLinks instance to avoid N registry calls.
+    private IReadOnlyList<PortalApplication> _apps = [];
+    private IReadOnlyList<string> _novelSections = [];
 
     private bool _characterActive;
 
@@ -195,6 +218,16 @@
         PlayTerminal.ConnectionStateChanged += OnPlayConnectionChanged;
         PlayTerminal.LineReceived += OnPlayLine;
         Nav.LocationChanged += OnLocationChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var role = AuthState is null
+            ? PortalRole.Guest
+            : PortalRoleHelper.CurrentRole((await AuthState).User);
+
+        _apps = await Registry.ListAsync();
+        _novelSections = PortalNavSections.NovelSections(_apps, role);
     }
 
     private void OnConnectionChanged(bool connected)

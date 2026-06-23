@@ -1,16 +1,18 @@
-using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library;
-using SharpMUSH.Library.Models.Scene;
-using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Integration.Scenes;
 
 /// <summary>
-/// Integration tests for the graph-native Scene System against the configured DB backend.
-/// <see cref="ISceneService"/> is implemented by the active <c>ISharpDatabase</c> provider
-/// (selected by <c>SHARPMUSH_DATABASE_PROVIDER</c> — arangodb / memgraph / surrealdb); these
-/// tests must pass identically on all three. Object references use <c>#1</c> (the seeded God
-/// object) so the resolve → edge → name-snapshot mechanism is exercised against a real vertex.
+/// Behaviour tests for the graph-native Scene System against the configured DB backend, driven entirely
+/// over the WIRE — the wizard-only <c>scene…()</c> side-effect functions (writes) and the <c>scene…()</c>
+/// read functions (reads). The Scene plugin now owns <c>ISceneService</c> inside its own (collectible)
+/// AssemblyLoadContext, so the host cannot name it any more; the engine's softcode surface is the
+/// host-visible seam. These exercises run identically on all three providers (arangodb / memgraph /
+/// surrealdb, selected by <c>SHARPMUSH_DATABASE_PROVIDER</c>). Object references use <c>#1</c> (the seeded
+/// God object) so the resolve → edge → name-snapshot mechanism is exercised against a real vertex.
+///
+/// <para>Each scene is made <c>public</c> immediately after creation so the read functions' visibility
+/// check (God owns these scenes anyway) never masks a behaviour assertion.</para>
 /// </summary>
 [NotInParallel]
 public class SceneServiceIntegrationTests
@@ -18,65 +20,67 @@ public class SceneServiceIntegrationTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactory { get; init; }
 
-	private ISceneService Scenes => WebAppFactory.Services.GetRequiredService<ISharpDatabase>() as ISceneService
-		?? throw new InvalidOperationException("ISharpDatabase does not implement ISceneService in this configuration.");
+	private IMUSHCodeParser FunctionParser => WebAppFactory.FunctionParser;
 
 	private const string God = "#1"; // seeded object — used for owner/author/origin in these tests
 
-	private async Task<Scene> NewSceneAsync(string title = "Test Scene")
-		=> await Scenes.CreateSceneAsync(roomDbref: "", ownerDbref: God, title: title);
+	/// <summary>Evaluates a softcode expression as God and returns its trimmed plain text.</summary>
+	private async Task<string> Eval(string expression) =>
+		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText().Trim();
+
+	/// <summary>Creates a fresh PUBLIC scene owned by God and returns its id.</summary>
+	private async Task<string> NewSceneAsync(string title = "Test Scene")
+	{
+		var id = await Eval($"scenecreate(,{God},{title} {Guid.NewGuid():N})");
+		await Eval($"sceneset({id},public,1)");
+		return id;
+	}
 
 	// ── Scene CRUD + meta ───────────────────────────────────────────────────────
 
 	[Test]
 	public async Task CreateScene_AssignsId_AndSnapshotsOwnerName()
 	{
-		var scene = await NewSceneAsync($"Create {Guid.NewGuid():N}");
+		var id = await NewSceneAsync($"Create");
 
-		await Assert.That(scene.Id).IsNotNull();
-		await Assert.That(scene.Id).IsNotEmpty();
-		await Assert.That(scene.OwnerName).IsNotEmpty(); // resolved + snapshotted from #1
+		await Assert.That(id).IsNotEmpty();
+		await Assert.That(id).DoesNotStartWith("#-1");
+		await Assert.That(await Eval($"scene({id}, ownername)")).IsNotEmpty(); // resolved + snapshotted from #1
 	}
 
 	[Test]
 	public async Task GetScene_RoundTrips()
 	{
-		var created = await NewSceneAsync($"RoundTrip {Guid.NewGuid():N}");
+		var id = await NewSceneAsync($"RoundTrip");
 
-		var got = await Scenes.GetSceneAsync(created.Id);
-
-		await Assert.That(got.IsT0).IsTrue();
-		await Assert.That(got.AsT0.Id).IsEqualTo(created.Id);
+		await Assert.That(await Eval($"scene({id}, id)")).IsEqualTo(id);
 	}
 
 	[Test]
 	public async Task GetScene_Missing_ReturnsNotFound()
 	{
-		var got = await Scenes.GetSceneAsync($"does-not-exist-{Guid.NewGuid():N}");
-		await Assert.That(got.IsT1).IsTrue();
+		var got = await Eval($"scene(does-not-exist-{Guid.NewGuid():N}, status)");
+		await Assert.That(got).StartsWith("#-1");
 	}
 
 	[Test]
 	public async Task SetSceneMeta_Status_RoutesToFirstClassField()
 	{
-		var scene = await NewSceneAsync();
+		var id = await NewSceneAsync();
 
-		var updated = await Scenes.SetSceneMetaAsync(scene.Id, "status", "active");
+		await Eval($"sceneset({id},status,active)");
 
-		await Assert.That(updated.IsT0).IsTrue();
-		await Assert.That(updated.AsT0.Status).IsEqualTo("active");
+		await Assert.That(await Eval($"scene({id}, status)")).IsEqualTo("active");
 	}
 
 	[Test]
 	public async Task SetSceneMeta_CustomKey_RoutesToMetaBag()
 	{
-		var scene = await NewSceneAsync();
+		var id = await NewSceneAsync();
 
-		var updated = await Scenes.SetSceneMetaAsync(scene.Id, "genre", "noir");
+		await Eval($"sceneset({id},genre,noir)");
 
-		await Assert.That(updated.IsT0).IsTrue();
-		await Assert.That(updated.AsT0.Meta.ContainsKey("genre")).IsTrue();
-		await Assert.That(updated.AsT0.Meta["genre"]).IsEqualTo("noir");
+		await Assert.That(await Eval($"scene({id}, genre)")).IsEqualTo("noir");
 	}
 
 	// ── Poses: order, content, edit/undo ─────────────────────────────────────────
@@ -84,64 +88,60 @@ public class SceneServiceIntegrationTests
 	[Test]
 	public async Task AddPoses_AreReturnedInChainOrder()
 	{
-		var scene = await NewSceneAsync();
+		var id = await NewSceneAsync();
 
-		var p1 = await Scenes.AddPoseAsync(scene.Id, God, "", God, "pose", [], "First pose.");
-		var p2 = await Scenes.AddPoseAsync(scene.Id, God, "", God, "pose", [], "Second pose.");
-		await Assert.That(p1.IsT0).IsTrue();
-		await Assert.That(p2.IsT0).IsTrue();
+		var p1 = await Eval($"sceneaddpose({id},{God},,{God},pose,,First pose.)");
+		var p2 = await Eval($"sceneaddpose({id},{God},,{God},pose,,Second pose.)");
+		await Assert.That(p1).DoesNotStartWith("#-1");
+		await Assert.That(p2).DoesNotStartWith("#-1");
 
-		var poses = await Scenes.GetPosesAsync(scene.Id);
-		await Assert.That(poses.IsT0).IsTrue();
-		await Assert.That(poses.AsT0.Count).IsEqualTo(2);
-		await Assert.That(poses.AsT0[0].Content).Contains("First");
-		await Assert.That(poses.AsT0[1].Content).Contains("Second");
+		var poses = await Eval($"sceneposes({id})");
+		var ids = poses.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(ids.Length).IsEqualTo(2);
+		await Assert.That(await Eval($"scenepose({id}, {ids[0]}, content)")).Contains("First");
+		await Assert.That(await Eval($"scenepose({id}, {ids[1]}, content)")).Contains("Second");
 	}
 
 	[Test]
 	public async Task EditPose_VersionsContent_AndUndoRestores()
 	{
-		var scene = await NewSceneAsync();
-		var added = await Scenes.AddPoseAsync(scene.Id, God, "", God, "pose", [], "Original.");
-		await Assert.That(added.IsT0).IsTrue();
-		var poseId = added.AsT0.Id;
+		var id = await NewSceneAsync();
+		var poseId = await Eval($"sceneaddpose({id},{God},,{God},pose,,Original.)");
+		await Assert.That(poseId).DoesNotStartWith("#-1");
 
-		var edited = await Scenes.EditPoseAsync(poseId, God, "Edited.");
-		await Assert.That(edited.IsT0).IsTrue();
-		await Assert.That(edited.AsT0.Content).Contains("Edited");
-		await Assert.That(edited.AsT0.EditCount).IsGreaterThan(1);
+		await Eval($"sceneeditpose({poseId},{God},Edited.)");
+		await Assert.That(await Eval($"scenepose({id}, {poseId}, content)")).Contains("Edited");
+		await Assert.That(int.Parse(await Eval($"scenepose({id}, {poseId}, editcount)"))).IsGreaterThan(1);
 
-		var undone = await Scenes.UndoPoseAsync(poseId);
-		await Assert.That(undone.IsT0).IsTrue();
-		await Assert.That(undone.AsT0.Content).Contains("Original");
+		await Eval($"sceneundo({poseId})");
+		await Assert.That(await Eval($"scenepose({id}, {poseId}, content)")).Contains("Original");
 
-		var redone = await Scenes.RedoPoseAsync(poseId);
-		await Assert.That(redone.IsT0).IsTrue();
-		await Assert.That(redone.AsT0.Content).Contains("Edited");
+		await Eval($"sceneredo({poseId})");
+		await Assert.That(await Eval($"scenepose({id}, {poseId}, content)")).Contains("Edited");
 	}
 
 	[Test]
 	public async Task ShowAs_IsSnapshottedOnThePose()
 	{
-		var scene = await NewSceneAsync();
+		var id = await NewSceneAsync();
 
-		var pose = await Scenes.AddPoseAsync(scene.Id, God, "Guard Captain", God, "pose", [], "stands watch.");
+		var poseId = await Eval($"sceneaddpose({id},{God},Guard Captain,{God},pose,,stands watch.)");
+		await Assert.That(poseId).DoesNotStartWith("#-1");
 
-		await Assert.That(pose.IsT0).IsTrue();
-		await Assert.That(pose.AsT0.ShowAsName).IsEqualTo("Guard Captain");
-		await Assert.That(pose.AsT0.AuthorName).IsNotEqualTo("Guard Captain"); // author snapshot is the real player
+		await Assert.That(await Eval($"scenepose({id}, {poseId}, showas)")).IsEqualTo("Guard Captain");
+		// author snapshot is the real player, not the persona
+		await Assert.That(await Eval($"scenepose({id}, {poseId}, authorname)")).IsNotEqualTo("Guard Captain");
 	}
 
 	[Test]
 	public async Task DeletePose_SoftDeletes()
 	{
-		var scene = await NewSceneAsync();
-		var added = await Scenes.AddPoseAsync(scene.Id, God, "", God, "pose", [], "Doomed.");
-		await Assert.That(added.IsT0).IsTrue();
+		var id = await NewSceneAsync();
+		var poseId = await Eval($"sceneaddpose({id},{God},,{God},pose,,Doomed.)");
+		await Assert.That(poseId).DoesNotStartWith("#-1");
 
-		var deleted = await Scenes.DeletePoseAsync(added.AsT0.Id);
-		await Assert.That(deleted.IsT0).IsTrue();
-		await Assert.That(deleted.AsT0.IsDeleted).IsTrue();
+		await Eval($"scenedelpose({poseId})");
+		await Assert.That(await Eval($"scenepose({id}, {poseId}, deleted)")).IsEqualTo("1");
 	}
 
 	// ── Membership + focus ───────────────────────────────────────────────────────
@@ -149,28 +149,38 @@ public class SceneServiceIntegrationTests
 	[Test]
 	public async Task AddMember_ThenGetMembers_IncludesPlayer()
 	{
-		var scene = await NewSceneAsync();
+		var id = await NewSceneAsync();
 
-		var member = await Scenes.AddMemberAsync(scene.Id, God, "participant");
-		await Assert.That(member.IsT0).IsTrue();
-		await Assert.That(member.AsT0.Role).IsEqualTo("participant");
+		await Eval($"sceneaddmember({id},{God},participant)");
+		await Assert.That(await Eval($"scenemember({id}, {God}, role)")).IsEqualTo("participant");
 
-		var members = await Scenes.GetMembersAsync(scene.Id);
-		await Assert.That(members.IsT0).IsTrue();
-		await Assert.That(members.AsT0.Count).IsGreaterThanOrEqualTo(1);
+		var members = await Eval($"scenemembers({id})");
+		await Assert.That(members).Contains(God);
 	}
 
 	[Test]
 	public async Task SetFocus_ThenGetCurrentScene_ReturnsTheScene()
 	{
-		var scene = await NewSceneAsync();
-		await Scenes.AddMemberAsync(scene.Id, God, "participant");
+		var id = await NewSceneAsync();
+		await Eval($"sceneaddmember({id},{God},participant)");
 
-		var focus = await Scenes.SetFocusAsync(God, scene.Id);
-		await Assert.That(focus.IsT0).IsTrue();
+		await Eval($"scenesetfocus({God},{id})");
 
-		var current = await Scenes.GetCurrentSceneAsync(God);
-		await Assert.That(current.IsT0).IsTrue();
-		await Assert.That(current.AsT0.Id).IsEqualTo(scene.Id);
+		await Assert.That(await Eval($"scenefocus({God})")).IsEqualTo(id);
+	}
+
+	[Test]
+	public async Task SetFocus_OnNonMember_AutoJoinsAndFocuses()
+	{
+		// Focusing a player who is NOT yet a member must auto-create a (role-less) member edge and stick,
+		// identically on all three providers. SurrealDB previously only UPDATEd an existing edge, so the
+		// focus silently no-opped for a non-member; ArangoDB/Memgraph created the edge. This pins the
+		// Arango behavior across the board (no explicit sceneaddmember first).
+		var id = await NewSceneAsync("NonMember focus");
+
+		await Eval($"scenesetfocus({God},{id})");
+
+		await Assert.That(await Eval($"scenefocus({God})")).IsEqualTo(id);
+		await Assert.That(await Eval($"scenemembers({id})")).Contains(God);
 	}
 }

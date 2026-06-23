@@ -39,10 +39,10 @@ public class PackageCommandTests
 				(msg.IsT1 && msg.AsT1.Contains(contains))), TestHelpers.MatchingObject(player),
 				INotifyService.NotificationType.Announce);
 
-	/// <summary>Creates a Thing owned by, and located in, the PM wizard (#3) — mirrors the authoring service tests.</summary>
+	/// <summary>Creates a Thing owned by, and located in, the PM wizard (#7) — mirrors the authoring service tests.</summary>
 	private async Task<DBRef> CreateThingAsync(string name)
 	{
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(3))).Known();
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
 		var pm = pmNode.Match(p => p, _ => null!, _ => null!, _ => null!);
 		var location = pmNode.Match<AnySharpContainer>(p => p, _ => null!, _ => null!, t => t);
 		return await Database.CreateThingAsync(name, location, pm, location);
@@ -50,7 +50,7 @@ public class PackageCommandTests
 
 	private async Task SetAttrAsync(DBRef target, string attr, string value)
 	{
-		var pm = (await Database.GetObjectNodeAsync(new DBRef(3))).Known()
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known()
 			.Match(p => p, _ => null!, _ => null!, _ => null!);
 		await Database.SetAttributeAsync(target, [attr], MModule.single(value), pm);
 	}

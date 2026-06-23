@@ -6,5 +6,4 @@ public enum NotificationType
 	Info,
 	Warning,
 	Mail,
-	Scene,
 }

@@ -1,4 +1,14 @@
-# Area 7: Scene System — TODO (Reconciled 2026-06-19)
+# Area 7: Scene System — TODO (Reconciled 2026-06-20)
+
+> **2026-06-20 status:** Phases 0–7 are **shipped**. The system is extracted into
+> `SharpMUSH.Plugins.Scene` (commands/functions/migration/flag/bridge) with
+> tri-provider graph storage, realtime, and full portal UI; the scene suite is
+> green on all three providers. Two design deviations from the plan below, now
+> reflected in the boxes: **(a)** there is **no `InMemorySceneService`** — the
+> three DB providers implement `ISceneService` directly and the WASM client reads
+> over the server API (Phase 1 reframed); **(b)** the member model is
+> `SceneMember`, not `SceneMemberEdge`. Remaining work is the optional temp-room
+> softcode extension (Phase 6, not in the 1.0 package) and a display audit pass.
 
 Reconciled to the **graph-native, mechanism/policy** design in
 `docs/design/scene-system.md`. The engine ships wizard-only primitives (`@SCENE`
@@ -24,56 +34,55 @@ plugin seam.
       function names no-underscore `scene…` (verb-form writes)
 - [ ] Remaining tasks (not decisions): `AuthorName`/`ShowAsName` display audit
       (Phase 5); confirm `@wait`/cron + building-command set (`@dig`/`@tel`/
-      `@destroy`/`lcon`) for the softcode bootstrap (Phase 6)
+      `@destroy`/`lcon`) for the **optional** temp-room softcode (Phase 6, not in
+      the shipped 1.0 package — documented in `docs/setup/scene-bootstrap.md` §4)
 
-## Phase 0 — Models & contracts (graph-aware)
-- [ ] `SharpMUSH.Library/Models/Scene/`: `Scene`, `ScenePose`, `ScenePoseEdit`,
+## Phase 0 — Models & contracts (graph-aware) — ✅ shipped
+- [x] `SharpMUSH.Library/Models/Scene/`: `Scene`, `ScenePose`, `ScenePoseEdit`,
       `ScenePlot` records (first-class fields + `Meta` maps + `Name` snapshots,
-      **no `*ObjId` strings**), `SceneEventMessage` (Portal), `SceneMemberEdge`
-      (role/showAs/isCurrent/grantedAt projection)
-- [ ] All timestamps `long` UTC-millis; `Status` free string; `Content` plain +
+      **no `*ObjId` strings**), `SceneEventMessage` (Portal), `SceneMember`
+      (role/showAs/isCurrent/grantedAt projection — named `SceneMember`, not
+      `SceneMemberEdge`)
+- [x] All timestamps `long` UTC-millis; `Status` free string; `Content` plain +
       `Markup` (no `RenderedHtml`)
-- [ ] **Clean break:** remove the legacy `SceneArchive`/`SceneMessage`/
-      `SceneMessageType` + `PostMessageAsync` (no permanent compat type); update
-      every caller
+- [x] **Clean break:** legacy `SceneArchive`/`SceneMessage`/`SceneMessageType` +
+      `PostMessageAsync` removed (verified gone — no compat type); callers updated
 - **Ships:** type contracts. **Tests:** compile-only; pages still build.
 
-## Phase 1 — `ISceneService` surface + `InMemorySceneService`
-- [ ] Define `ISceneService` with the full primitive set (dbref args; service
+## Phase 1 — `ISceneService` surface — ✅ shipped (no in-memory impl, by design)
+- [x] Define `ISceneService` with the full primitive set (dbref args; service
       manages edges + name snapshots): create (roomless allowed), set (known
       keys → field/edge, else `Meta`), addpose, setpose, editpose (versioned),
       undo/redo (move `current_edit`), move (`pose_next` re-link), delete
       (soft), addmember/unmember, setfocus, showas, plot ops; reads `scene`,
       `scenelist`, `scenewhere`, `sceneposes`, `scenepose`, `sceneedits`,
       `scenemembers`, `scenemember`, `scenefocus`, `scenetags`, `scenecast`
-- [ ] Implement all in `InMemorySceneService` (graph emulated: `pose_next`
-      chain + first/last; `current_edit`/edit chain + undo/redo pointer;
-      soft-delete keeps slot; member edges incl. `isCurrent` single-current
-      invariant; `scenewhere` = in-room active; `scenecreate` roomless;
-      `Status`/`ScheduledFor` filters; name snapshot on edge create)
-- **Ships:** complete mechanism contract, testable in isolation (seam #5 half).
-- **Test matrix (TUnit, in-memory):** append/last-pose; **move re-link**
-  (front/middle/end); **undo→redo→edit-truncates-forward**; soft-delete keeps
-  chain; member `isCurrent` single-current; `scenefocus`/`scenewhere`;
-  roomless create + later room-bind via `set room=`; `scheduled` window/sort;
-  name snapshot survives a simulated target deletion (edge gone, name remains).
+      (`SharpMUSH.Library/Services/Interfaces/ISceneService.cs`)
+- [x] ~~`InMemorySceneService`~~ **dropped by design** — there is no in-memory
+      implementation. The three DB providers implement `ISceneService` directly
+      (Phase 3) and the WASM client reads scene data over the server API. The
+      Phase-1 graph-mechanism behaviours (`pose_next` chain, `current_edit`
+      undo/redo, soft-delete, `isCurrent` single-current, `scenewhere`, roomless
+      create, `scheduled` filters, name snapshots) are tested against the real
+      providers in Phase 3 instead of an in-memory oracle.
+- **Ships:** complete mechanism contract, validated via the DB providers (P3).
 
-## Phase 2 — `SCENE_ROOM` flag + wizard `@SCENE` + `scene…` functions
-- [ ] Seed `SCENE_ROOM` (`typesRoom`, wizard set/unset, informational, **symbol
-      `S`**) in `Migration_CreateDatabase.CreateInitialFlags` + Memgraph +
-      Surreal flag seeders — seam #1b
-- [ ] `Commands/SceneCommand/SceneCommand.cs` (`[SharpCommand(Name="@SCENE",
-      CommandLock="FLAG^WIZARD")]` + `IsWizard()` + switch dispatch) and handler
-      classes: scene-scoped (`create`,`set`,`addpose`,`member`,`unmember`,
-      `focus`,`showas`,`plot`,`list`,`get`,bare) take `<sceneId>`; pose-scoped
-      (`setpose`,`editpose`,`undo`,`redo`,`move`,`delete`) take `<poseId>`
-- [ ] `SceneBroadcast.cs` shared publish helper (used by command + function)
-- [ ] `Functions/SceneFunctions.cs`: reads (`Regular`) + writes
+## Phase 2 — `SCENE_ROOM` flag + wizard `@SCENE` + `scene…` functions — ✅ shipped
+- [x] `SCENE_ROOM` (`typesRoom`, wizard set/unset, informational, **symbol `S`**)
+      contributed by the plugin via `IFlagSource` (`ScenePlugin.cs`) — seam #1b —
+      instead of being seeded in the engine's flag seeders
+- [x] `Commands/SceneCommandModule.cs` (`@SCENE`, wizard-gated) + switch dispatch
+      and handler classes `SceneRead`/`SceneWrite`/`ScenePoseHandlers`/
+      `SceneMemberHandlers`/`ScenePlotHandlers`; switches LIST/GET/CREATE/SET/
+      ADDPOSE/SETPOSE/EDITPOSE/UNDO/REDO/MOVE/DELETE/MEMBER/UNMEMBER/FOCUS/SHOWAS/
+      PLOT/LINK/UNLINK/NOEVAL (`SharpMUSH.Plugins.Scene/Commands/`)
+- [x] `SceneBroadcast.cs` shared publish helper (used by command + function)
+- [x] `Functions/SceneFunctions.cs`: reads (`Regular`) + writes
       (`WizardOnly|HasSideFX`, verb-form, dbref args, return id/value):
       `scenecreate`/`sceneset`/`sceneaddpose`/`scenesetpose`/`sceneeditpose`/
       `sceneundo`/`sceneredo`/`scenemovepose`/`scenedelpose`/`sceneaddmember`/
-      `sceneunmember`/`scenesetfocus`/`sceneshowas`/`sceneplot`
-- **Ships:** softcode drives scenes end-to-end on in-memory storage; OVERRIDE
+      `sceneunmember`/`scenesetfocus`/`sceneshowas`/`sceneplot` + all read fns
+- **Ships:** softcode drives scenes end-to-end on durable storage; OVERRIDE
   capture works.
 - **Test matrix:** wizard gate denies non-wizards; read-function visibility
   (`#-1 PERMISSION` non-members); side-fx guard + inline returns; `@scene/set`
@@ -82,24 +91,25 @@ plugin seam.
   `@hook/override POSE`→`sceneaddpose` reading `scenewhere`/`scenefocus`/
   `scenemember(...,showas)`); `hasflag(<room>,SCENE_ROOM)` after softcode `@set`.
 
-## Phase 3 — DB-backed `ISceneService` across 3 providers + migrations
-- [ ] `DatabaseConstants.cs`: the `node_sharp_sys_scene_*`, `edge_sharp_sys_scene_*`,
-      `graph_sharp_sys_scene` names
-- [ ] **ArangoDB** `Migration_AddScenes : IArangoMigration`: vertex doc
-      collections; an **edge collection per edge type**; the named graph with
-      edge definitions (incl. cross-collection edges into `node_rooms`/
-      `node_players`/`node_objects`); indexes on `Scene.Status`/`ScheduledFor`/
-      `IsPublic`
-- [ ] `ArangoDatabase.Scene.cs` / `MemgraphDatabase.Scene.cs` /
+## Phase 3 — DB-backed `ISceneService` across 3 providers + migrations — ✅ shipped
+- [x] `DatabaseConstants.cs`: the `node_sharp_sys_scene_*`, `edge_sharp_sys_scene_*`,
+      `graph_sharp_sys_scene` names (`SharpScenes`/`SharpScenePoses`/
+      `SharpScenePoseEdits`/`SharpScenePlots` + the edge-type set)
+- [x] **ArangoDB** `Migration_AddScenes : IArangoMigration` (in the plugin, via
+      `IMigrationSource`): vertex doc collections; an **edge collection per edge
+      type**; the named graph with edge definitions (incl. cross-collection edges
+      into core collections); indexes on `Scene.Status`/`ScheduledFor`/`IsPublic`
+- [x] `ArangoDatabase.Scene.cs` / `MemgraphDatabase.Scene.cs` /
       `SurrealDatabase.Scene.cs` partials implementing `ISceneService` —
-      **NET-NEW files**, graph traversals (not FK scans)
-- [ ] Memgraph: labels + relationship types + indexes (auto-commit DDL).
+      graph traversals (not FK scans)
+- [x] Memgraph: labels + relationship types + indexes (auto-commit DDL).
       Surreal: tables + `RELATE` edges; `*DbRecord` **verbatim camelCase** (CBOR
-      gotcha); confirm `SCENE_ROOM` seed in all three flag seeders
-- [ ] Server `Startup.cs:257`: replace in-memory reg with the `ISceneService`
-      tri-cast (`IWikiService` precedent at `:242`). **`Client/Program.cs:33`
-      STAYS `InMemorySceneService`** (WASM no DB)
-- **Ships:** durable scenes + edges + edits on the default provider.
+      gotcha); `SCENE_ROOM` contributed via `IFlagSource` (all providers)
+- [x] Server `Startup.cs`: `ISceneService` resolves from `ISharpDatabase` (the
+      provider tri-cast). **`Client/Program.cs` registers no `ISceneService`** —
+      the WASM client reads scene data over the server API
+- **Ships:** durable scenes + edges + edits on the default provider, incl.
+  1-based scene/pose ids across all three providers (this branch).
 - **Test matrix (all 3 via Podman):** per-method parity; `pose_next` move; edit
   versioning + undo/redo pointer; soft-delete; member `isCurrent`; `scenewhere`
   via `in_room`; **object-edge + `Name` snapshot round-trip, incl. target-delete
@@ -107,33 +117,35 @@ plugin seam.
   migration idempotency; `SCENE_ROOM` parity; UTC-ms boundary. Phase-1 in-memory
   tests re-run as the oracle.
 
-## Phase 4 — Realtime `game.scene.{id}` leg
-- [ ] `NatsBridgeService.SubscribeSceneAsync` added to `Task.WhenAll`
-- [ ] `GameHub`: `ReceiveSceneMessage` on `IGameHubClient` + `SendToSceneAsync`
-      (feeds the existing-but-unpopulated `scene:{id}` groups)
-- [ ] Client `ConnectionStateService.OnSceneEventReceived` + the
-      `On(string, Action<SceneEventMessage>)` overload on `IGameHubConnection`/
-      `GameHubConnectionFactory`
-- [ ] Confirm `@SCENE` arms + side-effect functions both route through
-      `SceneBroadcast`
+## Phase 4 — Realtime `game.scene.{id}` leg — ✅ shipped
+- [x] Scene subscription moved into the plugin as an `IBridgeSubscriptionSource`
+      (`game.scene.*`), enumerated by `NatsBridgeService` instead of a hard-coded
+      `Task.WhenAll` — seam #6
+- [x] `GameHub`: `ReceiveSceneMessage` on `IGameHubClient` + `SendToSceneAsync`
+      (feeds the `scene:{id}` groups)
+- [x] Client `ConnectionStateService.OnSceneEventReceived` wired to the
+      `ReceiveSceneMessage` hub event
+- [x] `@SCENE` arms + side-effect functions both route through `SceneBroadcast`
 - **Ships:** live poses in subscribed clients.
 - **Test matrix:** publish → subject `game.scene.{id}`; bridge forwarding (mock
   `IHubContext`); client handler fires; existing `NatsBridgeServiceTests` green.
 
-## Phase 5 — Portal UI + web pose-authoring + tag filtering
-- [ ] Migrate the five surfaces (4 pages + `ActiveSceneWidget`) off the legacy
-      models onto the new functions/`ISceneService`
-- [ ] `SceneDetail`: render `Markup` client-side; display **`ShowAsName`
-      (fallback `AuthorName`)** — never key logic off a display name; edited
-      badge (edit count); struck `IsDeleted` (owner); dynamic tag chips from
-      `scenetags`/distinct `Tags`
-- [ ] `SceneLive`: `JoinScene` + `OnSceneEventReceived` patch by pose id;
-      **REMOVE the legacy direct write at `SceneLive.razor:148`**; pose editor
-      submits a normal **POSE/SAY/SEMIPOSE** (never `@emit`) via
-      `GameHub.SendCommand` (no `ISceneService` write, no optimistic insert)
-- [ ] `Scenes`/`ScenesActive`: plot grouping, cohort + RSVP counts, temp badge;
-      a `+schedule`-style agenda surface (sorted by `ScheduledFor`)
-- [ ] Client models use `long` UTC-millis
+## Phase 5 — Portal UI + web pose-authoring + tag filtering — ✅ shipped (audit open)
+- [x] The five surfaces exist on the new functions/`ISceneService`: `SceneDetail`,
+      `SceneLive`, `Scenes`, `ScenesActive` (`Client/Pages/`) + `ActiveSceneWidget`
+      (`Client/Components/Widgets/`)
+- [x] `SceneDetail`: render `Markup` client-side; edited badge; struck
+      `IsDeleted` (owner); dynamic tag chips from `scenetags`/distinct `Tags`
+- [x] `SceneLive`: `JoinScene` + `OnSceneEventReceived` patch by pose id; pose
+      editor submits a normal **POSE/SAY/SEMIPOSE** (never `@emit`) via
+      `GameHub.SendCommand` (no `ISceneService` write, no optimistic insert);
+      legacy direct write removed
+- [x] `Scenes`/`ScenesActive`: plot grouping, cohort + RSVP counts, temp badge;
+      `+schedule`-style agenda surface (sorted by `ScheduledFor`)
+- [x] Client models use `long` UTC-millis
+- [ ] **OPEN:** `AuthorName`/`ShowAsName` display audit — confirm every surface
+      shows `ShowAsName` (fallback `AuthorName`) and never keys *logic* off a
+      display name
 - **Ships:** full portal scene experience incl. web authoring.
 - **Test matrix (bUnit):** ordered render; `ShowAsName` display; `IsDeleted`
   hidden for non-owners; tag chips filter; `SceneLive` single-render of own pose
@@ -144,19 +156,21 @@ plugin seam.
 - [x] **No `SceneOptions` config** — dropped by design (every knob is softcode
       policy with zero C# consumers; the bootstrap hardcodes its own policy via
       `&conf.* #SCENELOGGER` attributes). Keeps the mechanism/policy split clean.
-- [ ] `docs/setup/scene-bootstrap.md` — the **WIZARD** `#SCENELOGGER`:
-      `@hook/override POSE/SAY/SEMIPOSE` capture (reproduce-emit + `sceneaddpose`
-      via `scenewhere`/`scenefocus`/`scenemember(...,showas)`); `+scene/*` verbs
-      (`create`,`create/temp`,`schedule`,`reschedule`,`start`,`pause`,`finish`,
-      `showas`,`edit <pose>=<find>^^^<replace>`,`undo`,`redo`,`delete`,`move`,
-      `join`,`leave`,`invite`,`watch`,`boot`,`tag`/`untag` RSVP,`share`,`unshare`,
-      `private`,`public`,meta verbs, `+scene`/`list`/`log`/`recap`/`who`,
-      `+schedule`/`+scenes`, `plot/*`); **entire temp-room lifecycle in softcode**
-      (`@dig`+`@set SCENE_ROOM FLOATING`+`scenecreate`; occupant-safe
-      `lcon()`-evacuate-then-`@destroy` recycle janitor); owner-only via
-      `@assert strmatch(scene(<id>,owner),%#)`; `/leave` scrubs no-pose members
-      (`sceneunmember`) else clears focus; document logger-must-be-WIZARD
-- **Ships:** admin-tunable config + canonical wiring docs.
+- [x] `docs/setup/scene-bootstrap.md` — the **WIZARD** Scene Logger:
+      `@hook/override POSE/SAY/SEMIPOSE` (and `@EMIT`, this branch) capture
+      (reproduce-emit + `sceneaddpose` via `scenewhere`/`scenefocus`/
+      `scenemember(...,showas)`); `+scene/*` verbs (`create`,`schedule`,`start`,
+      `pause`,`finish`,`showas`,`edit`,`undo`,`redo`,`delete`,`move`,`join`,
+      `leave`,`tag`/`untag` RSVP, meta verbs, `+scene`/`list`/`log`/`who`,
+      `+schedule`/`+scenes`, `plot/*`); owner-only via
+      `@assert strmatch(scene(<id>,owner),%#)`; logger-must-be-WIZARD documented.
+      This branch: capture keys off `loc(%#)` and the logger parks in master room
+      `#2` at AINSTALL
+- [ ] **OPTIONAL (not in shipped 1.0 package):** the full temp-room softcode
+      lifecycle (`@dig`+`@set SCENE_ROOM`+`scenecreate`; occupant-safe
+      `lcon()`-evacuate-then-`@destroy` recycle janitor) — documented as an
+      opt-in extension in `scene-bootstrap.md` §4, not packaged by default
+- **Ships:** canonical wiring docs + the packaged Scene Logger.
 - **Test matrix:** config binds; `Scene` category generated; stale generator does
   not drop it.
 
@@ -177,6 +191,11 @@ was extracted into `SharpMUSH.Plugins.Scene` (Phase 5 of the plugin framework).
       see `docs/design/plugin-system.md` §"Phase 5".
 
 ## Cross-Phase Test Matrix Summary
+
+> Note: the **In-Memory (TUnit)** column reflects the original plan's
+> `InMemorySceneService` oracle, which was dropped. Those `P1` mechanism concerns
+> are now covered directly against the three real providers (the `Arango`/
+> `Memgraph`/`Surreal` columns) via the integration scene suite.
 
 | Concern | In-Memory (TUnit) | Arango | Memgraph | Surreal | bUnit |
 |---|---|---|---|---|---|

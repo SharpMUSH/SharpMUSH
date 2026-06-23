@@ -26,6 +26,17 @@ public class DefaultPackagesBootstrapService(
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
+		// Bundled packages can be turned off (SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES=false) so a host can run
+		// the bare engine without the bundled softcode — notably generic unit tests, which must not inherit
+		// a package's server-global @hook/override capture (e.g. scene's @EMIT hook). Unset/anything-else
+		// installs as normal, so production is unaffected; package- and plugin-dependent tests opt back in.
+		if (string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES"), "false",
+			    StringComparison.OrdinalIgnoreCase))
+		{
+			logger.LogInformation("Bundled package bootstrap disabled via SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES=false.");
+			return;
+		}
+
 		var handler = options.CurrentValue.Database.HttpHandler;
 
 		foreach (var package in BundledPackages.All)

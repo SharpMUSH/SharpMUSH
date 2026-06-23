@@ -1193,29 +1193,87 @@ public partial class Functions
 		return new CallState(exitDbRef.ToString());
 	}
 
+	// r(<register>[, <type>]) — read a register. <type> (default "qregisters") selects the store, per
+	// `help r`: qregisters (setq/setr), args (the %0-%9 stack + named regexp $-command captures), iter
+	// (itext context), switch (stext context), regexp (re*() capture names, %$0 and named). Note: the
+	// second argument is the TYPE selector, NOT a fallback default value.
 	[SharpFunction(Name = "r", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> R(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var registerName = MModule.plainText(args["0"].Message);
+		var typeArgStr = args.TryGetValue("1", out var typeArg) && typeArg.Message is not null
+			? MModule.plainText(typeArg.Message).Trim()
+			: string.Empty;
 
-		// Try to get the register value from the current stack
-		if (parser.CurrentState.Registers.TryPeek(out var registers))
+		// <type> defaults to qregisters and accepts unambiguous PREFIXES (e.g. "a"→args, "q"→qregisters,
+		// "sw"→switch). The five type names have distinct first letters, so any prefix matches at most one.
+		var canonicalType = string.IsNullOrEmpty(typeArgStr)
+			? "qregisters"
+			: new[] { "qregisters", "args", "iter", "switch", "regexp" }
+				.FirstOrDefault(t => t.StartsWith(typeArgStr, StringComparison.OrdinalIgnoreCase));
+		if (canonicalType is null)
+			return ValueTask.FromResult(new CallState($"#-1 R: INVALID REGISTER TYPE '{typeArgStr}'"));
+
+		switch (canonicalType)
 		{
-			if (registers.TryGetValue(registerName.ToUpper(), out var value))
+			// setq()/setr() registers (names are case-insensitive).
+			case "qregisters":
+				return ValueTask.FromResult(
+					parser.CurrentState.Registers.TryPeek(out var qregs)
+					&& qregs.TryGetValue(registerName.ToUpper(), out var qval)
+						? new CallState(qval)
+						: CallState.Empty);
+
+			// The argument stack (%0-%9, up to 30) plus named stack registers from regexp $-commands.
+			case "args":
+				return ValueTask.FromResult(
+					parser.CurrentState.EnvironmentRegisters.TryGetValue(registerName, out var aval)
+						? new CallState(aval.Message!)
+						: CallState.Empty);
+
+			// %$0 and named captures from re*() regexp functions.
+			case "regexp":
+				return ValueTask.FromResult(
+					parser.CurrentState.RegexRegisters.TryPeek(out var rxregs)
+					&& rxregs.TryGetValue(registerName, out var rxval)
+						? new CallState(rxval)
+						: CallState.Empty);
+
+			// itext() context — int level, or "L" for the outermost iteration.
+			case "iter":
 			{
-				return ValueTask.FromResult(new CallState(value));
+				var maxCount = parser.CurrentState.IterationRegisters.Count;
+				if (registerName.Equals("L", StringComparison.OrdinalIgnoreCase))
+					return ValueTask.FromResult(maxCount == 0
+						? new CallState(ErrorMessages.Returns.RegisterRange)
+						: new CallState(parser.CurrentState.IterationRegisters.Last().Value));
+				if (!int.TryParse(registerName, out var lvl))
+					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
+				if (lvl < 0 || lvl >= maxCount)
+					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
+				return ValueTask.FromResult(
+					new CallState(parser.CurrentState.IterationRegisters.ElementAt(maxCount - lvl - 1).Value));
 			}
-		}
 
-		// If not found and there's a default value, return it
-		if (args.Count == 2)
-		{
-			return ValueTask.FromResult(new CallState(args["1"].Message!));
-		}
+			// stext() context — int depth, or "L" for the outermost switch.
+			case "switch":
+			{
+				var stack = parser.CurrentState.SwitchStack;
+				var depth = 0;
+				if (registerName.Equals("L", StringComparison.OrdinalIgnoreCase))
+					depth = stack.Count - 1;
+				else if (!string.IsNullOrEmpty(registerName) && (!int.TryParse(registerName, out depth) || depth < 0))
+					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NonNegativeInteger));
+				if (stack.Count == 0 || depth < 0 || depth >= stack.Count)
+					return ValueTask.FromResult(new CallState(string.Empty));
+				return ValueTask.FromResult(new CallState(stack.ElementAtOrDefault(depth) ?? MModule.empty()));
+			}
 
-		// Otherwise return empty
-		return ValueTask.FromResult(CallState.Empty);
+			default:
+				// Unreachable: canonicalType is always one of the five valid names (or we returned above).
+				return ValueTask.FromResult(new CallState($"#-1 R: INVALID REGISTER TYPE '{typeArgStr}'"));
+		}
 	}
 
 	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

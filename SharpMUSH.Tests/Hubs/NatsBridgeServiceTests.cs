@@ -28,7 +28,6 @@ public class NatsBridgeServiceTests
 		clients.Group(Arg.Any<string>()).Returns(clientProxy);
 		clientProxy.ReceiveOutput(Arg.Any<GameOutputMessage>()).Returns(Task.CompletedTask);
 		clientProxy.ReceiveRoomEvent(Arg.Any<RoomEventMessage>()).Returns(Task.CompletedTask);
-		clientProxy.ReceiveSceneMessage(Arg.Any<SceneEventMessage>()).Returns(Task.CompletedTask);
 
 		var pluginHubContext = Substitute.For<IHubContext<GameHub>>();
 		var options = new NatsOptions { Url = natsUrl };
@@ -92,34 +91,9 @@ public class NatsBridgeServiceTests
 		await proxy.Received(1).ReceiveRoomEvent(message);
 	}
 
-	[Test]
-	public async Task ForwardSceneEventMessage_RoutesToCorrectSceneGroup()
-	{
-		// Arrange
-		var (_, hubContext) = BuildService();
-		var clients = hubContext.Clients;
-		var sceneId = "777";
-		var expectedGroup = GameHub.SceneGroupName(sceneId);
-		var message = new SceneEventMessage(
-			SceneId: sceneId,
-			EventType: "pose",
-			ActorName: "Wizard",
-			PoseId: "9001",
-			Content: "Wizard waves.",
-			Markup: "Wizard waves.",
-			Tags: ["intro"],
-			Source: "pose",
-			Location: "The Void",
-			Timestamp: 1_700_000_000_000);
-
-		// Act
-		var proxy = hubContext.Clients.Group(expectedGroup);
-		await proxy.ReceiveSceneMessage(message);
-
-		// Assert
-		clients.Received(1).Group(expectedGroup);
-		await proxy.Received(1).ReceiveSceneMessage(message);
-	}
+	// Phase 9: the game.scene.* → scene:{id} leg moved into the Scene plugin and now forwards through the
+	// plugin-owned SceneHub (IHubContext<SceneHub, ISceneHubClient>), NOT the GameHub. The GameHub-based
+	// scene-routing test was therefore removed from this host-level NatsBridgeService suite.
 
 	[Test]
 	public async Task ForwardMultipleOutputMessages_EachRoutedToCorrectGroup()

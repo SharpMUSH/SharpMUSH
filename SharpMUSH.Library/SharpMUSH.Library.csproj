@@ -58,8 +58,7 @@
 	     ensures @(ReferenceCopyLocalPaths) is populated when pack invokes this. -->
 	<Target Name="IncludeReferencedProjectsInPackage" DependsOnTargets="ResolveReferences">
 		<ItemGroup>
-			<BuildOutputInPackage Include="@(ReferenceCopyLocalPaths)"
-				Condition="'%(ReferenceCopyLocalPaths.ReferenceSourceTarget)' == 'ProjectReference' And '%(Extension)' == '.dll'" />
+			<BuildOutputInPackage Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.ReferenceSourceTarget)' == 'ProjectReference' And '%(Extension)' == '.dll'" />
 		</ItemGroup>
 	</Target>
 
@@ -93,6 +92,33 @@
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
     <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.5.0" />
 		<PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
+
+    <!-- DB-client packages referenced ONLY by the per-provider storage-accessor interfaces
+         (IArangoStorageAccessor / IMemgraphStorageAccessor / ISurrealStorageAccessor). These interfaces
+         must live in this host-shared assembly so the host and a storage plugin (e.g. SharpMUSH.Plugins.Scene)
+         unify on the SAME accessor Type across the plugin AssemblyLoadContext. PrivateAssets="all" keeps the
+         three client packages out of SharpMUSH.Library's published NuGet dependency closure (command/function
+         plugin authors never pull them), and they do not flow transitively to Library consumers. The client
+         assemblies are shared from the host ALC at load time (PluginLoaderService SharedAssemblies), so an
+         accessor-returned client casts/uses cleanly inside the plugin. -->
+    <PackageReference Include="Core.Arango" Version="3.12.2" PrivateAssets="all" />
+    <PackageReference Include="Neo4j.Driver" Version="6.0.0" PrivateAssets="all" />
+    <!-- The core SurrealDb.Net client only (NOT the embedded provider). -->
+    <PackageReference Include="SurrealDb.Net" Version="0.9.0" PrivateAssets="all" />
+    <!-- SurrealDb.Net pulls System.Linq.Async 6.x, whose IOrderedAsyncEnumerable collides at compile time
+         with .NET 10's built-in System.Linq.AsyncEnumerable. ExcludeAssets="compile" keeps the runtime
+         assembly available but drops its compile-time facade (same fix the SurrealDB provider uses). -->
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- The IEndpointContributor plugin seam (Plugins/IEndpointContributor.cs) takes an
+       IEndpointRouteBuilder so a plugin can map controllers/hubs/routes into the ASP.NET pipeline.
+       That type lives in the ASP.NET Core shared framework. Compile-time only — PrivateAssets="all"
+       keeps the framework reference out of Library's published dependency closure and stops it flowing
+       transitively to non-web consumers (e.g. the Blazor WASM client / ConnectionServer), which never
+       use the seam. The host (SharpMUSH.Server) already loads this shared framework. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

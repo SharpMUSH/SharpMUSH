@@ -133,6 +133,26 @@ public class Program
 		app.MapRazorPages();
 		app.MapHub<GameHub>("/hubs/game");
 
+		// Phase 9 — plugin web-contribution seam: after the host maps its own controllers/hubs, let each
+		// plugin implementing IEndpointContributor map its endpoints (hubs/routes) into the pipeline. The
+		// Scene plugin maps its SceneHub at /hubs/scene here. Each is isolated so a single failing plugin
+		// cannot abort endpoint mapping for the rest.
+		var pluginCatalog = app.Services.GetRequiredService<SharpMUSH.Implementation.Services.PluginCatalog>();
+		var endpointLogger = app.Services.GetRequiredService<ILogger<Program>>();
+		foreach (var contributor in pluginCatalog.EndpointContributors)
+		{
+			try
+			{
+				contributor.MapEndpoints(app);
+			}
+			catch (Exception ex)
+			{
+				endpointLogger.LogError(ex,
+					"[Plugins] Endpoint contributor '{Contributor}' threw while mapping endpoints; skipping it.",
+					contributor.GetType().FullName);
+			}
+		}
+
 		// Health and readiness endpoints for deployment checks
 		app.MapGet("/health", () => "healthy");
 		app.MapGet("/ready", () => "ready");

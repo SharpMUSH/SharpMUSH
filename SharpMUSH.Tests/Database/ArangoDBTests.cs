@@ -47,6 +47,120 @@ public class ArangoDBTests
 	}
 
 	[Test]
+	public async Task TestAncestorRoomThree()
+	{
+		var ancestor = (await Database.GetObjectNodeAsync(new DBRef(3))).AsRoom;
+		await Assert.That(ancestor).IsTypeOf<SharpRoom>();
+		await Assert.That(ancestor.Object.Name).IsEqualTo("Ancestor Room");
+		await Assert.That(ancestor.Object.Key).IsEqualTo(3);
+	}
+
+	[Test]
+	public async Task TestAncestorPlayerFour()
+	{
+		// Ancestor Player is a THING (decided: avoid a loginable player ancestor).
+		var ancestor = (await Database.GetObjectNodeAsync(new DBRef(4))).AsThing;
+		await Assert.That(ancestor).IsTypeOf<SharpThing>();
+		await Assert.That(ancestor.Object.Name).IsEqualTo("Ancestor Player");
+		await Assert.That(ancestor.Object.Key).IsEqualTo(4);
+	}
+
+	[Test]
+	public async Task TestAncestorExitFive()
+	{
+		var ancestor = (await Database.GetObjectNodeAsync(new DBRef(5))).AsThing;
+		await Assert.That(ancestor).IsTypeOf<SharpThing>();
+		await Assert.That(ancestor.Object.Name).IsEqualTo("Ancestor Exit");
+		await Assert.That(ancestor.Object.Key).IsEqualTo(5);
+	}
+
+	[Test]
+	public async Task TestAncestorThingSix()
+	{
+		var ancestor = (await Database.GetObjectNodeAsync(new DBRef(6))).AsThing;
+		await Assert.That(ancestor).IsTypeOf<SharpThing>();
+		await Assert.That(ancestor.Object.Name).IsEqualTo("Ancestor Thing");
+		await Assert.That(ancestor.Object.Key).IsEqualTo(6);
+	}
+
+	[Test]
+	public async Task TestPackageManagerSeven()
+	{
+		// Package Manager displaced from #3 to #7 by the ancestor renumber.
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).AsPlayer;
+		await Assert.That(pm).IsTypeOf<SharpPlayer>();
+		await Assert.That(pm.Object.Name).IsEqualTo("Package Manager");
+		await Assert.That(pm.Object.Key).IsEqualTo(7);
+	}
+
+	[Test]
+	public async Task TestHttpHandlerEight()
+	{
+		var handler = (await Database.GetObjectNodeAsync(new DBRef(8))).AsThing;
+		await Assert.That(handler).IsTypeOf<SharpThing>();
+		await Assert.That(handler.Object.Name).IsEqualTo("HTTP Handler");
+		await Assert.That(handler.Object.Key).IsEqualTo(8);
+	}
+
+	[Test]
+	public async Task TestEventHandlerNine()
+	{
+		var handler = (await Database.GetObjectNodeAsync(new DBRef(9))).AsThing;
+		await Assert.That(handler).IsTypeOf<SharpThing>();
+		await Assert.That(handler.Object.Name).IsEqualTo("Event Handler");
+		await Assert.That(handler.Object.Key).IsEqualTo(9);
+	}
+
+	[Test]
+	[Explicit]
+	[NotInParallel]
+	public async Task FirstCreatedGameObjectIsTen()
+	{
+		// The standard slots occupy #0-#9; the first freely-created game object on a freshly migrated
+		// database must land at #10. Use a staging copy so the assertion is deterministic regardless of
+		// objects created by other tests sharing the live database.
+		// Staging is fully exercised on Arango (mirrors StagingDatabaseTests); skip on other providers
+		// where the in-memory test harness does not wire a staging endpoint.
+		var provider = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
+		if (!string.IsNullOrEmpty(provider) && !string.Equals(provider, "arangodb", StringComparison.OrdinalIgnoreCase))
+		{
+			return;
+		}
+
+		await using var staging = await Database.CreateStagingAsync();
+
+		var god = (await staging.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var roomZero = (await staging.GetObjectNodeAsync(new DBRef(0))).AsRoom;
+
+		var created = await staging.CreateThingAsync("Renumber Probe Thing", roomZero, god, roomZero);
+
+		await Assert.That(created.Number).IsEqualTo(10);
+
+		await staging.AbortAsync();
+	}
+
+	[Test]
+	public async Task AncestorPlayerSeedsFormatAttributes()
+	{
+		// The Ancestor Player (#4) carries the default FORMAT`* render templates so a plain player
+		// inherits them. Read them directly off #4.
+		var ancestor = new DBRef(4);
+
+		var say = await Database.GetAttributeAsync(ancestor, ["FORMAT", "SAY"]).ToArrayAsync();
+		var pose = await Database.GetAttributeAsync(ancestor, ["FORMAT", "POSE"]).ToArrayAsync();
+		var semipose = await Database.GetAttributeAsync(ancestor, ["FORMAT", "SEMIPOSE"]).ToArrayAsync();
+		var emit = await Database.GetAttributeAsync(ancestor, ["FORMAT", "EMIT"]).ToArrayAsync();
+
+		await Assert.That(say.Length).IsGreaterThan(0);
+		await Assert.That(pose.Length).IsGreaterThan(0);
+		await Assert.That(semipose.Length).IsGreaterThan(0);
+		await Assert.That(emit.Length).IsGreaterThan(0);
+
+		await Assert.That(say.Last().Value.ToPlainText()).Contains("You say");
+		await Assert.That(emit.Last().Value.ToPlainText()).IsEqualTo("%0");
+	}
+
+	[Test]
 	[Repeat(10)]
 	[NotInParallel]
 	public async Task SetAndOverrideAnAttribute()

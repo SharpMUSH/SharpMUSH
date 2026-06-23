@@ -103,6 +103,16 @@ public sealed class ManagedPackageInstaller(
 				deployed.Add(fileName);
 			}
 
+			// Persist the verified SHA-256s next to the binaries so the runtime UI-assembly endpoint can
+			// re-verify any compiled component it serves to the browser against the installer-checked hash
+			// (the Phase-4 trust chain extended to serve time). Best-effort sidecar — its absence simply means
+			// the endpoint cannot serve a component for this package (it 404s), never a tampered serve.
+			var sidecar = PluginUiBinaryManifest.FromManifestFiles(manifest.Binary.Files);
+			await File.WriteAllTextAsync(
+				Path.Combine(targetDirectory, PluginUiBinaryManifest.FileName),
+				sidecar.ToJson(),
+				cancellationToken);
+
 			logger.LogInformation(
 				"Deployed managed package '{PackageId}' v{Version}: {Count} verified file(s) into {Directory}. "
 				+ "It loads on the next server boot.",

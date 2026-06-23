@@ -10,6 +10,7 @@ using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components.Widgets;
+using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Pages;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
@@ -114,6 +115,7 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	public event Action<GameOutputMessage>? OnOutputReceived;
 	public event Action<RoomEventMessage>? OnRoomEventReceived;
 	public event Action<SceneEventMessage>? OnSceneEventReceived;
+	public event Action? OnPluginsChanged;
 
 	public Task ConnectAsync(string accessToken) => Task.CompletedTask;
 	public Task DisconnectAsync() => Task.CompletedTask;

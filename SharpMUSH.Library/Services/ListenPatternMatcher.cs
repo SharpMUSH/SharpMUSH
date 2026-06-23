@@ -12,9 +12,12 @@ namespace SharpMUSH.Library.Services;
 /// <remarks>
 /// Implements listen pattern matching for ^-prefixed attributes that trigger on speech.
 /// Supports AHEAR (others only), AAHEAR (anyone), and AMHEAR (self only) behaviors.
-/// Can optionally check parent objects with LISTEN_PARENT flag.
+/// Can optionally check parent objects with LISTEN_PARENT flag, then the type ancestor
+/// (PennMUSH ANCESTOR_*) and the ancestor's own LISTEN_PARENT chain.
 /// </remarks>
-public class ListenPatternMatcher(IMediator mediator) : IListenPatternMatcher
+public class ListenPatternMatcher(
+	IMediator mediator,
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration) : IListenPatternMatcher
 {
 	public async ValueTask<ListenMatch[]> MatchListenPatternsAsync(
 		AnySharpObject listener,
@@ -26,40 +29,7 @@ public class ListenPatternMatcher(IMediator mediator) : IListenPatternMatcher
 
 		// Get cached listen attributes for this object
 		var listenAttributes = await mediator.Send(new GetListenAttributesQuery(listener));
-
-		foreach (var listenAttr in listenAttributes)
-		{
-			// Check if this pattern should trigger based on speaker
-			var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
-			var shouldTrigger = listenAttr.Behavior switch
-			{
-				ListenBehavior.AHear => !isSelf,   // Only others
-				ListenBehavior.AAHear => true,      // Anyone
-				ListenBehavior.AMHear => isSelf,    // Only self
-				_ => false
-			};
-
-			if (!shouldTrigger)
-				continue;
-
-			// Try to match the pattern
-			var regexMatch = listenAttr.CompiledRegex.Match(message);
-			if (!regexMatch.Success)
-				continue;
-
-			// Extract captured groups
-			var capturedGroups = new string[regexMatch.Groups.Count];
-			for (int i = 0; i < regexMatch.Groups.Count; i++)
-			{
-				capturedGroups[i] = regexMatch.Groups[i].Value;
-			}
-
-			matches.Add(new ListenMatch(
-				listenAttr.Attribute,
-				capturedGroups,
-				listenAttr.Behavior
-			));
-		}
+		CollectMatches(listenAttributes, listener, message, speaker, matches);
 
 		// Check parent objects if requested and LISTEN_PARENT flag is set
 		if (checkParents)
@@ -90,47 +60,76 @@ public class ListenPatternMatcher(IMediator mediator) : IListenPatternMatcher
 
 				// Get listen attributes from parent
 				var parentListenAttributes = await mediator.Send(new GetListenAttributesQuery(parent));
-
-				foreach (var listenAttr in parentListenAttributes)
-				{
-					// Check if this pattern should trigger based on speaker
-					var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
-					var shouldTrigger = listenAttr.Behavior switch
-					{
-						ListenBehavior.AHear => !isSelf,   // Only others
-						ListenBehavior.AAHear => true,      // Anyone
-						ListenBehavior.AMHear => isSelf,    // Only self
-						_ => false
-					};
-
-					if (!shouldTrigger)
-						continue;
-
-					// Try to match the pattern
-					var regexMatch = listenAttr.CompiledRegex.Match(message);
-					if (!regexMatch.Success)
-						continue;
-
-					// Extract captured groups
-					var capturedGroups = new string[regexMatch.Groups.Count];
-					for (int i = 0; i < regexMatch.Groups.Count; i++)
-					{
-						capturedGroups[i] = regexMatch.Groups[i].Value;
-					}
-
-					matches.Add(new ListenMatch(
-						listenAttr.Attribute,
-						capturedGroups,
-						listenAttr.Behavior
-					));
-				}
+				CollectMatches(parentListenAttributes, listener, message, speaker, matches);
 
 				// Move to next parent
 				currentObject = parent;
 				depth++;
 			}
+
+			// PennMUSH ancestor fall-through: after the object's own @parent chain, consult the
+			// type ancestor and its own LISTEN_PARENT chain (but no ancestor-of-ancestor).
+			//
+			// Short-circuit cheapest-first: Ancestor() resolves the configured ancestor purely from
+			// type + config with no DB access and returns null when disabled, so a disabled ancestor
+			// costs nothing here. Skip too when the object IS its own type ancestor (no self-loop) or
+			// when the ancestor was already visited along the @parent chain. The ancestor's listen
+			// contribution (its own listens + its LISTEN_PARENT chain) is itself cached keyed by
+			// ancestor dbref, so it is computed once per ancestor rather than re-walked per listener.
+			var ancestorRef = await listener.Ancestor(configuration);
+			if (ancestorRef is not null && ancestorRef.Value.Number != listener.Object().DBRef.Number
+			    && !visitedObjects.Contains(ancestorRef.Value.Number))
+			{
+				var ancestorListenAttributes =
+					await mediator.Send(new GetAncestorListenAttributesQuery(ancestorRef.Value));
+				CollectMatches(ancestorListenAttributes, listener, message, speaker, matches);
+			}
 		}
 
 		return [.. matches];
+	}
+
+	/// <summary>
+	/// Evaluate a set of listen attributes against the message and append any matches. The self/other
+	/// trigger gate is computed relative to the original <paramref name="listener"/>.
+	/// </summary>
+	private static void CollectMatches(
+		IEnumerable<ListenAttributeCache> listenAttributes,
+		AnySharpObject listener,
+		string message,
+		AnySharpObject speaker,
+		List<ListenMatch> matches)
+	{
+		var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
+
+		foreach (var listenAttr in listenAttributes)
+		{
+			var shouldTrigger = listenAttr.Behavior switch
+			{
+				ListenBehavior.AHear => !isSelf,   // Only others
+				ListenBehavior.AAHear => true,      // Anyone
+				ListenBehavior.AMHear => isSelf,    // Only self
+				_ => false
+			};
+
+			if (!shouldTrigger)
+				continue;
+
+			var regexMatch = listenAttr.CompiledRegex.Match(message);
+			if (!regexMatch.Success)
+				continue;
+
+			var capturedGroups = new string[regexMatch.Groups.Count];
+			for (int i = 0; i < regexMatch.Groups.Count; i++)
+			{
+				capturedGroups[i] = regexMatch.Groups[i].Value;
+			}
+
+			matches.Add(new ListenMatch(
+				listenAttr.Attribute,
+				capturedGroups,
+				listenAttr.Behavior
+			));
+		}
 	}
 }

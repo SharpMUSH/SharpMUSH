@@ -36,6 +36,21 @@ public enum ApplicationKind
 /// registered application. When set, the package manager owns the record's lifecycle: uninstalling the
 /// package removes it.
 /// </param>
+/// <param name="RenderKind">
+/// How the client renders this application: <c>"Schema"</c> (default) drives the generic Area-21
+/// schema/data renderer; <c>"Component"</c> loads a plugin-shipped compiled Blazor component by
+/// <see cref="ComponentAssemblyUrl"/> + <see cref="ComponentTypeName"/> and renders it via
+/// <c>&lt;DynamicComponent&gt;</c>. This is a general portal descriptor field, NOT a plugin contract — the
+/// host/client reference zero plugin types and render the component purely by reflection/Type.
+/// </param>
+/// <param name="ComponentAssemblyUrl">
+/// For <c>RenderKind == "Component"</c>: the relative URL the client fetches the UI assembly bytes from
+/// (e.g. <c>api/plugins/{pluginId}/ui/{assembly}</c>). Null for Schema apps.
+/// </param>
+/// <param name="ComponentTypeName">
+/// For <c>RenderKind == "Component"</c>: the full Type name to resolve out of the loaded assembly and hand
+/// to <c>&lt;DynamicComponent&gt;</c>. Null for Schema apps.
+/// </param>
 public sealed record RegisteredApplication(
 	string Slug,
 	string DisplayName,
@@ -48,4 +63,21 @@ public sealed record RegisteredApplication(
 	string? NavPlacement,
 	IReadOnlyList<WidgetZone>? Zones,
 	int Order,
-	string? OwningPackage = null);
+	string? OwningPackage = null,
+	string RenderKind = ApplicationRenderKind.Schema,
+	string? ComponentAssemblyUrl = null,
+	string? ComponentTypeName = null);
+
+/// <summary>
+/// String discriminator values for <see cref="RegisteredApplication.RenderKind"/>. Kept as constants
+/// (not an enum) because the value travels as a plain string through the DTO and DB, and the default must
+/// be a compile-time constant for the positional record's optional parameter.
+/// </summary>
+public static class ApplicationRenderKind
+{
+	/// <summary>Default: render via the generic Area-21 schema/data renderer.</summary>
+	public const string Schema = "Schema";
+
+	/// <summary>Render via a plugin-shipped compiled Blazor component loaded at runtime (operator-gated).</summary>
+	public const string Component = "Component";
+}

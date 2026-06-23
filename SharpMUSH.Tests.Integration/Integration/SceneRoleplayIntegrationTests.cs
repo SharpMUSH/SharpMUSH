@@ -4,6 +4,8 @@ using NSubstitute;
 using NSubstitute.Core;
 using OneOf;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -97,12 +99,69 @@ public class SceneRoleplayIntegrationTests
 		return all.Skip(fromCount).ToList();
 	}
 
+	/// <summary>A single captured notification: who heard it, the text, and the short "#N" sender dbref (or null).</summary>
+	private sealed record Notification(string Recipient, string Message, string? Sender);
+
+	/// <summary>Extracts the short "#N" recipient dbref from a Notify call's first argument.</summary>
+	private static string? ExtractRecipient(ICall call)
+	{
+		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify))
+			return null;
+		var args = call.GetArguments();
+		if (args.Length < 1)
+			return null;
+		return args[0] switch
+		{
+			DBRef dbref => dbref.ToString(),
+			AnySharpObject obj => obj.Object().DBRef.ToString(),
+			_ => args[0]?.ToString()
+		};
+	}
+
+	/// <summary>Extracts the short "#N" sender dbref from a Notify call's third argument (the spoofed sender).</summary>
+	private static string? ExtractSender(ICall call)
+	{
+		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify))
+			return null;
+		var args = call.GetArguments();
+		if (args.Length < 3)
+			return null;
+		return args[2] switch
+		{
+			AnySharpObject obj => obj.Object().DBRef.ToString(),
+			DBRef dbref => dbref.ToString(),
+			null => null,
+			_ => args[2]?.ToString()
+		};
+	}
+
+	private IReadOnlyList<Notification> NotificationsSince(int fromCount)
+	{
+		var calls = NotifyService.ReceivedCalls()
+			.Where(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify))
+			.ToList();
+		return calls.Skip(fromCount)
+			.Select(c => new Notification(
+				Num(ExtractRecipient(c) ?? string.Empty),
+				ExtractMessageText(c) ?? string.Empty,
+				ExtractSender(c) is { } s ? Num(s) : null))
+			.ToList();
+	}
+
 	/// <summary>Runs a command as a connection handle and returns every notification it produced.</summary>
 	private async Task<IReadOnlyList<string>> RunAndCollectAs(long handle, string command)
 	{
 		var before = NotificationCount();
 		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
 		return MessagesSince(before);
+	}
+
+	/// <summary>Runs a command as a handle and returns the full (recipient, message, sender) notifications.</summary>
+	private async Task<IReadOnlyList<Notification>> RunAndCollectNotificationsAs(long handle, string command)
+	{
+		var before = NotificationCount();
+		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
+		return NotificationsSince(before);
 	}
 
 	/// <summary>Creates a non-God player, registers + binds a connection handle, returns its full objid.</summary>
@@ -177,9 +236,11 @@ public class SceneRoleplayIntegrationTests
 			await God1($"@tel {dbref}={digOut}");
 
 		// Co-locate the Scene Logger with the players so its +scene/* $-commands match for them.
-		// (The bundled package parks the Logger in its own package room — it is NOT placed in the
-		// master room, so its verbs are not global. This is the same co-location trick the Myrddin
-		// BBS test uses for mbboard's $-commands. The capture hooks fire regardless of locality.)
+		// (AINSTALL parks the Logger in the master room #2 — proven by
+		// PackageLifecycleHooksTests.Ainstall_TeleportSelfToMasterRoom_LandsObjectInRoom2 — so its
+		// verbs ARE global from there. We co-locate it into this dug room anyway: this is the same
+		// trick the Myrddin BBS test uses for mbboard's $-commands, and it keeps the beat independent
+		// of the shared-session Logger location. The capture hooks fire regardless of locality.)
 		await God1($"@tel {loggerDbref}={digOut}");
 		await Assert.That(await EvalNum($"loc({loggerDbref})")).IsEqualTo(roomDbref)
 			.Because("the Scene Logger must be co-located so its +scene/* verbs fire for the players");
@@ -540,5 +601,258 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(card).Contains("Summary").Because("the info card should have a Summary row");
 		await Assert.That(card).Contains("A tense standoff").Because("the summary text should render in the card");
 		await Assert.That(card).Contains("active").Because("the Status row should show the scene is active");
+	}
+
+	/// <summary>
+	/// Proves #2 (AINSTALL `leave` lands the logger in the master room #2) and #4 (capture keys off the
+	/// poser's loc(%#), not the logger's %L): with the logger NOT co-located, a remote player's +scene/create
+	/// still works (global $-command from #2) and their pose both OUTPUTS to their room and is CAPTURED.
+	/// </summary>
+	[Test]
+	public async Task SceneCapture_LoggerInMasterRoom_CapturesRemotePose()
+	{
+		await God1("@set #1=WIZARD");
+
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+
+		// #2: the logger must live in the master room (#2) so the +scene/* $-commands are global.
+		// AINSTALL @teleports it there at install; this shared-session logger may have been moved into
+		// another test's room since, so re-establish the precondition before asserting + testing.
+		await God1($"@teleport {loggerDbref}=#2");
+		await Assert.That(Num(await Eval($"loc({loggerDbref})"))).IsEqualTo("#2")
+			.Because("the Scene Logger must be in the master room (#2) for +scene/* to match globally");
+
+		// A player in a SEPARATE dug room — the logger is NOT co-located with them.
+		var digOut = (await God1($"@dig CapRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var zed = await CreatePlayerAsync($"Zed_{Tag}", "pw_zed_123", 61L);
+		await God1($"@tel {zed}={digOut}");
+
+		// +scene/create must work globally (logger $-commands live in #2) even though Zed isn't there.
+		await RunAndCollectAs(61L, $"+scene/create CapTest_{Tag}");
+		await RunAndCollectAs(61L, "+scene/start");
+		var sceneId = await Eval($"get({zed}/MY.SID)");
+		await Assert.That(sceneId).IsNotEmpty()
+			.Because("+scene/create should work for a remote player when the logger is global in #2");
+
+		// #4: pose must OUTPUT to Zed's room and be CAPTURED — using loc(%#), not the logger's %L.
+		var poseMsgs = await RunAndCollectAs(61L, "pose waves a banner");
+		var poseOut = string.Join("\n", poseMsgs.SelectMany(m => m.Split('\n')));
+		Console.WriteLine("=== remote pose output ===\n" + poseOut);
+		await Assert.That(poseOut).Contains("waves a banner")
+			.Because("the pose must emit to the poser's room (loc(%#)), not the logger's room in #2");
+		await Assert.That(await Eval($"words(sceneposes({sceneId}))")).IsEqualTo("1")
+			.Because("the pose must be captured into the active scene in the poser's room");
+	}
+
+	/// <summary>
+	/// #1: the REGEXP capture patterns match every input form — "pose "/":" (pose), "semipose "/";"
+	/// (semipose), "say "/'"' (say) — plus @emit. All five are captured with correct rendering.
+	/// </summary>
+	[Test]
+	public async Task SceneCapture_AllInputFormsCaptured()
+	{
+		await God1("@set #1=WIZARD");
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+
+		var digOut = (await God1($"@dig FormRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var ada = await CreatePlayerAsync($"Ada_{Tag}", "pw_ada_123", 71L);
+		await God1($"@tel {ada}={digOut}");
+		await God1($"@tel {loggerDbref}={digOut}");   // co-located, to isolate FORM matching from #4
+
+		await RunAndCollectAs(71L, $"+scene/create FormTest_{Tag}");
+		await RunAndCollectAs(71L, "+scene/start");
+		var sceneId = await Eval($"get({ada}/MY.SID)");
+
+		await RunAndCollectAs(71L, "pose waves.");          // "pose " form
+		await RunAndCollectAs(71L, ":nods.");               // ':' pose shortcut
+		await RunAndCollectAs(71L, ";grins.");              // ';' semipose shortcut
+		await RunAndCollectAs(71L, "\"hello there");        // '\"' say shortcut
+		await RunAndCollectAs(71L, "@emit The wind howls."); // @emit (currently unhooked)
+
+		var captured = await Eval($"words(sceneposes({sceneId}))");
+		var contents = await Eval($"iter(sceneposes({sceneId}),scenepose({sceneId},##,content),,|)");
+		await Assert.That(captured).IsEqualTo("5")
+			.Because("all five input forms (pose / : / ; / \" / @emit) must be captured");
+		await Assert.That(contents).Contains($"Ada_{Tag} waves.").Because("'pose ' form, name + space");
+		await Assert.That(contents).Contains($"Ada_{Tag} nods.").Because("':' pose shortcut, name + space");
+		await Assert.That(contents).Contains($"Ada_{Tag}grins.").Because("';' semipose shortcut, name + no space");
+		await Assert.That(contents).Contains("says, \"hello there\"").Because("'\"' say shortcut");
+		await Assert.That(contents).Contains("The wind howls.").Because("@emit captured verbatim");
+	}
+
+	/// <summary>
+	/// Attribution: capture re-broadcasts via @message/spoof, so the captured say/pose/@emit
+	/// notification's SENDER is the real speaker (%#), NOT the WIZARD Scene Logger that runs the hook.
+	/// (This is the regression that previously forced @emit out of the unit run.)
+	/// </summary>
+	[Test]
+	public async Task SceneCapture_NotificationSenderIsSpeakerNotLogger()
+	{
+		await God1("@set #1=WIZARD");
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+
+		var digOut = (await God1($"@dig SenderRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var eve = await CreatePlayerAsync($"Eve_{Tag}", "pw_eve_123", 91L);
+		await God1($"@tel {eve}={digOut}");
+		await God1($"@tel {loggerDbref}={digOut}");
+
+		await RunAndCollectAs(91L, $"+scene/create SenderTest_{Tag}");
+		await RunAndCollectAs(91L, "+scene/start");
+
+		// SAY — Eve has no FORMAT`SAY, so the built-in default literal is used for all recipients.
+		var sayNotes = await RunAndCollectNotificationsAs(91L, "say I am the speaker.");
+		var sayHeard = sayNotes.Where(n => n.Message.Contains("I am the speaker.")).ToList();
+		await Assert.That(sayHeard).IsNotEmpty().Because("the say must be broadcast to the room");
+		foreach (var n in sayHeard)
+			await Assert.That(n.Sender).IsEqualTo(Num(eve))
+				.Because("the captured say's sender must be the speaker, not the Scene Logger");
+		await Assert.That(sayHeard.All(n => n.Sender != Num(loggerDbref))).IsTrue()
+			.Because("the Scene Logger must never be the sender of a captured say");
+
+		// POSE
+		var poseNotes = await RunAndCollectNotificationsAs(91L, "pose stands up.");
+		var poseHeard = poseNotes.Where(n => n.Message.Contains("stands up.")).ToList();
+		await Assert.That(poseHeard).IsNotEmpty();
+		foreach (var n in poseHeard)
+			await Assert.That(n.Sender).IsEqualTo(Num(eve))
+				.Because("the captured pose's sender must be the speaker");
+
+		// @EMIT
+		var emitNotes = await RunAndCollectNotificationsAs(91L, "@emit A bell tolls.");
+		var emitHeard = emitNotes.Where(n => n.Message.Contains("A bell tolls.")).ToList();
+		await Assert.That(emitHeard).IsNotEmpty();
+		foreach (var n in emitHeard)
+			await Assert.That(n.Sender).IsEqualTo(Num(eve))
+				.Because("the captured @emit's sender must be the speaker (the @emit attribution regression)");
+	}
+
+	/// <summary>
+	/// Speaker-vs-observer rendering from a single capture: with a per-player FORMAT`SAY set, the
+	/// speaker hears the "You say…" first-person form and a co-located observer hears the "Name says…"
+	/// third-person form — both produced by one say, evaluated per recipient through @message.
+	/// </summary>
+	[Test]
+	public async Task SceneCapture_SpeakerVsObserverRendering_FromSingleSay()
+	{
+		await God1("@set #1=WIZARD");
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+
+		var digOut = (await God1($"@dig SplitRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var fred = await CreatePlayerAsync($"Fred_{Tag}", "pw_fred_123", 92L);
+		var gwen = await CreatePlayerAsync($"Gwen_{Tag}", "pw_gwen_123", 93L);
+		foreach (var p in new[] { fred, gwen }) await God1($"@tel {p}={digOut}");
+		await God1($"@tel {loggerDbref}={digOut}");
+
+		await RunAndCollectAs(92L, $"+scene/create SplitTest_{Tag}");
+		await RunAndCollectAs(92L, "+scene/start");
+
+		// Fred sets a FORMAT`SAY that splits speaker (You) vs observer (Name) per recipient.
+		// %0 = message, %1 = the recipient's FULL objid (#N:creation via the @message ## token),
+		// %# = the speaker (short #N). Compare the dbref NUMBER (before the ':') so the speaker
+		// matches. Literal commas inside the format use chr(44) (raw `,`/`\,` is unreliable here).
+		await God1($"&FORMAT`SAY {fred}=if(strmatch(before(%1,:),%#),You say[chr(44)] \"%0\",[name(%#)] says[chr(44)] \"%0\")");
+
+		var sayNotes = await RunAndCollectNotificationsAs(92L, "say hi all");
+		var speakerLine = sayNotes.FirstOrDefault(n => n.Recipient == Num(fred) && n.Message.Contains("hi all"));
+		var observerLine = sayNotes.FirstOrDefault(n => n.Recipient == Num(gwen) && n.Message.Contains("hi all"));
+
+		await Assert.That(speakerLine).IsNotNull().Because("the speaker must hear the say");
+		await Assert.That(observerLine).IsNotNull().Because("the co-located observer must hear the say");
+		await Assert.That(speakerLine!.Message).Contains("You say")
+			.Because("the speaker sees the first-person 'You say…' form");
+		await Assert.That(observerLine!.Message).Contains($"Fred_{Tag} says")
+			.Because("the observer sees the third-person 'Name says…' form");
+	}
+
+	/// <summary>
+	/// Per-player FORMAT override: a player who sets FORMAT`SAY changes their own rendered say; a player
+	/// without it falls back to the built-in default literal baked into the capture attribute.
+	/// </summary>
+	[Test]
+	public async Task SceneCapture_PlayerFormatOverridesDefault()
+	{
+		await God1("@set #1=WIZARD");
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+
+		var digOut = (await God1($"@dig FmtRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var hugo = await CreatePlayerAsync($"Hugo_{Tag}", "pw_hugo_123", 94L);
+		var iris = await CreatePlayerAsync($"Iris_{Tag}", "pw_iris_123", 95L);
+		foreach (var p in new[] { hugo, iris }) await God1($"@tel {p}={digOut}");
+		await God1($"@tel {loggerDbref}={digOut}");
+
+		await RunAndCollectAs(94L, $"+scene/create FmtTest_{Tag}");
+		await RunAndCollectAs(94L, "+scene/start");
+		await RunAndCollectAs(95L, $"+scene/join [get({hugo}/MY.SID)]");
+
+		// Hugo sets a custom FORMAT`SAY. %0 = message, %1 = recipient dbref, %# = speaker.
+		await God1($"&FORMAT`SAY {hugo}=CUSTOMFMT[name(%#)]: %0");
+
+		var hugoSay = await RunAndCollectNotificationsAs(94L, "say with format");
+		var hugoObserver = hugoSay.FirstOrDefault(n => n.Recipient == Num(iris) && n.Message.Contains("with format"));
+		await Assert.That(hugoObserver).IsNotNull();
+		await Assert.That(hugoObserver!.Message).Contains("CUSTOMFMT")
+			.Because("a player-set FORMAT`SAY must override the default render");
+		await Assert.That(hugoObserver.Message).Contains($"Hugo_{Tag}: with format")
+			.Because("the custom format renders name + message");
+
+		// Iris has no FORMAT`SAY → default literal third-person "Name says, \"…\"".
+		var irisSay = await RunAndCollectNotificationsAs(95L, "say no format");
+		var irisObserver = irisSay.FirstOrDefault(n => n.Recipient == Num(hugo) && n.Message.Contains("no format"));
+		await Assert.That(irisObserver).IsNotNull();
+		await Assert.That(irisObserver!.Message).DoesNotContain("CUSTOMFMT")
+			.Because("Iris set no FORMAT`SAY, so the custom format must not leak across players");
+		await Assert.That(irisObserver.Message).Contains($"Iris_{Tag} says, \"no format\"")
+			.Because("a player without FORMAT`SAY gets the built-in default literal");
+	}
+
+	/// <summary>
+	/// Scene IDs and pose IDs come from 1-based incrementing counters (not GUIDs or ArangoDB's
+	/// server-wide HLC key sequence): two scenes created back-to-back get consecutive numeric ids,
+	/// and two poses in a scene likewise.
+	/// </summary>
+	[Test]
+	public async Task SceneAndPoseIds_AreSequentialCounters()
+	{
+		await God1("@set #1=WIZARD");
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = PackageInstallService.ParseObjid(packageObjects.Single().Objid)!.Value.ToString();
+		await God1($"@teleport {loggerDbref}=#2");
+
+		var digOut = (await God1($"@dig SeqRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var bea = await CreatePlayerAsync($"Bea_{Tag}", "pw_bea_123", 81L);
+		await God1($"@tel {bea}={digOut}");
+
+		// Two scenes back-to-back → consecutive numeric ids.
+		await RunAndCollectAs(81L, $"+scene/create SeqA_{Tag}");
+		var idA = await Eval($"get({bea}/MY.SID)");
+		await RunAndCollectAs(81L, $"+scene/create SeqB_{Tag}");
+		var idB = await Eval($"get({bea}/MY.SID)");
+		// Providers format the id differently (Arango/Memgraph bare "N"; SurrealDB "scene:N"/"scene_pose:N");
+		// the 1-based counter is the trailing numeric segment in all cases.
+		static int IdSeq(string id) => int.Parse(id.Split(':')[^1]);
+		await Assert.That(int.TryParse(idA.Split(':')[^1], out _)).IsTrue()
+			.Because("scene ids must be 1-based counter values, not GUIDs or large HLC keys");
+		await Assert.That(IdSeq(idB)).IsEqualTo(IdSeq(idA) + 1)
+			.Because("scene ids increment by a 1-based counter");
+
+		// Two poses in scene B → consecutive numeric pose ids.
+		await RunAndCollectAs(81L, "+scene/start");
+		await RunAndCollectAs(81L, "pose one.");
+		await RunAndCollectAs(81L, "pose two.");
+		var poseIds = (await Eval($"sceneposes({idB})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(poseIds.Length).IsEqualTo(2).Because("both poses should be captured");
+		await Assert.That(IdSeq(poseIds[1])).IsEqualTo(IdSeq(poseIds[0]) + 1)
+			.Because("pose ids increment by a 1-based counter");
 	}
 }

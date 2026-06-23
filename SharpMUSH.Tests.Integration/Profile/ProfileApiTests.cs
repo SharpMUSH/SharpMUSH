@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.Integration.Profile;
 /// <summary>
 /// End-to-end tests for the default character-profile and character-directory softcode, served
 /// through the routed http_handler (help sharphttp). The bootstrap seeds the GET verb router and
-/// the GET`CHARACTERS / GET`PROFILE`SCHEMA / GET`PROFILE sub-attributes onto #4 at startup;
+/// the GET`CHARACTERS / GET`PROFILE`SCHEMA / GET`PROFILE sub-attributes onto #8 at startup;
 /// characters are addressed by objid via a query parameter, and real HTTP statuses come from
 /// @respond — there is no JSON status envelope.
 /// </summary>

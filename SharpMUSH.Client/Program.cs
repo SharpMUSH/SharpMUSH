@@ -27,6 +27,9 @@ builder.Services.AddSingleton<WikiAssetService>();
 builder.Services.AddSingleton<CharacterDirectoryService>();
 builder.Services.AddSingleton<SchemaAppService>();
 builder.Services.AddSingleton<ApplicationRegistryClient>();
+// Loads + resolves plugin-shipped compiled Blazor components at runtime (gate-guarded server-side; renders
+// by reflection only — references zero plugin types). Caches loaded assemblies (no unload, by design).
+builder.Services.AddSingleton<PluginComponentLoader>();
 builder.Services.AddSingleton<RoleRegistryClient>();
 builder.Services.AddSingleton<GalleryService>();
 builder.Services.AddSingleton<MailService>();
@@ -92,7 +95,9 @@ builder.Services.AddSingleton<ICharacterStateService, CharacterStateService>();
 builder.Services.AddSingleton<INotificationService, NotificationService>();
 builder.Services.AddSingleton<IGameHubConnectionFactory>(_ =>
 	new GameHubConnectionFactory(
-		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/game"));
+		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/game",
+		// Phase 9: scene realtime is a separate connection to the plugin-owned SceneHub at /hubs/scene.
+		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/scene"));
 builder.Services.AddSingleton<ConnectionStateService>();
 builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredService<ConnectionStateService>());
 // Same singleton, exposed for scene group join/leave (client-only control surface).

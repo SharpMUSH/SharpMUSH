@@ -166,7 +166,7 @@ public class PackageInstallServiceTests
 		await Assert.That(idle.HasConflicts).IsFalse();
 
 		// ── Customize locally, then upgrade: ModifyModify conflict ─────────────
-		var pm = (await Database.GetObjectNodeAsync(new DBRef(3))).Known();
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
 		await Database.SetAttributeAsync(
 			PackageInstallService.ParseObjid(boardObjid)!.Value, ["FN_FMT"],
 			MModule.single("my-custom-format"), pm.Match(p => p, _ => null!, _ => null!, _ => null!));
@@ -224,7 +224,7 @@ public class PackageInstallServiceTests
 		// Attach mode (decision 20.3): a package that manages attributes on an
 		// object it does not own. Uses a {{?configure}} target so it's isolated
 		// from the shared http_handler. Mirrors how http-hooks attaches to #4.
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(3))).Known();
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
 		var pm = pmNode.Match(p => p, _ => null!, _ => null!, _ => null!);
 		var location = pmNode.Match<SharpMUSH.Library.DiscriminatedUnions.AnySharpContainer>(
 			p => p, _ => null!, _ => null!, t => t);
