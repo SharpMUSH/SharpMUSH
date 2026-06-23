@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -33,6 +34,27 @@ public class ObjectEventHandlers(
 			notification.OldLocation.ToString(),
 			notification.IsSilent ? "1" : "0",
 			notification.Cause);
+
+		// Room-scoped ROOM`CONTENTS so the handler can refresh ALL occupants of the affected
+		// rooms (not just the mover): one fire for the destination, one for the origin.
+		var newLocDbref = notification.NewLocation.Match(
+			player => player.Object.DBRef.ToString(),
+			room => room.Object.DBRef.ToString(),
+			thing => thing.Object.DBRef.ToString());
+
+		await eventService.TriggerEventAsync(
+			parser,
+			SharpEvents.RoomContents,
+			notification.Enactor,
+			newLocDbref,
+			"move-in");
+
+		await eventService.TriggerEventAsync(
+			parser,
+			SharpEvents.RoomContents,
+			notification.Enactor,
+			notification.OldLocation.ToString(),
+			"move-out");
 	}
 
 	public async ValueTask Handle(ObjectFlagChangedNotification notification, CancellationToken cancellationToken)
