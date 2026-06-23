@@ -228,6 +228,15 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 				parameters = new { count };
 				break;
 			}
+			case "finished":
+			{
+				cypher = $$"""
+					MATCH (s:{{SceneLabel}}) WHERE s.status = 'finished'
+					RETURN s ORDER BY s.lastActivityAt DESC LIMIT $count
+					""";
+				parameters = new { count };
+				break;
+			}
 			default: // "recent" and anything else
 			{
 				cypher = $$"""

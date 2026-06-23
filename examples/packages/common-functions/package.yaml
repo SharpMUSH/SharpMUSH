@@ -1,36 +1,81 @@
 format: 1
 package: common-functions
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
-description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional centered title."
+description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional title, justified center (default) / left / right."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [ui, formatting, functions]
 requires_server: ">=0.1"
 
-# Create mode: a single owned thing carries the softcode the global functions
-# evaluate. AINSTALL registers header()/footer()/line() once at install; STARTUP
-# re-registers them on every boot (the global-function registry is in-memory).
+# Create mode: a single owned thing carries the softcode the global functions evaluate. AINSTALL
+# registers header()/footer()/line() once at install; STARTUP re-registers them on every boot (the
+# global-function registry is in-memory).
+#
+# Each function is self-describing via its FUN` attribute subtree:
+#   FUN`<NAME>                  — the function body (a dispatcher for justified variants)
+#   FUN`<NAME>`MINARGS / MAXARGS — arg counts, read by @function so the registration has one source
+#   FUN`<NAME>`DISPLAY`<TYPE>   — the rendering for each justification (CENTER | LEFT | RIGHT)
+# The body derives type -> attribute with u(%!/FUN`<NAME>`DISPLAY`[ucstr(firstof(%2,center))],…), so
+# each justification stays isolated and readable.
+#
+# WIDTH SAFETY: every variant truncates the title with left(%0, sub(<width>, <overhead>)) so the
+# rendered line is never wider than <width> — a long title is clipped rather than wrapping to a new line.
 objects:
   - ref: functions
     type: thing
     name: Common Functions
     attributes:
-      # Functions live under the FUN` attribute tree (leaves inherit the branch's flags/perms).
-      # Each rule is sized to the caller's client width (width(%#) defaults to 78 when the client
-      # doesn't report one), with an optional centered title. %0 = title, %1 = width override.
+      # header(<title>[, <width>][, <type>]) — full-width rule with an optional title.
+      #   width: defaults to the caller's client width (width(%#), 78 fallback).
+      #   type : center (default) | left | right. center = legacy centered look (no brackets, stable for
+      #          existing callers); left/right = the title bracketed `[ title ]`, pushed to that edge with
+      #          a 2-char border on the near side and the rule filling the rest.
       FUN`HEADER: |-
-        center(if(strlen(%0),[space(1)]%0[space(1)],),firstof(%1,width(%#)),=)
-      # Same as the header, drawn at the bottom of a block.
+        u(%!/FUN`HEADER`DISPLAY`[ucstr(firstof(%2,center))],%0,if(strlen(%1),%1,width(%#)))
+      FUN`HEADER`MINARGS: |-
+        0
+      FUN`HEADER`MAXARGS: |-
+        3
+      # CENTER overhead = 2 (the surrounding spaces); title clipped to width-2.
+      FUN`HEADER`DISPLAY`CENTER: |-
+        center(if(strlen(%0),[space(1)][left(%0,sub(%1,2))][space(1)],),%1,=)
+      # LEFT/RIGHT overhead = 8 ("== " + "[ " + " ]" + trailing space); title clipped to width-8.
+      FUN`HEADER`DISPLAY`LEFT: |-
+        ljust(if(strlen(%0),==%b\[%b[left(%0,sub(%1,8))]%b\]%b,),%1,=)
+      FUN`HEADER`DISPLAY`RIGHT: |-
+        rjust(if(strlen(%0),%b\[%b[left(%0,sub(%1,8))]%b\]%b==,),%1,=)
+
+      # footer(<title>[, <width>][, <type>]) — same rule, drawn at the bottom of a block.
       FUN`FOOTER: |-
-        center(if(strlen(%0),[space(1)]%0[space(1)],),firstof(%1,width(%#)),=)
-      # Lighter divider filled with '-'.
+        u(%!/FUN`FOOTER`DISPLAY`[ucstr(firstof(%2,center))],%0,if(strlen(%1),%1,width(%#)))
+      FUN`FOOTER`MINARGS: |-
+        0
+      FUN`FOOTER`MAXARGS: |-
+        3
+      FUN`FOOTER`DISPLAY`CENTER: |-
+        center(if(strlen(%0),[space(1)][left(%0,sub(%1,2))][space(1)],),%1,=)
+      FUN`FOOTER`DISPLAY`LEFT: |-
+        ljust(if(strlen(%0),==%b\[%b[left(%0,sub(%1,8))]%b\]%b,),%1,=)
+      FUN`FOOTER`DISPLAY`RIGHT: |-
+        rjust(if(strlen(%0),%b\[%b[left(%0,sub(%1,8))]%b\]%b==,),%1,=)
+
+      # line(<title>[, <width>]) — a lighter '-' divider with an optional centered title.
       FUN`LINE: |-
-        center(if(strlen(%0),[space(1)]%0[space(1)],),firstof(%1,width(%#)),-)
-      # Runs once after first install: register the three global user functions, each bound to its
-      # FUN` leaf on this object (data-writes go through the @function command, per the style guide).
+        center(if(strlen(%0),[space(1)][left(%0,sub(firstof(%1,width(%#)),2))][space(1)],),firstof(%1,width(%#)),-)
+      FUN`LINE`MINARGS: |-
+        0
+      FUN`LINE`MAXARGS: |-
+        2
+
+      # AINSTALL (once): just run STARTUP. The function body u()s its own object's FUN`<NAME>`DISPLAY`<TYPE>
+      # leaf, which is safe for ANY caller: a global @function "runs as the backing object, with its
+      # powers" (PennMUSH `help @function2`, and SharpMUSH matches this — SharpMUSHParserVisitor evaluates
+      # the attribute with the function object as executor), so the nested u() is this object reading its
+      # OWN attribute regardless of who called header()/footer().
       AINSTALL: |-
-        @function header=%!,FUN`HEADER,0,2; @function footer=%!,FUN`FOOTER,0,2; @function line=%!,FUN`LINE,0,2
-      # Runs on every server boot: re-establish the in-memory registrations.
+        @trigger %!/STARTUP
+      # STARTUP (every boot): re-establish the in-memory global-function registrations, reading each
+      # function's arg counts from its MINARGS/MAXARGS leaf (one source of truth).
       STARTUP: |-
-        @function header=%!,FUN`HEADER,0,2; @function footer=%!,FUN`FOOTER,0,2; @function line=%!,FUN`LINE,0,2
+        @function header=%!,FUN`HEADER,[get(%!/FUN`HEADER`MINARGS)],[get(%!/FUN`HEADER`MAXARGS)]; @function footer=%!,FUN`FOOTER,[get(%!/FUN`FOOTER`MINARGS)],[get(%!/FUN`FOOTER`MAXARGS)]; @function line=%!,FUN`LINE,[get(%!/FUN`LINE`MINARGS)],[get(%!/FUN`LINE`MAXARGS)]
