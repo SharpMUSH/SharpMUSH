@@ -1,9 +1,11 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using System.Text;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -138,5 +140,80 @@ public class RoomContentsEventTests
 		// Cleanup.
 		await Cmd("&ROOM`CONTENTS #9=");
 		await Cmd("&SAW_ENACTOR #9=");
+	}
+
+	[Test]
+	public async ValueTask ConnectFiresRoomContentsForPlayerRoom()
+	{
+		// Install handler on #9: record room dbref keyed by cause.
+		// "connect" contains only letters, valid as an attribute-name suffix.
+		await Cmd("&ROOM`CONTENTS #9=&LAST_CONN_[secure(%1)] #9=%0");
+
+		// Resolve God's (#1) current room so we can assert against it after connect.
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var godNode = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var godRoom = (await godNode.AsPlayer.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString();
+
+		// Use a fresh handle (9001) so there is no "already logged in" rejection.
+		// The connect command works with an unregistered handle (connectionData may be null;
+		// the command falls back to "unknown" for ipAddress in that case).
+		var connectHandle = 9001L;
+		await ConnectionService.Register(
+			connectHandle,
+			"127.0.0.1", "localhost", "test",
+			_ => ValueTask.CompletedTask,
+			_ => ValueTask.CompletedTask,
+			() => Encoding.UTF8);
+
+		// Issue "connect God" — God has no password, so an empty password is accepted.
+		await WebAppFactoryArg.CommandParser.CommandParse(
+			connectHandle, ConnectionService, MModule.single("connect God"));
+
+		// ROOM`CONTENTS should have fired with %1="connect" and %0=godRoom.
+		var recorded = await Eval("get(#9/LAST_CONN_connect)");
+		await Assert.That(recorded).IsEqualTo(godRoom);
+
+		// Cleanup: disconnect the extra handle and remove handler attributes.
+		await ConnectionService.Disconnect(connectHandle);
+		await Cmd("&ROOM`CONTENTS #9=");
+		await Cmd("&LAST_CONN_connect #9=");
+	}
+
+	[Test]
+	public async ValueTask DisconnectFiresRoomContentsForPlayerRoom()
+	{
+		// Install handler on #9: record room dbref keyed by cause.
+		// "disconnect" contains only letters, valid as an attribute-name suffix.
+		await Cmd("&ROOM`CONTENTS #9=&LAST_DISC_[secure(%1)] #9=%0");
+
+		// Resolve God's (#1) current room so we can assert against it after disconnect.
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var godNode = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var godRoom = (await godNode.AsPlayer.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString();
+
+		// Register a fresh handle and bind it to God (#1) so we have a LoggedIn connection.
+		var disconnectHandle = 9002L;
+		await ConnectionService.Register(
+			disconnectHandle,
+			"127.0.0.1", "localhost", "test",
+			_ => ValueTask.CompletedTask,
+			_ => ValueTask.CompletedTask,
+			() => Encoding.UTF8);
+		await ConnectionService.Bind(disconnectHandle, WebAppFactoryArg.ExecutorDBRef);
+
+		// Disconnect the handle — ConnectionStateEventHandler should fire ROOM`CONTENTS
+		// for God's room with cause "disconnect".
+		await ConnectionService.Disconnect(disconnectHandle);
+
+		// Give the notification handler a moment to execute.
+		await Task.Delay(200);
+
+		// ROOM`CONTENTS should have fired with %1="disconnect" and %0=godRoom.
+		var recorded = await Eval("get(#9/LAST_DISC_disconnect)");
+		await Assert.That(recorded).IsEqualTo(godRoom);
+
+		// Cleanup.
+		await Cmd("&ROOM`CONTENTS #9=");
+		await Cmd("&LAST_DISC_disconnect #9=");
 	}
 }

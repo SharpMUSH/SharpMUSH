@@ -4,6 +4,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -192,6 +193,15 @@ public partial class Commands
 		await EventService!.TriggerEventAsync(parser, "PLAYER`CONNECT", playerDbRef,
 			$"#{foundPlayer.Object.Key}", connectionCount.ToString(), handle.ToString());
 
+		// Refresh everyone in the room the player just appeared in.
+		var makeConnectRoomContainer = await foundPlayer.Location.WithCancellation(CancellationToken.None);
+		await EventService.TriggerEventAsync(
+			parser,
+			SharpEvents.RoomContents,
+			playerDbRef,
+			makeConnectRoomContainer.Object().DBRef.ToString(),
+			"connect");
+
 		await SyncPlayerOutputPreferences(handle, foundPlayer.Object);
 		await ShowPostLoginMessages(parser, handle, new Library.DiscriminatedUnions.AnySharpObject(foundPlayer));
 
@@ -250,6 +260,15 @@ public partial class Commands
 		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
 		await EventService!.TriggerEventAsync(parser, "PLAYER`CONNECT", playerDbRef,
 			$"#{character.Object.Key}", connectionCount.ToString(), handle.ToString());
+
+		// Refresh everyone in the room the player just appeared in.
+		var playConnectRoomContainer = await character.Location.WithCancellation(CancellationToken.None);
+		await EventService.TriggerEventAsync(
+			parser,
+			SharpEvents.RoomContents,
+			playerDbRef,
+			playConnectRoomContainer.Object().DBRef.ToString(),
+			"connect");
 
 		await SyncPlayerOutputPreferences(handle, character.Object);
 		await ShowPostLoginMessages(parser, handle, new Library.DiscriminatedUnions.AnySharpObject(character));
