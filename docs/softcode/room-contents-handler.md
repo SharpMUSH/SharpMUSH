@@ -81,7 +81,8 @@ Install on the configured event handler object (default: `#9`):
 - `filter(#lambda/hasflag(%0,connected),lcon(%0))` — restricts fan-out to
   connected players only. `lcon` does not implement a native `connected`
   flag argument in this version of SharpMUSH; the lambda filter is the
-  correct idiom.
+  correct idiom. (Inside the `#lambda` body, `%0` refers to each candidate
+  occupant from `lcon(%0)`; the `%0` in the outer handler scope is the room.)
 - `@dolist … ##` — `##` is the current list item (a connected occupant
   dbref). Each occupant receives its own pair of OOB messages.
 - `lcon(%0)` inside the `room.contents` payload lists *all* current
@@ -96,11 +97,7 @@ Install on the configured event handler object (default: `#9`):
 
 ## Installation
 
-```
-@trigger me/INSTALL_WS_PACKAGE
-```
-
-Or manually, one attribute at a time:
+Install manually, one attribute at a time:
 
 ```
 &ROOM`CONTENTS #9=@dolist [filter(#lambda/hasflag(%0,connected),lcon(%0))]={think oob(##, room.contents, [json(object, who, [json(array, [iter(lcon(%0), json(string,name(itext(0))))])], room, [json(string,name(%0))])]); think oob(##, room.exits, [json(object, exits, [json(array, [iter(lexits(%0), json(object, name, json(string,name(itext(0))), cmd, json(string,goto itext(0))))])])])}
@@ -128,16 +125,24 @@ silences the handler (the engine fires it but it executes nothing).
 ## Testing the handler
 
 The wiring test (`RoomContentsHandlerReferenceTests`) installs a
-simplified variant of this handler — one that records the count of
-connected occupants it processed — triggers `ROOM`CONTENTS` via
-`@trigger #9/ROOM`CONTENTS=<room>,move-in`, then asserts that the
-recorded count matches an independently-computed `words(lcon(room))`
-value. This proves:
+simplified variant of this handler — one that records occupant lists
+and counts into scratch attributes on #9 — then triggers `ROOM`CONTENTS`
+via the real event path: `EventService.TriggerEventAsync(parser,
+SharpEvents.RoomContents, executor, room, cause)`. This is NOT `@trigger`;
+the real event path executes the handler with God (#1) as the executor,
+providing the elevated permission context required for `lcon()` and
+`filter()` to work correctly within the handler. If the test used `@trigger
+#9/ROOM`CONTENTS=<room>`, the handler would run as #9 and its calls to
+`lcon()` and `filter()` would silently fail (no permission to introspect
+the room).
 
-1. The handler attribute is executed when `ROOM`CONTENTS` fires.
+The tests assert that:
+
+1. The handler attribute is executed when `ROOM`CONTENTS` fires via the real event path.
 2. `%0` correctly carries the room dbref into the handler body.
-3. The `lcon(%0)` call returns the room's occupants from within the
-   handler context.
+3. Handler-recorded attributes (`FANOUT_LIST`, `FANOUT_COUNT`, `LAST_CAUSE`)
+   match independently-resolved values, proving the handler ran with correct
+   context and permissions.
 
 See `SharpMUSH.Tests/Services/RoomContentsHandlerReferenceTests.cs`.
 

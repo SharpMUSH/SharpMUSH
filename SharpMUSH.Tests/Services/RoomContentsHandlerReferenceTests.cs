@@ -117,10 +117,9 @@ public class RoomContentsHandlerReferenceTests
 			cause);
 
 		var recorded = await Eval("get(#9/LAST_CAUSE)");
-		var expectedCause = cause;
 
 		// %1 must carry the cause string "move-in".
-		await Assert.That(recorded).IsEqualTo(expectedCause);
+		await Assert.That(recorded).IsEqualTo(cause);
 
 		// Cleanup
 		await Cmd("&ROOM`CONTENTS #9=");
