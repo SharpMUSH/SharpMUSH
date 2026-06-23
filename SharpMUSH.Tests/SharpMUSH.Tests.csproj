@@ -30,6 +30,8 @@
   <ItemGroup>
     <!-- Shared test infrastructure (ServerWebAppFactory, TestHelpers, test containers, etc.) -->
     <ProjectReference Include="..\SharpMUSH.Tests.Infrastructure\SharpMUSH.Tests.Infrastructure.csproj" />
+    <!-- ConnectionServer protocol handlers -->
+    <ProjectReference Include="..\SharpMUSH.ConnectionServer\SharpMUSH.ConnectionServer.csproj" />
   </ItemGroup>
 
   <ItemGroup>
