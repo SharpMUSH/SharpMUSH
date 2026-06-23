@@ -66,4 +66,7 @@ public interface ITerminalService
 	/// by the server.  A <c>@pemit me=SHARP_END:&lt;id&gt;</c> command is appended automatically.
 	/// </summary>
 	Task<string[]> SendCommandAsync(string command, int timeoutMs = 5000);
+
+	/// <summary>Latest out-of-band channel payloads received on this connection.</summary>
+	IOobChannelStore OobChannels { get; }
 }

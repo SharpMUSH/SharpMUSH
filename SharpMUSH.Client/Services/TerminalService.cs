@@ -18,6 +18,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 	private readonly ILogger<TerminalService> _logger = logger;
 	private readonly List<TerminalLine> _lines = new(MaxLines);
+	private readonly OobChannelStore _oob = new();
 	private long? _myPort;
 	private string? _serverUri;
 
@@ -39,6 +40,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 	/// <inheritdoc/>
 	public long? MyPort => _myPort;
+
+	/// <inheritdoc/>
+	public IOobChannelStore OobChannels => _oob;
 
 	/// <inheritdoc/>
 	public string? ServerUri => _serverUri;
@@ -263,7 +267,8 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 				return;
 
 			case TerminalFrameKind.Oob:
-				// Structured out-of-band data: not for direct display (future hook).
+				// Structured out-of-band data: route to the channel store; never displayed.
+				_oob.Set(frame.Package, frame.DataJson);
 				return;
 
 			default:
