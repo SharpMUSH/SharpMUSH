@@ -102,9 +102,19 @@ public class WebSocketServer
 				{
 					var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-					// Publish user input to MainProcess
-					await _publishEndpoint.Publish(
-						new WebSocketInputMessage(nextPort, message), ct);
+					// Browser-sent JSON control frames are handled here and NOT forwarded as commands.
+					// NAWS reuses the same NAWSUpdateMessage path telnet uses (Height=rows, Width=cols).
+					if (WebSocketControlFrame.TryParseNaws(message, out var cols, out var rows))
+					{
+						await _publishEndpoint.Publish(
+							new NAWSUpdateMessage(nextPort, rows, cols), ct);
+					}
+					else
+					{
+						// Publish user input to MainProcess
+						await _publishEndpoint.Publish(
+							new WebSocketInputMessage(nextPort, message), ct);
+					}
 				}
 			}
 		}
