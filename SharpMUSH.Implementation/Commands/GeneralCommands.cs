@@ -907,8 +907,8 @@ public partial class Commands
 
 				var locate = await LocateService!.LocateAndNotifyIfInvalid(
 					parser,
-					enactor,
-					enactor,
+					executor,
+					executor,
 					objectName,
 					LocateFlags.All);
 
@@ -925,8 +925,8 @@ public partial class Commands
 			{
 				var locate = await LocateService!.LocateAndNotifyIfInvalid(
 					parser,
-					enactor,
-					enactor,
+					executor,
+					executor,
 					argText,
 					LocateFlags.All);
 
@@ -3123,7 +3123,7 @@ public partial class Commands
 		foreach (var target in nameListTargets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var maybeLocateTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor,
+			var maybeLocateTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 				targetString,
 				LocateFlags.All);
 
@@ -3497,7 +3497,7 @@ public partial class Commands
 
 		// Locate object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor, executor, dbref, LocateFlags.All);
+			executor, executor, dbref, LocateFlags.All);
 
 		if (locate.IsError)
 		{
@@ -5029,8 +5029,8 @@ public partial class Commands
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
-				enactor,
-				enactor,
+				executor,
+				executor,
 				objectName,
 				LocateFlags.All);
 
@@ -5047,8 +5047,8 @@ public partial class Commands
 		{
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
-				enactor,
-				enactor,
+				executor,
+				executor,
 				objectSpec,
 				LocateFlags.All);
 
@@ -5924,7 +5924,7 @@ public partial class Commands
 
 		// Locate the object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor,
+			executor,
 			executor,
 			dbref,
 			LocateFlags.All);

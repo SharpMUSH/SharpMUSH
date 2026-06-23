@@ -72,7 +72,7 @@ public partial class Commands
 		var knownByObjid = new Dictionary<string, AnySharpObject>(StringComparer.Ordinal);
 		foreach (var token in tokens)
 		{
-			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, enactor, executor, token, LocateFlags.All);
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, token, LocateFlags.All);
 			if (!locate.IsValid())
 			{
 				return new None();
