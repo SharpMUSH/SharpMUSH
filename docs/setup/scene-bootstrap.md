@@ -69,7 +69,9 @@ editing the managed attributes on the Scene Logger via the package manager:
 
 ```mush
 &DATA`CAPTURE        Scene Logger=1
-&DATA`DEFAULT_STATUS Scene Logger=new
+@@ `active` => +scene/create yields an immediately-capturing scene (no separate +scene/start).
+@@ Use `new` or `scheduled` if you want creation to STAGE a scene that starts logging only on +scene/start.
+&DATA`DEFAULT_STATUS Scene Logger=active
 &DATA`DEFAULT_PUBLIC Scene Logger=0
 &DATA`MAX_RECENT     Scene Logger=50
 &DATA`STATUSES       Scene Logger=new scheduled active paused finished
@@ -175,7 +177,7 @@ calls its guard.
 
 ```mush
 @@ ---- create / lifecycle -------------------------------------------------
-&CMD`CREATE Scene Logger=$+scene/create *: @assert setr(0,scenecreate(%L,%#,%0)); @scene/member %q0/owner=%#; @scene/focus %#=%q0; @scene/set %q0/status=[get(%!/DATA`DEFAULT_STATUS)]; @pemit %#=Scene %q0 created and focused.; &MY.SID %#=%q0
+&CMD`CREATE Scene Logger=$+scene/create *: @assert setr(0,scenecreate(%L,%#,%0)); @scene/member %q0/owner=%#; @scene/focus %#=%q0; @scene/set %q0/status=[get(%!/DATA`DEFAULT_STATUS)]; @pemit %#=Scene %q0 created and focused (status: [get(%!/DATA`DEFAULT_STATUS)]).; &MY.SID %#=%q0
 
 &CMD`START   Scene Logger=$+scene/start: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=active; @pemit %#=Scene is now active.
 &CMD`PAUSE   Scene Logger=$+scene/pause: @assert u(%!/FUN`OWNS,%#,scenefocus(%#)); @scene/set [scenefocus(%#)]/status=paused; @pemit %#=Scene paused.

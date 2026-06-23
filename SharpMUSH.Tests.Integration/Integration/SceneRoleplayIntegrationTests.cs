@@ -251,11 +251,10 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await EvalNum($"loc({bob})")).IsEqualTo(roomDbref);
 		await Assert.That(await EvalNum($"loc({carol})")).IsEqualTo(roomDbref);
 
-		// ── Beat 2: Create + start (run as the owner, Alice) ──────────────────────
-		// +scene/create binds the scene to %L (the room), makes Alice owner+focused, and sets
-		// status to the package default ("new"). Capture requires the scene be ACTIVE in the
-		// room (GetActiveSceneInRoomAsync filters Status=='active'), so +scene/start is needed
-		// before any pose is captured.
+		// ── Beat 2: Create (run as the owner, Alice) ──────────────────────────────
+		// +scene/create binds the scene to %L (the room), makes Alice owner+focused, and sets status
+		// to the package default — `active` (1.1.0) — so the scene is immediately the room's active
+		// scene and capture fires without a separate +scene/start.
 		var sceneTitle = $"The Tavern Meeting {Tag}";
 		var createMsgs = await RunAndCollectAs(11L, $"+scene/create {sceneTitle}");
 		Log($"[CREATE] {string.Join(" | ", createMsgs)}");
@@ -278,24 +277,24 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"scenefocus({alice})")).IsEqualTo(sceneId)
 			.Because("+scene/create focuses the creator on the new scene");
 
-		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("new")
-			.Because("the package default status is 'new'");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active")
+			.Because("the package default status is 'active' (created scenes are immediately live)");
 		await Assert.That(await EvalNum($"scene({sceneId}, owner)")).IsEqualTo(Num(alice))
 			.Because("the creator becomes the owner");
 		await Assert.That(await EvalNum($"scene({sceneId}, room)")).IsEqualTo(roomDbref)
 			.Because("+scene/create binds the scene to the creator's room (%L)");
 
-		// Before start, the room has no ACTIVE scene → scenewhere is NOT FOUND.
-		await Assert.That(await Eval($"scenewhere({roomDbref})")).StartsWith("#-1")
-			.Because("a 'new' scene is not yet the room's active scene");
+		// Created active → it is immediately the room's active scene (the capture pre-req).
+		await Assert.That(await Eval($"scenewhere({roomDbref})")).IsEqualTo(sceneId)
+			.Because("a created-active scene is the room's active scene with no separate start");
 
-		// Start it (owner-only). Now scenewhere resolves to our scene.
+		// +scene/start is idempotent on an already-active scene (it also resumes a paused one).
 		var startMsgs = await RunAndCollectAs(11L, "+scene/start");
 		Log($"[START] {string.Join(" | ", startMsgs)}");
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active")
-			.Because("+scene/start drives status to active");
+			.Because("+scene/start keeps the scene active");
 		await Assert.That(await Eval($"scenewhere({roomDbref})")).IsEqualTo(sceneId)
-			.Because("an active scene is now the room's active scene (capture pre-req)");
+			.Because("the scene remains the room's active scene (capture pre-req)");
 
 		// ── Beat 3: Join + showas (Bob and Carol) ─────────────────────────────────
 		var bobJoin = await RunAndCollectAs(12L, $"+scene/join {sceneId}");

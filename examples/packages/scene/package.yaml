@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits."
 license: MIT
@@ -37,8 +37,11 @@ objects:
       # ---- policy knobs (read by the verbs; replaces a SceneOptions config) ----
       DATA`CAPTURE: |-
         1
+      # `active` so +scene/create yields an immediately-capturing scene — pose/say/@emit are recorded
+      # right after creation, with no separate +scene/start. Set this to `new` (or `scheduled`) instead
+      # if you want creation to STAGE a scene that only begins logging after an explicit +scene/start.
       DATA`DEFAULT_STATUS: |-
-        new
+        active
 
       # ---- owner / wizard guard -------------------------------------------------
       FUN`OWNS: |-
@@ -116,7 +119,7 @@ objects:
       # `&MY.SID %#=[setr(0,…)]` also failed (setr inside an &attr=<value> RHS doesn't
       # propagate its register); @assert in command position does.
       CMD`CREATE: |-
-        $+scene/create *: @assert setr(0,scenecreate(%L,%#,%0)); @scene/member %q0/owner=%#; @scene/focus %#=%q0; @scene/set %q0/status=[get(%!/DATA`DEFAULT_STATUS)]; @pemit %#=Scene %q0 created and focused.; &MY.SID %#=%q0
+        $+scene/create *: @assert setr(0,scenecreate(%L,%#,%0)); @scene/member %q0/owner=%#; @scene/focus %#=%q0; @scene/set %q0/status=[get(%!/DATA`DEFAULT_STATUS)]; @pemit %#=Scene %q0 created and focused (status: [get(%!/DATA`DEFAULT_STATUS)]).; &MY.SID %#=%q0
 
       # NOTE: verb bodies are written as ONE physical line with `;` separators. In a
       # multi-line ($-command) attribute the FIRST command after the `$pattern:` header does
