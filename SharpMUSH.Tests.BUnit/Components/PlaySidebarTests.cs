@@ -72,7 +72,6 @@ public class PlaySidebarTests : BunitContext
         var play = Substitute.For<IPlayTerminalService>();
         play.OobChannels.Returns(store);
         play.Lines.Returns(Array.Empty<SharpMUSH.Client.Models.TerminalLine>());
-        Services.AddSingleton(play);
         Services.AddSingleton<IPlayTerminalService>(play);
 
         var cut = Render<Play>();
@@ -84,7 +83,5 @@ public class PlaySidebarTests : BunitContext
             if (!cut.Markup.Contains("Bob"))
                 throw new InvalidOperationException("contents not rendered yet");
         }, TimeSpan.FromSeconds(5));
-
-        await Assert.That(cut.Markup).Contains("Bob");
     }
 }

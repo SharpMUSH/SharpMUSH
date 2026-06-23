@@ -39,10 +39,19 @@
             {
                 @foreach (var e in _here)
                 {
-                    <div class="play-entry @(e.Cmd is null ? "" : "play-clickable")"
-                         @onclick="@(() => RunEntry(e))">
-                        @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
-                    </div>
+                    @if (e.Cmd is not null)
+                    {
+                        <div class="play-entry play-clickable"
+                             @onclick="@(() => RunEntry(e))">
+                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="play-entry">
+                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                        </div>
+                    }
                 }
             }
         </div>
@@ -57,10 +66,19 @@
             {
                 @foreach (var e in _exits)
                 {
-                    <div class="play-entry @(e.Cmd is null ? "" : "play-clickable")"
-                         @onclick="@(() => RunEntry(e))">
-                        @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
-                    </div>
+                    @if (e.Cmd is not null)
+                    {
+                        <div class="play-entry play-clickable"
+                             @onclick="@(() => RunEntry(e))">
+                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="play-entry">
+                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                        </div>
+                    }
                 }
             }
         </div>
@@ -190,6 +208,7 @@
     .play-clickable {
         cursor: pointer;
     }
+
     .play-clickable:hover {
         background: var(--surface-2);
         color: var(--text);
