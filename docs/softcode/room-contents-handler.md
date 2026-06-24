@@ -2,8 +2,12 @@
 
 This document is part of the **WebSocket Support Package**. It provides a
 reference implementation of the `ROOM`CONTENTS` event handler that fans out
-structured OOB pushes to the room's connected occupants whenever the room's
+structured OOB pushes to a room's connected occupants whenever the room's
 population changes (player movement, connect, or disconnect).
+
+The handler below was verified end-to-end against a live server: installed on
+`#9`, fired by the real event path, and confirmed to populate the portal's
+Play sidebar.
 
 > **Packaging note:** The eventual home for this softcode is a SharpMUSH
 > package loadable via the `@package` command. Until the package-manager
@@ -21,89 +25,90 @@ When `ROOM`CONTENTS` fires the handler receives:
 | `%0` | Dbref of the affected room |
 | `%1` | Cause: `move-in`, `move-out`, `connect`, or `disconnect` |
 
-For every *connected* occupant of that room the handler sends two OOB
-packages over the WebSocket (or GMCP) connection:
+For the connected occupants of that room it sends two OOB packages over each
+WebSocket (or GMCP) connection:
 
-- **`room.contents`** — a JSON object listing the room's name and the
-  name of every current occupant (non-exit things and players).
-- **`room.exits`** — a JSON object listing each exit's name and the
-  bare `goto` command a client can issue to traverse it.
+- **`room.contents`** — `{"who": [ {dbref, name, cmd}, … ]}`, one entry per
+  non-exit occupant (things and players).
+- **`room.exits`** — `{"exits": [ {name, cmd}, … ]}`, one entry per exit, with
+  the `goto` command a client issues to traverse it.
 
-The exit/contents filtering is the natural customisation seam: change
-the `lcon` or `lexits` calls, add dark/visibility guards, or swap the
-JSON shape to taste. The engine imposes no policy here.
+The `lcon`/`lexits`/filter calls are the natural customisation seam: add
+dark/visibility guards, change which occupants are listed, or swap the JSON
+shape to taste. The engine imposes no policy here.
 
 ---
 
-## SharpMUSH function availability notes
+## Idioms used (and the traps they avoid)
 
-Before installing, note these verified behaviours of the functions used:
+These were learned the hard way; the reference handler relies on all of them:
 
-| Call in handler | Status |
-|-----------------|--------|
-| `lcon(%0)` | **Exists.** Returns a space-separated list of all contents dbrefs. |
-| `lcon(%0,connected)` | **Second arg is silently ignored** — the engine's `lcon` accepts up to 2 args but does not implement a filter flag. Use `filter(#lambda/hasflag(%0,connected),lcon(%0))` to restrict to connected occupants. |
-| `lexits(%0)` | **Exists.** Returns a space-separated list of exit dbrefs in the room. |
-| `json(object,k,v,...)` / `json(array,...)` / `json(string,...)` | **All exist.** |
-| `iter(list, expr)` / `itext(0)` | **Both exist.** |
-| `name(dbref)` | **Exists.** |
-| `secure(str)` | **Exists.** |
-| `words(list)` | **Exists.** |
-| `@dolist list={action}` | **Exists.** |
-| `oob(target, package, json)` | **Exists** (built in Tasks A1–A2). |
-| `hasflag(dbref, connected)` | **Exists** via the `CONNECTED` pseudo-flag. |
-| `filter(#lambda/expr, list)` | **Exists** — `#lambda/` inline form supported. |
+1. **`think oob(...)` — no brackets.** When `oob(...)` is the *entire*
+   argument to `think`, it evaluates. Brackets (`think [oob(...)]`) are only
+   needed when a function call is embedded in surrounding text. The two forms
+   are otherwise equivalent.
+
+2. **`oob(<list>, <package>, <json>)` takes a target *list*.** It locates each
+   target and delivers only to those that are players with a live WebSocket
+   (or GMCP) connection; everything else is skipped. So you pass `lcon(%0)`
+   (the whole room) and let `oob()` do the connected/player filtering — no
+   manual `@dolist` fan-out is required.
+
+3. **Build JSON arrays with `json_array()`, not `json(array, iter(...))`.**
+   `json(array, …)` takes each element as a *separate* argument, so feeding it
+   a single `iter()` list cannot work. `json_array(<list>[, <delim>])`
+   assembles a list of already-formed JSON values into an array. Produce the
+   per-element JSON with `iter()`:
+   `json_array(iter(0 1 2 3, json(number, %i0)))` → `[0,1,2,3]`.
+
+4. **Use a non-space delimiter for `json_array`/`iter` when elements contain
+   spaces.** A row like `{"cmd":"look #1"}` contains a space, so the default
+   space delimiter would split it apart. The handler uses `|`:
+   `iter(<list>, <expr>, %b, |)` then `json_array(<that>, |)`.
+
+5. **Filter with a stored attribute, not `#lambda`.** `filter(#9/FN`NOTEXIT,
+   lcon(%0))` is clean; the `#lambda/...` inline form mis-splits on commas
+   inside the lambda body (e.g. `hasflag(%0,connected)`) and needs escapes you
+   should not have to think about.
+
+6. **`lcon(%0)` includes exits in this engine.** Filter them out of the *who*
+   list with a `not(hastype(%0,exit))` predicate so exits don't appear as
+   occupants.
+
+7. **Connected detection.** `hasflag(%0,connected)` returns `0` here — use
+   `conn(%0)` (seconds, `-1` if not connected) or membership in `lwho()`.
+   (The reference handler doesn't need an explicit connected filter because
+   `oob()` already skips non-connected targets, per point 2.)
+
+8. **`num(%0)` returns the `#N` dbref form** (e.g. `#76`), so don't prepend an
+   extra `#`.
 
 ---
 
 ## Reference handler
 
-Install on the configured event handler object (default: `#9`):
+Install on the configured event handler object (default `#9`), one attribute
+at a time. The helper attributes keep the main handler readable.
 
 ```mushcode
-&ROOM`CONTENTS #9=
-  @dolist [filter(#lambda/hasflag(%0,connected),lcon(%0))]={
-    think oob(##, room.contents,
-      [json(object,
-        who,  [json(array, [iter(lcon(%0), json(string,name(itext(0))))])],
-        room, [json(string,name(%0))])]);
-    think oob(##, room.exits,
-      [json(object,
-        exits, [json(array, [iter(lexits(%0),
-          json(object,
-            name, json(string,name(itext(0))),
-            cmd,  json(string,goto itext(0))))])])])
-  }
+&FN`NOTEXIT #9=not(hastype(%0,exit))
+&FN`WHOROW #9=json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))
+&FN`EXITROW #9=json(object,name,json(string,name(%0)),cmd,json(string,goto [num(%0)]))
+&ROOM`CONTENTS #9=think oob(lcon(%0),room.contents,json(object,who,json_array(iter(filter(#9/FN`NOTEXIT,lcon(%0)),u(#9/FN`WHOROW,itext(0)),%b,|),|)));think oob(lcon(%0),room.exits,json(object,exits,json_array(iter(lexits(%0),u(#9/FN`EXITROW,itext(0)),%b,|),|)))
 ```
 
-### Key design points
+Reading the main handler:
 
-- `filter(#lambda/hasflag(%0,connected),lcon(%0))` — restricts fan-out to
-  connected players only. `lcon` does not implement a native `connected`
-  flag argument in this version of SharpMUSH; the lambda filter is the
-  correct idiom. (Inside the `#lambda` body, `%0` refers to each candidate
-  occupant from `lcon(%0)`; the `%0` in the outer handler scope is the room.)
-- `@dolist … ##` — `##` is the current list item (a connected occupant
-  dbref). Each occupant receives its own pair of OOB messages.
-- `lcon(%0)` inside the `room.contents` payload lists *all* current
-  occupants, not just the connected ones — this is intentional so the
-  browser can render the full room population including NPCs.
-- `lexits(%0)` lists exits; the `goto itext(0)` string is the command a
-  browser client sends back to traverse the exit.
-- The handler calls `think oob(…)` so the return values of `oob()` do not
-  appear in the room (they are sent to no output channel).
+- `filter(#9/FN`NOTEXIT,lcon(%0))` — room contents minus exits (the *who* set).
+- `iter(<set>, u(#9/FN`WHOROW,itext(0)), %b, |)` — build one JSON object per
+  occupant (via the `FN`WHOROW` helper, `%0` = the occupant), joined with `|`.
+- `json_array(<that>, |)` — assemble those JSON objects into a JSON array.
+- `json(object, who, <array>)` — wrap as `{"who": [...]}`.
+- `oob(lcon(%0), room.contents, <json>)` — send to every connected occupant of
+  the room (non-players / non-connected are skipped automatically).
+- The second statement does the same for `room.exits` via `FN`EXITROW`/`lexits`.
 
----
-
-## Installation
-
-Install manually, one attribute at a time:
-
-```
-&ROOM`CONTENTS #9=@dolist [filter(#lambda/hasflag(%0,connected),lcon(%0))]={think oob(##, room.contents, [json(object, who, [json(array, [iter(lcon(%0), json(string,name(itext(0))))])], room, [json(string,name(%0))])]); think oob(##, room.exits, [json(object, exits, [json(array, [iter(lexits(%0), json(object, name, json(string,name(itext(0))), cmd, json(string,goto itext(0))))])])])}
-```
-
-Verify the handler is set:
+Verify it is set:
 
 ```
 > get #9/ROOM`CONTENTS
@@ -117,34 +122,25 @@ Verify the handler is set:
 &ROOM`CONTENTS #9=
 ```
 
-An empty `&` sets the attribute to an empty string, which effectively
-silences the handler (the engine fires it but it executes nothing).
+An empty `&` sets the attribute to an empty string, which silences the handler
+(the engine still fires the event, but the attribute executes nothing).
 
 ---
 
 ## Testing the handler
 
-The wiring test (`RoomContentsHandlerReferenceTests`) installs a
-simplified variant of this handler — one that records occupant lists
-and counts into scratch attributes on #9 — then triggers `ROOM`CONTENTS`
-via the real event path: `EventService.TriggerEventAsync(parser,
-SharpEvents.RoomContents, executor, room, cause)`. This is NOT `@trigger`;
-the real event path executes the handler with God (#1) as the executor,
-providing the elevated permission context required for `lcon()` and
-`filter()` to work correctly within the handler. If the test used `@trigger
-#9/ROOM`CONTENTS=<room>`, the handler would run as #9 and its calls to
-`lcon()` and `filter()` would silently fail (no permission to introspect
-the room).
+`SharpMUSH.Tests/Services/RoomContentsHandlerReferenceTests.cs` installs the
+reference helpers + handler and triggers `ROOM`CONTENTS` via the **real event
+path** (`EventService.TriggerEventAsync(parser, SharpEvents.RoomContents,
+enactor, room, cause)`), not `@trigger`. The real path runs the handler with
+God (`#1`) as the executor — the elevated context the handler needs — whereas
+`@trigger` would run it as `#9` and the introspection calls would silently
+return nothing.
 
-The tests assert that:
-
-1. The handler attribute is executed when `ROOM`CONTENTS` fires via the real event path.
-2. `%0` correctly carries the room dbref into the handler body.
-3. Handler-recorded attributes (`FANOUT_LIST`, `FANOUT_COUNT`, `LAST_CAUSE`)
-   match independently-resolved values, proving the handler ran with correct
-   context and permissions.
-
-See `SharpMUSH.Tests/Services/RoomContentsHandlerReferenceTests.cs`.
+The test asserts the handler emits a **valid JSON `room.contents` payload**
+with the room's occupants — exercising `oob()`, `json_array()`, `iter()`,
+`filter()`, and the helper attributes together (the gap the previous,
+simplified test left open).
 
 ---
 
@@ -154,8 +150,10 @@ See `SharpMUSH.Tests/Services/RoomContentsHandlerReferenceTests.cs`.
 
 ```json
 {
-  "who":  ["God", "Alice"],
-  "room": "The Void"
+  "who": [
+    { "dbref": "#76", "name": "Marble Bust",    "cmd": "look #76" },
+    { "dbref": "#1",  "name": "God",            "cmd": "look #1"  }
+  ]
 }
 ```
 
@@ -164,12 +162,13 @@ See `SharpMUSH.Tests/Services/RoomContentsHandlerReferenceTests.cs`.
 ```json
 {
   "exits": [
-    { "name": "North",  "cmd": "goto #42" },
-    { "name": "Out",    "cmd": "goto #7"  }
+    { "name": "east",  "cmd": "goto #80" },
+    { "name": "north", "cmd": "goto #74" }
   ]
 }
 ```
 
-The client (Blazor WASM) routes incoming OOB packages by the package
-name (`room.contents`, `room.exits`) and updates its reactive room
-model accordingly.
+The portal (Blazor WASM) routes incoming OOB frames by package name
+(`room.contents`, `room.exits`) into its per-connection OOB channel store; the
+Play sidebar renders `who`/`exits` entries, blank names as "(untitled)", and
+issues each entry's `cmd` on click.

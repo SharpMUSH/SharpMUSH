@@ -16,9 +16,11 @@ namespace SharpMUSH.Tests.Services;
 ///   2. %0 correctly carries the room dbref into the handler body.
 ///   3. lcon(%0) returns the room's occupants from within the handler context.
 ///
-/// The simplified handler records lcon(%0)/words(lcon(%0)) into scratch attributes on #9
-/// instead of calling oob() — oob() requires WebSocket connections that the unit test
-/// harness does not provide — so assertions focus on fan-out targeting logic.
+/// Most tests record lcon(%0)/words(lcon(%0)) into scratch attributes on #9 instead of calling
+/// oob() — oob() requires WebSocket connections the unit harness lacks — so they assert fan-out
+/// targeting logic. HandlerBuildsValidRoomContentsJsonPayload goes further: it runs the real
+/// reference idioms (json_array + iter + filter + helper rows) and asserts the built
+/// room.contents payload is VALID JSON containing the room's actual occupants.
 /// </summary>
 [NotInParallel]
 public class RoomContentsHandlerReferenceTests
@@ -124,6 +126,52 @@ public class RoomContentsHandlerReferenceTests
 		// Cleanup
 		await Cmd("&ROOM`CONTENTS #9=");
 		await Cmd("&LAST_CAUSE #9=");
+	}
+
+	[Test]
+	public async ValueTask HandlerBuildsValidRoomContentsJsonPayload()
+	{
+		// The previous tests prove the handler fires with the right room/cause, but not that
+		// the reference handler's payload-building (json_array + iter + filter + helper rows)
+		// actually produces VALID JSON for the room's occupants. This exercises exactly that.
+		var token = Guid.NewGuid().ToString("N")[..8];
+		var thingName = $"Probe{token}";
+
+		// A uniquely-named thing dropped into God's room becomes a who-list occupant.
+		await Cmd($"@create {thingName}");
+		await Cmd($"drop {thingName}");
+
+		// Install the real reference helpers, plus a handler that records the room.contents
+		// payload (json_array of per-occupant rows) into LAST_PAYLOAD — oob() needs a live
+		// WebSocket the harness lacks, so we capture the built payload instead of sending it.
+		await Cmd("&FN`NOTEXIT #9=not(hastype(%0,exit))");
+		await Cmd("&FN`WHOROW #9=json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))");
+		await Cmd("&ROOM`CONTENTS #9=&LAST_PAYLOAD #9=json(object,who,json_array(iter(filter(#9/FN`NOTEXIT,lcon(%0)),u(#9/FN`WHOROW,itext(0)),%b,|),|))");
+
+		var room = await Eval("loc(#1)");
+		await EventService.TriggerEventAsync(
+			WebAppFactoryArg.CommandParser,
+			SharpEvents.RoomContents,
+			WebAppFactoryArg.ExecutorDBRef,
+			room,
+			"move-in");
+
+		// The core assertion the earlier tests missed: the handler emits VALID JSON.
+		var valid = await Eval("isjson(get(#9/LAST_PAYLOAD))");
+		var one = "1";
+		await Assert.That(valid).IsEqualTo(one);
+
+		// And the who list is built from the real occupants: it contains the unique thing and God.
+		var payload = await Eval("get(#9/LAST_PAYLOAD)");
+		await Assert.That(payload).Contains(thingName);
+		await Assert.That(payload).Contains("\"dbref\":\"#1\"");
+
+		// Cleanup
+		await Cmd("&ROOM`CONTENTS #9=");
+		await Cmd("&LAST_PAYLOAD #9=");
+		await Cmd("&FN`WHOROW #9=");
+		await Cmd("&FN`NOTEXIT #9=");
+		await Cmd($"@dest/override {thingName}");
 	}
 
 	[Test]
