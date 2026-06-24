@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits."
 license: MIT
@@ -92,45 +92,42 @@ objects:
       # So a CAPTURED pose is framed (header + pose + footer with the Scene/Pose ids); an uncaptured
       # one is a plain pose. The header must come AFTER addpose because it reads the new pose id.
 
-      # When a pose IS captured, frame the room line. The render LOGIC is factored into the u()-callable
-      # functions CAP_HEADER(<sceneId>) / CAP_FOOTER(<sceneId>) so the four hooks share it (no replication);
-      # the hook supplies the scene id and %# is the poser. (We deliberately keep the @remit INLINE in the
-      # hook and call these via u(), rather than @include-ing an attribute that does the @remit: empirically
-      # the @include form's @remit resolved to a locate error for a REMOTE poser — Logger and poser in
-      # different rooms — while the identical inline @remit works. @include itself is PennMUSH-faithful
-      # (it preserves the executor and q-registers), so the exact cause is NOT pinned down; until it is,
-      # the proven inline form is used. See the @include remote-enactor investigation for details.)
+      # When a pose IS captured, frame the room line. The emit LOGIC is factored into INC`CAP_HEADER /
+      # INC`CAP_FOOTER and the four capture hooks @include them, so there is no replicated @remit (they
+      # read the hook's %q<RoomID> / %q<SceneID> registers; %# is the poser). @include runs the tail AS the
+      # Logger (the executor), so it works even for a REMOTE poser — this relied on the engine fix that
+      # makes @include locate its target (%!) as the executor, not the enactor.
       # Header = WHO posed (left); footer = the Scene/Pose ids (right) — via the common-functions
       # header()/footer() type dispatch, fixed width 78 (room emit ⇒ no single recipient width). CAP_FOOTER
       # reads the JUST-added pose id via last(sceneposes()), so it MUST run after @scene/addpose.
-      FUN`CAP_HEADER: |-
-        header([firstof(scenemember(%0,%#,showas),name(%#))] posed,78,left)
-      FUN`CAP_FOOTER: |-
-        footer(Scene %0 [chr(183)] Pose [last(sceneposes(%0))],78,right)
+      INC`CAP_HEADER: |-
+        @remit %q<RoomID>=[header([firstof(scenemember(%q<SceneID>,%#,showas),name(%#))] posed,78,left)]
+      INC`CAP_FOOTER: |-
+        @remit %q<RoomID>=[footer(Scene %q<SceneID> [chr(183)] Pose [last(sceneposes(%q<SceneID>))],78,right)]
 
       # Built-in POSE (MoreCommands.Pose) emits: "<name> <message>" to the room.
       CMD`CAPTURE`POSE:
         value: |-
-          $(?i)^(pose |\:)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,pose,,[name(%#)] %2; @remit %q<RoomID>=[u(%!/FUN`CAP_HEADER,%q<SceneID>)]}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] %2,%#/FORMAT`POSE,%2,##; @if %q<WillCaptureAsPose>={@remit %q<RoomID>=[u(%!/FUN`CAP_FOOTER,%q<SceneID>)]}
+          $(?i)^(pose |\:)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,pose,,[name(%#)] %2; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] %2,%#/FORMAT`POSE,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # Built-in SAY (MoreCommands.Say) emits "You say, \"<msg>\"" to the speaker
       # and "<name> says, \"<msg>\"" to everyone else in the room.
       CMD`CAPTURE`SAY:
         value: |-
-          $(?i)^(say |")(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,say,,[name(%#)] says\, "%2"; @remit %q<RoomID>=[u(%!/FUN`CAP_HEADER,%q<SceneID>)]}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] says[chr(44)] "%2",%#/FORMAT`SAY,%2,##; @if %q<WillCaptureAsPose>={@remit %q<RoomID>=[u(%!/FUN`CAP_FOOTER,%q<SceneID>)]}
+          $(?i)^(say |")(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,say,,[name(%#)] says\, "%2"; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] says[chr(44)] "%2",%#/FORMAT`SAY,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # Built-in SEMIPOSE (MoreCommands.SemiPose) emits "<name><message>" (no space).
       CMD`CAPTURE`SEMI:
         value: |-
-          $(?i)^(semipose |;)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,semipose,,[name(%#)]%2; @remit %q<RoomID>=[u(%!/FUN`CAP_HEADER,%q<SceneID>)]}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)]%2,%#/FORMAT`SEMIPOSE,%2,##; @if %q<WillCaptureAsPose>={@remit %q<RoomID>=[u(%!/FUN`CAP_FOOTER,%q<SceneID>)]}
+          $(?i)^(semipose |;)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,semipose,,[name(%#)]%2; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)]%2,%#/FORMAT`SEMIPOSE,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # Built-in @EMIT emits "<message>" verbatim (no name) to the room.
       CMD`CAPTURE`EMIT:
         value: |-
-          $(?i)^@emit (.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,emit,,%1; @remit %q<RoomID>=[u(%!/FUN`CAP_HEADER,%q<SceneID>)]}; @message/spoof [lcon(%q<RoomID>)]=%1,%#/FORMAT`EMIT,%1,##; @if %q<WillCaptureAsPose>={@remit %q<RoomID>=[u(%!/FUN`CAP_FOOTER,%q<SceneID>)]}
+          $(?i)^@emit (.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*))))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,emit,,%1; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=%1,%#/FORMAT`EMIT,%1,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # ---- create / lifecycle ---------------------------------------------------
