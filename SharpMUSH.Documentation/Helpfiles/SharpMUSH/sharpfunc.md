@@ -6192,7 +6192,7 @@ a          b          areallylon d
 # JSON FUNCTIONS
   JSON functions are used to create and modify JSON objects.
 
-`isjson()    json()     json_map()     json_query()     json_mod()`
+`isjson()    json()     json_array()     json_map()     json_query()     json_mod()`
 
   These functions are used to output JSON objects to GMCP and WebSocket connections.
 
@@ -6263,6 +6263,7 @@ think isjson("quoted")
 **See Also:**
 - [oob()]
 - [isjson()]
+- [json_array()]
 - [json_query()]
 - [json_map()]
 - [render()]
@@ -6286,6 +6287,28 @@ think isjson("quoted")
    {"name": "One", "dbref": "#1", "created": 1431039583},<br>
    {"name": "Master Room", "dbref": "#2", "created": 1431039583}<br>
   ]
+# JSON_ARRAY()
+`json_array(<list>[, <delimiter>])`
+
+  This function assembles a MUSH `<list>` (separated by `<delimiter>`, which defaults to a space) of already-formed JSON values into a JSON array. Each element must itself be valid JSON — typically produced with json(type, value) — and is placed into the array unchanged. json_array() does NOT quote or re-escape its elements.
+
+  Unlike json(array, ...), which takes each element as a separate argument, json_array() takes a single list, so it composes naturally with iter(). If any element is not valid JSON, json_array() returns a #-1 BAD ARGUMENT error.
+
+  See [json_array2] for examples.
+
+**See Also:**
+- [json()]
+- [json_map()]
+- [oob()]
+# JSON_ARRAY2
+  > think json_array(1 2 3)<br>
+  [1,2,3]
+
+  > think json_array(iter(0 1 2 3, json(number, %i0)))<br>
+  [0,1,2,3]
+
+  > think json(object, who, json_array(iter(a b c, json(string, %i0))))<br>
+  {"who": ["a","b","c"]}
 # JSON_MAP()
 `json_map([<object>/]<attribute>, <json>[, <osep>[, <arg>[, ..., <argN>]]])`
 

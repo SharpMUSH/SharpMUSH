@@ -39,6 +39,33 @@ public partial class Functions
 			: new CallState(MModule.single(ErrorMessages.Returns.InvalidType));
 
 
+	/// <summary>
+	/// <c>json_array(&lt;list&gt;[, &lt;delimiter&gt;])</c> — assembles a MUSH list (split on the
+	/// delimiter argument, default a space) of already-formed JSON values into a JSON array.
+	/// Each element must itself be valid JSON (typically produced with <c>json(type, value)</c>);
+	/// elements are NOT quoted or re-escaped. Unlike <c>json(array, …)</c>, which takes each
+	/// element as a separate argument, this takes a single list, so it composes with
+	/// <c>iter()</c>: <c>json_array(iter(0 1 2 3, json(number, %i0)))</c> → <c>[0,1,2,3]</c>.
+	/// Returns a BAD ARGUMENT error if any element is not valid JSON.
+	/// </summary>
+	[SharpFunction(Name = "json_array", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
+	public static async ValueTask<CallState> json_array(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var delimiter = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, " ");
+		var list = MModule.splitList(delimiter, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
+
+		try
+		{
+			var elements = list.Select(x => JsonDocument.Parse(MModule.plainText(x)).RootElement);
+			return new CallState(JsonSerializer.Serialize(elements, JsonHelpers.RelaxedJsonOptions));
+		}
+		catch (JsonException)
+		{
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json_array"));
+		}
+	}
+
+
 	[SharpFunction(Name = "isjson", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public static ValueTask<CallState> IsJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
