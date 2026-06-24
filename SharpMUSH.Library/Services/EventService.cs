@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
+using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -50,6 +51,7 @@ public class EventService(
 			}
 
 			var eventHandler = eventHandlerResult.Known;
+			var handlerRef = eventHandler.Object().DBRef;
 
 			// Check if the event handler has an attribute matching the event name
 			var attributeResult = await attributeService.GetAttributeAsync(
@@ -69,59 +71,94 @@ public class EventService(
 			// Build the arguments dictionary for the attribute execution
 			// Arguments are passed as %0, %1, %2, etc. in the attribute code
 			var argsDict = new Dictionary<string, CallState>();
-			for (int i = 0; i < args.Length; i++)
+			for (var i = 0; i < args.Length; i++)
 			{
 				argsDict[i.ToString()] = new CallState(args[i]);
 			}
 
-			// Determine the enactor for the event
-			// PennMUSH uses #-1 for system events (no player enactor)
-			var eventEnactor = enactor ?? new DBRef(-1, null);
-
-			// Get the enactor object for passing to EvaluateAttributeFunctionAsync
-			AnySharpObject enactorObject;
-			if (eventEnactor.Number == -1)
+			// Resolve the enactor (%#) for this event.
+			// PennMUSH contract: %# is the object that caused the event (e.g. the player who
+			// connected, the wizard who ran @tel). For system events with no real actor, enactor
+			// is null → we fall back to #-1, and then to the handler object itself so that
+			// %# is never a non-existent dbref inside handler code.
+			var eventEnactorRef = enactor ?? new DBRef(-1, null);
+			DBRef resolvedEnactorRef;
+			if (eventEnactorRef.Number < 0)
 			{
-				// For system events (#-1), use the event handler as the enactor
-				enactorObject = eventHandler;
+				// System event: no real actor — handler runs as God (elevated).
+				resolvedEnactorRef = new DBRef(1, null);
 			}
 			else
 			{
-				var enactorResult = await mediator.Send(new GetObjectNodeQuery(eventEnactor));
+				var enactorResult = await mediator.Send(new GetObjectNodeQuery(eventEnactorRef));
 				if (enactorResult.IsNone)
 				{
-					// If enactor doesn't exist, use the event handler as fallback
+					// Enactor no longer exists — fall back to God.
 					logger.LogWarning(
-						"Event enactor {Enactor} not found for event {EventName}, using event handler as enactor",
-						eventEnactor,
+						"Event enactor {Enactor} not found for event {EventName}, using God as enactor",
+						eventEnactorRef,
 						eventName);
-					enactorObject = eventHandler;
+					resolvedEnactorRef = new DBRef(1, null);
 				}
 				else
 				{
-					enactorObject = enactorResult.Known;
+					resolvedEnactorRef = eventEnactorRef;
 				}
 			}
 
-			// Execute the event handler attribute with modified parser state
-			// Set executor to event handler and enactor as determined above
-			await parser.With(state => state with
-			{
-				Executor = eventHandler.Object().DBRef,
-				Enactor = eventEnactor
-			}, async newParser =>
-			{
-				// Execute the event handler attribute
-				// ignorePermissions: true because events run with elevated privileges
-				await attributeService.EvaluateAttributeFunctionAsync(
-					newParser,
-					enactorObject,
-					eventHandler,
-					eventName,
-					argsDict,
-					evalParent: false,
-					ignorePermissions: true);
-			});
+			// Build a fresh parser state with the event arguments bound as %0, %1, ...
+			// This mirrors the HTTP handler pattern (HttpHandlerCommandService) and the startup
+			// bootstrap pattern (StartupAttributeBootstrapService): when there is no ambient parse
+			// context, push a minimal state rather than calling parser.CurrentState (which throws
+			// on an empty ImmutableStack). Using CommandListParse (not FunctionParse) so that the
+			// attribute body can run commands such as &attr obj=val, @emit, @switch, etc.
+			//
+			// Executor = God (#1) — the "ignorePermissions: true" mechanism from the original
+			//   EvaluateAttributeFunctionAsync path: God is IsSee_All and IsGod, so the Nearby
+			//   check in Locate() is bypassed and CanSet() always succeeds. This matches the
+			//   elevated-permissions semantics events require.
+			// Enactor = resolvedEnactorRef (%# — the object that caused the event)
+			// Caller  = handlerRef (%@ — who triggered this evaluation; the handler itself)
+			//
+			// Note: %! inside the handler will be #1 (God). If softcode needs the handler object,
+			// it can use num(handler_name) or a named q-register. This is the same trade-off as
+			// the original EvaluateAttributeFunctionAsync(ignorePermissions:true) path.
+			var godRef = new DBRef(1, null);
+			var isEmpty = parser.State.IsEmpty;
+			var evalParser = parser.Push(new ParserState(
+				Registers: new([[]]),
+				IterationRegisters: [],
+				RegexRegisters: [],
+				SwitchStack: [],
+				ExecutionStack: [],
+				EnvironmentRegisters: argsDict,
+				CurrentEvaluation: null,
+				ParserFunctionDepth: 0,
+				Function: null,
+				Command: null,
+				CommandInvoker: isEmpty
+					? _ => ValueTask.FromResult(new Option<CallState>(new None()))
+					: parser.CurrentState.CommandInvoker,
+				Switches: [],
+				Arguments: argsDict,
+				Executor: godRef,
+				Enactor: resolvedEnactorRef,
+				Caller: handlerRef,
+				Handle: isEmpty ? null : parser.CurrentState.Handle,
+				CallDepth: isEmpty ? new InvocationCounter() : parser.CurrentState.CallDepth ?? new InvocationCounter(),
+				FunctionRecursionDepths: isEmpty
+					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+					: parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+				TotalInvocations: isEmpty ? new InvocationCounter() : parser.CurrentState.TotalInvocations ?? new InvocationCounter(),
+				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag()));
+
+			// Run the attribute body as a command list (same as @include, HTTP handler, @startup).
+			// This allows commands such as & (attribute set), @emit, @switch, etc.
+			// Convert to plain text then re-wrap (matching @include's behaviour) so that any
+			// markup encoding in the stored MString does not interfere with ANTLR parsing.
+			var attributeText = attributeResult.AsAttribute.Last().Value.ToPlainText();
+
+			await evalParser.CommandListParse(MModule.single(attributeText));
 
 			logger.LogDebug(
 				"Triggered event {EventName} with {ArgCount} arguments",

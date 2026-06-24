@@ -65,6 +65,14 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
+	[Arguments("oob(me, room.contents)", "0")]
+	public async Task OobNoConnectionReturnsZero(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
 	[Arguments("pueblo()", "0")]
 	public async Task Pueblo(string str, string expected)
 	{

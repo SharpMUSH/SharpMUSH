@@ -14,6 +14,7 @@
           integrity="sha512-Rfc5zQIp95eozfMCdS3B4MItUxU8orNje/t1OEhf7XwIk0DTCuMH2LG0NIgP8UGYK9L39WfUNI1c4IsM5yY/PA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="preload" id="webassembly" />
     <link rel="icon" type="image/svg" href="assets/Logo.svg" />
+    <link rel="preload" href="/fonts/cascadia-mono.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
     <link href="css/custom.css" rel="stylesheet" />
     <link href="SharpMUSH.Client.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
@@ -51,6 +52,8 @@
     <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
     <!-- SharpMUSH MUSH language definition for Monaco -->
     <script src="js/mush-monaco.js"></script>
+    <!-- Terminal grid measurement and resize observer -->
+    <script src="js/terminalMetrics.js"></script>
     <!-- Mermaid (wiki diagram rendering) + the wiki post-render pass (mermaid run + anchor scroll) -->
     <script src="js/mermaid.min.js"></script>
     <script src="js/wiki-render.js"></script>

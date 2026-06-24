@@ -19,7 +19,9 @@ public enum TerminalFrameKind
 /// <param name="Kind">How to handle the frame.</param>
 /// <param name="Plain">Plain-text content (used for correlation, buffering, accessibility).</param>
 /// <param name="Html">Safe HTML for display (empty for <see cref="TerminalFrameKind.Oob"/>).</param>
-public readonly record struct TerminalFrame(TerminalFrameKind Kind, string Plain, string Html);
+/// <param name="Package">Out-of-band package identifier (empty for non-OOB frames).</param>
+/// <param name="DataJson">Raw JSON text of the data payload (empty for non-OOB frames).</param>
+public readonly record struct TerminalFrame(TerminalFrameKind Kind, string Plain, string Html, string Package, string DataJson);
 
 /// <summary>
 /// Interprets a raw WebSocket text frame. Game output now arrives as an out-of-band JSON envelope
@@ -34,7 +36,7 @@ public static class TerminalFrameRenderer
 	{
 		var trimmed = frame.AsSpan().TrimStart();
 		if (trimmed.Length == 0 || trimmed[0] != '{')
-			return new TerminalFrame(TerminalFrameKind.PlainText, frame, string.Empty);
+			return new TerminalFrame(TerminalFrameKind.PlainText, frame, string.Empty, string.Empty, string.Empty);
 
 		try
 		{
@@ -43,7 +45,7 @@ public static class TerminalFrameRenderer
 			if (root.ValueKind != JsonValueKind.Object
 				|| !root.TryGetProperty("type", out var typeEl)
 				|| typeEl.ValueKind != JsonValueKind.String)
-				return new TerminalFrame(TerminalFrameKind.PlainText, frame, string.Empty);
+				return new TerminalFrame(TerminalFrameKind.PlainText, frame, string.Empty, string.Empty, string.Empty);
 
 			switch (typeEl.GetString())
 			{
@@ -51,24 +53,31 @@ public static class TerminalFrameRenderer
 				{
 					var data = GetStringProperty(root, "data");
 					var ms = MModule.deserialize(data);
-					return new TerminalFrame(TerminalFrameKind.Markup, ms.ToPlainText(), ms.Render("html"));
+					return new TerminalFrame(TerminalFrameKind.Markup, ms.ToPlainText(), ms.Render("html"), string.Empty, string.Empty);
 				}
 				case "html":
 				{
 					var data = GetStringProperty(root, "data");
-					return new TerminalFrame(TerminalFrameKind.Html, data, data);
+					return new TerminalFrame(TerminalFrameKind.Html, data, data, string.Empty, string.Empty);
 				}
+				case "oob":
 				case "json":
-					return new TerminalFrame(TerminalFrameKind.Oob, string.Empty, string.Empty);
+				{
+					var package = GetStringProperty(root, "package");
+					var dataJson = root.TryGetProperty("data", out var dataEl)
+						? dataEl.GetRawText()
+						: string.Empty;
+					return new TerminalFrame(TerminalFrameKind.Oob, string.Empty, string.Empty, package, dataJson);
+				}
 				default:
 					// Unknown envelope type: do not assume it was meant for us — show it as text.
-					return new TerminalFrame(TerminalFrameKind.PlainText, frame, string.Empty);
+					return new TerminalFrame(TerminalFrameKind.PlainText, frame, string.Empty, string.Empty, string.Empty);
 			}
 		}
 		catch (JsonException)
 		{
 			// A plain line that merely happened to start with '{'.
-			return new TerminalFrame(TerminalFrameKind.PlainText, frame, string.Empty);
+			return new TerminalFrame(TerminalFrameKind.PlainText, frame, string.Empty, string.Empty, string.Empty);
 		}
 	}
 

@@ -1,4 +1,13 @@
-﻿:root {
+﻿/* ── Self-hosted Cascadia Mono (OFL 1.1, microsoft/cascadia-code v2407.24) ── */
+@font-face {
+    font-family: "Cascadia Mono";
+    src: url("/fonts/cascadia-mono.woff2") format("woff2");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
 	/* ── Phosphor Refined design tokens ── */
 	--bg: #0e0f11;
 	--surface: #16181b;
@@ -18,7 +27,7 @@
 	--cpad: 30px;
 	--nav-letterspacing: 0.01em;
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
-	--font-mono: 'JetBrains Mono', monospace;
+	--font-mono: "Cascadia Mono", "Sarasa Mono SC", "DejaVu Sans Mono", "JetBrains Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;
 	--shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 4px 16px rgba(0,0,0,0.4);
 	--mud-palette-background-gradient: radial-gradient(120% 100% at 80% -10%, #16181c 0%, #0e0f11 55%);
@@ -626,6 +635,21 @@ body {
     height: 100%;
     min-height: 0;
     overflow: hidden;
+}
+
+/* Fixed-grid font rules: disable ligatures/kerning so column widths are stable for NAWS grid measurement */
+.sharp-terminal-output,
+.term-input {
+    font-family: "Cascadia Mono", "Sarasa Mono SC", "DejaVu Sans Mono", monospace;
+    font-variant-ligatures: none;
+    font-feature-settings: "liga" 0, "calt" 0;
+    font-kerning: none;
+    letter-spacing: 0;
+}
+
+/* Stable scrollbar gutter prevents layout shift when content overflows */
+.sharp-terminal-output {
+    scrollbar-gutter: stable;
 }
 
 /* Bottom terminal drawer: ensure mud-drawer-content is flex so GlobalTerminal fills it */
