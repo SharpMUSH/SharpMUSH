@@ -239,6 +239,9 @@
     private IJSObjectReference? _cmdLinkHandle;
     private DotNetObjectReference<GlobalTerminal>? _metricsRef;
     private IJSObjectReference? _metricsHandle;
+    private int _lastCols;
+    private int _lastRows;
+    private bool _hasMeasured;
 
     protected override async Task OnInitializedAsync()
     {
@@ -365,9 +368,19 @@
     [JSInvokable]
     public async Task OnTerminalResize(int cols, int rows)
     {
-        if (!Terminal.IsConnected) return;
-        await Terminal.SendControlAsync($"{{\"type\":\"naws\",\"cols\":{cols},\"rows\":{rows}}}");
+        // Remember the grid even before the socket connects (the first measurement fires on
+        // fonts-ready, which can precede connect). The remembered size is then sent once the
+        // connection is established (see OnConnectionChanged), so a connection that never resizes
+        // still reports its NAWS.
+        _lastCols = cols;
+        _lastRows = rows;
+        _hasMeasured = true;
+        if (Terminal.IsConnected)
+            await SendNawsAsync(cols, rows);
     }
+
+    private Task SendNawsAsync(int cols, int rows) =>
+        Terminal.SendControlAsync($"{{\"type\":\"naws\",\"cols\":{cols},\"rows\":{rows}}}");
 
     // ── Account login / register ─────────────────────────────────────────────
 
@@ -530,6 +543,9 @@
     {
         _connected = connected;
         if (!connected) SetPlayerName(null);
+        // Report the grid for this connection now that it's up — covers the case where the initial
+        // measurement happened before connect and the user never resizes afterward.
+        else if (_hasMeasured) _ = SendNawsAsync(_lastCols, _lastRows);
         InvokeAsync(StateHasChanged);
     }
 

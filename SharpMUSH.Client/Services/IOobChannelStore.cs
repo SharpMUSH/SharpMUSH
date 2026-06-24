@@ -10,4 +10,11 @@ public interface IOobChannelStore
 	void Set(string package, string dataJson);
 	string? Get(string package);
 	IReadOnlyCollection<string> Packages { get; }
+
+	/// <summary>
+	/// Drops all cached payloads (e.g. on a new connection/login) so a fresh session never renders
+	/// stale data from a previous one. Raises <see cref="ChannelUpdated"/> for each cleared package
+	/// so subscribers re-read and reset.
+	/// </summary>
+	void Clear();
 }

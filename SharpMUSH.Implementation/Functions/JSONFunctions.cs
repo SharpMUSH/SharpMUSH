@@ -56,7 +56,15 @@ public partial class Functions
 
 		try
 		{
-			var elements = list.Select(x => JsonDocument.Parse(MModule.plainText(x)).RootElement);
+			// Clone each element out of its JsonDocument so the documents (and their pooled
+			// buffers) are disposed before we serialize, rather than lingering until finalization.
+			var elements = new List<JsonElement>(list.Length);
+			foreach (var element in list)
+			{
+				using var document = JsonDocument.Parse(MModule.plainText(element));
+				elements.Add(document.RootElement.Clone());
+			}
+
 			return new CallState(JsonSerializer.Serialize(elements, JsonHelpers.RelaxedJsonOptions));
 		}
 		catch (JsonException)

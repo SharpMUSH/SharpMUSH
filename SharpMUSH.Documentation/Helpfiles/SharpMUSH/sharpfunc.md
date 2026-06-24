@@ -6302,11 +6302,9 @@ think isjson("quoted")
 - [oob()]
 # JSON_ARRAY2
   > think json_array(1 2 3)<br>
-  [1,2,3]
-
+  [1,2,3]<br>
   > think json_array(iter(0 1 2 3, json(number, %i0)))<br>
-  [0,1,2,3]
-
+  [0,1,2,3]<br>
   > think json(object, who, json_array(iter(a b c, json(string, %i0))))<br>
   {"who": ["a","b","c"]}
 # JSON_MAP()

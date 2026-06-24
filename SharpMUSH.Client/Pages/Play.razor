@@ -39,7 +39,7 @@
             {
                 @foreach (var e in _here)
                 {
-                    @if (e.Cmd is not null)
+                    @if (!string.IsNullOrWhiteSpace(e.Cmd))
                     {
                         <div class="play-entry play-clickable"
                              @onclick="@(() => RunEntry(e))">
@@ -66,7 +66,7 @@
             {
                 @foreach (var e in _exits)
                 {
-                    @if (e.Cmd is not null)
+                    @if (!string.IsNullOrWhiteSpace(e.Cmd))
                     {
                         <div class="play-entry play-clickable"
                              @onclick="@(() => RunEntry(e))">
@@ -283,7 +283,7 @@
 
     private async Task RunEntry(OobEntry entry)
     {
-        if (!string.IsNullOrEmpty(entry.Cmd))
+        if (!string.IsNullOrWhiteSpace(entry.Cmd))
             await PlayTerminal.SendAsync(entry.Cmd);
     }
 

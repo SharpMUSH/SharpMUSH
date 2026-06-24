@@ -55,6 +55,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	public async Task ConnectAsync(string serverUri)
 	{
 		_serverUri = serverUri;
+		// New connection/login: drop any OOB payloads from a previous session so the UI never
+		// renders stale cross-session data until fresh OOB arrives.
+		_oob.Clear();
 		wsService.MessageReceived -= HandleMessage;
 		wsService.ConnectionStateChanged -= HandleStateChange;
 		wsService.MessageReceived += HandleMessage;

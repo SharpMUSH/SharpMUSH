@@ -131,8 +131,7 @@ An empty `&` sets the attribute to an empty string, which silences the handler
 
 `SharpMUSH.Tests/Services/RoomContentsHandlerReferenceTests.cs` installs the
 reference helpers + handler and triggers `ROOM`CONTENTS` via the **real event
-path** (`EventService.TriggerEventAsync(parser, SharpEvents.RoomContents,
-enactor, room, cause)`), not `@trigger`. The real path runs the handler with
+path** — `EventService.TriggerEventAsync(parser, SharpEvents.RoomContents, enactor, room, cause)` — not `@trigger`. The real path runs the handler with
 God (`#1`) as the executor — the elevated context the handler needs — whereas
 `@trigger` would run it as `#9` and the introspection calls would silently
 return nothing.

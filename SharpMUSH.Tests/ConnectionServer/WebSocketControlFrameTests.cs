@@ -16,7 +16,8 @@ public class WebSocketControlFrameTests
 	[Test]
 	public async Task OversizeClampsToThousand()
 	{
-		WebSocketControlFrame.TryParseNaws("{\"type\":\"naws\",\"cols\":99999,\"rows\":0}", out var cols, out var rows);
+		var ok = WebSocketControlFrame.TryParseNaws("{\"type\":\"naws\",\"cols\":99999,\"rows\":0}", out var cols, out var rows);
+		await Assert.That(ok).IsTrue();
 		await Assert.That(cols).IsEqualTo(1000);
 		await Assert.That(rows).IsEqualTo(1);
 	}

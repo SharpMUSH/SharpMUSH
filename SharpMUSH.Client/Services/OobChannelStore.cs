@@ -19,4 +19,12 @@ public sealed class OobChannelStore : IOobChannelStore
 		_channels.TryGetValue(package, out var v) ? v : null;
 
 	public IReadOnlyCollection<string> Packages => _channels.Keys.ToArray();
+
+	public void Clear()
+	{
+		var cleared = _channels.Keys.ToArray();
+		_channels.Clear();
+		foreach (var package in cleared)
+			ChannelUpdated?.Invoke(package);
+	}
 }

@@ -205,11 +205,17 @@ public class RoomContentsEventTests
 		// for God's room with cause "disconnect".
 		await ConnectionService.Disconnect(disconnectHandle);
 
-		// Give the notification handler a moment to execute.
-		await Task.Delay(200);
+		// Poll (bounded) until the disconnect notification handler records the room, rather than
+		// relying on a fixed sleep that can flake under variable CI timing.
+		var recorded = string.Empty;
+		for (var attempt = 0; attempt < 50; attempt++)
+		{
+			recorded = await Eval("get(#9/LAST_DISC_disconnect)");
+			if (recorded == godRoom) break;
+			await Task.Delay(20);
+		}
 
 		// ROOM`CONTENTS should have fired with %1="disconnect" and %0=godRoom.
-		var recorded = await Eval("get(#9/LAST_DISC_disconnect)");
 		await Assert.That(recorded).IsEqualTo(godRoom);
 
 		// Cleanup.
