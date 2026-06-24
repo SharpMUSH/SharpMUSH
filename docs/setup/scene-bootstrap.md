@@ -50,13 +50,13 @@ passers-by, and people focused on a different scene in the room, are not logged.
 > through `GameHub.SendCommand`, so the **same** hook fires — there is **one** stored pose,
 > rendered both to the room and over `game.scene.{id}` (no double-capture, no echo loop).
 
-## Policy knobs (`DATA\`*`)
+## Policy knobs (``DATA`*``)
 
 There is intentionally **no `SceneOptions` config category** — every knob is policy, set as a
-`&DATA\`*` attribute on the Scene Logger and read by the verbs (one place, not two). The
-package ships sensible defaults; the most notable is **`DATA\`DEFAULT_STATUS=active`**, so
+``&DATA`*`` attribute on the Scene Logger and read by the verbs (one place, not two). The
+package ships sensible defaults; the most notable is **``DATA`DEFAULT_STATUS=active``**, so
 `+scene/create` yields an immediately-capturing scene (set it to `new`/`scheduled` to stage a
-scene that only logs after `+scene/start`). See the `DATA\`*` block in `package.yaml` for the
+scene that only logs after `+scene/start`). See the ``DATA`*`` block in `package.yaml` for the
 full set (`CAPTURE`, `DEFAULT_STATUS`, `DEFAULT_PUBLIC`, `MAX_RECENT`, `STATUSES`, `TEMP_*`,
 `SHARE_OWNER`) and its current defaults.
 
@@ -82,7 +82,7 @@ edit their own poses.
 | `+scene/public` · `/private` | visibility |
 | `+scene/recall [<n>]` | print the last `<n>` poses |
 | `+scene/edit <id>=<before>^^^<after>` | fix a typo in your pose |
-| `+scene/undo` · `/redo` · `/delete <id>` · `/move <id>=<after>` | pose management |
+| `+scene/undo <id>` · `/redo <id>` · `/delete <id>` · `/move <id>=<after>` | pose management |
 | `+scene/who <id>` | cast list |
 | `+scene/schedule <title>=<when>` | schedule a roomless future scene |
 | `+scene/reschedule <id>=<when>` · `/unschedule <id>` · `/upcoming` | manage / list scheduled |

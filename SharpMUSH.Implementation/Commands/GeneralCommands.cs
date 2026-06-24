@@ -978,7 +978,7 @@ public partial class Commands
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
-		var description = (await AttributeService!.GetAttributeAsync(enactor, viewingKnown, "DESCRIBE",
+		var description = (await AttributeService!.GetAttributeAsync(executor, viewingKnown, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
 				attr => MModule.getLength(attr.Last().Value) == 0
@@ -1094,7 +1094,7 @@ public partial class Commands
 				var patternMode = IAttributeService.AttributePatternMode.Wildcard;
 
 				atrs = await AttributeService.GetAttributePatternAsync(
-					enactor,
+					executor,
 					viewingKnown,
 					attributePattern,
 					checkParents,
@@ -1102,7 +1102,7 @@ public partial class Commands
 			}
 			else
 			{
-				atrs = await AttributeService.GetVisibleAttributesAsync(enactor, viewingKnown);
+				atrs = await AttributeService.GetVisibleAttributesAsync(executor, viewingKnown);
 			}
 
 			if (atrs.IsAttribute)
@@ -1121,7 +1121,7 @@ public partial class Commands
 					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
 					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
 
-					if (!await PermissionService.CanViewAttribute(enactor, viewingKnown, attr))
+					if (!await PermissionService.CanViewAttribute(executor, viewingKnown, attr))
 					// || showPublicOnly && !showAll && !attr.IsVisual())
 					{
 						continue;
@@ -5153,7 +5153,7 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(attributePattern))
 			{
 				atrs = await AttributeService!.GetAttributePatternAsync(
-					enactor,
+					executor,
 					targetKnown,
 					attributePattern,
 					false, // don't check parents for decompile
@@ -5161,7 +5161,7 @@ public partial class Commands
 			}
 			else
 			{
-				atrs = await AttributeService!.GetVisibleAttributesAsync(enactor, targetKnown);
+				atrs = await AttributeService!.GetVisibleAttributesAsync(executor, targetKnown);
 			}
 
 			if (atrs.IsAttribute)
