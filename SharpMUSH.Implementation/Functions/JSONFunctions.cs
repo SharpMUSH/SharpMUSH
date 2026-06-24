@@ -46,13 +46,20 @@ public partial class Functions
 	/// elements are NOT quoted or re-escaped. Unlike <c>json(array, …)</c>, which takes each
 	/// element as a separate argument, this takes a single list, so it composes with
 	/// <c>iter()</c>: <c>json_array(iter(0 1 2 3, json(number, %i0)))</c> → <c>[0,1,2,3]</c>.
-	/// Returns a BAD ARGUMENT error if any element is not valid JSON.
+	/// The argumentless form <c>json_array()</c> yields an empty array <c>[]</c>. Returns a BAD
+	/// ARGUMENT error if any element is not valid JSON.
 	/// </summary>
-	[SharpFunction(Name = "json_array", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
+	[SharpFunction(Name = "json_array", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
 	public static async ValueTask<CallState> json_array(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// No list argument at all → an empty array (the explicit argumentless form).
+		if (!parser.CurrentState.Arguments.TryGetValue("0", out var listArg))
+		{
+			return new CallState("[]");
+		}
+
 		var delimiter = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, " ");
-		var list = MModule.splitList(delimiter, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
+		var list = MModule.splitList(delimiter, (await listArg.ParsedMessage())!);
 
 		try
 		{
