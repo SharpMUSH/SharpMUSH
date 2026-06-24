@@ -35,7 +35,6 @@ public class DatabaseCommandTests
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
-		// Grant WIZARD using God's (handle 1) privileged parser
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {player.DbRef}=WIZARD"));
 		return player;
 	}
@@ -49,7 +48,6 @@ public class DatabaseCommandTests
 		await using var connection = new MySqlConnection(connectionString);
 		await connection.OpenAsync();
 
-		// Create test tables with unique names for command tests
 		await using (var cmd = new MySqlCommand("""
 		                                        			CREATE TABLE IF NOT EXISTS test_sql_data_cmd (
 		                                        				id INT PRIMARY KEY AUTO_INCREMENT,
@@ -73,7 +71,6 @@ public class DatabaseCommandTests
 			await cmd.ExecuteNonQueryAsync();
 		}
 
-		// Truncate tables to ensure clean state
 		await using (var cmd = new MySqlCommand("TRUNCATE TABLE test_sql_data_cmd", connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
@@ -84,7 +81,6 @@ public class DatabaseCommandTests
 			await cmd.ExecuteNonQueryAsync();
 		}
 
-		// Insert test data
 		await using (var cmd = new MySqlCommand("""
 		                                        			INSERT INTO test_sql_data_cmd (name, value) VALUES 
 		                                        			('test_sql_row1', 100),
@@ -161,13 +157,10 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask ClockCommand()
 	{
-		// First create a test channel
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/add TestClockChannel"));
 
-		// Now test @clock to set a lock on the channel
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@clock/join TestClockChannel=#TRUE"));
 
-		// Verify the command executed successfully (didn't throw or return error)
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -299,13 +292,6 @@ public class DatabaseCommandTests
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		// TODO: There is a bug here. It keeps reading and loops around somehow. I don't get how.
-		/*
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().StartsWith("Test_MapSql_WithMultipleRows: 4")) ||
-				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithMultipleRows: 4"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
-				*/
 	}
 
 	[Test]
@@ -363,15 +349,12 @@ public class DatabaseCommandTests
 				(msg.IsT1 && msg.AsT1.Contains("#-1 SQL ERROR"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
-	// ===== Prepared Statement Command Tests =====
-
 	[Test]
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_SelectWithParameter()
 	{
 		var wizardPlayer = await CreateWizardTestPlayerAsync("SqlPrepSelParam");
 		var testParser = SqlWebAppFactoryArg.CommandParserFor(wizardPlayer.DbRef, wizardPlayer.Handle);
-		// Test using lit() to protect the query
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id = ?),1"));
 
 		await NotifyService

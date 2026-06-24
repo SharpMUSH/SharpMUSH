@@ -25,17 +25,15 @@ public class NatsPerformanceValidation
 		return await NatsJetStreamMessageBus.CreateAsync(options, logger);
 	}
 
-	[Test, Explicit]  // Explicit — only run when specifically requested
+	[Test, Explicit]
 	public async Task Nats_ProducerThroughput_ShouldHandleHighVolume()
 	{
-		// Arrange
 		var bus = await CreateMessageBusAsync();
 		const int messageCount = 1000;
 		var messages = Enumerable.Range(0, messageCount)
 			.Select(i => new TelnetOutputMessage(1, Encoding.UTF8.GetBytes($"Message {i}")))
 			.ToList();
 
-		// Act — measure sequential publish throughput for 1000 messages
 		var sw = Stopwatch.StartNew();
 		foreach (var message in messages)
 			await bus.Publish(message);
@@ -51,18 +49,15 @@ public class NatsPerformanceValidation
 			.Because("NATS JetStream should publish 1000 messages in under 15 seconds");
 	}
 
-	[Test, Explicit]  // Explicit — requires NATS to be running
+	[Test, Explicit]
 	public async Task Nats_ProducerLatency_ShouldBeLowForSingleMessage()
 	{
-		// Arrange
 		var bus = await CreateMessageBusAsync();
 		var message = new TelnetOutputMessage(1, Encoding.UTF8.GetBytes("Test message"));
 
-		// Warm up
 		await bus.Publish(message);
 		await Task.Delay(100);
 
-		// Act — measure single-message publish latency
 		var sw = Stopwatch.StartNew();
 		await bus.Publish(message);
 		sw.Stop();
@@ -76,17 +71,15 @@ public class NatsPerformanceValidation
 			.Because("Single NATS JetStream publish should complete in under 100ms");
 	}
 
-	[Test, Explicit]  // Explicit — requires NATS to be running
+	[Test, Explicit]
 	public async Task Nats_ConcurrentProducer_ShouldOutperformSequential()
 	{
-		// Arrange
 		var bus = await CreateMessageBusAsync();
 		const int messageCount = 100;
 		var messages = Enumerable.Range(0, messageCount)
 			.Select(i => new TelnetOutputMessage(1, Encoding.UTF8.GetBytes($"Batch message {i}")))
 			.ToList();
 
-		// Act — fire all publishes concurrently (mirrors Kafka_BatchedProducer test)
 		var sw = Stopwatch.StartNew();
 		await Task.WhenAll(messages.Select(m => bus.Publish(m)));
 		sw.Stop();
@@ -105,11 +98,9 @@ public class NatsPerformanceValidation
 	[Test]
 	public async Task Nats_Configuration_ShouldHaveReasonableDefaults()
 	{
-		// Arrange
 		var port = NatsTestServer.Instance.GetMappedPublicPort(4222);
 		var options = new NatsOptions { Url = $"nats://localhost:{port}" };
 
-		// Assert — verify NATS option defaults are sane
 		await Assert.That(options.StreamName).IsEqualTo("SHARPMUSH")
 			.Because("Default stream name should be SHARPMUSH");
 		await Assert.That(options.SubjectPrefix).IsEqualTo("sharpmush")

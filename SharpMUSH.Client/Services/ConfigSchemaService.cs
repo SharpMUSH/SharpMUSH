@@ -9,7 +9,6 @@ public class ConfigSchemaService(IHttpClientFactory httpClientFactory)
 	{
 		try
 		{
-			// Use the named "api" client which is configured to point to port 8081
 			var client = httpClientFactory.CreateClient("api");
 			var response = await client.GetFromJsonAsync<ConfigurationResponse>("/api/configuration");
 

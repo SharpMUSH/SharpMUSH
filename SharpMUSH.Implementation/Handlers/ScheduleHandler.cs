@@ -12,8 +12,6 @@ public class ScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueCo
 {
 	public async ValueTask<Unit> Handle(QueueCommandListRequest request, CancellationToken cancellationToken)
 	{
-		// DIAGNOSTIC: Prove the handler is being invoked
-
 		await scheduler.WriteCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue);
 		return await Unit.ValueTask;
 	}

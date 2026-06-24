@@ -10,13 +10,10 @@ namespace SharpMUSH.Tests.ClientState;
 
 public class ConnectionStateServiceTests
 {
-	// ── helpers ──────────────────────────────────────────────────────────────
-
 	private static (ConnectionStateService svc, IGameHubConnectionFactory factory, IGameHubConnection hub)
 		MakeService()
 	{
 		var hub = Substitute.For<IGameHubConnection>();
-		// On<T> typed overloads — return a no-op IDisposable stub
 		var disposable = Substitute.For<IDisposable>();
 		hub.On(Arg.Any<string>(), Arg.Any<Action<GameOutputMessage>>()).Returns(disposable);
 		hub.On(Arg.Any<string>(), Arg.Any<Action<RoomEventMessage>>()).Returns(disposable);
@@ -29,8 +26,6 @@ public class ConnectionStateServiceTests
 		return (svc, factory, hub);
 	}
 
-	// ── initial state ────────────────────────────────────────────────────────
-
 	[Test]
 	public async Task InitialState_IsDisconnected_NotConnected()
 	{
@@ -38,8 +33,6 @@ public class ConnectionStateServiceTests
 		await Assert.That(svc.IsConnected).IsFalse();
 		await Assert.That(svc.ConnectionState).IsEqualTo(HubConnectionState.Disconnected);
 	}
-
-	// ── ConnectAsync ─────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task ConnectAsync_CallsFactoryCreate_AndStartAsync()
@@ -68,7 +61,6 @@ public class ConnectionStateServiceTests
 
 		await svc.ConnectAsync("token");
 
-		// We expect at minimum a Connecting→Connected transition
 		await Assert.That(events.Count).IsGreaterThanOrEqualTo(1);
 		await Assert.That(events[^1]).IsEqualTo(HubConnectionState.Connected);
 	}
@@ -111,13 +103,10 @@ public class ConnectionStateServiceTests
 		await Assert.That(svc.ConnectionState).IsEqualTo(HubConnectionState.Disconnected);
 	}
 
-	// ── DisconnectAsync ──────────────────────────────────────────────────────
-
 	[Test]
 	public async Task DisconnectAsync_WhenNotConnected_DoesNotThrow()
 	{
 		var (svc, _, _) = MakeService();
-		// Should be a no-op
 		await svc.DisconnectAsync();
 		await Assert.That(svc.IsConnected).IsFalse();
 	}
@@ -141,8 +130,6 @@ public class ConnectionStateServiceTests
 		await Assert.That(svc.ConnectionState).IsEqualTo(HubConnectionState.Disconnected);
 	}
 
-	// ── SendCommandAsync ─────────────────────────────────────────────────────
-
 	[Test]
 	public async Task SendCommandAsync_WhenNotConnected_ThrowsInvalidOperationException()
 	{
@@ -159,8 +146,6 @@ public class ConnectionStateServiceTests
 		await svc.SendCommandAsync("look");
 		await hub.Received(1).InvokeAsync("SendCommand", "look", Arg.Any<CancellationToken>());
 	}
-
-	// ── DisposeAsync ─────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task DisposeAsync_WhenConnected_DisposesHub()

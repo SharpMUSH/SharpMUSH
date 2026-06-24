@@ -53,10 +53,9 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 
 			if (!maybeAttr.IsAttribute)
 			{
-				return null; // No custom template, use default
+				return null;
 			}
 
-			// Evaluate the attribute with the provided arguments
 			var result = await _attributeService.EvaluateAttributeFunctionAsync(
 				_parser,
 				_executor,
@@ -68,14 +67,12 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		}
 		catch
 		{
-			// If template evaluation fails, fall back to default rendering
 			return null;
 		}
 	}
 
 	protected override MString RenderHeading(HeadingBlock heading)
 	{
-		// Extract level for template selection
 		var templateName = heading.Level switch
 		{
 			1 => "H1",
@@ -84,7 +81,6 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 			_ => "H3"
 		};
 
-		// Render the heading content (inline elements) without default formatting
 		var content = RenderInlineContent(heading.Inline);
 
 		var args = new Dictionary<string, CallState>

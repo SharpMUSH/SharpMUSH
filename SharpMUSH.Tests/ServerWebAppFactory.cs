@@ -68,7 +68,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		AppDomain.CurrentDomain.ProcessExit += (_, _) => WriteTelemetryFile();
 	}
 
-	// Optional parameters for custom SQL connection
 	protected string? _customSqlConnectionString;
 	private readonly string _sqlPlatform;
 	private readonly string? _customDatabaseName;
@@ -188,7 +187,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 			.Enrich.FromLogContext()
 			.MinimumLevel.Verbose();
 
-		// Only write to console if explicitly enabled via environment variable
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
 		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) &&
 													 (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
@@ -201,7 +199,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		var log = logConfig.CreateLogger();
 		Log.Logger = log;
 
-		// Determine database provider from environment variable
 		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
 		var useMemgraph = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase);
 
@@ -248,7 +245,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	{
 		_meterListener?.Dispose();
 
-		// Shutdown the Quartz scheduler gracefully with a timeout
 		if (_server?.Services != null)
 		{
 			var schedulerFactory = _server.Services.GetService<ISchedulerFactory>();
@@ -257,7 +253,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 				var scheduler = await schedulerFactory.GetScheduler();
 				if (scheduler.IsStarted)
 				{
-					// Force shutdown after 5 seconds if jobs don't complete
 					using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 					try
 					{
@@ -265,7 +260,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 					}
 					catch (OperationCanceledException)
 					{
-						// Timeout occurred, forcefully stop
 					}
 				}
 			}

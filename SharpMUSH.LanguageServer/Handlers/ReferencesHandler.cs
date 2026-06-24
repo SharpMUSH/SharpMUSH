@@ -34,7 +34,6 @@ public class ReferencesHandler : ReferencesHandlerBase
 			var line = request.Position.Line < lines.Length ? lines[request.Position.Line] : string.Empty;
 			var character = (int)request.Position.Character;
 
-			// Find the word at the cursor position
 			var wordStart = character;
 			var wordEnd = character;
 
@@ -56,7 +55,6 @@ public class ReferencesHandler : ReferencesHandlerBase
 			var word = line.Substring(wordStart, wordEnd - wordStart);
 			var locations = new List<Location>();
 
-			// Search through all lines for references to this word
 			for (int i = 0; i < lines.Length; i++)
 			{
 				var currentLine = lines[i];
@@ -67,7 +65,6 @@ public class ReferencesHandler : ReferencesHandlerBase
 					var index = currentLine.IndexOf(word, startIndex, StringComparison.OrdinalIgnoreCase);
 					if (index == -1) break;
 
-					// Check if this is a whole word match
 					var isWholeWord = true;
 					if (index > 0 && IsWordCharacter(currentLine[index - 1]))
 					{
@@ -80,7 +77,6 @@ public class ReferencesHandler : ReferencesHandlerBase
 
 					if (isWholeWord)
 					{
-						// Include the reference if requested, or exclude the definition
 						var isDefinition = IsDefinitionLine(currentLine, word, index);
 
 						if (request.Context.IncludeDeclaration || !isDefinition)
@@ -121,12 +117,9 @@ public class ReferencesHandler : ReferencesHandlerBase
 
 	private static bool IsDefinitionLine(string line, string word, int index)
 	{
-		// Check if this line contains an attribute definition
-		// &attribute syntax
 		if (line.Contains($"&{word}"))
 			return true;
 
-		// @set object/attribute syntax
 		if (line.Contains("@set") && index > 0 && line[index - 1] == '/')
 			return true;
 

@@ -13,7 +13,6 @@ public class RestrictionsService
 
 	private HttpClient CreateClient() => _httpClientFactory.CreateClient("api");
 
-	// Command Restrictions
 	public async Task<Dictionary<string, string[]>?> GetCommandRestrictionsAsync()
 	{
 		var client = CreateClient();
@@ -34,7 +33,6 @@ public class RestrictionsService
 		return response.IsSuccessStatusCode;
 	}
 
-	// Function Restrictions
 	public async Task<Dictionary<string, string[]>?> GetFunctionRestrictionsAsync()
 	{
 		var client = CreateClient();

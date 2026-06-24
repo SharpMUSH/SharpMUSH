@@ -31,9 +31,6 @@ public static class ChannelTitle
 			return new CallState("You are not the owner of the channel.");
 		}
 
-		// channel.Title = title.ToPlainText();
-		// await Mediator!.Send(new UpdateChannelCommand(channel));
-
 		return new CallState("Channel title has been updated.");
 	}
 }

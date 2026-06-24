@@ -37,13 +37,11 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 		if (string.IsNullOrEmpty(hash))
 			return false;
 
-		// Check if this is a PennMUSH-format password (V:ALGO:HASH:TIMESTAMP)
 		if (IsPennMUSHPasswordFormat(hash))
 		{
 			return VerifyPennMUSHPassword(pw, hash);
 		}
 
-		// Use modern PBKDF2 verification
 		try
 		{
 			return hasher.VerifyHashedPassword(user, hash, pw) != PasswordVerificationResult.Failed;
@@ -68,11 +66,9 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 		if (parts.Length < 3)
 			return false;
 
-		// Check if first part is a version number (1 or 2)
 		if (!int.TryParse(parts[0], out var version) || version < 1 || version > 2)
 			return false;
 
-		// Check if second part is a known algorithm
 		var algo = parts[1].ToUpperInvariant();
 		return algo is "SHA1" or "SHA-1" or "SHA256" or "SHA-256";
 	}
@@ -98,7 +94,6 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 		var salt = saltedHash[..2];
 		var expectedHash = saltedHash[2..];
 
-		// Compute the hash: salt + plaintext
 		var saltedPlaintext = salt + plaintext;
 		string computedHash;
 
@@ -112,7 +107,6 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 		}
 		else
 		{
-			// Unknown algorithm
 			return false;
 		}
 

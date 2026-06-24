@@ -162,8 +162,6 @@ public class RolesController(
 		return Ok();
 	}
 
-	// ── Helpers ──────────────────────────────────────────────────────────────
-
 	private static bool IsValidSlug(string slug)
 		=> slug.All(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_');
 

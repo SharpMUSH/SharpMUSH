@@ -15,21 +15,18 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task ClearAttributeAsync_LeafAttribute_RemovesAttribute()
 	{
-		// Arrange: Create a unique leaf attribute
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var attributeName = $"CLEAR_LEAF_TEST_{Guid.NewGuid():N}";
 
 		await Database.SetAttributeAsync(playerOneDBRef, [attributeName], A.single("TestValue"), playerOne);
 
-		// Verify it exists
 		var beforeClear = Database.GetAttributeAsync(playerOneDBRef, [attributeName]);
 		await Assert.That(beforeClear).IsNotNull();
 
-		// Act: Clear the attribute (should remove it since it has no children)
+		// Clear should remove it since it has no children
 		var result = await Database.ClearAttributeAsync(playerOneDBRef, [attributeName]);
 
-		// Assert: Attribute should be removed
 		await Assert.That(result).IsTrue();
 		var afterClear = Database.GetAttributeAsync(playerOneDBRef, [attributeName]);
 		var afterClearList = await afterClear.ToListAsync();
@@ -39,7 +36,6 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task ClearAttributeAsync_AttributeWithChildren_ClearsValueKeepsStructure()
 	{
-		// Arrange: Create a unique attribute tree
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var baseName = $"CLEAR_PARENT_TEST_{Guid.NewGuid():N}";
@@ -48,23 +44,20 @@ public class ClearAndWipeAttributeTests
 		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD1"], A.single("ChildValue1"), playerOne);
 		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD2"], A.single("ChildValue2"), playerOne);
 
-		// Verify parent and children exist
 		var beforeClear = Database.GetAttributeAsync(playerOneDBRef, [baseName]);
 		var beforeList = await beforeClear!.ToListAsync()!;
 		await Assert.That(beforeList).Count().IsEqualTo(1);
 		await Assert.That(beforeList.Last().Value.ToString()).IsEqualTo("ParentValue");
 
-		// Act: Clear the parent attribute (should clear value but keep structure)
+		// Clear the parent should clear value but keep structure
 		var result = await Database.ClearAttributeAsync(playerOneDBRef, [baseName]);
 
-		// Assert: Parent should exist but have empty value, children should still exist
 		await Assert.That(result).IsTrue();
 		var afterClear = Database.GetAttributeAsync(playerOneDBRef, [baseName]);
 		var afterList = await afterClear!.ToListAsync()!;
 		await Assert.That(afterList).Count().IsEqualTo(1);
 		await Assert.That(afterList.Last().Value.ToString()).IsEqualTo(string.Empty);
 
-		// Verify children still exist
 		var child1 = Database.GetAttributeAsync(playerOneDBRef, [baseName, "CHILD1"]);
 		var child1List = await child1!.ToListAsync()!;
 		await Assert.That(child1List).Count().IsEqualTo(2);
@@ -79,36 +72,29 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task ClearAttributeAsync_NonExistentAttribute_ReturnsFalse()
 	{
-		// Arrange
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var attributeName = $"NONEXISTENT_CLEAR_{Guid.NewGuid():N}";
 
-		// Act
 		var result = await Database.ClearAttributeAsync(playerOneDBRef, [attributeName]);
 
-		// Assert
 		await Assert.That(result).IsFalse();
 	}
 
 	[Test]
 	public async Task WipeAttributeAsync_LeafAttribute_RemovesAttribute()
 	{
-		// Arrange: Create a unique leaf attribute
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var attributeName = $"WIPE_LEAF_TEST_{Guid.NewGuid():N}";
 
 		await Database.SetAttributeAsync(playerOneDBRef, [attributeName], A.single("TestValue"), playerOne);
 
-		// Verify it exists
 		var beforeWipe = Database.GetAttributeAsync(playerOneDBRef, [attributeName]);
 		await Assert.That(beforeWipe).IsNotNull();
 
-		// Act: Wipe the attribute
 		var result = await Database.WipeAttributeAsync(playerOneDBRef, [attributeName]);
 
-		// Assert: Attribute should be removed
 		await Assert.That(result).IsTrue();
 		var afterWipe = Database.GetAttributeAsync(playerOneDBRef, [attributeName]);
 		var afterWipeList = await afterWipe.ToListAsync();
@@ -118,7 +104,6 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task WipeAttributeAsync_AttributeTree_RemovesAllDescendants()
 	{
-		// Arrange: Create a unique attribute tree with multiple levels
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var baseName = $"WIPE_TREE_TEST_{Guid.NewGuid():N}";
@@ -135,7 +120,6 @@ public class ClearAndWipeAttributeTests
 		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD1", "GRANDCHILD2"], A.single("GrandChild2"), playerOne);
 		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD2"], A.single("Child2"), playerOne);
 
-		// Verify tree exists
 		var root = Database.GetAttributeAsync(playerOneDBRef, [baseName]);
 		await Assert.That(root).IsNotNull();
 		var child1 = Database.GetAttributeAsync(playerOneDBRef, [baseName, "CHILD1"]);
@@ -143,10 +127,9 @@ public class ClearAndWipeAttributeTests
 		var grandchild1 = Database.GetAttributeAsync(playerOneDBRef, [baseName, "CHILD1", "GRANDCHILD1"]);
 		await Assert.That(grandchild1).IsNotNull();
 
-		// Act: Wipe the root attribute (should remove everything)
+		// Wipe the root should remove everything
 		var result = await Database.WipeAttributeAsync(playerOneDBRef, [baseName]);
 
-		// Assert: Everything should be removed
 		await Assert.That(result).IsTrue();
 		var afterRoot = Database.GetAttributeAsync(playerOneDBRef, [baseName]);
 		var afterRootList = await afterRoot.ToListAsync();
@@ -168,7 +151,6 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task WipeAttributeAsync_MiddleOfTree_RemovesOnlySubtree()
 	{
-		// Arrange: Create a unique attribute tree
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var baseName = $"WIPE_SUBTREE_TEST_{Guid.NewGuid():N}";
@@ -180,10 +162,8 @@ public class ClearAndWipeAttributeTests
 		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "BRANCH2"], A.single("Branch2"), playerOne);
 		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "BRANCH2", "LEAF2"], A.single("Leaf2"), playerOne);
 
-		// Act: Wipe only BRANCH1 (not the root)
 		var result = await Database.WipeAttributeAsync(playerOneDBRef, [baseName, "BRANCH1"]);
 
-		// Assert: BRANCH1 and its children should be gone, but root and BRANCH2 should remain
 		await Assert.That(result).IsTrue();
 
 		var rootAfter = Database.GetAttributeAsync(playerOneDBRef, [baseName]);
@@ -211,22 +191,18 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task WipeAttributeAsync_NonExistentAttribute_ReturnsFalse()
 	{
-		// Arrange
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var attributeName = $"NONEXISTENT_WIPE_{Guid.NewGuid():N}";
 
-		// Act
 		var result = await Database.WipeAttributeAsync(playerOneDBRef, [attributeName]);
 
-		// Assert
 		await Assert.That(result).IsFalse();
 	}
 
 	[Test]
 	public async Task WipeAttributeAsync_DeepTree_RemovesAllLevels()
 	{
-		// Arrange: Create a deep attribute tree (5 levels)
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var baseName = $"WIPE_DEEP_TEST_{Guid.NewGuid():N}";
@@ -237,14 +213,11 @@ public class ClearAndWipeAttributeTests
 		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "L2", "L3", "L4"], A.single("L4"), playerOne);
 		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "L2", "L3", "L4", "L5"], A.single("L5"), playerOne);
 
-		// Verify deepest level exists
 		var deepest = Database.GetAttributeAsync(playerOneDBRef, [baseName, "L2", "L3", "L4", "L5"]);
 		await Assert.That(deepest).IsNotNull();
 
-		// Act: Wipe from root
 		var result = await Database.WipeAttributeAsync(playerOneDBRef, [baseName]);
 
-		// Assert: All levels should be removed
 		await Assert.That(result).IsTrue();
 		var afterL1 = Database.GetAttributeAsync(playerOneDBRef, [baseName]);
 		var afterL1List = await afterL1.ToListAsync();
@@ -258,7 +231,7 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task ClearAndWipe_DifferentAttributes_NoConflict()
 	{
-		// Arrange: Create two separate attribute trees to ensure they don't interfere
+		// Two separate attribute trees to ensure they don't interfere
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var clearAttr = $"CONFLICT_CLEAR_{Guid.NewGuid():N}";
@@ -269,11 +242,9 @@ public class ClearAndWipeAttributeTests
 		await Database.SetAttributeAsync(playerOneDBRef, [wipeAttr], A.single("WipeValue"), playerOne);
 		await Database.SetAttributeAsync(playerOneDBRef, [wipeAttr, "CHILD"], A.single("WipeChild"), playerOne);
 
-		// Act: Clear one, wipe the other
 		var clearResult = await Database.ClearAttributeAsync(playerOneDBRef, [clearAttr]);
 		var wipeResult = await Database.WipeAttributeAsync(playerOneDBRef, [wipeAttr]);
 
-		// Assert: Clear attribute should have empty value but exist, wipe attribute should be gone
 		await Assert.That(clearResult).IsTrue();
 		await Assert.That(wipeResult).IsTrue();
 

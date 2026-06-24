@@ -27,7 +27,6 @@ public static class LogSanitizer
 		if (string.IsNullOrWhiteSpace(input))
 			return "[empty]";
 
-		// Remove control characters and normalize whitespace
 		var sanitized = new StringBuilder(input.Length);
 		foreach (var c in input)
 		{
@@ -35,15 +34,12 @@ public static class LogSanitizer
 			{
 				case '\n':
 				case '\r':
-					// Replace newlines with escaped representation to prevent log forging
 					sanitized.Append("\\n");
 					break;
 				case '\t':
-					// Replace tabs with spaces
 					sanitized.Append(' ');
 					break;
 				default:
-					// Include only printable characters
 					if (!char.IsControl(c))
 						sanitized.Append(c);
 					break;
@@ -52,7 +48,6 @@ public static class LogSanitizer
 
 		var result = sanitized.ToString();
 
-		// Truncate if too long and add ellipsis
 		if (result.Length > MaxLogLength)
 		{
 			return result[..MaxLogLength] + "... [truncated]";

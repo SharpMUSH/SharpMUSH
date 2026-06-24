@@ -30,7 +30,6 @@ public class ArangoScanBenchmarks : BaseBenchmark
 		await base.Setup().ConfigureAwait(false);
 		_mediator = _server!.Services.GetRequiredService<IMediator>();
 
-		// Seed a handful of objects so the scan is non-trivial.
 		var god = (await _database!.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false)).AsPlayer;
 		var room = (await _database!.GetObjectNodeAsync(new DBRef(2)).ConfigureAwait(false)).Known.AsContainer;
 		for (var i = 0; i < 10; i++)

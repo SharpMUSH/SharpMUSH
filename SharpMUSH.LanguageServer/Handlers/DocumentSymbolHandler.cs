@@ -41,7 +41,6 @@ public partial class DocumentSymbolHandler : DocumentSymbolHandlerBase
 			{
 				var line = lines[i];
 
-				// Look for attribute definitions: &ATTRIBUTE_NAME
 				var attributeMatch = AttributeDefinitionRegex().Match(line);
 				if (attributeMatch.Success)
 				{
@@ -60,7 +59,6 @@ public partial class DocumentSymbolHandler : DocumentSymbolHandlerBase
 					}));
 				}
 
-				// Look for @set commands with attributes: @set object/ATTRIBUTE
 				var setMatch = SetAttributeRegex().Match(line);
 				if (setMatch.Success)
 				{
@@ -79,7 +77,6 @@ public partial class DocumentSymbolHandler : DocumentSymbolHandlerBase
 					}));
 				}
 
-				// Look for function calls at the start of lines (potential function definitions in softcode)
 				var functionMatch = FunctionCallRegex().Match(line);
 				if (functionMatch.Success)
 				{
@@ -98,7 +95,6 @@ public partial class DocumentSymbolHandler : DocumentSymbolHandlerBase
 					}));
 				}
 
-				// Look for commands at the start of lines
 				var commandMatch = CommandRegex().Match(line);
 				if (commandMatch.Success)
 				{

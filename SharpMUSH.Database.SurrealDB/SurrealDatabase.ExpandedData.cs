@@ -26,7 +26,6 @@ public partial class SurrealDatabase
 	{
 		var objKey = ExtractKey(sharpObjectId);
 
-		// Check if existing data exists
 		var parameters = new Dictionary<string, object?>
 		{
 			["key"] = objKey,

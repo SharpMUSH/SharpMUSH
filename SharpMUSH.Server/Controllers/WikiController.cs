@@ -46,8 +46,6 @@ public class WikiController(
 	IPrerenderCacheService prerenderCache,
 	ILogger<WikiController> logger) : ControllerBase
 {
-	// ── DTO record types ─────────────────────────────────────────────────────
-
 	/// <summary>Page data returned by the API. Includes MarkdownSource so the editor can round-trip.</summary>
 	public record WikiPageDto(
 		string Id,
@@ -72,8 +70,6 @@ public class WikiController(
 		DateTimeOffset Timestamp,
 		string? EditSummary,
 		string MarkdownSource);
-
-	// ── Helpers ──────────────────────────────────────────────────────────────
 
 	private static WikiPageDto ToDto(WikiPage p) => new(
 		p.Id, p.Slug, p.Title, p.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
@@ -131,8 +127,6 @@ public class WikiController(
 	/// <summary>Filters out unpublished (draft) pages the caller may not see (not published, no
 	/// wiki.read scope, and not their own authored draft).</summary>
 	private IEnumerable<WikiPage> FilterVisible(IEnumerable<WikiPage> pages) => pages.Where(CanSee);
-
-	// ── Read endpoints ───────────────────────────────────────────────────────
 
 	/// <summary>
 	/// GET /api/wiki/ns/{namespace}/{category}/{slug}
@@ -257,8 +251,6 @@ public class WikiController(
 			revision => Ok(ToDto(revision)),
 			_ => NotFound());
 	}
-
-	// ── Write endpoints ───────────────────────────────────────────────────────
 
 	/// <summary>Request body for creating a new wiki page. Category is part of identity and is fixed at create.</summary>
 	public record CreatePageRequest(string Title, string Markdown, string? Namespace, string? Category);
@@ -469,8 +461,6 @@ public class WikiController(
 			_ => NotFound());
 	}
 
-	// ── Batch operations ──────────────────────────────────────────────────────
-
 	/// <summary>Request body for batch protection changes. Refs use "ns/category/slug" form.</summary>
 	public record BatchProtectRequest(string[] Refs, bool IsProtected);
 
@@ -544,8 +534,6 @@ public class WikiController(
 		return Ok(new BatchResult(succeeded, failed));
 	}
 
-	// ── Cache invalidation ────────────────────────────────────────────────────
-
 	public record InvalidateCacheRequest(string? Path, string? Prefix);
 
 	/// <summary>
@@ -568,8 +556,6 @@ public class WikiController(
 
 		return Ok();
 	}
-
-	// ── Pre-render helper (called by BotPrerenderMiddleware) ─────────────────
 
 	/// <summary>
 	/// Generates a minimal static HTML page for bot consumption.

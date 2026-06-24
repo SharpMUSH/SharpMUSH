@@ -30,7 +30,6 @@ else
 {
     <div style="display:flex;flex-direction:column;height:100%;">
 
-        @* Scene header bar *@
         <div style="padding:12px var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:12px;flex-shrink:0;">
             <MudChip T="string" Color="Color.Success" Size="Size.Small"
                      Style="font-size:10px;letter-spacing:0.06em;height:20px;padding:0 7px;">LIVE</MudChip>
@@ -53,7 +52,6 @@ else
             </MudAlert>
         }
 
-        @* Transcript — scrollable *@
         <div class="scene-log scene-log--live" style="flex:1;min-height:0;padding:16px var(--cpad);">
             @if (_poses.Count == 0)
             {
@@ -65,7 +63,6 @@ else
             }
         </div>
 
-        @* Compose bar — submits a normal game command (POSE/SAY/SEMIPOSE) via the hub. *@
         <div style="padding:10px var(--cpad);border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:flex-end;gap:8px;flex-shrink:0;">
             <MudSelect T="string" @bind-Value="_mode" Dense="true" Margin="Margin.Dense"
                        Variant="Variant.Outlined" Style="max-width:130px;">
@@ -136,8 +133,6 @@ else
 
         _loading = false;
     }
-
-    // ── Realtime patching ──────────────────────────────────────────────────────
 
     private void HandleSceneEvent(SceneEventMessage msg)
     {
@@ -218,8 +213,6 @@ else
         LastEditorDbref: existing?.LastEditorDbref,
         LastEditorName: existing is null ? null : msg.ActorName);
 
-    // ── Web pose authoring ───────────────────────────────────────────────────
-
     private async Task SendPoseAsync()
     {
         var text = _composeText.Trim();
@@ -247,8 +240,6 @@ else
             await SendPoseAsync();
         }
     }
-
-    // ── Disposal ───────────────────────────────────────────────────────────────
 
     public async ValueTask DisposeAsync()
     {

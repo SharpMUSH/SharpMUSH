@@ -87,7 +87,6 @@ public class AuthController(
 		Justification = "accountId is a non-secret GUID identifier derived from the session token for service lookups, not a password or key.")]
 	public async Task<IActionResult> GetMushToken([FromBody] MushTokenRequest request)
 	{
-		// Path A: Account session token + character reference
 		if (!string.IsNullOrWhiteSpace(request.AccountSessionToken) && request.CharacterKey.HasValue)
 		{
 			var accountId = await accountSessionStore.ValidateAsync(request.AccountSessionToken);
@@ -97,7 +96,6 @@ public class AuthController(
 				return Unauthorized("Invalid or expired account session.");
 			}
 
-			// Verify that this character belongs to the account
 			var characters = await accountService.GetCharactersAsync(accountId);
 			var character = characters.FirstOrDefault(c => c.Object.Key == request.CharacterKey.Value);
 			if (character is null)
@@ -114,7 +112,6 @@ public class AuthController(
 			return Ok(new MushTokenResponse(sessionToken, sessionTtl));
 		}
 
-		// Path B: Direct character credentials
 		if (string.IsNullOrWhiteSpace(request.PlayerName))
 			return BadRequest("PlayerName or AccountSessionToken is required.");
 
@@ -139,7 +136,6 @@ public class AuthController(
 			return Unauthorized("Invalid credentials.");
 		}
 
-		// Rehash legacy PennMUSH passwords on successful login
 		if (valid && passwordService.NeedsRehash(player.PasswordHash))
 		{
 			await passwordService.RehashPasswordAsync(player, request.Password ?? string.Empty);
@@ -250,10 +246,6 @@ public class AuthController(
 		return Ok(new DebugOttResponse(token, ttl, player.Object.Name,
 			account?.Id, account?.Username, accountSessionToken, account?.MustChangePassword ?? false));
 	}
-
-	// -----------------------------------------------------------------------
-	// JWT endpoints
-	// -----------------------------------------------------------------------
 
 	/// <summary>Request body for JWT login.</summary>
 	public record JwtLoginRequest(string UsernameOrEmail, string Password, int CharacterKey, long CharacterCreationTime);

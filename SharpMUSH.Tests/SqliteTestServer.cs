@@ -8,7 +8,6 @@ public class SqliteTestServer : IAsyncInitializer, IAsyncDisposable
 
 	public SqliteTestServer()
 	{
-		// Create a unique database file for each test session
 		_databasePath = Path.Combine(Path.GetTempPath(), $"sharpmush_test_{Guid.NewGuid()}.db");
 	}
 
@@ -22,7 +21,6 @@ public class SqliteTestServer : IAsyncInitializer, IAsyncDisposable
 
 	public async ValueTask DisposeAsync()
 	{
-		// Clean up the database file
 		try
 		{
 			if (File.Exists(_databasePath))

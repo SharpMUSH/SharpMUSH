@@ -11,9 +11,6 @@ public partial class MemgraphDatabase : IPackageRegistryService
 {
 	#region Package Registry
 
-	// Node labels: :SysPackage, :SysPackageObject, :SysManagedAttribute,
-	// :SysRemote, :SysPackageRevision; dependency edges are
-	// (:SysPackage)-[:DEPENDS_ON {constraint}]->(:SysPackage).
 	// Dependency edges require both packages to exist (the plan engine
 	// guarantees dependencies are installed first).
 
@@ -22,8 +19,6 @@ public partial class MemgraphDatabase : IPackageRegistryService
 
 	private static DateTimeOffset ParsePackageTimestamp(string iso) =>
 		DateTimeOffset.Parse(iso, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-
-	// ── Installed packages ─────────────────────────────────────────────────
 
 	public async Task UpsertInstalledPackageAsync(InstalledPackageRecord package)
 	{
@@ -100,8 +95,6 @@ public partial class MemgraphDatabase : IPackageRegistryService
 			"MATCH (p:SysPackage {id: $id}) DETACH DELETE p", new { id = packageId });
 	}
 
-	// ── Package-created objects ────────────────────────────────────────────
-
 	public async Task UpsertPackageObjectAsync(PackageObjectRecord record)
 	{
 		await ExecuteWithRetryAsync("""
@@ -133,8 +126,6 @@ public partial class MemgraphDatabase : IPackageRegistryService
 			"MATCH (d:SysPackageObject {packageId: $id, ref: $ref}) DETACH DELETE d",
 			new { id = packageId, @ref });
 	}
-
-	// ── Managed attributes ─────────────────────────────────────────────────
 
 	public async Task UpsertManagedAttributeAsync(ManagedAttributeRecord record)
 	{
@@ -186,8 +177,6 @@ public partial class MemgraphDatabase : IPackageRegistryService
 			new { id = packageId, objid, attribute });
 	}
 
-	// ── Managed object structure ────────────────────────────────────────────
-
 	public async Task UpsertManagedStructureAsync(ManagedStructureRecord record)
 	{
 		await ExecuteWithRetryAsync("""
@@ -226,8 +215,6 @@ public partial class MemgraphDatabase : IPackageRegistryService
 			"MATCH (d:SysManagedStructure {packageId: $id, objid: $objid}) DETACH DELETE d",
 			new { id = packageId, objid });
 	}
-
-	// ── Dependencies ───────────────────────────────────────────────────────
 
 	public async Task SetPackageDependenciesAsync(string packageId, IReadOnlyList<PackageDependencyRecord> dependencies)
 	{
@@ -270,8 +257,6 @@ public partial class MemgraphDatabase : IPackageRegistryService
 		record["toId"].As<string>(),
 		record["constraint"].As<string>());
 
-	// ── Remotes ────────────────────────────────────────────────────────────
-
 	public async Task UpsertPackageRemoteAsync(PackageRemoteRecord remote)
 	{
 		await ExecuteWithRetryAsync("""
@@ -313,8 +298,6 @@ public partial class MemgraphDatabase : IPackageRegistryService
 	{
 		await ExecuteWithRetryAsync("MATCH (d:SysRemote {name: $name}) DETACH DELETE d", new { name });
 	}
-
-	// ── Revisions ──────────────────────────────────────────────────────────
 
 	public async Task AddPackageRevisionAsync(PackageRevisionRecord revision)
 	{

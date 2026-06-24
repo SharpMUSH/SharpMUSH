@@ -78,13 +78,11 @@ public class AnsiStringUnitTests
 	{
 		var (input, padStr, width, padType, truncType, expected) = data;
 
-		// Call the Pad method
 		var result = MModule.pad(input, padStr, width, padType, truncType);
 
 		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result.ToString(), Environment.NewLine,
 			expected.ToString());
 
-		// Convert result and expected to bytes for detailed verification
 		var resultBytes = Encoding.Unicode.GetBytes(result.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
 
@@ -168,12 +166,10 @@ public class AnsiStringUnitTests
 		var simpleString = A.single("red");
 	var redString = A.MarkupSingle(M.Create(foreground: StringExtensions.Rgb(Color.Red)), "red");
 	var redAnsiString = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiByte(31)), "red");
-		// var complexAnsiString = A.markupSingle(M.Create(foreground: StringExtensions.ansiByte(32)),"green");
 
 		await Assert.That(simpleString.ToString()).IsEqualTo("red");
 		await Assert.That(redString.ToString()).IsEqualTo("\e[38;2;255;0;0mred\e[0m");
 		await Assert.That(redAnsiString.ToString()).IsEqualTo("\e[31mred\e[0m");
-		// Assert.AreEqual("\e[32mwoo\e[0m", complexAnsiString.ToString());
 	}
 
 	[Test]
@@ -291,42 +287,27 @@ public class AnsiStringUnitTests
 	[Test]
 	public async Task SequentialAnsiOptimization()
 	{
-		// Test that sequential identical ANSI codes are optimized/coalesced
 		// This is Phase 2 TODO #3: Sequential ANSI Initialization Optimization
-
-		// Create three sequential red text segments
 	var red1 = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiBytes([0, 31])), "a");
 	var red2 = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiBytes([0, 31])), "b");
 	var red3 = A.MarkupSingle(M.Create(foreground: StringExtensions.AnsiBytes([0, 31])), "c");
 
-		// Concatenate them
 		var combined = A.concat(red1, A.concat(red2, red3));
 		var result = combined.ToString();
 
-		// Debug: Print the actual result
 		Log.Logger.Information("Result string: {Result}", result);
 		Log.Logger.Information("Result hex: {Hex}", BitConverter.ToString(Encoding.UTF8.GetBytes(result)));
 
-		// The optimization should coalesce sequential identical ANSI codes
-		// From: \u001b[31ma\u001b[0m\u001b[31mb\u001b[0m\u001b[31mc\u001b[0m
-		// To:   \u001b[31mabc\u001b[0m
-
-		// Verify the text content is correct
 		await Assert.That(combined.ToPlainText()).IsEqualTo("abc");
 
-		// Verify optimization occurred - the result should be optimized
-		// Count occurrences of ANSI escape sequences
 		var openCount = result.Split("\u001b[").Length - 1;
 		var closeCount = result.Split("m").Length - 1;
 
 		Log.Logger.Information("Open count: {Open}, Close count: {Close}", openCount, closeCount);
 
-		// After optimization, sequential identical codes should be merged
-		// We expect fewer ANSI sequences than without optimization
 		await Assert.That(openCount).IsGreaterThanOrEqualTo(1);
 		await Assert.That(closeCount).IsGreaterThanOrEqualTo(1);
 
-		// Verify plain text is correct
 		await Assert.That(combined.ToPlainText()).IsEqualTo("abc");
 	}
 
@@ -334,10 +315,6 @@ public class AnsiStringUnitTests
 	public async Task AnsiColorInterpolation()
 	{
 		// Test Phase 4 TODO #2: ANSI color interpolation with opacity
-		// This tests that ANSI standard colors can be interpolated when opacity is set
-
-		// Create an ANSIString with ANSI red color, ANSI blue background, and 50% opacity
-		// This should interpolate red and blue to create a purple color
 		var redFg = StringExtensions.AnsiBytes([0, 31]);  // Red foreground (170, 0, 0)
 		var blueBg = StringExtensions.AnsiBytes([0, 44]); // Blue background (0, 0, 170)
 
@@ -348,21 +325,17 @@ public class AnsiStringUnitTests
 
 		var result = ansiString.ToString();
 
-		// Verify the text is present
 		await Assert.That(result).Contains("test");
 
-		// The result should contain ANSI RGB color codes (38;2;R;G;B format)
 		// After interpolation: (170*0.5 + 0*0.5, 0*0.5 + 0*0.5, 0*0.5 + 170*0.5) = (85, 0, 85)
 		await Assert.That(result).Contains("38;2;85;0;85");
 
-		// Log the result for debugging
 		Log.Logger.Information("ANSI interpolation result: {Result}", result);
 	}
 
 	[Test]
 	public async Task MixedRgbAnsiColorInterpolation()
 	{
-		// Test interpolation between RGB and ANSI colors
 		var rgbRed = StringExtensions.Rgb(Color.FromArgb(255, 0, 0));     // RGB red
 		var ansiBlue = StringExtensions.AnsiBytes([0, 34]); // ANSI blue (0, 0, 170)
 
@@ -373,7 +346,6 @@ public class AnsiStringUnitTests
 
 		var result = ansiString.ToString();
 
-		// Verify the text is present
 		await Assert.That(result).Contains("test");
 
 		// After interpolation: (255*0.5 + 0*0.5, 0*0.5 + 0*0.5, 0*0.5 + 170*0.5) = (127, 0, 85)

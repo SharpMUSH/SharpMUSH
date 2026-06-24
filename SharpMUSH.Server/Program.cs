@@ -20,7 +20,6 @@ public class Program
 {
 	public static async Task Main(params string[] args)
 	{
-		// Determine database provider from environment variable
 		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
 		var databaseProvider = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase)
 			? DatabaseProvider.Memgraph
@@ -59,7 +58,6 @@ public class Program
 
 		var app = builder.Build();
 
-		// Configure Arango database logging sink only when using ArangoDB
 		if (databaseProvider == DatabaseProvider.ArangoDB)
 		{
 			var arangoContext = app.Services.GetRequiredService<IArangoContext>();
@@ -84,7 +82,6 @@ public class Program
 			.CreateLogger();
 		}
 
-		// Get logger for startup logging
 		var logger = app.Services.GetRequiredService<ILogger<Program>>();
 		logger.LogInformation("[NATS] Connected to NATS at {NatsUrl}", natsUrl);
 
@@ -120,10 +117,8 @@ public class Program
 
 		app.UseStaticFiles();
 
-		// ── Bot detection: sets IsBot flag, blocks bots on auth routes
 		app.UseMiddleware<BotDetectionMiddleware>();
 
-		// ── Bot pre-rendering: serves static HTML to search crawlers
 		app.UseMiddleware<BotPrerenderMiddleware>();
 
 		app.UseAuthentication();
@@ -153,7 +148,6 @@ public class Program
 			}
 		}
 
-		// Health and readiness endpoints for deployment checks
 		app.MapGet("/health", () => "healthy");
 		app.MapGet("/ready", () => "ready");
 
@@ -162,7 +156,6 @@ public class Program
 		// cannot shadow the portal's routes.
 		app.Map("/http/{**path}", HandleMushHttpRequest);
 
-		// Prometheus metrics endpoint (for scraping, not for logging to console)
 		app.MapPrometheusScrapingEndpoint();
 
 		// SPA fallback: all non-API, non-static routes serve index.html so that

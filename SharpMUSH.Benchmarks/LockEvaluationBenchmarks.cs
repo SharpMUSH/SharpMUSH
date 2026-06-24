@@ -13,7 +13,6 @@ public class LockEvaluationBenchmarks : BaseBenchmark
 	private IBooleanExpressionParser? _lockParser;
 	private AnySharpObject? _godPlayer;
 
-	// Pre-compiled locks — used for the evaluate-only benchmarks
 	private Func<AnySharpObject, AnySharpObject, bool>? _simpleLock;
 	private Func<AnySharpObject, AnySharpObject, bool>? _andLock;
 	private Func<AnySharpObject, AnySharpObject, bool>? _orLock;
@@ -34,8 +33,6 @@ public class LockEvaluationBenchmarks : BaseBenchmark
 		_complexLock = _lockParser.Compile("(#1|#2)&!(#3|#4)&(#1|#1)&!(#2|#2)");
 	}
 
-	// ── Compile benchmarks ────────────────────────────────────────────────────
-
 	[Benchmark(Description = "Compile: #1 (trivial object match)")]
 	public Func<AnySharpObject, AnySharpObject, bool> CompileSimple() =>
 		_lockParser!.Compile("#1");
@@ -55,8 +52,6 @@ public class LockEvaluationBenchmarks : BaseBenchmark
 	[Benchmark(Description = "Compile: 8-term complex lock")]
 	public Func<AnySharpObject, AnySharpObject, bool> CompileComplexLock() =>
 		_lockParser!.Compile("(#1|#2)&!(#3|#4)&(#1|#1)&!(#2|#2)");
-
-	// ── Evaluate benchmarks (pre-compiled delegate, no parsing overhead) ──────
 
 	[Benchmark(Description = "Evaluate: simple #1 lock")]
 	public bool EvaluateSimple() =>

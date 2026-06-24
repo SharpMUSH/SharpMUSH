@@ -23,14 +23,12 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToHashSet();
 		var prepareSwitch = switches.Contains("PREPARE");
 
-		// Check if SQL is available
 		if (SqlService == null || !SqlService.IsAvailable)
 		{
 			await NotifyService!.Notify(executor, ErrorMessages.Returns.SqlNotEnabled, executor);
 			return new CallState(ErrorMessages.Returns.SqlNotEnabled);
 		}
 
-		// Get the query from arguments
 		if (parser.CurrentState.Arguments.Count == 0 || !parser.CurrentState.Arguments.TryGetValue("0", out var queryArg))
 		{
 			await NotifyService!.Notify(executor, ErrorMessages.Returns.NoQuerySpecified, executor);
@@ -127,14 +125,12 @@ public partial class Commands
 		var spoofSwitch = switches.Contains("SPOOF");
 		var prepareSwitch = switches.Contains("PREPARE");
 
-		// Check if SQL is available
 		if (SqlService == null || !SqlService.IsAvailable)
 		{
 			await NotifyService!.Notify(executor, ErrorMessages.Returns.SqlNotEnabled, executor);
 			return new CallState(ErrorMessages.Returns.SqlNotEnabled);
 		}
 
-		// Parse arguments: obj/attr=query
 		if (parser.CurrentState.Arguments.Count < 2 ||
 				!parser.CurrentState.Arguments.TryGetValue("0", out var objAttrArg) ||
 				!parser.CurrentState.Arguments.TryGetValue("1", out var queryArg))
@@ -278,7 +274,6 @@ public partial class Commands
 						rowNumber++;
 					}
 
-					// If /notify switch, queue @notify command to signal completion
 					if (notifySwitch)
 					{
 						await Mediator!.Send(new QueueCommandListRequest(
@@ -292,7 +287,6 @@ public partial class Commands
 					// This is handled at the parser/execution level, not here
 					// The attribute will execute with the permissions of the enactor rather than executor
 
-					// Return success - rows have been queued for execution
 					var message = rowNumber == 1
 						? "No rows returned."
 						: $"{rowNumber - 1} row{(rowNumber > 2 ? "s" : "")} queued for execution.";

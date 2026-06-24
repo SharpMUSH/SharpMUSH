@@ -23,8 +23,6 @@ public sealed class WikiMarkdigPipeline
 		_pipeline = CreatePipeline();
 	}
 
-	// ── Factory ───────────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Builds a <see cref="MarkdownPipeline"/> with the extensions required for
 	/// wiki rendering:
@@ -45,8 +43,6 @@ public sealed class WikiMarkdigPipeline
 			.Use<WikiDirectiveExtension>()
 			.DisableHtml()
 			.Build();
-
-	// ── Rendering ─────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Renders a Markdown string to HTML using the wiki pipeline.
@@ -75,8 +71,6 @@ public sealed class WikiMarkdigPipeline
 		return StripHtml(html);
 	}
 
-	// ── Helpers ───────────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Strips HTML tags and decodes entities to produce plain readable text.
 	/// Block-level elements are replaced with newlines to preserve paragraph structure.
@@ -85,13 +79,9 @@ public sealed class WikiMarkdigPipeline
 	{
 		// Replace block-closing tags with newlines so paragraphs stay separated
 		html = Regex.Replace(html, @"</(p|li|h[1-6]|blockquote|pre|tr)>", "\n", RegexOptions.IgnoreCase);
-		// Replace <br> / <br /> with newlines
 		html = Regex.Replace(html, @"<br\s*/?>", "\n", RegexOptions.IgnoreCase);
-		// Strip remaining tags
 		html = Regex.Replace(html, @"<[^>]+>", string.Empty);
-		// Decode HTML entities (e.g. &amp; &lt; &gt; &quot; &#xNN;)
 		html = WebUtility.HtmlDecode(html);
-		// Collapse runs of blank lines
 		html = Regex.Replace(html, @"\n{3,}", "\n\n");
 		return html.Trim();
 	}

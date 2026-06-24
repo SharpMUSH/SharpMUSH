@@ -12,7 +12,6 @@ public enum WarningType : uint
 	/// </summary>
 	None = 0,
 
-	// Lock-related warnings (used internally for message checks)
 	/// <summary>
 	/// Check for unlocked-object warnings
 	/// </summary>
@@ -23,7 +22,6 @@ public enum WarningType : uint
 	/// </summary>
 	Locked = 0x2,
 
-	// Exit-specific warnings
 	/// <summary>
 	/// Find one-way exits (no return exit)
 	/// </summary>
@@ -49,7 +47,6 @@ public enum WarningType : uint
 	/// </summary>
 	ExitUnlinked = 0x10,
 
-	// Thing-specific warnings
 	/// <summary>
 	/// Find things without messages (SUCCESS, OSUCCESS, DROP, ODROP, FAILURE)
 	/// </summary>
@@ -60,25 +57,21 @@ public enum WarningType : uint
 	/// </summary>
 	ThingDesc = 0x200,
 
-	// Room-specific warnings
 	/// <summary>
 	/// Find rooms without descriptions
 	/// </summary>
 	RoomDesc = 0x1000,
 
-	// Player-specific warnings
 	/// <summary>
 	/// Find players without descriptions
 	/// </summary>
 	PlayerDesc = 0x10000,
 
-	// General warnings
 	/// <summary>
 	/// Find bad locks (invalid references, garbage objects, etc.)
 	/// </summary>
 	LockProbs = 0x100000,
 
-	// Convenience groups
 	/// <summary>
 	/// Serious warnings only: unlinked exits, missing descriptions, bad locks
 	/// </summary>
@@ -213,7 +206,6 @@ public static class WarningTypeHelper
 				continue;
 			}
 
-			// Check if all bits of this flag are set in warnings
 			if ((warnings & flag) == flag)
 			{
 				result.Add(name);

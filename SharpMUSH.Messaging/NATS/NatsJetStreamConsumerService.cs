@@ -52,7 +52,6 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 
 			var js = new NatsJSContext(nats);
 
-			// Ensure the stream exists (idempotent — mirrors what the publisher does)
 			await js.CreateOrUpdateStreamAsync(
 				new StreamConfig(_options.GetConsumeStreamName(), [$"{_options.GetConsumeSubjectPrefix()}.>"])
 				{

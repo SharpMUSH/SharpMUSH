@@ -14,10 +14,6 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 {
 	private readonly ILogger<MushQueryService> _logger = logger;
 
-	// ──────────────────────────────────────────────────────────────────────────────
-	// Routing helpers
-	// ──────────────────────────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Build a <c>think</c> command whose output is routed only to the editor port when known.
 	/// <paramref name="mushExpr"/> is a softcode expression (no outer brackets needed).
@@ -41,10 +37,6 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 			? $"think [pemit({port.Value}, {mushText})]"
 			: $"think {mushText}";
 	}
-
-	// ──────────────────────────────────────────────────────────────────────────────
-	// Object info
-	// ──────────────────────────────────────────────────────────────────────────────
 
 	/// <summary>Retrieve basic details (name, type, owner) and the full attribute list for a single object.</summary>
 	public async Task<MushObject?> GetObjectAsync(string dbref)
@@ -120,14 +112,9 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		var lines = await terminal.SendCommandAsync(RouteExpr(expr));
 		if (lines.Length == 0) return null;
 
-		// First non-empty line is the dbref, e.g. "#7"
 		var dbrefStr = lines.FirstOrDefault(l => l.TrimStart().StartsWith('#'))?.Trim();
 		return dbrefStr is not null && int.TryParse(dbrefStr.TrimStart('#'), out var n) ? n : null;
 	}
-
-	// ──────────────────────────────────────────────────────────────────────────────
-	// Object search
-	// ──────────────────────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Returns true if the currently connected player has the WIZARD flag.
@@ -178,10 +165,6 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		return ParseSearchResults(lines);
 	}
 
-	// ──────────────────────────────────────────────────────────────────────────────
-	// Eval / test
-	// ──────────────────────────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Evaluate the attribute on <paramref name="dbref"/> using <c>u()</c> so MUSH evaluates
 	/// the attribute in object context. Uses <c>RouteLiteral</c> so the output is just the
@@ -193,10 +176,6 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 		// The text [u(dbref/attr)] is evaluated inline — just the u() result is emitted.
 		return terminal.SendCommandAsync(RouteLiteral($"[u({dbref}/{attrName})]"));
 	}
-
-	// ──────────────────────────────────────────────────────────────────────────────
-	// Parsing helpers
-	// ──────────────────────────────────────────────────────────────────────────────
 
 	private static MushObject? ParseInfo(string[] lines)
 	{

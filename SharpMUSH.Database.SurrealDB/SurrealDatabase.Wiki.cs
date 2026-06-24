@@ -61,8 +61,6 @@ public partial class SurrealDatabase : IWikiService
     private const string WikiRevisionFields =
         "id, pageId, revisionNumber, markdownSource, editorDbref, timestamp, editSummary";
 
-    // ── Read ──────────────────────────────────────────────────────────────────
-
     public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
     {
         var nsStr = ns.ToString().ToLowerInvariant();
@@ -179,8 +177,6 @@ public partial class SurrealDatabase : IWikiService
         return (results?.Select(MapToWikiPage).ToList() ?? []).AsReadOnly();
     }
 
-    // ── Write ─────────────────────────────────────────────────────────────────
-
     public async Task<OneOf<WikiPage, Error<string>>> CreateAsync(
         string title,
         string markdown,
@@ -295,7 +291,6 @@ public partial class SurrealDatabase : IWikiService
 
         var parameters = new Dictionary<string, object?> { ["id"] = id };
 
-        // Delete revisions
         await ExecuteAsync("DELETE wiki_revision WHERE pageId = $id", parameters);
 
         var key = NormalizeSurrealId(id, "wiki_page");
@@ -305,7 +300,6 @@ public partial class SurrealDatabase : IWikiService
         return new OkNone();
     }
 
-    // C-7: Rename parameter to match interface contract (bool isProtected).
     public async Task<OneOf<OkNone, NotFound>> SetProtectionAsync(string id, bool isProtected)
     {
         var lookupResult = await GetByIdAsync(id);
@@ -363,8 +357,6 @@ public partial class SurrealDatabase : IWikiService
         return MapToWikiPage(results[0]);
     }
 
-    // ── Revisions ─────────────────────────────────────────────────────────────
-
     public async Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
     {
         var parameters = new Dictionary<string, object?>
@@ -393,8 +385,6 @@ public partial class SurrealDatabase : IWikiService
             return MapToWikiRevision(results[0]);
         return new NotFound();
     }
-
-    // ── Internals ─────────────────────────────────────────────────────────────
 
     private async Task SaveSurrealRevisionAsync(
         WikiPage page,

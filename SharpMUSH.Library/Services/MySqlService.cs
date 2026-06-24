@@ -70,7 +70,6 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 		await using var connection = await source.OpenConnectionAsync();
 		await using var command = new MySqlCommand(query, connection);
 
-		// Add parameters
 		for (var i = 0; i < parameters.Length; i++)
 		{
 			command.Parameters.AddWithValue($"@p{i}", parameters[i] ?? DBNull.Value);
@@ -97,7 +96,6 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 		await using var connection = await source.OpenConnectionAsync();
 		await using var command = new MySqlCommand(query, connection);
 
-		// Add parameters
 		for (var i = 0; i < parameters.Length; i++)
 		{
 			command.Parameters.AddWithValue($"@p{i}", parameters[i] ?? DBNull.Value);

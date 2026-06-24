@@ -55,7 +55,6 @@ public partial class Functions
 
 			if (isPreparedStatement)
 			{
-				// Collect parameters starting from argument 4
 				var parameters = new List<object?>();
 				for (var i = 4; i < args.Count; i++)
 				{
@@ -198,7 +197,6 @@ public partial class Functions
 
 					await foreach (var row in queryResults)
 					{
-						// If field names requested and this is the first row, process column names
 						if (doFieldNames && firstRow)
 						{
 							var columnNames = row.Keys.ToList();
@@ -219,7 +217,6 @@ public partial class Functions
 							firstRow = false;
 						}
 
-						// Process each data row
 						var currentRow = rowNumber;
 						var values = row.Values.ToList();
 

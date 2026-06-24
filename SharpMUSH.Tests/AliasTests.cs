@@ -25,14 +25,8 @@ public class AliasTests
 	[Test]
 	public async Task FunctionAlias_U_WorksAsUfun()
 	{
-		// u() is an alias for ufun()
-		// Testing with a simple string substitution: u(#1/test) should evaluate the attribute
-		// For this test, we'll verify that u() is recognized and doesn't throw an error
-
 		var result = await FunctionParser.FunctionParse(MModule.single("u(#1/test)"));
 
-		// The function should be recognized and parsed without error
-		// Even if the attribute doesn't exist, the function alias should work
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result?.Message).IsNotNull();
 	}
@@ -44,12 +38,8 @@ public class AliasTests
 	[Test]
 	public async Task FunctionAlias_Iter_WorksAsParse()
 	{
-		// iter() is an alias for parse()
-		// Testing with a simple iteration
-
 		var result = await FunctionParser.FunctionParse(MModule.single("iter(a b c,##)"));
 
-		// The function should be recognized and parsed without error
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result?.Message).IsNotNull();
 	}
@@ -61,16 +51,11 @@ public class AliasTests
 	[Test]
 	public async Task CommandAlias_L_WorksAsLook()
 	{
-		// l is an alias for LOOK
-		// The command should be recognized and executed without throwing an exception
-		// This verifies the alias is working by ensuring the command executes
-
 		var exception = await Assert.That(async () =>
 		{
 			await CommandParser.CommandParse(1, ConnectionService, MModule.single("l"));
 		}).ThrowsNothing();
 
-		// If we got here without exception, the alias worked
 		await Assert.That(exception).IsNull();
 	}
 
@@ -81,15 +66,11 @@ public class AliasTests
 	[Test]
 	public async Task CommandAlias_I_WorksAsInventory()
 	{
-		// i is an alias for INVENTORY
-		// The command should be recognized and executed without throwing an exception
-
 		var exception = await Assert.That(async () =>
 		{
 			await CommandParser.CommandParse(1, ConnectionService, MModule.single("i"));
 		}).ThrowsNothing();
 
-		// If we got here without exception, the alias worked
 		await Assert.That(exception).IsNull();
 	}
 
@@ -99,13 +80,11 @@ public class AliasTests
 	[Test]
 	public async Task CommandAlias_CaseInsensitive()
 	{
-		// Test that 'L' (uppercase) also works
 		var exception = await Assert.That(async () =>
 		{
 			await CommandParser.CommandParse(1, ConnectionService, MModule.single("L"));
 		}).ThrowsNothing();
 
-		// If we got here without exception, the alias worked
 		await Assert.That(exception).IsNull();
 	}
 }

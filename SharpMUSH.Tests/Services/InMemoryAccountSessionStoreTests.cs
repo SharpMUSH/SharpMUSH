@@ -10,8 +10,6 @@ public class InMemoryAccountSessionStoreTests
 {
 	private static InMemoryAccountSessionStore CreateStore() => new();
 
-	// ── CreateTokenAsync ──────────────────────────────────────────────────────
-
 	[Test]
 	public async ValueTask CreateToken_Returns32CharHexGuid()
 	{
@@ -47,8 +45,6 @@ public class InMemoryAccountSessionStoreTests
 		await Assert.That(id2).IsEqualTo("acct-2");
 	}
 
-	// ── ValidateAsync — valid token ───────────────────────────────────────────
-
 	[Test]
 	public async ValueTask ValidateAsync_ValidToken_ReturnsAccountId()
 	{
@@ -80,15 +76,12 @@ public class InMemoryAccountSessionStoreTests
 		await Assert.That(result).IsNull();
 	}
 
-	// ── ValidateAsync — expiry ────────────────────────────────────────────────
-
 	[Test]
 	public async ValueTask ValidateAsync_ExpiredToken_ReturnsNull()
 	{
 		var store = CreateStore();
 		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMilliseconds(1));
 
-		// Wait for the token to expire
 		await Task.Delay(50);
 
 		var result = await store.ValidateAsync(token);
@@ -104,12 +97,9 @@ public class InMemoryAccountSessionStoreTests
 		await Task.Delay(50);
 		_ = await store.ValidateAsync(token); // triggers removal
 
-		// A second validation should also return null (not re-inserted)
 		var second = await store.ValidateAsync(token);
 		await Assert.That(second).IsNull();
 	}
-
-	// ── Sliding expiry ────────────────────────────────────────────────────────
 
 	[Test]
 	[Skip("Timing-sensitive: 200ms TTL + 100ms+150ms delays are too tight on loaded CI. Pre-existing flake; see cc86928a.")]
@@ -143,8 +133,6 @@ public class InMemoryAccountSessionStoreTests
 		}
 	}
 
-	// ── RevokeAsync ───────────────────────────────────────────────────────────
-
 	[Test]
 	public async ValueTask RevokeAsync_ValidToken_SubsequentValidateReturnsNull()
 	{
@@ -162,7 +150,6 @@ public class InMemoryAccountSessionStoreTests
 	{
 		var store = CreateStore();
 
-		// Should complete without throwing
 		await store.RevokeAsync("ghost-token");
 	}
 
@@ -181,8 +168,6 @@ public class InMemoryAccountSessionStoreTests
 		await Assert.That(r1).IsNull();
 		await Assert.That(r2).IsEqualTo("acct-2");
 	}
-
-	// ── Thread-safety (smoke test) ────────────────────────────────────────────
 
 	[Test]
 	public async ValueTask CreateAndValidate_Concurrent_NoCrash()

@@ -325,7 +325,6 @@ public class AttributeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// Attribute Tree Tests
 	[Test]
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees,root)]" +
@@ -426,7 +425,6 @@ public class AttributeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// Diagnostic test to verify basic functionality
 	[Test]
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Basic_AttribSet_And_Get,testvalue)]" +
@@ -440,7 +438,6 @@ public class AttributeFunctionUnitTests
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 
-	// Test lattr which should work (it's already implemented)
 	[Test]
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Lattr_Simple1,v1)]" +
@@ -566,7 +563,6 @@ public class AttributeFunctionUnitTests
 	[Arguments("valid(name,)", "0")]
 	public async Task Valid_Name(string str, string expected)
 	{
-		// Test valid() function with name validation
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
@@ -576,9 +572,6 @@ public class AttributeFunctionUnitTests
 	[Arguments("valid(attrvalue,test_value,NONEXISTENT_ATTR)", "1")]
 	public async Task Valid_AttributeValue(string str, string expected)
 	{
-		// Test valid() function with attribute value validation
-		// First argument is attrvalue, second is the value to test
-		// Optional third argument is the target attribute name
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}

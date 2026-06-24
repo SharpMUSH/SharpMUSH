@@ -10,13 +10,11 @@ public class GetFilteredObjectsQueryHandler(ISharpDatabase database)
 {
 	public IAsyncEnumerable<SharpObject> Handle(GetFilteredObjectsQuery request, CancellationToken cancellationToken)
 	{
-		// If no filter is provided, return all objects
 		if (request.Filter == null || !request.Filter.HasFilters)
 		{
 			return database.GetAllObjectsAsync(cancellationToken);
 		}
 
-		// Otherwise, use the filtered query method
 		return database.GetFilteredObjectsAsync(request.Filter, cancellationToken);
 	}
 }

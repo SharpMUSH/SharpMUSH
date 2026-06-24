@@ -35,7 +35,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 
 	#region SceneModel
 
-	// ── Label / relationship constants (mapped from DatabaseConstants) ──────────
 	// Node labels — PascalCased from the node_* collection names.
 	private const string SceneLabel = "SharpScene";
 	private const string ScenePoseLabel = "SharpScenePose";
@@ -78,8 +77,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 		"showas", "authorname", "author", "origin", "originname", "source", "tags"
 	};
 
-	// ── Scenes ──────────────────────────────────────────────────────────────────
-
 	public async Task<SceneModel> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "")
 	{
 		var sceneId = (await GetNextSceneIdAsync()).ToString();
@@ -106,15 +103,13 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 				""",
 				new { sceneId, status = "new", noMillis = NoMillis, now });
 
-			// Title is opaque metadata — store in Meta.
 			if (!string.IsNullOrEmpty(title))
 				await SetSceneMetaInTxAsync(tx, sceneId, "title", title);
 
-			// Owner edge + snapshot (starter defaults to the owner).
+			// Starter defaults to the owner.
 			await RelateObjectAsync(tx, SceneLabel, "sceneId", sceneId, RelOwner, ownerDbref, "ownerName");
 			await RelateObjectAsync(tx, SceneLabel, "sceneId", sceneId, RelStarter, ownerDbref, "starterName");
 
-			// Optional room binding.
 			if (!string.IsNullOrEmpty(roomDbref))
 				await RelateObjectAsync(tx, SceneLabel, "sceneId", sceneId, RelInRoom, roomDbref, "roomName");
 		});
@@ -166,7 +161,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 					await RelateObjectAsync(tx, SceneLabel, "sceneId", sceneId, RelOwner, value, "ownerName");
 					break;
 				case "plot":
-					// Link the scene into the named plot.
 					await tx.RunAsync($$"""
 						MATCH (s:{{SceneLabel}} {sceneId: $id}), (pl:{{ScenePlotLabel}} {plotId: $plot})
 						MERGE (pl)-[:{{RelPlotIncludes}}]->(s)
@@ -302,8 +296,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 		});
 	}
 
-	// ── Poses ─────────────────────────────────────────────────────────────────
-
 	public async Task<OneOf<ScenePose, NotFound, Error<string>>> AddPoseAsync(string sceneId, string authorDbref,
 		string showAs, string originDbref, string source, IReadOnlyList<string> tags, string content)
 	{
@@ -319,7 +311,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 			if (!await SceneExistsAsync(tx, sceneId))
 				return (OneOf<bool, NotFound, Error<string>>)new NotFound();
 
-			// Create the pose slot.
 			await tx.RunAsync($$"""
 				CREATE (p:{{ScenePoseLabel}} {
 					poseId: $poseId,
@@ -335,22 +326,18 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 				""",
 				new { poseId, source = source ?? "", tags = tagList, now, showAs = showAs ?? "" });
 
-			// pose_in_scene back-reference.
 			await tx.RunAsync($$"""
 				MATCH (p:{{ScenePoseLabel}} {poseId: $poseId}), (s:{{SceneLabel}} {sceneId: $sceneId})
 				MERGE (p)-[:{{RelPoseInScene}}]->(s)
 				""",
 				new { poseId, sceneId });
 
-			// Append to the pose_next linked list.
 			await AppendPoseToChainAsync(tx, sceneId, poseId);
 
-			// Author/origin object edges + snapshots.
 			await RelateObjectAsync(tx, ScenePoseLabel, "poseId", poseId, RelAuthor, authorDbref, "authorName");
 			if (!string.IsNullOrEmpty(originDbref))
 				await RelateObjectAsync(tx, ScenePoseLabel, "poseId", poseId, RelOrigin, originDbref, "originName");
 
-			// First (current) content version.
 			await tx.RunAsync($$"""
 				CREATE (e:{{ScenePoseEditLabel}} {
 					editId: $editId,
@@ -370,7 +357,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 			// Editor of the first edit is the author.
 			await RelateObjectAsync(tx, ScenePoseEditLabel, "editId", editId, RelEditor, authorDbref, "editorName");
 
-			// Denormalized counters / activity.
 			await tx.RunAsync($$"""
 				MATCH (s:{{SceneLabel}} {sceneId: $sceneId})
 				SET s.poseCount = s.poseCount + 1, s.lastActivityAt = $now
@@ -402,7 +388,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 		if (!await SceneExistsSessionAsync(session, sceneId))
 			return new NotFound();
 
-		// Walk the pose_next chain from first_pose in order.
 		var result = await session.RunAsync($$"""
 			MATCH (s:{{SceneLabel}} {sceneId: $sceneId})-[:{{RelFirstPose}}]->(head:{{ScenePoseLabel}})
 			MATCH path = (head)-[:{{RelPoseNext}}*0..]->(p:{{ScenePoseLabel}})
@@ -505,7 +490,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 				""",
 				new { poseId });
 
-			// Create the new edit version and chain it after the current edit.
 			await tx.RunAsync($$"""
 				CREATE (e:{{ScenePoseEditLabel}} {
 					editId: $editId,
@@ -543,7 +527,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 			if (!await PoseExistsAsync(tx, poseId))
 				return (OneOf<bool, NotFound, Error<string>>)new NotFound();
 
-			// Find the edit immediately preceding the current edit.
 			var result = await tx.RunAsync($$"""
 				MATCH (p:{{ScenePoseLabel}} {poseId: $poseId})-[:{{RelCurrentEdit}}]->(cur:{{ScenePoseEditLabel}})
 				MATCH (prev:{{ScenePoseEditLabel}})-[:{{RelNextEdit}}]->(cur)
@@ -601,7 +584,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 		await using var session = _accessor.Driver.AsyncSession();
 		var outcome = await session.ExecuteWriteAsync(async tx =>
 		{
-			// Resolve the moving pose's scene.
 			var sceneResult = await tx.RunAsync($$"""
 				MATCH (p:{{ScenePoseLabel}} {poseId: $poseId})-[:{{RelPoseInScene}}]->(s:{{SceneLabel}})
 				RETURN s.sceneId AS sceneId
@@ -679,7 +661,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 		if (!await PoseExistsSessionAsync(session, poseId))
 			return new NotFound();
 
-		// Walk first_edit → next_edit (oldest first).
 		var result = await session.RunAsync($$"""
 			MATCH (p:{{ScenePoseLabel}} {poseId: $poseId})-[:{{RelFirstEdit}}]->(head:{{ScenePoseEditLabel}})
 			MATCH path = (head)-[:{{RelNextEdit}}*0..]->(e:{{ScenePoseEditLabel}})
@@ -695,8 +676,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 
 		return OneOf<IReadOnlyList<ScenePoseEdit>, NotFound>.FromT0(edits);
 	}
-
-	// ── Members / focus ─────────────────────────────────────────────────────────
 
 	public async Task<OneOf<SceneMember, NotFound>> AddMemberAsync(string sceneId, string playerDbref, string role)
 	{
@@ -793,7 +772,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 		await using var session = _accessor.Driver.AsyncSession();
 		var outcome = await session.ExecuteWriteAsync(async tx =>
 		{
-			// Clear isCurrent on all the player's member edges first.
 			await tx.RunAsync($$"""
 				MATCH (o:Object {key: $key})-[m:{{RelMember}}]->(:{{SceneLabel}})
 				SET m.isCurrent = false
@@ -806,7 +784,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 			if (!await SceneExistsAsync(tx, sceneId))
 				return false;
 
-			// Set isCurrent on the target scene's member edge, creating it if needed.
 			var now = NowMillis();
 			await tx.RunAsync($$"""
 				MATCH (o:Object {key: $key}), (s:{{SceneLabel}} {sceneId: $sceneId})
@@ -860,8 +837,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 		if (!exists) return new NotFound();
 		return await GetMemberAsync(sceneId, playerDbref);
 	}
-
-	// ── Plots ─────────────────────────────────────────────────────────────────
 
 	public async Task<ScenePlot> UpsertPlotAsync(string? plotId, string title, string description, string ownerDbref)
 	{
@@ -943,8 +918,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 			: new NotFound();
 	}
 
-	// ── Derived reads ───────────────────────────────────────────────────────────
-
 	public async Task<OneOf<IReadOnlyList<string>, NotFound>> GetTagsAsync(string sceneId)
 	{
 		await using var session = _accessor.Driver.AsyncSession();
@@ -991,8 +964,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 
 		return OneOf<IReadOnlyList<string>, NotFound>.FromT0(cast);
 	}
-
-	// ── Pose-chain helpers ──────────────────────────────────────────────────────
 
 	private async Task AppendPoseToChainAsync(IAsyncQueryRunner tx, string sceneId, string poseId)
 	{
@@ -1043,7 +1014,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 		var prevId = rows.Count > 0 ? AsNullableString(rows[0]["prevId"]) : null;
 		var nextId = rows.Count > 0 ? AsNullableString(rows[0]["nextId"]) : null;
 
-		// Detach the pose's own pose_next links.
 		await tx.RunAsync($$"""
 			MATCH (p:{{ScenePoseLabel}} {poseId: $poseId})
 			OPTIONAL MATCH (prev:{{ScenePoseLabel}})-[r1:{{RelPoseNext}}]->(p)
@@ -1052,7 +1022,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 			""",
 			new { poseId });
 
-		// Stitch predecessor → successor.
 		if (prevId is not null && nextId is not null)
 		{
 			await tx.RunAsync($$"""
@@ -1062,7 +1031,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 				new { prevId, nextId });
 		}
 
-		// Repair head pointer if the removed pose was the head.
 		if (prevId is null)
 		{
 			await tx.RunAsync($$"""
@@ -1078,7 +1046,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 					new { sceneId, nextId });
 		}
 
-		// Repair tail pointer if the removed pose was the tail.
 		if (nextId is null)
 		{
 			await tx.RunAsync($$"""
@@ -1192,8 +1159,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 			new { poseId, now });
 	}
 
-	// ── Object-edge + Meta helpers ───────────────────────────────────────────────
-
 	/// <summary>
 	/// MERGEs a single relationship of <paramref name="relType"/> from the scene-side
 	/// node to the live <c>:Object</c> resolved from <paramref name="dbref"/>, and
@@ -1260,8 +1225,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 		return AsNullableString(rows[0]["metaJson"]) ?? "{}";
 	}
 
-	// ── Existence checks ──────────────────────────────────────────────────────────
-
 	private static async Task<bool> SceneExistsAsync(IAsyncQueryRunner tx, string sceneId)
 	{
 		var result = await tx.RunAsync($"MATCH (s:{SceneLabel} {{sceneId: $id}}) RETURN s.sceneId AS id LIMIT 1",
@@ -1296,8 +1259,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 			new { id = plotId });
 		return (await result.ToListAsync()).Count > 0;
 	}
-
-	// ── Read projections (resolve live edges + read snapshots) ─────────────────────
 
 	private async Task<SceneRow?> ReadSceneRecordAsync(IAsyncSession session, string sceneId)
 	{
@@ -1349,8 +1310,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 			AsNullableInt(r["editorKey"]),
 			editCount);
 	}
-
-	// ── Mappers ────────────────────────────────────────────────────────────────
 
 	private static SceneModel MapScene(SceneRow row)
 	{
@@ -1440,8 +1399,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 		CreatedAt: node["createdAt"].As<long>(),
 		UpdatedAt: node["updatedAt"].As<long>());
 
-	// ── Primitive helpers ─────────────────────────────────────────────────────────
-
 	private static long NowMillis() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
 	/// <summary>Resolves a dbref string (e.g. "#5") to its numeric object key, or null.</summary>
@@ -1492,8 +1449,6 @@ public sealed class MemgraphSceneStorage(IMemgraphStorageAccessor _accessor) : I
 	private static long? AsNullableLong(object? value) => value is null ? null : value.As<long>();
 	private static string? AsNullableString(object? value) => value is null ? null : value.As<string>();
 	private static INode? AsNullableNode(object? value) => value as INode;
-
-	// ── Row carriers ──────────────────────────────────────────────────────────────
 
 	private sealed record SceneRow(INode Node, int? OwnerKey, int? StarterKey, int? RoomKey);
 

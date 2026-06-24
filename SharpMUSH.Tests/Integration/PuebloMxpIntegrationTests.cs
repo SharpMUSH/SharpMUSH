@@ -22,8 +22,6 @@ public class PuebloMxpIntegrationTests
 	[ClassDataSource<TelnetIntegrationFixture>(Shared = SharedType.PerClass)]
 	public required TelnetIntegrationFixture Fixture { get; init; }
 
-	// ── Pueblo Handshake Tests ──────────────────────────────────────────────
-
 	/// <summary>
 	/// Verifies that after connecting, the server sends the Pueblo hello string
 	/// ("This world is Pueblo 1.10 Enhanced.") before the login screen.
@@ -58,27 +56,20 @@ public class PuebloMxpIntegrationTests
 
 		await using var stream = client.GetStream();
 
-		// Wait for Pueblo hello
 		var hello = await ReadUntilAsync(stream,
 			s => s.Contains("Pueblo 1.10 Enhanced"), cancellationToken);
 		await Assert.That(hello).Contains("Pueblo 1.10 Enhanced");
 
-		// Respond with PUEBLOCLIENT handshake
 		await SendLineAsync(stream, "PUEBLOCLIENT 2.01", cancellationToken);
 
-		// Small delay to allow handshake processing
 		await Task.Delay(500, cancellationToken);
 
-		// Wait for the login screen
 		var loginScreen = await ReadUntilAsync(stream,
 			s => s.Contains("Welcome to SharpMUSH"), cancellationToken);
 		await Assert.That(loginScreen).Contains("Welcome to SharpMUSH");
 
-		// Log in as God
 		await SendLineAsync(stream, "connect God", cancellationToken);
 
-		// After login, the auto-look should produce Room Zero.
-		// As a Pueblo client, exit names should be wrapped in <send> tags.
 		var postLogin = await ReadUntilAsync(stream,
 			s => s.Contains("Room Zero"), cancellationToken);
 
@@ -102,12 +93,10 @@ public class PuebloMxpIntegrationTests
 
 		await using var stream = client.GetStream();
 
-		// Wait for login screen (skip Pueblo hello without responding)
 		var loginScreen = await ReadUntilAsync(stream,
 			s => s.Contains("Welcome to SharpMUSH"), cancellationToken);
 		await Assert.That(loginScreen).Contains("Welcome to SharpMUSH");
 
-		// Log in without Pueblo handshake
 		await SendLineAsync(stream, "connect God", cancellationToken);
 
 		var postLogin = await ReadUntilAsync(stream,
@@ -116,14 +105,11 @@ public class PuebloMxpIntegrationTests
 		await Assert.That(postLogin).Contains("Room Zero")
 			.Because("Room Zero should appear in ANSI mode");
 
-		// ANSI output should NOT contain HTML tags like <send> or <FONT>
 		await Assert.That(postLogin).DoesNotContain("<send")
 			.Because("ANSI output must not contain HTML send tags");
 		await Assert.That(postLogin).DoesNotContain("<FONT")
 			.Because("ANSI output must not contain HTML FONT tags");
 	}
-
-	// ── MXP Negotiation Tests ───────────────────────────────────────────────
 
 	/// <summary>
 	/// Verifies that the server sends IAC WILL MXP (255 251 91) during
@@ -163,7 +149,6 @@ public class PuebloMxpIntegrationTests
 
 		await using var stream = client.GetStream();
 
-		// Wait for IAC WILL MXP
 		var rawInit = await ReadRawUntilAsync(stream,
 			bytes => ContainsSequence(bytes, [0xFF, 0xFB, 0x5B]),
 			cancellationToken,
@@ -175,26 +160,20 @@ public class PuebloMxpIntegrationTests
 		await stream.WriteAsync(new byte[] { 0xFF, 0xFD, 0x5B }, cancellationToken);
 		await stream.FlushAsync(cancellationToken);
 
-		// Small delay for negotiation processing
 		await Task.Delay(500, cancellationToken);
 
-		// Wait for login screen
 		var loginScreen = await ReadUntilAsync(stream,
 			s => s.Contains("Welcome to SharpMUSH"), cancellationToken);
 		await Assert.That(loginScreen).Contains("Welcome to SharpMUSH");
 
-		// Log in
 		await SendLineAsync(stream, "connect God", cancellationToken);
 
-		// After login, MXP output should include ESC[0z open line prefixes.
-		// ESC[0z = \x1b[0z
 		var postLogin = await ReadUntilAsync(stream,
 			s => s.Contains("Room Zero"), cancellationToken);
 
 		await Assert.That(postLogin).Contains("Room Zero")
 			.Because("After login with MXP, should see Room Zero");
 
-		// MXP output should contain the open line prefix
 		await Assert.That(postLogin).Contains("\x1b[0z")
 			.Because("MXP output lines should be prefixed with ESC[0z open mode");
 		await Assert.That(postLogin).Contains("<send")
@@ -225,11 +204,9 @@ public class PuebloMxpIntegrationTests
 		await stream.WriteAsync(new byte[] { 0xFF, 0xFE, 0x5B }, cancellationToken);
 		await stream.FlushAsync(cancellationToken);
 
-		// Wait for login screen
 		var loginScreen = await ReadUntilAsync(stream,
 			s => s.Contains("Welcome to SharpMUSH"), cancellationToken);
 
-		// Log in
 		await SendLineAsync(stream, "connect God", cancellationToken);
 
 		var postLogin = await ReadUntilAsync(stream,
@@ -237,14 +214,11 @@ public class PuebloMxpIntegrationTests
 
 		await Assert.That(postLogin).Contains("Room Zero");
 
-		// Should NOT contain MXP line prefix
 		await Assert.That(postLogin).DoesNotContain("\x1b[0z")
 			.Because("ANSI output should not contain MXP line prefixes");
 		await Assert.That(postLogin).DoesNotContain("<SEND")
 			.Because("ANSI output should not contain MXP SEND tags");
 	}
-
-	// ── Helpers ──────────────────────────────────────────────────────────────
 
 	private static async Task<string> ReadUntilAsync(
 		NetworkStream stream,
@@ -311,7 +285,7 @@ public class PuebloMxpIntegrationTests
 				}
 			}
 		}
-		catch (OperationCanceledException) { /* timeout or cancellation */ }
+		catch (OperationCanceledException) { }
 
 		return received.ToArray();
 	}

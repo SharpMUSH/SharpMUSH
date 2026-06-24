@@ -14,8 +14,6 @@ public class WidgetRegistryTests
 {
 	private static WidgetRegistry MakeRegistry() => new();
 
-	// ─── Registration ──────────────────────────────────────────────────────
-
 	[Test]
 	public async Task Register_ThenGetWidget_ReturnsDescriptor()
 	{
@@ -34,7 +32,7 @@ public class WidgetRegistryTests
 	{
 		var registry = MakeRegistry();
 		var first = new QuickLinksWidgetDescriptor();
-		var second = new QuickLinksWidgetDescriptor(); // same Name
+		var second = new QuickLinksWidgetDescriptor();
 
 		registry.Register(first);
 		registry.Register(second);
@@ -50,8 +48,6 @@ public class WidgetRegistryTests
 		await Assert.ThrowsAsync<ArgumentNullException>(
 			async () => registry.Register(null!));
 	}
-
-	// ─── GetWidget ─────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task GetWidget_UnknownName_ReturnsSchemaWidgetFallback()
@@ -87,8 +83,6 @@ public class WidgetRegistryTests
 		await Assert.That(result.ComponentType).IsEqualTo(typeof(SchemaWidget));
 	}
 
-	// ─── GetAllWidgets ─────────────────────────────────────────────────────
-
 	[Test]
 	public async Task GetAllWidgets_EmptyRegistry_ReturnsEmpty()
 	{
@@ -109,14 +103,12 @@ public class WidgetRegistryTests
 		await Assert.That(result.Count).IsEqualTo(2);
 	}
 
-	// ─── GetWidgetsForZone ─────────────────────────────────────────────────
-
 	[Test]
 	public async Task GetWidgetsForZone_ReturnsOnlyWidgetsAllowedInZone()
 	{
 		var registry = MakeRegistry();
-		registry.Register(new QuickLinksWidgetDescriptor()); // TopBar, LeftSidebar, RightSidebar, Footer
-		registry.Register(new WelcomeTextWidgetDescriptor()); // MainContent only
+		registry.Register(new QuickLinksWidgetDescriptor());
+		registry.Register(new WelcomeTextWidgetDescriptor());
 
 		var topBar = registry.GetWidgetsForZone(WidgetZone.TopBar);
 		var mainContent = registry.GetWidgetsForZone(WidgetZone.MainContent);
@@ -132,7 +124,7 @@ public class WidgetRegistryTests
 	public async Task GetWidgetsForZone_ZoneWithNoWidgets_ReturnsEmpty()
 	{
 		var registry = MakeRegistry();
-		registry.Register(new WelcomeTextWidgetDescriptor()); // MainContent only
+		registry.Register(new WelcomeTextWidgetDescriptor());
 
 		var result = registry.GetWidgetsForZone(WidgetZone.Footer);
 		await Assert.That(result.Count).IsEqualTo(0);

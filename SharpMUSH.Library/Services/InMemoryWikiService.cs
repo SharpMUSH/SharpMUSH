@@ -17,18 +17,12 @@ namespace SharpMUSH.Library.Services;
 /// </remarks>
 public sealed class InMemoryWikiService : IWikiService
 {
-	// ── Storage ───────────────────────────────────────────────────────────────
-
 	private readonly ConcurrentDictionary<string, WikiPage> _pagesById = new();
-	// Composite key: $"{namespace}:{slug}" → page ID
 	private readonly ConcurrentDictionary<string, string> _slugIndex = new(StringComparer.OrdinalIgnoreCase);
-	// pageId → ordered list of revisions
 	private readonly ConcurrentDictionary<string, List<WikiRevision>> _revisions = new();
 
 	private readonly WikiMarkdigPipeline _renderer;
 	private int _idCounter;
-
-	// ── Construction ──────────────────────────────────────────────────────────
 
 	public InMemoryWikiService() : this(new WikiMarkdigPipeline()) { }
 
@@ -36,8 +30,6 @@ public sealed class InMemoryWikiService : IWikiService
 	{
 		_renderer = renderer;
 	}
-
-	// ── IWikiService: Read ────────────────────────────────────────────────────
 
 	public Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
@@ -127,8 +119,6 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult(result);
 	}
 
-	// ── IWikiService: Write ───────────────────────────────────────────────────
-
 	public Task<OneOf<WikiPage, Error<string>>> CreateAsync(
 		string title,
 		string markdown,
@@ -173,7 +163,6 @@ public sealed class InMemoryWikiService : IWikiService
 		_pagesById[id] = page;
 		_revisions[id] = [];
 
-		// Save initial revision snapshot
 		SaveRevisionSnapshot(page, authorDbref, editSummary: null);
 
 		return Task.FromResult<OneOf<WikiPage, Error<string>>>(page);
@@ -260,8 +249,6 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult<OneOf<WikiPage, NotFound>>(updated);
 	}
 
-	// ── IWikiService: Revisions ───────────────────────────────────────────────
-
 	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
 	{
 		if (!_revisions.TryGetValue(pageId, out var list))
@@ -295,8 +282,6 @@ public sealed class InMemoryWikiService : IWikiService
 
 		return Task.FromResult<OneOf<WikiRevision, NotFound>>(result);
 	}
-
-	// ── Internals ─────────────────────────────────────────────────────────────
 
 	/// <summary>Generates a URL-safe slug from a title.</summary>
 	private static string Slugify(string title) =>

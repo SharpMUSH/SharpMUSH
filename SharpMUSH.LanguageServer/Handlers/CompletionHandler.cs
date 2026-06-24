@@ -35,12 +35,10 @@ public class CompletionHandler : CompletionHandlerBase
 
 		try
 		{
-			// Get the current line and position
 			var lines = document.Text.Split('\n');
 			var line = request.Position.Line < lines.Length ? lines[request.Position.Line] : string.Empty;
 			var character = (int)request.Position.Character;
 
-			// Get the word being typed
 			var wordStart = character;
 			while (wordStart > 0 && IsWordCharacter(line[wordStart - 1]))
 			{
@@ -48,7 +46,6 @@ public class CompletionHandler : CompletionHandlerBase
 			}
 			var prefix = wordStart < line.Length ? line.Substring(wordStart, character - wordStart) : string.Empty;
 
-			// Add function completions
 			foreach (var (name, definition) in _parser.FunctionLibrary)
 			{
 				if (string.IsNullOrEmpty(prefix) || name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
@@ -65,7 +62,6 @@ public class CompletionHandler : CompletionHandlerBase
 				}
 			}
 
-			// Add command completions if at start of line or after whitespace
 			if (character == 0 || (character > 0 && char.IsWhiteSpace(line[character - 1])))
 			{
 				foreach (var (name, definition) in _parser.CommandLibrary)
@@ -84,7 +80,6 @@ public class CompletionHandler : CompletionHandlerBase
 				}
 			}
 
-			// Add common MUSH patterns
 			AddCommonPatterns(completions, prefix);
 		}
 		catch (Exception ex)
@@ -99,7 +94,6 @@ public class CompletionHandler : CompletionHandlerBase
 
 	public override Task<CompletionItem> Handle(CompletionItem request, CancellationToken cancellationToken)
 	{
-		// No additional resolution needed
 		return Task.FromResult(request);
 	}
 

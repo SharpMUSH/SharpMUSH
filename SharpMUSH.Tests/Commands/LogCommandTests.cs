@@ -69,7 +69,6 @@ public class LogCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/recall"));
 
-		// @log/recall retrieves recent log entries — output starts with log header
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLogEntriesForCategoryFormat), executor, executor)).IsTrue();
 	}
 
@@ -93,13 +92,10 @@ public class LogCommandTests
 		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LSetTestObject"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		// Set a lock on the test object
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@lock #{newDb.Number}=#TRUE"));
 
-		// Now test @lset to set a flag on the Basic lock
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@lset #{newDb.Number}/Basic=visual"));
 
-		// Verify the command executed successfully (didn't throw or return error)
 		await Assert.That(result).IsNotNull();
 	}
 }

@@ -91,7 +91,6 @@ public class InMemoryRefreshTokenStoreTests
 	public async ValueTask RevokeToken_UnknownToken_DoesNotThrow()
 	{
 		var store = new InMemoryRefreshTokenStore();
-		// Should complete without throwing
 		await store.RevokeAsync("ghost-token");
 	}
 

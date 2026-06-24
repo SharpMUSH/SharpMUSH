@@ -71,7 +71,6 @@ public class AntlrParserErrorAnalysis
 
 		var scriptLines = ReadBBSInstallScript();
 
-		// All parse types to test each line with
 		var parseTypes = new[]
 		{
 			ParseType.CommandList,
@@ -114,7 +113,6 @@ public class AntlrParserErrorAnalysis
 		Log($"Lines producing parser errors: {linesWithErrors.Count}");
 		Log("");
 
-		// Detailed analysis for each error-producing line
 		foreach (var (lineNumber, errorsByType) in linesWithErrors.OrderBy(x => x.Key))
 		{
 			var lineContent = scriptLines[lineNumber - 1];
@@ -122,14 +120,12 @@ public class AntlrParserErrorAnalysis
 			Log($"SCRIPT LINE {lineNumber}");
 			Log(new string('-', 80));
 
-			// Extract the attribute name and command prefix for readability
 			var attrName = ExtractAttributeOrCommandName(lineContent);
 			Log($"Attribute/Command: {attrName}");
 			Log($"Line length: {lineContent.Length} chars");
 			Log($"Full line (first 200 chars): {Truncate(lineContent, 200)}");
 			Log("");
 
-			// Identify escape sequences in the line
 			var escapeSequences = FindEscapeSequences(lineContent);
 			if (escapeSequences.Count > 0)
 			{
@@ -141,7 +137,6 @@ public class AntlrParserErrorAnalysis
 				Log("");
 			}
 
-			// Report errors per parse type
 			foreach (var (parseType, errors) in errorsByType)
 			{
 				Log($"  Parse Type: {parseType}");
@@ -153,7 +148,6 @@ public class AntlrParserErrorAnalysis
 					if (expectedTokens?.Count > 0)
 						Log($"      Expected: {string.Join(", ", expectedTokens.Take(10))}{(expectedTokens.Count > 10 ? "..." : "")}");
 
-					// Show the content at the error position
 					if (column >= 0 && column < lineContent.Length)
 					{
 						var start = Math.Max(0, column - 20);
@@ -167,13 +161,11 @@ public class AntlrParserErrorAnalysis
 				Log("");
 			}
 
-			// Analyze the root cause for this specific line
 			var rootCause = AnalyzeRootCause(lineContent, errorsByType);
 			Log($"  Root cause analysis: {rootCause}");
 			Log("");
 		}
 
-		// Summary section: categorize all errors
 		Log(new string('=', 80));
 		Log("ERROR CATEGORY SUMMARY");
 		Log(new string('=', 80));
@@ -182,7 +174,6 @@ public class AntlrParserErrorAnalysis
 			.SelectMany(kvp => kvp.Value.SelectMany(pt => pt.Value.Select(e => (Line: kvp.Key, ParseType: pt.Key, e.Column, e.Message, e.OffendingToken))))
 			.ToList();
 
-		// Group by error pattern
 		var errorPatterns = allErrors
 			.GroupBy(e => ClassifyError(e.Message))
 			.OrderByDescending(g => g.Count());
@@ -253,7 +244,6 @@ public class AntlrParserErrorAnalysis
 		Log("  The CBRACK token has no matching bracket to close, causing errors.");
 		Log("");
 
-		// Write output to file
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, AnalysisOutputFileName);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"\n[ANALYSIS] Full output written to: {outputPath}");
@@ -273,7 +263,6 @@ public class AntlrParserErrorAnalysis
 	{
 		var trimmed = line.TrimStart();
 
-		// &ATTR_NAME object=value pattern
 		if (trimmed.StartsWith('&'))
 		{
 			var spaceIdx = trimmed.IndexOf(' ');
@@ -281,7 +270,6 @@ public class AntlrParserErrorAnalysis
 				return trimmed[..spaceIdx];
 		}
 
-		// @command pattern
 		if (trimmed.StartsWith('@'))
 		{
 			var spaceIdx = trimmed.IndexOf(' ');
@@ -304,7 +292,6 @@ public class AntlrParserErrorAnalysis
 			if (line[i] == '\\')
 			{
 				var nextChar = line[i + 1];
-				// Check for known MUSH escape sequences
 				if (nextChar is '[' or ']' or '(' or ')' or '%' or ',' or '{' or '}' or '\\')
 				{
 					var contextStart = Math.Max(0, i - 10);
@@ -346,7 +333,6 @@ public class AntlrParserErrorAnalysis
 
 		if (parts.Count == 0)
 		{
-			// Check for bare 'me' pattern (lock evaluator issues)
 			if (line.TrimStart().EndsWith(" me"))
 				parts.Add("Bare 'me' at end of attribute clear command - lock evaluator expects NAME/BIT_FLAG tokens, not identifier 'me'");
 			else

@@ -21,7 +21,6 @@ namespace SharpMUSH.Tests.Markup;
 /// </summary>
 public class MarkupStringHandlerTests
 {
-    // ── Plain-text holes ───────────────────────────────────────────
 
     [Test]
     public async Task Handler_StringHole_ProducesPlainText()
@@ -61,8 +60,6 @@ public class MarkupStringHandlerTests
         await Assert.That(result.ToPlainText()).IsEqualTo("Enabled: True");
     }
 
-    // ── Markup preservation ────────────────────────────────────────
-
     [Test]
     public async Task Handler_MStringHole_PreservesMarkupRuns()
     {
@@ -72,10 +69,8 @@ public class MarkupStringHandlerTests
         MString result = Format($"Hello, {bold}!");
 
         await Assert.That(result.ToPlainText()).IsEqualTo("Hello, world!");
-        // Should have at least two runs: plain "Hello, " and marked "world"
         await Assert.That(result.Runs.Length).IsGreaterThanOrEqualTo(2);
 
-        // The run covering "world" (offset 7, length 5) must carry the red markup
         var markedRun = result.Runs.FirstOrDefault(r => r.Start == 7 && r.Length == 5);
         await Assert.That(markedRun.Markups.Length).IsEqualTo(1);
         await Assert.That(markedRun.Markups[0]).IsEqualTo(redMarkup);
@@ -94,7 +89,6 @@ public class MarkupStringHandlerTests
 
         await Assert.That(result.ToPlainText()).IsEqualTo("Color: red and blue.");
 
-        // Both markup runs must survive into the ANSI render output
         var ansiOutput = result.Render("ansi");
         await Assert.That(ansiOutput).Contains("red");
         await Assert.That(ansiOutput).Contains("blue");
@@ -107,18 +101,14 @@ public class MarkupStringHandlerTests
 		var red = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		MString marked = AMS.MarkupSingle(red, "world");
 
-		// Handler path
 		MString fromHandler = Format($"Hello, {marked}!");
 
-        // Equivalent manual construction
         MString manual = AMS.concatMany([AMS.single("Hello, "), marked, AMS.single("!")]);
 
         await Assert.That(fromHandler.ToPlainText()).IsEqualTo(manual.ToPlainText());
         await Assert.That(fromHandler.Render("ansi")).IsEqualTo(manual.Render("ansi"));
         await Assert.That(fromHandler.Render("html")).IsEqualTo(manual.Render("html"));
     }
-
-    // ── Mixed holes ────────────────────────────────────────────────
 
     [Test]
     public async Task Handler_MixedHoles_CombinesCorrectly()
@@ -131,12 +121,9 @@ public class MarkupStringHandlerTests
 
         await Assert.That(result.ToPlainText()).IsEqualTo("Player Alice scored 99 points.");
 
-        // The bold run for "Alice" must be preserved at offset 7, length 5
         var boldRun = result.Runs.FirstOrDefault(r => r.Start == 7 && r.Length == 5);
         await Assert.That(boldRun.Markups.Length).IsEqualTo(1);
     }
-
-    // ── Edge cases ─────────────────────────────────────────────────
 
     [Test]
     public async Task Handler_NullStringHole_ProducesEmptySegment()
@@ -200,8 +187,6 @@ public class MarkupStringHandlerTests
         await Assert.That(result.Runs.Length).IsEqualTo(1);
         await Assert.That(result.Runs[0].Markups.Length).IsEqualTo(1);
     }
-
-    // ── Trim format specifier ─────────────────────────────────────────
 
     [Test]
     public async Task Handler_Trim_DefaultTrimsBothSides()
@@ -269,8 +254,6 @@ public class MarkupStringHandlerTests
         await Assert.That(result.Runs.Any(r => r.Markups.Length > 0)).IsTrue();
     }
 
-    // ── Align format specifier ────────────────────────────────────────
-
     [Test]
     public async Task Handler_Align_Left_PadsRight()
     {
@@ -328,8 +311,6 @@ public class MarkupStringHandlerTests
         await Assert.That(result.Runs.Any(r => r.Markups.Length > 0)).IsTrue();
     }
 
-    // ── C# alignment specifier ────────────────────────────────────────
-
     [Test]
     public async Task Handler_CSharpAlignment_Positive_RightJustifies()
     {
@@ -356,8 +337,6 @@ public class MarkupStringHandlerTests
         await Assert.That(result.ToPlainText()).IsEqualTo("hi        ");
         await Assert.That(result.Length).IsEqualTo(10);
     }
-
-    // ── Color format specifier ────────────────────────────────────────
 
     [Test]
     public async Task Handler_Color_AppliesAnsiMarkup()
@@ -404,7 +383,6 @@ public class MarkupStringHandlerTests
         MString inner = AMS.MarkupSingle(blue, "hello");
         MString result = Format($"{inner:color:r}");
         await Assert.That(result.ToPlainText()).IsEqualTo("hello");
-        // Should have two markup layers
         await Assert.That(result.Runs.All(r => r.Markups.Length >= 2)).IsTrue();
     }
 
@@ -416,8 +394,6 @@ public class MarkupStringHandlerTests
         await Assert.That(result.ToPlainText()).IsEqualTo("hello");
         await Assert.That(result.Runs.All(r => r.Markups.Length == 0)).IsTrue();
     }
-
-    // ── AnsiCodeParser standalone tests ─────────────────────────────
 
     [Test]
     public async Task AnsiCodeParser_RedCode_SetsForegroundRed()
@@ -486,8 +462,6 @@ public class MarkupStringHandlerTests
         await Assert.That(markup.Details.Foreground).IsTypeOf<AnsiColor.RGB>();
     }
 
-    // ── Additional AnsiCodeParser coverage ──────────────────────────
-
     [Test]
     public async Task AnsiCodeParser_BlinkCode_SetsBlink()
     {
@@ -529,15 +503,12 @@ public class MarkupStringHandlerTests
         await Assert.That(markup.Details.Foreground).IsEqualTo(AnsiColor.NoAnsi.Instance);
     }
 
-    // ── Additional Handler format specifier coverage ─────────────────
-
     [Test]
     public async Task Handler_Color_BackgroundLetter_SetsBackground()
     {
         MString value = AMS.single("hello");
         MString result = Format($"{value:color:R}");
         await Assert.That(result.ToPlainText()).IsEqualTo("hello");
-        // Background color should produce ANSI output
         await Assert.That(result.Render("ansi")).Contains("\u001b[");
     }
 
@@ -567,7 +538,6 @@ public class MarkupStringHandlerTests
         MString value = AMS.single("hello");
         MString result = Format($"{value:color:}");
         await Assert.That(result.ToPlainText()).IsEqualTo("hello");
-        // No markup should be applied when codes string is empty
         await Assert.That(result.Runs.All(r => r.Markups.Length == 0)).IsTrue();
     }
 
@@ -584,7 +554,6 @@ public class MarkupStringHandlerTests
     public async Task Handler_Align_InvalidWidth_RetainsValue()
     {
         MString value = AMS.single("hello");
-        // align with a non-numeric width should return value unchanged
         MString result = Format($"{value:align:left:notanumber}");
         await Assert.That(result.ToPlainText()).IsEqualTo("hello");
     }
@@ -601,12 +570,9 @@ public class MarkupStringHandlerTests
     public async Task Handler_Align_ZeroWidth_RetainsValue()
     {
         MString value = AMS.single("hello");
-        // align with zero width should return value unchanged (invalid)
         MString result = Format($"{value:align:left:0}");
         await Assert.That(result.ToPlainText()).IsEqualTo("hello");
     }
-
-    // ── Hilight() extension ──────────────────────────────────────────
 
     [Test]
     public async Task Hilight_String_ProducesBoldBrightWhite()
@@ -616,7 +582,6 @@ public class MarkupStringHandlerTests
         MString result = "hello".Hilight();
         await Assert.That(result.ToPlainText()).IsEqualTo("hello");
         var ansiOut = result.Render("ansi");
-        // Must contain ANSI escape
         await Assert.That(ansiOut).Contains("\u001b[");
         // Bold (1) and white (37) SGR codes must be present
         await Assert.That(ansiOut).Contains("1;37");
@@ -635,7 +600,6 @@ public class MarkupStringHandlerTests
     [Test]
     public async Task Hilight_RendersIdenticallyToColorHw()
     {
-        // Hilight() must produce the same ANSI output as Format($"{value:color:hw}")
         MString value = AMS.single("hello");
         MString fromHilight = value.Hilight();
         MString fromColorHw = Format($"{value:color:hw}");

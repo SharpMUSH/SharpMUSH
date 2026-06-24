@@ -83,7 +83,6 @@ public class PennMUSHStringFunctionTests
 	}
 
 	// === stringsecs - Penn teststringsecs.t (check against existing TimeFunctionUnitTests) ===
-	// These are likely already covered but verifying edge cases
 	[Test]
 	[Arguments("stringsecs(10s)", "10")]
 	[Arguments("stringsecs(5m 10s)", "310")]

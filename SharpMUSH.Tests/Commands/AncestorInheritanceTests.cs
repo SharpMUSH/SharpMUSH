@@ -40,7 +40,6 @@ public class AncestorInheritanceTests
 	[NotInParallel]
 	public async Task AncestorOnlyAttribute_IsReadableOnPlainThing()
 	{
-		// Define an attribute ONLY on the Ancestor Thing (#6).
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&ANCESTOR_ONLY_ATTR {AncestorThing}=from ancestor"));
 
@@ -78,7 +77,6 @@ public class AncestorInheritanceTests
 	[NotInParallel]
 	public async Task NoInheritAncestorAttribute_IsNotInherited()
 	{
-		// Set an attribute on the ancestor and flag it no_inherit.
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&NO_INHERIT_ATTR {AncestorThing}=secret"));
 		await Parser.CommandParse(1, ConnectionService,

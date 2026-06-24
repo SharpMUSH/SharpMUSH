@@ -13,11 +13,9 @@ public class SharpExit
 
 	public required SharpObject Object { get; set; }
 
-	// Relationship
 	[JsonIgnore]
 	public required AsyncLazy<AnySharpContainer> Location { get; set; } // DESTINATION
 
-	// Relationship
 	[JsonIgnore]
 	public required AsyncLazy<AnySharpContainer> Home { get; set; } // SOURCE ROOM
 }

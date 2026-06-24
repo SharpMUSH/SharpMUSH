@@ -15,7 +15,6 @@ public class GetPowerQueryHandler(ISharpDatabase database) : IQueryHandler<GetPo
 			return exactMatch;
 		}
 
-		// Fall back to case-insensitive match on name or alias
 		return await database.GetObjectPowersAsync(cancellationToken)
 			.FirstOrDefaultAsync(
 				p => p.Name.Equals(query.PowerName, StringComparison.InvariantCultureIgnoreCase)

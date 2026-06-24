@@ -10,7 +10,6 @@ public class MarkdownHelpfileTests
 		var currentDirectory = Directory.GetCurrentDirectory();
 		var testFilePath = Path.Combine(currentDirectory, "TestMarkdownHelp.md");
 
-		// Create a test markdown file
 		var testContent = @"# help
 This is the main help page.
 
@@ -109,12 +108,10 @@ Displays the description of an object.
 
 			var indexes = maybeIndexes.AsT0;
 
-			// Both 'look' and 'read' should be present.
 			await Assert.That(indexes.Count).IsEqualTo(2);
 			await Assert.That(indexes).ContainsKey("look");
 			await Assert.That(indexes).ContainsKey("read");
 
-			// Both entries should include the shared content, not just the header.
 			await Assert.That(indexes["look"]).Contains("Displays the description of an object.");
 			await Assert.That(indexes["read"]).Contains("Displays the description of an object.");
 		}
@@ -148,7 +145,6 @@ This is commands content.
 			var helpfiles = new Helpfiles(new DirectoryInfo(testDir));
 			helpfiles.Index();
 
-			// Test case-insensitive lookup
 			var helpEntry = helpfiles.FindEntry("help");
 			await Assert.That(helpEntry).IsNotNull();
 			await Assert.That(helpEntry).Contains("This is help content");
@@ -193,7 +189,6 @@ Look command
 			var helpfiles = new Helpfiles(new DirectoryInfo(testDir));
 			helpfiles.Index();
 
-			// Test wildcard matching
 			var matches = helpfiles.FindMatchingTopics("@*").ToList();
 			await Assert.That(matches.Count).IsEqualTo(3);
 			await Assert.That(matches).Contains("@create");
@@ -233,7 +228,6 @@ The look command lets you examine your surroundings.
 			var helpfiles = new Helpfiles(new DirectoryInfo(testDir));
 			helpfiles.Index();
 
-			// Test content search
 			var matches = helpfiles.SearchContent("object").ToList();
 			await Assert.That(matches.Count).IsEqualTo(2);
 			await Assert.That(matches).Contains("@create");
@@ -277,18 +271,15 @@ The look command lets you examine your surroundings.
 
 			var indexes = maybeIndexes.AsT0;
 
-			// All three aliases should be present.
 			await Assert.That(indexes).ContainsKey("Getting Started");
 			await Assert.That(indexes).ContainsKey("GS");
 			await Assert.That(indexes).ContainsKey("Walkthrough");
 			await Assert.That(indexes).ContainsKey("GS MOVING");
 
-			// All three aliases should include the shared body content, not just the header.
 			await Assert.That(indexes["Getting Started"]).Contains("quick walkthrough");
 			await Assert.That(indexes["GS"]).Contains("quick walkthrough");
 			await Assert.That(indexes["Walkthrough"]).Contains("quick walkthrough");
 
-			// GS MOVING should have its own content.
 			await Assert.That(indexes["GS MOVING"]).Contains("type 'look'");
 		}
 		finally
@@ -336,11 +327,9 @@ Existing games which have softcoded 'who' commands.
 			await Assert.That(indexes).ContainsKey("DOING");
 			await Assert.That(indexes).ContainsKey("WHO2");
 
-			// Both WHO and DOING should include the full shared content.
 			await Assert.That(indexes["WHO"]).Contains("displays a list of players currently connected");
 			await Assert.That(indexes["DOING"]).Contains("displays a list of players currently connected");
 
-			// WHO2 should have its own content.
 			await Assert.That(indexes["WHO2"]).Contains("softcoded");
 		}
 		finally
@@ -387,11 +376,9 @@ Existing games which have softcoded 'who' commands.
 			await Assert.That(indexes).ContainsKey("FUNCTION TYPES");
 			await Assert.That(indexes).ContainsKey("Attribute functions");
 
-			// Both FUNCTION LIST and FUNCTION TYPES should include the shared content.
 			await Assert.That(indexes["FUNCTION LIST"]).Contains("Several major variants");
 			await Assert.That(indexes["FUNCTION TYPES"]).Contains("Several major variants");
 
-			// Attribute functions should have its own content.
 			await Assert.That(indexes["Attribute functions"]).Contains("stored in attributes");
 		}
 		finally
@@ -406,8 +393,6 @@ Existing games which have softcoded 'who' commands.
 	[Test]
 	public async Task RealHelpFilesHaveContentForKnownAliases()
 	{
-		// Test the actual help files in the repository to ensure the reported
-		// bug (entries showing only headers) is fixed.
 		var helpDir = FindHelpfilesDirectory();
 		if (helpDir == null)
 		{
@@ -418,7 +403,6 @@ Existing games which have softcoded 'who' commands.
 		var helpfiles = new Helpfiles(new DirectoryInfo(helpDir));
 		helpfiles.Index();
 
-		// These entries were reported as showing only headers with no content.
 		var functionList = helpfiles.FindEntry("FUNCTION LIST");
 		await Assert.That(functionList).IsNotNull();
 		await Assert.That(functionList!).Contains("Several major variants");
@@ -455,14 +439,11 @@ Existing games which have softcoded 'who' commands.
 			await Assert.That(positions).ContainsKey("DOING");
 			await Assert.That(positions).ContainsKey("WHO2");
 
-			// WHO and DOING should share the same byte range (aliases).
 			await Assert.That(positions["WHO"].Start).IsEqualTo(positions["DOING"].Start);
 			await Assert.That(positions["WHO"].End).IsEqualTo(positions["DOING"].End);
 
-			// WHO2 should have a different range.
 			await Assert.That(positions["WHO2"].Start).IsNotEqualTo(positions["WHO"].Start);
 
-			// Verify the byte ranges produce correct content when read from file.
 			var fileBytes = await File.ReadAllBytesAsync(testFilePath);
 
 			var whoStart = (int)positions["WHO"].Start;
@@ -509,7 +490,6 @@ Existing games which have softcoded 'who' commands.
 			await Assert.That(positions).ContainsKey("newbie");
 			await Assert.That(positions).ContainsKey("newbie2");
 
-			// Verify the byte ranges produce correct content when read from file.
 			var fileBytes = await File.ReadAllBytesAsync(testFilePath);
 
 			var newbieStart = (int)positions["newbie"].Start;
@@ -541,7 +521,6 @@ Existing games which have softcoded 'who' commands.
 		var currentDirectory = Directory.GetCurrentDirectory();
 		var testFilePath = Path.Combine(currentDirectory, "TestMarkdownHelpBom.md");
 
-		// Write a file with a UTF-8 BOM prefix.
 		var content = "# help\nMain help content.\n\n# topic2\nSecond topic.\n";
 		var bom = new byte[] { 0xEF, 0xBB, 0xBF };
 		var contentBytes = System.Text.Encoding.UTF8.GetBytes(content);
@@ -562,7 +541,6 @@ Existing games which have softcoded 'who' commands.
 			await Assert.That(positions).ContainsKey("help");
 			await Assert.That(positions).ContainsKey("topic2");
 
-			// Verify the byte ranges produce correct content when read from the BOM file.
 			var fileBytes = await File.ReadAllBytesAsync(testFilePath);
 
 			var helpStart = (int)positions["help"].Start;
@@ -604,14 +582,11 @@ Existing games which have softcoded 'who' commands.
 
 			var positions = maybePositions.AsT0;
 
-			// FUNCTION LIST and FUNCTION TYPES share the same range.
 			await Assert.That(positions["FUNCTION LIST"].Start).IsEqualTo(positions["FUNCTION TYPES"].Start);
 			await Assert.That(positions["FUNCTION LIST"].End).IsEqualTo(positions["FUNCTION TYPES"].End);
 
-			// FUNCTIONS2 has its own range.
 			await Assert.That(positions["FUNCTIONS2"].Start).IsNotEqualTo(positions["FUNCTION LIST"].Start);
 
-			// Verify content from byte positions.
 			var fileBytes = await File.ReadAllBytesAsync(testFilePath);
 
 			var flStart = (int)positions["FUNCTION LIST"].Start;
@@ -658,7 +633,6 @@ Existing games which have softcoded 'who' commands.
 				continue;
 			}
 
-			// Pick up to 5 random topics from this file.
 			var topics = indexes.Keys.ToList();
 			var sampled = topics.OrderBy(_ => rng.Next()).Take(5).ToList();
 
@@ -677,8 +651,6 @@ Existing games which have softcoded 'who' commands.
 
 	private static string? FindHelpfilesDirectory()
 	{
-		// Walk up from the current directory to find the repository root,
-		// then return the Helpfiles/SharpMUSH path.
 		var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
 		while (dir != null)
 		{

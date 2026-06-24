@@ -15,7 +15,6 @@ namespace SharpMUSH.Tests.Markup;
 /// </summary>
 public class MarkupStringTests
 {
-	// ── Construction ───────────────────────────────────────────────
 
 	[Test]
 	public async Task Single_PlainText_CreatesCorrectString()
@@ -72,8 +71,6 @@ public class MarkupStringTests
 		await Assert.That(ams.Runs[0].Markups.Length).IsEqualTo(2);
 	}
 
-	// ── Concat ─────────────────────────────────────────────────────
-
 	[Test]
 	public async Task Concat_TwoPlainStrings_CombinesText()
 	{
@@ -111,8 +108,6 @@ public class MarkupStringTests
 		await Assert.That(result1.ToPlainText()).IsEqualTo("Hello");
 		await Assert.That(result2.ToPlainText()).IsEqualTo("Hello");
 	}
-
-	// ── ConcatMany ────────────────────────────────────────────────
 
 	[Test]
 	public async Task ConcatMany_MultiplePlainStrings_CombinesAll()
@@ -207,8 +202,6 @@ public class MarkupStringTests
 		await Assert.That(manyResult.Render("ansi")).IsEqualTo(binaryResult.Render("ansi"));
 	}
 
-	// ── Substring ──────────────────────────────────────────────────
-
 	[Test]
 	public async Task Substring_PlainText_ExtractsCorrectRange()
 	{
@@ -228,12 +221,10 @@ public class MarkupStringTests
 		var part2 = AMS.MarkupSingle(blue, " World");
 		var combined = AMS.concat(part1, part2);
 
-		// Take "llo W" which spans both runs
 		var sub = AMS.substring(2, 5, combined);
 
 		await Assert.That(sub.ToPlainText()).IsEqualTo("llo W");
 		await Assert.That(sub.Length).IsEqualTo(5);
-		// Should have 2 runs, each clipped
 		await Assert.That(sub.Runs.Length).IsEqualTo(2);
 	}
 
@@ -254,8 +245,6 @@ public class MarkupStringTests
 
 		await Assert.That(sub.Length).IsEqualTo(0);
 	}
-
-	// ── Split ──────────────────────────────────────────────────────
 
 	[Test]
 	public async Task Split_PlainText_SplitsCorrectly()
@@ -278,8 +267,6 @@ public class MarkupStringTests
 		await Assert.That(parts.Length).IsEqualTo(1);
 		await Assert.That(parts[0].ToPlainText()).IsEqualTo("hello");
 	}
-
-	// ── Trim ───────────────────────────────────────────────────────
 
 	[Test]
 	public async Task Trim_BothSides_TrimsCorrectly()
@@ -308,8 +295,6 @@ public class MarkupStringTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("  hello");
 	}
 
-	// ── Optimize ───────────────────────────────────────────────────
-
 	[Test]
 	public async Task Optimize_AdjacentSameMarkup_MergesRuns()
 	{
@@ -318,12 +303,10 @@ public class MarkupStringTests
 		var part2 = AMS.MarkupSingle(red, " World");
 		var combined = AMS.concat(part1, part2);
 
-		// Before optimize: 2 runs
 		await Assert.That(combined.Runs.Length).IsEqualTo(2);
 
 		var optimized = AMS.optimize(combined);
 
-		// After optimize: 1 merged run
 		await Assert.That(optimized.Runs.Length).IsEqualTo(1);
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
 	}
@@ -342,8 +325,6 @@ public class MarkupStringTests
 		await Assert.That(optimized.Runs.Length).IsEqualTo(2);
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
 	}
-
-	// ── Render ─────────────────────────────────────────────────────
 
 	[Test]
 	public async Task Render_AnsiFormat_ContainsEscapeCodes()
@@ -417,8 +398,6 @@ public class MarkupStringTests
 		await Assert.That(htmlOutput).IsEqualTo("<b>Bold</b>");
 	}
 
-	// ── IndexOf ────────────────────────────────────────────────────
-
 	[Test]
 	public async Task IndexOf_Found_ReturnsCorrectIndex()
 	{
@@ -437,8 +416,6 @@ public class MarkupStringTests
 		await Assert.That(index).IsEqualTo(-1);
 	}
 
-	// ── Remove ─────────────────────────────────────────────────────
-
 	[Test]
 	public async Task Remove_MiddleSection_RemovesCorrectly()
 	{
@@ -447,8 +424,6 @@ public class MarkupStringTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("HelloWorld");
 	}
-
-	// ── Replace ────────────────────────────────────────────────────
 
 	[Test]
 	public async Task Replace_MiddleSection_ReplacesCorrectly()
@@ -459,8 +434,6 @@ public class MarkupStringTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Hello Beautiful World");
 	}
-
-	// ── Repeat ─────────────────────────────────────────────────────
 
 	[Test]
 	public async Task Repeat_ThreeTimes_RepeatsCorrectly()
@@ -481,8 +454,6 @@ public class MarkupStringTests
 		await Assert.That(result.Length).IsEqualTo(0);
 	}
 
-	// ── InsertAt ───────────────────────────────────────────────────
-
 	[Test]
 	public async Task InsertAt_Middle_InsertsCorrectly()
 	{
@@ -492,8 +463,6 @@ public class MarkupStringTests
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Hello World");
 	}
-
-	// ── EvaluateWith ───────────────────────────────────────────────
 
 	[Test]
 	public async Task EvaluateWith_CustomEvaluator_WorksCorrectly()
@@ -514,8 +483,6 @@ public class MarkupStringTests
 
 		await Assert.That(result).IsEqualTo("[Test]");
 	}
-
-	// ── Equality ───────────────────────────────────────────────────
 
 	[Test]
 	public async Task Equals_SameText_ReturnsTrue()
@@ -542,8 +509,6 @@ public class MarkupStringTests
 
 		await Assert.That(ams.Equals("Hello")).IsTrue();
 	}
-
-	// ── Pad ────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task Pad_Right_PadsCorrectly()
@@ -576,8 +541,6 @@ public class MarkupStringTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("--Hi--");
 	}
 
-	// ── MultipleWithDelimiter ──────────────────────────────────────
-
 	[Test]
 	public async Task MultipleWithDelimiter_JoinsCorrectly()
 	{
@@ -593,8 +556,6 @@ public class MarkupStringTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("a, b, c");
 	}
 
-	// ── Apply ──────────────────────────────────────────────────────
-
 	[Test]
 	public async Task Apply_ToUpper_TransformsText()
 	{
@@ -605,14 +566,11 @@ public class MarkupStringTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("HELLO");
 	}
 
-	// ── Immutability guarantees ───────────────────────────────────
-
 	[Test]
 	public async Task Immutability_RunsAreImmutableArray()
 	{
 		var ams = AMS.single("Hello");
 
-		// Runs property returns ImmutableArray — a value type that cannot be mutated
 		var runs = ams.Runs;
 		await Assert.That(runs).IsTypeOf<ImmutableArray<AttributeRun>>();
 	}
@@ -623,7 +581,6 @@ public class MarkupStringTests
 		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var ams = AMS.MarkupSingle(redMarkup, "Red");
 
-		// Markups within each run are ImmutableArray — cannot be mutated
 		var markups = ams.Runs[0].Markups;
 		await Assert.That(markups).IsTypeOf<ImmutableArray<IMarkup>>();
 	}
@@ -635,13 +592,11 @@ public class MarkupStringTests
 		var b = AMS.single(" World");
 		var combined = AMS.concat(a, b);
 
-		// Originals should be unchanged
 		await Assert.That(a.ToPlainText()).IsEqualTo("Hello");
 		await Assert.That(a.Length).IsEqualTo(5);
 		await Assert.That(b.ToPlainText()).IsEqualTo(" World");
 		await Assert.That(b.Length).IsEqualTo(6);
 
-		// Combined is a new instance
 		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello World");
 		await Assert.That(combined.Length).IsEqualTo(11);
 	}
@@ -652,11 +607,9 @@ public class MarkupStringTests
 		var ams = AMS.single("Hello, World!");
 		var sub = AMS.substring(7, 5, ams);
 
-		// Original unchanged
 		await Assert.That(ams.ToPlainText()).IsEqualTo("Hello, World!");
 		await Assert.That(ams.Length).IsEqualTo(13);
 
-		// Substring is independent
 		await Assert.That(sub.ToPlainText()).IsEqualTo("World");
 	}
 
@@ -670,13 +623,10 @@ public class MarkupStringTests
 
 		var optimized = AMS.optimize(combined);
 
-		// Original combined still has 2 runs
 		await Assert.That(combined.Runs.Length).IsEqualTo(2);
 
-		// Optimized has 1 merged run
 		await Assert.That(optimized.Runs.Length).IsEqualTo(1);
 
-		// Both have the same text
 		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello World");
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
 	}
@@ -687,14 +637,11 @@ public class MarkupStringTests
 		var ams = AMS.single("Hello World");
 		var removed = AMS.remove(ams, 5, 1);
 
-		// Original unchanged
 		await Assert.That(ams.ToPlainText()).IsEqualTo("Hello World");
 
-		// Removed is independent
 		await Assert.That(removed.ToPlainText()).IsEqualTo("HelloWorld");
 	}
 
-	// ── Sort-order invariant tests ────────────────────────────────
 	// Runs must always be sorted ascending by Start position.
 	// These tests verify the invariant is maintained across all operations.
 

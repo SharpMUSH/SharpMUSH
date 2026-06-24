@@ -4,41 +4,33 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 
-@* Prototype AdminScreen section nav: a "Configuration" kicker + grouped section
-   buttons (icon + label), active section highlighted in accent. No pop-out drawer. *@
 <div class="config-nav-title">@Loc["Configuration"]</div>
 
 <nav>
-    @* Server *@
     <div class="config-nav-group-label">@Loc["Server"]</div>
     @SectionLink("/admin/config/net", Icons.Material.Filled.NetworkCheck, Loc["Network"])
     @SectionLink("/admin/config/database", Icons.Material.Filled.Storage, Loc["Database"])
 
-    @* Performance *@
     <div class="config-nav-group-label">@Loc["Performance"]</div>
     @SectionLink("/admin/config/limit", Icons.Material.Filled.Timer, Loc["Limits"])
     @SectionLink("/admin/config/command", Icons.Material.Filled.Terminal, Loc["Commands"])
 
-    @* Security *@
     <div class="config-nav-group-label">@Loc["Security"]</div>
     @SectionLink("/admin/config/sitelock", Icons.Material.Filled.Lock, Loc["Sitelock"])
     @SectionLink("/admin/config/bannednames", Icons.Material.Filled.Block, Loc["BannedNames"])
     @SectionLink("/admin/config/restrictions", Icons.Material.Filled.GppBad, Loc["Restrictions"])
 
-    @* Content *@
     <div class="config-nav-group-label">@Loc["Content"]</div>
     @SectionLink("/admin/config/message", Icons.Material.Filled.Message, Loc["Messages"])
     @SectionLink("/admin/config/cosmetic", Icons.Material.Filled.Palette, Loc["Cosmetic"])
     @SectionLink("/admin/config/chat", Icons.Material.Filled.Chat, Loc["Chat"])
 
-    @* Logs & Files *@
     <div class="config-nav-group-label">@Loc["LogsAndFiles"]</div>
     @SectionLink("/admin/config/log", Icons.Material.Filled.Description, Loc["Logging"])
     @SectionLink("/admin/config/file", Icons.Material.Filled.Folder, Loc["Files"])
     @SectionLink("/admin/config/textfile", Icons.Material.Filled.TextSnippet, Loc["TextFiles"])
     @SectionLink("/admin/config/dump", Icons.Material.Filled.Save, Loc["DatabaseDumps"])
 
-    @* Advanced *@
     <div class="config-nav-group-label">@Loc["Advanced"]</div>
     @SectionLink("/admin/config/attribute", Icons.Material.Filled.Label, Loc["Attributes"])
     @SectionLink("/admin/config/flag", Icons.Material.Filled.Flag, Loc["Flags"])

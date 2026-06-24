@@ -46,8 +46,6 @@ public sealed class ScenePlugin
 	public override string Id => "scene";
 	public override string Version => "1.0.0";
 
-	// ── IServiceRegistrar ─────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Registers the Scene System's storage (this plugin owns it as of Phase 8) into the host container:
 	/// keyed per-provider <see cref="ISceneStorage"/> over the host-shared storage accessors, plus the
@@ -76,8 +74,6 @@ public sealed class ScenePlugin
 		services.AddHostedService<SceneHubContextHolder>();
 	}
 
-	// ── IEndpointContributor (Phase 9) ──────────────────────────────────────────────
-
 	/// <summary>
 	/// Maps the plugin-owned <c>SceneHub</c> at <c>/hubs/scene</c> into the host pipeline. The host invokes
 	/// this after mapping its own controllers/hubs (see <c>Program.ConfigureApp</c>). The MVC controller is
@@ -85,8 +81,6 @@ public sealed class ScenePlugin
 	/// </summary>
 	public void MapEndpoints(IEndpointRouteBuilder endpoints) =>
 		endpoints.MapHub<SceneHub>("/hubs/scene");
-
-	// ── IMigrationSource ──────────────────────────────────────────────────────────
 
 	/// <summary>The plugin's own assembly carries <c>Migration_AddScenes</c> (an <c>IArangoMigration</c>);
 	/// the host's <c>ArangoDatabase.Migrate()</c> feeds this to <c>migrator.AddMigrations(...)</c>.</summary>
@@ -120,7 +114,6 @@ public sealed class ScenePlugin
 	/// </summary>
 	public IEnumerable<string> SurrealStatements =>
 	[
-		// Vertices.
 		"DEFINE TABLE scene SCHEMALESS",
 		"DEFINE TABLE scene_pose SCHEMALESS",
 		"DEFINE TABLE scene_pose_edit SCHEMALESS",
@@ -129,12 +122,10 @@ public sealed class ScenePlugin
 		// this seed out of the core SurrealDB migration into the plugin alongside the scene schema.
 		"UPSERT counter:scene_id SET seq = 0",
 		"UPSERT counter:pose_id SET seq = 0",
-		// Scene first-class field indexes (status, scheduling, visibility, recency).
 		"DEFINE INDEX IF NOT EXISTS scene_status ON scene FIELDS status",
 		"DEFINE INDEX IF NOT EXISTS scene_scheduledfor ON scene FIELDS scheduledFor",
 		"DEFINE INDEX IF NOT EXISTS scene_public ON scene FIELDS isPublic",
 		"DEFINE INDEX IF NOT EXISTS scene_lastactivity ON scene FIELDS lastActivityAt",
-		// Structural edges (within the scene graph).
 		"DEFINE TABLE scene_first_pose TYPE RELATION",
 		"DEFINE TABLE scene_last_pose TYPE RELATION",
 		"DEFINE TABLE scene_pose_next TYPE RELATION",
@@ -153,7 +144,6 @@ public sealed class ScenePlugin
 		"DEFINE TABLE scene_plot_owner TYPE RELATION",
 		// The member edge (player -> scene) carries {role, showAs, isCurrent, grantedAt, memberName}.
 		"DEFINE TABLE scene_member TYPE RELATION",
-		// Edge traversal indexes.
 		"DEFINE INDEX IF NOT EXISTS scene_first_pose_in ON scene_first_pose FIELDS in",
 		"DEFINE INDEX IF NOT EXISTS scene_last_pose_in ON scene_last_pose FIELDS in",
 		"DEFINE INDEX IF NOT EXISTS scene_pose_next_in ON scene_pose_next FIELDS in",
@@ -177,8 +167,6 @@ public sealed class ScenePlugin
 		"DEFINE INDEX IF NOT EXISTS scene_member_out ON scene_member FIELDS out"
 	];
 
-	// ── IFlagSource ───────────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// The informational <c>SCENE_ROOM</c> object flag (symbol <c>S</c>, room-only, wizard set/unset),
 	/// moved out of every provider's built-in flag seed. Idempotent: the host UPSERTs/MERGEs by flag name.
@@ -193,8 +181,6 @@ public sealed class ScenePlugin
 			UnsetPermissions: ["wizard"],
 			TypeRestrictions: ["ROOM"])
 	];
-
-	// ── IBridgeSubscriptionSource ───────────────────────────────────────────────────
 
 	/// <summary>
 	/// The <c>game.scene.*</c> NATS→SignalR realtime leg. Subscribes to the transient core-NATS subject and

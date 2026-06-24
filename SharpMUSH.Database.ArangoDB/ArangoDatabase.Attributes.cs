@@ -96,12 +96,10 @@ public partial class ArangoDatabase
 	public async ValueTask<SharpAttributeEntry?> CreateOrUpdateAttributeEntryAsync(string name, string[] defaultFlags,
 		string? limit = null, string[]? enumValues = null, CancellationToken ct = default)
 	{
-		// Check if entry already exists
 		var existing = await GetSharpAttributeEntry(name, ct);
 
 		if (existing != null)
 		{
-			// Update existing entry - build document System.Text.Json.JsonElementally to omit null fields
 			var document = new Dictionary<string, object>
 			{
 				{ "_key", existing.Id!.Split('/')[1] },
@@ -125,7 +123,6 @@ public partial class ArangoDatabase
 		}
 		else
 		{
-			// Create new entry - build document System.Text.Json.JsonElementally to omit null fields
 			var document = new Dictionary<string, object>
 			{
 				{ "_key", name.ToUpper() },
@@ -277,7 +274,6 @@ public partial class ArangoDatabase
 			yield break;
 		}
 
-		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
 			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
@@ -328,12 +324,9 @@ public partial class ArangoDatabase
 			yield break;
 		}
 
-		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
 			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern  RETURN v";
-
-		// FILTER v.LongName =~ @pattern 
 
 		var queryResult = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
@@ -376,7 +369,6 @@ public partial class ArangoDatabase
 		//
 		// Results are sorted hierarchically (parent before children) by LongName.
 
-		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
 			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern SORT v.LongName ASC RETURN v";
@@ -416,7 +408,6 @@ public partial class ArangoDatabase
 		//
 		// Results are sorted hierarchically (parent before children) by LongName.
 
-		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		var pattern = $"(?i){attributePattern}"; // Add case-insensitive flag
 		const string query =
@@ -602,14 +593,12 @@ public partial class ArangoDatabase
 		var remaining = attribute.Skip(matches - 1).ToArray();
 		var lastId = actualResult.Last();
 
-		// Create Path
 		foreach (var nextAttr in remaining.Select((attrName, i) => (value: attrName, i)))
 		{
 			var longName = string.Join('`', attribute.SkipLast(remaining.Length - 1 - nextAttr.i));
 
 			var sharpAttributeEntry = await GetSharpAttributeEntry(longName, ct);
 
-			// Get flags from the attribute entry and resolve them
 			var flagNames = sharpAttributeEntry?.DefaultFlags ?? [];
 			var resolvedFlags = new List<SharpAttributeFlag>();
 			foreach (var flagName in flagNames)
@@ -667,7 +656,6 @@ public partial class ArangoDatabase
 			lastId = newOne.Id;
 		}
 
-		// Update Path
 		if (remaining.Length == 0)
 		{
 			await arangoDb.Document.UpdateAsync(transactionHandle, DatabaseConstants.Attributes,
@@ -713,7 +701,6 @@ public partial class ArangoDatabase
 	/// </summary>
 	private async ValueTask RemoveBranchFlagIfNoChildrenAsync(string parentAttrId, CancellationToken ct)
 	{
-		// Check if parent still has any children
 		var remainingChildren = await arangoDb.Query.ExecuteAsync<int>(handle,
 			$"RETURN LENGTH(FOR v IN 1..1 OUTBOUND @parentId GRAPH {DatabaseConstants.GraphAttributes} LIMIT 1 RETURN 1)",
 			new Dictionary<string, object> { { "parentId", parentAttrId } },
@@ -721,11 +708,9 @@ public partial class ArangoDatabase
 
 		if (remainingChildren.First() == 0)
 		{
-			// No children left — remove branch flag
 			var branchFlag = await GetAttributeFlagAsync("branch", ct);
 			if (branchFlag != null)
 			{
-				// Find and remove the edge from parent to branch flag
 				var edges = await arangoDb.Query.ExecuteAsync<string>(handle,
 					$"FOR e IN {DatabaseConstants.HasAttributeFlag} FILTER e._from == @parentId AND e._to == @flagId RETURN e._key",
 					new Dictionary<string, object>
@@ -807,33 +792,27 @@ public partial class ArangoDatabase
 
 	public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken ct = default)
 	{
-		// Set the contents to empty, or remove entirely if no children.
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
-		// Get the attribute path
 		var attrPath = await GetAttributeAsync(dbref, attribute, ct).ToListAsync(ct);
 		var targetAttr = attrPath.LastOrDefault();
 		if (targetAttr is null) return false;
 
-		// Check if attribute has children (just need to know if any exist)
 		var children = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} LIMIT 1 RETURN v._id",
 			cancellationToken: ct);
 
 		if (children.Any())
 		{
-			// Has children, just clear the value
 			await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Attributes,
 				new { Key = targetAttr.Key, Value = MModule.serialize(MModule.empty()) },
 				mergeObjects: true, cancellationToken: ct);
 		}
 	else
 		{
-			// No children, remove the attribute
 			await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphAttributes,
 				DatabaseConstants.Attributes, targetAttr.Key, cancellationToken: ct);
 
-			// Check if parent still has other children; if not, remove branch flag
 			// Parent is second-to-last in the path (if it's an attribute node)
 			if (attrPath.Count >= 2)
 			{
@@ -851,12 +830,10 @@ public partial class ArangoDatabase
 		// Wipe a list of attributes. We assume the calling code figured out the permissions part.
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
-		// Get the attribute path
 		var attrPath = await GetAttributeAsync(dbref, attribute, ct).ToListAsync(ct);
 		var targetAttr = attrPath.LastOrDefault();
 		if (targetAttr is null) return false;
 
-		// Get all descendants (children, grandchildren, etc.) - traverse to max depth
 		var descendants = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle,
 			$"FOR v IN 1..999 OUTBOUND {targetAttr.Id} GRAPH {DatabaseConstants.GraphAttributes} RETURN v",
 			cancellationToken: ct);
@@ -868,11 +845,9 @@ public partial class ArangoDatabase
 				DatabaseConstants.Attributes, descendant.Key, cancellationToken: ct);
 		}
 
-		// Remove the target attribute itself
 		await arangoDb.Graph.Vertex.RemoveAsync(handle, DatabaseConstants.GraphAttributes,
 			DatabaseConstants.Attributes, targetAttr.Key, cancellationToken: ct);
 
-		// Check if parent still has other children; if not, remove branch flag
 		if (attrPath.Count >= 2)
 		{
 			var parentAttr = attrPath[^2];

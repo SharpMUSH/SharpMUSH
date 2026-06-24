@@ -49,7 +49,6 @@ public class CachingBehaviorTests
 			MModule.single("@create QueryCachingBehavior Test Object"));
 		var dbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		// First call – populates cache
 		var result1 = await mediator.Send(new GetObjectNodeQuery(dbRef));
 
 		// Verify cache key exists. GetObjectNodeQuery delegates the cached load to the number-keyed
@@ -58,7 +57,6 @@ public class CachingBehaviorTests
 		var cached = await Cache.TryGetAsync<AnyOptionalSharpObject>(cacheKey);
 		await Assert.That(cached.HasValue).IsTrue();
 
-		// Second call – should come from cache
 		var result2 = await mediator.Send(new GetObjectNodeQuery(dbRef));
 
 		await Assert.That(result1.IsT0).IsEqualTo(result2.IsT0);
@@ -79,7 +77,6 @@ public class CachingBehaviorTests
 			MModule.single("@dig StreamCachingBehavior Test Room"));
 		var dbRef = Library.Models.DBRef.Parse(digResult.Message!.ToPlainText()!);
 
-		// First call – materialize and cache
 		var result1 = new List<AnySharpContent>();
 		await foreach (var item in mediator.CreateStream(new GetContentsQuery(dbRef)))
 		{
@@ -105,7 +102,6 @@ public class CachingBehaviorTests
 
 		await Assert.That(cached.HasValue).IsTrue();
 
-		// Second call – should come from cache
 		var result2 = new List<AnySharpContent>();
 		await foreach (var item in mediator.CreateStream(new GetContentsQuery(dbRef)))
 		{
@@ -130,7 +126,6 @@ public class CachingBehaviorTests
 			MModule.single("@create CacheInvalidation Test Object"));
 		var dbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		// Populate the cache for this object
 		var before = await mediator.Send(new GetObjectNodeQuery(dbRef));
 		await Assert.That(before.Object()!.Name).IsEqualTo("CacheInvalidation Test Object");
 
@@ -138,7 +133,6 @@ public class CachingBehaviorTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@name {dbRef}=CacheInvalidation Renamed Object"));
 
-		// Query again — should return the new name, not the stale cached one
 		var after = await mediator.Send(new GetObjectNodeQuery(dbRef));
 		await Assert.That(after.Object()!.Name).IsEqualTo("CacheInvalidation Renamed Object");
 	}
@@ -152,12 +146,10 @@ public class CachingBehaviorTests
 	{
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
-		// Create a new thing
 		var createResult = await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@create CacheInvalidation Visibility Test"));
 		var newDbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		// The new object should be queryable (cache was invalidated or wasn't stale)
 		var obj = await mediator.Send(new GetObjectNodeQuery(newDbRef));
 		await Assert.That(obj.IsNone).IsFalse();
 		await Assert.That(obj.Object()!.Name).IsEqualTo("CacheInvalidation Visibility Test");

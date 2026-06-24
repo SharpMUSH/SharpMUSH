@@ -71,7 +71,7 @@ public partial class Functions
 				);
 
 				return new CallState(setResult.Match(
-					_ => string.Empty, // $"{realLocated.Object().Name}/{args["0"].Message}",
+					_ => string.Empty,
 					failure => failure.Value));
 			});
 	}
@@ -378,7 +378,6 @@ public partial class Functions
 			executor, executor, objectStr!, LocateFlags.All,
 			async found =>
 			{
-				// Get all attributes matching the attribute pattern (wildcard)
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
 					attrsPattern ?? "*", checkParents,
 					IAttributeService.AttributePatternMode.Wildcard);
@@ -478,8 +477,6 @@ public partial class Functions
 					mode: IAttributeService.AttributeMode.Read,
 					parent: true);
 
-				// Check if attribute exists and has non-whitespace content
-				// Returns "1" or "0" based on tiny_booleans config setting
 				var hasValue = maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText());
 				return new CallState(
 					Configuration!.CurrentValue.Compatibility.TinyBooleans
@@ -510,8 +507,6 @@ public partial class Functions
 					mode: IAttributeService.AttributeMode.Read,
 					parent: false);
 
-				// Check if attribute exists and has non-whitespace content (no inheritance)
-				// Returns "1" or "0" based on tiny_booleans config setting
 				var hasValue = maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText());
 				return new CallState(
 					Configuration!.CurrentValue.Compatibility.TinyBooleans
@@ -636,12 +631,10 @@ public partial class Functions
 	{
 		if (parser.CurrentState.Arguments.Count == 0)
 		{
-			// List all flags known to the server
 			var flags = Mediator!.CreateStream(new GetAllObjectFlagsQuery());
 			return string.Join(" ", flags.Select(x => x.Name));
 		}
 
-		// List flags on an object or the object attribute
 		var dbrefAndAttr =
 			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -657,14 +650,12 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				// Object Flags
 				if (attributePattern is null)
 				{
 					var flags = found.Object().Flags.Value;
 					return string.Join(" ", await flags.Select(x => x.Name).ToArrayAsync());
 				}
 
-				// Attribute Flags
 				var attr = await AttributeService!.LazilyGetAttributeAsync(
 					executor, found, attributePattern, IAttributeService.AttributeMode.Read, false);
 
@@ -906,12 +897,10 @@ public partial class Functions
 	/// </summary>
 	private static async ValueTask<CallState> RegEditInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
-		// Get the string to edit - keep as MString
 		var stringArg = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var mstr = stringArg!;
-		var str = mstr.ToPlainText(); // For regex matching only
+		var str = mstr.ToPlainText();
 
-		// Get pattern/replacement pairs (remaining args after the first)
 		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).ToList();
 
 		var options = RegexOptions.None;
@@ -920,7 +909,6 @@ public partial class Functions
 			options |= RegexOptions.IgnoreCase;
 		}
 
-		// Process pattern/replacement pairs (every 2 elements)
 		for (int i = 0; i < args.Count - 1; i += 2)
 		{
 			var patternKv = args[i];
@@ -936,30 +924,26 @@ public partial class Functions
 
 				if (all)
 				{
-					// Replace all matches manually, working backwards to maintain indices
 					var matches = regex.Matches(str!).Cast<Match>().Reverse().ToList();
 					foreach (var match in matches)
 					{
 						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
-						// Use MModule.substring and MModule.concat to preserve markup
 						var before = MModule.substring(0, match.Index, mstr);
 						var after = MModule.substring(match.Index + match.Length, mstr.Length - match.Index - match.Length, mstr);
 						mstr = MModule.concat(MModule.concat(before, MModule.single(replacement)), after);
-						str = mstr.ToPlainText(); // Update plain text for next iteration
+						str = mstr.ToPlainText();
 					}
 				}
 				else
 				{
-					// Replace only the first match
 					var match = regex.Match(str!);
 					if (match.Success)
 					{
 						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
-						// Use MModule.substring and MModule.concat to preserve markup
 						var before = MModule.substring(0, match.Index, mstr);
 						var after = MModule.substring(match.Index + match.Length, mstr.Length - match.Index - match.Length, mstr);
 						mstr = MModule.concat(MModule.concat(before, MModule.single(replacement)), after);
-						str = mstr.ToPlainText(); // Update plain text for next iteration
+						str = mstr.ToPlainText();
 					}
 				}
 			}
@@ -979,13 +963,11 @@ public partial class Functions
 	{
 		var replacement = template;
 
-		// Replace $0, $1, etc. with captured groups
 		for (int j = 0; j < match.Groups.Count; j++)
 		{
 			replacement = replacement.Replace($"${j}", match.Groups[j].Value);
 		}
 
-		// Replace named captures
 		foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
 		{
 			var group = match.Groups[groupName];
@@ -995,7 +977,6 @@ public partial class Functions
 			}
 		}
 
-		// Evaluate the replacement
 		var evaluatedReplacement = await parser.FunctionParse(MModule.single(replacement));
 		return evaluatedReplacement?.Message?.ToPlainText() ?? replacement;
 	}
@@ -1021,12 +1002,10 @@ public partial class Functions
 
 			var regex = new Regex(regexpPattern, options);
 
-			// 1. Parse the object reference
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser, executor, executor, objectStr, LocateFlags.All,
 				async found =>
 				{
-					// 2. Get all attributes matching the attrsPattern (using wildcard pattern)
 					var attributes = await AttributeService!.GetAttributePatternAsync(
 						executor,
 						found,
@@ -1041,7 +1020,6 @@ public partial class Functions
 
 					var matchingAttributes = new List<string>();
 
-					// 3. Filter attributes whose values match the regexpPattern
 					foreach (var attr in attributes.AsAttributes)
 					{
 						var attrValue = attr.Value.ToPlainText();
@@ -1051,7 +1029,6 @@ public partial class Functions
 						}
 					}
 
-					// 4. Return the list of matching attribute names (space-separated)
 					return new CallState(string.Join(" ", matchingAttributes));
 				});
 		}
@@ -1315,15 +1292,12 @@ public partial class Functions
 
 		return (arg0, arg1) switch
 		{
-			// set(<object>/<attribute>, <attribute flag>)
 			(_, _) when HelperFunctions.SplitObjectAndAttr(arg0) is { IsT0: true } split =>
 				await SetAttributeFlag(split),
 
-			// set(<object>, <attribute>:<value>)
 			(_, _) when MModule.indexOf(arg1, ":") > 1
 				=> await SetAttributeValue(),
 
-			// set(<object>, <flag>)
 			_ => await SetObjectFlag()
 		};
 
@@ -1374,7 +1348,6 @@ public partial class Functions
 				{
 					var result = await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, found, arg1.ToPlainText(), false);
 
-					// Return empty string on success, error message on failure
 					return result.Message switch
 					{
 						{ } when result.Message!.ToPlainText() == "True" => string.Empty,
@@ -1792,7 +1765,6 @@ public partial class Functions
 			executor, executor, objectStr!, LocateFlags.All,
 			async found =>
 			{
-				// Get all attributes matching the attribute pattern (wildcard)
 				var attributes = await AttributeService!.GetAttributePatternAsync(executor, found,
 					attrsPattern ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
@@ -1802,7 +1774,6 @@ public partial class Functions
 					return attributes.AsError;
 				}
 
-				// Filter attributes whose values match the wildcard pattern
 				var matchingAttrs = new List<string>();
 
 				foreach (var attr in attributes.AsAttributes)
@@ -1954,7 +1925,6 @@ public partial class Functions
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
-		// Get the zone object from enactor
 		var zone = await enactor.Object().Zone.WithCancellation(CancellationToken.None);
 
 		if (zone.IsNone)
@@ -1962,7 +1932,6 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoZoneSet);
 		}
 
-		// Evaluate the attribute function on the zone object
 		var result = await AttributeService!.EvaluateAttributeFunctionAsync(
 			parser,
 			zone.Known,

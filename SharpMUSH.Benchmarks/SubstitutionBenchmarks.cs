@@ -11,23 +11,18 @@ public class SubstitutionBenchmarks : BaseBenchmark
 {
 	private IMUSHCodeParser? _parser;
 
-	// %# / %N — always available, no register setup required
 	private static readonly MString ExecDbRefCmd = MModule.single("think %#");
 	private static readonly MString ExecNameCmd = MModule.single("think %N");
 
-	// cat() with multiple %# to stress repeated substitution expansion
 	private static readonly MString Cat3Subst = MModule.single("[cat(%#,%#,%#)]");
 	private static readonly MString Cat10Subst = MModule.single(
 		$"[cat({string.Join(",", Enumerable.Repeat("%#", 10))})]");
 
-	// setq + read — exercises the q-register write+read path
 	private static readonly MString SetQRead = MModule.single("[setq(0,hello)]%q0");
 
-	// iter — exercises iteration register (%i0) population and access
 	private static readonly MString IterReg5 = MModule.single("iter(lnum(5),%i0)");
 	private static readonly MString IterReg50 = MModule.single("iter(lnum(50),%i0)");
 
-	// Nested substitutions: add() with %# embedded at various recursion depths
 	private static readonly MString Add1Subst = MModule.single("[add(0,%#)]");
 	private static readonly MString Add5Subst = MModule.single(
 		"[add(%#,[add(%#,[add(%#,[add(%#,%#)])])])]");

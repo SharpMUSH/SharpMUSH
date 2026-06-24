@@ -27,7 +27,6 @@ public partial class SurrealDatabase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var objKey = dbref.Number;
 
-		// Verify the object exists using the object table
 		var existResult = await ExecuteAsync(
 			"SELECT key FROM object:$key",
 			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
@@ -35,7 +34,6 @@ public partial class SurrealDatabase
 		var existRecords = existResult.GetValue<List<ObjectRecord>>(0)!;
 		if (existRecords.Count == 0) yield break;
 
-		// Walk the attribute tree step by step
 		var attrs = new List<AttributeRecord>();
 		string? currentParentKey = null;
 		var isFirst = true;
@@ -95,7 +93,6 @@ public partial class SurrealDatabase
 
 		var regexPattern = $"(?i)^{pattern}$";
 
-		// Get the typed ID for this object
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 		var objResult = await ExecuteAsync("SELECT * FROM object:$key", parameters, cancellationToken);
 		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
@@ -103,7 +100,6 @@ public partial class SurrealDatabase
 
 		var typedId = GetTypedId(objRecords[0].type, objKey);
 
-		// Recursively gather all attributes and filter
 		await foreach (var attr in GetAllAttributesForIdAsync(typedId, cancellationToken))
 		{
 			if (attr.LongName != null && Regex.IsMatch(attr.LongName, regexPattern, RegexOptions.IgnoreCase))
@@ -125,7 +121,6 @@ public partial class SurrealDatabase
 		var typedId = GetTypedId(objRecords[0].type, objKey);
 		var fullPattern = ToFullMatchRegex(attributePattern.ToLower());
 
-		// Recursively gather all attributes and filter
 		await foreach (var attr in GetAllAttributesForIdAsync(typedId, cancellationToken))
 		{
 			if (attr.LongName != null && Regex.IsMatch(attr.LongName.ToLower(), fullPattern))
@@ -140,7 +135,6 @@ public partial class SurrealDatabase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var objKey = dbref.Number;
 
-		// Verify the object exists using the object table
 		var existResult = await ExecuteAsync(
 			"SELECT key FROM object:$key",
 			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
@@ -254,7 +248,6 @@ public partial class SurrealDatabase
 		var ownerKey = ExtractKey(owner.Id!);
 		var serializedValue = MModule.serialize(value);
 
-		// Verify the object exists and determine its type via the object table
 		var objParams = new Dictionary<string, object?> { ["key"] = objKey };
 		var objResult = await ExecuteAsync("SELECT * FROM object:$key", objParams, cancellationToken);
 		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
@@ -262,7 +255,6 @@ public partial class SurrealDatabase
 
 		var typedRecordId = GetSurrealRecordId(objRecords[0].type.ToLower(), objKey);
 
-		// Walk or create the attribute path
 		string currentParentRecordId = typedRecordId;
 		string? lastAttrKey = null;
 
@@ -275,7 +267,6 @@ public partial class SurrealDatabase
 
 			if (isLast)
 			{
-				// For the target attribute, always set the value
 				var upsertParams = new Dictionary<string, object?>
 				{
 					["key"] = attrKey,
@@ -290,7 +281,6 @@ public partial class SurrealDatabase
 			}
 			else
 			{
-				// For intermediate nodes, use UPSERT preserving any existing value
 				var upsertParams = new Dictionary<string, object?>
 				{
 					["key"] = attrKey,
@@ -303,10 +293,8 @@ public partial class SurrealDatabase
 					upsertParams, cancellationToken);
 			}
 
-			// Ensure the has_attribute edge exists from parent to this attribute using UPSERT with deterministic ID
 			if (i == 0)
 			{
-				// Parent is a typed object node (player/room/thing/exit)
 				var edgeId = $"{currentParentRecordId.Replace(":", "_")}__attr_{EscapeString(attrKey)}";
 				var edgeParams = new Dictionary<string, object?>
 				{
@@ -338,7 +326,6 @@ public partial class SurrealDatabase
 
 		if (lastAttrKey == null) return false;
 
-		// Set ownership: remove old owner edge and create new one
 		var ownerParams = new Dictionary<string, object?>
 		{
 			["attrKey"] = lastAttrKey,
@@ -365,7 +352,6 @@ public partial class SurrealDatabase
 			branchParams, cancellationToken);
 	}
 
-	// Handle attribute entry flags for newly created attributes
 	for (var i = 0; i < attribute.Length; i++)
 	{
 		var longName = string.Join('`', attribute.Take(i + 1));
@@ -464,7 +450,6 @@ public partial class SurrealDatabase
 
 		var attrKey = ExtractKeyString(targetAttr.Id);
 
-		// Check for children
 		var childParams = new Dictionary<string, object?> { ["key"] = attrKey };
 		var childrenResult = await ExecuteAsync(
 			"SELECT count() AS cnt FROM has_attribute WHERE in = attribute:⟨$key⟩ GROUP ALL",
@@ -475,7 +460,6 @@ public partial class SurrealDatabase
 
 		if (hasChildren)
 		{
-			// Just clear the value
 			var clearParams = new Dictionary<string, object?>
 			{
 				["key"] = attrKey,
@@ -487,7 +471,6 @@ public partial class SurrealDatabase
 		}
 		else
 		{
-			// Remove the attribute entirely (edges are removed with DELETE on relations)
 			var deleteParams = new Dictionary<string, object?> { ["key"] = attrKey };
 			await ExecuteAsync("DELETE has_attribute WHERE out = attribute:⟨$key⟩", deleteParams, cancellationToken);
 			await ExecuteAsync("DELETE has_attribute_flag WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
@@ -495,7 +478,6 @@ public partial class SurrealDatabase
 			await ExecuteAsync("DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
 			await ExecuteAsync("DELETE attribute:⟨$key⟩", deleteParams, cancellationToken);
 
-			// Remove branch flag from parent if it no longer has children
 			if (attribute.Length > 1)
 			{
 				var parentLongName = string.Join('`', attribute.Take(attribute.Length - 1));
@@ -516,10 +498,8 @@ public partial class SurrealDatabase
 
 		var attrKey = ExtractKeyString(targetAttr.Id);
 
-		// Delete all descendants recursively
 		await WipeAttributeDescendantsAsync(attrKey, cancellationToken);
 
-		// Delete the target itself
 		var deleteParams = new Dictionary<string, object?> { ["key"] = attrKey };
 		await ExecuteAsync("DELETE has_attribute WHERE out = attribute:⟨$key⟩", deleteParams, cancellationToken);
 		await ExecuteAsync("DELETE has_attribute WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
@@ -528,7 +508,6 @@ public partial class SurrealDatabase
 		await ExecuteAsync("DELETE has_attribute_entry WHERE in = attribute:⟨$key⟩", deleteParams, cancellationToken);
 		await ExecuteAsync("DELETE attribute:⟨$key⟩", deleteParams, cancellationToken);
 
-		// Remove branch flag from parent if it no longer has children
 		if (attribute.Length > 1)
 		{
 			var parentLongName = string.Join('`', attribute.Take(attribute.Length - 1));
@@ -552,10 +531,8 @@ public partial class SurrealDatabase
 		{
 			if (string.IsNullOrEmpty(childKey)) continue;
 
-			// Recurse into children first
 			await WipeAttributeDescendantsAsync(childKey, ct);
 
-			// Then delete this child
 			var deleteParams = new Dictionary<string, object?> { ["key"] = childKey };
 			await ExecuteAsync("DELETE has_attribute WHERE out = attribute:⟨$key⟩", deleteParams, ct);
 			await ExecuteAsync("DELETE has_attribute WHERE in = attribute:⟨$key⟩", deleteParams, ct);
@@ -628,7 +605,6 @@ public partial class SurrealDatabase
 	{
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
-		// Try self first
 		var selfAttrs = await GetAttributeAsync(dbref, attribute, cancellationToken).ToArrayAsync(cancellationToken);
 		if (selfAttrs.Length == attribute.Length)
 		{
@@ -639,7 +615,6 @@ public partial class SurrealDatabase
 
 		if (!checkParent) yield break;
 
-		// Try parents
 		var objKey = dbref.Number;
 		var parentParams = new Dictionary<string, object?> { ["key"] = objKey };
 		var parentChain = await GetParentChainAsync(objKey, cancellationToken);
@@ -660,7 +635,6 @@ public partial class SurrealDatabase
 			}
 		}
 
-		// Try zones (on self and parents)
 		var allKeys = new List<int> { objKey };
 		allKeys.AddRange(parentChain);
 
@@ -726,7 +700,6 @@ public partial class SurrealDatabase
 			}
 		}
 
-		// Try zones (on self and parents)
 		var allKeys = new List<int> { objKey };
 		allKeys.AddRange(parentChain);
 
@@ -791,7 +764,6 @@ public partial class SurrealDatabase
 			["newKey"] = newKey
 		};
 
-		// Find all attribute keys owned by old owner
 		var response = await ExecuteAsync(
 			"SELECT VALUE in.key FROM has_attribute_owner WHERE out = player:$oldKey",
 			parameters, cancellationToken);
@@ -814,7 +786,6 @@ public partial class SurrealDatabase
 			}
 		}
 
-		// Clean up any remaining edges
 		await ExecuteAsync("DELETE has_attribute_owner WHERE out = player:$oldKey", parameters, cancellationToken);
 	}
 

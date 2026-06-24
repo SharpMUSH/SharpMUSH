@@ -18,24 +18,18 @@ public class PennMUSHOracleTests
 
 	[Test]
 	// TODO: Depends on backslash-space escaping behavior (\ → literal space in PennMUSH)
-	// [Arguments("decompose.2", "decompose(a\\ \\ \\ \\ b)", "a %b %bb")]
 	[Arguments("decompose.3", "decompose(s(tab%treturn%r))", "tab%treturn%r")]
 	[Arguments("decompose.4", "decompose(before(ansi(h,x),x)hello)", "hello")]
 	[Arguments("digest.1", "digest(md5,foo)", "acbd18db4cc2f85cedef654fccc4a4d8")]
 	[Arguments("digest.3", "digest(sha1,foo)", "0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33")]
 	// Skipped: RIPEMD160 not available in .NET 5+
-	// [Arguments("digest.5", "digest(ripemd160,foo)", "42cfa211018ea492fdee45ac637b7972a0ad6873")]
 	// Skipped: MD4 not available in .NET
-	// [Arguments("digest.6", "digest(md4,foo)", "0ac6700c491d70fb8650940b1ca1e4b2")]
 	[Arguments("base64.1", "encode64(test string)", "dGVzdCBzdHJpbmc=")]
 	[Arguments("lit.semi", "lit(;)", ";")]
 	[Arguments("lit.pct_hash", "lit(%#)", "%#")]
 	[Arguments("fn.add", "fn(add,1,2)", "3")]
 	[Arguments("fn.error", "fn(notafunction)", "#-1")]
 	// Skipped: requires @function myfn setup (object state)
-	// [Arguments("atfun.3", "myfn(test)", "CUSTOM-test")]
-	// Skipped: requires @function myfn setup (object state)
-	// [Arguments("atfun.4", "fn(myfn,test)", "#-1")]
 	[Arguments("fn.case", "[fn(ADD,1,2)]", "3")]
 	[Arguments("fn.zero_args_add", "[fn(add)]", "#-1 FUNCTION (ADD) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1")]
 	[Arguments("lit.1", "lit(hello world)", "hello world")]
@@ -85,7 +79,6 @@ public class PennMUSHOracleTests
 	[Arguments("fn.3", "fn(cat,hello,world)", "hello world")]
 	[Arguments("userfn.1", "fn(mid,hello,1,3)", "ell")]
 	// Skipped: mid-string function recognition — deliberate incompatibility
-	// [Arguments("qreg_noparse.1", "[setq(0,test)]lit(%q0)", "%q0")]
 	[Arguments("qreg_noparse.2", "[setq(0,test)]%q0", "test")]
 	[Arguments("qreg_noparse.3", "lit(%q0)", "%q0")]
 	[Arguments("lit_spaces.1", "lit(  hello   world  )", "  hello   world  ")]
@@ -170,7 +163,6 @@ public class PennMUSHOracleTests
 	[Arguments("reswitch.15", "reswitchalli(test STRING,E,1,0)", "1")]
 	[Arguments("reswitch.16", "reswitchalli(test STRING,.\\{4\\}\\\\\\s\\[A-Z\\]\\{6\\},9,t,1,E,2,0)", "912")]
 	// TODO: PennMUSH float sort has specific tie-breaking and formatting behavior
-	// [Arguments("sort.2", "sort(0.0 0 0.3 *foo*,f)", "0 *foo* 0.3")]
 	[Arguments("sort.3", "sort(a [ansi(h,a)] b [ansi(h,b)] c d [ansi(h,e)] f)", "a a b b c d e f")]
 	[Arguments("sort.4", "sort(3 [ansi(h,1)] [ansi(y,7)] 5)", "1 3 5 7")]
 	[Arguments("soundex.1", "soundex(a)", "A000")]

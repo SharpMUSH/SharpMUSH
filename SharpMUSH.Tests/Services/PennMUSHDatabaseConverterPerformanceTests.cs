@@ -31,7 +31,6 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	[Category("LongRunning")]
 	public async ValueTask LargeDatabaseConversionPerformance()
 	{
-		// Generate a large fake database (10MB+)
 		var databaseFilePath = await PennMUSHDatabaseGenerator.GenerateLargeDatabaseFileAsync(10 * 1024 * 1024);
 
 		try
@@ -50,7 +49,6 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			await Assert.That(result.IsSuccessful).IsTrue();
 			await Assert.That(result.TotalObjects).IsGreaterThan(0);
 
-			// Log performance metrics
 			var fileSize = new FileInfo(databaseFilePath).Length;
 			var fileSizeMB = fileSize / (1024.0 * 1024.0);
 
@@ -70,20 +68,17 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			Console.WriteLine($"MB/second: {fileSizeMB / (parseStopwatch.Elapsed + convertStopwatch.Elapsed).TotalSeconds:F2}");
 			Console.WriteLine($"===========================");
 
-			// Performance assertions - should complete in reasonable time
 			// SurrealDB embedded in-memory is slower for bulk inserts than ArangoDB/Memgraph
 			var dbProvider = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER") ?? "";
 			var isSurrealDb = dbProvider.Equals("surrealdb", StringComparison.OrdinalIgnoreCase);
 			var timeoutSeconds = isSurrealDb ? 120.0 : 60.0;
 
-			// For a 10MB database, we expect parsing + conversion to complete within the timeout
 			var totalTime = parseStopwatch.Elapsed + convertStopwatch.Elapsed;
 			await Assert.That(totalTime.TotalSeconds).IsLessThan(timeoutSeconds)
 				.Because($"Conversion of {fileSizeMB:F2}MB should complete in under {timeoutSeconds} seconds");
 		}
 		finally
 		{
-			// Cleanup: delete the temporary database file
 			if (File.Exists(databaseFilePath))
 			{
 				File.Delete(databaseFilePath);
@@ -100,7 +95,6 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	[Explicit("Performance test - run manually for benchmarking")]
 	public async ValueTask FixedSizeDatabaseConversionPerformance()
 	{
-		// Generate a database with exactly 1000 objects
 		var databaseFilePath = await PennMUSHDatabaseGenerator.GenerateDatabaseWithObjectCountAsync(1000);
 
 		try
@@ -116,7 +110,6 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			await Assert.That(result.IsSuccessful).IsTrue();
 			await Assert.That(result.TotalObjects).IsEqualTo(1000);
 
-			// Log metrics
 			Console.WriteLine($"1000-object conversion completed in {stopwatch.Elapsed.TotalSeconds:F3} seconds");
 			Console.WriteLine($"  - Players: {result.PlayersConverted}");
 			Console.WriteLine($"  - Rooms: {result.RoomsConverted}");
@@ -126,7 +119,6 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			Console.WriteLine($"  - Locks: {result.LocksConverted}");
 			Console.WriteLine($"  - Objects/sec: {1000 / stopwatch.Elapsed.TotalSeconds:F2}");
 
-			// Should complete in under 10 seconds for 1000 objects
 			await Assert.That(stopwatch.Elapsed.TotalSeconds).IsLessThan(10.0)
 				.Because("1000 objects should convert in under 10 seconds");
 		}
@@ -183,7 +175,6 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			}
 		}
 
-		// Display summary
 		Console.WriteLine("\n=== Scalability Summary ===");
 		Console.WriteLine("Objects | Time (s) | Obj/s");
 		Console.WriteLine("--------|----------|-------");
@@ -192,8 +183,6 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			Console.WriteLine($"{objects,7} | {seconds,8:F3} | {objPerSec,6:F2}");
 		}
 
-		// Verify reasonable scaling - larger databases should not be disproportionately slower
-		// Check that 5000 objects doesn't take more than 6x the time of 1000 objects
 		var time1000 = results.First(r => r.Objects == 1000).Seconds;
 		var time5000 = results.First(r => r.Objects == 5000).Seconds;
 		var scalingRatio = time5000 / time1000;

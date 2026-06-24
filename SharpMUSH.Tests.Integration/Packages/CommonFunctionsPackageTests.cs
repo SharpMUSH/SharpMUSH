@@ -22,17 +22,14 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task CommonFunctions_IsInstalled_WithObjectAndAttributes()
 	{
-		// The bootstrap installed the package at startup.
 		var package = await Registry.GetInstalledPackageAsync("common-functions");
 		await Assert.That(package.IsT0).IsTrue();
 		await Assert.That(package.AsT0.Version).IsEqualTo("1.1.0");
 
-		// Create mode: the package owns exactly one object (the functions thing).
 		var objects = await Registry.GetPackageObjectsAsync("common-functions");
 		await Assert.That(objects.Count).IsEqualTo(1);
 		await Assert.That(objects.Single().Ref).IsEqualTo("functions");
 
-		// The UI-helper softcode attributes are managed on that object.
 		var attrs = (await Registry.GetManagedAttributesAsync("common-functions"))
 			.Select(m => m.Attribute).ToList();
 		await Assert.That(attrs).Contains("FUN`HEADER");

@@ -10,7 +10,6 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public class InMemoryChannelBufferService : IChannelBufferService
 {
-	// Dictionary of channel ID to circular buffer of messages
 	private readonly ConcurrentDictionary<string, CircularBuffer<SharpChannelMessage>> _buffers = new();
 	private const int DefaultBufferSize = 100;
 
@@ -79,7 +78,6 @@ public class InMemoryChannelBufferService : IChannelBufferService
 			{
 				var result = new List<T>(Math.Min(count, _count));
 
-				// Start from the most recent and work backwards
 				var index = (_nextIndex - 1 + _buffer.Length) % _buffer.Length;
 				var retrieved = 0;
 

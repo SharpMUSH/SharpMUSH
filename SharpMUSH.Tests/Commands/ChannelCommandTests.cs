@@ -41,18 +41,15 @@ public class ChannelCommandTests
 			throw new InvalidOperationException($"Test player #{TestPlayerDbRef} not found");
 		}
 
-		// Create a test channel
 		await Mediator.Send(new CreateChannelCommand(
 			MModule.single(TestChannelName),
 			[TestChannelPrivilege],
 			_testPlayer
 		));
 
-		// Retrieve the created channel
 		var channelQuery = new GetChannelQuery(TestChannelName);
 		_testChannel = await Mediator.Send(channelQuery);
 
-		// Add the test player to the channel
 		if (_testChannel != null && playerNode.IsPlayer)
 		{
 			await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));

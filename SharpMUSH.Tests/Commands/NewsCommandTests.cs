@@ -23,10 +23,8 @@ public class NewsCommandTests
 	public async ValueTask NewsCommandWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test that news command runs and returns the main news page
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news"));
 
-		// Verify that NotifyService was called with content about news
 		await NotifyService
 			.Received() // Weak check. This is currently being interfered with by 'anews' also matching 'news'.
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -39,10 +37,8 @@ public class NewsCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "NewsTopic");
-		// Test news with the "welcome" topic
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("news welcome"));
 
-		// Verify that NotifyService was called with content about welcome
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
@@ -65,10 +61,8 @@ public class NewsCommandTests
 	public async ValueTask NewsNonExistentTopic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test news with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news nonexistenttopicxyz123"));
 
-		// Verify that NotifyService was called with "No news available"
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), executor, executor)).IsTrue();
 	}
 }
@@ -87,12 +81,10 @@ public class AhelpCommandTests
 	public async ValueTask AhelpCommandAndAnewsAliasWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		
-		// Test that ahelp command runs for God (player 1)
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("anews"));
 
-		// Verify that NotifyService was called with content about ahelp
 		await NotifyService
 			.Received(2)	
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -105,10 +97,8 @@ public class AhelpCommandTests
 	public async ValueTask AhelpWithTopicWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test ahelp with the "security" topic
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp security"));
 
-		// Verify that NotifyService was called with content about security
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -120,10 +110,8 @@ public class AhelpCommandTests
 	public async ValueTask AhelpNonExistentTopic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test ahelp with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp nonexistenttopicxyz123"));
 
-		// Verify that NotifyService was called with "No admin help available for '<topic>'"
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AhelpNoHelpForTopic), executor, executor)).IsTrue();
 	}
 }

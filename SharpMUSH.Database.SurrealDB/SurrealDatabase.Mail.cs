@@ -82,7 +82,6 @@ public partial class SurrealDatabase
 			["recipientKey"] = recipientKey
 		};
 
-		// Get mails received by recipient that were sent by sender
 		var response = await ExecuteAsync(
 			"SELECT * FROM mail WHERE id IN (SELECT VALUE out FROM received_mail WHERE in = player:$recipientKey) AND id IN (SELECT VALUE in FROM mail_sender WHERE out = object:$senderKey)",
 			parameters, cancellationToken);
@@ -214,7 +213,6 @@ public partial class SurrealDatabase
 			["newFolder"] = newFolder
 		};
 
-		// Update all mail in the folder for this player directly
 		await ExecuteAsync(
 			"UPDATE mail SET folder = $newFolder WHERE folder = $folder AND id IN (SELECT VALUE out FROM received_mail WHERE in = player:$key)",
 			parameters, cancellationToken);

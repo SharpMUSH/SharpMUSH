@@ -153,8 +153,6 @@ public class MailController(IMediator mediator, ILogger<MailController> logger) 
 		return Ok(new { deleted = true });
 	}
 
-	// ── Helpers ────────────────────────────────────────────────────────────────
-
 	private static async Task<string> FromNameAsync(SharpMail mail)
 		=> (await mail.From.WithCancellation(CancellationToken.None)).Object()?.Name ?? "(unknown)";
 

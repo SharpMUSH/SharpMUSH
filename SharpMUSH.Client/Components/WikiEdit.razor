@@ -6,7 +6,6 @@
 @if (Article is not null)
 {
     <div class="wiki-edit">
-        @* ── Header ── *@
         <div class="wiki-edit-header">
             <button type="button" class="wiki-edit-cancel" @onclick="OnCancel">
                 <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:15px;" /> Cancel
@@ -17,7 +16,6 @@
             </span>
         </div>
 
-        @* ── Title + category ── *@
         <div class="wiki-edit-titlerow">
             <input class="wiki-edit-title" value="@Article.Title"
                    @oninput="@(e => Article.Title = e.Value?.ToString() ?? string.Empty)"
@@ -30,7 +28,6 @@
             </div>
         </div>
 
-        @* ── Toolbar ── *@
         <div class="wiki-edit-toolbar">
             <button type="button" title="Bold" @onclick="@(() => Wrap("**", "**", false))"><b>B</b></button>
             <button type="button" title="Italic" @onclick="@(() => Wrap("*", "*", false))"><i>I</i></button>
@@ -59,7 +56,6 @@
             </div>
         }
 
-        @* ── Split editor / preview ── *@
         <div class="wiki-edit-split">
             <textarea id="@_taId" class="wiki-edit-textarea" spellcheck="false"
                       value="@Article.Content"
@@ -71,7 +67,6 @@
             </div>
         </div>
 
-        @* ── Tags + published ── *@
         <div class="wiki-edit-tags">
             <span class="wiki-edit-taglabel">Tags</span>
             @foreach (var tag in Article.Tags)
@@ -92,7 +87,6 @@
             </label>
         </div>
 
-        @* ── Save bar ── *@
         <div class="wiki-edit-savebar">
             <div class="wiki-edit-summary">
                 <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:14px;color:var(--text-faint);" />

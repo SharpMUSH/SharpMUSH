@@ -32,8 +32,6 @@ public class WikiControllerHtmlTests
             IsProtected: false,
             RevisionNumber: 1);
 
-    // ── GeneratePrerenderHtml ────────────────────────────────────────────────
-
     [Test]
     public async Task GeneratePrerenderHtml_ContainsDoctype()
     {
@@ -90,7 +88,6 @@ public class WikiControllerHtmlTests
         var page = MakePage(plain: longPlain);
         var html = WikiController.GeneratePrerenderHtml(page, "https://example.com/wiki/Test");
 
-        // Description meta should contain the truncated text and the ellipsis
         await Assert.That(html).Contains("og:description");
         await Assert.That(html).Contains(new string('A', 200));
     }
@@ -104,8 +101,6 @@ public class WikiControllerHtmlTests
         await Assert.That(html).DoesNotContain("<script>");
         await Assert.That(html).Contains("&amp;");
     }
-
-    // ── GenerateCharacterPrerenderHtml ───────────────────────────────────────
 
     [Test]
     public async Task GenerateCharacterPrerenderHtml_ContainsOgTypeProfile()

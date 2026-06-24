@@ -43,7 +43,6 @@ public class WebSocketServer
 		var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 		var hostname = context.Request.Headers.Host.ToString();
 
-		// Register connection in ConnectionService
 		await _connectionService.RegisterAsync(
 			nextPort,
 			remoteIp,
@@ -102,7 +101,6 @@ public class WebSocketServer
 				{
 					var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-					// Publish user input to MainProcess
 					await _publishEndpoint.Publish(
 						new WebSocketInputMessage(nextPort, message), ct);
 				}
@@ -118,7 +116,6 @@ public class WebSocketServer
 		}
 		finally
 		{
-			// Disconnect and notify MainProcess
 			await _connectionService.DisconnectAsync(nextPort);
 			_descriptorGenerator.ReleaseWebSocketDescriptor(nextPort);
 		}

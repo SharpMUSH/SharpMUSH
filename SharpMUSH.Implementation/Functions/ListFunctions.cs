@@ -99,12 +99,6 @@ public partial class Functions
 	[SharpFunction(Name = "filter", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter"])]
 	public static async ValueTask<CallState> Filter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Arg0: Object/Attribute (or #lambda/code or #apply[N]/funcname)
-		// Arg1: List
-		// Arg2: Delimiter (optional)
-		// Arg3: Output separator (optional)
-		// Arg4+: Additional arguments passed as v(1) through v(30)
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = MModule.plainText(rawAttrArg)!;
@@ -113,7 +107,6 @@ public partial class Functions
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
 		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
-		// Handle #lambda and #apply anonymous attribute forms
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
@@ -203,7 +196,6 @@ public partial class Functions
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
 		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
-		// Handle #lambda and #apply anonymous attribute forms
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
@@ -259,7 +251,6 @@ public partial class Functions
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
 
-		// Build environment registers for additional arguments (v(1) to v(30))
 		var environmentRegisters = new Dictionary<string, CallState>();
 		for (var i = 4; i < parser.CurrentState.ArgumentsOrdered.Count; i++)
 		{
@@ -277,7 +268,6 @@ public partial class Functions
 						["0"] = new CallState(item)
 					}
 				});
-				// FilterBool returns items where the function evaluates to a boolean true
 				return (await newParser.FunctionParse(attrValue))!.Message!.Truthy();
 			})
 			.ToListAsync();
@@ -315,18 +305,12 @@ public partial class Functions
 			}
 		}
 
-		// None were truthy: return the last arg's value
 		return lastValue;
 	}
 
 	[SharpFunction(Name = "fold", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "base"])]
 	public static async ValueTask<CallState> Fold(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Arg0: Object/Attribute (or #lambda/code or #apply[N]/funcname)
-		// Arg1: List
-		// Arg2: Base case (optional)
-		// Arg3: Delimiter (optional)
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = MModule.plainText(rawAttrArg)!;
@@ -424,7 +408,6 @@ public partial class Functions
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
 
-		// Fold through the rest of the list
 		for (var i = startIndex; i < list.Length; i++)
 		{
 			var newParser = parser.Push(parser.CurrentState with
@@ -557,18 +540,16 @@ public partial class Functions
 		var list = parser.CurrentState.Arguments["0"].Message!;
 		var delimiter = parser.CurrentState.Arguments["1"].Message!;
 
-		// items() counts the number of delimiter occurrences + 1
-		// This naturally handles null items
+		// items() counts the number of delimiter occurrences + 1; this naturally handles null items
 		var listStr = list.ToPlainText();
 		var delimStr = delimiter.ToPlainText();
 
 		if (string.IsNullOrEmpty(delimStr))
 		{
-			// If delimiter is empty, each character is an item
 			return ValueTask.FromResult(new CallState(listStr.Length));
 		}
 
-		var count = 1; // Start with 1 (for the first item)
+		var count = 1;
 		var index = 0;
 		while ((index = listStr.IndexOf(delimStr, index, StringComparison.Ordinal)) != -1)
 		{
@@ -698,10 +679,9 @@ public partial class Functions
 		var result = new List<MString>();
 		for (var i = 0; i < list.Length; i++)
 		{
-			var index = i + 1; // 1-based indexing
-			var negativeIndex = i - list.Length; // negative indexing from end
+			var index = i + 1;
+			var negativeIndex = i - list.Length;
 
-			// Check if this position should be deleted
 			if (!positionsSet.Contains(index) && !positionsSet.Contains(negativeIndex))
 			{
 				result.Add(list[i]);
@@ -714,11 +694,6 @@ public partial class Functions
 	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
 	public static async ValueTask<CallState> Map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Arg0: Object/Attribute (or #lambda/code or #apply[N]/funcname)
-		// Arg1: List
-		// Arg2: Delim
-		// Arg3: Sep
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = MModule.plainText(rawAttrArg)!;
@@ -727,7 +702,6 @@ public partial class Functions
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
 		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
-		// Handle #lambda and #apply anonymous attribute forms
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
@@ -847,15 +821,10 @@ public partial class Functions
 	[SharpFunction(Name = "mix", MinArgs = 3, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "delimiter", "outsep"])]
 	public static async ValueTask<CallState> Mix(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Arg0: Object/Attribute (or #lambda/code or #apply[N]/funcname)
-		// Arg1-Arg30: Up to 30 lists
-		// Last arg (if > 2 lists): delimiter
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = MModule.plainText(rawAttrArg)!;
 
-		// Determine delimiter and lists
 		var argCount = parser.CurrentState.ArgumentsOrdered.Count;
 		MString delimiter;
 		var listCount = argCount - 1;
@@ -871,7 +840,6 @@ public partial class Functions
 			delimiter = MModule.single(" ");
 		}
 
-		// Split all lists
 		var lists = new List<MString[]>();
 		var maxLength = 0;
 		for (var i = 1; i <= listCount; i++)
@@ -941,7 +909,6 @@ public partial class Functions
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
 
-		// Process each position
 		var attrResult = new List<MString>();
 		for (var i = 0; i < maxLength; i++)
 		{
@@ -969,12 +936,6 @@ public partial class Functions
 	[SharpFunction(Name = "munge", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "list3", "delimiter"])]
 	public static async ValueTask<CallState> Munge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Arg0: Object/Attribute (or #lambda/code or #apply[N]/funcname)
-		// Arg1: List1 (to be transformed)
-		// Arg2: List2 (to be rearranged based on list1's transformation)
-		// Arg3: Delimiter (optional)
-		// Arg4: Output separator (optional)
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = MModule.plainText(rawAttrArg)!;
@@ -1255,10 +1216,9 @@ public partial class Functions
 
 		for (var i = 0; i < list.Count; i++)
 		{
-			var index = i + 1; // 1-based indexing
-			var negativeIndex = i - list.Count; // negative indexing from end
+			var index = i + 1;
+			var negativeIndex = i - list.Count;
 
-			// Check if this position should be replaced
 			if (positionsSet.Contains(index) || positionsSet.Contains(negativeIndex))
 			{
 				list[i] = newItem ?? MModule.Empty();
@@ -1413,7 +1373,6 @@ public partial class Functions
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
 
-		// Custom comparison using the user-defined function
 		// We need to do this synchronously since List.Sort doesn't support async
 		var attrComparisonTasks = new List<Task<(int index, MString value, int order)>>();
 		for (var i = 0; i < list.Count; i++)
@@ -1458,8 +1417,6 @@ public partial class Functions
 	[SharpFunction(Name = "sortkey", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "attribute", "delimiter"])]
 	public static async ValueTask<CallState> SortKey(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// sortkey([<obj>/]<attrib>, <list>[, <sort type>[, <delimiter>[, <osep>]]])
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = MModule.plainText(rawAttrArg)!;
@@ -1533,7 +1490,6 @@ public partial class Functions
 			var attr = maybeAttr.AsAttribute;
 			var attrValue = attr.Last().Value;
 
-			// Generate keys for each element
 			keys = await list.ToAsyncEnumerable()
 				.Select((MString item, CancellationToken _) =>
 				{
@@ -1548,13 +1504,10 @@ public partial class Functions
 				.ToListAsync();
 		}
 
-		// Sort keys with their indices and use standard LINQ OrderBy with a comparison
 		var sortTypeStr = sortType.ToPlainText().ToLower();
 
-		// Create pairs of (index, key)
 		var indexedKeys = keys.Select((k, i) => new { Index = i, Key = k }).ToList();
 
-		// Use simple LINQ OrderBy based on keys
 		IEnumerable<int> sortedIndices = sortTypeStr switch
 		{
 			"n" => indexedKeys.OrderBy(x => int.TryParse(x.Key, out var n) ? n : 0).Select(x => x.Index),
@@ -1573,7 +1526,6 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
 		var list2Arg = args["1"].Message;
-		// The 4th argument is the delimiter used to split both lists and join the result
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
 
 		var list = MModule.splitList(delimiter, listArg);
@@ -1598,8 +1550,6 @@ public partial class Functions
 	[SharpFunction(Name = "step", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["start", "end", "increment", "expression"])]
 	public static async ValueTask<CallState> Step(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// step([<obj>/]<attr>, <list>, <step>[, <delim>[, <osep>]])
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = MModule.plainText(rawAttrArg)!;
@@ -1675,13 +1625,11 @@ public partial class Functions
 		var attrValue = attr.Last().Value;
 		var attrResult = new List<MString>();
 
-		// Process in chunks of 'step' size
 		for (var i = 0; i < list.Length; i += step)
 		{
 			var args = new Dictionary<string, CallState>();
 			var envRegs = new Dictionary<string, CallState>();
 
-			// Add up to 'step' elements as %0-%9 and v(10)-v(29)
 			for (var j = 0; j < step && (i + j) < list.Length; j++)
 			{
 				args[j.ToString()] = new CallState(list[i + j]);
@@ -1704,7 +1652,6 @@ public partial class Functions
 	{
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
 
-		// If single argument, split by spaces and return first non-empty element
 		if (orderedArgs.Count == 1)
 		{
 			var singleArg = await parser.FunctionParse(orderedArgs["0"].Message!);
@@ -1714,7 +1661,6 @@ public partial class Functions
 				: CallState.Empty;
 		}
 
-		// Original multi-argument logic: iterate through arguments to find the first non-empty one after parsing
 		var argsArray = orderedArgs.ToArray();
 		for (int i = 0; i < argsArray.Length - 1; i++)
 		{
@@ -1725,7 +1671,6 @@ public partial class Functions
 			}
 		}
 
-		// If no non-empty argument found, return the last argument
 		return new CallState(argsArray[^1].Value.Message);
 	}
 
@@ -1734,8 +1679,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		// strallof(expr1, expr2, ..., exprN, delimiter):
-		// Last arg is output delimiter. Return all non-empty results joined by it.
+		// Last arg is the output delimiter; return all non-empty results joined by it.
 		if (args.Count < 2)
 		{
 			return ValueTask.FromResult(CallState.Empty);
@@ -1834,7 +1778,6 @@ public partial class Functions
 				var current = list[i].ToPlainText();
 				var previous = list[i - 1].ToPlainText();
 
-				// Compare based on sort type
 				var isDuplicate = sortTypeStr.ToLower() switch
 				{
 					"f" => double.TryParse(current, out var c1) && double.TryParse(previous, out var p1) && Math.Abs(c1 - p1) < 0.0000001,
@@ -2007,7 +1950,6 @@ public partial class Functions
 		var comparer = SortService.GetEqualityComparer(sortTypeType);
 		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
 
-		// Elements in list1 that aren't in list2
 		var difference = aList1.Where(x => !set2.Contains(MModule.plainText(x)));
 
 		var sorted = SortService.Sort(Enumerable.DistinctBy(difference, MModule.plainText, comparer),
@@ -2035,7 +1977,6 @@ public partial class Functions
 		var comparer = SortService.GetEqualityComparer(sortTypeType);
 		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
 
-		// Elements that appear in both lists
 		var intersection = aList1.Where(x => set2.Contains(MModule.plainText(x)));
 
 		var sorted = SortService.Sort(Enumerable.DistinctBy(intersection, MModule.plainText, comparer),
@@ -2064,7 +2005,6 @@ public partial class Functions
 		var set1 = new HashSet<string>(aList1.Select(MModule.plainText), comparer);
 		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
 
-		// Elements that appear in only one of the lists
 		var symdiff = aList1.Where(x => !set2.Contains(MModule.plainText(x)))
 			.Concat(aList2.Where(x => !set1.Contains(MModule.plainText(x))));
 

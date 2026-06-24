@@ -23,7 +23,6 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_InitialLoad_DisplaysEmptyState()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -31,11 +30,9 @@ public class SuggestionManagementTests
 		var httpClient = CreateMockHttpClient(new SuggestionData());
 		ctx.Services.AddScoped(_ => httpClient);
 
-		// Act
 		var cut = ctx.Render<SuggestionManagement>();
-		await Task.Delay(100); // Wait for async load
+		await Task.Delay(100);
 
-		// Assert
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("No suggestion categories defined");
 	}
@@ -43,7 +40,6 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_WithCategories_DisplaysCategoryList()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -58,11 +54,9 @@ public class SuggestionManagementTests
 		});
 		ctx.Services.AddScoped(_ => httpClient);
 
-		// Act
 		var cut = ctx.Render<SuggestionManagement>();
-		await Task.Delay(200); // Wait for async load
+		await Task.Delay(200);
 
-		// Assert
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("Categories (2)");
 	}
@@ -70,7 +64,6 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_Statistics_DisplaysCorrectCounts()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -85,11 +78,9 @@ public class SuggestionManagementTests
 		});
 		ctx.Services.AddScoped(_ => httpClient);
 
-		// Act
 		var cut = ctx.Render<SuggestionManagement>();
-		await Task.Delay(200); // Wait for async load
+		await Task.Delay(200);
 
-		// Assert - Check that statistics section exists
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("Total Words");
 		await Assert.That(markup).Contains("Categories");
@@ -98,7 +89,6 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_ClickRefresh_ReloadsData()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -112,18 +102,15 @@ public class SuggestionManagementTests
 		});
 		ctx.Services.AddScoped(_ => httpClient);
 
-		// Act
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(200);
 
-		// Find and click refresh button
 		var refreshButton = cut.FindAll("button").FirstOrDefault(b => b.TextContent.Contains("Refresh"));
 		await Assert.That(refreshButton).IsNotNull();
 
 		refreshButton!.Click();
 		await Task.Delay(100);
 
-		// Assert - Component should still render
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("Suggestion Management");
 	}
@@ -131,7 +118,6 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_Title_DisplaysCorrectly()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -139,11 +125,9 @@ public class SuggestionManagementTests
 		var httpClient = CreateMockHttpClient(new SuggestionData());
 		ctx.Services.AddScoped(_ => httpClient);
 
-		// Act
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(100);
 
-		// Assert
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("Suggestion Management");
 	}
@@ -151,7 +135,6 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_Description_DisplaysCorrectly()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -159,10 +142,8 @@ public class SuggestionManagementTests
 		var httpClient = CreateMockHttpClient(new SuggestionData());
 		ctx.Services.AddScoped(_ => httpClient);
 
-		// Act
 		var cut = ctx.Render<SuggestionManagement>();
 
-		// Assert
 		var description = cut.Find("p.ph-subtitle");
 		await Assert.That(description.TextContent).Contains("spell-check and suggestion categories");
 	}
@@ -170,7 +151,6 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_HasAddCategoryButton()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -178,10 +158,8 @@ public class SuggestionManagementTests
 		var httpClient = CreateMockHttpClient(new SuggestionData());
 		ctx.Services.AddScoped(_ => httpClient);
 
-		// Act
 		var cut = ctx.Render<SuggestionManagement>();
 
-		// Assert
 		var addButton = cut.FindAll("button").FirstOrDefault(b => b.TextContent.Contains("Add Category"));
 		await Assert.That(addButton).IsNotNull();
 	}
@@ -189,7 +167,6 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_HasRefreshButton()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -197,10 +174,8 @@ public class SuggestionManagementTests
 		var httpClient = CreateMockHttpClient(new SuggestionData());
 		ctx.Services.AddScoped(_ => httpClient);
 
-		// Act
 		var cut = ctx.Render<SuggestionManagement>();
 
-		// Assert
 		var refreshButton = cut.FindAll("button").FirstOrDefault(b => b.TextContent.Contains("Refresh"));
 		await Assert.That(refreshButton).IsNotNull();
 	}
@@ -208,7 +183,6 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_WithMultipleCategories_DisplaysAllCategories()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -224,11 +198,9 @@ public class SuggestionManagementTests
 		});
 		ctx.Services.AddScoped(_ => httpClient);
 
-		// Act
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(100);
 
-		// Assert
 		var panelTitles = cut.FindAll(".panel-title, .mud-expand-panel-text");
 		var categoryNames = panelTitles.Select(p => p.TextContent.ToLower()).ToList();
 
@@ -240,7 +212,6 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_CategoryWithWords_DisplaysWordCount()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -254,11 +225,10 @@ public class SuggestionManagementTests
 		});
 		ctx.Services.AddScoped(_ => httpClient);
 
-		// Act
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(100);
 
-		// Assert — the per-category word count renders as a ".ph-chip" badge ("{n} words").
+		// the per-category word count renders as a ".ph-chip" badge ("{n} words").
 		var chips = cut.FindAll(".ph-chip");
 		var wordCountChip = chips.FirstOrDefault(c => c.TextContent.Contains("words"));
 
@@ -269,7 +239,6 @@ public class SuggestionManagementTests
 	[Test]
 	public async Task SuggestionManagement_LoadingState_ShowsProgressIndicator()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
@@ -277,10 +246,8 @@ public class SuggestionManagementTests
 		var httpClient = CreateMockHttpClient(new SuggestionData(), delayMs: 1000);
 		ctx.Services.AddScoped(_ => httpClient);
 
-		// Act
 		var cut = ctx.Render<SuggestionManagement>();
 
-		// Assert - Should show loading indicator before data loads
 		var progressIndicator = cut.FindAll(".mud-progress-circular");
 		await Assert.That(progressIndicator.Count).IsGreaterThan(0);
 	}

@@ -16,7 +16,6 @@ public class Migration_AddWiki : IArangoMigration
 
 	public async Task Up(IArangoMigrator migrator, ArangoHandle handle)
 	{
-		// ── node_wiki_pages ───────────────────────────────────────────────────
 		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.WikiPages))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection
@@ -73,7 +72,6 @@ public class Migration_AddWiki : IArangoMigration
 			});
 		}
 
-		// ── node_wiki_revisions ───────────────────────────────────────────────
 		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.WikiRevisions))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection

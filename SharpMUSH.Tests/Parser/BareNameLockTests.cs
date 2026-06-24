@@ -61,7 +61,6 @@ public class BareNameLockTests
 		var bep = BooleanParser;
 		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
-		// Test bare name combined with other lock expressions
 		await Assert.That(bep.Compile("me & #TRUE")(player, player)).IsTrue();
 		await Assert.That(bep.Compile("me | #FALSE")(player, player)).IsTrue();
 		await Assert.That(bep.Compile("!me")(player, player)).IsFalse();

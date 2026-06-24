@@ -45,21 +45,17 @@ public partial class OutputTransformService : IOutputTransformService
 	{
 		try
 		{
-			// Convert to string for processing
 			var text = Encoding.UTF8.GetString(rawOutput);
 
-			// Apply transformations in order
 			text = ApplyAnsiTransformations(text, capabilities, preferences);
 			text = ApplyCharsetTransformations(text, capabilities);
 
-			// Convert back to bytes with appropriate encoding
 			var targetEncoding = GetTargetEncoding(capabilities.Charset);
 			return targetEncoding.GetBytes(text);
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Error transforming output");
-			// Return original output on error
 			return rawOutput;
 		}
 	}
@@ -72,25 +68,21 @@ public partial class OutputTransformService : IOutputTransformService
 		// Always strip OSC 8 hyperlinks - telnet clients don't support them
 		text = StripOsc8Hyperlinks(text);
 
-		// If player preferences exist and either ANSI or COLOR is disabled, strip all ANSI
 		if (preferences is { AnsiEnabled: false } or { ColorEnabled: false })
 		{
 			return StripAnsiCodes(text);
 		}
 
-		// If client doesn't support ANSI, strip all codes
 		if (!capabilities.SupportsAnsi)
 		{
 			return StripAnsiCodes(text);
 		}
 
-		// If XTERM256 is disabled (either by preference or capability), downgrade to 16-color
 		if ((preferences != null && !preferences.Xterm256Enabled) || !capabilities.SupportsXterm256)
 		{
 			return DowngradeXterm256To16Color(text);
 		}
 
-		// No transformation needed
 		return text;
 	}
 
@@ -103,28 +95,23 @@ public partial class OutputTransformService : IOutputTransformService
 
 	private string StripAnsiCodes(string text)
 	{
-		// Remove all CSI ANSI escape sequences
 		return AnsiEscapeSequenceRegex().Replace(text, string.Empty);
 	}
 
 	private string StripOsc8Hyperlinks(string text)
 	{
-		// Replace OSC 8 hyperlink sequences with just their display text
 		return Osc8HyperlinkRegex().Replace(text, "$1");
 	}
 
 	private string DowngradeXterm256To16Color(string text)
 	{
-		// Convert 256-color codes to closest 16-color equivalent
 		return Xterm256ColorRegex().Replace(text, match =>
 		{
 			var fgOrBg = match.Groups[1].Value; // "3" for foreground, "4" for background
 			var colorCode = int.Parse(match.Groups[2].Value);
 
-			// Map 256-color code to 16-color code (0-15)
 			var basicColor = Map256ColorTo16Color(colorCode);
 
-			// Return ANSI 16-color code
 			return $"\x1b[{fgOrBg}{basicColor}m";
 		});
 	}
@@ -138,7 +125,6 @@ public partial class OutputTransformService : IOutputTransformService
 
 		if (color256 < 16)
 		{
-			// Direct mapping for standard colors
 			return color256;
 		}
 
@@ -157,10 +143,8 @@ public partial class OutputTransformService : IOutputTransformService
 		var g = (cubeIndex / 6) % 6;
 		var b = cubeIndex % 6;
 
-		// Map to 16-color by checking brightness
 		var bright = (r + g + b) > 6;
 
-		// Determine primary color
 		if (r > g && r > b) return bright ? 9 : 1; // Red (bright: 9, normal: 1)
 		if (g > r && g > b) return bright ? 10 : 2; // Green (bright: 10, normal: 2)
 		if (b > r && b > g) return bright ? 12 : 4; // Blue (bright: 12, normal: 4)
@@ -168,7 +152,6 @@ public partial class OutputTransformService : IOutputTransformService
 		if (r == b && r > g) return bright ? 13 : 5; // Magenta (bright: 13, normal: 5)
 		if (g == b && g > r) return bright ? 14 : 6; // Cyan (bright: 14, normal: 6)
 
-		// Grayscale
 		return bright ? 7 : 0; // White or Black
 	}
 

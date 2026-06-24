@@ -36,10 +36,8 @@ public class IncludeBacktickAttributeTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclPlain");
 		var marker = $"INCL_PLAIN_RESULT_{tag}";
 
-		// The included body sets a marker attribute on #1.
 		await Cmd($"&INCLUDEPLAIN_{tag} {obj}=&{marker} #1=ran_plain");
 
-		// Readable directly by get():
 		await Assert.That(await Eval($"get({obj}/INCLUDEPLAIN_{tag})")).IsEqualTo($"&{marker} #1=ran_plain")
 			.Because("the plain attribute should be readable by get()");
 
@@ -56,10 +54,8 @@ public class IncludeBacktickAttributeTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclBacktick");
 		var marker = $"INCL_BT_RESULT_{tag}";
 
-		// Same as the control, but the included attribute has a BACKTICK (tree) name.
 		await Cmd($"&INCLUDE`CAPTURE {obj}=&{marker} #1=ran_backtick");
 
-		// The backtick attribute is readable directly by get() (proves the name + value are stored fine).
 		await Assert.That(await Eval($"get({obj}/INCLUDE`CAPTURE)")).IsEqualTo($"&{marker} #1=ran_backtick")
 			.Because("the backtick attribute should be readable by get() (backticks are valid attr-name chars)");
 

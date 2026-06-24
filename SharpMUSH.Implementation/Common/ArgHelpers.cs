@@ -77,7 +77,6 @@ public static partial class ArgHelpers
 
 		var result = decimals.Aggregate(aggregateFunction);
 
-		// Format decimal to remove unnecessary trailing zeros and decimal point
 		return ValueTask.FromResult<CallState>(FormatDecimal(result));
 	}
 
@@ -300,7 +299,6 @@ public static partial class ArgHelpers
 			return null;
 		}
 
-		// Check if input contains '/' character which indicates room/obj format
 		var slashIndex = input.IndexOf('/');
 		if (slashIndex < 0 || slashIndex == 0)
 		{
@@ -312,7 +310,6 @@ public static partial class ArgHelpers
 		var roomName = inputSpan.Slice(0, slashIndex).Trim().ToString();
 		var objectsPart = inputSpan.Slice(slashIndex + 1).Trim().ToString();
 
-		// Parse the objects part as a name list
 		var objectNames = NameListString(objectsPart).ToList();
 
 		return (roomName, objectNames);

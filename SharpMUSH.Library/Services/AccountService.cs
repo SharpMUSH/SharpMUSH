@@ -12,7 +12,6 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 
 	public async ValueTask<SharpAccount?> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default)
 	{
-		// Detect email vs username by presence of '@'
 		SharpAccount? account = usernameOrEmail.Contains('@')
 			? await database.GetAccountByEmailAsync(usernameOrEmail, ct)
 			: await database.GetAccountByUsernameAsync(usernameOrEmail, ct);

@@ -28,7 +28,6 @@ public class ConnectionStateEventHandler(
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
 	{
-		// Trigger SOCKET`CONNECT when a new socket connects
 		// PennMUSH spec: socket`connect (descriptor, ip)
 		if (notification.OldState == IConnectionService.ConnectionState.None &&
 				notification.NewState == IConnectionService.ConnectionState.Connected)
@@ -39,7 +38,6 @@ public class ConnectionStateEventHandler(
 				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
 					? ip : "unknown";
 
-				// Show connect screen (connect.txt) to new connections
 				var connectFile = configuration.CurrentValue.Message.ConnectFile;
 				if (!string.IsNullOrEmpty(connectFile) && File.Exists(connectFile))
 				{
@@ -60,7 +58,6 @@ public class ConnectionStateEventHandler(
 			}
 		}
 
-		// Trigger PLAYER`DISCONNECT when a logged-in player disconnects
 		// PennMUSH spec: player`disconnect (objid, number of remaining connections, hidden?, cause of disconnection, ip, descriptor, conn() secs, idle() secs, recv bytes/sent bytes/command count)
 		if (notification.OldState == IConnectionService.ConnectionState.LoggedIn &&
 				notification.NewState == IConnectionService.ConnectionState.Disconnected &&
@@ -72,17 +69,14 @@ public class ConnectionStateEventHandler(
 				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
 					? ip : "unknown";
 
-				// Calculate remaining connections for this player
 				var remainingConnections = await connectionService.Get(notification.PlayerRef.Value).CountAsync();
 
-				// Calculate connection statistics
 				var connectedSecs = connectionData.Connected?.TotalSeconds.ToString("F0") ?? "0";
 				var idleSecs = connectionData.Idle?.TotalSeconds.ToString("F0") ?? "0";
 				var bytesRecv = connectionData.Metadata.TryGetValue("BytesReceived", out var recv) ? recv : "0";
 				var bytesSent = connectionData.Metadata.TryGetValue("BytesSent", out var sent) ? sent : "0";
 				var commandCount = connectionData.Metadata.TryGetValue("CommandCount", out var count) ? count : "0";
 
-				// Trigger PLAYER`DISCONNECT event
 				await eventService.TriggerEventAsync(
 					parser,
 					"PLAYER`DISCONNECT",
@@ -99,7 +93,6 @@ public class ConnectionStateEventHandler(
 			}
 		}
 
-		// Trigger SOCKET`DISCONNECT when a socket disconnects
 		// PennMUSH spec: socket`disconnect (former descriptor, former ip, cause of disconnection, recv bytes/sent bytes/command count)
 		if (notification.NewState == IConnectionService.ConnectionState.Disconnected)
 		{
@@ -109,7 +102,6 @@ public class ConnectionStateEventHandler(
 				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
 					? ip : "unknown";
 
-				// Calculate statistics following PennMUSH format
 				var bytesRecv = connectionData.Metadata.TryGetValue("BytesReceived", out var recv) ? recv : "0";
 				var bytesSent = connectionData.Metadata.TryGetValue("BytesSent", out var sent) ? sent : "0";
 				var commandCount = connectionData.Metadata.TryGetValue("CommandCount", out var count) ? count : "0";

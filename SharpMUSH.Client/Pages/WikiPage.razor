@@ -3,7 +3,6 @@
 
 <PageTitle>@Slug — Wiki — SharpMUSH</PageTitle>
 
-@* Article chrome (back link, category kicker, title, meta, TOC) lives in WikiDisplay. *@
 <WikiView @key="@($"{Ns}:{Category}:{Slug}")" Slug="@Slug" Namespace="@Ns" Category="@Category" Mode="WikiView.WikiMode.View" />
 
 @code {

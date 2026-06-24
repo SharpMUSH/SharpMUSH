@@ -5,11 +5,8 @@ using SharpMUSH.Server.Controllers;
 
 namespace SharpMUSH.Tests.Server.Controllers;
 
-// ── Concrete stub for the abstract base ──────────────────────────────────────
-
 internal sealed class TestableController : ApiControllerBase
 {
-    // Expose the protected helpers as public so tests can call them
     public IActionResult GetOk<T>(T value, string? message = null) => Ok(value, message);
     public IActionResult GetCreated<T>(string location, T value) => Created(location, value);
     public IActionResult GetNoContent() => NoContent();
@@ -21,7 +18,6 @@ internal sealed class TestableController : ApiControllerBase
     public IActionResult GetProblem422(string detail) => Problem422(detail);
     public IActionResult GetProblem500(string detail = "An unexpected error occurred.") => Problem500(detail);
 
-    // Identity helpers (need a live HttpContext with a ClaimsPrincipal set)
     public string? GetAccountId() => CurrentAccountId;
     public string? GetUsername() => CurrentUsername;
     public int? GetCharacterKey() => CurrentCharacterKey;
@@ -55,8 +51,6 @@ public class ApiControllerBaseTests
         return controller;
     }
 
-    // ── Ok<T> envelope ───────────────────────────────────────────────────────
-
     [Test]
     public async Task Ok_ReturnsSuccessEnvelopeWithData()
     {
@@ -82,8 +76,6 @@ public class ApiControllerBaseTests
         await Assert.That(envelope.Message).IsEqualTo("created");
     }
 
-    // ── Created<T> envelope ──────────────────────────────────────────────────
-
     [Test]
     public async Task Created_ReturnsCreatedResultWithLocationAndEnvelope()
     {
@@ -99,8 +91,6 @@ public class ApiControllerBaseTests
         await Assert.That(envelope.Data).IsEqualTo("item");
     }
 
-    // ── NoContent ────────────────────────────────────────────────────────────
-
     [Test]
     public async Task NoContent_Returns204()
     {
@@ -108,8 +98,6 @@ public class ApiControllerBaseTests
         var result = controller.GetNoContent() as NoContentResult;
         await Assert.That(result!.StatusCode).IsEqualTo(204);
     }
-
-    // ── RFC 7807 error helpers ────────────────────────────────────────────────
 
     [Test]
     public async Task Problem400_Returns400WithProblemDetails()
@@ -165,8 +153,6 @@ public class ApiControllerBaseTests
         var result = BuildController().GetProblem500() as ObjectResult;
         await Assert.That(result!.StatusCode).IsEqualTo(500);
     }
-
-    // ── Identity helpers ─────────────────────────────────────────────────────
 
     [Test]
     public async Task CurrentAccountId_WhenClaimPresent_ReturnsValue()

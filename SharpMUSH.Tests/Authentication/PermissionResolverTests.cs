@@ -73,7 +73,6 @@ public class PermissionResolverTests
 	[Test]
 	public async ValueTask LowerPriorityOpinion_AppliesWhenHigherIsInherit()
 	{
-		// The high-priority role is Inherit on this scope (no opinion), so the lower role decides.
 		var high = Role("high", 100, (PortalPermission.WikiAdmin, PermissionState.Inherit));
 		var low = Role("low", 10, (PortalPermission.WikiAdmin, PermissionState.Allow));
 		var granted = Resolver.Resolve([high, low]);
@@ -104,13 +103,11 @@ public class PermissionResolverTests
 		var player = BuiltInRoles.All.Single(r => r.Slug == "player");
 		var granted = Resolver.Resolve([player]);
 
-		// Contributor: read drafts, create/edit pages, upload images.
 		await Assert.That(granted.Contains(PortalPermission.WikiRead)).IsTrue();
 		await Assert.That(granted.Contains(PortalPermission.WikiCreate)).IsTrue();
 		await Assert.That(granted.Contains(PortalPermission.WikiEdit)).IsTrue();
 		await Assert.That(granted.Contains(PortalPermission.MediaUpload)).IsTrue();
 
-		// But not delete, moderation, or any admin scope.
 		await Assert.That(granted.Contains(PortalPermission.WikiDelete)).IsFalse();
 		await Assert.That(granted.Contains(PortalPermission.WikiAdmin)).IsFalse();
 		await Assert.That(granted.Contains(PortalPermission.PlayersView)).IsFalse();

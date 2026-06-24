@@ -52,7 +52,6 @@ public sealed class ProblemDetailsExceptionHandler(
         {
             Status = status,
             Title = title,
-            // In development expose the full exception message; in production use a generic string.
             Detail = env.IsDevelopment() ? exception.Message : "An unexpected error occurred.",
             Instance = httpContext.Request.Path,
         };

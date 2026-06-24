@@ -18,13 +18,10 @@
 @* Forces a hard browser refresh whenever the server unloads/reloads a plugin DLL (generic signal). *@
 <PluginChangeReloader />
 
-@* ── Phosphor Refined shell: full-height sidebar + content column ── *@
 <div class="phosphor-shell">
 
-    @* ── Left sidebar (full height) ── *@
     <NavMenu IsCollapsed="@_sidebarCollapsed" />
 
-    @* ── LeftSidebar widget zone (optional) ── *@
     @if (_layout is not null && _layout.Settings.LeftSidebarEnabled && !_isConfigRoute)
     {
         <div class="phosphor-widget-aside" style="@($"width:{_layout.Settings.LeftSidebarWidth};")">
@@ -32,17 +29,14 @@
         </div>
     }
 
-    @* ── Content column ── *@
     <div class="phosphor-content-col">
 
-        @* ── Topbar ── *@
         <header class="phosphor-topbar">
             <button class="phosphor-icon-btn" @onclick="ToggleSidebar" title="Toggle navigation">
                 <MudIcon Icon="@Icons.Material.Filled.Menu" Style="font-size:20px;" />
             </button>
             <div class="phosphor-topbar-title">@PageTitle()</div>
 
-            @* TopBar widget zone *@
             @if (_layout is not null)
             {
                 <ZoneRenderer Zone="WidgetZone.TopBar" Layout="_layout" />
@@ -50,7 +44,6 @@
 
             <div style="flex:1;"></div>
 
-            @* Global search bar *@
             <div class="phosphor-search">
                 <span class="phosphor-search-icon">⌕</span>
                 <input type="search"
@@ -63,7 +56,6 @@
 
             <LanguagePicker />
 
-            @* Terminal toggle *@
             <button class="@($"phosphor-icon-btn{(_terminalOpen ? " phosphor-icon-btn--active" : "")}")"
                     @onclick="ToggleTerminal"
                     title="@(_terminalOpen ? "Close Terminal" : "Open Terminal")">
@@ -72,7 +64,6 @@
 
             <div class="phosphor-topbar-divider"></div>
 
-            @* Character / Account switcher *@
             @if (AccountAuth.IsLoggedIn || _isDebugAuth)
             {
                 <MudMenu Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
@@ -133,13 +124,11 @@
             }
         </header>
 
-        @* ── Scrollable main content ── *@
         <main class="phosphor-main"
               style="@(_terminalOpen ? "padding-bottom:300px;" : "")">
             @Body
         </main>
 
-        @* ── Footer widget zone — only when explicitly enabled ── *@
         @if (_layout is not null && _layout.Settings.FooterEnabled)
         {
             <div class="phosphor-footer">
@@ -147,7 +136,6 @@
             </div>
         }
 
-        @* ── Terminal drawer (slides up over content) ── *@
         @if (_terminalOpen)
         {
             <div class="phosphor-terminal">
@@ -169,7 +157,6 @@
         }
     </div>
 
-    @* ── RightSidebar widget zone (optional) ── *@
     @if (_layout is not null && _layout.Settings.RightSidebarEnabled && !_isConfigRoute)
     {
         <div class="phosphor-widget-aside phosphor-widget-aside--right" style="@($"width:{_layout.Settings.RightSidebarWidth};")">
@@ -221,14 +208,12 @@
             _terminalOpen = true;
         }
 
-        // Load characters if logged in and not yet populated
         if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
             await AccountAuth.GetCharactersAsync();
 
         _isDebugAuth = authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         await EnsureAccountRoutingAsync();
 
-        // Load the shell chrome layout (global scope: top bar, sidebars, footer).
         LayoutService.OnLayoutChanged += HandleLayoutChanged;
         _layout = await LayoutService.GetLayoutAsync(LayoutScopes.Global);
     }
@@ -284,7 +269,6 @@
         _isConfigRoute = NavigationManager.Uri.Contains("/admin/config");
     }
 
-    @* Page title derived from the active route, mirroring the prototype topbar. *@
     private string PageTitle()
     {
         if (_isConfigRoute) return Loc["Configuration"];

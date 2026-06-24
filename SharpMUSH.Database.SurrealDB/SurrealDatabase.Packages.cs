@@ -102,8 +102,6 @@ public partial class SurrealDatabase : IPackageRegistryService
 	private static DateTimeOffset ParsePackageTimestamp(string iso) =>
 		DateTimeOffset.Parse(iso, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 
-	// ── Installed packages ─────────────────────────────────────────────────
-
 	public async Task UpsertInstalledPackageAsync(InstalledPackageRecord package)
 	{
 		var parameters = new Dictionary<string, object?>
@@ -160,8 +158,6 @@ public partial class SurrealDatabase : IPackageRegistryService
 		await ExecuteAsync("DELETE type::thing('sys_package', $pkg)", parameters);
 	}
 
-	// ── Package-created objects ────────────────────────────────────────────
-
 	public async Task UpsertPackageObjectAsync(PackageObjectRecord record)
 	{
 		var parameters = new Dictionary<string, object?>
@@ -195,8 +191,6 @@ public partial class SurrealDatabase : IPackageRegistryService
 		await ExecuteAsync("DELETE type::thing('sys_package_object', $key)",
 			new Dictionary<string, object?> { ["key"] = $"{packageId}/{@ref}" });
 	}
-
-	// ── Managed attributes ─────────────────────────────────────────────────
 
 	public async Task UpsertManagedAttributeAsync(ManagedAttributeRecord record)
 	{
@@ -244,8 +238,6 @@ public partial class SurrealDatabase : IPackageRegistryService
 			new Dictionary<string, object?> { ["key"] = $"{packageId}/{objid}/{attribute}" });
 	}
 
-	// ── Managed object structure ────────────────────────────────────────────
-
 	public async Task UpsertManagedStructureAsync(ManagedStructureRecord record)
 	{
 		var parameters = new Dictionary<string, object?>
@@ -278,8 +270,6 @@ public partial class SurrealDatabase : IPackageRegistryService
 		await ExecuteAsync("DELETE type::thing('sys_managed_structure', $key)",
 			new Dictionary<string, object?> { ["key"] = $"{packageId}/{objid}" });
 	}
-
-	// ── Dependencies ───────────────────────────────────────────────────────
 
 	public async Task SetPackageDependenciesAsync(string packageId, IReadOnlyList<PackageDependencyRecord> dependencies)
 	{
@@ -323,8 +313,6 @@ public partial class SurrealDatabase : IPackageRegistryService
 	private static PackageDependencyRecord MapDependency(SysPackageDependencyDbRecord r) => new(
 		r.packageId, r.dependsOnId, r.constraint);
 
-	// ── Remotes ────────────────────────────────────────────────────────────
-
 	public async Task UpsertPackageRemoteAsync(PackageRemoteRecord remote)
 	{
 		var parameters = new Dictionary<string, object?>
@@ -364,8 +352,6 @@ public partial class SurrealDatabase : IPackageRegistryService
 		await ExecuteAsync("DELETE type::thing('sys_remote', $name)",
 			new Dictionary<string, object?> { ["name"] = name });
 	}
-
-	// ── Revisions ──────────────────────────────────────────────────────────
 
 	public async Task AddPackageRevisionAsync(PackageRevisionRecord revision)
 	{

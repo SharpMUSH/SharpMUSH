@@ -30,7 +30,6 @@ public partial class MemgraphDatabase
 		// Memgraph is single-database — backup current state before wiping
 		var backupPath = await MemgraphStagingDatabase.BackupCurrentDatabaseAsync(driver, logger, ct);
 
-		// Wipe the current database
 		await using var session = driver.AsyncSession();
 		await session.RunAsync("MATCH (n) DETACH DELETE n");
 		_migrated = false;
@@ -52,7 +51,6 @@ public partial class MemgraphDatabase
 		await session.RunAsync("MATCH (n) DETACH DELETE n");
 		_migrated = false;
 
-		// Re-migrate
 		await Migrate(cancellationToken);
 
 		logger.LogInformation("Database wiped and re-initialized successfully.");
@@ -70,7 +68,6 @@ public partial class MemgraphDatabase
 			// Storage mode IN_MEMORY_ANALYTICAL is set via container startup flags
 			// (--storage-mode=IN_MEMORY_ANALYTICAL) to avoid MVCC transaction conflicts.
 
-			// Create indexes (Memgraph uses CREATE INDEX ON syntax)
 			var indexQueries = new[]
 			{
 "CREATE INDEX ON :Object(key)",
@@ -95,7 +92,6 @@ public partial class MemgraphDatabase
 "CREATE INDEX ON :SysManagedAttribute(objid)",
 "CREATE INDEX ON :SysRemote(name)",
 "CREATE INDEX ON :SysPackageRevision(packageId)",
-// Portal RBAC system data — custom roles and account→role assignments.
 "CREATE INDEX ON :SysRole(slug)"
 };
 
@@ -135,17 +131,10 @@ public partial class MemgraphDatabase
 					{ /* Index already exists — safe to ignore */ }
 				}
 
-				// Scene System schema (graph_sharp_sys_scene) is no longer seeded here — Phase 5 moved it
-				// into the Scene plugin's IMigrationSource.CypherStatements, run after this built-in batch
-				// (see RunPluginCypherMigrations). The ISceneService storage moved into the plugin too (Phase 8),
-				// reaching this provider's driver through the host-shared IMemgraphStorageAccessor.
-
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-			// Create Counter for auto-increment object keys (migration seeds keys 0-9)
 			await ExecuteWithRetryAsync("MERGE (c:Counter {name: 'object_key'}) ON CREATE SET c.value = 9", ct: cancellationToken);
 
-			// Create Room Zero (key=0)
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 0})
 ON CREATE SET o.name = 'Room Zero', o.type = 'ROOM', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
@@ -154,7 +143,6 @@ ON CREATE SET r.aliases = []
 MERGE (r)-[:IS_OBJECT]->(o)
 """, new { now }, cancellationToken);
 
-			// Create Player One - God (key=1)
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 1})
 ON CREATE SET o.name = 'God', o.type = 'PLAYER', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
@@ -163,7 +151,6 @@ ON CREATE SET p.passwordHash = '', p.passwordSalt = '', p.aliases = [], p.quota 
 MERGE (p)-[:IS_OBJECT]->(o)
 """, new { now }, cancellationToken);
 
-			// Create Room Two - Master Room (key=2)
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 2})
 ON CREATE SET o.name = 'Master Room', o.type = 'ROOM', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
@@ -172,8 +159,7 @@ ON CREATE SET r.aliases = []
 MERGE (r)-[:IS_OBJECT]->(o)
 """, new { now }, cancellationToken);
 
-			// Create Room Three - Ancestor Room (config ancestor_room). Like Room Zero / Master Room,
-			// a room has no location/home edges — it is a pure attribute holder.
+			// A room has no location/home edges — it is a pure attribute holder.
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 3})
 ON CREATE SET o.name = 'Ancestor Room', o.type = 'ROOM', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
@@ -182,7 +168,6 @@ ON CREATE SET r.aliases = []
 MERGE (r)-[:IS_OBJECT]->(o)
 """, new { now }, cancellationToken);
 
-			// Create Thing Four - Ancestor Player (config ancestor_player) in Master Room
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 4})
 ON CREATE SET o.name = 'Ancestor Player', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
@@ -195,7 +180,6 @@ MERGE (t)-[:AT_LOCATION]->(r)
 MERGE (t)-[:HAS_HOME]->(r)
 """, new { now }, cancellationToken);
 
-			// Create Thing Five - Ancestor Exit (config ancestor_exit) in Master Room
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 5})
 ON CREATE SET o.name = 'Ancestor Exit', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
@@ -208,7 +192,6 @@ MERGE (t)-[:AT_LOCATION]->(r)
 MERGE (t)-[:HAS_HOME]->(r)
 """, new { now }, cancellationToken);
 
-			// Create Thing Six - Ancestor Thing (config ancestor_thing) in Master Room
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 6})
 ON CREATE SET o.name = 'Ancestor Thing', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
@@ -221,7 +204,6 @@ MERGE (t)-[:AT_LOCATION]->(r)
 MERGE (t)-[:HAS_HOME]->(r)
 """, new { now }, cancellationToken);
 
-			// Create Player Seven - Package Manager (config package_manager) at Room Zero
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 7})
 ON CREATE SET o.name = 'Package Manager', o.type = 'PLAYER', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
@@ -234,7 +216,6 @@ MERGE (p)-[:AT_LOCATION]->(r)
 MERGE (p)-[:HAS_HOME]->(r)
 """, new { now }, cancellationToken);
 
-			// Create Thing Eight - HTTP Handler (config http_handler) in Master Room
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 8})
 ON CREATE SET o.name = 'HTTP Handler', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
@@ -247,7 +228,6 @@ MERGE (t)-[:AT_LOCATION]->(r)
 MERGE (t)-[:HAS_HOME]->(r)
 """, new { now }, cancellationToken);
 
-			// Create Thing Nine - Event Handler (config event_handler) in Master Room
 			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 9})
 ON CREATE SET o.name = 'Event Handler', o.type = 'THING', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
@@ -260,19 +240,16 @@ MERGE (t)-[:AT_LOCATION]->(r)
 MERGE (t)-[:HAS_HOME]->(r)
 """, new { now }, cancellationToken);
 
-			// Player One at Room Zero
 			await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: 1}), (r:Room {key: 0})
 MERGE (p)-[:AT_LOCATION]->(r)
 """, ct: cancellationToken);
 
-			// Player One home is Room Zero
 			await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: 1}), (r:Room {key: 0})
 MERGE (p)-[:HAS_HOME]->(r)
 """, ct: cancellationToken);
 
-			// Ownership: God owns the core objects, the ancestors, and the handler things; PM owns itself
 			await ExecuteWithRetryAsync("""
 MATCH (ownerPlayer:Player {key: 1})
 MATCH (o:Object) WHERE o.key IN [0, 1, 2, 3, 4, 5, 6, 8, 9]
@@ -283,32 +260,24 @@ MATCH (pm:Player {key: 7}), (o:Object {key: 7})
 MERGE (o)-[:HAS_OWNER]->(pm)
 """, ct: cancellationToken);
 
-			// Create initial flags
 			await CreateInitialFlags(cancellationToken);
 
-			// Create initial attribute flags
 			await CreateInitialAttributeFlags(cancellationToken);
 
-			// Create initial powers
 			await CreateInitialPowers(cancellationToken);
 
-			// Create initial attribute entries
 			await CreateInitialAttributeEntries(cancellationToken);
 
-			// Give Player One the WIZARD flag
 			await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: 1}), (f:ObjectFlag {name: 'WIZARD'})
 MERGE (o)-[:HAS_FLAG]->(f)
 """, ct: cancellationToken);
 
-			// Give the Package Manager (#7) the WIZARD flag
 			await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: 7}), (f:ObjectFlag {name: 'WIZARD'})
 MERGE (o)-[:HAS_FLAG]->(f)
 """, ct: cancellationToken);
 
-			// Phase 2a: seed plugin-contributed flags (IFlagSource), then run plugin Cypher migrations
-			// (IMigrationSource). Both ride the same plumbing as the built-in seed batch above.
 			await SeedPluginFlags(cancellationToken);
 			await RunPluginCypherMigrations(cancellationToken);
 
@@ -393,8 +362,6 @@ MERGE (o)-[:HAS_FLAG]->(f)
 ("OPEN_OK", "", null, [], [], ["ROOM"]),
 ("GOING", "g", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
 ("GOING_TWICE", "", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
-// Scene System SCENE_ROOM flag is no longer seeded here — Phase 5 moved it into the Scene
-// plugin's IFlagSource, seeded after this built-in batch by SeedPluginFlags.
 		};
 
 		foreach (var f in flags)

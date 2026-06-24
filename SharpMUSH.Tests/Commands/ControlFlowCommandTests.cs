@@ -148,7 +148,6 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclDollar");
 
-		// Set an attribute with a $...: command prefix pattern
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&INCL_DOLLAR_TEST {objDbRef}=$testcmd *:@pemit #1=IncludeDollarPrefix_Executed_71934"));
 
@@ -168,7 +167,6 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclCaret");
 
-		// Set an attribute with a ^...: listen prefix pattern
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&INCL_CARET_TEST {objDbRef}=^*says*:@pemit #1=IncludeCaretPrefix_Executed_82045"));
 
@@ -188,7 +186,6 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclNoPrefix");
 
-		// Set an attribute without any prefix pattern
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&INCL_NOPREFIX_TEST {objDbRef}=@pemit #1=IncludeNoPrefix_Executed_93156"));
 
@@ -208,7 +205,6 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclNobreak");
 
-		// Set an attribute that includes an @break
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&INCL_NOBRK_TEST {objDbRef}=@pemit #1=IncludeNobreak_Before_14267;@break 1"));
 
@@ -221,7 +217,6 @@ public class ControlFlowCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "IncludeNobreak_Before_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
-		// The command after @include/nobreak should still execute
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -234,7 +229,6 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclDollarArg");
 
-		// Set an attribute with a $...: prefix that uses %0
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&INCL_DOLLARARG_TEST {objDbRef}=$testarg *:@pemit #1=IncludeDollarArg_%0_25378"));
 
@@ -253,7 +247,6 @@ public class ControlFlowCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var baselineNotificationCount = NotifyService.ReceivedCalls().Count();
-		// Test that @break/queued with a truthy condition still breaks the command list
 		await Parser.CommandListParse(
 			MModule.single("@pemit #1=BreakQueued_Before_36489;@break/queued 1=@pemit #1=BreakQueued_Action_36489;@pemit #1=BreakQueued_After_36489"));
 

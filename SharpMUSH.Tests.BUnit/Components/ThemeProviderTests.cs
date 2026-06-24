@@ -19,7 +19,6 @@ public abstract class ThemeProviderTestBase : BunitContext
 	{
 		Services.AddMudServices();
 		Services.AddLocalization();
-		// Allow all JS interop calls (MudThemeProvider uses JS for system-preference detection)
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -68,7 +67,6 @@ public class ThemeProviderRenderTests : ThemeProviderTestBase
 		var cut = Render<ThemeProvider>(p => p
 			.AddChildContent("<span></span>"));
 
-		// MudThemeProvider is rendered as a component — verify it is present in the tree
 		var mudTheme = cut.FindComponent<MudThemeProvider>();
 		await Assert.That(mudTheme.Instance is not null).IsTrue();
 	}

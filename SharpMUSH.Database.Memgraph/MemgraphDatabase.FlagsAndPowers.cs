@@ -72,7 +72,6 @@ aliases: $aliases, setPermissions: $setPerms, unsetPermissions: $unsetPerms, typ
 	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default)
 	{
 		var objKey = dbref.Object().Key;
-		// Check if already set
 		var existing = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:HAS_FLAG]->(f:ObjectFlag {name: $fname})
 RETURN count(f) AS cnt

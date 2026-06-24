@@ -29,7 +29,6 @@ public class Migration_AddScenes : IArangoMigration
 
 	public async Task Up(IArangoMigrator migrator, ArangoHandle handle)
 	{
-		// ── Vertex DOCUMENT collections ─────────────────────────────────────────
 		if (!await migrator.Context.Collection.ExistAsync(handle, SceneArangoConstants.SharpScenes))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection
@@ -178,7 +177,6 @@ public class Migration_AddScenes : IArangoMigration
 			});
 		}
 
-		// ── Edge collections ────────────────────────────────────────────────────
 		string[] edgeCollections =
 		[
 			SceneArangoConstants.SceneFirstPose,
@@ -212,7 +210,6 @@ public class Migration_AddScenes : IArangoMigration
 			}
 		}
 
-		// ── Named graph with edge definitions ─────────────────────────────────────
 		// Create the graph directly (NOT via ApplyStructureAsync) — that calls
 		// GetStructureAsync, which fails to deserialize some existing collections' index
 		// metadata on ArangoDB 3.10+ (same reason Migration_AddAccounts/AddRoles do this).

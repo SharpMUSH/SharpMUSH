@@ -42,7 +42,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	IOptionsWrapper<SharpMUSHOptions> Configuration,
 	IServiceProvider ServiceProvider) : IMUSHCodeParser
 {
-	// Cached service instances to avoid repeated DI resolution on every parse operation
 	private readonly IMediator _mediator = ServiceProvider.GetRequiredService<IMediator>();
 	private readonly INotifyService _notifyService = ServiceProvider.GetRequiredService<INotifyService>();
 	private readonly IConnectionService _connectionService = ServiceProvider.GetRequiredService<IConnectionService>();
@@ -55,7 +54,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	private static readonly IVocabulary LexerVocabulary =
 		new SharpMUSHLexer(new StringSpanInputStream(string.Empty, string.Empty)).Vocabulary;
 
-	// Command trie for efficient prefix-based command lookup
 	private readonly CommandTrie _commandTrie = BuildCommandTrie(CommandLibrary);
 
 	/// <summary>
@@ -72,7 +70,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		foreach (var (commandName, commandInfo) in commandLibrary)
 		{
-			if (commandInfo.IsSystem) // Only add system commands to trie
+			if (commandInfo.IsSystem)
 			{
 				trie.Add(commandName, commandInfo.LibraryInformation);
 			}
@@ -167,7 +165,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		bool lenient = false)
 		where TContext : ParserRuleContext
 	{
-		// Use provided parser or default to this instance
 		parser ??= this;
 
 		StringSpanInputStream inputStream = new(MModule.plainText(text), methodName);
@@ -238,8 +235,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (string.IsNullOrEmpty(MModule.plainText(text)))
 			return CallState.Empty;
 
-		// Ensure we have invocation tracking for standalone function parsing
-		// Check if tracking is already initialized - if not, create a new parser with tracking
 		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
 
 		var parser = needsTracking
@@ -282,7 +277,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (string.IsNullOrEmpty(MModule.plainText(text).ToString()))
 			return CallState.Empty;
 
-		// Replicate the tracking logic from FunctionParse
 		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
 		var parser = needsTracking
 			? Push(new ParserState(
@@ -560,20 +554,16 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			{
 				PredictionMode = GetPredictionMode()
 			},
-			Trace = false // Don't trace during validation
+			Trace = false
 		};
 
-		// Create custom error listener to collect errors
 		var errorListener = new ParserErrorListener(plaintext.ToString());
 
-		// Remove default error listeners and add our custom one
 		sharpParser.RemoveErrorListeners();
 		sharpParser.AddErrorListener(errorListener);
 
 		try
 		{
-			// Parse based on the specified parse type
-			// We just need to trigger the parsing - we don't use the result
 			switch (parseType)
 			{
 				case ParseType.Function:
@@ -604,8 +594,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		}
 		catch (RecognitionException)
 		{
-			// Errors are collected by the error listener
-			// RecognitionException is expected during error recovery
 		}
 
 		return errorListener.Errors;
@@ -656,12 +644,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Trace = false
 		};
 
-		// Remove error listeners to avoid noise during analysis
 		sharpParser.RemoveErrorListeners();
 
 		try
 		{
-			// Parse to get the parse tree
 			ParserRuleContext context;
 			switch (parseType)
 			{
@@ -691,12 +677,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 					break;
 			}
 
-			// Analyze the parse tree for semantic information
 			return AnalyzeSemanticTokens(context, bufferedTokenSpanStream, plaintext.ToString());
 		}
 		catch (RecognitionException)
 		{
-			// If parsing fails, fall back to syntactic tokens
 			return ConvertSyntacticToSemanticTokens(Tokenize(text));
 		}
 	}
@@ -794,7 +778,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		return parentCtx switch
 		{
-			// ── Structural characters used as *literal text* (not as operators) ──────────────
 			// CCARET (>), EQUALS (=), COMMAWS (,), SEMICOLON (;), CPAREN ()) appear here when
 			// they are NOT serving as argument separators, delimiters or register-close markers.
 			// OTHER inside beginGenericText still needs content-based classification
@@ -808,56 +791,47 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			SharpMUSHParser.GenericTextContext
 				=> SemanticTokenType.Text,
 
-			// ── Function ──────────────────────────────────────────────────────────────────────
 			// FUNCHAR is the open-paren+name; COMMAWS and CPAREN inside the function are operators.
 			SharpMUSHParser.FunctionContext when token.Type == SharpMUSHParser.FUNCHAR
 				=> ClassifyFunction(token.Text),
 			SharpMUSHParser.FunctionContext
 				=> SemanticTokenType.Operator,
 
-			// ── Bracket [ ] substitution ──────────────────────────────────────────────────────
 			SharpMUSHParser.BracketPatternContext
 				=> SemanticTokenType.BracketSubstitution,
 
-			// ── Brace { } group ───────────────────────────────────────────────────────────────
 			SharpMUSHParser.BracePatternContext
 				=> SemanticTokenType.BraceGroup,
 
-			// ── ANSI escape codes ─────────────────────────────────────────────────────────────
 			SharpMUSHParser.AnsiContext
 				=> SemanticTokenType.AnsiCode,
 
-			// ── Backslash escape sequences ────────────────────────────────────────────────────
 			SharpMUSHParser.EscapedTextContext
 				=> SemanticTokenType.EscapeSequence,
 
-			// ── %q<register> — opening token (q<) and closing > are both Register ────────────
+			// %q<register> — opening token (q<) and closing > are both Register
 			SharpMUSHParser.ComplexSubstitutionSymbolContext
 				=> SemanticTokenType.Register,
 
-			// ── %x substitution codes — all single-char codes including %=, %# etc. ──────────
 			// EQUALS here means %=; DBREF means %#; CALLED_DBREF means %@ — all Substitution.
 			SharpMUSHParser.SubstitutionSymbolContext
 				=> SemanticTokenType.Substitution,
 
-			// ── The leading % of any %x substitution ─────────────────────────────────────────
 			// PERCENT is the only direct terminal child of ExplicitEvaluationStringContext.
 			SharpMUSHParser.ExplicitEvaluationStringContext
 			or SharpMUSHParser.BraceExplicitEvaluationStringContext
 				=> SemanticTokenType.Substitution,
 
-			// ── Structural operators — separators that act at command/argument scope ─────────
 			SharpMUSHParser.StartEqSplitCommandContext
 			or SharpMUSHParser.StartEqSplitCommandArgsContext
-				=> SemanticTokenType.Operator,   // EQUALS acting as command split
+				=> SemanticTokenType.Operator,
 
 			SharpMUSHParser.CommaCommandArgsContext
-				=> SemanticTokenType.Operator,   // COMMAWS acting as argument separator
+				=> SemanticTokenType.Operator,
 
 			SharpMUSHParser.CommandListContext
-				=> SemanticTokenType.Operator,   // SEMICOLON acting as command separator
+				=> SemanticTokenType.Operator,
 
-			// ── Fallback for context-independent tokens ───────────────────────────────────────
 			_ => ClassifyByTokenType(token, sourceText)
 		};
 	}
@@ -890,10 +864,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	private SemanticTokenType ClassifyFunction(string functionText)
 	{
-		// Remove the opening parenthesis to get the function name
 		var functionName = functionText.TrimEnd('(', ' ', '\t', '\r', '\n', '\f');
 
-		// Check if it's a built-in function
 		if (FunctionLibrary.TryGetValue(functionName, out var functionInfo)
 			|| FunctionLibrary.TryGetValue(functionName.ToLowerInvariant(), out functionInfo))
 		{
@@ -910,13 +882,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	private static SemanticTokenType ClassifyOther(string text, string sourceText)
 	{
-		// Check if it's a number
 		if (int.TryParse(text, out _) || double.TryParse(text, out _))
 		{
 			return SemanticTokenType.Number;
 		}
 
-		// Check if it's an object reference (dbref)
 		if (text.StartsWith('#') && text.Length > 1)
 		{
 			return SemanticTokenType.ObjectReference;
@@ -932,7 +902,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var modifiers = SemanticTokenModifier.None;
 
-		// Mark built-in functions and substitutions as default library
 		if (semanticType == SemanticTokenType.Function ||
 				semanticType == SemanticTokenType.Substitution ||
 				semanticType == SemanticTokenType.Register)
@@ -1002,7 +971,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			{
 				if (depth > 0)
 				{
-					// Closes a real bracket — decrement depth
 					depth--;
 				}
 				else
@@ -1022,7 +990,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				&& tokens[i + 1].Type == SharpMUSHLexer.ANY
 				&& tokens[i + 1].Text == "[")
 			{
-				// Escaped bracket opener at depth 0
 				pendingEscapedOpeners++;
 			}
 		}
@@ -1046,7 +1013,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			{
 				if (depth > 0)
 				{
-					// Closes a real brace — decrement depth
 					depth--;
 				}
 				else
@@ -1066,7 +1032,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				&& tokens[i + 1].Type == SharpMUSHLexer.ANY
 				&& tokens[i + 1].Text == "{")
 			{
-				// Escaped brace opener at depth 0
 				pendingEscapedOpeners++;
 			}
 		}

@@ -1,4 +1,3 @@
-// Converted from Markup.fs — namespace MarkupString.MarkupImplementation
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -13,8 +12,6 @@ namespace MarkupString.MarkupImplementation;
 /// legacy markup with no LinkKind deserialises to navigation behaviour.
 /// </summary>
 public enum LinkKind { Url = 0, Command = 1 }
-
-// ── Struct records ─────────────────────────────────────────────────────────────
 
 /// <summary>
 /// Describes the ANSI/terminal formatting for an AnsiMarkup span.
@@ -46,8 +43,6 @@ public readonly record struct HtmlStructure
     public string? Attributes { get; init; }
 }
 
-// ── IMarkup interface ─────────────────────────────────────────────────────────
-
 /// <summary>
 /// Defines how to wrap a text segment in a given output format.
 /// Implemented by NeutralMarkup, AnsiMarkup and HtmlMarkup.
@@ -66,8 +61,6 @@ public interface IMarkup
     string Optimize(string text);
 }
 
-// ── NeutralMarkup ─────────────────────────────────────────────────────────────
-
 public sealed class NeutralMarkup : IMarkup
 {
     public static readonly NeutralMarkup Instance = new();
@@ -80,8 +73,6 @@ public sealed class NeutralMarkup : IMarkup
     public string WrapAndRestoreAs(string _format, string text, IMarkup _) => text;
     public string Optimize(string text)                                 => text;
 }
-
-// ── AnsiMarkup ────────────────────────────────────────────────────────────────
 
 public sealed class AnsiMarkup : IMarkup
 {
@@ -298,8 +289,6 @@ public sealed class AnsiMarkup : IMarkup
         return s;
     }
 
-    // ── IMarkup ────────────────────────────────────────────────────────────────
-
     public string Prefix  => string.Empty;
     public string Postfix => string.Empty.EndWithTrueClear().ToString();
 
@@ -358,8 +347,6 @@ public sealed class AnsiMarkup : IMarkup
             _        => WrapAndRestore(text, outerMarkup),
         };
 }
-
-// ── HtmlMarkup ────────────────────────────────────────────────────────────────
 
 public sealed class HtmlMarkup : IMarkup
 {

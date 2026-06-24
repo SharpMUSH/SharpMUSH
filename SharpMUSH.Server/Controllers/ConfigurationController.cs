@@ -76,7 +76,6 @@ public class ConfigurationController(
 				return BadRequest(new { errors = errors });
 			}
 
-			// Validate using the generated validator
 			var validator = new ValidateSharpOptions();
 			var validationResult = validator.Validate(null, updated);
 			if (validationResult.Failed)
@@ -114,7 +113,6 @@ public class ConfigurationController(
 	{
 		errors = new Dictionary<string, string>();
 
-		// Group updates by category (first segment of the path)
 		var grouped = new Dictionary<string, Dictionary<string, JsonElement>>(StringComparer.OrdinalIgnoreCase);
 		foreach (var (path, value) in updates)
 		{
@@ -150,7 +148,6 @@ public class ConfigurationController(
 			var categoryType = categoryProp.PropertyType;
 			var updatedCategory = ApplyCategoryUpdates(categoryValue, categoryType, categoryName, categoryUpdates, errors);
 
-			// Use reflection to set the property on the record via 'with' clone
 			result = CloneRecordWithProperty(result, categoryProp, updatedCategory);
 		}
 
@@ -164,7 +161,6 @@ public class ConfigurationController(
 		Dictionary<string, JsonElement> updates,
 		Dictionary<string, string> errors)
 	{
-		// Get the constructor to build a new record instance
 		var ctor = categoryType.GetConstructors()
 			.OrderByDescending(c => c.GetParameters().Length)
 			.First();
@@ -248,13 +244,11 @@ public class ConfigurationController(
 			return str?.Length > 0 ? str[0] : throw new InvalidOperationException("Empty string for char");
 		}
 
-		// Arrays: string[]
 		if (actualType == typeof(string[]))
 		{
 			return element.EnumerateArray().Select(e => e.GetString()!).ToArray();
 		}
 
-		// Dictionary<string, string[]>
 		if (actualType == typeof(Dictionary<string, string[]>))
 		{
 			var dict = new Dictionary<string, string[]>();
@@ -265,7 +259,6 @@ public class ConfigurationController(
 			return dict;
 		}
 
-		// Fallback: use system deserializer
 		return JsonSerializer.Deserialize(element.GetRawText(), targetType);
 	}
 
@@ -305,21 +298,16 @@ public class ConfigurationController(
 	{
 		try
 		{
-			// Create a temporary file with the content
 			var tempFile = Path.GetTempFileName();
 			await System.IO.File.WriteAllTextAsync(tempFile, configContent);
 
-			// Use ReadPennMushConfig to parse it
 			var importedOptions = ReadPennMushConfig.Create(tempFile);
 
-			// Clean up temp file
 			System.IO.File.Delete(tempFile);
 
-			// Store the new configuration in the database
 			// Pass the object directly - the database will handle serialization
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), importedOptions);
 
-			// Signal that configuration has changed using the proper Microsoft pattern
 			// This notifies IOptionsMonitor consumers via change tokens
 			configReloadService.SignalChange();
 

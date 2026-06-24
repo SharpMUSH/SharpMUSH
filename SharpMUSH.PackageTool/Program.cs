@@ -94,7 +94,6 @@ internal static class PackageToolApp
 				var warningsFail = strict && parsed.Warnings.Count > 0;
 				PrintIssues(label, parsed.Warnings);
 
-				// Managed packages carry binaries that must exist and hash-match.
 				var binariesOk = VerifyBinaries(yaml, packageDir, label);
 
 				if (parsed.Warnings.Count == 0 && binariesOk && !warningsFail)

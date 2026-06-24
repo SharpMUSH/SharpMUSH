@@ -206,16 +206,13 @@ public partial class ArangoDatabase
 
 	public async ValueTask<bool> LinkRoomAsync(SharpRoom room, AnyOptionalSharpContainer location, CancellationToken ct = default)
 	{
-		// If location is None, just unlink any existing location
 		if (location.IsT3) // None
 		{
 			return await UnlinkRoomAsync(room, ct);
 		}
 
-		// First, unlink any existing location
 		await UnlinkRoomAsync(room, ct);
 
-		// Create edge for location (drop-to)
 		var locationId = location.Match(
 			player => player.Id!,
 			room => room.Id!,
@@ -367,25 +364,21 @@ public partial class ArangoDatabase
 
 		if (zoneEdge is null && zone is null)
 		{
-			// No existing zone and we're not setting one - nothing to do
 			return;
 		}
 
 		if (zoneEdge is null)
 		{
-			// No existing zone, create new edge
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
 				new { _from = obj.Object().Id, _to = zone!.Object().Id }, cancellationToken: ct);
 		}
 		else if (zone is null)
 		{
-			// Removing zone - edge exists (zoneEdge is not null at this point)
 			await arangoDb.Graph.Edge.RemoveAsync<object>(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
 				zoneEdge!.Key, cancellationToken: ct);
 		}
 		else
 		{
-			// Updating zone - edge exists (zoneEdge is not null at this point)
 			await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
 				zoneEdge!.Key, new { _to = zone.Object().Id }, cancellationToken: ct);
 		}
@@ -415,7 +408,7 @@ public partial class ArangoDatabase
 		};
 
 		var result = await arangoDb.Query.ExecuteAsync<bool>(handle, query, bindVars, cancellationToken: ct);
-		return result.FirstOrDefault(); // Returns true if found, false if not
+		return result.FirstOrDefault();
 	}
 
 	public async ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner, CancellationToken ct = default)
@@ -601,7 +594,7 @@ public partial class ArangoDatabase
 			CreationTime = obj.GetProperty("CreationTime").GetInt64(),
 			ModifiedTime = obj.GetProperty("ModifiedTime").GetInt64(),
 			Warnings = warnings,
-			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty, // Empty locks for JSON element conversion
+			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty,
 			Flags = new(() => GetObjectFlagsAsync(id, type.ToUpper(), CancellationToken.None)),
 			Powers = new(() => GetPowersAsync(id, CancellationToken.None)),
 			Attributes = new(() => GetTopLevelAttributesAsync(id, CancellationToken.None)),
@@ -775,34 +768,28 @@ public partial class ArangoDatabase
 
 	public async IAsyncEnumerable<SharpObject> GetFilteredObjectsAsync(ObjectSearchFilter filter, [EnumeratorCancellation] CancellationToken ct = default)
 	{
-		// Build AQL query with filters applied at database level
 		var filters = new List<string>();
 		var bindVars = new Dictionary<string, object>();
 
-		// Type filter
 		if (filter.Types != null && filter.Types.Length > 0)
 		{
 			filters.Add("v.Type IN @types");
 			bindVars["types"] = filter.Types;
 		}
 
-		// Name pattern filter (case-insensitive substring match or regex)
 		if (!string.IsNullOrEmpty(filter.NamePattern))
 		{
 			if (filter.UseRegex)
 			{
-				// Use REGEX_TEST for regex matching (case-insensitive)
 				filters.Add("REGEX_TEST(v.Name, @namePattern, true)");
 			}
 			else
 			{
-				// Use CONTAINS for substring matching (case-insensitive)
 				filters.Add("CONTAINS(LOWER(v.Name), LOWER(@namePattern))");
 			}
 			bindVars["namePattern"] = filter.NamePattern;
 		}
 
-		// DBRef range filters
 		if (filter.MinDbRef.HasValue)
 		{
 			filters.Add("TO_NUMBER(v._key) >= @minDbRef");
@@ -814,7 +801,6 @@ public partial class ArangoDatabase
 			bindVars["maxDbRef"] = filter.MaxDbRef.Value;
 		}
 
-		// Owner filter - requires traversing the HasObjectOwner edge
 		if (filter.Owner.HasValue)
 		{
 			filters.Add($@"LENGTH(FOR owner IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphObjectOwners}' 
@@ -824,7 +810,6 @@ public partial class ArangoDatabase
 			bindVars["ownerKey"] = filter.Owner.Value.Number.ToString();
 		}
 
-		// Zone filter - requires checking zone relationship
 		if (filter.Zone.HasValue)
 		{
 			filters.Add($@"LENGTH(FOR zone IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphZones}' 
@@ -834,7 +819,6 @@ public partial class ArangoDatabase
 			bindVars["zoneKey"] = filter.Zone.Value.Number.ToString();
 		}
 
-		// Parent filter - requires checking parent relationship
 		if (filter.Parent.HasValue)
 		{
 			filters.Add($@"LENGTH(FOR parent IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphParents}' 
@@ -844,24 +828,20 @@ public partial class ArangoDatabase
 			bindVars["parentKey"] = filter.Parent.Value.Number.ToString();
 		}
 
-		// Flag filter - requires checking flags array
 		if (!string.IsNullOrEmpty(filter.HasFlag))
 		{
 			filters.Add("@flagName IN v.Flags[*].Name");
 			bindVars["flagName"] = filter.HasFlag;
 		}
 
-		// Power filter - requires checking powers array
 		if (!string.IsNullOrEmpty(filter.HasPower))
 		{
 			filters.Add("@powerName IN v.Powers[*].Name");
 			bindVars["powerName"] = filter.HasPower;
 		}
 
-		// Build the complete query
 		var filterClause = filters.Count > 0 ? $"FILTER {string.Join(" AND ", filters)}" : "";
 
-		// Add LIMIT clause for pagination (START/COUNT)
 		var limitClause = "";
 		if (filter.Skip.HasValue || filter.Limit.HasValue)
 		{
@@ -914,7 +894,6 @@ public partial class ArangoDatabase
 	public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination,
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
-		// Query to find all exits that lead to the destination
 		// Exits are connected to their destination via the AtLocation edge in GraphLocations
 		var exitIds = arangoDb.Query.ExecuteStreamAsync<string>(handle,
 			$@"FOR v, e IN 1..1 INBOUND @destination GRAPH @graph
@@ -983,8 +962,6 @@ public partial class ArangoDatabase
 
 	public async ValueTask<int> GetOwnedObjectCountAsync(SharpPlayer player, CancellationToken ct = default)
 	{
-		// Query to count all objects owned by the player
-		// Uses the HasObjectOwner edge in the GraphObjectOwners graph
 		// HasObjectOwner edges go FROM Object TO Player, so we traverse INBOUND from the Player
 		var query = $@"
 			FOR v, e IN 1..1 INBOUND @playerId GRAPH {DatabaseConstants.GraphObjectOwners}

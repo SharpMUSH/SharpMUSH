@@ -44,18 +44,15 @@ public class CommunicationCommandTests
 			throw new InvalidOperationException($"Test player #{TestPlayerDbRef} not found");
 		}
 
-		// Create a test channel named "Public"
 		await Mediator.Send(new CreateChannelCommand(
 			MModule.single(TestChannelName),
 			[TestChannelPrivilege],
 			_testPlayer
 		));
 
-		// Retrieve the created channel
 		var channelQuery = new GetChannelQuery(TestChannelName);
 		_testChannel = await Mediator.Send(channelQuery);
 
-		// Add the test player to the channel
 		if (_testChannel != null && playerNode.IsPlayer)
 		{
 			await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
@@ -292,7 +289,6 @@ public class CommunicationCommandTests
 		var alias = command.Split('=')[0].Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify notification was sent with message containing the alias and channel
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasAddedForChannelFormat), executor, executor)).IsTrue();
 	}
 
@@ -324,13 +320,10 @@ public class CommunicationCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split(' ')[1];
-		// First add an alias
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
 
-		// Now delete it
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify the deletion notification was sent
 		// Check for the specific deletion message (not the addcom message from earlier)
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasDeletedFormat), executor, executor)).IsTrue();
 	}
@@ -344,7 +337,6 @@ public class CommunicationCommandTests
 		var alias = command.Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify error notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, executor)).IsTrue();
 	}
 
@@ -357,7 +349,6 @@ public class CommunicationCommandTests
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify a notification was sent (channel list output contains "Name: Public")
 		await NotifyService
 			.Received() // Weak check
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -375,13 +366,10 @@ public class CommunicationCommandTests
 		var alias = parts[0].Split(' ')[1];
 		var title = parts[1];
 
-		// First add an alias
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
 
-		// Now set title
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify the title set notification was sent containing the title and alias
 		// Note: This command sends TWO notifications - one from ChannelTitle.Handle and one custom message
 		// We check that at least one contains our custom message with alias information
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.TitleSetForAliasChannelFormat), executor, executor)).IsTrue();
@@ -396,7 +384,6 @@ public class CommunicationCommandTests
 		var alias = command.Split('=')[0].Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify error notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, executor)).IsTrue();
 	}
 
@@ -406,14 +393,11 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		// First add some aliases
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST1=Public"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST2=Public"));
 
-		// Now list them
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify we received at least one notification (the comlist output)
 		// The output is sent as a multi-line MString containing all aliases (in lowercase)
 		// Note: Aliases are stored in uppercase but displayed in lowercase
 		await NotifyService
@@ -435,7 +419,6 @@ public class CommunicationCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify the empty list message was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases), executor, executor)).IsTrue();
 	}
 }

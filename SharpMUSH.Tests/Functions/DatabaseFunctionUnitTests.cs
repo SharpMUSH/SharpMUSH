@@ -27,7 +27,6 @@ public class DatabaseFunctionUnitTests
 		await using var connection = new MySqlConnection(connectionString);
 		await connection.OpenAsync();
 
-		// Verify test_sql_data_func exists
 		await using (var cmd = new MySqlCommand("""
 		                                        	CREATE TABLE IF NOT EXISTS test_sql_data_func (
 		                                        		id INT PRIMARY KEY AUTO_INCREMENT,
@@ -39,13 +38,11 @@ public class DatabaseFunctionUnitTests
 			await cmd.ExecuteNonQueryAsync();
 		}
 
-		// Truncate to ensure clean state
 		await using (var cmd = new MySqlCommand("TRUNCATE TABLE test_sql_data_func", connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
 		}
 
-		// Insert test data
 		await using (var cmd = new MySqlCommand("""
 		                                       	INSERT INTO test_sql_data_func (name, value) VALUES 
 		                                       	('test_sql_row1', 100),
@@ -217,7 +214,6 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Sqlescape_RealWorldUse()
 	{
-		// Test using sqlescape in an actual query
 		var escapedValue = (await Parser.FunctionParse(MModule.single("sqlescape(test_sql_row1)")))?.Message!.ToPlainText();
 		var query = $"Test_Sqlescape_RealWorldUse: [sql(lit(SELECT DISTINCT value FROM test_sql_data_func WHERE name = '{escapedValue}'))]";
 		var result = (await Parser.FunctionParse(MModule.single(query)))?.Message!;
@@ -294,13 +290,10 @@ public class DatabaseFunctionUnitTests
 		await Assert.That(result.ToPlainText()).StartsWith("#-1 SQL ERROR");
 	}
 
-	// ===== Prepared Statement Tests =====
-
 	[Test]
 	public async Task Test_Sql_PreparedStatement_SelectWithParameter()
 	{
 		// sql() with more than 4 args automatically uses prepared statements
-		// Args: query, rowsep, fieldsep, register, param1
 		var result =
 			(await Parser.FunctionParse(MModule.single("sql(lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = ?),%b,%b,%b,1)")))
 			?.Message!;
@@ -313,7 +306,6 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Sql_PreparedStatement_SelectWithMultipleParameters()
 	{
-		// Args: query, rowsep, fieldsep, register, param1, param2
 		var result =
 			(await Parser.FunctionParse(MModule.single("sql(lit(SELECT `name` FROM `test_sql_data_func` WHERE id >= ? AND id <= ? ORDER BY id),%b,%b,%b,1,2)")))
 			?.Message!;
@@ -348,7 +340,6 @@ public class DatabaseFunctionUnitTests
 	public async Task Test_Sql_PreparedStatement_PreventsSqlInjection()
 	{
 		// Try to inject SQL via a string parameter - prepared statements should prevent this
-		// Use a string that would normally cause issues if directly concatenated
 		var result = (await Parser.FunctionParse(MModule.single("sql(lit(SELECT * FROM `test_sql_data_func` WHERE name = ?),%b,%b,%b,test' OR '1'='1)")))
 			?.Message!;
 		var plainText = result.ToPlainText();
@@ -365,7 +356,6 @@ public class DatabaseFunctionUnitTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&Test_Mapsql_PreparedStatement_BasicExecution {objDbRef}=Test_Mapsql_PreparedStatement_BasicExecution: Row %0 has value %2"));
 
-		// Args: obj/attr, query, osep, fieldnames, param1
 		var result = await PollFunctionUntilAttributeReadyAsync(
 			Parser,
 			$"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = ?),%b,0,1)");

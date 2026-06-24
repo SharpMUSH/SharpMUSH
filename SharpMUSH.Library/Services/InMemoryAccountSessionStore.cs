@@ -31,7 +31,6 @@ public sealed class InMemoryAccountSessionStore : IAccountSessionStore
 			return Task.FromResult<string?>(null);
 		}
 
-		// Slide expiry (rolling window)
 		_tokens[token] = entry with { Expiry = DateTimeOffset.UtcNow.Add(entry.Ttl) };
 		return Task.FromResult<string?>(entry.AccountId);
 	}

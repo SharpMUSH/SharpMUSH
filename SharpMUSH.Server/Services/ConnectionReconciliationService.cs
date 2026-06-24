@@ -32,7 +32,6 @@ public class ConnectionReconciliationService : IHostedService
 
 		try
 		{
-			// Reconcile state from Redis
 			await _connectionService.ReconcileFromStateStoreAsync(
 				handle => async data => await _bus.Publish(new TelnetOutputMessage(handle, data), cancellationToken),
 				handle => async data => await _bus.Publish(new TelnetPromptMessage(handle, data), cancellationToken),
@@ -50,7 +49,6 @@ public class ConnectionReconciliationService : IHostedService
 
 	public Task StopAsync(CancellationToken cancellationToken)
 	{
-		// No cleanup needed
 		return Task.CompletedTask;
 	}
 }

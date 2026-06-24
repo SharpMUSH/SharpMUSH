@@ -11,8 +11,6 @@ public partial class MemgraphDatabase : IApplicationRegistryService
 {
 	#region Application Registry
 
-	// Node label: :SysApplication, keyed by slug.
-
 	public async Task UpsertApplicationAsync(RegisteredApplication application)
 	{
 		await ExecuteWithRetryAsync("""

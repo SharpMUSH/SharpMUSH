@@ -21,8 +21,6 @@ public class RateLimiterSmokeTests
 {
     private const string PolicyName = "public-api";
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
     private static async Task<TestServer> BuildServerAsync(int permitLimit = 3, int queueLimit = 0)
     {
         var builder = WebApplication.CreateBuilder();
@@ -55,8 +53,6 @@ public class RateLimiterSmokeTests
         return app.GetTestServer();
     }
 
-    // ── Policy registration ──────────────────────────────────────────────────
-
     [Test]
     public async Task AddRateLimiter_PolicyRegistered_DoesNotThrowOnBuild()
     {
@@ -66,8 +62,6 @@ public class RateLimiterSmokeTests
         var response = await client.GetAsync("/any");
         await Assert.That((int)response.StatusCode).IsEqualTo(200);
     }
-
-    // ── Permit limit enforcement ─────────────────────────────────────────────
 
     [Test]
     public async Task Requests_WithinLimit_AllSucceed()
@@ -88,11 +82,9 @@ public class RateLimiterSmokeTests
         using var server = await BuildServerAsync(permitLimit: 2, queueLimit: 0);
         using var client = server.CreateClient();
 
-        // Exhaust the limit
         await client.GetAsync("/test");
         await client.GetAsync("/test");
 
-        // This one must be rejected
         var over = await client.GetAsync("/test");
         await Assert.That((int)over.StatusCode).IsEqualTo(429);
     }
@@ -103,7 +95,7 @@ public class RateLimiterSmokeTests
         using var server = await BuildServerAsync(permitLimit: 1, queueLimit: 0);
         using var client = server.CreateClient();
 
-        await client.GetAsync("/test"); // exhaust
+        await client.GetAsync("/test");
 
         var rejected = await client.GetAsync("/test");
         await Assert.That((int)rejected.StatusCode).IsEqualTo(429);
@@ -111,8 +103,6 @@ public class RateLimiterSmokeTests
         // (AddProblemDetails wires that in the full server Startup.cs).
         // We verify only the 429 status code here.
     }
-
-    // ── Policy name constant ──────────────────────────────────────────────────
 
     [Test]
     public async Task PolicyName_MustBe_PublicApi_UsedInEnableLimiting()

@@ -26,20 +26,16 @@ public class EventService(
 	{
 		try
 		{
-			// Get the event_handler config option
 			var eventHandlerDbRef = options.CurrentValue.Database.EventHandler;
 
-			// If no event handler is configured, return early
 			if (eventHandlerDbRef is null or 0)
 			{
 				return;
 			}
 
-			// Get the event handler object from the database
 			var eventHandlerRef = new DBRef((int)eventHandlerDbRef.Value, null);
 			var eventHandlerResult = await mediator.Send(new GetObjectNodeQuery(eventHandlerRef));
 
-			// If the event handler object doesn't exist, log warning and return
 			if (eventHandlerResult.IsNone)
 			{
 				logger.LogWarning(
@@ -51,7 +47,6 @@ public class EventService(
 
 			var eventHandler = eventHandlerResult.Known;
 
-			// Check if the event handler has an attribute matching the event name
 			var attributeResult = await attributeService.GetAttributeAsync(
 				eventHandler,
 				eventHandler,
@@ -78,7 +73,6 @@ public class EventService(
 			// PennMUSH uses #-1 for system events (no player enactor)
 			var eventEnactor = enactor ?? new DBRef(-1, null);
 
-			// Get the enactor object for passing to EvaluateAttributeFunctionAsync
 			AnySharpObject enactorObject;
 			if (eventEnactor.Number == -1)
 			{
@@ -103,15 +97,12 @@ public class EventService(
 				}
 			}
 
-			// Execute the event handler attribute with modified parser state
-			// Set executor to event handler and enactor as determined above
 			await parser.With(state => state with
 			{
 				Executor = eventHandler.Object().DBRef,
 				Enactor = eventEnactor
 			}, async newParser =>
 			{
-				// Execute the event handler attribute
 				// ignorePermissions: true because events run with elevated privileges
 				await attributeService.EvaluateAttributeFunctionAsync(
 					newParser,

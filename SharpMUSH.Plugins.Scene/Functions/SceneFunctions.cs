@@ -19,8 +19,6 @@ namespace SharpMUSH.Plugins.Scene.Functions;
 /// </summary>
 public static class SceneFunctions
 {
-	// ── Shared helpers ──────────────────────────────────────────────────────────
-
 	private const string SceneNotFound = "#-1 NOT FOUND";
 	private const string ScenePermission = "#-1 PERMISSION";
 
@@ -65,8 +63,6 @@ public static class SceneFunctions
 	private static bool SideEffectsEnabled(IMUSHCodeParser parser)
 		=> parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
 			.CurrentValue.Function.FunctionSideEffects;
-
-	// ── Reads ───────────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// scene(&lt;id&gt;[, &lt;field&gt;])
@@ -545,8 +541,6 @@ public static class SceneFunctions
 
 		return new CallState(string.Join(" ", cast.AsT0));
 	}
-
-	// ── Writes (WizardOnly | HasSideFX) ───────────────────────────────────────────
 
 	/// <summary>
 	/// scenecreate(&lt;room&gt;, &lt;owner&gt;[, &lt;title&gt;])

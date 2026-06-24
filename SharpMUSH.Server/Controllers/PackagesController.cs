@@ -116,8 +116,6 @@ public class PackagesController(
 			error => NotFound(error.Value));
 	}
 
-	// ── Authoring (Phase 7) ─────────────────────────────────────────────────
-
 	/// <summary>Scans selected live objects: attrs, flags, parents, and external dbrefs needing classification.</summary>
 	[HttpPost("author/scan")]
 	[Authorize]
@@ -141,8 +139,6 @@ public class PackagesController(
 			yaml => File(System.Text.Encoding.UTF8.GetBytes(yaml), "application/yaml", "package.yaml"),
 			error => BadRequest(error.Value));
 	}
-
-	// ── Installed packages (dashboard) ──────────────────────────────────────
 
 	/// <summary>Lists installed packages with dashboard context.</summary>
 	[HttpGet]
@@ -223,8 +219,6 @@ public class PackagesController(
 			error => StatusCode(StatusCodes.Status502BadGateway, error.Value));
 	}
 
-	// ── Remotes ─────────────────────────────────────────────────────────────
-
 	/// <summary>Lists configured remotes.</summary>
 	[HttpGet("remotes")]
 	[Authorize]
@@ -277,8 +271,6 @@ public class PackagesController(
 			ok => Ok(ok),
 			error => StatusCode(StatusCodes.Status502BadGateway, error.Value));
 	}
-
-	// ── Plan & apply ────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Computes the review-screen payload for an install/upgrade: fetches the

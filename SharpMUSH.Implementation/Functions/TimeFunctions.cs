@@ -93,23 +93,18 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var timeStr = args["0"].Message!.ToPlainText().Trim();
 
-		// Parse the initial timestring
 		DateTimeOffset baseTime;
 		bool isUnixEpoch = false;
 
-		// Handle "now" keyword
 		if (timeStr.Equals("now", StringComparison.OrdinalIgnoreCase))
 		{
 			baseTime = DateTimeOffset.UtcNow;
 		}
-		// Try to parse as Julian day (just a number)
 		else if (long.TryParse(timeStr, out var julianOrEpoch))
 		{
-			// If it's a large number, treat as seconds since epoch (will be modified by unixepoch modifier if needed)
 			baseTime = DateTimeOffset.FromUnixTimeSeconds(julianOrEpoch);
 			isUnixEpoch = true;
 		}
-		// Try various datetime formats
 		else if (DateTimeOffset.TryParse(timeStr, out var parsedTime))
 		{
 			baseTime = parsedTime;
@@ -147,15 +142,12 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "SECSCALC"));
 		}
 
-		// Apply modifiers
 		for (int i = 1; i < args.Count; i++)
 		{
 			var modifier = args[i.ToString()].Message!.ToPlainText().Trim().ToLower();
 
-			// Check for "unixepoch" modifier
 			if (modifier == "unixepoch")
 			{
-				// If the original number was treated as julian day, now treat it as unix epoch
 				if (isUnixEpoch)
 				{
 					// Already treated as epoch, no change needed
@@ -163,21 +155,18 @@ public partial class Functions
 				continue;
 			}
 
-			// Check for "localtime" modifier
 			if (modifier == "localtime")
 			{
 				baseTime = baseTime.ToLocalTime();
 				continue;
 			}
 
-			// Check for "utc" modifier
 			if (modifier == "utc")
 			{
 				baseTime = baseTime.ToUniversalTime();
 				continue;
 			}
 
-			// Check for "start of" modifiers
 			if (modifier.StartsWith("start of "))
 			{
 				var unit = modifier.Substring(9).Trim();
@@ -191,7 +180,6 @@ public partial class Functions
 				continue;
 			}
 
-			// Check for "weekday N" modifier
 			if (modifier.StartsWith("weekday "))
 			{
 				if (int.TryParse(modifier.AsSpan(8).Trim(), out var targetWeekday))
@@ -241,7 +229,6 @@ public partial class Functions
 		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
 
 		// Parse strings like "5m 1s", "1d 2h 3m 4s", "3y 2m 7d 5h 23m", etc.
-		// Use generated regex to extract all number-unit pairs
 		var matches = DurationPattern().Matches(timeStr);
 
 		if (matches.Count == 0)
@@ -258,7 +245,6 @@ public partial class Functions
 			}
 
 			var unit = match.Groups["unit"].Value.ToLower();
-			// Use array pattern matching for first character
 			totalSeconds += unit switch
 			{
 				['y', ..] => (long)(value * 365 * 24 * 3600),
@@ -318,10 +304,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 
-		// Get the base time string
 		var timeStr = args["0"].Message!.ToPlainText().Trim();
 
-		// Parse the base time
 		DateTimeOffset dt;
 
 		if (timeStr.Equals("now", StringComparison.OrdinalIgnoreCase))
@@ -330,7 +314,6 @@ public partial class Functions
 		}
 		else if (long.TryParse(timeStr, out var secs))
 		{
-			// Unix timestamp
 			dt = DateTimeOffset.FromUnixTimeSeconds(secs);
 		}
 		else if (DateTime.TryParse(timeStr, out var parsed))
@@ -342,7 +325,6 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "TIMECALC"));
 		}
 
-		// Apply modifiers using Aggregate
 		dt = Enumerable.Range(1, args.Count - 1)
 			.Aggregate(dt, (currentDt, i) =>
 			{
@@ -405,7 +387,6 @@ public partial class Functions
 				}
 			});
 
-		// Return formatted time string
 		return ValueTask.FromResult<CallState>(dt.ToString());
 	}
 
@@ -415,7 +396,6 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var format = args["0"].Message!.ToPlainText();
 
-		// Get the time to format (default to current time)
 		DateTimeOffset dt;
 		if (args.TryGetValue("1", out var secsArg))
 		{
@@ -431,7 +411,6 @@ public partial class Functions
 			dt = DateTimeOffset.Now;
 		}
 
-		// Get timezone (default to local)
 		if (args.TryGetValue("2", out var tzArg))
 		{
 			var tzStr = tzArg.Message!.ToPlainText();
@@ -449,7 +428,6 @@ public partial class Functions
 			dt = dt.ToLocalTime();
 		}
 
-		// Process format string using generated regex with MatchEvaluator
 		var result = TimeFmtPattern().Replace(format, match =>
 		{
 			var code = match.Groups["code"].Value[0];
@@ -528,14 +506,12 @@ public partial class Functions
 			pad = 0;
 		}
 
-		// Calculate time components using TimeSpan
 		var timeSpan = TimeSpan.FromSeconds(totalSecs);
 		var days = (long)timeSpan.TotalDays;
 		var hours = timeSpan.Hours;
 		var minutes = timeSpan.Minutes;
 		var seconds = timeSpan.Seconds;
 
-		// Format based on pad flag
 		return pad switch
 		{
 			2 => ValueTask.FromResult<CallState>($"{days:D2}d {hours:D2}h {minutes:D2}m {seconds:D2}s"),
@@ -638,7 +614,6 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.WidthMustBeANumber);
 		}
 
-		// Calculate time components
 		var timeSpan = TimeSpan.FromSeconds(totalSecs);
 		var years = (long)(timeSpan.TotalDays / 365);
 		var remainingDays = (long)timeSpan.TotalDays % 365;
@@ -648,7 +623,6 @@ public partial class Functions
 		var minutes = timeSpan.Minutes;
 		var seconds = timeSpan.Seconds;
 
-		// Build result string, showing non-zero fields
 		var parts = new List<string>();
 
 		if (years > 0) parts.Add($"{years}y");
@@ -658,7 +632,6 @@ public partial class Functions
 		if (minutes > 0) parts.Add($"{minutes}m");
 		if (seconds > 0 || parts.Count == 0) parts.Add($"{seconds}s");
 
-		// Join parts with two spaces and respect width limit
 		const string separator = "  ";
 		var result = string.Join(separator, parts);
 
@@ -692,7 +665,6 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
 		}
 
-		// Calculate time components using TimeSpan
 		var timeSpan = TimeSpan.FromSeconds(totalSecs);
 		var years = (long)(timeSpan.TotalDays / 365);
 		var remainingDays = (long)timeSpan.TotalDays % 365;
@@ -707,7 +679,6 @@ public partial class Functions
 		var totalHours = (long)timeSpan.TotalHours;
 		var totalMinutes = (long)timeSpan.TotalMinutes;
 
-		// Process format string using generated regex with MatchEvaluator
 		var result = ETimeFmtPattern().Replace(format, match =>
 		{
 			var widthStr = match.Groups["width"].Value;
@@ -741,7 +712,6 @@ public partial class Functions
 			return addSuffix ? valueStr + suffix : valueStr;
 		});
 
-		// Return the formatted result
 		return ValueTask.FromResult<CallState>(result);
 	}
 
@@ -749,7 +719,6 @@ public partial class Functions
 		ParameterNames = ["seconds", "timezone"])]
 	public static ValueTask<CallState> ConvSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Convert seconds since epoch to time string
 		var secsStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
 			? tzArg.Message!.ToPlainText()
@@ -779,7 +748,6 @@ public partial class Functions
 			}
 		}
 
-		// Local time by default
 		return ValueTask.FromResult<CallState>(dateTime.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy"));
 	}
 
@@ -787,17 +755,14 @@ public partial class Functions
 		ParameterNames = ["time-string", "timezone"])]
 	public static ValueTask<CallState> ConvTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Convert time string to seconds since epoch
 		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
 			? tzArg.Message!.ToPlainText()
 			: null;
 
-		// Try to parse the time string
 		// Format: Ddd MMM DD HH:MM:SS YYYY
 		if (!DateTimeOffset.TryParse(timeStr, out var dateTime))
 		{
-			// Try different formats for extended convtime support
 			if (!DateTime.TryParse(timeStr, out var dt))
 			{
 				return ValueTask.FromResult<CallState>("#-1");
@@ -818,7 +783,6 @@ public partial class Functions
 		ParameterNames = ["seconds"])]
 	public static ValueTask<CallState> ConvUtcSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Convert seconds since epoch to UTC time string
 		var secsStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (!long.TryParse(secsStr, out var seconds))
@@ -834,7 +798,6 @@ public partial class Functions
 		ParameterNames = ["time-string"])]
 	public static ValueTask<CallState> ConvUtcTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Convert UTC time string to seconds since epoch
 		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		// Try standard format first: Ddd Mmm DD HH:MM:SS YYYY

@@ -36,7 +36,6 @@
         </MudRadioGroup>
     }
 
-    @* Create character form *@
     @if (_showCreate)
     {
         <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px;">
@@ -93,7 +92,6 @@
 
     protected override void OnParametersSet()
     {
-        // Pre-select the first character if none selected
         if (_selectedDbref == 0 && AccountAuth.Characters.Count > 0)
             _selectedDbref = AccountAuth.Characters[0].DbrefNumber;
     }

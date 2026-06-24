@@ -41,7 +41,6 @@ public class ParserThroughputTests
 		const int iterations = 200;
 		const int warmup = 20;
 
-		// Warm up
 		for (var i = 0; i < warmup; i++)
 			await Parser.FunctionParse(SimpleAdd);
 

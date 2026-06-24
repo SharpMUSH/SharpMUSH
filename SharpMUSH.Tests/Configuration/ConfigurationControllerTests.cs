@@ -60,7 +60,6 @@ public class ConfigurationControllerTests
 
 		var result = await controller.ImportConfiguration(configContent);
 
-		// Empty config is valid and returns default configuration
 		await Assert.That(result.Result).IsTypeOf<OkObjectResult>();
 	}
 

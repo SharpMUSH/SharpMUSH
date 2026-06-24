@@ -235,7 +235,6 @@ public partial class LocateService(
 			// wildcard. Strip the leading '*' before doing the global player lookup so that
 			// locate(%#, "*God", "p") correctly finds the player named "God".
 			var playerName = name.StartsWith('*') ? name[1..] : name;
-			// Async streaming pattern is correct - mediator creates IAsyncEnumerable
 			var maybeMatch = await mediator
 				.CreateStream(new GetPlayerQuery(playerName))
 				.FirstOrDefaultAsync();
@@ -255,7 +254,6 @@ public partial class LocateService(
 						|| await Nearby(looker, match.WithoutError().WithoutNone())
 						|| await permissionService.Controls(looker, match.WithoutError().WithoutNone()))
 				{
-					// Check if the looker controls the found player when OnlyMatchLookerControlledObjects flag is set
 					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 							|| await permissionService.Controls(looker, match.WithoutError().WithoutNone()))
 					{
@@ -354,11 +352,9 @@ public partial class LocateService(
 							&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
 																LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
-						// Check if the location has a zone and if that zone is a room (ZMR)
 						var locationZone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
 						if (!locationZone.IsNone && locationZone.Known.IsRoom)
 						{
-							// Zone Master Room: Match exits in the ZMR
 							AnySharpContainer zmr = locationZone.Known.AsRoom;
 							var zmrExits = mediator
 								.CreateStream(new GetContentsQuery(zmr))
@@ -564,7 +560,6 @@ public partial class LocateService(
 			{
 				if (exact)
 				{
-					//  Another exact match 
 					curr++;
 				}
 				else
@@ -577,7 +572,6 @@ public partial class LocateService(
 			}
 			else
 			{
-				//  Another partial match 
 				curr++;
 			}
 
@@ -625,13 +619,11 @@ public partial class LocateService(
 			depth++;
 			if (depth > maxDepth)
 			{
-				// Hit depth limit - return whatever we have to avoid infinite loop
 				break;
 			}
 
 			currentLocation = await currentLocation.Location();
 
-			// Also guard against cycles via visited set
 			var dbRefStr = currentLocation.Object().DBRef.ToString();
 			if (!visited.Add(dbRefStr))
 			{
@@ -756,7 +748,7 @@ public partial class LocateService(
 			string expectedSuffix = (isTeen || mod10 == 0 || mod10 > 3) ? "th"
 				: mod10 == 1 ? "st"
 				: mod10 == 2 ? "nd"
-				: "rd"; // mod10 == 3
+				: "rd";
 
 			if (count < 1 || !ordinal.Equals(expectedSuffix, StringComparison.CurrentCultureIgnoreCase))
 			{

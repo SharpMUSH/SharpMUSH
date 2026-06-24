@@ -42,10 +42,10 @@ public partial class WarningCheckService(
 			var unit = match.Groups[2].Value;
 			totalSeconds += unit switch
 			{
-				"d" => value * 86400,  // days
-				"h" => value * 3600,   // hours
-				"m" => value * 60,     // minutes
-				"s" => value,          // seconds
+				"d" => value * 86400,
+				"h" => value * 3600,
+				"m" => value * 60,
+				"s" => value,
 				_ => 0
 			};
 		}
@@ -58,7 +58,6 @@ public partial class WarningCheckService(
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		// Check if automatic warning checks are enabled
 		if (_warnInterval == TimeSpan.Zero)
 		{
 			logger.LogInformation("Automatic warning checks are disabled (warn_interval = 0)");
@@ -76,18 +75,14 @@ public partial class WarningCheckService(
 			{
 				logger.LogInformation("Starting automatic warning check of all objects");
 
-				// Call the warning service to check all objects
-				// This will notify owners of their warnings
 				var objectsChecked = await warningService.CheckAllObjectsAsync();
 
 				logger.LogInformation("Completed automatic warning check - {Count} objects checked", objectsChecked);
 
-				// Wait for the configured interval
 				await Task.Delay(_warnInterval, stoppingToken);
 			}
 			catch (OperationCanceledException)
 			{
-				// Normal shutdown
 				break;
 			}
 			catch (Exception ex) when (IsCatchableExceptionType(ex))
@@ -96,7 +91,6 @@ public partial class WarningCheckService(
 
 				try
 				{
-					// Wait a bit before retrying on error
 					await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
 				}
 				catch (OperationCanceledException)

@@ -31,7 +31,6 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		// Get channel using standardized helper method
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -82,7 +81,6 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		// Get channel using standardized helper method
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -135,7 +133,6 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		// Get channel using standardized helper method
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -197,7 +194,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
-		// Get the channel
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
 		if (maybeChannel.IsError)
 		{
@@ -206,14 +202,12 @@ public partial class Commands
 
 		var channel = maybeChannel.AsChannel;
 
-		// Check if already a member, if not join the channel
 		var isMember = await ChannelHelper.IsMemberOfChannel(executor, channel);
 		if (!isMember)
 		{
 			await Mediator!.Send(new AddUserToChannelCommand(channel, executor));
 		}
 
-		// Store the alias as an attribute
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
 		var result = await AttributeService!.SetAttributeAsync(executor, executor, attributeName, channel.Name);
 
@@ -247,7 +241,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
-		// Get the alias attribute
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
 		var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
 
@@ -265,7 +258,6 @@ public partial class Commands
 
 		var channelName = maybeAttribute.AsAttribute.Last().Value;
 
-		// Delete the alias attribute
 		var clearResult = await AttributeService!.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
 
 		if (clearResult.IsT1)
@@ -274,7 +266,6 @@ public partial class Commands
 			return new CallState($"#-1 Error deleting alias: {clearResult.AsT1.Value}");
 		}
 
-		// Check if this was the last alias for this channel
 		var allAliases = await AttributeService!.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
 
 		if (!allAliases.IsError)
@@ -283,7 +274,6 @@ public partial class Commands
 
 			if (!hasOtherAlias)
 			{
-				// Leave the channel if this was the last alias
 				var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, false);
 				if (!maybeChannel.IsError)
 				{
@@ -338,7 +328,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
-		// Get the channel name from the alias
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
 		var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
 
@@ -356,7 +345,6 @@ public partial class Commands
 
 		var channelName = maybeAttribute.AsAttribute.Last().Value;
 
-		// Get the channel to validate it exists
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
 		if (maybeChannel.IsError)
 		{
@@ -365,10 +353,8 @@ public partial class Commands
 
 		var channel = maybeChannel.AsChannel;
 
-		// Use the ChannelTitle handler to set the title
 		var result = await ChannelTitle.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, title);
 
-		// Send custom notification that includes the alias name
 		if (result.Message != null && !result.Message.ToPlainText().StartsWith("#-1"))
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TitleSetForAliasChannelFormat), executor, title.ToPlainText(), alias, channel.Name.ToPlainText());
@@ -382,7 +368,6 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		// Get all CHANALIAS attributes
 		var allAliases = await AttributeService!.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
 
 		if (allAliases.IsError)
@@ -399,11 +384,9 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		// Format output: <alias> : <channel>
 		var outputLines = new List<MString>();
 		foreach (var attr in aliases)
 		{
-			// Extract alias name from attribute name (CHANALIAS`ALIAS -> ALIAS) using Span
 			var attrName = attr.Name;
 			var aliasName = attrName.StartsWith("CHANALIAS`") ? attrName.AsSpan(10).ToString() : attrName;
 			var channelName = attr.Value;

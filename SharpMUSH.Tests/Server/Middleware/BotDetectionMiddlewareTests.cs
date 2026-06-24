@@ -14,8 +14,6 @@ namespace SharpMUSH.Tests.Server.Middleware;
 /// </summary>
 public class BotDetectionMiddlewareTests
 {
-    // ── IsBot static helper ──────────────────────────────────────────────────
-
     [Test]
     public async Task IsBot_Googlebot_ReturnsTrue()
     {
@@ -68,8 +66,6 @@ public class BotDetectionMiddlewareTests
             BotDetectionMiddleware.IsBot("TWITTERBOT/1.0", QueryCollection.Empty)
         ).IsTrue();
     }
-
-    // ── HTTP behaviour via TestServer ────────────────────────────────────────
 
     /// <summary>Builds a minimal in-process app with only BotDetectionMiddleware registered.</summary>
     private static async Task<WebApplication> BuildAndStartAsync()

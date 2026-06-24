@@ -34,11 +34,9 @@ public class SeoController(
 		sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
 		sb.AppendLine("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
 
-		// Static entries: site root and the wiki landing page.
 		AppendUrl(sb, $"{baseUrl}/", now);
 		AppendUrl(sb, $"{baseUrl}/wiki", now);
 
-		// Page through ALL wiki pages in fixed-size chunks until a short page signals the end.
 		var skip = 0;
 		var total = 0;
 		while (true)
@@ -88,8 +86,6 @@ public class SeoController(
 		Response.Headers.CacheControl = "public, max-age=3600";
 		return Content(sb.ToString(), "text/plain; charset=utf-8");
 	}
-
-	// ── Helpers ──────────────────────────────────────────────────────────────
 
 	/// <summary>Maps a wiki page to its public portal path based on its namespace.</summary>
 	private static string PathFor(WikiPage page) =>

@@ -61,18 +61,15 @@ public class FunctionPermissionTests
 	[Test]
 	public async Task WizardOnlyFunction_AllowsWizard()
 	{
-		// Test that a wizard can call a WizardOnly function (e.g., pcreate)
 		var parser = WebAppFactoryArg.FunctionParser;
 		var result = await parser.FunctionParse(MModule.single("pcreate(TestWiz,password)"));
 
-		// Should not return a permission error
 		await Assert.That(result?.Message?.ToPlainText()).DoesNotContain("PERMISSION DENIED");
 	}
 
 	[Test]
 	public async Task WizardOnlyFunction_DeniesNonWizard()
 	{
-		// Create a non-wizard player
 		var player = await Mediator.Send(new CreatePlayerCommand(
 			"NonWizardPlayer",
 			"password",
@@ -80,31 +77,25 @@ public class FunctionPermissionTests
 			new DBRef(0),
 			100));
 
-		// Create a parser with the non-wizard player as executor
 		var parser = CreateParserWithExecutor(player);
 
-		// Try to call a WizardOnly function (pcreate)
 		var result = await parser.FunctionParse(MModule.single("pcreate(AnotherPlayer,password)"));
 
-		// Should return a permission error
 		await Assert.That(result?.Message?.ToPlainText()).Contains("PERMISSION DENIED");
 	}
 
 	[Test]
 	public async Task AdminOnlyFunction_AllowsWizard()
 	{
-		// Test that a wizard can call an AdminOnly function (e.g., beep)
 		var parser = WebAppFactoryArg.FunctionParser;
 		var result = await parser.FunctionParse(MModule.single("beep()"));
 
-		// Should not return a permission error
 		await Assert.That(result?.Message?.ToPlainText()).DoesNotContain("PERMISSION DENIED");
 	}
 
 	[Test]
 	public async Task AdminOnlyFunction_DeniesNonWizard()
 	{
-		// Create a non-wizard player
 		var player = await Mediator.Send(new CreatePlayerCommand(
 			"NonAdminPlayer",
 			"password",
@@ -112,13 +103,10 @@ public class FunctionPermissionTests
 			new DBRef(0),
 			100));
 
-		// Create a parser with the non-wizard player as executor
 		var parser = CreateParserWithExecutor(player);
 
-		// Try to call an AdminOnly function (beep)
 		var result = await parser.FunctionParse(MModule.single("beep()"));
 
-		// Should return a permission error
 		await Assert.That(result?.Message?.ToPlainText()).Contains("PERMISSION DENIED");
 	}
 }

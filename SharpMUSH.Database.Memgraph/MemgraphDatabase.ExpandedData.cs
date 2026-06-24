@@ -25,7 +25,6 @@ public partial class MemgraphDatabase
 	{
 		var objKey = ExtractKey(sharpObjectId);
 
-		// Check if node exists
 		var existing = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:HAS_EXPANDED_DATA]->(d:ExpandedObjectData {sharpObjectId: $objId, dataType: $dataType})
 RETURN d.data AS data
@@ -34,7 +33,6 @@ RETURN d.data AS data
 		string jsonData;
 		if (existing.Result.Count > 0)
 		{
-			// Merge with existing data: non-null values from new data override existing
 			var existingJson = existing.Result[0]["data"].As<string>();
 			var existingDoc = JsonSerializer.Deserialize<JsonElement>(existingJson, JsonOptions);
 			var newDoc = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize((object)data, JsonOptions), JsonOptions);

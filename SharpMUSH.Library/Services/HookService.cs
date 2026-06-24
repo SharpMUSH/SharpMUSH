@@ -15,8 +15,6 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public class HookService : IHookService
 {
-	// Performance: ConcurrentDictionary provides O(1) lookup time for hook retrieval
-	// Thread-safe for concurrent access during command execution
 	private readonly ConcurrentDictionary<string, Dictionary<string, CommandHook>> _hooks = new();
 
 	/// <summary>
@@ -83,11 +81,9 @@ public class HookService : IHookService
 
 	public async ValueTask<Option<CallState>> ExecuteHookAsync(IMUSHCodeParser parser, CommandHook hook, Dictionary<string, string> namedRegisters)
 	{
-		// Get required services
 		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
 		var attributeService = parser.ServiceProvider.GetRequiredService<IAttributeService>();
 
-		// Get the target object
 		var targetQuery = new GetObjectNodeQuery(hook.TargetObject);
 		var targetResult = await mediator.Send(targetQuery);
 
@@ -98,7 +94,6 @@ public class HookService : IHookService
 
 		var targetObject = targetResult.Known;
 
-		// Get the attribute from the target object
 		var attrResult = await attributeService.GetAttributeAsync(
 			targetObject,
 			targetObject,

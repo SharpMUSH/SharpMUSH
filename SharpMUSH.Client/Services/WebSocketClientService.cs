@@ -82,10 +82,8 @@ public class WebSocketClientService : IWebSocketClientService
 			ConnectionStateChanged?.Invoke(this, _webSocket.State);
 			_logger.LogInformation("Connected to WebSocket server");
 
-			// Flush any messages that were queued while disconnected
 			await FlushSendBufferAsync();
 
-			// Start receiving messages
 			_receiveTask = ReceiveMessagesAsync(_cancellationTokenSource.Token);
 		}
 		catch (Exception ex)
@@ -122,7 +120,6 @@ public class WebSocketClientService : IWebSocketClientService
 			}
 		}
 
-		// Buffer the message for later delivery
 		if (_sendBuffer.Count < MaxBufferedMessages)
 		{
 			_sendBuffer.Enqueue(message);
@@ -281,7 +278,6 @@ public class WebSocketClientService : IWebSocketClientService
 				_logger.LogWarning(ex, "Reconnection attempt {Attempt} failed", attempt);
 			}
 
-			// Exponential backoff capped at MaxReconnectDelay
 			delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, MaxReconnectDelay.Ticks));
 		}
 

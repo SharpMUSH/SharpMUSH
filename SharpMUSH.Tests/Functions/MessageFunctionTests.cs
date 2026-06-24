@@ -38,7 +38,6 @@ public class MessageFunctionTests
 
 		await Parser.FunctionParse(MModule.single($"message({objDbRef},Default,TESTFORMAT_MSGFUNC2_37291)"));
 
-		// The message() function sends the attribute value exactly to objDbRef
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(objDbRef),
@@ -85,7 +84,6 @@ public class MessageFunctionTests
 
 		await Parser.FunctionParse(MModule.single($"message({objDbRef},Default,TESTFORMAT_MSGARGS_63018)"));
 
-		// The attribute sends the stored value exactly
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(objDbRef),

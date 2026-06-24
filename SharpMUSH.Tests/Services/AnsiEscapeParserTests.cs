@@ -36,10 +36,8 @@ public class AnsiEscapeParserTests
 		var input = "\x1b[31mRed Text\x1b[0m";
 		var result = AnsiEscapeParser.ConvertAnsiToMarkupString(input);
 
-		// Should preserve the text
 		await Assert.That(result.ToPlainText()).IsEqualTo("Red Text");
 
-		// Should have ANSI markup
 		var resultStr = result.ToString();
 		await Assert.That(resultStr).Contains("Red Text");
 	}
@@ -110,7 +108,6 @@ public class AnsiEscapeParserTests
 		var input = "Before\x1b[2JAfter";
 		var result = AnsiEscapeParser.ConvertAnsiToMarkupString(input);
 
-		// Should strip the unknown sequence
 		await Assert.That(result.ToPlainText()).IsEqualTo("BeforeAfter");
 	}
 
@@ -151,7 +148,6 @@ public class AnsiEscapeParserTests
 		var input = "\x1b]8;;https://example.com\x1b\\Click here\x1b]8;;\x1b\\";
 		var result = AnsiEscapeParser.ConvertAnsiToMarkupString(input);
 
-		// Should preserve the text
 		await Assert.That(result.ToPlainText()).IsEqualTo("Click here");
 
 		// Markup should be applied (can't easily test URL in result, but it shouldn't crash)

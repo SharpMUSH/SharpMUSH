@@ -16,7 +16,6 @@ public class ObjectEventHandlers(
 {
 	public async ValueTask Handle(ObjectMovedNotification notification, CancellationToken cancellationToken)
 	{
-		// Trigger OBJECT`MOVE event
 		// PennMUSH spec: object`move (objid, newloc, origloc, issilent, cause)
 		await eventService.TriggerEventAsync(
 			parser,
@@ -37,7 +36,6 @@ public class ObjectEventHandlers(
 
 	public async ValueTask Handle(ObjectFlagChangedNotification notification, CancellationToken cancellationToken)
 	{
-		// Trigger OBJECT`FLAG event  
 		// PennMUSH spec: object`flag (objid of object with flag, flag name, type, setbool, setstr)
 		await eventService.TriggerEventAsync(
 			parser,

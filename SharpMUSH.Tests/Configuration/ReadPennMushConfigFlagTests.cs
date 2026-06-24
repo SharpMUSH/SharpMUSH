@@ -36,8 +36,7 @@ public class ReadPennMushConfigFlagTests
 	[Test]
 	public async Task ThingFlags_WithEmptyDefault_IsEmptyNotASingleBlankEntry()
 	{
-		// No thing_flags line -> falls back to the empty default, which previously
-		// produced [""] (one blank chip) instead of an empty list.
+		// No thing_flags line -> falls back to the empty default.
 		var path = WriteTempConfig("player_flags enter_ok");
 		try
 		{

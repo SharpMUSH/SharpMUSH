@@ -51,7 +51,6 @@ public class PluginChangeNotificationTests
 		var loaded = PluginLoaderService.LoadOne(CommandOnlyDllPath, NullLogger.Instance)!;
 		manager.RegisterPlugin(loaded.Plugin);
 
-		// Registering (a "load") must NOT notify — only an unload forces a refresh.
 		await Assert.That(notifier.Count).IsEqualTo(0).Because("loading a plugin must not force a reload");
 
 		var result = await manager.UnloadAsync(loaded.Plugin.Id);

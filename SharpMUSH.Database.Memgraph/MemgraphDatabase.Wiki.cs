@@ -13,8 +13,6 @@ public partial class MemgraphDatabase : IWikiService
 
 	private static readonly WikiMarkdigPipeline _wikiRenderer = new();
 
-	// ── Read ──────────────────────────────────────────────────────────────────
-
 	public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
@@ -120,8 +118,6 @@ public partial class MemgraphDatabase : IWikiService
 		var records = await result.ToListAsync();
 		return records.Select(r => NodeToWikiPage(r["p"].As<INode>())).ToList().AsReadOnly();
 	}
-
-	// ── Write ─────────────────────────────────────────────────────────────────
 
 	public async Task<OneOf<WikiPage, Error<string>>> CreateAsync(
 		string title,
@@ -294,8 +290,6 @@ public partial class MemgraphDatabase : IWikiService
 		return NodeToWikiPage(records[0]["p"].As<INode>());
 	}
 
-	// ── Revisions ─────────────────────────────────────────────────────────────
-
 	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
 	{
 		await using var session = driver.AsyncSession();
@@ -318,8 +312,6 @@ public partial class MemgraphDatabase : IWikiService
 		if (records.Count == 0) return new NotFound();
 		return NodeToWikiRevision(records[0]["r"].As<INode>());
 	}
-
-	// ── Internals ─────────────────────────────────────────────────────────────
 
 	private static async Task SaveMemgraphRevisionAsync(
 		IAsyncQueryRunner runner,

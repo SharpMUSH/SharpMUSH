@@ -184,7 +184,6 @@ public partial class Commands
 
 		var realLocated = locate.AsSharpObject;
 
-		// Attr Flag Path
 		if (!string.IsNullOrEmpty(maybeAttribute))
 		{
 			foreach (var flag in MModule.splitList(MModule.single(" "), args["1"].Message!))
@@ -203,7 +202,6 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		// Attr Set Path
 		var maybeColonLocation = MModule.indexOf(args["1"].Message!, ":");
 		if (maybeColonLocation > -1)
 		{
@@ -229,7 +227,6 @@ public partial class Commands
 			failure => failure.Value));
 		}
 
-		// Object Flag Set Path
 		foreach (var flag in MModule.splitList(MModule.single(" "), args["1"].Message!))
 		{
 			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
@@ -640,7 +637,6 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				// Handle different link types
 				if (exitObj.IsExit)
 				{
 					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
@@ -688,12 +684,10 @@ public partial class Commands
 								}
 							}
 
-							// Get exit owner and check if it's owned by someone else
 							var exitOwner = await exitObj.Object().Owner.WithCancellation(CancellationToken.None);
 							var executorObj = executor.Object();
 							var executorOwner = await executorObj.Owner.WithCancellation(CancellationToken.None);
 
-							// Check if exit is owned by someone else and executor doesn't control it
 							var exitNotControlled = !await PermissionService!.Controls(executor, exitObj);
 							var isOwnedByOther = exitOwner.Object.Id != executorOwner.Object.Id;
 
@@ -701,7 +695,6 @@ public partial class Commands
 							// Check @lock/link, transfer ownership, and set HALT flag
 							if (isOwnedByOther && exitNotControlled)
 							{
-								// Check @lock/link on the exit
 								var linkLockPasses = LockService!.Evaluate(LockType.Link, exitObj, executor);
 								if (!linkLockPasses)
 								{
@@ -712,7 +705,6 @@ public partial class Commands
 									shouldNotify: true);
 								}
 
-								// Transfer ownership to the linker (with error handling)
 								if (executor.IsPlayer)
 								{
 									try
@@ -767,7 +759,6 @@ public partial class Commands
 				}
 				else if (exitObj.IsRoom)
 				{
-					// Set DROP-TO for room
 					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
@@ -781,7 +772,6 @@ public partial class Commands
 							shouldNotify: true);
 							}
 
-							// Link the room to its drop-to
 							await Mediator!.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
 							await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToSet), executor);
 							return CallState.Empty;
@@ -832,7 +822,6 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				// Check if marked for destruction
 				if (!await obj.HasFlag("GOING"))
 				{
 				return await NotifyService!.NotifyAndReturn(
@@ -842,7 +831,6 @@ public partial class Commands
 					shouldNotify: true);
 				}
 
-				// Remove GOING and GOING_TWICE flags
 				if (await obj.HasFlag("GOING"))
 				{
 					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!GOING", false);
@@ -854,7 +842,6 @@ public partial class Commands
 
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SparedFromDestructionFormat), executor, obj.Object().Name);
 
-				// Trigger @startup attribute if it exists
 				try
 				{
 					await AttributeService!.EvaluateAttributeFunctionAsync(
@@ -893,7 +880,6 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				// Handle "none" to remove zone
 				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
 				{
 					await Mediator!.Send(new UnsetObjectZoneCommand(obj));
@@ -905,10 +891,8 @@ public partial class Commands
 					executor, executor, zoneName, LocateFlags.All,
 					async zoneObj =>
 					{
-						// Check if executor can control the zone or passes ChZone lock
 						bool canZone = await PermissionService!.Controls(executor, zoneObj);
 
-						// If not controlled, check ChZone lock
 						if (!canZone && !LockService!.Evaluate(LockType.ChZone, zoneObj, executor))
 						{
 					return await NotifyService!.NotifyAndReturn(
@@ -928,10 +912,8 @@ public partial class Commands
 								shouldNotify: true);
 						}
 
-						// Set the zone using database edge
 						await Mediator!.Send(new SetObjectZoneCommand(obj, zoneObj));
 
-						// Auto-set ChZone lock if not present on zone object
 						// Default ChZone lock is the zone object itself (allows controlled objects)
 						if (!zoneObj.Object().Locks.ContainsKey("ChZone"))
 						{
@@ -941,7 +923,6 @@ public partial class Commands
 						// Clear privileged flags and powers unless /preserve is used
 						if (!preserve && !obj.IsPlayer)
 						{
-							// Clear WIZARD, ROYALTY, TRUST flags if present
 							if (await obj.HasFlag("WIZARD"))
 							{
 								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
@@ -955,7 +936,6 @@ public partial class Commands
 								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 							}
 
-							// Strip all powers from the object
 							var allPowers = obj.Object().Powers.Value;
 							await foreach (var power in allPowers)
 							{
@@ -994,12 +974,10 @@ public partial class Commands
 		// - Can executor create rooms (quota check)
 		// - Does executor have DIG permission
 
-		// CREATE ROOM
 		var response = await Mediator!.Send(new CreateRoomCommand(MModule.plainText(roomName),
 			await executor.Owner.WithCancellation(CancellationToken.None)));
 		await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executorBase, roomName, response.Number);
 
-		// Inherit zone from creator
 		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
 		if (!creatorZone.IsNone)
 		{
@@ -1068,7 +1046,6 @@ public partial class Commands
 		var target = args["0"].Message!.ToPlainText();
 		var lockKey = args["1"].Message!.ToPlainText();
 
-		// Determine lock type from switches
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
@@ -1107,7 +1084,6 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var target = args["0"].Message!.ToPlainText();
 
-		// Determine lock type from switches
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
@@ -1263,12 +1239,10 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var exitName = args["0"].Message!.ToPlainText();
 
-		// Parse exit name and aliases
 		var exitParts = exitName.Split(";");
 		var primaryName = exitParts[0];
 		var aliases = exitParts.Skip(1).ToArray();
 
-		// Get current location or source room if specified
 		var sourceRoom = await executor.Where();
 		if (args.ContainsKey("2") && !string.IsNullOrWhiteSpace(args["2"].Message!.ToPlainText()))
 		{
@@ -1284,7 +1258,6 @@ public partial class Commands
 			sourceRoom = locateResult.AsSharpObject.AsRoom;
 		}
 
-		// Check permissions
 		if (!await PermissionService!.Controls(executor, sourceRoom.WithExitOption()))
 		{
 			return await NotifyService!.NotifyAndReturn(
@@ -1294,7 +1267,6 @@ public partial class Commands
 				shouldNotify: true);
 		}
 
-		// Create the exit
 		var exitDbRef = await Mediator!.Send(new CreateExitCommand(
 			primaryName,
 			aliases,
@@ -1302,7 +1274,6 @@ public partial class Commands
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)
 		));
 
-		// Inherit zone from creator
 		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
 		if (!creatorZone.IsNone)
 		{
@@ -1319,7 +1290,6 @@ public partial class Commands
 
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OpenedExit), executor, $"#{exitDbRef.Number}");
 
-		// Link to destination if provided
 		if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 		{
 			var destName = args["1"].Message!.ToPlainText();
@@ -1381,7 +1351,6 @@ public partial class Commands
 					shouldNotify: true);
 				}
 
-				// Determine new name
 				var newName = obj.Object().Name;
 				if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 				{
@@ -1391,7 +1360,6 @@ public partial class Commands
 				DBRef cloneDbRef;
 				var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 
-				// Create the appropriate object type
 				if (obj.IsThing)
 				{
 					cloneDbRef = await Mediator!.Send(new CreateThingCommand(
@@ -1427,11 +1395,9 @@ public partial class Commands
 					shouldNotify: true);
 				}
 
-				// Get the cloned object
 				var clonedObjOptional = await Mediator!.Send(new GetObjectNodeQuery(cloneDbRef));
 				var clonedObj = clonedObjOptional.WithoutNone();
 
-				// Copy attributes (excluding system attributes)
 				await foreach (var attr in obj.Object().Attributes.Value)
 				{
 					if (!attr.Name.StartsWith("_"))
@@ -1441,7 +1407,6 @@ public partial class Commands
 					}
 				}
 
-				// Copy flags (excluding privileged ones unless /preserve)
 				await foreach (var flag in obj.Object().Flags.Value)
 				{
 					if (preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
@@ -1476,7 +1441,6 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				// If no moniker provided, clear it
 				if (!args.ContainsKey("1") || string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 				{
 					await AttributeService!.SetAttributeAsync(executor, obj, "MONIKER", MModule.single(""));
@@ -1553,7 +1517,6 @@ public partial class Commands
 
 				if (obj.IsExit)
 				{
-					// Clear special link type attribute if it exists
 					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
 
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
@@ -1562,7 +1525,6 @@ public partial class Commands
 				}
 				else if (obj.IsRoom)
 				{
-					// Remove drop-to
 					await Mediator!.Send(new UnlinkRoomCommand(obj.AsRoom));
 					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToRemoved), executor);
 					return CallState.Empty;

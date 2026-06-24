@@ -80,8 +80,6 @@ public partial class TimeHelpers
 			var adjustment = match.Groups["Adjustment"].Success
 				? match.Groups["Adjustment"].Value
 				: null;
-			// var pad = adjustment?.Contains('x') ?? false;
-			// var append = adjustment?.Contains('z') ?? false;
 
 			return character.Value switch
 			{

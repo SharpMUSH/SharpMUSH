@@ -49,8 +49,6 @@ public class SchemaFormRendererShapeTests : BunitContext
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
-	// ── builders ───────────────────────────────────────────────────────────
-
 	private static PortalSchemaDocument Form(string? title, IReadOnlyDictionary<string, SchemaAction>? actions,
 		params SchemaPage[] pages) => new("form", 1, title, null, pages, actions);
 
@@ -74,8 +72,6 @@ public class SchemaFormRendererShapeTests : BunitContext
 	// an empty container, so form assertions are unaffected).
 	private IRenderedComponent<MudHarness> RenderForm(PortalSchemaDocument doc) =>
 		Render<MudHarness>(p => p.AddChildContent<SchemaFormRenderer>(cp => cp.Add(x => x.Document, doc)));
-
-	// ── field type → control ─────────────────────────────────────────────────
 
 	[TUnit.Core.Test]
 	public async Task TextField_RendersInput()
@@ -163,8 +159,6 @@ public class SchemaFormRendererShapeTests : BunitContext
 		await Assert.That(cut.Markup).Contains("Name");
 	}
 
-	// ── layout / navigation ──────────────────────────────────────────────────
-
 	[TUnit.Core.Test]
 	public async Task Title_RendersAsHeading()
 	{
@@ -213,8 +207,6 @@ public class SchemaFormRendererShapeTests : BunitContext
 		await Assert.That(buttons.Any(t => t.Contains("Back"))).IsTrue();
 		await Assert.That(buttons.Any(t => t.Contains("Submit"))).IsTrue();
 	}
-
-	// ── display elements inside a form ────────────────────────────────────────
 
 	[TUnit.Core.Test]
 	public async Task DisplayElements_MarkdownDividerButton_Render()

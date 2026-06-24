@@ -46,18 +46,15 @@ public partial class CodeActionHandler : CodeActionHandlerBase
 		{
 			var diagnostics = _parser.GetDiagnostics(document.Text, ParseType.Function);
 
-			// Process diagnostics to suggest fixes
 			foreach (var diagnostic in diagnostics)
 			{
 				if (diagnostic.Severity == Library.Models.DiagnosticSeverity.Error)
 				{
-					// Check for common error patterns and suggest fixes
 					var actions = GetCodeActionsForDiagnostic(diagnostic, request.TextDocument.Uri, document.Text);
 					codeActions.AddRange(actions);
 				}
 			}
 
-			// Check for unclosed parentheses
 			var lines = document.Text.Split('\n');
 			for (int i = 0; i < lines.Length; i++)
 			{
@@ -67,7 +64,6 @@ public partial class CodeActionHandler : CodeActionHandlerBase
 
 				if (openCount > closeCount)
 				{
-					// Suggest adding closing parentheses
 					codeActions.Add(new CodeAction
 					{
 						Title = $"Add {openCount - closeCount} closing parenthesis",
@@ -92,7 +88,6 @@ public partial class CodeActionHandler : CodeActionHandlerBase
 				}
 			}
 
-			// Check for potential typos in function names
 			var functionNames = _underlyingParser.FunctionLibrary.Keys.ToList();
 			foreach (var line in lines.Select((text, index) => new { text, index }))
 			{
@@ -103,10 +98,8 @@ public partial class CodeActionHandler : CodeActionHandlerBase
 					// Check if word looks like a function call (followed by parenthesis)
 					if (match.Index + word.Length < line.text.Length && line.text[match.Index + word.Length] == '(')
 					{
-						// Check if it's not in the function library
 						if (!functionNames.Any(f => f.Equals(word, StringComparison.OrdinalIgnoreCase)))
 						{
-							// Find similar function names
 							var similar = functionNames
 								.Where(f => LevenshteinDistance(f.ToLower(), word.ToLower()) <= 2)
 								.Take(3)
@@ -159,7 +152,6 @@ public partial class CodeActionHandler : CodeActionHandlerBase
 
 	public override Task<CodeAction> Handle(CodeAction request, CancellationToken cancellationToken)
 	{
-		// No additional resolution needed for code actions
 		return Task.FromResult(request);
 	}
 
@@ -170,10 +162,8 @@ public partial class CodeActionHandler : CodeActionHandlerBase
 	{
 		var actions = new List<CodeAction>();
 
-		// Add generic quick fixes based on diagnostic messages
 		if (diagnostic.Message.Contains("unexpected", StringComparison.OrdinalIgnoreCase))
 		{
-			// Could suggest removing unexpected tokens
 		}
 
 		return actions;

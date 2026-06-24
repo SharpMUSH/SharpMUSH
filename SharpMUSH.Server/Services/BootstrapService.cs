@@ -70,8 +70,6 @@ public class BootstrapService(
 	/// Logs the first-run credentials banner.  The password is a one-time generated value
 	/// that the operator must see to log in; displaying it once in startup logs is intentional.
 	/// </summary>
-	// The password parameter is a one-time generated bootstrap credential printed once at startup
-	// so the operator can complete first-run setup. This is not accidental cleartext storage.
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
 		Justification = "One-time generated bootstrap credential intentionally shown once in startup logs. Operator must change it on first login.")]
 	private void LogBootstrapBanner(string username, string password)

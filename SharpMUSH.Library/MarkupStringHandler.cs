@@ -176,8 +176,6 @@ public ref struct MarkupStringHandler
 		_parts.Add(value);
 	}
 
-	// ── Format application ────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Applies the format specifier and/or C# alignment to an <see cref="MString"/> value.
 	/// </summary>
@@ -199,7 +197,6 @@ public ref struct MarkupStringHandler
 	/// <summary>Dispatches a format string to the appropriate transform.</summary>
 	private static MString ParseAndApplyFormat(MString value, string format)
 	{
-		// Identify the operation: everything before the first ':'.
 		int sep = format.IndexOf(':');
 		string op = sep < 0 ? format : format[..sep];
 		string rest = sep < 0 ? string.Empty : format[(sep + 1)..];
@@ -212,8 +209,6 @@ public ref struct MarkupStringHandler
 			_       => value, // unknown specifiers are silently ignored
 		};
 	}
-
-	// ── Trim ──────────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Applies a trim operation.
@@ -242,8 +237,6 @@ public ref struct MarkupStringHandler
 
 		return MModule.Trim(value, chars, trimType);
 	}
-
-	// ── Align ─────────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Applies an alignment (pad) operation.
@@ -277,8 +270,6 @@ public ref struct MarkupStringHandler
 
 		return MModule.Pad(value, fill, width, padType, TruncationType.Truncate);
 	}
-
-	// ── Color ─────────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Wraps <paramref name="value"/> in an ANSI colour/attribute markup run.

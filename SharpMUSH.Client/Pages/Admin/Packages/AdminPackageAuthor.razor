@@ -17,7 +17,6 @@
         </p>
     </div>
 
-    @* ── Step 1: selection ──────────────────────────────────────────────── *@
     <div class="pkg-card mb-4">
         <div class="pkg-card-head"><span class="pkg-step">1</span> Select objects</div>
         <div class="pkg-card-body">
@@ -31,7 +30,6 @@
 
 @if (_scan is not null)
 {
-    @* ── Step 2: objects, refs, attribute selection ─────────────────────── *@
     <div class="pkg-card mb-4">
         <div class="pkg-card-head"><span class="pkg-step">2</span> Refs &amp; attributes</div>
         <div class="pkg-card-body">
@@ -68,7 +66,6 @@
         </div>
     </div>
 
-    @* ── Step 3: external dbref classification ──────────────────────────── *@
     @if (_scan.ExternalDbrefs.Count > 0)
     {
         <div class="pkg-card mb-4">
@@ -117,7 +114,6 @@
         </div>
     }
 
-    @* ── Step 4: metadata + export ──────────────────────────────────────── *@
     <div class="pkg-card mb-4">
         <div class="pkg-card-head"><span class="pkg-step">4</span> Metadata &amp; export</div>
         <div class="pkg-card-body">

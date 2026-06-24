@@ -17,14 +17,12 @@ public class EventServiceTests
 	[Skip("Integration test - requires database setup with event_handler configured")]
 	public async ValueTask TriggerEventWithNoHandlerConfigured()
 	{
-		// When no event_handler is configured, TriggerEventAsync should return without error
 		await EventService.TriggerEventAsync(
 			WebAppFactoryArg.CommandParser,
 			"TEST`EVENT",
 			null,
 			"arg0", "arg1");
 
-		// Should complete without throwing an exception
 		await ValueTask.CompletedTask;
 	}
 

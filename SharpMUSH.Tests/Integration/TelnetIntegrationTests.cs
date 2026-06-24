@@ -95,7 +95,6 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 
 		builder.ConfigureServices(sc =>
 		{
-			// Override SharpMUSH options to point at the test MySQL database
 			var optionsSubstitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 			var optionsMonitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 			var config = ReadPennMushConfig.Create(configFile);
@@ -156,7 +155,6 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 		var natsPort = NatsTestServer.Instance.GetMappedPublicPort(4222);
 		var natsUrl = $"nats://localhost:{natsPort}";
 
-		// ── 1. Start the SharpMUSH Server (game engine) ──────────────────────
 		// natsUrl is passed to the factory so it can be set inside ConfigureWebHost —
 		// which runs immediately before Program.Main() — mirroring the approach used
 		// by ConnectionServerTestWebApplicationBuilderFactory.
@@ -177,7 +175,6 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 		var scheduler = await schedulerFactory.GetScheduler();
 		if (!scheduler.IsStarted) await scheduler.Start();
 
-		// ── 2. Start the ConnectionServer (Kestrel TCP listener) ─────────────
 		TelnetPort = FindFreePort();
 		var httpPort = FindFreePort();
 
@@ -191,7 +188,6 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 
 		_connectionServerApp = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync(csArgs, natsUrl);
 
-		// Set up the same HTTP routes as Program.Main
 		_connectionServerApp.UseWebSockets();
 		var wsHandler = _connectionServerApp.Services.GetRequiredService<WebSocketServer>();
 		_connectionServerApp.Map("/ws", wsHandler.HandleWebSocketAsync);
@@ -298,24 +294,17 @@ public class TelnetIntegrationTests
 
 		await using var stream = client.GetStream();
 
-		// ── Step 1: wait for the login screen ────────────────────────────────
 		var loginScreen = await ReadUntilAsync(stream, s => s.Contains("Welcome to SharpMUSH"), cancellationToken);
 		await Assert.That(loginScreen).Contains("Welcome to SharpMUSH")
 			.Because("Login screen must appear before we can log in");
 
-		// ── Step 2: send the connect command (God has an empty password) ─────
 		await SendLineAsync(stream, "connect God", cancellationToken);
 
-		// ── Step 3: wait for the room description that auto-look produces ────
-		// ShowPostLoginMessages sends MOTD → WizMOTD → look, which outputs
-		// the room name "Room Zero" followed by a description.
 		var postLogin = await ReadUntilAsync(stream, s => s.Contains("Room Zero"), cancellationToken);
 
 		await Assert.That(postLogin).Contains("Room Zero")
 			.Because("After logging in as God, the auto-look should show Room Zero");
 	}
-
-	// ── Helpers ──────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Reads from <paramref name="stream"/> polling every <see cref="PollingIntervalMs"/> ms,

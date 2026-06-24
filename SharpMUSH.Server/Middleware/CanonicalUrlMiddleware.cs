@@ -15,7 +15,6 @@ namespace SharpMUSH.Server.Middleware;
 /// </summary>
 public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger<CanonicalUrlMiddleware> logger)
 {
-	// Prefixes that receive canonical treatment
 	private static readonly string[] CanonicalisedPrefixes =
 	[
 		"/wiki/", "/character/", "/characters", "/scenes/",
@@ -23,7 +22,6 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 		"/admin/", "/login", "/register",
 	];
 
-	// Prefixes that are never redirected
 	private static readonly string[] ExemptPrefixes =
 	[
 		"/api/", "/hubs/", "/mush/", "/_framework/", "/_content/",
@@ -35,7 +33,6 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 		var req = context.Request;
 		var path = req.Path.Value ?? "/";
 
-		// Skip exempt prefixes
 		foreach (var exempt in ExemptPrefixes)
 		{
 			if (path.StartsWith(exempt, StringComparison.OrdinalIgnoreCase))
@@ -45,7 +42,6 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 			}
 		}
 
-		// Skip static files (have an extension)
 		if (HasFileExtension(path))
 		{
 			await next(context);
@@ -78,11 +74,9 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 		if (path == "/")
 			return path;
 
-		// Strip trailing slash first
 		if (path.Length > 1 && path.EndsWith('/'))
 			path = path[..^1];
 
-		// Split into segments and process each
 		var segments = path.Split('/');
 		for (var i = 0; i < segments.Length; i++)
 		{
@@ -90,11 +84,9 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 			if (string.IsNullOrEmpty(seg))
 				continue;
 
-			// Percent-decode the segment, replace spaces with underscores
 			var decoded = Uri.UnescapeDataString(seg);
 			var noSpaces = decoded.Replace(' ', '_');
 
-			// For the first real segment (the "section"), lowercase it
 			if (i == 1)
 				noSpaces = noSpaces.ToLowerInvariant();
 

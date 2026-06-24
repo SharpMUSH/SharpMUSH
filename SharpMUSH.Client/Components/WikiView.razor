@@ -45,7 +45,6 @@ else
 
     public async Task ActivateEditMode()
     {
-        // Build a draft from the current article (or a blank new one if the page doesn't exist yet).
         _editDraft = _article is not null
             ? new WikiArticle(_article.Title, _article.Content, _article.Image, _article.RenderedHtml)
             {

@@ -180,7 +180,6 @@ public class WikiControllerVisibilityTests
 	[Test]
 	public async Task GetPage_Unpublished_Author_Returns200_EvenWithoutWikiRead()
 	{
-		// SeedUnpublishedPage authors the draft as "#1"; that author sees it without wiki.read.
 		var (wiki, slug) = await SeedUnpublishedPage();
 		var controller = MakeController(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#1");
 

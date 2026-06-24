@@ -24,8 +24,6 @@ public class WikiServiceIntegrationTests
     private IWikiService Wiki => WebAppFactory.Services.GetRequiredService<ISharpDatabase>() as IWikiService
         ?? throw new InvalidOperationException("ISharpDatabase does not implement IWikiService in this configuration.");
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
     /// <summary>Creates a page, asserts success, returns the resulting <see cref="WikiPage"/>.</summary>
     private async Task<WikiPage> CreatePageAsync(
         string title,
@@ -37,8 +35,6 @@ public class WikiServiceIntegrationTests
         await Assert.That(result.IsT0).IsTrue();
         return result.AsT0;
     }
-
-    // ── CreateAsync ───────────────────────────────────────────────────────────
 
     [Test]
     public async Task CreateAsync_ReturnsPageWithAssignedId()
@@ -137,14 +133,12 @@ public class WikiServiceIntegrationTests
         await Assert.That(lore.IsT0).IsTrue();
         await Assert.That(rules.IsT0).IsTrue();
         await Assert.That(lore.AsT0.Id).IsNotEqualTo(rules.AsT0.Id);
-        await Assert.That(dupe.IsT1).IsTrue(); // same (ns, category, slug) rejected
+        await Assert.That(dupe.IsT1).IsTrue();
 
         var slug = lore.AsT0.Slug;
         await Assert.That((await Wiki.GetBySlugAsync(slug, "lore", WikiNamespace.Main)).AsT0.Id).IsEqualTo(lore.AsT0.Id);
         await Assert.That((await Wiki.GetBySlugAsync(slug, "rules", WikiNamespace.Main)).AsT0.Id).IsEqualTo(rules.AsT0.Id);
     }
-
-    // ── GetBySlugAsync ────────────────────────────────────────────────────────
 
     [Test]
     public async Task GetBySlugAsync_ExistingPage_ReturnsPage()
@@ -178,8 +172,6 @@ public class WikiServiceIntegrationTests
         await Assert.That(result.IsT1).IsTrue();
     }
 
-    // ── GetByIdAsync ──────────────────────────────────────────────────────────
-
     [Test]
     public async Task GetByIdAsync_ExistingId_ReturnsPage()
     {
@@ -199,8 +191,6 @@ public class WikiServiceIntegrationTests
 
         await Assert.That(result.IsT1).IsTrue();
     }
-
-    // ── UpdateAsync ───────────────────────────────────────────────────────────
 
     [Test]
     public async Task UpdateAsync_ChangesMarkdownAndBumpsRevision()
@@ -238,8 +228,6 @@ public class WikiServiceIntegrationTests
         await Assert.That(result.IsT1).IsTrue();
     }
 
-    // ── DeleteAsync ───────────────────────────────────────────────────────────
-
     [Test]
     public async Task DeleteAsync_ExistingPage_RemovesPage()
     {
@@ -274,8 +262,6 @@ public class WikiServiceIntegrationTests
 
         await Assert.That(result.IsT1).IsTrue();
     }
-
-    // ── Revisions ─────────────────────────────────────────────────────────────
 
     [Test]
     public async Task GetRevisionsAsync_AfterCreate_HasOneRevision()
@@ -327,8 +313,6 @@ public class WikiServiceIntegrationTests
         await Assert.That(result.IsT1).IsTrue();
     }
 
-    // ── SetProtectionAsync ────────────────────────────────────────────────────
-
     [Test]
     public async Task SetProtectionAsync_SetsIsProtectedFlag()
     {
@@ -353,8 +337,6 @@ public class WikiServiceIntegrationTests
         await Assert.That(result.IsT1).IsTrue();
     }
 
-    // ── GetByNamespaceAsync ───────────────────────────────────────────────────
-
     [Test]
     public async Task GetByNamespaceAsync_ReturnsOnlyPagesInNamespace()
     {
@@ -373,12 +355,9 @@ public class WikiServiceIntegrationTests
         await Assert.That(helpPages.All(p => p.Namespace == "help")).IsTrue();
     }
 
-    // ── GetRecentChangesAsync ─────────────────────────────────────────────────
-
     [Test]
     public async Task GetRecentChangesAsync_ReturnsNewestFirstAndRespectsCount()
     {
-        // Create 3 uniquely named pages so they are guaranteed to exist
         var uid = Guid.NewGuid().ToString("N")[..8];
         await CreatePageAsync($"Rc Page A {uid}");
         await Task.Delay(10); // ensure distinct UpdatedAt timestamps
@@ -386,11 +365,9 @@ public class WikiServiceIntegrationTests
         await Task.Delay(10);
         var pageC = await CreatePageAsync($"Rc Page C {uid}");
 
-        // Fetch only 2 — most recent 2 should be C then B
         var recent = await Wiki.GetRecentChangesAsync(count: 2);
 
         await Assert.That(recent.Count).IsEqualTo(2);
-        // Most recent is C; second is B
         await Assert.That(recent[0].Id).IsEqualTo(pageC.Id);
         await Assert.That(recent[1].Id).IsEqualTo(pageB.Id);
     }
@@ -403,7 +380,6 @@ public class WikiServiceIntegrationTests
         await Task.Delay(10);
         await CreatePageAsync($"Rc Rise B {uid}");
         await Task.Delay(10);
-        // Now update A — it should become the most recent change
         await Wiki.UpdateAsync(pageA.Id, "updated content", "#1");
 
         var recent = await Wiki.GetRecentChangesAsync(count: 2);

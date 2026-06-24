@@ -59,7 +59,6 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 		{
 			OutputFormat.Pueblo => ms.Render("pueblo"),
 			OutputFormat.Mxp => ApplyMxpLinePrefix(ms.Render("mxp")),
-			// Ansi (default): use the native ANSI representation, matching the legacy NotifyService path.
 			_ => ms.ToString()
 		};
 

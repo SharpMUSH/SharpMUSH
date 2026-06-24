@@ -68,8 +68,6 @@ public class Startup(
 // Must match the [FromKeyedServices] key used in BooleanExpressionParser.
 	public const string CompiledExpressionsCacheName = "compiled-expressions";
 
-// This method gets called by the runtime. Use this method to add services to the container.
-// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
 		services.Configure<BootstrapOptions>(configuration.GetSection(BootstrapOptions.Section));
@@ -224,7 +222,6 @@ public class Startup(
 		services.AddSingleton<IPermissionService, PermissionService>();
 		services.AddSingleton<ITelemetryService, TelemetryService>();
 
-// Add NATS-backed connection state store
 		services.AddSingleton<IConnectionStateStore>(sp =>
 		{
 			var logger = sp.GetRequiredService<ILogger<NatsConnectionStateStore>>();
@@ -324,7 +321,6 @@ public class Startup(
 		services.AddMemoryCache();
 		services.AddSingleton<Server.Services.IPrerenderCacheService, Server.Services.PrerenderCacheService>();
 
-// Initialize TextFileService
 		services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
 		services.AddSingleton<ILocalizedTextFileService, Implementation.Services.LocalizedTextFileService>();
 
@@ -391,19 +387,16 @@ public class Startup(
 		{
 			logging.ClearProviders();
 
-// Read Serilog configuration from appsettings.json (MinimumLevel, Overrides, WriteTo, Enrich)
 			var loggerConfig = new LoggerConfiguration()
 				.ReadFrom.Configuration(configuration);
 
 			logging.AddSerilog(loggerConfig.CreateLogger());
 		});
 
-// Configure NATS messaging for message queue integration
 		services.AddNatsMainProcessMessaging(
 			options => { options.Url = natsUrl; },
 			x =>
 			{
-// Register consumers for input messages from ConnectionServer
 				x.AddConsumer<Consumers.TelnetInputConsumer>();
 				x.AddConsumer<Consumers.WebSocketInputConsumer>();
 				x.AddConsumer<Consumers.GMCPSignalConsumer>();
@@ -535,7 +528,6 @@ public class Startup(
 
 		services.AddSignalR();
 
-		// ── API Versioning ────────────────────────────────────────────────────
 		// URL-segment strategy: /api/v1/... and /api/v2/...
 		// Default version: 1.0 so existing unversioned controllers keep working.
 		// Deprecated versions are announced via the api-deprecated-versions response header.
@@ -549,7 +541,6 @@ public class Startup(
 				new HeaderApiVersionReader("x-api-version"));
 		}).AddMvc();
 
-		// ── Rate Limiting ─────────────────────────────────────────────────────
 		// Named "public-api" policy: fixed window, 30 req/min per client IP,
 		// queue depth 5.  Auth endpoints opt in via [EnableRateLimiting("public-api")].
 		services.AddRateLimiter(opts =>
@@ -564,7 +555,6 @@ public class Startup(
 			});
 		});
 
-		// ── RFC 7807 Problem Details ──────────────────────────────────────────
 		services.AddProblemDetails();
 		services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 
@@ -606,7 +596,6 @@ public class Startup(
 					serviceVersion: "1.0.0",
 					serviceInstanceId: Environment.MachineName);
 
-// Add container resource detection for Kubernetes environments
 				if (isK8s)
 				{
 					resource.AddDetector(new ContainerResourceDetector());

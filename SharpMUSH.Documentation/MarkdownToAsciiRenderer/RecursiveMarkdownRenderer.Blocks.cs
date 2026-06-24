@@ -22,7 +22,6 @@ public partial class RecursiveMarkdownRenderer
 
 	private MString RenderParagraph(ParagraphBlock para)
 	{
-		// Paragraph blocks contain inline elements in the Inline property.
 		// Trim trailing whitespace because EnableTrackTrivia appends a soft
 		// LineBreakInline (rendered as " ") at the end of many paragraphs.
 		var content = RenderInlines(para.Inline);
@@ -33,7 +32,6 @@ public partial class RecursiveMarkdownRenderer
 	{
 		if (!list.IsOrdered)
 		{
-			// Unordered lists render as a comma-separated list
 			var unorderedItems = list
 				.OfType<ListItemBlock>()
 				.Select(listItem => RenderListItem(listItem))

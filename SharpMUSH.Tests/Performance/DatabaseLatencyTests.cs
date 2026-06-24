@@ -24,7 +24,6 @@ public class DatabaseLatencyTests
 		const int iterations = 100;
 		const int warmup = 10;
 
-		// Warm up
 		for (var i = 0; i < warmup; i++)
 			await Database.GetObjectNodeAsync(new DBRef(1));
 

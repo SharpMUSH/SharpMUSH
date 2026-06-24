@@ -11,7 +11,6 @@ public class HealthMonitoringService(ITelemetryService telemetryService, ILogger
 {
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		// Set initial healthy state
 		telemetryService.SetServerHealthState(true);
 
 		logger.LogInformation("Health monitoring service started - Server is healthy");
@@ -28,7 +27,6 @@ public class HealthMonitoringService(ITelemetryService telemetryService, ILogger
 			}
 			catch (OperationCanceledException)
 			{
-				// Normal shutdown
 				break;
 			}
 			catch (Exception ex) when (IsCatchableExceptionType(ex))

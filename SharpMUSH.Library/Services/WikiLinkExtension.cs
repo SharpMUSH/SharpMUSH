@@ -7,10 +7,6 @@ using Markdig.Syntax.Inlines;
 
 namespace SharpMUSH.Library.Services;
 
-// ──────────────────────────────────────────────────────────────────────────────
-// WikiLinkInline — the AST node
-// ──────────────────────────────────────────────────────────────────────────────
-
 /// <summary>
 /// Markdig AST node that represents a wiki-link: <c>[[Target]]</c> or
 /// <c>[[Display Text|Target]]</c>.
@@ -40,10 +36,6 @@ public sealed class WikiLinkInline : LeafInline
 	public bool IsRedLink { get; init; }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// WikiLinkParser — matches [[...]] syntax
-// ──────────────────────────────────────────────────────────────────────────────
-
 /// <summary>
 /// Markdig inline parser that recognises <c>[[...]]</c> wiki-link syntax.
 /// Handles the following forms:
@@ -57,13 +49,11 @@ internal sealed class WikiLinkParser : InlineParser
 {
 	public WikiLinkParser()
 	{
-		// '[' is the opening delimiter
 		OpeningCharacters = ['['];
 	}
 
 	public override bool Match(InlineProcessor processor, ref StringSlice slice)
 	{
-		// We need at least [[x]]
 		var current = slice;
 		if (current.CurrentChar != '[') return false;
 		current.NextChar();
@@ -108,7 +98,6 @@ internal sealed class WikiLinkParser : InlineParser
 			target = raw[(pipeIdx + 1)..].Trim();
 		}
 
-		// Resolve namespace + category + slug
 		var (ns, category, slug) = ResolveTarget(target);
 
 		// Derive title from the bare slug (spaces for underscores)
@@ -156,10 +145,6 @@ internal sealed class WikiLinkParser : InlineParser
 		WikiHelpers.Slugify(text);
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// WikiLinkHtmlRenderer — emits <a> tags
-// ──────────────────────────────────────────────────────────────────────────────
-
 /// <summary>
 /// Markdig HTML renderer that converts <see cref="WikiLinkInline"/> nodes into
 /// HTML anchor tags pointing to <c>/wiki/{ns}/{slug}</c>.
@@ -184,10 +169,6 @@ internal sealed class WikiLinkHtmlRenderer : HtmlObjectRenderer<WikiLinkInline>
 		renderer.Write("</a>");
 	}
 }
-
-// ──────────────────────────────────────────────────────────────────────────────
-// WikiLinkExtension — wires parser + renderer into Markdig
-// ──────────────────────────────────────────────────────────────────────────────
 
 /// <summary>
 /// Markdig extension that adds <c>[[wiki-link]]</c> support.

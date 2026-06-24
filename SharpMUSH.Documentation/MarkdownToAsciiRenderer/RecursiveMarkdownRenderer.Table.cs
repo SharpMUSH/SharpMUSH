@@ -23,7 +23,6 @@ public partial class RecursiveMarkdownRenderer
 
 		if (allRows.Count == 0) return MModule.empty();
 
-		// Calculate column widths
 		var columnCount = allRows.Max(r => r.Cells.Count);
 		var columnWidths = new int[columnCount];
 
@@ -41,8 +40,6 @@ public partial class RecursiveMarkdownRenderer
 
 		if (hasEmptyHeaders)
 		{
-			// For borderless tables use the full available width split evenly across columns.
-			// Column separator is 2 spaces; no pipe characters.
 			const int BORDERLESS_SEP_WIDTH = 2;
 			var borderlessAvailable = _maxWidth - (columnCount - 1) * BORDERLESS_SEP_WIDTH;
 			var totalBorderlessWidth = columnWidths.Sum();
@@ -97,7 +94,6 @@ public partial class RecursiveMarkdownRenderer
 
 		if (totalWidth > availableWidth && availableWidth > columnCount * 3)
 		{
-			// Scale down column widths proportionally when table is too wide
 			for (var col = 0; col < columnCount; col++)
 			{
 				var proportion = (double)columnWidths[col] / totalWidth;
@@ -106,7 +102,6 @@ public partial class RecursiveMarkdownRenderer
 		}
 		else if (totalWidth < availableWidth)
 		{
-			// Expand columns proportionally to fit the available width for nice spacing
 			var extraSpace = availableWidth - totalWidth;
 			for (var col = 0; col < columnCount; col++)
 			{
@@ -115,13 +110,12 @@ public partial class RecursiveMarkdownRenderer
 			}
 		}
 
-		// Build column specifications with alignment
 		var columnSpecs = new StringBuilder();
 		for (var col = 0; col < columnCount; col++)
 		{
 			if (col > 0) columnSpecs.Append(' ');
 
-			var alignment = "<"; // Default to left
+			var alignment = "<";
 			if (table.ColumnDefinitions.Count > col && table.ColumnDefinitions[col].Alignment.HasValue)
 			{
 				alignment = table.ColumnDefinitions[col].Alignment!.Value switch
@@ -137,13 +131,11 @@ public partial class RecursiveMarkdownRenderer
 			columnSpecs.Append(columnWidths[col]);
 		}
 
-		// Render each row
 		var renderedRows = new List<MString>();
 		for (var rowIndex = 0; rowIndex < allRows.Count; rowIndex++)
 		{
 			var (isHeader, cells) = allRows[rowIndex];
 
-			// Use TextAlignerModule to align the cells
 			var alignedRow = TextAlignerModule.align(
 				columnSpecs.ToString(),
 				cells,
@@ -152,7 +144,6 @@ public partial class RecursiveMarkdownRenderer
 				MModule.single("")
 			);
 
-			// Wrap in borders
 			var rowWithBorders = MModule.multiple([
 				MModule.MarkupSingle(borderStyle, "| "),
 				alignedRow,
@@ -161,7 +152,6 @@ public partial class RecursiveMarkdownRenderer
 
 			renderedRows.Add(rowWithBorders);
 
-			// Add separator after header
 			if (isHeader)
 			{
 				var separator = new StringBuilder();

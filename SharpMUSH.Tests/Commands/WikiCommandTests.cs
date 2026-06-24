@@ -133,13 +133,11 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/create Locked Page=original content"));
 
-		// God (#1, connection handle 1) protects the page …
 		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@wiki/protect locked_page"));
 		await ExpectNotify(god, "now protected");
 
-		// … and the mortal can no longer edit it.
 		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki/edit locked_page=replacement content"));
@@ -162,7 +160,6 @@ public class WikiCommandTests
 			MModule.single("@wiki/rollback rollback_target=1"));
 		await ExpectNotify(player.DbRef, "Restored 'Rollback Target' to r1 (now rev 3)");
 
-		// The restored body is served on view again.
 		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MModule.single("@wiki rollback_target"));

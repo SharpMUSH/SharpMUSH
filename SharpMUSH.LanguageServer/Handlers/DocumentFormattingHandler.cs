@@ -70,13 +70,10 @@ public partial class DocumentFormattingHandler : DocumentFormattingHandlerBase
 
 	private static string FormatLine(string line, FormattingOptions options)
 	{
-		// Trim trailing whitespace
 		var formatted = line.TrimEnd();
 
-		// Normalize spacing around operators and parentheses
 		formatted = NormalizeSpacing(formatted);
 
-		// Apply indentation if this is a continuation or nested line
 		formatted = ApplyIndentation(formatted, options);
 
 		return formatted;
@@ -84,10 +81,8 @@ public partial class DocumentFormattingHandler : DocumentFormattingHandlerBase
 
 	private static string NormalizeSpacing(string line)
 	{
-		// Add space after commas in function calls
 		var result = CommaWithoutSpaceRegex().Replace(line, ", ");
 
-		// Ensure space after commands
 		result = CommandWithoutSpaceRegex().Replace(result, "$1 $2");
 
 		return result;
@@ -101,16 +96,13 @@ public partial class DocumentFormattingHandler : DocumentFormattingHandlerBase
 			return string.Empty;
 		}
 
-		// Count nesting level based on brackets
 		var indent = 0;
 
-		// If line starts with closing bracket, reduce indent
 		if (trimmed.StartsWith(")") || trimmed.StartsWith("}") || trimmed.StartsWith("]"))
 		{
 			indent = Math.Max(0, indent - 1);
 		}
 
-		// Apply indentation
 		var indentString = options.InsertSpaces
 			? new string(' ', indent * (int)options.TabSize)
 			: new string('\t', indent);

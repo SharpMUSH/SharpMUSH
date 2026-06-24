@@ -21,17 +21,14 @@ public class HttpHooksPackageTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task DefaultHandler_IsInstalledAsSplitPackages_ManagingHandlerAttributes()
 	{
-		// The bootstrap installed both bundled packages at startup, in order.
 		var http = await Registry.GetInstalledPackageAsync("http-handler");
 		var profile = await Registry.GetInstalledPackageAsync("profile-handler");
 		await Assert.That(http.IsT0).IsTrue();
 		await Assert.That(profile.IsT0).IsTrue();
 
-		// Attach mode: neither owns objects (#8 is infrastructure).
 		await Assert.That((await Registry.GetPackageObjectsAsync("http-handler")).Count).IsEqualTo(0);
 		await Assert.That((await Registry.GetPackageObjectsAsync("profile-handler")).Count).IsEqualTo(0);
 
-		// http-handler owns the verb routers; profile-handler owns the routes.
 		var httpAttrs = (await Registry.GetManagedAttributesAsync("http-handler")).Select(m => m.Attribute).ToList();
 		await Assert.That(httpAttrs).Contains("GET");
 		await Assert.That(httpAttrs).Contains("POST");
@@ -39,10 +36,8 @@ public class HttpHooksPackageTests(ServerWebAppFactory factory)
 		var profileAttrs = (await Registry.GetManagedAttributesAsync("profile-handler")).Select(m => m.Attribute).ToList();
 		await Assert.That(profileAttrs).Contains("GET`CHARACTERS");
 		await Assert.That(profileAttrs).Contains("GET`PROFILE`SCHEMA");
-		// profile-handler does NOT manage the bare verb routers.
 		await Assert.That(profileAttrs).DoesNotContain("GET");
 
-		// profile-handler depends on http-handler.
 		var profileDeps = await Registry.GetPackageDependenciesAsync("profile-handler");
 		await Assert.That(profileDeps.Select(d => d.DependsOnId)).Contains("http-handler");
 	}
@@ -50,8 +45,6 @@ public class HttpHooksPackageTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task HttpHooks_PackageManagedRoutes_RespondLive()
 	{
-		// The package-installed softcode actually serves requests — identical
-		// behavior to the old hardcoded seeding.
 		var http = factory.CreateHttpClient();
 		var response = await http.GetAsync("http/profile/schema");
 

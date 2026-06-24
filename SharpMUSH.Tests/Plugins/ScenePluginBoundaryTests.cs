@@ -51,7 +51,6 @@ public class ScenePluginBoundaryTests
 			.IsFalse()
 			.Because("GameHub must expose no scene methods/helpers");
 
-		// The strongly-typed client surface carries no scene push either.
 		var clientMembers = typeof(IGameHubClient).GetMethods().Select(m => m.Name).ToList();
 		await Assert.That(clientMembers.Any(n => n.Contains("Scene", StringComparison.Ordinal)))
 			.IsFalse()
@@ -78,8 +77,6 @@ public class ScenePluginBoundaryTests
 	[Test]
 	public async Task Client_HasNoSceneServiceOrPluginModels()
 	{
-		// The client keeps ONLY its own view models (SceneSummary/ScenePoseView/SceneMemberView) and its own
-		// SceneEventMessage wire DTO. It must NOT carry ISceneService or the plugin's domain MODEL records.
 		var offenders = ClientAssembly.GetTypes()
 			.Where(t =>
 				t.Name is "ISceneService" or "ScenePose" or "ScenePoseEdit" or "ScenePlot" or "SceneMember"
@@ -91,7 +88,6 @@ public class ScenePluginBoundaryTests
 			.IsEmpty()
 			.Because($"the Client assembly must carry no ISceneService or plugin scene models; found: {string.Join(", ", offenders)}");
 
-		// Its scene DTO is the client's OWN, in SharpMUSH.Client.Models — not the plugin's type.
 		var clientSceneEvent = ClientAssembly.GetType("SharpMUSH.Client.Models.SceneEventMessage");
 		await Assert.That(clientSceneEvent).IsNotNull()
 			.Because("the Client must define its own SceneEventMessage wire DTO");
@@ -100,7 +96,6 @@ public class ScenePluginBoundaryTests
 	[Test]
 	public async Task SceneContractsAssembly_IsGone()
 	{
-		// Nothing — not the host, not a test — can load the deleted shared Contracts assembly.
 		var loaded = AppDomain.CurrentDomain.GetAssemblies()
 			.Any(a => a.GetName().Name == "SharpMUSH.Plugins.Scene.Contracts");
 		await Assert.That(loaded).IsFalse()

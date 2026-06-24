@@ -62,7 +62,6 @@ public sealed record SchemaSection(
 /// </summary>
 public sealed record SchemaElement(
 	string? Kind = null,
-	// field
 	string? Key = null,
 	string? Label = null,
 	string? Type = null,
@@ -73,17 +72,12 @@ public sealed record SchemaElement(
 	[property: JsonPropertyName("visible_to")] string? VisibleTo = null,
 	// view: show the field even when its value is empty (default true); render Default in its place.
 	[property: JsonPropertyName("show_when_empty")] bool ShowWhenEmpty = true,
-	// markdown / static value
 	string? Value = null,
-	// image
 	[property: JsonPropertyName("src_field")] string? SrcField = null,
 	string? Alt = null,
-	// table
 	[property: JsonPropertyName("rows_field")] string? RowsField = null,
 	IReadOnlyList<SchemaColumn>? Columns = null,
-	// keyvalue
 	IReadOnlyList<string>? Fields = null,
-	// button
 	string? Action = null,
 	// layout: how many of the section's columns this element occupies (default 1)
 	int Span = 1);

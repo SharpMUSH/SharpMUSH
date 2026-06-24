@@ -93,7 +93,6 @@ public partial class Functions
 		var open = ArgHelpers.NoParseDefaultNoParseArgument(args, 5, "\"");
 		var close = ArgHelpers.NoParseDefaultNoParseArgument(args, 6, "\"");
 
-		// Determine message type and strip prefix using helper
 		var plainSpeak = speakString.ToPlainText();
 		var messageType = MessageHelpers.DetermineMessageType(plainSpeak);
 
@@ -469,7 +468,6 @@ public partial class Functions
 			('-', 'D') => 'Ð',
 			('&', 'o') => 'ð',
 
-			// No match, return original character
 			_ => c
 		};
 	}
@@ -488,9 +486,8 @@ public partial class Functions
 		}
 
 		var expectedColumnCount = widthSpecs.Length;
-		var totalArgs = args.Count - 1; // Exclude the widths argument
+		var totalArgs = args.Count - 1;
 
-		// We need at least expectedColumnCount arguments for the column data
 		if (totalArgs < expectedColumnCount)
 		{
 			return ErrorMessages.Returns.NotEnoughColumnsForAlign;
@@ -502,7 +499,6 @@ public partial class Functions
 			return ErrorMessages.Returns.TooManyColumnsForAlign;
 		}
 
-		// Take exactly expectedColumnCount arguments as column data
 		var columnArguments = args
 			.Skip(1)
 			.Take(expectedColumnCount)
@@ -828,7 +824,6 @@ public partial class Functions
 			}
 		}
 
-		// Return default if present
 		if (hasDefault)
 		{
 			var result = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!);
@@ -860,7 +855,6 @@ public partial class Functions
 			return result ?? CallState.Empty;
 		}
 
-		// Original multi-pair logic for other cases
 		var hasDefault = args.Count % 2 == 1;
 		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
 		var results = new List<MString?>();
@@ -881,7 +875,6 @@ public partial class Functions
 			}
 		}
 
-		// Return matched results or default
 		if (results.Count > 0)
 		{
 			return MModule.multiple(results);
@@ -926,7 +919,6 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var str = args["0"].Message!.ToPlainText();
 
-		// Process search/replace pairs
 		for (int i = 1; i < args.Count - 1; i += 2)
 		{
 			var search = args[i.ToString()].Message!.ToPlainText();
@@ -1038,7 +1030,6 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
-	// Escape angle brackets for HTML safety
 	[SharpFunction(Name = "decomposeweb", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public static ValueTask<CallState> DecomposeWeb(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(
@@ -1438,7 +1429,6 @@ public partial class Functions
 			? encodingArg.Message!.ToPlainText()!.ToLowerInvariant()
 			: "base16";
 
-		// Get the appropriate HMAC algorithm
 		HMAC? hmac = digest switch
 		{
 			"MD5" => new HMACMD5(Encoding.UTF8.GetBytes(key)),
@@ -1562,7 +1552,6 @@ public partial class Functions
 		var string2 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var separator = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 
-		// Split by separator
 		var parts1 = string.IsNullOrEmpty(separator)
 			? new[] { string1 }
 			: string1.Split(new[] { separator }, StringSplitOptions.None);
@@ -1570,7 +1559,6 @@ public partial class Functions
 			? new[] { string2 }
 			: string2.Split(new[] { separator }, StringSplitOptions.None);
 
-		// Merge alternating parts
 		var result = new StringBuilder();
 		var maxCount = Math.Max(parts1.Length, parts2.Length);
 
@@ -1621,7 +1609,6 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var hasDefault = args.Count % 2 == 1;
 
-		// Process pairs: (condition, expression), (condition, expression), ...
 		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
 
 		for (int i = 0; i < pairCount; i++)
@@ -1630,7 +1617,6 @@ public partial class Functions
 			var exprIndex = i * 2 + 1;
 
 			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
-			// Return expression when condition is TRUTHY
 			if (condition != null && Predicates.Truthy(condition.Message!))
 			{
 				var result = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
@@ -1638,7 +1624,6 @@ public partial class Functions
 			}
 		}
 
-		// Return default if present
 		if (hasDefault)
 		{
 			var result = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!);
@@ -1655,7 +1640,6 @@ public partial class Functions
 		var hasDefault = args.Count % 2 == 1;
 		var results = new List<MString?>();
 
-		// Process pairs: (condition, expression), (condition, expression), ...
 		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
 
 		for (int i = 0; i < pairCount; i++)
@@ -1686,7 +1670,6 @@ public partial class Functions
 			}
 		}
 
-		// Return matched results or default
 		if (results.Count > 0)
 		{
 			return MModule.multiple(results);
@@ -1897,7 +1880,6 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
 		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
 
-		// Push the switch string onto the context stack
 		parser.CurrentState.SwitchStack.Push(arg0!);
 
 		try
@@ -1936,7 +1918,6 @@ public partial class Functions
 		}
 		finally
 		{
-			// Pop the switch string from the context stack
 			parser.CurrentState.SwitchStack.TryPop(out _);
 		}
 	}
@@ -1950,7 +1931,6 @@ public partial class Functions
 		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
 		var resultList = new List<MString?>();
 
-		// Push the switch string onto the context stack
 		parser.CurrentState.SwitchStack.Push(arg0!);
 
 		try
@@ -1992,7 +1972,6 @@ public partial class Functions
 		}
 		finally
 		{
-			// Pop the switch string from the context stack
 			parser.CurrentState.SwitchStack.TryPop(out _);
 		}
 	}
@@ -2020,7 +1999,6 @@ public partial class Functions
 			translationMap[expandedFind[i]] = expandedReplace[i];
 		}
 
-		// Apply translation character by character
 		var result = new StringBuilder(str.Length);
 		foreach (var c in str)
 		{
@@ -2046,7 +2024,6 @@ public partial class Functions
 		{
 			if (i + 2 < input.Length && input[i + 1] == '-')
 			{
-				// Range found
 				char start = input[i];
 				char end = input[i + 2];
 				for (char c = start; c <= end; c++)
@@ -2248,7 +2225,6 @@ public partial class Functions
 		ParameterNames = ["list", "position", "delimiter", "output-separator"])]
 	public static ValueTask<CallState> Delete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// DELETE() is an alias for ldelete()
 		return ListDelete(parser, _2);
 	}
 
@@ -2256,7 +2232,6 @@ public partial class Functions
 		ParameterNames = ["list", "position", "new-item", "delim"])]
 	public static ValueTask<CallState> Insert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// INSERT() is an alias for linsert()
 		return ListInsert(parser, _2);
 	}
 
@@ -2264,7 +2239,6 @@ public partial class Functions
 		ParameterNames = ["string"])]
 	public static ValueTask<CallState> LCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// LCSTR2 strips ANSI and converts to lowercase with Unicode support
 		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		return new ValueTask<CallState>(new CallState(str.ToLowerInvariant()));
 	}
@@ -2273,7 +2247,6 @@ public partial class Functions
 		ParameterNames = ["string"])]
 	public static ValueTask<CallState> UCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// UCSTR2 strips ANSI and converts to uppercase with Unicode support
 		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		return new ValueTask<CallState>(new CallState(str.ToUpperInvariant()));
 	}

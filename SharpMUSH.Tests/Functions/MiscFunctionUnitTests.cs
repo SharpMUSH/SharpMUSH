@@ -10,8 +10,8 @@ public class MiscFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Arguments("list(functions)", "list")] // should include the 'list' function name
-	[Arguments("list(commands)", "@emit")] // should include a common command
+	[Arguments("list(functions)", "list")]
+	[Arguments("list(commands)", "@emit")]
 	[Arguments("list(locks)", "basic")] // lock type names are lowercased
 	public async Task List(string str, string expectedContains)
 	{

@@ -55,13 +55,12 @@ public class WikiControllerProtectionTests
 	public async Task UpdatePage_ProtectedPage_NonWizard_Returns403()
 	{
 		var (wiki, slug) = await SeedProtectedPage(isProtected: true);
-		var controller = MakeController(wiki); // no scopes → not a wiki moderator
+		var controller = MakeController(wiki);
 
 		var result = await controller.UpdatePage(slug, new WikiController.UpdatePageRequest("# changed", null));
 
 		await Assert.That(result).IsTypeOf<ForbidResult>();
 
-		// Content must be untouched.
 		var page = await wiki.GetBySlugAsync(slug, "general");
 		await Assert.That(page.AsT0.MarkdownSource).IsEqualTo("# original");
 	}
@@ -70,7 +69,7 @@ public class WikiControllerProtectionTests
 	public async Task UpdatePage_ProtectedPage_Wizard_Succeeds()
 	{
 		var (wiki, slug) = await SeedProtectedPage(isProtected: true);
-		var controller = MakeController(wiki, PortalPermission.WikiAdmin); // moderator scope
+		var controller = MakeController(wiki, PortalPermission.WikiAdmin);
 
 		var result = await controller.UpdatePage(slug, new WikiController.UpdatePageRequest("# changed", null));
 
@@ -81,7 +80,7 @@ public class WikiControllerProtectionTests
 	public async Task UpdatePage_UnprotectedPage_NonWizard_Succeeds()
 	{
 		var (wiki, slug) = await SeedProtectedPage(isProtected: false);
-		var controller = MakeController(wiki); // unprotected page → no moderator scope needed
+		var controller = MakeController(wiki);
 
 		var result = await controller.UpdatePage(slug, new WikiController.UpdatePageRequest("# changed", null));
 

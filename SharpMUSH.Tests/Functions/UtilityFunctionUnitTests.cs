@@ -17,7 +17,6 @@ public class UtilityFunctionUnitTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 
-	// , DependsOn<SharpMUSH.Tests.Commands.RoomsAndMovementTests>
 	[Test]
 	public async Task PCreate()
 	{
@@ -52,7 +51,6 @@ public class UtilityFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("functions()")))?.Message!;
 		var functions = result.ToPlainText();
 		await Assert.That(functions).IsNotEmpty();
-		// Should contain some known functions
 		await Assert.That(functions).Contains("rand");
 		await Assert.That(functions).Contains("add");
 	}
@@ -63,7 +61,6 @@ public class UtilityFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("functions(add*)")))?.Message!;
 		var functions = result.ToPlainText();
 		await Assert.That(functions).IsNotEmpty();
-		// Should contain functions starting with "add"
 		await Assert.That(functions).Contains("add");
 	}
 
@@ -109,7 +106,6 @@ public class UtilityFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		var value = result.ToPlainText();
 		await Assert.That(value).IsNotNull();
-		// Should return a numeric value (time in milliseconds)
 		await Assert.That(double.TryParse(value, out _)).IsTrue();
 	}
 
@@ -207,34 +203,30 @@ public class UtilityFunctionUnitTests
 	public async Task SuggestFunction()
 	{
 		var dataService = WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>();
-		
-		// Set up suggestion data with a test category
+
 		var suggestionData = new Library.ExpandedObjectData.SuggestionData(new Dictionary<string, HashSet<string>>
 		{
 			["test"] = new HashSet<string> { "apple", "application", "apply", "appreciate", "apricot", "banana", "grape" }
 		});
 		
 		await dataService.SetExpandedServerDataAsync(suggestionData);
-		
-		// Test basic suggestion - should suggest words similar to "aple" (misspelled apple)
+
+		// "aple" is a misspelling of apple
 		var result1 = (await Parser.FunctionParse(MModule.single("suggest(test,aple)")))?.Message?.ToString();
 		await Assert.That(result1).IsNotNull();
-		await Assert.That(result1).Contains("apple"); // Should suggest apple as closest match
-		
-		// Test with custom separator
+		await Assert.That(result1).Contains("apple");
+
 		var result2 = (await Parser.FunctionParse(MModule.single("suggest(test,aple,|)")))?.Message?.ToString();
 		await Assert.That(result2).IsNotNull();
-		await Assert.That(result2).Contains("|"); // Should use pipe separator
-		
-		// Test with limit
+		await Assert.That(result2).Contains("|");
+
 		var result3 = (await Parser.FunctionParse(MModule.single("suggest(test,app,|,2)")))?.Message?.ToString();
 		await Assert.That(result3).IsNotNull();
 		var suggestions = result3!.Split('|');
-		await Assert.That(suggestions.Length).IsLessThanOrEqualTo(2); // Should limit to 2 suggestions
-		
-		// Test non-existent category
+		await Assert.That(suggestions.Length).IsLessThanOrEqualTo(2);
+
 		var result4 = (await Parser.FunctionParse(MModule.single("suggest(nonexistent,word)")))?.Message?.ToString();
-		await Assert.That(result4).IsEqualTo(string.Empty); // Should return empty for non-existent category
+		await Assert.That(result4).IsEqualTo(string.Empty);
 	}
 
 	[Test]
@@ -249,7 +241,6 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Rand_NoArgs()
 	{
-		// rand() should return a value between 0 and 2^31-1
 		var result = (await Parser.FunctionParse(MModule.single("rand()")))?.Message!;
 		var value = int.Parse(result.ToPlainText());
 		await Assert.That(value).IsGreaterThanOrEqualTo(0);
@@ -283,7 +274,6 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Die_TwoDice()
 	{
-		// die(2,6) should return two space-separated dice rolls
 		var result = (await Parser.FunctionParse(MModule.single("die(2,6)")))?.Message!;
 		var rolls = result.ToPlainText().Split(' ');
 		await Assert.That(rolls.Length).IsEqualTo(2);
@@ -298,7 +288,6 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Die_ShowSum()
 	{
-		// die(5,6,0) should return only the sum
 		var result = (await Parser.FunctionParse(MModule.single("die(5,6,0)")))?.Message!;
 		var value = int.Parse(result.ToPlainText());
 		await Assert.That(value).IsGreaterThanOrEqualTo(5);
@@ -308,7 +297,6 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task R_WithRegister()
 	{
-		// setq(A,test_value_r)[r(A)]
 		var result = (await Parser.FunctionParse(MModule.single("setq(A,test_value_r)[r(A)]")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("test_value_r");
 	}
@@ -353,7 +341,6 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task SLev_CheckDepth()
 	{
-		// slev() should return current stack depth
 		var result = (await Parser.FunctionParse(MModule.single("slev()")))?.Message!;
 		var depth = int.Parse(result.ToPlainText());
 		await Assert.That(depth).IsGreaterThanOrEqualTo(0);
@@ -384,14 +371,11 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Dig_CreateRoom()
 	{
-		// Create a test room using dig()
 		var result = (await Parser.FunctionParse(MModule.single("dig(test_room_DIG_case1)")))?.Message!;
 		var resultStr = result.ToPlainText();
-		
-		// Should return a DBRef
+
 		await Assert.That(resultStr).StartsWith("#");
-		
-		// Verify the room was created
+
 		var dbRef = HelperFunctions.ParseDbRef(resultStr).AsValue();
 		var room = await Mediator.Send(new GetObjectNodeQuery(dbRef));
 		await Assert.That(room.IsRoom).IsTrue();
@@ -401,14 +385,11 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Open_CreateExit()
 	{
-		// Create a test exit using open()
 		var result = (await Parser.FunctionParse(MModule.single("open(test_exit_OPEN_case1;te1)")))?.Message!;
 		var resultStr = result.ToPlainText();
-		
-		// Should return a DBRef
+
 		await Assert.That(resultStr).StartsWith("#");
-		
-		// Verify the exit was created
+
 		var dbRef = HelperFunctions.ParseDbRef(resultStr).AsValue();
 		var exit = await Mediator.Send(new GetObjectNodeQuery(dbRef));
 		await Assert.That(exit.IsExit).IsTrue();
@@ -418,21 +399,16 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Clone_CopyObject()
 	{
-		// First create a thing to clone
 		var createResult = (await Parser.FunctionParse(MModule.single("create(test_thing_CLONE_original)")))?.Message!;
 		var originalDbRef = HelperFunctions.ParseDbRef(createResult.ToPlainText()).AsValue();
-		
-		// Set an attribute on it
+
 		await Parser.FunctionParse(MModule.single($"attrib_set({createResult},TEST_ATTR,test_value_CLONE)"));
-		
-		// Clone it
+
 		var cloneResult = (await Parser.FunctionParse(MModule.single($"clone({createResult},test_thing_CLONE_copy)")))?.Message!;
 		var cloneDbRef = HelperFunctions.ParseDbRef(cloneResult.ToPlainText()).AsValue();
-		
-		// Verify clone was created with a different dbref
+
 		await Assert.That(cloneDbRef.Number).IsNotEqualTo(originalDbRef.Number);
-		
-		// Verify the clone has the same attribute
+
 		var clone = await Mediator.Send(new GetObjectNodeQuery(cloneDbRef));
 		await Assert.That(clone.IsThing).IsTrue();
 		await Assert.That(clone.AsThing.Object.Name).IsEqualTo("test_thing_CLONE_copy");
@@ -441,10 +417,8 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task TestLock_EvaluateLock()
 	{
-		// Create a test object
 		var createResult = (await Parser.FunctionParse(MModule.single("create(test_obj_TESTLOCK)")))?.Message!;
-		
-		// Test a simple lock (always pass)
+
 		var result = (await Parser.FunctionParse(MModule.single($"testlock({createResult},%#/%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
@@ -452,98 +426,83 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Wipe_ClearAttributes()
 	{
-		// Create a test object
 		var createResult = (await Parser.FunctionParse(MModule.single("create(test_obj_WIPE)")))?.Message!;
-		
-		// Set some attributes
+
 		await Parser.FunctionParse(MModule.single($"attrib_set({createResult},ATTR1,value1)"));
 		await Parser.FunctionParse(MModule.single($"attrib_set({createResult},ATTR2,value2)"));
-		
-		// Wipe attributes
+
 		var wipeResult = (await Parser.FunctionParse(MModule.single($"wipe({createResult})")))?.Message!;
-		
-		// Should indicate number of attributes wiped
+
 		await Assert.That(wipeResult.ToPlainText()).Contains("2");
 	}
 
 	[Test]
 	public async Task ANSI_NamedColor()
 	{
-		// Test named color from colors.json
+		// named color from colors.json
 		var result = (await Parser.FunctionParse(MModule.single("ansi(+red,test)")))?.Message!;
 		var plainText = result.ToPlainText();
-		
-		// Should contain the text "test"
+
 		await Assert.That(plainText).IsEqualTo("test");
-		
-		// The full string should contain ANSI codes
+
 		var fullText = result.ToString();
 		await Assert.That(fullText).Contains("test");
-		await Assert.That(fullText).Contains("\u001b["); // Should have ANSI escape sequence
+		await Assert.That(fullText).Contains("\u001b[");
 	}
 
 	[Test]
 	public async Task ANSI_NamedBackgroundColor()
 	{
-		// Test named background color
 		var result = (await Parser.FunctionParse(MModule.single("ansi(/+blue,test)")))?.Message!;
 		var plainText = result.ToPlainText();
-		
-		// Should contain the text "test"
+
 		await Assert.That(plainText).IsEqualTo("test");
-		
-		// The full string should contain ANSI codes
+
 		var fullText = result.ToString();
 		await Assert.That(fullText).Contains("test");
-		await Assert.That(fullText).Contains("\u001b["); // Should have ANSI escape sequence
+		await Assert.That(fullText).Contains("\u001b[");
 	}
 
 	[Test]
 	public async Task ANSI_XtermColor()
 	{
-		// Test xterm color (0-255)
+		// xterm color (0-255)
 		var result = (await Parser.FunctionParse(MModule.single("ansi(196,test)")))?.Message!;
 		var plainText = result.ToPlainText();
-		
-		// Should contain the text "test"
+
 		await Assert.That(plainText).IsEqualTo("test");
-		
-		// The full string should contain ANSI codes
+
 		var fullText = result.ToString();
 		await Assert.That(fullText).Contains("test");
-		await Assert.That(fullText).Contains("\u001b["); // Should have ANSI escape sequence
+		await Assert.That(fullText).Contains("\u001b[");
 	}
 
 	[Test]
 	public async Task ANSI_XtermWithPrefix()
 	{
-		// Test +xterm prefix format
+		// +xterm prefix format
 		var result = (await Parser.FunctionParse(MModule.single("ansi(+xterm196,test)")))?.Message!;
 		var plainText = result.ToPlainText();
-		
-		// Should contain the text "test"
+
 		await Assert.That(plainText).IsEqualTo("test");
-		
-		// The full string should contain ANSI codes
+
 		var fullText = result.ToString();
 		await Assert.That(fullText).Contains("test");
-		await Assert.That(fullText).Contains("\u001b["); // Should have ANSI escape sequence
+		await Assert.That(fullText).Contains("\u001b[");
 	}
 
 	[Test]
 	public async Task ANSI_RGBFormat()
 	{
-		// Test RGB format <r g b>
+		// RGB format <r g b>
 		var result = (await Parser.FunctionParse(MModule.single("ansi(<255 0 0>,test)")))?.Message!;
 		var plainText = result.ToPlainText();
-		
-		// Should contain the text "test"
+
 		await Assert.That(plainText).IsEqualTo("test");
-		
-		// The full string should contain ANSI codes
+
 		var fullText = result.ToString();
 		await Assert.That(fullText).Contains("test");
-		await Assert.That(fullText).Contains("\u001b["); // Should have ANSI escape sequence
+		await Assert.That(fullText).Contains("\u001b[");
 		await Assert.That(fullText).Contains("38;2;255;0;0"); // RGB red color
 	}
 

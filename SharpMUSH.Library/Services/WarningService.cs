@@ -24,19 +24,16 @@ public class WarningService(
 	{
 		var targetObj = target.Object();
 
-		// Skip GOING objects
 		if (await targetObj.IsGoingAsync())
 		{
 			return false;
 		}
 
-		// Skip NO_WARN objects
 		if (await targetObj.HasNoWarnFlagAsync())
 		{
 			return false;
 		}
 
-		// Skip if owner relationship is missing, or if owner has NO_WARN
 		SharpPlayer owner;
 		try
 		{
@@ -53,7 +50,6 @@ public class WarningService(
 			return false;
 		}
 
-		// Determine which warnings to check
 		var warnings = await GetWarningsForCheck(checker, targetObj, owner.Object);
 
 		if (warnings == WarningType.None)
@@ -61,13 +57,10 @@ public class WarningService(
 			return false;
 		}
 
-		// Perform the checks
 		var hasWarnings = false;
 
-		// Generic checks for all objects
 		hasWarnings |= await CheckGenericWarnings(checker, target, warnings);
 
-		// Type-specific checks
 		hasWarnings |= targetObj.Type switch
 		{
 			"ROOM" => await CheckRoomWarnings(checker, target, warnings),
@@ -95,7 +88,6 @@ public class WarningService(
 
 		await foreach (var obj in allObjects)
 		{
-			// Check if this object is owned by the player - skip if owner relationship is missing
 			SharpPlayer objectOwner;
 			try
 			{
@@ -142,7 +134,6 @@ public class WarningService(
 		{
 			checkedCount++;
 
-			// Get the owner for this object - skip if owner relationship is missing
 			SharpPlayer owner;
 			try
 			{
@@ -160,13 +151,11 @@ public class WarningService(
 			// no secondary GetObjectNodeQuery calls needed.
 			var ownerAny = new AnySharpObject(owner);
 
-			// Track warnings per owner
 			if (!warningsByOwner.TryGetValue(ownerDbRef, out _))
 			{
 				warningsByOwner[ownerDbRef] = (ownerAny, []);
 			}
 
-			// Check warnings (using owner as checker for their own objects)
 			var hadWarnings = await CheckObjectAsync(ownerAny, obj);
 
 			if (hadWarnings)
@@ -176,7 +165,6 @@ public class WarningService(
 			}
 		}
 
-		// Notify connected owners of their warnings
 		foreach (var (ownerDbRef, (owner, warnings)) in warningsByOwner)
 		{
 			if (warnings.Count > 0)
@@ -233,11 +221,9 @@ public class WarningService(
 			var targetObj = target.Object();
 			var locks = targetObj.Locks;
 
-			// Check each lock on the object
 			foreach (var (lockName, lockData) in locks)
 			{
 				var lockString = lockData.LockString;
-				// Skip empty locks
 				if (string.IsNullOrWhiteSpace(lockString))
 				{
 					continue;
@@ -307,7 +293,6 @@ public class WarningService(
 	{
 		var hasWarnings = false;
 
-		// Check for unlinked exits
 		if (warnings.HasFlag(WarningType.ExitUnlinked))
 		{
 			if (target.IsExit)
@@ -364,7 +349,6 @@ public class WarningService(
 			}
 		}
 
-		// Check for missing description
 		if (warnings.HasFlag(WarningType.ExitDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
@@ -375,10 +359,8 @@ public class WarningService(
 			}
 		}
 
-		// Check for missing messages
 		if (warnings.HasFlag(WarningType.ExitMsgs))
 		{
-			// Check unlocked exit messages: SUCCESS, OSUCCESS, ODROP
 			var success = await attributeService.GetAttributeAsync(checker, target, "SUCCESS", IAttributeService.AttributeMode.Read, false);
 			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, false);
 			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
@@ -389,7 +371,6 @@ public class WarningService(
 				hasWarnings = true;
 			}
 
-			// Check locked exit messages: FAILURE
 			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
 			if (failure.IsT1)
 			{
@@ -398,7 +379,6 @@ public class WarningService(
 			}
 		}
 
-		// Check for one-way and multiple return exits
 		// These require topology analysis
 		if (target.IsExit && (warnings.HasFlag(WarningType.ExitOneway) || warnings.HasFlag(WarningType.ExitMultiple)))
 		{
@@ -423,7 +403,6 @@ public class WarningService(
 				// Only check if we have valid source and destination (not NOTHING)
 				if (destObj.DBRef.Number > 0 && sourceObj.DBRef.Number > 0)
 				{
-					// Get all exits from the destination that lead back to the source
 					var returnExitsQuery = mediator.CreateStream(new GetExitsQuery(destination));
 					var returnExitCount = 0;
 
@@ -449,7 +428,6 @@ public class WarningService(
 						}
 					}
 
-					// Check for one-way exits (no return)
 					if (warnings.HasFlag(WarningType.ExitOneway) && returnExitCount == 0)
 					{
 						await Complain(checker, target, "exit-oneway",
@@ -457,7 +435,6 @@ public class WarningService(
 						hasWarnings = true;
 					}
 
-					// Check for multiple return exits
 					if (warnings.HasFlag(WarningType.ExitMultiple) && returnExitCount > 1)
 					{
 						await Complain(checker, target, "exit-multiple",
@@ -482,7 +459,6 @@ public class WarningService(
 	{
 		var hasWarnings = false;
 
-		// Check for missing description
 		if (warnings.HasFlag(WarningType.ThingDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
@@ -509,10 +485,8 @@ public class WarningService(
 			}
 		}
 
-		// Check for missing messages
 		if (warnings.HasFlag(WarningType.ThingMsgs))
 		{
-			// Check unlocked thing messages: SUCCESS, OSUCCESS, DROP, ODROP
 			var success = await attributeService.GetAttributeAsync(checker, target, "SUCCESS", IAttributeService.AttributeMode.Read, false);
 			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, false);
 			var drop = await attributeService.GetAttributeAsync(checker, target, "DROP", IAttributeService.AttributeMode.Read, false);
@@ -524,7 +498,6 @@ public class WarningService(
 				hasWarnings = true;
 			}
 
-			// Check locked thing messages: FAILURE
 			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
 			if (failure.IsT1)
 			{

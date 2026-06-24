@@ -55,8 +55,6 @@ public class PluginLoaderIntegrationTests
 		await Assert.That(result).IsEqualTo("Pong from the sample plugin!");
 	}
 
-	// ----- Phase 2a contribution seams -----
-
 	[Test]
 	public async Task ServiceRegistrar_PluginService_IsResolvablePostBoot()
 	{
@@ -109,8 +107,6 @@ public class PluginLoaderIntegrationTests
 
 		await Assert.That(ran).IsTrue();
 	}
-
-	// ----- Phase 2b engine-extension hooks -----
 
 	[Test]
 	public async Task CommandInterceptor_ObservesDispatchedCommand()

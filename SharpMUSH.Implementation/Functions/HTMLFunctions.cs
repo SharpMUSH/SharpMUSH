@@ -14,7 +14,6 @@ public partial class Functions
 	[SharpFunction(Name = "html", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = ["tag", "text..."])]
 	public static ValueTask<CallState> HTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Basic HTML tag wrapper - wraps content in angle brackets for simple tag generation
 		return new ValueTask<CallState>(new CallState(
 			MModule.concat(
 				MModule.concat(
@@ -38,7 +37,6 @@ public partial class Functions
 		var tagName = args["0"].Message!.ToPlainText();
 		var content = args["1"].Message!;
 
-		// Add attributes if provided
 		string? attributes = null;
 		if (args.Count > 2)
 		{
@@ -49,7 +47,6 @@ public partial class Functions
 			}
 		}
 
-		// Create HTML markup structure for semantic information
 		var htmlMarkup = HtmlMarkup.Create(tagName, attributes);
 
 		// Return a MarkupString that contains both the HTML markup structure
@@ -63,10 +60,6 @@ public partial class Functions
 	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["message"])]
 	public static async ValueTask<CallState> websocket_json(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// wsjson() sends JSON data out-of-band to WebSocket connections
-		// First argument is the JSON content to send
-		// Second optional argument is the player/target (defaults to enactor)
-
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
@@ -94,7 +87,6 @@ public partial class Functions
 			return CallState.Empty;
 		}
 
-		// Check permissions
 		var isWizard = await executor.IsWizard();
 		var isSelf = executor.Object().DBRef == located.Object().DBRef;
 
@@ -103,7 +95,6 @@ public partial class Functions
 			return CallState.Empty;
 		}
 
-		// Format as JSON object with type indicator
 		// Try to parse as JSON, but if it fails, send as-is
 		object? dataObj;
 		try
@@ -125,7 +116,6 @@ public partial class Functions
 			data = dataObj
 		});
 
-		// Send to all WebSocket connections for the target player
 		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
 		{
 			if (connection.ConnectionType != "websocket")
@@ -145,10 +135,6 @@ public partial class Functions
 	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["html"])]
 	public static async ValueTask<CallState> websocket_html(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// wshtml() sends HTML data out-of-band to WebSocket connections
-		// First argument is the HTML content to send
-		// Second optional argument is the player/target (defaults to enactor)
-
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
@@ -185,14 +171,12 @@ public partial class Functions
 			return CallState.Empty;
 		}
 
-		// Format as JSON object with type indicator
 		var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
 		{
 			type = "html",
 			data = htmlContent
 		});
 
-		// Send to all WebSocket connections for the target player
 		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
 		{
 			if (connection.ConnectionType != "websocket")
@@ -213,7 +197,6 @@ public partial class Functions
 		ParameterNames = ["html", "player"])]
 	public static async ValueTask<CallState> WebSocketHTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Send HTML data via websocket - similar to wshtml()
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 

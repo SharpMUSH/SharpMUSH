@@ -24,7 +24,6 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask DirectParentCycle_ShouldFail()
 	{
-		// Create two objects
 		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create TestObj1"));
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
 		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
@@ -33,13 +32,11 @@ public class ZoneParentCycleTests
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
 		var obj2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
 
-		// Set obj1's parent to obj2
 		await Mediator.Send(new SetObjectParentCommand(obj1.Known, obj2.Known));
 
 		// Try to set obj2's parent to obj1 (would create a cycle)
 		var result = await ManipulateService.SetParent(obj1.Known, obj2.Known, obj1.Known, false);
 
-		// Should fail with parent loop error
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
 		await Assert.That(message).Contains("LOOP");
@@ -48,7 +45,6 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask DirectZoneCycle_ShouldFail()
 	{
-		// Create two objects
 		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create TestZone1"));
 		var zone1DbRef = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
 		var zone1 = await Mediator.Send(new GetObjectNodeQuery(zone1DbRef));
@@ -57,13 +53,11 @@ public class ZoneParentCycleTests
 		var zone2DbRef = DBRef.Parse(zone2Result.Message!.ToPlainText()!);
 		var zone2 = await Mediator.Send(new GetObjectNodeQuery(zone2DbRef));
 
-		// Set zone1's zone to zone2
 		await Mediator.Send(new SetObjectZoneCommand(zone1.Known, zone2.Known));
 
 		// Try to set zone2's zone to zone1 (would create a cycle)
 		var result = await ManipulateService.SetZone(zone1.Known, zone2.Known, zone1.Known, false);
 
-		// Should fail with zone loop error
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
 		await Assert.That(message).Contains("LOOP");
@@ -72,7 +66,6 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ParentWithZoneCycle_ShouldFail()
 	{
-		// Create two objects
 		var objAResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create MixedCycleA"));
 		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
 		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
@@ -81,13 +74,11 @@ public class ZoneParentCycleTests
 		var objBDbRef = DBRef.Parse(objBResult.Message!.ToPlainText()!);
 		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
 
-		// Set objA's parent to objB
 		await Mediator.Send(new SetObjectParentCommand(objA.Known, objB.Known));
 
 		// Try to set objB's zone to objA (would create a cycle: A -> parent B -> zone A)
 		var result = await ManipulateService.SetZone(objA.Known, objB.Known, objA.Known, false);
 
-		// Should fail with zone loop error
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
 		await Assert.That(message).Contains("LOOP");
@@ -96,7 +87,6 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ZoneWithParentCycle_ShouldFail()
 	{
-		// Create two objects
 		var objXResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create MixedCycleX"));
 		var objXDbRef = DBRef.Parse(objXResult.Message!.ToPlainText()!);
 		var objX = await Mediator.Send(new GetObjectNodeQuery(objXDbRef));
@@ -105,13 +95,11 @@ public class ZoneParentCycleTests
 		var objYDbRef = DBRef.Parse(objYResult.Message!.ToPlainText()!);
 		var objY = await Mediator.Send(new GetObjectNodeQuery(objYDbRef));
 
-		// Set objX's zone to objY
 		await Mediator.Send(new SetObjectZoneCommand(objX.Known, objY.Known));
 
 		// Try to set objY's parent to objX (would create a cycle: X -> zone Y -> parent X)
 		var result = await ManipulateService.SetParent(objX.Known, objY.Known, objX.Known, false);
 
-		// Should fail with parent loop error
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
 		await Assert.That(message).Contains("LOOP");
@@ -120,7 +108,6 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask MultiHopParentZoneCycle_ShouldFail()
 	{
-		// Create three objects
 		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create MultiHop1"));
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
 		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
@@ -133,16 +120,13 @@ public class ZoneParentCycleTests
 		var obj3DbRef = DBRef.Parse(obj3Result.Message!.ToPlainText()!);
 		var obj3 = await Mediator.Send(new GetObjectNodeQuery(obj3DbRef));
 
-		// Set obj1 -> parent obj2
 		await Mediator.Send(new SetObjectParentCommand(obj1.Known, obj2.Known));
 
-		// Set obj2 -> zone obj3
 		await Mediator.Send(new SetObjectZoneCommand(obj2.Known, obj3.Known));
 
 		// Try to set obj3 -> parent obj1 (would create a cycle: 1 -> parent 2 -> zone 3 -> parent 1)
 		var result = await ManipulateService.SetParent(obj1.Known, obj3.Known, obj1.Known, false);
 
-		// Should fail with parent loop error
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
 		await Assert.That(message).Contains("LOOP");
@@ -151,7 +135,6 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ValidParentAndZone_ShouldSucceed()
 	{
-		// Create three objects
 		var parentResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ValidParent"));
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
 		var parent = await Mediator.Send(new GetObjectNodeQuery(parentDbRef));
@@ -164,15 +147,12 @@ public class ZoneParentCycleTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
-		// Set obj's parent to parent
 		var parentResult2 = await ManipulateService.SetParent(obj.Known, obj.Known, parent.Known, false);
 		await Assert.That(parentResult2.Message).IsNotNull();
 
-		// Set obj's zone to zone
 		var zoneResult2 = await ManipulateService.SetZone(obj.Known, obj.Known, zone.Known, false);
 		await Assert.That(zoneResult2.Message).IsNotNull();
 
-		// Verify both are set
 		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var objParent = await updated.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		var objZone = await updated.Known.Object().Zone.WithCancellation(CancellationToken.None);
@@ -186,7 +166,6 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask SelfParent_ShouldFail()
 	{
-		// Create object
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create SelfParentTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -194,7 +173,6 @@ public class ZoneParentCycleTests
 		// Try to set object as its own parent
 		var result = await ManipulateService.SetParent(obj.Known, obj.Known, obj.Known, false);
 
-		// Should fail
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
 		await Assert.That(message).Contains("LOOP");
@@ -203,7 +181,6 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask SelfZone_ShouldFail()
 	{
-		// Create object
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create SelfZoneTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -211,7 +188,6 @@ public class ZoneParentCycleTests
 		// Try to set object as its own zone
 		var result = await ManipulateService.SetZone(obj.Known, obj.Known, obj.Known, false);
 
-		// Should fail
 		await Assert.That(result.Message).IsNotNull();
 		var message = result.Message!.ToPlainText()!;
 		await Assert.That(message).Contains("LOOP");
@@ -220,7 +196,6 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ChzoneCommand_WithCycle_ShouldFail()
 	{
-		// Create two objects
 		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChzoneCycle1"));
 		var zone1DbRefParsed = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
 
@@ -239,13 +214,11 @@ public class ZoneParentCycleTests
 		var zone1Num = zone1DbRefParsed.Number;
 		var zone2Num = zone2DbRefParsed.Number;
 
-		// Set zone1's zone to zone2
 		var firstCommand = $"@chzone #{zone1Num}=#{zone2Num}";
 		Console.WriteLine($"First command: {firstCommand}");
 		var firstResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single(firstCommand));
 		Console.WriteLine($"First @chzone result: '{firstResult.Message?.ToPlainText()}'");
 
-		// Verify zone1.zone was set to zone2 (use parsed DBRef for query)
 		var zone1Obj = await Mediator.Send(new GetObjectNodeQuery(zone1DbRefParsed));
 		var zone1Zone = await zone1Obj.Known.Object().Zone.WithCancellation(CancellationToken.None);
 		Console.WriteLine($"zone1.zone IsNone: {zone1Zone.IsNone}");
@@ -284,17 +257,14 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ChzoneCommand_Simple_ShouldSucceed()
 	{
-		// Create two objects
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create SimpleZone"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create SimpleObj"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
-		// Set obj's zone to zone
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
-		// Verify zone was set
 		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var objZone = await updated.Known.Object().Zone.WithCancellation(CancellationToken.None);
 
@@ -305,7 +275,6 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask DebugChzoneBasic()
 	{
-		// Create two objects
 		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DebugObj1"));
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
 
@@ -318,11 +287,9 @@ public class ZoneParentCycleTests
 		var dbObj2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
 		await Mediator.Send(new UnsetObjectZoneCommand(dbObj2.Known));
 
-		// Set obj1's zone to obj2
 		var chzoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {obj1DbRef}={obj2DbRef}"));
 		Console.WriteLine($"Chzone result: '{chzoneResult.Message?.ToPlainText()}'");
 
-		// Verify zone was set
 		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
 		var obj1Zone = await obj1.Known.Object().Zone.WithCancellation(CancellationToken.None);
 

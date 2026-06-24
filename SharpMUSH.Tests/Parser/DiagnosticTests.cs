@@ -48,7 +48,6 @@ public class DiagnosticTests
 		await Assert.That(diagnostics).IsNotEmpty();
 
 		var diagnostic = diagnostics[0];
-		// Range should have valid positions
 		await Assert.That(diagnostic.Range.Start.Line).IsGreaterThanOrEqualTo(0);
 		await Assert.That(diagnostic.Range.Start.Character).IsGreaterThanOrEqualTo(0);
 		await Assert.That(diagnostic.Range.End.Character).IsGreaterThanOrEqualTo(diagnostic.Range.Start.Character);

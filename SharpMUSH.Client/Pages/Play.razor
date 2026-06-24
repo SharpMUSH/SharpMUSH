@@ -10,7 +10,6 @@
 
 <div class="play-shell">
 
-    @* ── Main terminal pane (rounded card) ── *@
     <div class="play-term">
         <div class="play-term-header">
             <span class="play-dot @(PlayTerminal.IsConnected ? "play-dot--on" : "")"></span>
@@ -26,7 +25,6 @@
         </div>
     </div>
 
-    @* ── Side panel: stacked cards ── *@
     <div class="play-side">
         <div class="play-card">
             <div class="play-fieldlabel">Here</div>
@@ -68,7 +66,6 @@
         overflow: hidden;
     }
 
-    /* Terminal card */
     .play-term {
         display: flex;
         flex-direction: column;
@@ -120,7 +117,6 @@
         color: var(--accent);
     }
 
-    /* Side panel */
     .play-side {
         display: flex;
         flex-direction: column;

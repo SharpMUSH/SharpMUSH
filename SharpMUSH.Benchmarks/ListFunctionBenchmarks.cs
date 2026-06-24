@@ -27,7 +27,6 @@ public class ListFunctionBenchmarks : BaseBenchmark
 	private static readonly MString Member100 = MModule.single(
 		$"member({string.Join(" ", Enumerable.Range(1, 100))},50)");
 
-	// Reversed order to stress sort
 	private static readonly MString Sort10 = MModule.single(
 		$"sort({string.Join(" ", Enumerable.Range(1, 10).Select(i => (11 - i).ToString()))})");
 	private static readonly MString Sort100 = MModule.single(

@@ -28,8 +28,6 @@ public partial class Commands
 			return new None();
 		}
 
-		// Parse args from the raw input: "register arg0 [arg1] arg2"
-		// MinArgs=2 (displayname + password), MaxArgs=3 (displayname + email + password)
 		var rawArgs = parser.CurrentState.Arguments;
 		string username, password;
 		string? email = null;
@@ -41,14 +39,12 @@ public partial class Commands
 
 		if (arg2 is not null)
 		{
-			// 3-arg form: username email password
 			username = arg0 ?? string.Empty;
 			email = arg1;
 			password = arg2;
 		}
 		else if (arg1 is not null)
 		{
-			// 2-arg form: username password
 			username = arg0 ?? string.Empty;
 			password = arg1;
 		}
@@ -174,10 +170,8 @@ public partial class Commands
 
 		var playerDbRef = await Mediator!.Send(new CreatePlayerCommand(charName, charPassword, defaultHomeDbref, defaultHomeDbref, startingQuota));
 
-		// Link the new character to the account
 		await AccountService!.LinkCharacterAsync(accountId, playerDbRef);
 
-		// Bind the connection to the new character (LoggedIn)
 		await ConnectionService.Bind(handle, playerDbRef);
 
 		var playerNode = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(playerDbRef));

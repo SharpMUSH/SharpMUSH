@@ -44,11 +44,9 @@ public sealed class SurrealStagingDatabase : SurrealDatabase, IStagingDatabase
 		if (IsPromoted) throw new InvalidOperationException("Staging already promoted.");
 		if (_aborted) throw new InvalidOperationException("Staging was aborted.");
 
-		// Drop the original live database
 		await _liveClient.RawQuery("REMOVE DATABASE IF EXISTS world;");
 		_logger.LogInformation("Dropped original SurrealDB database: world");
 
-		// Swap the client on the live database instance
 		SwapClientOnLive();
 
 		IsPromoted = true;

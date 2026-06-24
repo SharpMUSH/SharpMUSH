@@ -179,13 +179,11 @@ public static class MessageListHelper
 		IAsyncEnumerable<SharpMail> mailList,
 		string personName)
 	{
-		// Try to locate the person using the Locate service
 		var locateService = parser.ServiceProvider.GetRequiredService<ILocateService>();
 		var locateResult = await locateService.Locate(parser, executor, executor, personName, LocateFlags.PlayersPreference);
 
 		if (!locateResult.IsValid() || !locateResult.IsPlayer)
 		{
-			// If person not found or not a player, fall back to string matching
 			return ErrorOrMailList.FromAsyncEnumerable(mailList
 				.Where(async (x, _) =>
 				{
@@ -194,7 +192,6 @@ public static class MessageListHelper
 				}));
 		}
 
-		// Filter by exact player dbref match
 		var targetPlayerDbref = locateResult.AsPlayer.Object.DBRef;
 		return ErrorOrMailList.FromAsyncEnumerable(mailList
 			.Where(async (x, _) =>

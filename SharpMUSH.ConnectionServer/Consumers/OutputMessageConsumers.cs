@@ -74,7 +74,6 @@ public class BroadcastConsumer(
 		{
 			try
 			{
-				// Transform output based on capabilities and preferences
 				var transformedData = await transformService.TransformAsync(
 					message.Data,
 					connection.Capabilities,

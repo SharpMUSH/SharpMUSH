@@ -62,7 +62,6 @@ public class TestObjectFactory
 		if (_objects.TryGetValue(key, out var existingObject))
 			return existingObject;
 
-		// Use provided location or create a default one
 		var playerLocation = location ?? CreateRoom(key + 10000, $"Room for {name}");
 
 		var sharpObject = new SharpObject
@@ -75,7 +74,6 @@ public class TestObjectFactory
 			Owner = new(async ct =>
 			{
 				await ValueTask.CompletedTask;
-				// Players own themselves
 				return _objects.TryGetValue(key, out var player) && player.IsPlayer
 					? player.AsPlayer
 					: null!;
@@ -99,7 +97,7 @@ public class TestObjectFactory
 			Home = new(async ct => { await ValueTask.CompletedTask; return playerLocation; }),
 			PasswordHash = string.Empty,
 			PasswordSalt = null,
-			Quota = 20 // Default test quota
+			Quota = 20
 		};
 
 		var anySharpObject = new AnySharpObject(player);
@@ -122,7 +120,6 @@ public class TestObjectFactory
 		if (_objects.TryGetValue(key, out var existingObject))
 			return existingObject;
 
-		// Use provided location or create a default one
 		var thingLocation = location ?? CreateRoom(key + 10000, $"Room for {name}");
 
 		var sharpObject = new SharpObject
@@ -135,7 +132,6 @@ public class TestObjectFactory
 			Owner = new(async ct =>
 			{
 				await ValueTask.CompletedTask;
-				// Use provided owner or default to null
 				return owner?.IsPlayer == true ? owner.AsPlayer : null!;
 			}),
 			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),

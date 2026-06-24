@@ -26,8 +26,8 @@ public interface IListenerRoutingService
 /// Context information for a notification being routed.
 /// </summary>
 public record NotificationContext(
-	DBRef Target,              // Who is being notified
-	DBRef? Location,           // Where notification is happening
-	bool IsRoomBroadcast,      // Is this a room-wide message?
-	DBRef[] ExcludedObjects    // Objects to exclude from listening
+	DBRef Target,
+	DBRef? Location,
+	bool IsRoomBroadcast,
+	DBRef[] ExcludedObjects
 );

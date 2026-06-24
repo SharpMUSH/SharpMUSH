@@ -10,8 +10,6 @@ public partial class MemgraphDatabase : ILayoutRegistryService
 {
 	#region Layout Registry
 
-	// Node label: :SysLayout, keyed by scope. Stores the LayoutConfiguration as a JSON blob.
-
 	public async Task UpsertLayoutAsync(string scope, LayoutConfiguration layout)
 	{
 		await ExecuteWithRetryAsync("""

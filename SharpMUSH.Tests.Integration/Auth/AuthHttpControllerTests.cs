@@ -16,8 +16,6 @@ namespace SharpMUSH.Tests.Integration.Auth;
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class AuthHttpControllerTests(ServerWebAppFactory factory)
 {
-	// ── DTO mirrors (only the fields the tests assert on) ────────────────────
-
 	private record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 	private record AccountLoginResponse(string AccountId, string Username, List<CharacterSummary> Characters, string AccountSessionToken, bool MustChangePassword);
 	private record JwtTokenResponse(string AccessToken, string RefreshToken, int ExpiresIn, string Role);
@@ -33,8 +31,6 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 	private record MushTokenRequest(string? PlayerName, string? Password, string? AccountSessionToken, int? CharacterKey, long? CharacterCreationTime);
 
 	private const string Password = "Integration-Test-Pw-1!";
-
-	// ── Helpers ───────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Test client pinned to the https base address. The server uses UseHttpsRedirection;
@@ -74,8 +70,6 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		return (await response.Content.ReadFromJsonAsync<CreatedCharacterResponse>())!;
 	}
-
-	// ── Registration & login ──────────────────────────────────────────────────
 
 	[Test]
 	public async Task AccountRegister_NewAccount_ReturnsSessionTokenAndEmptyCharacterList()
@@ -128,8 +122,6 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(login.Characters.Count).IsEqualTo(1);
 	}
 
-	// ── Character switch (JWT) ────────────────────────────────────────────────
-
 	[Test]
 	public async Task JwtSwitchCharacter_LinkedCharacter_IssuesTokenPairAndRefreshCookie()
 	{
@@ -145,7 +137,6 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(tokens.RefreshToken).IsNotEmpty();
 		await Assert.That(tokens.Role).IsEqualTo("Player");
 
-		// The refresh token must also land in the httpOnly cookie.
 		var setCookies = response.Headers.GetValues("Set-Cookie").ToList();
 		await Assert.That(setCookies.Any(c => c.StartsWith("sharpmush_refresh="))).IsTrue();
 		await Assert.That(setCookies.First(c => c.StartsWith("sharpmush_refresh="))).Contains("httponly");
@@ -162,8 +153,6 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 	}
 
-	// ── Refresh token rotation ────────────────────────────────────────────────
-
 	[Test]
 	public async Task JwtRefresh_ValidToken_RotatesAndRejectsReuse()
 	{
@@ -174,7 +163,6 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 			new JwtSwitchCharacterRequest(account.AccountSessionToken, character.DbrefNumber, character.CreationTime));
 		var tokens = await login.Content.ReadFromJsonAsync<JwtTokenResponse>();
 
-		// First refresh succeeds and returns a NEW refresh token.
 		var refresh = await http.PostAsJsonAsync("api/auth/jwt-refresh", new JwtRefreshRequest(tokens!.RefreshToken));
 		await Assert.That(refresh.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var refreshed = await refresh.Content.ReadFromJsonAsync<JwtTokenResponse>();
@@ -206,8 +194,6 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
 	}
 
-	// ── OTT via account session (no character password) ───────────────────────
-
 	[Test]
 	public async Task MushToken_ViaAccountSession_IssuesOttWithoutCharacterPassword()
 	{
@@ -221,8 +207,6 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		var ott = await response.Content.ReadFromJsonAsync<MushTokenResponse>();
 		await Assert.That(ott!.Token).IsNotEmpty();
 	}
-
-	// ── Link existing character ───────────────────────────────────────────────
 
 	[Test]
 	public async Task LinkCharacter_WrongPassword_Returns401()
@@ -267,13 +251,11 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		var name = UniqueName("LinkC");
 		var character = await CreateCharacterAsync(http, accountA.AccountSessionToken, name, Password);
 
-		// Unlink from account A …
 		var unlink = new HttpRequestMessage(HttpMethod.Delete, $"api/account/characters/{character.DbrefNumber}");
 		unlink.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accountA.AccountSessionToken);
 		var unlinkResponse = await http.SendAsync(unlink);
 		await Assert.That(unlinkResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
 
-		// … then link it to account B by name + character password.
 		var (_, accountB) = await RegisterAccountAsync();
 		var link = new HttpRequestMessage(HttpMethod.Post, "api/account/link-character")
 		{
@@ -283,7 +265,6 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		var linkResponse = await http.SendAsync(link);
 		await Assert.That(linkResponse.StatusCode).IsEqualTo(HttpStatusCode.OK);
 
-		// Account B now sees the character.
 		var list = new HttpRequestMessage(HttpMethod.Get, "api/account/characters");
 		list.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accountB.AccountSessionToken);
 		var listResponse = await http.SendAsync(list);

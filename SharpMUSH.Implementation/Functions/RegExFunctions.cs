@@ -126,7 +126,6 @@ public partial class Functions
 			// Check if the entire string matches (not just a substring)
 			var isFullMatch = match.Success && match.Index == 0 && match.Length == str.Length;
 
-			// Handle register list if provided
 			if (args.ContainsKey("2"))
 			{
 				var registerList = args["2"].Message!.ToPlainText();
@@ -175,11 +174,9 @@ public partial class Functions
 				qRegister = parts[0];
 			}
 
-			// Get the capture value
 			string value = "";
 			if (int.TryParse(captureIndexOrName, out int captureIndex))
 			{
-				// Numeric capture
 				if (captureIndex < match.Groups.Count)
 				{
 					value = match.Groups[captureIndex].Value;
@@ -187,7 +184,6 @@ public partial class Functions
 			}
 			else
 			{
-				// Named capture
 				var group = match.Groups[captureIndexOrName];
 				if (group.Success)
 				{
@@ -195,7 +191,6 @@ public partial class Functions
 				}
 			}
 
-			// Set the q-register
 			parser.CurrentState.AddRegister(qRegister, MModule.single(value));
 		}
 	}
@@ -312,12 +307,10 @@ public partial class Functions
 			options |= RegexOptions.IgnoreCase;
 		}
 
-		// Push the switch string onto the context stack
 		parser.CurrentState.SwitchStack.Push(arg0!);
 
 		try
 		{
-			// Process pattern/list pairs manually (every 2 elements)
 			for (int i = 0; i < pairCount - 1; i += 2)
 			{
 				var patternKv = orderedArgs[i];
@@ -337,13 +330,11 @@ public partial class Functions
 						var list = listKv.Value.Message!.ToPlainText();
 						list = list.Replace("#$", str);
 
-						// Replace numbered captures ($0, $1, etc.)
 						for (int j = 0; j < match.Groups.Count; j++)
 						{
 							list = list.Replace($"${j}", match.Groups[j].Value);
 						}
 
-						// Replace named captures ($<name>)
 						foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
 						{
 							var group = match.Groups[groupName];
@@ -353,14 +344,12 @@ public partial class Functions
 							}
 						}
 
-						// Parse and evaluate the list
 						var evaluated = (await parser.FunctionParse(MModule.single(list))) ?? new CallState(MModule.empty());
 						var evaluatedMsg = evaluated.Message ?? MModule.empty();
 						results.Add(evaluatedMsg);
 
 						if (!all)
 						{
-							// Return first match for reswitch/reswitchi
 							return new CallState(evaluatedMsg);
 						}
 					}
@@ -372,14 +361,12 @@ public partial class Functions
 				}
 			}
 
-			// If we got here and have results (for reswitchall/reswitchalli), return them
 			if (results.Any())
 			{
 				// PennMUSH concatenates results with no separator (like appending to a buffer)
 				return new CallState(MModule.multipleWithDelimiter(MModule.empty(), results));
 			}
 
-			// No matches - return default if available
 			if (defaultValue != null)
 			{
 				var defaultEvaluated = await defaultValue.Value.Value.ParsedMessage();
@@ -390,7 +377,6 @@ public partial class Functions
 		}
 		finally
 		{
-			// Pop the switch string from the context stack
 			parser.CurrentState.SwitchStack.TryPop(out _);
 		}
 	}

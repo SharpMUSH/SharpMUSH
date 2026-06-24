@@ -43,7 +43,6 @@ public static class SharpObjectExtensions
 			var zone = currentZone.Known;
 			yield return zone;
 
-			// Get the zone's zone (if any)
 			currentZone = await zone.Object().Zone.WithCancellation(ct);
 			depth++;
 
@@ -90,13 +89,11 @@ public static class SharpObjectExtensions
 			return false;
 		}
 
-		// Check immediate zone
 		if (objectZone.Known.Object().DBRef.Number == targetZone.Object().DBRef.Number)
 		{
 			return true;
 		}
 
-		// Check zone hierarchy if requested
 		if (checkHierarchy)
 		{
 			await foreach (var zone in obj.GetZoneChain(ct: ct))

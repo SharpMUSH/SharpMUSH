@@ -67,7 +67,6 @@ public partial class Functions
 
 		if (args.Count == 2)
 		{
-			// If only 2 args, just return max(value, min)
 			return ValueTask.FromResult<CallState>(Math.Max(value, min));
 		}
 
@@ -76,7 +75,6 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
-		// Clamp the value between min and max
 		return ValueTask.FromResult<CallState>(Math.Clamp(value, min, max));
 	}
 
@@ -85,19 +83,16 @@ public partial class Functions
 	{
 		var text = MModule.plainText(parser.CurrentState.ArgumentsOrdered["0"].Message);
 
-		// Handle pure integer
 		if (int.TryParse(text, out var intVal))
 		{
 			return ValueTask.FromResult<CallState>((intVal - 1).ToString(CultureInfo.InvariantCulture));
 		}
 
-		// Handle empty string
 		if (string.IsNullOrEmpty(text))
 		{
 			return ValueTask.FromResult<CallState>("-1");
 		}
 
-		// Find trailing integer portion
 		var lastIdx = text.Length - 1;
 		if (!char.IsDigit(text[lastIdx]))
 		{
@@ -277,14 +272,12 @@ public partial class Functions
 		var wholePart = Math.Truncate(value);
 		var fractionalPart = Math.Abs(value - wholePart);
 
-		// If it's a whole number, just return it
 		if (fractionalPart < 0.000001m)
 		{
 			return ValueTask.FromResult<CallState>(((int)wholePart).ToString());
 		}
 
-		// Convert fractional part to a fraction using continued fraction approximation
-		// PennMUSH uses this approach with a max denominator limit
+		// PennMUSH uses continued fraction approximation with a max denominator limit
 		var (numerator, denominator) = ContinuedFractionApprox((double)fractionalPart, 1000000);
 
 		if (value < 0 && wholePart == 0)
@@ -292,18 +285,15 @@ public partial class Functions
 			numerator = -numerator;
 		}
 
-		// If we have a whole part and showWhole is true
 		if (Math.Abs(wholePart) >= 1 && showWhole)
 		{
 			return ValueTask.FromResult<CallState>($"{(int)wholePart} {numerator}/{denominator}");
 		}
-		// If we have a whole part but showWhole is false, add it to the fraction
 		else if (Math.Abs(wholePart) >= 1 && !showWhole)
 		{
 			numerator += (long)wholePart * denominator;
 			return ValueTask.FromResult<CallState>($"{numerator}/{denominator}");
 		}
-		// Just the fraction
 		else
 		{
 			return ValueTask.FromResult<CallState>($"{numerator}/{denominator}");
@@ -315,19 +305,16 @@ public partial class Functions
 	{
 		var text = MModule.plainText(parser.CurrentState.ArgumentsOrdered["0"].Message);
 
-		// Handle pure integer
 		if (int.TryParse(text, out var intVal))
 		{
 			return ValueTask.FromResult<CallState>((intVal + 1).ToString(CultureInfo.InvariantCulture));
 		}
 
-		// Handle empty string
 		if (string.IsNullOrEmpty(text))
 		{
 			return ValueTask.FromResult<CallState>("1");
 		}
 
-		// Find trailing integer portion
 		var lastIdx = text.Length - 1;
 		if (!char.IsDigit(text[lastIdx]))
 		{
@@ -381,7 +368,6 @@ public partial class Functions
 			return new CallState("0");
 		}
 
-		// Check for division by zero for operations that divide
 		if ((operation == "div" || operation == "fdiv" || operation == "modulo" || operation == "remainder")
 				&& values.Skip(1).Any(v => v == 0))
 		{
@@ -390,7 +376,6 @@ public partial class Functions
 
 		string result = operation switch
 		{
-			// Arithmetic operations
 			"add" => values.Sum().ToString(CultureInfo.InvariantCulture),
 			"sub" => values.Aggregate((acc, val) => acc - val).ToString(CultureInfo.InvariantCulture),
 			"mul" => values.Aggregate((acc, val) => acc * val).ToString(CultureInfo.InvariantCulture),
@@ -399,7 +384,6 @@ public partial class Functions
 			"modulo" => values.Aggregate((acc, val) => ((acc % val) + val) % val).ToString(CultureInfo.InvariantCulture),
 			"remainder" => values.Aggregate((acc, val) => acc % val).ToString(CultureInfo.InvariantCulture),
 
-			// Comparison operations
 			"max" => values.Max().ToString(CultureInfo.InvariantCulture),
 			"min" => values.Min().ToString(CultureInfo.InvariantCulture),
 			"eq" => (values.All(v => v == values[0]) ? 1 : 0).ToString(),
@@ -421,7 +405,6 @@ public partial class Functions
 			"bor" => values.Select(v => (int)v).Aggregate((acc, val) => acc | val).ToString(),
 			"bxor" => values.Select(v => (int)v).Aggregate((acc, val) => acc ^ val).ToString(),
 
-			// Statistical operations
 			"mean" => values.Average().ToString(CultureInfo.InvariantCulture),
 			"median" => CalculateMedian(values).ToString(CultureInfo.InvariantCulture),
 			"stddev" => CalculateStdDev(values).ToString(CultureInfo.InvariantCulture),
@@ -507,7 +490,6 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		// Determine if we're working with integers or floats
 		var useIntegers = Math.Abs(start - Math.Floor(start)) < 1e-10
 			&& Math.Abs(end - Math.Floor(end)) < 1e-10
 			&& Math.Abs(step - Math.Floor(step)) < 1e-10;
@@ -586,12 +568,10 @@ public partial class Functions
 
 		if (count % 2 == 1)
 		{
-			// Odd number of elements, return middle element
 			return ValueTask.FromResult<CallState>(sorted[count / 2]);
 		}
 		else
 		{
-			// Even number of elements, return average of two middle elements
 			var median = (sorted[count / 2 - 1] + sorted[count / 2]) / 2.0;
 			return ValueTask.FromResult<CallState>(median);
 		}
@@ -663,7 +643,6 @@ public partial class Functions
 		// Handle negative base: odd integer roots of negatives are valid (e.g. root(-27,3) = -3)
 		if (value < 0)
 		{
-			// Check if root is an odd integer
 			if (root == Math.Floor(root) && (int)root % 2 != 0)
 			{
 				var result = -Math.Pow(-value, 1.0 / root);
@@ -862,7 +841,6 @@ public partial class Functions
 
 		if (args.Count == 1)
 		{
-			// Base 10 logarithm
 			var result = Math.Log10(value);
 			if (double.IsNegativeInfinity(result))
 				return ValueTask.FromResult(new CallState("-inf"));
@@ -944,7 +922,6 @@ public partial class Functions
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
 
-			// Third argument indicates whether to pad with zeros
 			if (padZeros != 0)
 			{
 				return ValueTask.FromResult<CallState>(rounded.ToString($"F{decimals}"));
@@ -1296,13 +1273,11 @@ public partial class Functions
 			executor, executor, containerArg, All,
 			async container =>
 			{
-				// Check if executor can examine the container
 				if (!await PermissionService!.CanExamine(executor, container))
 				{
 					return new CallState("#-1");
 				}
 
-				// Search for the object inside the container
 				if (!container.IsContainer)
 				{
 					return new CallState("#-1");

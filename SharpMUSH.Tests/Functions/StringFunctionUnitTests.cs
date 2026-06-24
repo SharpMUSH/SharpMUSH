@@ -303,9 +303,7 @@ public class StringFunctionUnitTests
 	[Test]
 	// TODO: Fix decomposeweb, and then fix this test.
 	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color:Red;background-color:inherit;text-decoration:inherit"">red</span>")]
-	// [Arguments("decomposeweb(ansi(bu,blue))", @"<span style=""color:Blue;background-color:inherit;text-decoration:underline"">blue</span>")]
 	// TODO: decompsoe is not matching 'b' correctly it seems.
-	// [Skip("Decompose function not functioning as expected. Needs investigation.")]
 	public async Task DecomposeWeb(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -401,7 +399,6 @@ public class StringFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// Comprehensive tests for align() function
 	[Test]
 	[Arguments("align(10 10,left,right)", "left       right     ")]
 	[Arguments("align(>10 >10,left,right)", "      left      right")]
@@ -448,7 +445,6 @@ public class StringFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// Comprehensive tests for lalign() function
 	[Test]
 	[Arguments("lalign(10 10,col1|col2,|)", "col1       col2      ")]
 	[Arguments("lalign(>10 >10,left|right,|)", "      left      right")]

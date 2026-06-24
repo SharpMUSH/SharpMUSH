@@ -27,13 +27,11 @@ public class ObjectFlagChangeHandler(
 
 	public async ValueTask Handle(ObjectFlagChangedNotification notification, CancellationToken cancellationToken)
 	{
-		// Only sync if this is one of the output preference flags
 		if (!OutputPreferenceFlags.Contains(notification.FlagName))
 		{
 			return;
 		}
 
-		// Find all connections for this player
 		var connections = await connectionService.GetAll()
 			.Where(c => c.Ref == notification.Target.Object().DBRef)
 			.ToListAsync(cancellationToken);
@@ -45,7 +43,6 @@ public class ObjectFlagChangeHandler(
 			return;
 		}
 
-		// Query all output preference flags from the player object
 		var player = notification.Target.Object();
 		var ansiEnabled = await player.Flags.Value.AnyAsync(f =>
 			string.Equals(f.Name, "ANSI", StringComparison.OrdinalIgnoreCase), cancellationToken);
@@ -54,7 +51,6 @@ public class ObjectFlagChangeHandler(
 		var xterm256Enabled = await player.Flags.Value.AnyAsync(f =>
 			string.Equals(f.Name, "XTERM256", StringComparison.OrdinalIgnoreCase), cancellationToken);
 
-		// Sync preferences to all connections for this player
 		foreach (var connection in connections)
 		{
 			await messageBus.Publish(new UpdatePlayerPreferencesMessage(

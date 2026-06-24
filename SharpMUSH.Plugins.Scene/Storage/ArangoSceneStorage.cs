@@ -26,8 +26,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 	/// <summary>Strips an Arango <c>collection/key</c> prefix to the bare key (local copy of the provider helper).</summary>
 	private static string ExtractKey(string id) => id.Contains('/') ? id.Split('/')[1] : id;
 
-	// ── Object reference helpers ──────────────────────────────────────────────
-
 	/// <summary>
 	/// Resolves a dbref string (e.g. <c>#1</c>) to its live typed-vertex id and name
 	/// snapshot. Returns <c>(null, "")</c> when the dbref is malformed or the object
@@ -134,8 +132,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 	private static string EditVertexId(string editKey) => $"{SceneArangoConstants.SharpScenePoseEdits}/{editKey}";
 	private static string PlotVertexId(string plotKey) => $"{SceneArangoConstants.SharpScenePlots}/{plotKey}";
 
-	// ── Scenes ─────────────────────────────────────────────────────────────────
-
 	public async Task<SceneModel> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "")
 	{
 		var now = NowMillis();
@@ -164,8 +160,8 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		var key = created.New.GetProperty("_key").GetString()!;
 		var vertexId = SceneVertexId(key);
 
-		// Owner edge + snapshot. Starter defaults to the owner.
 		var ownerName = await SetObjectEdgeAsync(SceneArangoConstants.SceneOwner, vertexId, ownerDbref);
+		// Starter defaults to the owner.
 		var starterName = await SetObjectEdgeAsync(SceneArangoConstants.SceneStarter, vertexId, ownerDbref);
 		var roomName = string.IsNullOrWhiteSpace(roomDbref)
 			? string.Empty
@@ -382,8 +378,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		return await SceneFromJsonAsync(elem);
 	}
 
-	// ── Poses ──────────────────────────────────────────────────────────────────
-
 	public async Task<OneOf<ScenePose, NotFound, Error<string>>> AddPoseAsync(string sceneId, string authorDbref,
 		string showAs, string originDbref, string source, IReadOnlyList<string> tags, string content)
 	{
@@ -414,10 +408,8 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		var poseKey = createdPose.New.GetProperty("_key").GetString()!;
 		var poseVertex = PoseVertexId(poseKey);
 
-		// pose_in_scene back-reference.
 		await InsertEdgeAsync(SceneArangoConstants.ScenePoseInScene, poseVertex, sceneVertex);
 
-		// author edge + origin edge (snapshots already partly captured).
 		if (authorVertex is not null)
 			await InsertEdgeAsync(SceneArangoConstants.ScenePoseAuthor, poseVertex, authorVertex);
 		var originName = string.IsNullOrWhiteSpace(originDbref)
@@ -434,10 +426,8 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		await InsertEdgeAsync(SceneArangoConstants.SceneFirstEdit, poseVertex, editVertex);
 		await InsertEdgeAsync(SceneArangoConstants.SceneCurrentEdit, poseVertex, editVertex);
 
-		// Append to the scene's pose_next chain.
 		await AppendPoseToChainAsync(sceneVertex, poseVertex);
 
-		// Bump denormalized counters.
 		await UpdateSceneFieldsAsync(sceneKey, new { PoseCount = sceneResult.AsT0.PoseCount + 1, LastActivityAt = now });
 
 		return (await GetPoseAsync(poseKey)).Match<OneOf<ScenePose, NotFound, Error<string>>>(
@@ -577,7 +567,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		var newEditKey = await CreateEditAsync(poseKey, content, editorVertex, editorName, now);
 		var newEditVertex = EditVertexId(newEditKey);
 
-		// Link current -> new via next_edit, then move current_edit pointer.
 		await InsertEdgeAsync(SceneArangoConstants.SceneNextEdit, EditVertexId(currentEditKey), newEditVertex);
 		await RepointCurrentEditAsync(poseVertex, newEditVertex);
 
@@ -599,7 +588,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		if (currentEditKey is null)
 			return new Error<string>("Pose has no content version.");
 
-		// Find the edit whose next_edit points to current.
 		var prev = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._to == @cur LIMIT 1 RETURN e._from",
 			new Dictionary<string, object>
@@ -633,7 +621,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		if (currentEditKey is null)
 			return new Error<string>("Pose has no content version.");
 
-		// Find next_edit from current.
 		var next = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @cur LIMIT 1 RETURN e._to",
 			new Dictionary<string, object>
@@ -705,7 +692,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 			await _accessor.Context.Document.UpdateAsync(_accessor.Handle, SceneArangoConstants.SharpScenePoses,
 				new { _key = poseKey, IsDeleted = true }, mergeObjects: true);
 
-			// Decrement the denormalized pose count on the owning scene.
 			var sceneVertex = await GetSceneVertexForPoseAsync(poseVertex);
 			if (sceneVertex is not null)
 			{
@@ -769,8 +755,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		return OneOf<IReadOnlyList<ScenePoseEdit>, NotFound>.FromT0(edits.AsReadOnly());
 	}
 
-	// ── Members / focus ──────────────────────────────────────────────────────────
-
 	public async Task<OneOf<SceneMember, NotFound>> AddMemberAsync(string sceneId, string playerDbref, string role)
 	{
 		var sceneResult = await GetSceneAsync(sceneId);
@@ -784,7 +768,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 
 		var now = NowMillis();
 
-		// One member edge per (player, scene). Update existing or insert.
 		var existing = await GetMemberEdgeAsync(sceneVertex, playerVertex);
 		if (existing is null)
 		{
@@ -903,7 +886,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		if (playerVertex is null)
 			return new NotFound();
 
-		// Clear isCurrent on all of the player's member edges.
 		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @from UPDATE e WITH { isCurrent: false } IN @@e",
 			new Dictionary<string, object>
@@ -921,7 +903,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 
 		var sceneVertex = SceneVertexId(ExtractKey(sceneId));
 
-		// Ensure a member edge exists, then mark it current.
 		var existing = await GetMemberEdgeAsync(sceneVertex, playerVertex);
 		if (existing is null)
 		{
@@ -998,8 +979,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 
 		return await GetMemberAsync(sceneId, playerDbref);
 	}
-
-	// ── Plots ──────────────────────────────────────────────────────────────────
 
 	public async Task<ScenePlot> UpsertPlotAsync(string? plotId, string title, string description, string ownerDbref)
 	{
@@ -1115,8 +1094,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 
 		return new None();
 	}
-
-	// ── Derived reads ────────────────────────────────────────────────────────────
 
 	public async Task<OneOf<IReadOnlyList<string>, NotFound>> GetTagsAsync(string sceneId)
 	{
@@ -1267,7 +1244,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 			if (next is null)
 				break;
 
-			// Remove the next_edit edge from cursor.
 			await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 				"FOR e IN @@e FILTER e._from == @c REMOVE e IN @@e",
 				new Dictionary<string, object>
@@ -1276,7 +1252,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 					{ "c", cursor }
 				});
 
-			// Remove the forward edit's editor edge and the edit document itself.
 			await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 				"FOR e IN @@e FILTER e._from == @n REMOVE e IN @@e",
 				new Dictionary<string, object>
@@ -1328,8 +1303,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		return result.FirstOrDefault() > 0;
 	}
 
-	// ── Pose chain (first_pose / last_pose / pose_next) ────────────────────────────
-
 	private async Task AppendPoseToChainAsync(string sceneVertex, string poseVertex)
 	{
 		var lastResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
@@ -1343,7 +1316,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 
 		if (last is null)
 		{
-			// Empty chain: this is both first and last.
 			await InsertEdgeAsync(SceneArangoConstants.SceneFirstPose, sceneVertex, poseVertex);
 			await InsertEdgeAsync(SceneArangoConstants.SceneLastPose, sceneVertex, poseVertex);
 		}
@@ -1395,7 +1367,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 
 	private async Task UnlinkPoseFromChainAsync(string sceneVertex, string poseVertex)
 	{
-		// Find predecessor (pose_next -> poseVertex) and successor (poseVertex -> pose_next).
 		var prevResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._to == @p LIMIT 1 RETURN e._from",
 			new Dictionary<string, object>
@@ -1414,7 +1385,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 			});
 		var next = nextResult.FirstOrDefault();
 
-		// Remove pose_next edges touching poseVertex.
 		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @p OR e._to == @p REMOVE e IN @@e",
 			new Dictionary<string, object>
@@ -1423,14 +1393,11 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 				{ "p", poseVertex }
 			});
 
-		// Bridge predecessor to successor.
 		if (prev is not null && next is not null)
 			await InsertEdgeAsync(SceneArangoConstants.ScenePoseNext, prev, next);
 
-		// Fix head/tail pointers.
 		if (prev is null)
 		{
-			// poseVertex was the head.
 			if (next is not null)
 				await RepointSingletonEdgeAsync(SceneArangoConstants.SceneFirstPose, sceneVertex, next);
 			else
@@ -1438,7 +1405,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		}
 		if (next is null)
 		{
-			// poseVertex was the tail.
 			if (prev is not null)
 				await RepointSingletonEdgeAsync(SceneArangoConstants.SceneLastPose, sceneVertex, prev);
 			else
@@ -1450,7 +1416,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 	{
 		if (afterVertex is null)
 		{
-			// Move to front.
 			var firstResult = await _accessor.Context.Query.ExecuteAsync<string>(_accessor.Handle,
 				"FOR e IN @@e FILTER e._from == @s LIMIT 1 RETURN e._to",
 				new Dictionary<string, object>
@@ -1483,7 +1448,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 			});
 		var successor = succResult.FirstOrDefault();
 
-		// Remove after -> successor (if any).
 		await _accessor.Context.Query.ExecuteAsync<ArangoVoid>(_accessor.Handle,
 			"FOR e IN @@e FILTER e._from == @a REMOVE e IN @@e",
 			new Dictionary<string, object>
@@ -1496,7 +1460,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		if (successor is not null)
 			await InsertEdgeAsync(SceneArangoConstants.ScenePoseNext, poseVertex, successor);
 		else
-			// afterVertex was the tail; pose is the new tail.
 			await RepointSingletonEdgeOrInsertAsync(SceneArangoConstants.SceneLastPose, sceneVertex, poseVertex);
 	}
 
@@ -1525,8 +1488,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 				{ "from", from }
 			});
 
-	// ── Member edge lookup ─────────────────────────────────────────────────────────
-
 	private async Task<(string Key, JsonElement Edge)?> GetMemberEdgeAsync(string sceneVertex, string playerVertex)
 	{
 		var result = await _accessor.Context.Query.ExecuteAsync<JsonElement>(_accessor.Handle,
@@ -1543,8 +1504,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 
 		return (elem.GetProperty("_key").GetString()!, elem);
 	}
-
-	// ── Projection helpers ──────────────────────────────────────────────────────────
 
 	private async Task<SceneModel> SceneFromJsonAsync(JsonElement elem)
 	{
@@ -1584,7 +1543,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 		var authorDbref = await ReadObjectEdgeDbrefAsync(SceneArangoConstants.ScenePoseAuthor, poseVertex);
 		var originDbref = await ReadObjectEdgeDbrefAsync(SceneArangoConstants.ScenePoseOrigin, poseVertex);
 
-		// Project the current edit's content + edit history.
 		var content = string.Empty;
 		var markup = string.Empty;
 		var editCount = 0;
@@ -1697,8 +1655,6 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 			IsCurrent: GetBool(elem, "isCurrent"),
 			GrantedAt: GetLong(elem, "grantedAt"));
 	}
-
-	// ── JSON primitive readers ────────────────────────────────────────────────────
 
 	private static string GetString(JsonElement elem, string name, string fallback)
 		=> elem.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.String

@@ -80,7 +80,6 @@ public class MarkupOutputRendererTests
 		var root = doc.RootElement;
 		await Assert.That(root.GetProperty("type").GetString()).IsEqualTo("markup");
 
-		// The carried data round-trips back to the original markup/text.
 		var data = root.GetProperty("data").GetString()!;
 		await Assert.That(MModule.deserialize(data).ToPlainText()).IsEqualTo(Raw);
 	}

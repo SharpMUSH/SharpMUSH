@@ -13,8 +13,6 @@ public class WikiSyntaxInGameRenderingTests
 	private static string Render(string markdown) =>
 		RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText();
 
-	// ── Image sizing attribute blocks ─────────────────────────────────────────
-
 	[Test]
 	public async Task ImageWithSizeAttributes_AttributeBlockDoesNotLeak()
 	{
@@ -42,8 +40,6 @@ public class WikiSyntaxInGameRenderingTests
 		await Assert.That(text).Contains("Title");
 		await Assert.That(text).DoesNotContain("{.fancy}");
 	}
-
-	// ── Wiki links ────────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task WikiLink_RendersDisplayTitleWithoutBrackets()
@@ -78,10 +74,8 @@ public class WikiSyntaxInGameRenderingTests
 	{
 		var rendered = RecursiveMarkdownHelper.RenderMarkdown("[[Getting Started]]").ToString();
 
-		await Assert.That(rendered).Contains("[4m"); // ANSI underline
+		await Assert.That(rendered).Contains("[4m");
 	}
-
-	// ── Directive blocks ──────────────────────────────────────────────────────
 
 	[Test]
 	public async Task CategoryDirective_RendersPlaceholderNotFences()
@@ -130,8 +124,6 @@ public class WikiSyntaxInGameRenderingTests
 		await Assert.That(text).Contains("::: category lore");
 		await Assert.That(text).DoesNotContain("live listing");
 	}
-
-	// ── Task lists ────────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task TaskList_RendersCheckboxNotation()

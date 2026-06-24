@@ -30,7 +30,6 @@
 }
 else if (DisplayAsHero)
 {
-    @* Home hero — centered, no article chrome *@
     <div class="WikiContent WikiContent--hero" style="text-align:center;">
         <div class="mud-card-content">
             @if (Article.Image is not null)
@@ -43,7 +42,6 @@ else if (DisplayAsHero)
 }
 else
 {
-    @* Article — prototype WikiArticleScreen: kicker + title + meta + content + TOC *@
     <div class="wiki-article-grid">
         <article class="wiki-article-main">
             <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:14px;" /> Wiki</a>
@@ -363,7 +361,6 @@ else
         color: var(--text);
     }
 
-    /* TOC */
     .wiki-toc-sticky { position: sticky; top: 0; }
     .wiki-toc-label {
         font-family: var(--font-mono);

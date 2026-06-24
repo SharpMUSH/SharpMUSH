@@ -46,7 +46,6 @@ public class PluginUnloadTests
 		await Assert.That(loaded!.IsUnloadable).IsTrue();
 		await Assert.That(PluginLoaderService.IsUnloadablePlugin(loaded.Plugin)).IsTrue();
 
-		// Tidy up the probe loader so this test leaves nothing loaded for the next.
 		loaded.Loader.Dispose();
 	}
 
@@ -64,11 +63,8 @@ public class PluginUnloadTests
 
 		var manager = NewManager(out var commands, out var functions);
 
-		// Load + register inside a no-inline helper so no local (plugin/loader/LoadedPlugin) can pin the ALC
-		// past unload. Only the WeakReference and the plugin id escape.
 		var (loaderRef, pluginId) = LoadRegisterAndWeaklyReference(manager, commands, functions);
 
-		// Sanity: the command and function landed and the loader is alive while registered.
 		await Assert.That(commands.ContainsKey("+UNLOADME")).IsTrue();
 		await Assert.That(functions.ContainsKey("unloadme")).IsTrue();
 		await Assert.That(loaderRef.IsAlive).IsTrue();
@@ -76,11 +72,9 @@ public class PluginUnloadTests
 		var result = await manager.UnloadAsync(pluginId);
 		await Assert.That(result.IsT0).IsTrue().Because("an unloadable plugin must unload successfully");
 
-		// The plugin's entries must be gone from the live libraries (the per-parse trie rebuilds from these).
 		await Assert.That(commands.ContainsKey("+UNLOADME")).IsFalse();
 		await Assert.That(functions.ContainsKey("unloadme")).IsFalse();
 
-		// The real gate: the collectible ALC must actually be collected. Bounded GC loop.
 		await Assert.That(WaitForCollected(loaderRef))
 			.IsTrue()
 			.Because("the collectible AssemblyLoadContext must be reclaimed after UnloadAsync");
@@ -100,7 +94,6 @@ public class PluginUnloadTests
 		var result = await manager.ReloadAsync("command-only");
 		await Assert.That(result.IsT0).IsTrue();
 
-		// After reload the command/function are present again, freshly registered from disk.
 		await Assert.That(commands.ContainsKey("+UNLOADME")).IsTrue();
 		await Assert.That(functions.ContainsKey("unloadme")).IsTrue();
 	}
@@ -110,7 +103,6 @@ public class PluginUnloadTests
 	{
 		var manager = NewManager(out _, out _);
 
-		// A plugin that contributes a flag (load-once) — registered like the catalog/manager would.
 		var plugin = new LoadOnceFlagPlugin();
 		await Assert.That(PluginLoaderService.IsUnloadablePlugin(plugin)).IsFalse();
 		manager.RegisterPlugin(plugin);

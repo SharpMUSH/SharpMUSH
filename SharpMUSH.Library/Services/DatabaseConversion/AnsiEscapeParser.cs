@@ -11,7 +11,6 @@ namespace SharpMUSH.Library.Services.DatabaseConversion;
 /// </summary>
 public static class AnsiEscapeParser
 {
-	// Standard ANSI 256-color palette (indices 0-255)
 	private static readonly Color[] Ansi256ColorPalette = BuildAnsi256ColorPalette();
 
 	/// <summary>
@@ -34,36 +33,30 @@ public static class AnsiEscapeParser
 
 		while (position < text.Length)
 		{
-			// Look for ESC character
 			if (text[position] == '\x1b' && position + 1 < text.Length)
 			{
-				// Save accumulated text before escape sequence
 				if (textBuilder.Length > 0)
 				{
 					segments.Add(CreateMarkupStringFromState(textBuilder.ToString(), currentState));
 					textBuilder.Clear();
 				}
 
-				// Parse escape sequence
 				var (newState, consumed) = ParseEscapeSequence(text, position, currentState);
 				currentState = newState;
 				position += consumed;
 			}
 			else
 			{
-				// Regular character
 				textBuilder.Append(text[position]);
 				position++;
 			}
 		}
 
-		// Add final text segment
 		if (textBuilder.Length > 0)
 		{
 			segments.Add(CreateMarkupStringFromState(textBuilder.ToString(), currentState));
 		}
 
-		// Combine all segments
 		if (segments.Count == 0)
 		{
 			return MModule.single(string.Empty);
@@ -84,7 +77,6 @@ public static class AnsiEscapeParser
 	/// </summary>
 	private static (AnsiState newState, int consumed) ParseEscapeSequence(string text, int position, AnsiState currentState)
 	{
-		// position points to ESC character
 		if (position + 1 >= text.Length)
 		{
 			return (currentState, 1); // Just consume ESC
@@ -136,7 +128,6 @@ public static class AnsiEscapeParser
 		var parametersSpan = text.AsSpan(position + 2, endPos - position - 2);
 		var codes = ParseSgrParameters(parametersSpan);
 
-		// Apply SGR codes to create new state
 		var newState = ApplySgrCodes(currentState, codes);
 
 		return (newState, endPos - position + 1);
@@ -209,12 +200,10 @@ public static class AnsiEscapeParser
 
 		if (urlSpan.IsEmpty)
 		{
-			// Clear hyperlink
 			return currentState with { LinkUrl = null };
 		}
 		else
 		{
-			// Set hyperlink
 			return currentState with { LinkUrl = urlSpan.ToString() };
 		}
 	}
@@ -378,12 +367,10 @@ public static class AnsiEscapeParser
 			return MModule.single(text);
 		}
 
-		// Build the markup based on state, including hyperlink support if present
 		AnsiMarkup markup;
 
 		if (state.LinkUrl != null)
 		{
-			// Create markup with hyperlink
 			markup = AnsiMarkup.Create(
 				foreground: state.Foreground,
 				background: state.Background,
@@ -402,7 +389,6 @@ public static class AnsiEscapeParser
 		}
 		else
 		{
-			// Create markup without hyperlink
 			markup = AnsiMarkup.Create(
 				foreground: state.Foreground,
 				background: state.Background,

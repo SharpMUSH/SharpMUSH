@@ -18,7 +18,6 @@ public static class ErrorMessages
 	/// </summary>
 	public static class Returns
 	{
-		// Object and matching errors
 		public const string BadObjectName = "#-1 BAD OBJECT NAME";
 		public const string NoMatch = "#-1 NO MATCH";
 		public const string NoSuchObject = "#-1 NO SUCH OBJECT";
@@ -27,7 +26,6 @@ public static class ErrorMessages
 		public const string CantSeeThat = "#-1 CAN'T SEE THAT HERE";
 		public const string InvalidDbref = "#-1 INVALID DBREF";
 
-		// Object type errors
 		public const string NotARoom = "#-1 NOT A ROOM";
 		public const string NotAnExit = "#-1 NOT AN EXIT";
 		public const string NotAThing = "#-1 NOT A THING";
@@ -37,7 +35,6 @@ public static class ErrorMessages
 		public const string InvalidDestination = "#-1 INVALID DESTINATION";
 		public const string InvalidObjectType = "#-1 INVALID OBJECT TYPE";
 
-		// Permission errors
 		public const string PermissionDenied = "#-1 PERMISSION DENIED";
 		public const string AttrPermissions = "#-1 NO PERMISSION TO GET ATTRIBUTE";
 		public const string AttrEvalPermissions = "#-1 NO PERMISSION TO EVALUATE ATTRIBUTE";
@@ -45,7 +42,6 @@ public static class ErrorMessages
 		public const string AttrWipPermissions = "#-1 NO PERMISSION TO WIPE ATTRIBUTE";
 		public const string CannotTeleport = "#-1 NO PERMISSION TO TELEPORT OBJECT";
 
-		// Argument and validation errors
 		public const string InvalidArgument = "#-1 INVALID ARGUMENT";
 		public const string Integer = "#-1 ARGUMENT MUST BE INTEGER";
 		public const string PositiveInteger = "#-1 ARGUMENT MUST BE POSITIVE INTEGER";
@@ -63,10 +59,8 @@ public static class ErrorMessages
 		public const string ArgRange = "#-1 ARGUMENT OUT OF RANGE";
 		public const string TimeInteger = "#-1 TIME INTEGER OUT OF RANGE";
 
-		// Attribute errors
 		public const string NoSuchAttribute = "#-1 NO SUCH ATTRIBUTE";
 
-		// Function and feature errors
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NoSuchFunction = "#-1 COULD NOT FIND FUNCTION: {0}";
 		public const string NoSuchPower = "#-1 NO SUCH POWER";
@@ -75,7 +69,6 @@ public static class ErrorMessages
 		public const string FunctionDisabled = "#-1 FUNCTION DISABLED";
 		public const string NoSideFx = "#-1 SIDE EFFECTS DISABLED FOR THIS FUNCTION";
 
-		// Limits and recursion
 		public const string Invoke = "#-1 FUNCTION INVOCATION LIMIT EXCEEDED";
 		public const string Recursion = "#-1 FUNCTION RECURSION LIMIT EXCEEDED";
 		public const string Call = "#-1 CALL LIMIT EXCEEDED";
@@ -85,14 +78,12 @@ public static class ErrorMessages
 		public const string TooManySwitches = "#-1 TOO MANY SWITCHES, OR A BAD COMBINATION OF SWITCHES";
 		public const string OutOfRange = "#-1 OUT OF RANGE";
 
-		// Configuration and database errors
 		public const string NoSuchConfigOption = "#-1 NO SUCH CONFIG OPTION";
 		public const string InvalidZone = "#-1 INVALID ZONE";
 		public const string SeparatorMustBeOneChar = "#-1 SEPARATOR MUST BE ONE CHARACTER";
 		public const string MissingArguments = "#-1 MISSING ARGUMENTS";
 		public const string NoSuchRecord = "#-1 NO SUCH RECORD";
 
-		// SQL/Database errors (for future SQL support)
 		public const string SqlNoConnection = "#-1 SQL ERROR: NO DATABASE CONNECTED";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SqlError = "#-1 SQL ERROR: {0}";
@@ -100,10 +91,8 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SqliteErrorDetail = "#-1 SQLITE ERROR: {0}";
 
-		// Channel errors
 		public const string AmbiguousChannelName = "#-2 AMBIGUOUS CHANNEL NAME";
 
-		// Function argument errors
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string TooFewArguments = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS BUT GOT {2}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -115,11 +104,9 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WrongArgumentsRange = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS AND AT MOST {2} BUT GOT {3}";
 
-		// Parser errors
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ParserFailure = "#-1 PARSER FAILURE: {0}";
 
-		// State and operation errors
 		public const string NothingToEvaluate = "#-1 NOTHING TO EVALUATE";
 		public const string NothingToDo = "#-1 NOTHING TO DO";
 		public const string ExitsCannotContainThings = "#-1 EXITS CANNOT CONTAIN THINGS";
@@ -127,7 +114,6 @@ public static class ErrorMessages
 		public const string NotSupported = "#-1 BEHAVIOR NOT SUPPORTED BY SHARPMUSH";
 		public const string SafeObject = "#-1 OBJECT IS SAFE";
 
-		// Migrated from Errors.cs
 		public const string ArgMustEndInInteger = "#-1 ARGUMENT MUST END IN AN INTEGER";
 		public const string ConnectionNotFound = "#-1 CONNECTION NOT FOUND";
 		public const string CycleDetected = "#-1 CYCLE DETECTED";
@@ -218,7 +204,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BaseArgRange = "#-1 ARGUMENT {0} MUST BE BETWEEN 2 AND 64";
 
-		// Command error constants (migrated from inline strings)
 		public const string AhelpSystemNotInitialized = "#-1 AHELP SYSTEM NOT INITIALIZED";
 		public const string AllGuestsInUse = "#-1 ALL GUESTS IN USE";
 		public const string AlreadyConnected = "#-1 ALREADY CONNECTED";
@@ -326,7 +311,6 @@ public static class ErrorMessages
 	/// </summary>
 	public static class Notifications
 	{
-		// Object and matching notifications
 		public const string BadObjectName = "I don't understand that object name.";
 		public const string InvalidNameThing = "Invalid name for a thing.";
 		public const string NoMatch = "I don't see that here.";
@@ -345,7 +329,6 @@ public static class ErrorMessages
 		public const string DontSeeThatHereFormat = "I don't see {0} here.";
 		public const string DontKnowWhoYouMean = "I don't know who you mean!";
 
-		// Object type notifications
 		public const string NotARoom = "That's not a room.";
 		public const string NotAnExit = "That's not an exit.";
 		public const string NotAThing = "That's not a thing.";
@@ -360,12 +343,10 @@ public static class ErrorMessages
 		public const string CannotCloneThisObjectType = "Cannot clone this object type.";
 		public const string NotMarkedForDestruction = "That object is not marked for destruction.";
 
-		// Permission notifications
 		public const string PermissionDenied = "Permission denied.";
 		public const string NoPermission = "You don't have permission to do that.";
 		public const string YouDoNotControlThatObject = "You do not control that object.";
 
-		// General
 		public const string EmptyLine = "";
 		public const string CantLinkToThat = "You can't link to that.";
 		public const string DontPassLinkLock = "You don't pass the link lock.";
@@ -382,7 +363,6 @@ public static class ErrorMessages
 		public const string CantTeleportToNothing = "You can't teleport to nothing!";
 		public const string HavenFlagSet = "You are set HAVEN and cannot receive pages.";
 
-		// Argument and validation notifications
 		public const string InvalidArgument = "Invalid argument.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string InvalidArguments = "Invalid arguments to {0}.";
@@ -398,15 +378,12 @@ public static class ErrorMessages
 		public const string DontKnowThat = "I don't know that {0}.";
 		public const string DontKnowThatAttribute = "I don't know that attribute.";
 
-		// Name and alias notifications
 		public const string PlayerNameInUse = "That player name is already in use.";
 		public const string PlayerAliasInUse = "That player alias is already in use.";
 
-		// Function notifications
 		public const string RecursionLimit = "That caused too much recursion.";
 		public const string FunctionDisabled = "That function is disabled.";
 
-		// Operation result notifications
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string Created = "Created {0} ({1}).";
 		public const string CreatedObject = "Created: Object {0}.";
@@ -416,28 +393,23 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CouldNotFindDestination = "Could not find destination: {0}";
 
-		// Channel notifications
 		public const string DontRecognizeThatChannel = "CHAT: I don't recognize that channel.";
 		public const string DontKnowWhichChannel = "CHAT: I don't know which channel you mean.";
 
-		// Mail and communication notifications
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DontThinkWantsToHearFrom = "I don't think #{0} wants to hear from {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DontThinkWantsMail = "I don't think #{0} wants {1}'s mail.";
 
-		// Economic notifications
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NotEnoughMoneyToLink = "You don't have enough {0} to link.";
 		public const string CantBuyThingsByTakingMoney = "You can't buy things by taking money.";
 
-		// Administrative notifications
 		public const string DontLookLikeGod = "You don't look like God.";
 		public const string NotAnAdmin = "You don't look like an admin to me.";
 		public const string CantAliasCommandToThat = "I can't alias a command to that!";
 		public const string CantMakeMultipleRequests = "You can't make multiple requests at the same time!";
 
-		// HTTP/Network notifications
 		public const string CannotSetContentLengthHeader = "You cannot set Content-Length header.";
 
 		// --- Destruction edge-case notifications (PennMUSH src/destroy.c) ---
@@ -495,13 +467,11 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GameSuspectCreated = "GAME: Suspect {0} created.";
 
-		// --- Reboot / shutdown broadcast ---
 		public const string GameRebootNoDisconnect = "GAME: Reboot w/o disconnect from game account, please wait.";
 
 		// --- Pueblo protocol (PennMUSH hdrs/conf.h) ---
 		public const string PuebloHello = "This world is Pueblo 1.10 Enhanced.\r\n";
 
-		// --- MXP line security modes (ESC[Nz) ---
 		/// <summary>Open line — only "safe" tags (B, I, U, COLOR, FONT). For user-generated content.</summary>
 		public const string MxpLineOpen = "\x1b[0z";
 		/// <summary>Secure line — allows SEND, A, IMG, SOUND. For server-generated content.</summary>
@@ -515,7 +485,6 @@ public static class ErrorMessages
 		public const string OutputPrefixCleared = "OUTPUTPREFIX cleared.";
 		public const string OutputSuffixCleared = "OUTPUTSUFFIX cleared.";
 
-		// --- @LOCALE / locale() ---
 		public const string LocaleSetFormat = "Locale set to {0}.";
 		public const string LocaleCleared = "Locale cleared (reset to default).";
 		public const string LocaleInvalidFormat = "Invalid locale: {0}.";
@@ -588,19 +557,16 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCleared = "{0}/{1} - Cleared.";
 
-		// --- Connection lifecycle ---
 		public const string Connected = "Connected!";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WelcomeBackFormat = "Welcome back, {0}!";
 
-		// --- Name / Password ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotNameObjectFormat = "You cannot name that object {0}.";
 		public const string InvalidPasswordText = "That password is not a valid password.";
 		public const string InvalidPasswordForCommand = "Invalid password.";
 		public const string OnlyPlayersHavePasswords = "Only players have passwords.";
 
-		// --- Parent / Zone ---
 		public const string ParentLoopCannotAdd = "Cannot add parent to loop.";
 		public const string ParentSet = "Parent set.";
 		public const string ZoneCycleCannotAdd = "Cannot add zone: would create a cycle.";
@@ -609,7 +575,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ClearedPowersFromFormat = "Cleared {0} power(s) from {1}.";
 
-		// --- Attribute operations ---
 		public const string NeedObjectAttributePair = "You need to give an object/attribute pair.";
 		public const string AttributeIsLocked = "That attribute is locked.";
 		public const string AttributeIsUnlocked = "That attribute is unlocked.";
@@ -641,7 +606,6 @@ public static class ErrorMessages
 		public const string ObjectIsProtectedSafe = "That object is protected (SAFE).";
 		public const string AttributesWiped = "Attributes wiped.";
 
-		// --- Building / Creating ---
 		public const string Destroyed = "Destroyed.";
 		public const string LinkedToHome = "Linked to home.";
 		public const string LinkedToVariable = "Linked to variable.";
@@ -662,13 +626,11 @@ public static class ErrorMessages
 		public const string RoomCreatedWithNumberFormat = "{0} created with room number {1}.";
 		public const string TryingToLink = "Trying to link...";
 
-		// --- Navigation ---
 		public const string CantGoThatWay = "You can't go that way.";
 		public const string ExitNoValidLocation = "That exit doesn't go to a valid location.";
 		public const string CantGoThatWayContainmentLoop = "You can't go that way - it would create a containment loop.";
 		public const string YouHaveBeenTeleported = "You have been teleported.";
 
-		// --- General game operations ---
 		public const string DontYouHaveAnythingToSay = "Don't you have anything to say?";
 		public const string HuhTypeHelp = "Huh?  (Type \"help\" for help.)";
 		public const string AllObjectsHalted = "All objects halted.";
@@ -690,7 +652,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ErrorDetailFormat = "Error: {0}";
 
-		// --- Channel management (addcom/delcom/comtitle) ---
 		public const string ChatAlreadyExists = "CHAT: Channel already exists.";
 		public const string ChatInvalidChannelNameShort = "CHAT: Invalid channel name.";
 		public const string ChatChannelCreated = "Channel has been created.";
@@ -740,7 +701,6 @@ public static class ErrorMessages
 		public const string ErrorReadingAliasesFormat = "Error reading aliases: {0}";
 		public const string YouHaveNoChannelAliases = "You have no channel aliases.";
 
-		// --- News / Help system ---
 		public const string NewsSystemNotInitialized = "News system not initialized.";
 		public const string NewsNoTopicAvailable = "No news available. Type 'news <topic>' for news on a specific topic.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -765,7 +725,6 @@ public static class ErrorMessages
 		public const string AhelpTopicsMatchingFormat = "Admin help topics matching '{0}':";
 		public const string AhelpTryPattern = "Try 'ahelp <pattern>' with wildcards (*) or 'ahelp/search <text>' to search admin help.";
 
-		// --- Wizard admin — flag management ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AllObjectsHaltedWithCountFormat = "All objects halted. {0} objects processed.";
 		public const string FlagAddRequiresNameAndSymbol = "@FLAG/ADD requires flag name and symbol.";
@@ -813,7 +772,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToEnableFlagFormat = "Failed to enable flag '{0}'.";
 
-		// --- Wizard admin — power management ---
 		public const string PowerAddRequiresNameAndAlias = "@POWER/ADD requires power name and alias.";
 		public const string PowerNameAndAliasCannotBeEmpty = "Power name and alias cannot be empty.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -836,7 +794,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToUpdatePowerFormat = "Failed to update power '{0}'.";
 
-		// --- Wizard admin — log / quota / dark ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NoLogEntriesForCategoryFormat = "No log entries found for category '{0}'.";
 		public const string LogUsage = "Usage: @log[/<switch>] <message> or @log/recall[/<switch>] [<number>]";
@@ -868,7 +825,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MotdSetFormat = "{0} MOTD set.";
 
-		// --- Building / destroy ---
 		public const string NoSuicideAllowed = "Sorry, no suicide allowed.";
 		public const string EvenYouCantDoThat = "Even you can't do that!";
 		public const string MayNotDestroyConnectedPlayer = "How gruesome. You may not destroy players who are connected.";
@@ -878,13 +834,11 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ObjectScheduledDestroyedFormat = "{0} is scheduled to be destroyed.";
 
-		// --- Softcode functions ---
 		public const string DefaultHomeLocationInvalid = "Default home location is invalid.";
 		public const string MoneyFunctionNotSupported = "The money() function is not supported. SharpMUSH does not track money or pennies.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MessageSentToRecipientsFormat = "Message sent to {0} recipient(s).";
 
-		// --- @map command ---
 		public const string MapMustSpecifyAttribute = "You must specify an attribute to map.";
 		public const string MapInvalidObjectAttributePath = "Invalid object/attribute path format.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -896,16 +850,13 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MapAttributeNotFoundOnObjectFormat = "Attribute {0} not found on {1}.";
 
-		// --- @dolist command ---
 		public const string DoListWhatToDoWithList = "What do you want to do with the list?";
 
-		// --- goto / teleport ---
 		public const string ExitNoValidLocationDetail = "That exit doesn't go to a valid location.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ExitNameToDestFormat = "{0} to {1}";
 		public const string TeleportedPlayerNotified = "You have been teleported.";
 
-		// --- @find command ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FindSearchingFormat = "@find: Searching for objects{0}...";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -917,7 +868,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FindFoundMatchingFormat = "Found {0} matching objects.";
 
-		// --- @halt command ---
 		public const string HaltMustSpecifyPid = "You must specify a process ID.";
 		public const string HaltInvalidPidFormat = "Invalid process ID format.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -932,7 +882,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string HaltedObjectFormat = "Halted {0}.";
 
-		// --- @notify command (semaphore) ---
 		public const string NotifyMustSpecifySemaphoreObject = "You must specify an object to use for the semaphore.";
 		public const string NotifyMustSpecifyValidObjectAttribute = "You must specify a valid object with an optional valid attribute to use for the semaphore.";
 		public const string NotifyMustSpecifyQregAssignments = "You must specify Q-register assignments.";
@@ -940,17 +889,14 @@ public static class ErrorMessages
 		public const string NotifyInvalidNumber = "Invalid number specified.";
 		public const string NotifyNoTaskWaitingOnSemaphore = "No task is waiting on that semaphore.";
 
-		// --- @nsprompt / @prompt ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ObjectDoesNotWantToHearFromYouFormat = "{0} does not want to hear from you.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string YouPromptedFormat = "You prompted {0}.";
 
-		// --- @switch ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SwitchInvalidRegexpFormat = "Invalid regexp: {0}: {1}";
 
-		// --- @wait command ---
 		public const string WaitCommandListMissing = "Command list missing";
 		public const string WaitPermissionDenied = "Permission Denied.";
 		public const string WaitInvalidTimeArgumentFormat = "Invalid time argument format";
@@ -959,7 +905,6 @@ public static class ErrorMessages
 		public const string WaitWhatToDoWithProcess = "What do you want to do with the process?";
 		public const string WaitInvalidTimeSpecified = "Invalid time specified.";
 
-		// --- @command command ---
 		public const string CommandMustSpecifyName = "You must specify a command name.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandAddNotImplementedFormat = "@command/add: Dynamic command creation not yet implemented.";
@@ -996,23 +941,18 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandInfoLockFormat = "  Lock: {0}";
 
-		// --- @drain command ---
 		public const string DrainInvalidNumber = "Invalid number specified.";
 		public const string DrainCannotSpecifyBothAnyAndAttribute = "You may not specify both /any and a specific attribute.";
 		public const string DrainCannotSpecifyBothAllAndNumber = "You may not specify both /all and a number.";
 
-		// --- @force command ---
 		public const string ForcePermissionDeniedDoNotControl = "Permission denied. You do not control the target.";
 		public const string ForceThemToDoWhat = "Force them to do what?";
 
-		// --- @nsemit / @oemit / @emit / @nsoemit ---
 		public const string YouDoNotHavePermissionToSpoofEmitsDetail = "You do not have permission to spoof emits.";
 
-		// --- @nsremit / @lemit / @nslemit / @nszemit / @zemit / @oemit / @remit / @nspemit ---
 		public const string DontYouHaveAnythingToSayDetail = "Don't you have anything to say?";
 		public const string InvalidRoomSpecifiedDetail = "Invalid room specified.";
 
-		// --- @ps command ---
 		public const string PsMustSpecifyPid = "You must specify a process ID.";
 		public const string PsInvalidPidFormat = "Invalid process ID format.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1051,7 +991,6 @@ public static class ErrorMessages
 		public const string PsWaitTaskEntryFormat = "  [{0}] (delayed)";
 		public const string PsQueueManagementNotImplemented = "Note: Queue management not yet implemented.";
 
-		// --- @select command ---
 		public const string SelectMustSpecifyTestString = "You must specify a test string.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SelectTestingStringFormat = "@select: Testing string '{0}'";
@@ -1069,7 +1008,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SelectInvalidRegexPatternFormat = "Invalid regex pattern: {0}";
 
-		// --- @trigger command ---
 		public const string TriggerMustSpecifyAttributePath = "You must specify an object/attribute to trigger.";
 		public const string TriggerMustSpecifyObjectAttributePath = "You must specify an object/attribute path.";
 		public const string TriggerPermissionDeniedDoNotControl = "Permission denied. You do not control that object.";
@@ -1077,7 +1015,6 @@ public static class ErrorMessages
 		public const string TriggerNoSuchAttributeFormat = "No such attribute: {0}";
 		public const string TriggerMustProvideMatchString = "You must provide a string to match when using /match.";
 
-		// --- @whereis command ---
 		public const string WhereIsMustSpecifyPlayer = "You must specify a player to locate.";
 		public const string WhereIsCanOnlyLocatePlayers = "You can only @whereis players.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1089,7 +1026,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WhereIsObjectInLocationFormat = "{0} is in {1}.";
 
-		// --- @config command ---
 		public const string ConfigOnlyGodCanUseSave = "Only God can use /save switch.";
 		public const string ConfigSetSaveNotImplemented = "@config/set and @config/save are not yet implemented.";
 		public const string ConfigCategoriesHeader = "Configuration Categories:";
@@ -1110,7 +1046,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ConfigNoCategoryOrOptionFormat = "No configuration category or option named '{0}'.";
 
-		// --- @edit command ---
 		public const string EditInvalidArguments = "Invalid arguments to @edit.";
 		public const string EditInvalidFormat = "Invalid format. Use: object/attribute=search,replace";
 		public const string EditMustSpecifySearchAndReplace = "You must specify search and replace strings.";
@@ -1122,7 +1057,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EditSummaryFormat = "{0} {1} attribute{2}. {3} unchanged.";
 
-		// --- @function command ---
 		public const string FunctionLibraryUnavailable = "Function library unavailable.";
 		public const string FunctionGlobalUserDefinedHeader = "Global user-defined functions:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1196,7 +1130,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionInfoRestrictionsFormat = "  Restrictions: {0}";
 
-		// --- @grep command ---
 		public const string GrepInvalidArguments = "Invalid arguments to @grep.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GrepErrorReadingAttributesFormat = "Error reading attributes: {0}";
@@ -1210,7 +1143,6 @@ public static class ErrorMessages
 		public const string GrepInvalidWildcardFormat = "Invalid wildcard pattern: {0}";
 		public const string GrepNoMatchingAttributesFound = "No matching attributes found.";
 
-		// --- @include command ---
 		public const string IncludeMustSpecifyAttributePath = "You must specify an object/attribute to include.";
 		public const string IncludeMustSpecifyObjectAttributePath = "You must specify an object/attribute path.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1220,21 +1152,17 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string IncludeErrorExecutingFormat = "Error executing included attribute: {0}";
 
-		// --- @mail command ---
 		public const string MailTooManySwitches = "Error: Too many switches passed to @mail.";
 
-		// --- @password command ---
 		public const string PasswordOnlyPlayersHavePasswords = "Only players have passwords.";
 		public const string PasswordInvalid = "Invalid password.";
 
-		// --- @restart command ---
 		public const string RestartMustSpecifyObject = "You must specify an object to restart.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RestartedPlayerAndObjectsFormat = "Restarted {0} and all their objects.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RestartedObjectFormat = "Restarted {0}.";
 
-		// --- @sweep command ---
 		public const string SweepListeningInRoom = "Listening in ROOM:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SweepObjectIsListeningFormat = "{0} is listening.";
@@ -1259,11 +1187,9 @@ public static class ErrorMessages
 		public const string SweepExitBroadcastingFormat = "{0} [broadcasting].";
 		public const string SweepListeningInInventory = "Listening in your INVENTORY:";
 
-		// --- @retry command ---
 		public const string RetryUsage = "Usage: @retry <condition>[=<arg0>,<arg1>,...]";
 		public const string RetryNothingToRetry = "Nothing to retry.";
 
-		// --- @attribute command ---
 		public const string AttributeCommandMustSpecifyAttribute = "You must specify an attribute.";
 		public const string AttributeCommandMustSpecifyFlags = "You must specify attribute flags.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1318,7 +1244,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandDecompileEnumFormat = "@attribute/enum {0}={1}";
 
-		// --- @stats command ---
 		public const string StatsTablesNotImplemented = "@stats/tables: Internal table statistics not yet implemented.";
 		public const string StatsFlagsNotImplemented = "@stats/flags: Flag system statistics not yet implemented.";
 		public const string StatsMemorySwitchesNotImplemented = "@stats memory switches not yet implemented.";
@@ -1336,7 +1261,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string StatsTotalFormat = "  Total: {0}";
 
-		// --- @entrances command ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EntrancesToFormat = "Entrances to {0}:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1349,7 +1273,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EntrancesCountFormat = "{0} entrance(s) found.";
 
-		// --- @search command ---
 		public const string SearchAdvancedHeader = "@search: Advanced database search";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SearchPlayerFilterFormat = "  Player filter: {0}";
@@ -1362,7 +1285,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SearchObjectsFoundFormat = "{0} objects found.";
 
-		// --- @listmotd command ---
 		public const string ListMotdCurrentSettingsHeader = "Current Message of the Day settings:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ListMotdConnectFileFormat = "  Connect MOTD File: {0}";
@@ -1382,14 +1304,11 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ListMotdFullMotdFormat = "  Full MOTD:    {0}";
 
-		// --- @verb command ---
 		public const string VerbUsage = "Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]";
 
-		// --- @whereis ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WhereIsTriedToLocateButUnableFormat = "{0} tried to locate you, but was unable to.";
 
-		// --- @flag — missing sub-command constants ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotModifySystemFlagFormat = "Cannot modify system flag '{0}'.";
 		public const string FlagDebugRequiresName = "@FLAG/DEBUG requires a flag name.";
@@ -1397,7 +1316,6 @@ public static class ErrorMessages
 		public const string FlagDisableEnableRequiresNameFormat = "@FLAG/{0} requires a flag name.";
 		public const string FlagUsage = "Usage: @flag/list, @flag/add <name>=<symbol>, @flag/delete <name>, @flag/letter <name>=<symbol>, @flag/type <name>=<types>, @flag/alias <name>=<aliases>, @flag/restrict <name>=<permissions>, @flag/decompile <name>";
 
-		// --- @power — missing sub-command constants ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotModifySystemPowerFormat = "Cannot modify system power '{0}'.";
 		public const string PowerTypeRequiresNameAndTypes = "@POWER/TYPE requires power name and type restrictions.";
@@ -1423,7 +1341,6 @@ public static class ErrorMessages
 		public const string FailedToEnablePowerFormat = "Failed to enable power '{0}'.";
 		public const string PowerUsage = "Usage: @power/list, @power/add <name>=<alias>, @power/delete <name>, @power/alias <name>=<alias>, @power/type <name>=<types>, @power/restrict <name>=<permissions>, @power/decompile <name>";
 
-		// --- @rejectmotd / @wizmotd ---
 		public const string FullMotdCleared = "Full MOTD cleared.";
 		public const string RejectMotdUsage = "Usage: @rejectmotd <message>";
 		public const string FullMotdSet = "Full MOTD set.";
@@ -1431,7 +1348,6 @@ public static class ErrorMessages
 		public const string WizMotdUsage = "Usage: @wizmotd <message>";
 		public const string WizMotdSet = "Wizard MOTD set.";
 
-		// --- @suggest ---
 		public const string NoSuggestionCategoriesDefined = "No suggestion categories defined.";
 		public const string SuggestAddUsage = "Usage: @suggest/add <category>=<word>";
 		public const string SuggestCategoryAndWordCannotBeEmpty = "Category and word cannot be empty.";
@@ -1450,7 +1366,6 @@ public static class ErrorMessages
 		public const string SuggestCategoryWordCountFormat = "Category '{0}' ({1} words):";
 		public const string SuggestUsage = "Usage: @suggest[/list], @suggest <category>, @suggest/add <category>=<word>, @suggest/delete <category>=<word>";
 
-		// --- @boot ---
 		public const string BootPortUsage = "Usage: @boot/port <descriptor number>";
 		public const string BootDescriptorMustBeNumber = "Descriptor number must be a number.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1459,7 +1374,6 @@ public static class ErrorMessages
 		public const string PlayerNotConnected = "That player is not connected.";
 		public const string YouHaveBeenDisconnected = "You have been disconnected.";
 
-		// --- @hook ---
 		public const string HookMustSpecifyCommandName = "You must specify a command name.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string HookNoHooksForCommandFormat = "No hooks set for command '{0}'.";
@@ -1478,19 +1392,16 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string HookSetFormat = "Hook '{0}' set for command '{1}'{2}.";
 
-		// --- @newpassword ---
 		public const string NewPasswordGenerateSwitchConflict = "@NEWPASSWORD: /GENERATE switch cannot be used with other arguments.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NewPasswordGeneratedFormat = "Generated password for {0}: {1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NewPasswordSetFormat = "Set new password for {0}: {1}";
 
-		// --- @purge ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PurgeCompleteFormat = "Purge complete. {0} objects advanced to GOING_TWICE. {1} objects marked for final deletion.";
 		public const string PurgeNoteBackgroundGc = "Note: Actual object deletion is handled by background garbage collection in SharpMUSH.";
 
-		// --- @shutdown ---
 		public const string ShutdownOnlyGodPanic = "Only God can perform a panic shutdown.";
 		public const string ShutdownPanicInitiated = "PANIC SHUTDOWN initiated by God.";
 		public const string ShutdownRebootInitiated = "REBOOT initiated. In SharpMUSH's web-based architecture:";
@@ -1504,20 +1415,16 @@ public static class ErrorMessages
 		public const string ShutdownNoteOrchestration = "In cloud/container deployments, use your orchestration tools to manage server lifecycle.";
 		public const string ShutdownNoteNoSave = "Database state is preserved automatically. No explicit save is needed.";
 
-		// --- @chownall ---
 		public const string ChownAllUsage = "Usage: @chownall <player>[=<new owner>]";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ChownAllCompleteFormat = "Changed ownership of {0} object(s) from {1} to {2}.";
 
-		// --- @dump ---
 		public const string DumpDoesNothing = "Dump command does nothing for SharpMUSH. Consider using @backup.";
 
-		// --- @pcreate ---
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
 		public const string PlayerNameAlreadyExists = "That player name already exists.";
 		public const string PlayerCreateInvalidPassword = "That is not a valid password.";
 
-		// --- @quota ---
 		public const string QuotaSetUsage = "Usage: @quota/set <player>=<amount>";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string QuotaForPlayerSetFormat = "Quota for {0} set to {1}.";
@@ -1533,7 +1440,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AllQuotaSetForPlayerFormat = "Your building quota has been set to {0} by {1}.";
 
-		// --- @sitelock ---
 		public const string SitelockCheckRequiresHost = "@SITELOCK/CHECK requires a hostname or IP address.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SitelockHostMatchesFormat = "Host '{0}' matches pattern '{1}' with options: {2}";
@@ -1550,23 +1456,19 @@ public static class ErrorMessages
 		public const string SitelockRuleNotImplemented = "@SITELOCK rule modification is not yet implemented. Use the admin UI to modify sitelock rules.";
 		public const string SitelockInvalidSyntax = "Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.";
 
-		// --- @chzoneall ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ZonesClearedForOwnerFormat = "Zones cleared for {0} object(s) owned by {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ZoneSetForOwnerFormat = "Zone set to {0} for {1} object(s) owned by {2}.";
 
-		// --- @kick ---
 		public const string KickUsage = "Usage: @kick <player>";
 
-		// --- @poll ---
 		public const string PollMessageCleared = "Poll message cleared.";
 		public const string PollNoPollMessage = "No poll message is currently set.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PollCurrentMessageFormat = "Current poll: {0}";
 		public const string PollMessageSet = "Poll message set.";
 
-		// --- @readcache ---
 		public const string ReadCacheServiceNotAvailable = "Text file service not available.";
 		public const string ReadCacheReindexing = "Reindexing text files...";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1574,7 +1476,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ReadCacheErrorFormat = "Error reindexing text files after {0}ms: {1}";
 
-		// --- @enable / @disable ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EnableDisableUsageSyntaxFormat = "Usage: @{0} <option>";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

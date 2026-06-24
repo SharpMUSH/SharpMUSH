@@ -7,7 +7,6 @@
 <PageTitle>@Name — SharpMUSH</PageTitle>
 
 <div>
-    @* Banner *@
     @{
         var hue = Math.Abs((Name ?? "").GetHashCode()) % 360;
     }
@@ -16,7 +15,6 @@
     </div>
 
     <div style="padding:0 var(--cpad) var(--cpad);">
-        @* Avatar overlapping banner *@
         <div style="margin-top:-40px;margin-bottom:16px;display:flex;align-items:flex-end;gap:16px;">
             <MudAvatar Style="@($"background:hsl({hue},50%,30%);color:#fff;font-size:28px;font-weight:700;width:80px;height:80px;border:3px solid var(--bg);flex-shrink:0;")" >
                 @(Name?.Length > 0 ? Name[0].ToString().ToUpper() : "?")

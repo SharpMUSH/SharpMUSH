@@ -22,10 +22,8 @@ public class SetLockCommandHandler(ISharpDatabase database, IBooleanExpressionPa
 		// This ensures locks won't match recycled dbrefs after objects are destroyed
 		var normalizedLockString = booleanParser.Normalize(request.LockString, request.Executor);
 
-		// Determine flags for this lock
 		var flags = lockService.SystemLocks.GetValueOrDefault(request.LockName, Library.Services.LockService.LockFlags.Default);
 
-		// Create lock data with the normalized string and flags
 		var lockData = new Library.Models.SharpLockData(normalizedLockString, flags);
 
 		await database.SetLockAsync(request.Target, request.LockName, lockData, cancellationToken);
@@ -52,10 +50,8 @@ public class UnsetLockCommandHandler(ISharpDatabase database, IBooleanExpression
 
 		await database.UnsetLockAsync(request.Target, request.LockName, cancellationToken);
 
-		// Update in-memory state
 		request.Target.Locks = request.Target.Locks.Remove(request.LockName);
 
-		// Invalidate the object cache
 		await cache.RemoveAsync(SharpMUSH.Library.Definitions.CacheKeys.Object(request.Target.DBRef), token: cancellationToken);
 
 		return new Unit();

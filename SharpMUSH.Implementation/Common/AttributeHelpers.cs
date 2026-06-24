@@ -10,8 +10,6 @@ namespace SharpMUSH.Implementation.Common;
 
 public static class AttributeHelpers
 {
-	// Future optimization: Consider caching attribute configuration values to reduce lookups
-
 	/// <summary>
 	/// Evaluates a @*format attribute on an object, providing a standardized way to handle display formatting.
 	/// This method checks if a format attribute exists, and if so, evaluates it with the provided arguments.
@@ -66,7 +64,6 @@ public static class AttributeHelpers
 	{
 		try
 		{
-			// Try to get the format attribute
 			var attrResult = await attributeService.GetAttributeAsync(
 				executor,
 				target,
@@ -74,7 +71,6 @@ public static class AttributeHelpers
 				IAttributeService.AttributeMode.Read,
 				checkParents);
 
-			// If attribute doesn't exist or is empty, return default
 			if (attrResult.IsError || attrResult.IsNone)
 			{
 				return defaultValue;
@@ -86,7 +82,6 @@ public static class AttributeHelpers
 				return defaultValue;
 			}
 
-			// Evaluate the format attribute with the provided arguments
 			var result = await attributeService.EvaluateAttributeFunctionAsync(
 				parser!,
 				executor,
@@ -96,12 +91,10 @@ public static class AttributeHelpers
 				evalParent: checkParents,
 				ignorePermissions: false);
 
-			// If evaluation returns empty, use default
 			return MModule.getLength(result) > 0 ? result : defaultValue;
 		}
 		catch
 		{
-			// On any error, return the default value
 			return defaultValue;
 		}
 	}

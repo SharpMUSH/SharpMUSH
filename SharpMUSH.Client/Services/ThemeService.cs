@@ -140,25 +140,20 @@ public static class ThemePresetExtensions
 			Surface          = preset.SurfaceColor,
 			AppbarBackground = preset.AppBarColor,
 			DrawerBackground = preset.DrawerBackgroundColor,
-			// Text
 			TextPrimary      = "#e9edf0",
 			TextSecondary    = "#9aa3ab",
 			TextDisabled     = "#5f6870",
-			// App bar / drawer text
 			AppbarText       = preset.PrimaryColor,
 			DrawerText       = "#e9edf0",
 			DrawerIcon       = preset.PrimaryColor,
-			// Semantic
 			Warning          = "#d9a23a",
 			Error            = "#e57373",
 			Info             = "#5aa9ff",
 			Success          = preset.PrimaryColor,
-			// Lines / dividers
 			LinesDefault     = "#262a2f",
 			LinesInputs      = "#262a2f",
 			TableLines       = "#262a2f",
 			Divider          = "#1d2024",
-			// Override button text on primary fills
 			PrimaryContrastText  = onAccent,
 			SecondaryContrastText = onAccent,
 		};

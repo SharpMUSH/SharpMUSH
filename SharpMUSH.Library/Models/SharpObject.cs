@@ -31,19 +31,15 @@ public class SharpObject
 	/// </summary>
 	public WarningType Warnings { get; set; } = WarningType.None;
 
-	// RELATIONSHIP
 	[JsonIgnore]
 	public required AsyncLazy<SharpPlayer> Owner { get; set; }
 
-	// RELATIONSHIP
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<SharpPower>> Powers { get; set; }
 
-	// RELATIONSHIP
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<SharpAttribute>> Attributes { get; set; }
 
-	// RELATIONSHIP
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<LazySharpAttribute>> LazyAttributes { get; set; }
 
@@ -53,19 +49,15 @@ public class SharpObject
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<LazySharpAttribute>> LazyAllAttributes { get; set; }
 
-	// RELATIONSHIP
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<SharpObjectFlag>> Flags { get; set; }
 
-	// RELATIONSHIP
 	[JsonIgnore]
 	public required AsyncLazy<AnyOptionalSharpObject> Parent { get; set; }
 
-	// RELATIONSHIP
 	[JsonIgnore]
 	public required AsyncLazy<AnyOptionalSharpObject> Zone { get; set; }
 
-	// RELATIONSHIP
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<SharpObject>?> Children { get; set; }
 }

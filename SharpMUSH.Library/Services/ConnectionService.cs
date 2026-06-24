@@ -25,19 +25,16 @@ public class ConnectionService(
 			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(get.Handle, get.Ref, get.State, IConnectionService.ConnectionState.Disconnected));
 		}
 
-		// Publish notification for Mediator handlers
 		await publisher.Publish(new ConnectionStateChangeNotification(get.Handle, get.Ref, get.State,
 			IConnectionService.ConnectionState.Disconnected));
 
 		_sessionState.Remove(handle, out _);
 
-		// Remove from Redis if available
 		if (stateStore != null)
 		{
 			await stateStore.RemoveConnectionAsync(handle);
 		}
 
-		// Record disconnection event
 		telemetryService?.RecordConnectionEvent("disconnected");
 		UpdateConnectionMetrics();
 	}
@@ -67,7 +64,6 @@ public class ConnectionService(
 			_ => throw new InvalidDataException("Tried to add a new handle during Login."),
 			(_, y) => y with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn });
 
-		// Update Redis if available
 		if (stateStore != null)
 		{
 			await stateStore.SetPlayerBindingAsync(handle, player);
@@ -78,7 +74,6 @@ public class ConnectionService(
 			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
 		}
 
-		// Record login event
 		telemetryService?.RecordConnectionEvent("logged_in");
 		UpdateConnectionMetrics();
 
@@ -208,7 +203,6 @@ public class ConnectionService(
 			return;
 		}
 
-		// Store in Redis if available
 		if (stateStore != null)
 		{
 			await stateStore.SetConnectionAsync(handle, new ConnectionStateData
@@ -230,10 +224,8 @@ public class ConnectionService(
 			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(handle, null, IConnectionService.ConnectionState.None, IConnectionService.ConnectionState.Connected));
 		}
 
-		// Publish notification for Mediator handlers
 		await publisher.Publish(new ConnectionStateChangeNotification(handle, null, IConnectionService.ConnectionState.None, IConnectionService.ConnectionState.Connected));
 
-		// Record connection event
 		telemetryService?.RecordConnectionEvent("connected");
 		UpdateConnectionMetrics();
 	}
@@ -256,7 +248,6 @@ public class ConnectionService(
 			// Skip if already in memory (shouldn't happen on startup)
 			if (_sessionState.ContainsKey(handle)) continue;
 
-			// Reconstruct ConnectionData from Redis
 			var state = data.State switch
 			{
 				"LoggedIn" => IConnectionService.ConnectionState.LoggedIn,

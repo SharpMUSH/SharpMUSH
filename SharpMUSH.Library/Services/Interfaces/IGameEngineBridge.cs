@@ -1,7 +1,5 @@
 namespace SharpMUSH.Library.Services.Interfaces;
 
-// ── Request / Response DTOs ────────────────────────────────────────────────
-
 /// <summary>
 /// A command dispatched from the web portal to the game engine.
 /// </summary>
@@ -37,8 +35,6 @@ public sealed record EngineStateResponse(
     string RoomDbref,
     string RoomName,
     IReadOnlyList<string> VisibleObjectDbrefs);
-
-// ── Bridge interface ───────────────────────────────────────────────────────
 
 /// <summary>
 /// Abstraction over the transport layer between the web portal and the SharpMUSH game engine.

@@ -43,8 +43,6 @@ public class ConnectionServiceAccountModeTests
 		return (svc, publisher);
 	}
 
-	// ── BindAccount ───────────────────────────────────────────────────────────
-
 	[Test]
 	public async ValueTask BindAccount_TransitionsToAccountMode()
 	{
@@ -122,7 +120,6 @@ public class ConnectionServiceAccountModeTests
 		var publisher = Substitute.For<IPublisher>();
 		var svc = new ConnectionService(publisher);
 
-		// Handle 999 was never registered — BindAccount should silently no-op
 		await svc.BindAccount(999, "accounts/42");
 	}
 
@@ -136,8 +133,6 @@ public class ConnectionServiceAccountModeTests
 		var data = svc.Get(1);
 		await Assert.That(data!.Ref).IsNull();
 	}
-
-	// ── Idle/Connected properties in AccountMode ──────────────────────────────
 
 	[Test]
 	public async ValueTask ConnectionData_InAccountMode_IdleIsNotNull()
@@ -160,8 +155,6 @@ public class ConnectionServiceAccountModeTests
 
 		await Assert.That(data!.Connected).IsNotNull();
 	}
-
-	// ── BindAccount then Bind (character login) ───────────────────────────────
 
 	[Test]
 	public async ValueTask BindAccount_ThenBind_TransitionsToLoggedIn()
@@ -186,7 +179,6 @@ public class ConnectionServiceAccountModeTests
 		await svc.BindAccount(1, "accounts/42");
 		await svc.Bind(1, playerRef);
 
-		// AccountId set during account mode should persist after character login
 		var data = svc.Get(1);
 		await Assert.That(data!.Metadata.TryGetValue("AccountId", out var id)).IsTrue();
 		await Assert.That(id).IsEqualTo("accounts/42");

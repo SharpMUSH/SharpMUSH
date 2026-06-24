@@ -267,8 +267,6 @@ public class GitPackageSourceService(
 			Task.FromResult(files.GetValueOrDefault(fileName));
 	}
 
-	// ── Repo cache management ───────────────────────────────────────────────
-
 	private async Task<OneOf<T, Error<string>>> WithRepoAsync<T>(
 		PackageRemoteRecord remote,
 		Func<Repository, OneOf<T, Error<string>>> action,
@@ -324,8 +322,6 @@ public class GitPackageSourceService(
 
 		return repository.Branches["origin/HEAD"]?.Tip ?? repository.Head?.Tip;
 	}
-
-	// ── Discovery ───────────────────────────────────────────────────────────
 
 	private List<string> DiscoverPackagePaths(Commit tip)
 	{
@@ -413,8 +409,6 @@ public class GitPackageSourceService(
 			.Select(t => t.Tag)
 			.ToList();
 	}
-
-	// ── Tree reads ──────────────────────────────────────────────────────────
 
 	private static string ManifestPathFor(string path) =>
 		path.Length == 0 ? "package.yaml" : $"{path.TrimEnd('/')}/package.yaml";

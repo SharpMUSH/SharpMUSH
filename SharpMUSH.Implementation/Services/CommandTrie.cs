@@ -56,18 +56,15 @@ public class CommandTrie
 		var node = _root;
 		var lowerPrefix = prefix.ToLowerInvariant();
 
-		// Navigate to the prefix node
 		foreach (var ch in lowerPrefix)
 		{
 			if (!node.Children.TryGetValue(ch, out node))
-				return null; // Prefix not found
+				return null;
 		}
 
-		// If the prefix itself is a complete command, return it
 		if (node.Command is CommandDefinition cmd)
 			return (node.CommandName!, cmd);
 
-		// BFS to find the shortest command with this prefix
 		var queue = new Queue<TrieNode>();
 		queue.Enqueue(node);
 
@@ -78,7 +75,6 @@ public class CommandTrie
 			if (current.Command is CommandDefinition cmd2)
 				return (current.CommandName!, cmd2);
 
-			// Sort children by key to ensure consistent ordering
 			foreach (var child in current.Children.OrderBy(kvp => kvp.Key))
 			{
 				queue.Enqueue(child.Value);
@@ -125,14 +121,12 @@ public class CommandTrie
 		var node = _root;
 		var lowerPrefix = prefix.ToLowerInvariant();
 
-		// Navigate to the prefix node
 		foreach (var ch in lowerPrefix)
 		{
 			if (!node.Children.TryGetValue(ch, out node))
-				return results; // Prefix not found
+				return results;
 		}
 
-		// Collect all commands in this subtree
 		CollectAllCommands(node, results);
 
 		return results;

@@ -8,13 +8,11 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 /// </summary>
 public static class SceneArangoConstants
 {
-	// ── Vertex DOCUMENT collections ─────────────────────────────────────────────
 	public const string SharpScenes = "node_sharp_sys_scene_scenes";
 	public const string SharpScenePoses = "node_sharp_sys_scene_poses";
 	public const string SharpScenePoseEdits = "node_sharp_sys_scene_pose_edits";
 	public const string SharpScenePlots = "node_sharp_sys_scene_plots";
 
-	// ── EDGE collections (comments note from -> to vertex collections) ──────────
 	public const string SceneFirstPose = "edge_sharp_sys_scene_first_pose";       // SharpScenes -> SharpScenePoses
 	public const string SceneLastPose = "edge_sharp_sys_scene_last_pose";         // SharpScenes -> SharpScenePoses
 	public const string ScenePoseNext = "edge_sharp_sys_scene_pose_next";         // SharpScenePoses -> SharpScenePoses
@@ -32,6 +30,5 @@ public static class SceneArangoConstants
 	public const string SceneEditEditor = "edge_sharp_sys_scene_editor";          // SharpScenePoseEdits -> Players
 	public const string ScenePlotOwner = "edge_sharp_sys_scene_plotowner";        // SharpScenePlots -> Objects
 
-	// ── Named graph ─────────────────────────────────────────────────────────────
 	public const string GraphScene = "graph_sharp_sys_scene";
 }

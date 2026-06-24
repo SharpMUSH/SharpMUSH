@@ -18,8 +18,6 @@ public class AccountAuthService(
 	private const string UsernameKey = "sharpmush.account.username";
 	private const string MustChangePasswordKey = "sharpmush.account.mustChangePassword";
 
-	// ── DTO records ─────────────────────────────────────────────────────────
-
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 
 	private record AccountLoginRequest(string UsernameOrEmail, string Password);
@@ -37,15 +35,11 @@ public class AccountAuthService(
 	private record SetupStatusResponse(bool NeedsSetup);
 	private record SetupCompleteRequest(string Username, string Password);
 
-	// ── In-memory state ──────────────────────────────────────────────────────
-
 	public string? AccountSessionToken { get; private set; }
 	public string? Username { get; private set; }
 	public IReadOnlyList<CharacterSummary> Characters { get; private set; } = [];
 	public bool MustChangePassword { get; private set; }
 	public bool IsLoggedIn => AccountSessionToken is not null;
-
-	// ── Initialization ────────────────────────────────────────────────────────
 
 	public async Task InitAsync()
 	{
@@ -54,8 +48,6 @@ public class AccountAuthService(
 		var mustChangePassword = await js.InvokeAsync<string?>("sessionStorage.getItem", MustChangePasswordKey);
 		MustChangePassword = string.Equals(mustChangePassword, bool.TrueString, StringComparison.OrdinalIgnoreCase);
 	}
-
-	// ── Login / Register ─────────────────────────────────────────────────────
 
 	public async Task<(bool Success, string? Error, IReadOnlyList<CharacterSummary> Characters)> LoginAsync(
 		string identifier, string password)
@@ -142,8 +134,6 @@ public class AccountAuthService(
 		}
 	}
 
-	// ── OTT for a character ───────────────────────────────────────────────────
-
 	/// <summary>
 	/// Development-only: get a debug OTT for player #1 without credentials.
 	/// The server endpoint is only active when DebugAuth is enabled (development mode).
@@ -162,7 +152,6 @@ public class AccountAuthService(
 			var result = await response.Content.ReadFromJsonAsync<DebugOttResponse>();
 			if (result is null) return null;
 
-			// If an account session was returned, persist it so IsLoggedIn becomes true
 			if (result.AccountSessionToken is not null && result.AccountUsername is not null)
 				await PersistSessionAsync(result.AccountSessionToken, result.AccountUsername, result.AccountMustChangePassword);
 
@@ -203,8 +192,6 @@ public class AccountAuthService(
 			return null;
 		}
 	}
-
-	// ── Character management ─────────────────────────────────────────────────
 
 	public async Task<IReadOnlyList<CharacterSummary>> GetCharactersAsync()
 	{
@@ -279,8 +266,6 @@ public class AccountAuthService(
 		}
 	}
 
-	// ── Profile management ────────────────────────────────────────────────────
-
 	public async Task<(bool Success, string? Error)> ChangePasswordAsync(string oldPassword, string newPassword)
 	{
 		if (AccountSessionToken is null) return (false, "Not logged in.");
@@ -308,8 +293,6 @@ public class AccountAuthService(
 		return (success, error);
 	}
 
-	// ── Logout ────────────────────────────────────────────────────────────────
-
 	public async Task LogoutAsync()
 	{
 		if (AccountSessionToken is not null)
@@ -331,8 +314,6 @@ public class AccountAuthService(
 		await js.InvokeVoidAsync("sessionStorage.removeItem", SessionTokenKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", MustChangePasswordKey);
 	}
-
-	// ── Helpers ───────────────────────────────────────────────────────────────
 
 	private async Task PersistSessionAsync(string token, string username, bool mustChangePassword)
 	{

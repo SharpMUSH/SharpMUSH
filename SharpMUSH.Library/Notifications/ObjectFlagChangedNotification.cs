@@ -11,5 +11,5 @@ public record ObjectFlagChangedNotification(
 	AnySharpObject Target,
 	string FlagName,
 	string Type, // "FLAG" or "POWER"
-	bool IsSet, // true if being set, false if being cleared
+	bool IsSet,
 	DBRef? Enactor) : INotification;

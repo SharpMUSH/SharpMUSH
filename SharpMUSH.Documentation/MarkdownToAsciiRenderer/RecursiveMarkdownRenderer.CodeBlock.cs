@@ -118,7 +118,6 @@ public partial class RecursiveMarkdownRenderer
 
 		foreach (var scope in ordered)
 		{
-			// Plain text before this scope's range
 			if (scope.Index > offset)
 				parts.Add(MModule.single(text[offset..scope.Index]));
 
@@ -148,7 +147,6 @@ public partial class RecursiveMarkdownRenderer
 			offset = scope.Index + scope.Length;
 		}
 
-		// Trailing plain text after all scopes
 		if (offset < text.Length)
 			parts.Add(MModule.single(text[offset..]));
 	}

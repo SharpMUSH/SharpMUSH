@@ -13,8 +13,6 @@ namespace SharpMUSH.Tests.Server.Middleware;
 /// </summary>
 public class CanonicalUrlMiddlewareTests
 {
-    // ── BuildCanonical static helper ────────────────────────────────────────
-
     [Test]
     public async Task BuildCanonical_RootPath_Unchanged()
     {
@@ -60,11 +58,8 @@ public class CanonicalUrlMiddlewareTests
     [Test]
     public async Task BuildCanonical_DeepPath_OnlyFirstSegmentLowercased()
     {
-        // The second and deeper segments preserve their case
         await Assert.That(CanonicalUrlMiddleware.BuildCanonical("/Wiki/Page/edit")).IsEqualTo("/wiki/Page/edit");
     }
-
-    // ── HTTP behaviour via TestServer ────────────────────────────────────────
 
     /// <summary>Builds a minimal in-process app with only CanonicalUrlMiddleware registered.</summary>
     private static async Task<WebApplication> BuildAndStartAsync()

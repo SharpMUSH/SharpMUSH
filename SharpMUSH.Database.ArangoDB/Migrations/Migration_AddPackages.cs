@@ -18,7 +18,6 @@ public class Migration_AddPackages : IArangoMigration
 
 	public async Task Up(IArangoMigrator migrator, ArangoHandle handle)
 	{
-		// ── sys_packages ──────────────────────────────────────────────────────
 		// _key is the package id, so dependency edges can target sys_packages/<id>.
 		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.Packages))
 		{
@@ -48,7 +47,6 @@ public class Migration_AddPackages : IArangoMigration
 			});
 		}
 
-		// ── sys_package_objects ───────────────────────────────────────────────
 		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.PackageObjects))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection
@@ -88,7 +86,6 @@ public class Migration_AddPackages : IArangoMigration
 			});
 		}
 
-		// ── sys_package_depends (edge: sys_packages -> sys_packages) ─────────
 		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.PackageDependsOn))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection
@@ -99,7 +96,6 @@ public class Migration_AddPackages : IArangoMigration
 			});
 		}
 
-		// ── sys_managed_attributes ────────────────────────────────────────────
 		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.ManagedAttributes))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection
@@ -141,7 +137,6 @@ public class Migration_AddPackages : IArangoMigration
 			});
 		}
 
-		// ── sys_remotes ───────────────────────────────────────────────────────
 		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.PackageRemotes))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection
@@ -174,7 +169,6 @@ public class Migration_AddPackages : IArangoMigration
 			});
 		}
 
-		// ── sys_package_revisions ─────────────────────────────────────────────
 		if (!await migrator.Context.Collection.ExistAsync(handle, DatabaseConstants.PackageRevisions))
 		{
 			await migrator.Context.Collection.CreateAsync(handle, new ArangoCollection

@@ -14,7 +14,6 @@ public class GetConnectionLogsQueryHandler(ISharpDatabase database)
 			return SafeAsyncEnumerable(loggingDb.GetLogsFromCategory(request.Category, request.Skip, request.Count));
 		}
 
-		// Return empty enumerable if logging is not supported
 		return AsyncEnumerable.Empty<LogEventEntity>();
 	}
 

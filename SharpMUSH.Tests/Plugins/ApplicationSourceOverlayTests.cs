@@ -28,8 +28,6 @@ public class ApplicationSourceOverlayTests
 
 	private const string PluginSlug = "plugin-widget-demo";
 
-	// ── Seam + load-once verdict via the real fixture DLL ──────────────────────────────────────────────
-
 	[Test]
 	public async Task FixturePlugin_LoadsFromDisk_ContributesApplication_AndIsLoadOnce()
 	{
@@ -40,12 +38,10 @@ public class ApplicationSourceOverlayTests
 		var loaded = PluginLoaderService.LoadOne(AppSourceDllPath, NullLogger.Instance);
 		await Assert.That(loaded).IsNotNull();
 
-		// It contributes commands too, but contributing UI makes it load-once (NOT hot-unloadable).
 		await Assert.That(loaded!.IsUnloadable).IsFalse()
 			.Because("a plugin contributing IApplicationSource is a load-once seam");
 		await Assert.That(PluginLoaderService.IsUnloadablePlugin(loaded.Plugin)).IsFalse();
 
-		// The IApplicationSource cast must succeed across the isolation boundary (host-shared seam + model).
 		await Assert.That(loaded.Plugin is IApplicationSource).IsTrue();
 		var apps = ((IApplicationSource)loaded.Plugin).GetApplications().ToList();
 		await Assert.That(apps.Count).IsEqualTo(1);
@@ -71,28 +67,23 @@ public class ApplicationSourceOverlayTests
 		}
 	}
 
-	// ── Overlay decorator semantics (in-memory inner + catalog) ─────────────────────────────────────────
-
 	[Test]
 	public async Task Overlay_UnionsPluginApp_WhenLoaded_AndOmitsIt_WhenCatalogEmpty()
 	{
 		var inner = new FakeRegistry();
 		await inner.UpsertApplicationAsync(DbApp("db-page", order: 10));
 
-		// No application sources → the DB app only.
 		var withoutPlugin = new PluginApplicationRegistryDecorator(
 			inner, PluginCatalog.Empty(), NullLogger<PluginApplicationRegistryDecorator>.Instance);
 		var none = await withoutPlugin.GetApplicationsAsync();
 		await Assert.That(none.Select(a => a.Slug)).IsEquivalentTo(new[] { "db-page" });
 
-		// With the plugin source → DB app ∪ plugin app, ordered by Order then slug.
 		var withPlugin = new PluginApplicationRegistryDecorator(
 			inner, PluginCatalog.ForPlugins([new StubAppPlugin(PluginApp("plugin-page", order: 5))]),
 			NullLogger<PluginApplicationRegistryDecorator>.Instance);
 		var merged = await withPlugin.GetApplicationsAsync();
 		await Assert.That(merged.Select(a => a.Slug)).IsEquivalentTo(new[] { "plugin-page", "db-page" });
 
-		// GetApplicationAsync resolves the plugin overlay too.
 		var single = await withPlugin.GetApplicationAsync("plugin-page");
 		await Assert.That(single.IsT0).IsTrue();
 		await Assert.That(single.AsT0.Slug).IsEqualTo("plugin-page");
@@ -125,26 +116,21 @@ public class ApplicationSourceOverlayTests
 			inner, PluginCatalog.ForPlugins([new StubAppPlugin(PluginApp(PluginSlug, order: 5))]),
 			NullLogger<PluginApplicationRegistryDecorator>.Instance);
 
-		// A normal DB upsert/get/remove works through the decorator.
 		await decorator.UpsertApplicationAsync(DbApp("editable", order: 2));
 		await Assert.That((await decorator.GetApplicationAsync("editable")).IsT0).IsTrue();
 		await Assert.That((await inner.GetApplicationAsync("editable")).IsT0).IsTrue();
 		await decorator.RemoveApplicationAsync("editable");
 		await Assert.That((await inner.GetApplicationAsync("editable")).IsT1).IsTrue();
 
-		// Upsert of a plugin-owned slug is refused: nothing is written to the DB inner.
 		await decorator.UpsertApplicationAsync(DbApp(PluginSlug, order: 7, display: "Admin Tried To Edit"));
 		await Assert.That((await inner.GetApplicationAsync(PluginSlug)).IsT1).IsTrue()
 			.Because("a plugin-owned slug must not be persisted");
 
-		// Remove of a plugin-owned slug is ignored: the overlay still resolves it.
 		await decorator.RemoveApplicationAsync(PluginSlug);
 		var stillThere = await decorator.GetApplicationAsync(PluginSlug);
 		await Assert.That(stillThere.IsT0).IsTrue();
 		await Assert.That(stillThere.AsT0.DisplayName).IsEqualTo("Plugin Demo");
 	}
-
-	// ── Helpers ─────────────────────────────────────────────────────────────────────────────────────
 
 	private static RegisteredApplication DbApp(string slug, int order, string? display = null) =>
 		new(slug, display ?? slug, null, ApplicationKind.Page, $"http/{slug}/schema", null, null,

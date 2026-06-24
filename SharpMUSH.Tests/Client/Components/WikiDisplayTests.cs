@@ -18,10 +18,9 @@ public class WikiDisplayTests
 	[Test]
 	public async Task WikiDisplay_WithArticle_DisplaysTitle()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-		ctx.AddAuthorization(); // Required for AuthorizeView component
+		ctx.AddAuthorization();
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
@@ -35,13 +34,11 @@ public class WikiDisplayTests
 
 		var article = new WikiArticle("Test Article", "This is test content", null);
 
-		// Act
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
 
-		// Assert
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("Test Article");
 	}
@@ -49,7 +46,6 @@ public class WikiDisplayTests
 	[Test]
 	public async Task WikiDisplay_WithArticle_RendersContent()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.AddAuthorization();
@@ -66,22 +62,18 @@ public class WikiDisplayTests
 
 		var article = new WikiArticle("Test Article", "This is **bold** content", null);
 
-		// Act
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
 
-		// Assert
 		var markup = cut.Markup;
-		// Markdown should be converted to HTML
 		await Assert.That(markup).Contains("<strong>bold</strong>");
 	}
 
 	[Test]
 	public async Task WikiDisplay_WithoutArticle_ShowsInfoMessage()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -96,13 +88,11 @@ public class WikiDisplayTests
 		ctx.Services.AddSingleton(sp => new WikiService(
 			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 
-		// Act
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "nonexistent")
 			.Add(p => p.Article, null)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
 
-		// Assert
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("Nothing to see here");
 	}
@@ -110,7 +100,6 @@ public class WikiDisplayTests
 	[Test]
 	public async Task WikiDisplay_WithoutArticle_WhenAuthorized_ShowsCreateOption()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
@@ -127,13 +116,11 @@ public class WikiDisplayTests
 		ctx.Services.AddSingleton(sp => new WikiService(
 			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 
-		// Act
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "new-page")
 			.Add(p => p.Article, null)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
 
-		// Assert
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("does not exist yet");
 		await Assert.That(markup).Contains("Create this Page");
@@ -142,7 +129,6 @@ public class WikiDisplayTests
 	[Test]
 	public async Task WikiDisplay_WhenAuthorized_ShowsEditButton()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
@@ -161,24 +147,20 @@ public class WikiDisplayTests
 
 		var article = new WikiArticle("Test Article", "Content", null);
 
-		// Act
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
 
-		// Assert - Should have edit button (icon button with edit icon)
 		var markup = cut.Markup;
-		// MudBlazor renders icon buttons, checking for presence in markup
 		await Assert.That(cut.FindAll("button").Count).IsGreaterThanOrEqualTo(1);
 	}
 
 	[Test]
 	public async Task WikiDisplay_WhenNotAuthorized_DoesNotShowEditButton()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
-		ctx.AddAuthorization(); // Not authorized
+		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
@@ -193,13 +175,11 @@ public class WikiDisplayTests
 
 		var article = new WikiArticle("Test Article", "Content", null);
 
-		// Act
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
 
-		// Assert - Should not have edit button when not authorized
 		var buttons = cut.FindAll("button");
 		await Assert.That(buttons.Count).IsEqualTo(0);
 	}
@@ -207,7 +187,6 @@ public class WikiDisplayTests
 	[Test]
 	public async Task WikiDisplay_HomeSlug_DisplaysAsHero()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -224,13 +203,11 @@ public class WikiDisplayTests
 
 		var article = new WikiArticle("Home", "Welcome", null);
 
-		// Act
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "home")
 			.Add(p => p.Article, article)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
 
-		// Assert - the home slug renders in hero mode (centered, no article chrome)
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("WikiContent--hero");
 	}

@@ -12,9 +12,8 @@ public partial class MemgraphDatabase : IRoleRegistryService
 {
 	#region Role Registry
 
-	// Node label: :SysRole, keyed by slug. Permissions are persisted as a JSON string
-	// (permissionsJson) because Cypher node properties cannot hold a nested map cleanly.
-	// Assignment edge: (:Account)-[:ACCOUNT_HAS_ROLE]->(:SysRole).
+	// Permissions are persisted as a JSON string (permissionsJson) because Cypher node
+	// properties cannot hold a nested map cleanly.
 
 	public async Task UpsertRoleAsync(SharpRole role)
 	{

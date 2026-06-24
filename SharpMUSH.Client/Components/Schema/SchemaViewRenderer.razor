@@ -152,9 +152,8 @@ else
                 </MudSimpleTable>
                 break;
 
-            default: // "field"
+            default:
                 var raw = ValueToString(element.Key is not null ? Lookup(element.Key) : null);
-                // Empty value → fall back to the element's Default (the "default value").
                 var display = string.IsNullOrEmpty(raw) ? ValueToString(element.Default) : raw;
                 <div class="mb-2">
                     @if (!string.IsNullOrWhiteSpace(element.Label))

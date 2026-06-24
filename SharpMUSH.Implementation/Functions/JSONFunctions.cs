@@ -205,7 +205,6 @@ public partial class Functions
 		{
 			var jsonDoc = JsonNode.Parse(json);
 
-			// patch: arg2 is the merge-patch document applied to the root (no JSONPath needed)
 			if (action == "patch")
 			{
 				if (string.IsNullOrWhiteSpace(arg2))
@@ -217,7 +216,6 @@ public partial class Functions
 				return new CallState(merged?.ToJsonString() ?? "null");
 			}
 
-			// sort: arg2 is a JSONPath selector applied to each array element to get the sort key
 			if (action == "sort")
 			{
 				if (jsonDoc is not JsonArray arr)
@@ -244,11 +242,9 @@ public partial class Functions
 
 			var jsonPath = JsonPath.Parse(arg2);
 
-			// Evaluate path to see if it exists
 			var pathResult = jsonPath.Evaluate(jsonDoc);
 			var pathExists = pathResult.Matches != null && pathResult.Matches.Count > 0;
 
-			// For modification operations with found matches, we need exactly one
 			if (pathExists && pathResult.Matches!.Count > 1)
 			{
 				return new CallState(ErrorMessages.Returns.PathMustBeSingular);
@@ -581,7 +577,6 @@ public partial class Functions
 		ParameterNames = ["json", "player"])]
 	public static async ValueTask<CallState> WebSocketJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Send JSON data via websocket - similar to wsjson()
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 

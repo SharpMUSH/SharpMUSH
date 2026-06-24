@@ -130,16 +130,13 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToList();
 		var httpResponse = parser.CurrentState.HttpResponse;
 
-		// Determine if we're in HTTP context (HttpResponse will be set by HTTP handler)
 		var isHttpContext = httpResponse is not null;
 
-		// Parse the arguments based on the switch
 		var hasTypeSwitch = switches.Contains("TYPE");
 		var hasHeaderSwitch = switches.Contains("HEADER");
 
 		if (hasTypeSwitch)
 		{
-			// @respond/type <content-type>
 			parser.CurrentState.Arguments.TryGetValue("0", out var contentTypeArg);
 			if (contentTypeArg is null || string.IsNullOrWhiteSpace(contentTypeArg.Message?.ToPlainText()))
 			{
@@ -160,7 +157,6 @@ public partial class Commands
 		}
 		else if (hasHeaderSwitch)
 		{
-			// @respond/header <name>=<value>
 			// With EqSplit, arg 0 is header name, arg 1 is header value
 			parser.CurrentState.Arguments.TryGetValue("0", out var headerNameArg);
 			parser.CurrentState.Arguments.TryGetValue("1", out var headerValueArg);
@@ -180,7 +176,6 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.HeaderNameCannotBeEmpty);
 			}
 
-			// Prevent setting Content-Length as per documentation
 			if (headerName.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
 			{
 				await NotifyService!.Notify(executor, "Cannot set Content-Length header.", executor);
@@ -198,7 +193,6 @@ public partial class Commands
 		}
 		else
 		{
-			// @respond <code> <text>
 			// With EqSplit, the entire "code text" comes in arg[0], need to manually split on first space
 			parser.CurrentState.Arguments.TryGetValue("0", out var statusArg);
 
@@ -229,7 +223,6 @@ public partial class Commands
 
 			var statusLine = fullStatusText;
 
-			// Validate total length < 40 characters as per documentation
 			if (statusLine.Length >= 40)
 			{
 				await NotifyService!.Notify(executor, "@respond status code too long.", executor);

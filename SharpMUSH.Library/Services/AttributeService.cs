@@ -261,7 +261,6 @@ public class AttributeService(
 		}
 		recursionDepths[attributeName] = ++depth;
 
-		// Check recursion limit for attributes (same as built-in functions)
 		if (depth > configuration.CurrentValue.Limit.FunctionRecursionLimit)
 		{
 			limitExceeded.IsExceeded = true;
@@ -287,7 +286,6 @@ public class AttributeService(
 		}
 		finally
 		{
-			// Decrement tracking when done
 			callDepth.Decrement();
 			if (recursionDepths.TryGetValue(attributeName, out var currentDepth) && currentDepth > 0)
 			{
@@ -358,7 +356,6 @@ public class AttributeService(
 			realExecutor = maybeOne.Known;
 		}
 
-		// #apply evaluations. 
 		if (applyPredicate && !ignoreLambda)
 		{
 			var argN = 1;
@@ -367,7 +364,6 @@ public class AttributeService(
 			var applyArgCountStr = objPlainText.Remove(0, 6); // part after "#apply"
 			if (!string.IsNullOrWhiteSpace(applyArgCountStr) && !int.TryParse(applyArgCountStr, out argN))
 			{
-				// Invalid argument count in #apply 
 				return MModule.single(string.Format(ErrorMessages.Returns.BadArgumentFormat, "#APPLY"));
 			}
 
@@ -378,10 +374,8 @@ public class AttributeService(
 
 			if (parser.FunctionLibrary.TryGetValue(attribute.ToPlainText().ToLower(), out var applyFunction))
 			{
-				// Check function permission flags
 				var functionFlags = applyFunction.LibraryInformation.Attribute.Flags;
 
-				// Check wizard/admin/god restrictions
 				if (functionFlags.HasFlag(FunctionFlags.GodOnly) && !await realExecutor.IsRoyalty())
 				{
 					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
@@ -399,7 +393,6 @@ public class AttributeService(
 					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 
-				// Check custom restrictions
 				if (applyFunction.LibraryInformation.Attribute.Restrict.Length > 0)
 				{
 					var hasRestriction = await applyFunction.LibraryInformation.Attribute.Restrict.ToAsyncEnumerable()
@@ -434,7 +427,6 @@ public class AttributeService(
 			// Further work is needed before this can be implemented properly.
 		}
 
-		// LAMBDA.
 		if (lambdaPredicate && !ignoreLambda)
 		{
 			var result = await parser.With(s => s with
@@ -450,7 +442,6 @@ public class AttributeService(
 			return result!.Message!;
 		}
 
-		// Standard Object/Attribute evaluation
 		var maybeObject =
 			await locateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objPlainText,
 				LocateFlags.All);
@@ -528,7 +519,6 @@ public class AttributeService(
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode)
 	{
-		// Create stream of attributes matching the pattern
 		var attributes = mediator.CreateStream(
 			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
@@ -578,7 +568,6 @@ public class AttributeService(
 		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
-		// Create lazy stream of attributes
 		var attributes = mediator.CreateStream(
 			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
 
@@ -646,7 +635,6 @@ public class AttributeService(
 			return new Error<string>("Flag Found");
 		}
 
-		// Check if the flag is already set to avoid redundant operations
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
 		if (currentFlags.Any(f => f.Name.Equals(returnedFlag.Name, StringComparison.OrdinalIgnoreCase)))
 		{
@@ -688,7 +676,6 @@ public class AttributeService(
 			return new Error<string>("Flag Found");
 		}
 
-		// Check if the flag is actually set before unsetting
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
 		if (!currentFlags.Any(f => f.Name.Equals(returnedFlag.Name, StringComparison.OrdinalIgnoreCase)))
 		{
@@ -792,7 +779,6 @@ public class AttributeService(
 			return new Success();
 		}
 
-		// Attribute exists but executor can't set it — permission denied.
 		if (!await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);

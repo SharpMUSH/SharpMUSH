@@ -26,14 +26,12 @@ public partial class MemgraphDatabase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var objKey = dbref.Number;
 
-		// Find the typed node for this object
 		var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, cancellationToken);
 
 		if (typedResult.Result.Count == 0) yield break;
 
 		var tkey = typedResult.Result[0]["tkey"].As<int>();
 
-		// Walk the attribute tree step by step
 		var attrs = new List<INode>();
 		var currentKey = (object)tkey;
 		var isFirst = true;
@@ -243,10 +241,8 @@ RETURN child ORDER BY child.longName
 			["emptyValue"] = emptyValue
 		};
 
-		// Start: find the typed node (Player/Room/Thing/Exit) for this object
 		sb.AppendLine("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $objKey})");
 
-		// Build MERGE chain for each attribute level
 		for (var i = 0; i < attribute.Length; i++)
 		{
 			var parentAlias = i == 0 ? "typed" : $"a{i - 1}";
@@ -277,7 +273,6 @@ RETURN child ORDER BY child.longName
 
 		var leafAlias = $"a{attribute.Length - 1}";
 
-		// Remove old owner and set new owner atomically
 		sb.AppendLine($"WITH {leafAlias}");
 		sb.AppendLine($"OPTIONAL MATCH ({leafAlias})-[oldOwner:HAS_ATTRIBUTE_OWNER]->()");
 		sb.AppendLine("DELETE oldOwner");
@@ -302,8 +297,6 @@ RETURN child ORDER BY child.longName
 		""", new { key = attrKey }, cancellationToken);
 		}
 
-		// Handle attribute entry flags for newly created attributes (post-MERGE)
-		// Check each level for attribute entries with default flags
 		for (var i = 0; i < attribute.Length; i++)
 		{
 			var longName = string.Join('`', attribute.Take(i + 1));
@@ -383,7 +376,6 @@ public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute
 
 		var attrKey = ExtractKeyString(targetAttr.Id);
 
-		// Check for children
 		var childrenResult = await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE]->(child:Attribute)
 RETURN count(child) AS cnt
@@ -399,7 +391,6 @@ RETURN count(child) AS cnt
 		{
 			await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) DETACH DELETE a", new { key = attrKey }, cancellationToken);
 
-			// Check if parent still has other children; if not, remove branch flag
 			if (attrPath.Count >= 2)
 			{
 				var parentAttr = attrPath[^2];
@@ -419,16 +410,13 @@ public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute,
 
 		var attrKey = ExtractKeyString(targetAttr.Id);
 
-		// Delete all descendants first
 		await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE*1..999]->(descendant:Attribute)
 DETACH DELETE descendant
 """, new { key = attrKey }, cancellationToken);
 
-		// Delete the target itself
 		await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) DETACH DELETE a", new { key = attrKey }, cancellationToken);
 
-		// Check if parent still has other children; if not, remove branch flag
 		if (attrPath.Count >= 2)
 		{
 			var parentAttr = attrPath[^2];
@@ -491,7 +479,6 @@ SET e.defaultFlags = $defaultFlags, e.lim = $lim, e.enumValues = $enumValues
 	{
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
-		// Try self first
 		var selfAttrs = await GetAttributeAsync(dbref, attribute, cancellationToken).ToArrayAsync(cancellationToken);
 		if (selfAttrs.Length == attribute.Length)
 		{
@@ -502,7 +489,6 @@ SET e.defaultFlags = $defaultFlags, e.lim = $lim, e.enumValues = $enumValues
 
 		if (!checkParent) yield break;
 
-		// Try parents
 		var objKey = dbref.Number;
 		var parentResult = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..100]->(parent:Object) RETURN parent", new { key = objKey }, cancellationToken);
 
@@ -523,7 +509,6 @@ SET e.defaultFlags = $defaultFlags, e.lim = $lim, e.enumValues = $enumValues
 			}
 		}
 
-		// Try zones (on self and parents)
 		var chainResult = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})
 OPTIONAL MATCH (o)-[:HAS_PARENT*0..100]->(chainObj:Object)
@@ -618,7 +603,6 @@ RETURN zone
 	/// </summary>
 	private async ValueTask RemoveBranchFlagIfNoChildrenAsync(string parentAttrKey, CancellationToken cancellationToken)
 	{
-		// Check if parent still has any children
 		var remainingChildren = await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE]->(child:Attribute)
 RETURN count(child) AS cnt
@@ -627,7 +611,6 @@ RETURN count(child) AS cnt
 		var childCount = remainingChildren.Result.Count > 0 ? remainingChildren.Result[0]["cnt"].As<long>() : 0;
 		if (childCount == 0)
 		{
-			// No children left — remove branch flag
 			await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key})-[r:HAS_ATTRIBUTE_FLAG]->(f:AttributeFlag)
 WHERE toUpper(f.name) = 'BRANCH'
@@ -641,7 +624,6 @@ DELETE r
 		var oldKey = ExtractKey(oldOwner.Id!);
 		var newKey = ExtractKey(newOwner.Id!);
 
-		// Redirect all HAS_ATTRIBUTE_OWNER edges from oldOwner to newOwner in a single query.
 		await ExecuteWithRetryAsync("""
 MATCH (a:Attribute)-[r:HAS_ATTRIBUTE_OWNER]->(oldP:Player {key: $oldKey})
 MATCH (newP:Player {key: $newKey})

@@ -27,11 +27,9 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask SetFlag_PartialMatch_NoCommand()
 	{
-		// Create a thing to test with
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing1"));
 		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
 
-		// Test that "@set thing=no_com" sets the NO_COMMAND flag (partial match)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=no_com"));
 
 		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
@@ -55,10 +53,8 @@ public class FlagWildcardMatchingTests
 			?? throw new InvalidOperationException($"@create {uniqueName} message could not be converted to plain text.");
 		var thingDbRef = DBRef.Parse(createPlainText);
 
-		// Set NO_COMMAND flag first
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=NO_COMMAND"));
 
-		// Test that "@set thing=!no_com" unsets the NO_COMMAND flag (partial match with negation)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=!no_com"));
 
 		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
@@ -74,11 +70,9 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask SetFlag_PartialMatch_Visual()
 	{
-		// Create a thing to test with
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing3"));
 		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
 
-		// Test that "@set thing=vis" sets the VISUAL flag (partial match)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=vis"));
 
 		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
@@ -100,10 +94,9 @@ public class FlagWildcardMatchingTests
 			?? throw new InvalidOperationException($"@create {uniqueName} returned a null message.");
 		var thingDbRef = DBRef.Parse(createPlainText);
 
-		// Set VISUAL flag first — use DBRef to avoid name-lookup flakiness.
+		// Use DBRef to avoid name-lookup flakiness.
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=VISUAL"));
 
-		// Test that "@set thing=!vis" unsets the VISUAL flag (partial match with negation)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=!vis"));
 
 		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
@@ -119,9 +112,6 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask GetObjectFlagQuery_ExactMatch_Preferred()
 	{
-		// If there are flags like "COLOR" and "COLORFUL" (hypothetically),
-		// an exact match should be preferred over a partial match
-		// Testing with COLOR which should match exactly
 		var flag = await Mediator.Send(new GetObjectFlagQuery("COLOR"));
 
 		await Assert.That(flag).IsNotNull();
@@ -131,7 +121,6 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask GetObjectFlagQuery_PartialMatch()
 	{
-		// Test that "col" returns the COLOR flag
 		var flag = await Mediator.Send(new GetObjectFlagQuery("COL"));
 
 		await Assert.That(flag).IsNotNull();
@@ -141,7 +130,6 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask GetObjectFlagQuery_CaseInsensitive()
 	{
-		// Test that lowercase "col" also works
 		var flag = await Mediator.Send(new GetObjectFlagQuery("col"));
 
 		await Assert.That(flag).IsNotNull();

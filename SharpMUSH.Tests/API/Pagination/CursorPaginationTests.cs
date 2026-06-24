@@ -10,8 +10,6 @@ public class CursorPaginationTests
     private static IEnumerable<int> Range(int from, int to) =>
         Enumerable.Range(from, to - from + 1);
 
-    // ── Basic slicing ────────────────────────────────────────────────────────
-
     [Test]
     public async Task Paginate_FirstPage_ReturnsFirstN()
     {
@@ -61,7 +59,6 @@ public class CursorPaginationTests
     [Test]
     public async Task Paginate_LastPage_NoNextCursor()
     {
-        // 5 items with pageSize=10 — fits all on one page
         var page = CursorPaginationHelper.Paginate(Range(1, 5), x => x, pageSize: 10);
 
         await Assert.That(page.HasNextPage).IsFalse();
@@ -77,8 +74,6 @@ public class CursorPaginationTests
         await Assert.That(page.HasNextPage).IsFalse();
     }
 
-    // ── Page size clamping ───────────────────────────────────────────────────
-
     [Test]
     public async Task Paginate_PageSizeZero_ClampedTo1()
     {
@@ -92,8 +87,6 @@ public class CursorPaginationTests
         var page = CursorPaginationHelper.Paginate(Range(1, 500), x => x, pageSize: 9999);
         await Assert.That(page.Items.Count).IsEqualTo(200);
     }
-
-    // ── Cursor encode / decode round-trip ────────────────────────────────────
 
     [Test]
     public async Task EncodeDecode_RoundTrip_Int()
@@ -119,8 +112,6 @@ public class CursorPaginationTests
         var decoded = CursorPaginationHelper.DecodeCursor<int>("!!!invalid!!!");
         await Assert.That(decoded).IsEqualTo(0);
     }
-
-    // ── Empty source ─────────────────────────────────────────────────────────
 
     [Test]
     public async Task Paginate_EmptySource_ReturnsEmptyPage()

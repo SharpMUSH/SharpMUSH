@@ -67,11 +67,9 @@ public sealed class MemgraphStagingDatabase : MemgraphDatabase, IStagingDatabase
 
 		_logger.LogWarning("Aborting staging import — restoring database from backup");
 
-		// Wipe current state
 		await using var session = _driver.AsyncSession();
 		await session.RunAsync("MATCH (n) DETACH DELETE n");
 
-		// Restore from backup
 		var backupJson = await File.ReadAllTextAsync(_backupPath, ct);
 		var backup = JsonSerializer.Deserialize<MemgraphBackup>(backupJson);
 
@@ -90,7 +88,6 @@ public sealed class MemgraphStagingDatabase : MemgraphDatabase, IStagingDatabase
 				new { props = node.Properties, bid = node.BackupId });
 		}
 
-		// Restore relationships using temporary backup IDs
 		foreach (var rel in backup.Relationships)
 		{
 			await session.RunAsync(
@@ -99,10 +96,8 @@ public sealed class MemgraphStagingDatabase : MemgraphDatabase, IStagingDatabase
 				new { startId = rel.StartNodeBackupId, endId = rel.EndNodeBackupId, props = rel.Properties });
 		}
 
-		// Remove temporary backup IDs
 		await session.RunAsync("MATCH (n) WHERE n._backup_id IS NOT NULL REMOVE n._backup_id");
 
-		// Clean up backup file
 		File.Delete(_backupPath);
 
 		_logger.LogInformation("Database restored from backup successfully");
@@ -149,7 +144,6 @@ public sealed class MemgraphStagingDatabase : MemgraphDatabase, IStagingDatabase
 			});
 		}
 
-		// Export all relationships
 		var relResult = await session.RunAsync(
 			"MATCH (a)-[r]->(b) RETURN type(r) as type, id(a) as startId, id(b) as endId, properties(r) as props");
 		var relRecords = await relResult.ToListAsync();

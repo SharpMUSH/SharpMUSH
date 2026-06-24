@@ -27,7 +27,6 @@ public class DatabaseConversionController(
 
 		try
 		{
-			// Create a temporary file to store the uploaded database
 			var tempPath = Path.Combine(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
 
 			await using (var stream = System.IO.File.Create(tempPath))
@@ -37,10 +36,8 @@ public class DatabaseConversionController(
 
 			logger.LogInformation("Uploaded PennMUSH database file: {FileName} ({Size} bytes)", file.FileName, file.Length);
 
-			// Start conversion in background and return a session ID
 			var sessionId = Guid.NewGuid().ToString();
 
-			// Store the conversion task in a static dictionary for progress tracking
 			DatabaseConversionSession.StartConversion(sessionId, converter, tempPath, logger, cancellationToken);
 
 			return Ok(new { sessionId, message = "Conversion started" });
@@ -151,7 +148,6 @@ public static class DatabaseConversionSession
 							session.Result = result;
 						}
 
-						// Clean up temp file
 						try
 						{
 							if (File.Exists(tempFilePath))
@@ -169,7 +165,6 @@ public static class DatabaseConversionSession
 					else if (task.IsFaulted)
 					{
 						logger.LogError(task.Exception?.InnerException, "Error during conversion");
-						// Preserve the original exception by throwing the inner exception
 						if (task.Exception?.InnerException != null)
 						{
 							throw task.Exception.InnerException;
@@ -190,7 +185,6 @@ public static class DatabaseConversionSession
 
 		_sessions[sessionId] = sessionData;
 
-		// Schedule cleanup of old sessions after 1 hour using a background timer
 		// Use CancellationToken.None to ensure cleanup runs even if request is cancelled
 		_ = Task.Delay(TimeSpan.FromHours(1), CancellationToken.None)
 			.ContinueWith(_ =>
@@ -199,10 +193,8 @@ public static class DatabaseConversionSession
 				{
 					_sessions.TryRemove(sessionId, out var removedSession);
 
-					// Dispose of cancellation token source
 					removedSession?.CancellationSource?.Dispose();
 
-					// Clean up any remaining temp files
 					if (removedSession != null && File.Exists(removedSession.TempFilePath))
 					{
 						try
@@ -271,7 +263,6 @@ public static class DatabaseConversionSession
 
 		session.CancellationSource.Cancel();
 
-		// Clean up temp file - ignore specific expected exceptions during cleanup
 		try
 		{
 			if (File.Exists(session.TempFilePath))

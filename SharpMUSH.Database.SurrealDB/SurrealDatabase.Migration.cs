@@ -48,11 +48,9 @@ public partial class SurrealDatabase
 	{
 		logger.LogWarning("WIPING DATABASE - This is destructive and irreversible!");
 
-		// Remove all records from SurrealDB
 		await db.RawQuery("REMOVE DATABASE IF EXISTS sharpmush;");
 		_migrated = false;
 
-		// Re-migrate
 		await Migrate(cancellationToken);
 
 		logger.LogInformation("Database wiped and re-initialized successfully.");
@@ -67,7 +65,6 @@ public partial class SurrealDatabase
 			if (_migrated) return;
 			logger.LogInformation("Migrating SurrealDB Database");
 
-			// Create indexes on data tables
 			var indexQueries = new[]
 			{
 				"DEFINE INDEX IF NOT EXISTS object_key ON object FIELDS key UNIQUE",
@@ -103,9 +100,7 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS sys_package_dependency_dep ON sys_package_dependency FIELDS dependsOnId",
 				"DEFINE INDEX IF NOT EXISTS sys_remote_name ON sys_remote FIELDS name UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS sys_package_revision_key ON sys_package_revision FIELDS packageId, revision UNIQUE",
-				// Portal RBAC — custom roles (keyed by slug) and account→role assignments.
 				"DEFINE INDEX IF NOT EXISTS role_slug ON role FIELDS slug UNIQUE",
-				// Indexes on edge/relation tables for fast traversal
 				"DEFINE INDEX IF NOT EXISTS has_attribute_in ON has_attribute FIELDS in",
 				"DEFINE INDEX IF NOT EXISTS has_attribute_out ON has_attribute FIELDS out",
 				"DEFINE INDEX IF NOT EXISTS has_attribute_flag_in ON has_attribute_flag FIELDS in",
@@ -133,10 +128,6 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS mail_sender_in ON mail_sender FIELDS in",
 				"DEFINE INDEX IF NOT EXISTS mail_sender_out ON mail_sender FIELDS out",
 				"DEFINE INDEX IF NOT EXISTS object_data_key_type ON object_data FIELDS objectKey, dataType UNIQUE"
-				// Scene System schema (scene tables/edges/indexes) is no longer defined here — Phase 5 moved
-				// it into the Scene plugin's IMigrationSource.SurrealStatements, run after this built-in batch
-				// (see RunPluginSurrealMigrations). The ISceneService storage moved into the plugin too (Phase 8),
-				// reaching this provider's connection through the host-shared ISurrealStorageAccessor.
 			};
 
 			foreach (var q in indexQueries)
@@ -146,14 +137,8 @@ public partial class SurrealDatabase
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-			// Initialize in-memory counter for auto-increment object keys (migration creates keys 0-9)
 			_nextObjectKey = 9;
 
-			// The 1-based scene/pose id counters (counter:scene_id / counter:pose_id) are no longer seeded
-			// here — Phase 9 moved that seed into the Scene plugin's IMigrationSource.SurrealStatements,
-			// run after this built-in batch (see RunPluginSurrealMigrations).
-
-			// Create Room Zero (key=0)
 			await ExecuteAsync(
 				"UPSERT object:0 SET name = 'Room Zero', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 0",
 				new Dictionary<string, object?> { ["now"] = now },
@@ -165,7 +150,6 @@ public partial class SurrealDatabase
 				"RELATE room:0->is_object->object:0",
 				cancellationToken);
 
-			// Create Player One - God (key=1)
 			await ExecuteAsync(
 				"UPSERT object:1 SET name = 'God', type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 1",
 				new Dictionary<string, object?> { ["now"] = now },
@@ -177,7 +161,6 @@ public partial class SurrealDatabase
 				"RELATE player:1->is_object->object:1",
 				cancellationToken);
 
-			// Create Room Two - Master Room (key=2)
 			await ExecuteAsync(
 				"UPSERT object:2 SET name = 'Master Room', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 2",
 				new Dictionary<string, object?> { ["now"] = now },
@@ -189,8 +172,7 @@ public partial class SurrealDatabase
 				"RELATE room:2->is_object->object:2",
 				cancellationToken);
 
-			// Create Room Three - Ancestor Room (config ancestor_room). Like Room Zero / Master Room,
-			// a room has no location/home edges — it is a pure attribute holder.
+			// A room has no location/home edges — it is a pure attribute holder.
 			await ExecuteAsync(
 				"UPSERT object:3 SET name = 'Ancestor Room', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 3",
 				new Dictionary<string, object?> { ["now"] = now },
@@ -198,7 +180,6 @@ public partial class SurrealDatabase
 			await ExecuteAsync("UPSERT room:3 SET key = 3, aliases = []", cancellationToken);
 			await ExecuteAsync("RELATE room:3->is_object->object:3", cancellationToken);
 
-			// Create Thing Four - Ancestor Player (config ancestor_player) in Master Room
 			await ExecuteAsync(
 				"UPSERT object:4 SET name = 'Ancestor Player', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 4",
 				new Dictionary<string, object?> { ["now"] = now },
@@ -208,7 +189,6 @@ public partial class SurrealDatabase
 			await ExecuteAsync("RELATE thing:4->at_location->room:2", cancellationToken);
 			await ExecuteAsync("RELATE thing:4->has_home->room:2", cancellationToken);
 
-			// Create Thing Five - Ancestor Exit (config ancestor_exit) in Master Room
 			await ExecuteAsync(
 				"UPSERT object:5 SET name = 'Ancestor Exit', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 5",
 				new Dictionary<string, object?> { ["now"] = now },
@@ -218,7 +198,6 @@ public partial class SurrealDatabase
 			await ExecuteAsync("RELATE thing:5->at_location->room:2", cancellationToken);
 			await ExecuteAsync("RELATE thing:5->has_home->room:2", cancellationToken);
 
-			// Create Thing Six - Ancestor Thing (config ancestor_thing) in Master Room
 			await ExecuteAsync(
 				"UPSERT object:6 SET name = 'Ancestor Thing', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 6",
 				new Dictionary<string, object?> { ["now"] = now },
@@ -228,7 +207,6 @@ public partial class SurrealDatabase
 			await ExecuteAsync("RELATE thing:6->at_location->room:2", cancellationToken);
 			await ExecuteAsync("RELATE thing:6->has_home->room:2", cancellationToken);
 
-			// Create Player Seven - Package Manager (config package_manager) at Room Zero
 			await ExecuteAsync(
 				"UPSERT object:7 SET name = 'Package Manager', type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 7",
 				new Dictionary<string, object?> { ["now"] = now },
@@ -240,7 +218,6 @@ public partial class SurrealDatabase
 			await ExecuteAsync("RELATE player:7->at_location->room:0", cancellationToken);
 			await ExecuteAsync("RELATE player:7->has_home->room:0", cancellationToken);
 
-			// Create Thing Eight - HTTP Handler (config http_handler) in Master Room
 			await ExecuteAsync(
 				"UPSERT object:8 SET name = 'HTTP Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 8",
 				new Dictionary<string, object?> { ["now"] = now },
@@ -250,7 +227,6 @@ public partial class SurrealDatabase
 			await ExecuteAsync("RELATE thing:8->at_location->room:2", cancellationToken);
 			await ExecuteAsync("RELATE thing:8->has_home->room:2", cancellationToken);
 
-			// Create Thing Nine - Event Handler (config event_handler) in Master Room
 			await ExecuteAsync(
 				"UPSERT object:9 SET name = 'Event Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 9",
 				new Dictionary<string, object?> { ["now"] = now },
@@ -260,17 +236,14 @@ public partial class SurrealDatabase
 			await ExecuteAsync("RELATE thing:9->at_location->room:2", cancellationToken);
 			await ExecuteAsync("RELATE thing:9->has_home->room:2", cancellationToken);
 
-			// Player One at Room Zero
 			await ExecuteAsync(
 				"RELATE player:1->at_location->room:0",
 				cancellationToken);
 
-			// Player One home is Room Zero
 			await ExecuteAsync(
 				"RELATE player:1->has_home->room:0",
 				cancellationToken);
 
-			// Ownership: all objects owned by Player One
 			await ExecuteAsync(
 				"RELATE object:0->has_owner->player:1",
 				cancellationToken);
@@ -289,29 +262,21 @@ public partial class SurrealDatabase
 			await ExecuteAsync("RELATE object:9->has_owner->player:1", cancellationToken);
 			await ExecuteAsync("RELATE object:7->has_owner->player:7", cancellationToken);
 
-			// Create initial flags
 			await CreateInitialFlags(cancellationToken);
 
-			// Create initial attribute flags
 			await CreateInitialAttributeFlags(cancellationToken);
 
-			// Create initial powers
 			await CreateInitialPowers(cancellationToken);
 
-			// Create initial attribute entries
 			await CreateInitialAttributeEntries(cancellationToken);
 
-			// Give Player One the WIZARD flag
 			await ExecuteAsync(
 				"RELATE object:1->has_flags->object_flag:WIZARD",
 				cancellationToken);
-			// Give the Package Manager (#7) the WIZARD flag
 			await ExecuteAsync(
 				"RELATE object:7->has_flags->object_flag:WIZARD",
 				cancellationToken);
 
-			// Phase 2a: seed plugin-contributed flags (IFlagSource), then run plugin SurrealQL migrations
-			// (IMigrationSource). Both ride the same plumbing as the built-in seed batch above.
 			await SeedPluginFlags(cancellationToken);
 			await RunPluginSurrealMigrations(cancellationToken);
 
@@ -397,8 +362,6 @@ public partial class SurrealDatabase
 			("OPEN_OK", "", null, [], [], ["ROOM"]),
 			("GOING", "g", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
 			("GOING_TWICE", "", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
-			// Scene System SCENE_ROOM flag is no longer seeded here — Phase 5 moved it into the Scene
-			// plugin's IFlagSource, seeded after this built-in batch by SeedPluginFlags.
 		};
 
 		foreach (var f in flags)

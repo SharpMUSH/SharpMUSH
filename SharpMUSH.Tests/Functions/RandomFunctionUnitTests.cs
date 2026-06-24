@@ -17,7 +17,6 @@ public class RandomFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
-		// Result should be space-separated numbers
 		var rolls = result.ToPlainText().Split(' ');
 		await Assert.That(rolls.Length).IsGreaterThan(0);
 	}
@@ -34,16 +33,11 @@ public class RandomFunctionUnitTests
 		Console.WriteLine($"Result value: '{result}'");
 		Console.WriteLine($"Result length: {result?.Length}");
 		await Assert.That(result).IsNotNull();
-		// Should be a valid integer
 		await Assert.That(int.TryParse(result, out _)).IsTrue();
 	}
 
 	// Penn rand.1 — rand(-1) should return 0
 	// NOTE: SharpMUSH currently rejects negative args; PennMUSH returns 0
-	// [Test]
-	// [Arguments("rand(-1)", "0")]
-	// public async Task RandNegative(string str, string expected) { ... }
-
 	// Penn rand.3 — rand(1) should always return 0
 	[Test]
 	[Arguments("rand(1)", "0")]

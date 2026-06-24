@@ -27,7 +27,6 @@ public partial class Functions
 
 		if (parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[0]))
 		{
-			// Format: "folder:number"
 			folder = parts[0].Trim().ToUpper();
 			if (!int.TryParse(parts[1].Trim(), out messageIndex) || messageIndex < 1)
 			{
@@ -36,7 +35,6 @@ public partial class Functions
 		}
 		else
 		{
-			// Format: just "number" - use current folder
 			folder = await MessageListHelper.CurrentMailFolder(parser, ObjectDataService!, player);
 			if (!int.TryParse(messageSpec.Trim(), out messageIndex) || messageIndex < 1)
 			{
@@ -85,13 +83,11 @@ public partial class Functions
 		AnySharpObject executor,
 		Dictionary<string, CallState> args)
 	{
-		// Single argument - query self
 		if (args.Count == 1)
 		{
 			return PlayerMessageResult.Success(executor, args["0"].Message!.ToPlainText()!);
 		}
 
-		// Two arguments - must be wizard to view other player's mail
 		if (!await executor.IsWizard())
 		{
 			return PlayerMessageResult.FromError(ErrorMessages.Returns.PermissionDenied);
@@ -128,7 +124,6 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		// Case 1: mail() - return total count of messages in all folders
 		if (args.Count == 0 || (args.Count == 1 && string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText())))
 		{
 			var allMail = Mediator!.CreateStream(new GetAllMailListQuery(executor.AsPlayer));
@@ -138,10 +133,8 @@ public partial class Functions
 
 		var arg0 = args["0"].Message!.ToPlainText()!;
 
-		// Check if arg0 is a message number (contains only digits or folder:digits format)
 		var isMsgNumber = IsMessageNumber(arg0);
 
-		// Case 2: mail(player) - return "read unread cleared" counts for player
 		if (args.Count == 1 && !isMsgNumber)
 		{
 			if (!await CanViewOtherPlayerMail(executor))
@@ -162,7 +155,6 @@ public partial class Functions
 				});
 		}
 
-		// Case 3: mail(msg#) or mail(folder:msg#) - return text content of message
 		if (args.Count == 1)
 		{
 			var (folder, messageIndex) = await ParseMessageSpec(parser, executor, arg0);
@@ -180,7 +172,6 @@ public partial class Functions
 			return new CallState(mail.Content.ToString());
 		}
 
-		// Case 4: mail(player, msg#) or mail(player, folder:msg#) - return text of player's message
 		var arg1 = args["1"].Message!.ToPlainText()!;
 
 		if (!await CanViewOtherPlayerMail(executor))
@@ -240,14 +231,12 @@ public partial class Functions
 		AnySharpObject targetPlayer = executor;
 		string? messageListSpec = null;
 
-		// Parse arguments - can be (msglist) or (player, msglist)
 		if (args.Count == 1)
 		{
 			messageListSpec = args["0"].Message?.ToPlainText();
 		}
 		else if (args.Count == 2)
 		{
-			// Must be wizard to view other player's mail
 			if (!await CanViewOtherPlayerMail(executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -266,7 +255,6 @@ public partial class Functions
 			messageListSpec = args["1"].Message?.ToPlainText();
 		}
 
-		// Use MessageListHelper to filter mail
 		var msgListArg = messageListSpec != null ? MModule.single(messageListSpec) : null;
 		var filteredList = await MessageListHelper.Handle(
 			parser, ObjectDataService!, Mediator, NotifyService, msgListArg, targetPlayer);
@@ -278,7 +266,6 @@ public partial class Functions
 
 		var mailList = filteredList.AsMailList;
 
-		// Build result list by finding each mail's index in its folder using async enumeration
 		var results = new List<string>();
 		await foreach (var mail in mailList)
 		{
@@ -338,7 +325,6 @@ public partial class Functions
 		var recipientArg = args["0"].Message!.ToPlainText()!;
 		var messageArg = args["1"].Message!;
 
-		// Locate recipient
 		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 			parser, sender, sender, recipientArg, LocateFlags.PlayersPreference);
 
@@ -354,7 +340,6 @@ public partial class Functions
 
 		var recipient = locateResult.AsPlayer;
 
-		// Check mail lock
 		if (!PermissionService!.PassesLock(sender, recipient, LockType.Mail))
 		{
 			return new CallState(ErrorMessages.Returns.RecipientDoesNotAcceptMail);
@@ -371,7 +356,6 @@ public partial class Functions
 			? MModule.substring(subjectBodySplit + 1, messageArg.Length - subjectBodySplit - 1, messageArg)
 			: messageArg;
 
-		// Create mail object
 		var mail = new SharpMail
 		{
 			DateSent = DateTimeOffset.UtcNow,
@@ -390,7 +374,6 @@ public partial class Functions
 			}),
 		};
 
-		// Send the mail
 		await Mediator!.Send(new Library.Commands.Database.SendMailCommand(sender.Object(), recipient, mail));
 
 		return new CallState(string.Empty);
@@ -403,7 +386,6 @@ public partial class Functions
 
 		var playerArg = args["0"].Message!.ToPlainText()!;
 
-		// Check if querying self or another player
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
 		{
@@ -411,7 +393,6 @@ public partial class Functions
 		}
 		else
 		{
-			// Must be wizard to view other player's mail
 			if (!await CanViewOtherPlayerMail(executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -444,7 +425,6 @@ public partial class Functions
 
 		var playerArg = args["0"].Message!.ToPlainText()!;
 
-		// Check if querying self or another player
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
 		{
@@ -452,7 +432,6 @@ public partial class Functions
 		}
 		else
 		{
-			// Must be wizard to view other player's mail
 			if (!await CanViewOtherPlayerMail(executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -490,7 +469,6 @@ public partial class Functions
 
 		var playerArg = args["0"].Message!.ToPlainText()!;
 
-		// Check if querying self or another player
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
 		{
@@ -498,7 +476,6 @@ public partial class Functions
 		}
 		else
 		{
-			// Must be wizard to view other player's mail
 			if (!await CanViewOtherPlayerMail(executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);

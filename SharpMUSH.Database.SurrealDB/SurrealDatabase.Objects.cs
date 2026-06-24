@@ -174,7 +174,6 @@ public partial class SurrealDatabase
 		var exitKey = ExtractKey(exit.Id!);
 		var parameters = new Dictionary<string, object?> { ["key"] = exitKey };
 
-		// Check if there's anything to delete first
 		var countResponse = await ExecuteAsync(
 			"SELECT count() AS cnt FROM has_home WHERE in = exit:$key GROUP ALL",
 			parameters, cancellationToken);
@@ -221,7 +220,6 @@ public partial class SurrealDatabase
 		var roomKey = ExtractKey(room.Id!);
 		var parameters = new Dictionary<string, object?> { ["key"] = roomKey };
 
-		// Check if there's anything to delete first
 		var countResponse = await ExecuteAsync(
 			"SELECT count() AS cnt FROM has_home WHERE in = room:$key GROUP ALL",
 			parameters, cancellationToken);
@@ -341,14 +339,12 @@ public partial class SurrealDatabase
 
 		var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 
-		// Also search by alias
 		var aliasResponse = await ExecuteAsync(
 			"SELECT * FROM player WHERE $name IN aliases",
 			parameters, cancellationToken);
 
 		var aliasResults = aliasResponse.GetValue<List<PlayerRecord>>(0)!;
 
-		// Collect keys from name matches
 		var foundKeys = new HashSet<int>();
 		foreach (var objRecord in objResults)
 		{
@@ -366,7 +362,6 @@ public partial class SurrealDatabase
 			}
 		}
 
-		// Collect keys from alias matches
 		foreach (var playerRecord in aliasResults)
 		{
 			var key = playerRecord.key;
@@ -397,17 +392,14 @@ public partial class SurrealDatabase
 
 	public async IAsyncEnumerable<AnySharpObject> GetAllTypedObjectsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		// Fetch all objects
 		var objResponse = await ExecuteAsync("SELECT * FROM object", cancellationToken);
 		var objResults = objResponse.GetValue<List<ObjectRecord>>(0)!;
 
-		// Fetch all typed records
 		var playerResponse = await ExecuteAsync("SELECT * FROM player", cancellationToken);
 		var playerResults = playerResponse.GetValue<List<PlayerRecord>>(0)!;
 		var exitResponse = await ExecuteAsync("SELECT * FROM exit", cancellationToken);
 		var exitResults = exitResponse.GetValue<List<ExitRecord>>(0)!;
 
-		// Index typed records by key for efficient lookup
 		var playersByKey = playerResults.ToDictionary(p => p.key);
 		var exitsByKey = exitResults.ToDictionary(e => e.key);
 
@@ -590,7 +582,6 @@ public partial class SurrealDatabase
 		var objKey = obj.Object().Key;
 		var parameters = new Dictionary<string, object?> { ["key"] = objKey };
 
-		// Remove existing parent edge
 		await ExecuteAsync("DELETE has_parent WHERE in = object:$key", parameters, cancellationToken);
 
 		if (parent != null)

@@ -13,8 +13,6 @@ public class IsOnChannelQueryHandler(IMediator mediator) : IQueryHandler<IsOnCha
 {
 	public async ValueTask<bool> Handle(IsOnChannelQuery request, CancellationToken cancellationToken)
 	{
-		// Check if the object (or its owner) is on the channel
-		// GetOnChannelQuery returns all channels the object is on
 		var requestedChannelName = request.ChannelName;
 
 		return await mediator.CreateStream(new GetOnChannelQuery(request.Object), cancellationToken)

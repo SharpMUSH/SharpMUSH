@@ -19,8 +19,6 @@ public class SchemaViewRendererShapeTests : BunitContext
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
-	// ── builders ───────────────────────────────────────────────────────────
-
 	private static JsonElement El(object? value) => JsonSerializer.SerializeToElement(value);
 
 	private static SchemaData Data(params (string Key, object? Value, bool Visible)[] fields) =>
@@ -40,8 +38,6 @@ public class SchemaViewRendererShapeTests : BunitContext
 
 	private IRenderedComponent<SchemaViewRenderer> RenderView(PortalSchemaDocument doc, SchemaData? data = null) =>
 		Render<SchemaViewRenderer>(p => p.Add(x => x.Document, doc).Add(x => x.Data, data));
-
-	// ── tests ──────────────────────────────────────────────────────────────
 
 	[TUnit.Core.Test]
 	public async Task NullDocument_RendersNothingToDisplay()
@@ -169,11 +165,9 @@ public class SchemaViewRendererShapeTests : BunitContext
 				Columns: [new SchemaColumn("item", "Item"), new SchemaColumn("qty", "Qty")]))));
 		var cut = RenderView(doc, Data(("inv", rows, true)));
 
-		// Header columns.
 		var headers = cut.FindAll("thead th").Select(th => th.TextContent.Trim()).ToList();
 		await Assert.That(headers).Contains("Item");
 		await Assert.That(headers).Contains("Qty");
-		// Two data rows.
 		await Assert.That(cut.FindAll("tbody tr").Count).IsEqualTo(2);
 		await Assert.That(cut.Markup).Contains("Sword");
 		await Assert.That(cut.Markup).Contains("Potion");

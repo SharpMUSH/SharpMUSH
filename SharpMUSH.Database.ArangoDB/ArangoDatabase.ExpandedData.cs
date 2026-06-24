@@ -29,7 +29,6 @@ public partial class ArangoDatabase
 	public async ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data,
 		CancellationToken ct = default)
 	{
-		// Get the edge that leads to it, otherwise we will have to create one.
 		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.GraphObjectData} RETURN v._key",
 			cancellationToken: ct);
@@ -59,7 +58,6 @@ public partial class ArangoDatabase
 	public async ValueTask<T?> GetExpandedObjectData<T>(string sharpObjectId, string dataType,
 		CancellationToken ct = default)
 	{
-		// Get the edge that leads to it, otherwise we will have to create one.
 		var result = await arangoDb.Query.ExecuteAsync<T>(handle,
 			$"FOR v IN 1..1 OUTBOUND {sharpObjectId} GRAPH {DatabaseConstants.GraphObjectData} RETURN v.{dataType}",
 			cancellationToken: ct);

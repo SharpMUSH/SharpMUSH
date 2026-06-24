@@ -37,7 +37,6 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 			var line = request.Position.Line < lines.Length ? lines[request.Position.Line] : string.Empty;
 			var character = (int)request.Position.Character;
 
-			// Find the function name before the current position
 			var functionInfo = FindFunctionAtPosition(line, character);
 			if (functionInfo == null)
 			{
@@ -46,7 +45,6 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 
 			var (functionName, currentParam) = functionInfo.Value;
 
-			// Look up the function in the library
 			if (_parser.FunctionLibrary.TryGetValue(functionName, out var functionDef))
 			{
 				var attr = functionDef.LibraryInformation.Attribute;
@@ -72,12 +70,10 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 
 	private static (string functionName, int currentParam)? FindFunctionAtPosition(string line, int position)
 	{
-		// Work backwards from position to find the function call
 		var depth = 0;
 		var paramCount = 0;
 		var i = position - 1;
 
-		// Count parameters by counting commas at depth 0
 		while (i >= 0)
 		{
 			if (line[i] == ')')
@@ -89,8 +85,6 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 				depth--;
 				if (depth < 0)
 				{
-					// Found the opening parenthesis
-					// Now find the function name
 					var nameEnd = i;
 					i--;
 					while (i >= 0 && IsWordCharacter(line[i]))
@@ -125,10 +119,8 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 		var parameters = new List<ParameterInformation>();
 		var label = functionName + "(";
 
-		// Build parameter list
 		for (int i = 0; i < attr.MaxArgs; i++)
 		{
-			// Use parameter names from the attribute if available
 			var paramName = GetParameterName(i, attr);
 			var isOptional = i >= attr.MinArgs;
 
@@ -177,13 +169,11 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 
 	private static string GetParameterName(int index, Library.Attributes.SharpFunctionAttribute attr)
 	{
-		// Use parameter names from the attribute if available
 		if (attr.ParameterNames != null && attr.ParameterNames.Length > 0)
 		{
 			return ExpandParameterName(attr.ParameterNames, index);
 		}
 
-		// Fallback to generic parameter name
 		return $"arg{index + 1}";
 	}
 
@@ -195,21 +185,17 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 	/// </summary>
 	private static string ExpandParameterName(string[] parameterNames, int index)
 	{
-		// Find which parameter pattern applies to this index
 		int currentIndex = 0;
 
 		foreach (var paramName in parameterNames)
 		{
 			if (paramName.Contains("..."))
 			{
-				// This is a repeating parameter pattern
 				if (paramName.Contains("|"))
 				{
-					// Paired repeating pattern like "case...|result..."
 					var parts = paramName.Split('|');
 					var cleanParts = parts.Select(p => p.Replace("...", "").Trim()).ToArray();
 
-					// Calculate which part of the pair this index represents
 					var pairIndex = (index - currentIndex) / cleanParts.Length;
 					var partIndex = (index - currentIndex) % cleanParts.Length;
 
@@ -217,14 +203,12 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 				}
 				else
 				{
-					// Simple repeating pattern like "value..."
 					var cleanName = paramName.Replace("...", "").Trim();
 					return $"{cleanName}{index - currentIndex + 1}";
 				}
 			}
 			else
 			{
-				// Regular fixed parameter
 				if (index == currentIndex)
 				{
 					return paramName;
@@ -233,7 +217,6 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 			}
 		}
 
-		// If we get here, we've gone past all defined parameters
 		return $"arg{index + 1}";
 	}
 

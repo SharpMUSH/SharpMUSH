@@ -30,11 +30,8 @@ public class SubstitutionUnitTests
 	[Arguments("think [setq(test,foo)]%q<test>4", "foo4")]
 	[Arguments("think [setq(0,foo)]%q<0>5", "foo5")]
 	[Arguments("think [setq(0,foo)][strcat(%q<0>,6)]", "foo6")]
-	// [Arguments("think [setq(word\\(\\),foo)][strcat(%q<word()>)]","foo")]
 	[Arguments("think [setq(10,foo)][strcat(%q<[strcat(1,0)]>)]7", "foo7")]
-	// [Arguments("think strcat(%q<%s>)")]
 	[Arguments("think [setq(0,foo,foo,dog)][strcat(%q<%q0>)]8", "dog8")]
-	// [Arguments("think strcat(%q<Word %q<5> [strcat(%q<6six>)]>)")]
 	[Arguments("think [setq(0,hello)][setr(1,0)]%q<[r(1)]>", "0hello")]
 	[Arguments("think [setq(2,result)]%q<[add(1,1)]>", "result")]
 	[Arguments("think [setq(0,a)][setq(a,found)]%q<%q0>", "found")]
@@ -42,36 +39,26 @@ public class SubstitutionUnitTests
 	[Arguments("think [setq(99,big)]%q<99>", "big")]
 	// Nested %q<> inside %q<>: inner resolves first, outer uses result
 	[Arguments("think [setq(5,mid)][setq(mid,deep)]%q<%q<5>>end", "deepend")]
-	// Bracket eval inside %q<>
 	[Arguments("think [setr(ab,X)]%q<a[strcat(b)]>", "XX")]
-	// Triple nesting
 	[Arguments("think [setq(0,a)][setq(a,b)][setq(b,final)]%q<%q<%q0>>", "final")]
-	// Side effects during %q<> name resolution
 	[Arguments("think %q<[setq(x,y)]x>%qx", "yy")]
-	// Empty %q<> is invalid register name
 	[Arguments("think [setq(,hello)]%q<>-", "#-1 REGISTER NAME INVALID-")]
 	// %b in %q<> produces space in name → invalid
 	[Arguments("think [setq(a b,spaced)]%q<a%bb>", "#-1 REGISTER NAME INVALID")]
 	// Unknown % substitutions: PennMUSH strips the % and outputs just the letter
 	[Arguments("think %z", "z")]
 	[Arguments("think %Z", "Z")]
-	// %% = literal percent
 	[Arguments("think %%", "%")]
-	// Trailing % preserved
 	[Arguments(@"think hello\%", @"hello\%")]
-	// %q in iter context
 	[Arguments("think [setq(0,X)][iter(a b,##%q0)]", "aX bX")]
 	// #@ is 1-indexed in iter
 	[Arguments("think [iter(a b c,#@)]", "1 2 3")]
-	// Nested iter with itext() for accessing outer loop values
 	[Arguments("think [iter(a b,[iter(1 2,[itext(1)]-[itext(0)])])]", "a-1 a-2 b-1 b-2")]
 	// ## does NOT expand in switch — literal ##
 	[Arguments("think [switch(x,x,##)]", "##")]
-	// iter with custom input/output delimiters
 	[Arguments("think [iter(a|b|c,##!,|,!)]", "a!!b!!c!")]
 	// Double evaluation via s() — %%q1 stores as %q1, s() evaluates it
 	[Arguments("think [setq(0,%%q1)][setq(1,deep)][s(%q0)]", "deep")]
-	// lit() prevents evaluation
 	[Arguments(@"think [lit([add(1,2)])]", "[add(1,2)]")]
 	// PennMUSH double-evaluates ##: item text is substituted, then body is evaluated
 	// SharpMUSH intentionally does NOT double-evaluate ## (safer, no re-parsing)

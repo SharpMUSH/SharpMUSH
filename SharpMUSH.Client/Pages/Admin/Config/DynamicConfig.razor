@@ -12,7 +12,6 @@
 <PageTitle>@CategoryTitle - Configuration</PageTitle>
 
 <div class="config-section-page">
-    @* Header — prototype SectionTitle: kicker + title + actions *@
     <div class="config-section-header">
         <div>
             <div class="config-kicker">Admin · server settings</div>
@@ -32,7 +31,6 @@
         }
     </div>
 
-    @* Content *@
     <div class="config-section-content">
         @if (CustomPageCategories.Contains(Category))
         {
@@ -76,7 +74,6 @@
         }
         else if (!_categoryMetadata.Groups.Any())
         {
-            @* Fallback: all properties in one flat card if groups aren't defined *@
             <div class="config-field-card">
                 @foreach (var prop in _categoryProperties.Values.OrderBy(p => p.Name))
                 {
@@ -86,7 +83,6 @@
         }
         else
         {
-            @* One flat field card per group, with a group title above *@
             @foreach (var group in _categoryMetadata.Groups.OrderBy(g => g.Order))
             {
                 var groupProperties = GetPropertiesInGroup(group.Name).OrderBy(p => p.Order).ToList();
@@ -103,7 +99,6 @@
         }
     </div>
 
-    @* Save/Reset Bar *@
     @if (_hasChanges)
     {
         <MudPaper Elevation="4" Class="save-bar">
@@ -157,7 +152,6 @@
     private Dictionary<string, object?> _originalValues = new();
     private readonly Dictionary<string, string> _validationErrors = new();
 
-    // Categories that have custom pages - redirect to them
     private static readonly HashSet<string> CustomPageCategories = new(StringComparer.OrdinalIgnoreCase)
     {
         "bannednames",
@@ -170,7 +164,6 @@
 
     protected override void OnInitialized()
     {
-        // Check if this category has a custom page - if so, let that page handle it
         if (CustomPageCategories.Contains(Category))
         {
             return;
@@ -179,7 +172,6 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        // Skip loading for custom page categories
         if (CustomPageCategories.Contains(Category))
         {
             return;
@@ -385,7 +377,6 @@
                 }
                 else
                 {
-                    @* text (default) *@
                     <input class="config-input" type="text"
                            value="@GetStringValue(prop)"
                            readonly="@prop.ReadOnly"
@@ -493,8 +484,6 @@
         return prop.DefaultValue?.ToString() ?? "";
     }
 
-    // --- String list (string[]) editing ---
-
     private List<string> GetStringListValue(PropertyMetadata prop)
     {
         if (_currentValues.TryGetValue(prop.Path, out var value) && value != null)
@@ -513,7 +502,6 @@
         _ => new List<string>()
     };
 
-    // Transient "add" text for each string-list field, keyed by property path.
     private readonly Dictionary<string, string> _listDrafts = new();
 
     private string GetListDraft(PropertyMetadata prop) =>
@@ -549,7 +537,6 @@
         UpdateValue(prop, list.ToArray());
     }
 
-    // --- Dictionary<string, string[]> editing ---
     // A draft list preserves entry order and allows in-progress (blank) keys while editing;
     // it is synced back to _currentValues as a Dictionary on every change.
 
@@ -558,8 +545,6 @@
         public string Key { get; set; } = string.Empty;
         public List<string> Values { get; set; } = new();
 
-        // Transient "add value" text bound to this entry's input, travels with the entry
-        // regardless of list reordering.
         public string ValueDraft { get; set; } = string.Empty;
     }
 
@@ -704,7 +689,6 @@
 
         try
         {
-            // Build changes dict: only send modified values
             var changes = _currentValues
                 .Where(kvp => !Equals(kvp.Value, _originalValues.GetValueOrDefault(kvp.Key)))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -723,7 +707,6 @@
                         string.Format(Loc["ConfigSavedCount"].Value, changes.Count),
                         Severity.Success);
 
-                    // Update originals to reflect saved state
                     foreach (var kvp in changes)
                     {
                         _originalValues[kvp.Key] = _currentValues[kvp.Key];
@@ -733,7 +716,6 @@
                 },
                 error =>
                 {
-                    // Try to parse structured error response
                     try
                     {
                         var errorDoc = JsonDocument.Parse(error.Value);

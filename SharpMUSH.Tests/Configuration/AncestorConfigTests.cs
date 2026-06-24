@@ -19,7 +19,6 @@ public class AncestorConfigTests
 	[Test]
 	public async Task Defaults_PointAtSeededAncestorAndHandlerSlots()
 	{
-		// No ancestor/handler lines -> the built-in fallbacks apply.
 		var path = WriteTempConfig("player_start 0");
 		try
 		{

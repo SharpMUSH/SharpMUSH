@@ -16,9 +16,7 @@
    transitioning between px and 1fr. Collapse is an instant class swap. *@
 <div class="sc-shell">
 
-    @* ── Pane 1: Objects ─────────────────────────────────────────── *@
     <div class="sc-panel" style="@($"width:{(_objCollapsed ? "46px" : "220px")};flex-shrink:0;background:var(--surface);")">
-        @* Pane header *@
         <div style="display:flex;align-items:center;padding:8px 8px 6px;border-bottom:1px solid var(--border-soft);gap:6px;flex-shrink:0;">
             @if (!_objCollapsed)
             {
@@ -37,7 +35,6 @@
 
         @if (_objCollapsed)
         {
-            @* Rail: show active dbref or icon *@
             <div style="display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:8px;">
                 <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Color="Color.Primary" />
                 @if (_selectedObject is not null)
@@ -70,9 +67,7 @@
         }
     </div>
 
-    @* ── Pane 2: Attributes ───────────────────────────────────────── *@
     <div class="sc-panel" style="@($"width:{(_attrCollapsed ? "46px" : "248px")};flex-shrink:0;background:var(--surface);")">
-        @* Pane header *@
         <div style="display:flex;align-items:center;padding:10px 10px 6px;gap:6px;flex-shrink:0;">
             @if (!_attrCollapsed)
             {
@@ -107,7 +102,6 @@
         }
         else
         {
-            @* Search — prototype searchBox: clean inline input, no Material chrome *@
             <div class="sc-search">
                 <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:14px;color:var(--text-faint);" />
                 <input value="@_attrSearch" @oninput="@(e => _attrSearch = e.Value?.ToString() ?? string.Empty)"
@@ -121,7 +115,6 @@
             </div>
 
             <div style="flex:1;overflow-y:auto;min-height:0;padding:8px;">
-                @* Inline add row — appears at the top of the list, autofocused *@
                 @if (_showCreateAttr)
                 {
                     <div class="sc-add-row">
@@ -178,10 +171,8 @@
         }
     </div>
 
-    @* ── Pane 3: Editor ───────────────────────────────────────────── *@
     <div class="sc-panel" style="flex:1;min-width:0;background:#0c0f14;">
 
-        @* Breadcrumb header *@
         <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border-soft);background:var(--surface-3);flex-shrink:0;min-height:40px;">
             @if (ActiveTab is not null)
             {
@@ -212,7 +203,6 @@
                 <MudText Style="font-size:12px;color:var(--text-faint);">No attribute selected</MudText>
             }
             <MudSpacer />
-            @* Toolbar actions — Test runs an eval in one click (think without saving) *@
             <MudTooltip Text="Test — evaluate without saving">
                 <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
                            StartIcon="@Icons.Material.Filled.PlayArrow"
@@ -246,7 +236,6 @@
             }
         </div>
 
-        @* Open-attribute tab bar *@
         @if (_openTabs.Count > 0)
         {
             <div style="display:flex;overflow-x:auto;background:var(--surface-3);border-bottom:1px solid var(--border);min-height:30px;align-items:stretch;flex-shrink:0;">
@@ -268,7 +257,6 @@
             </div>
         }
 
-        @* Monaco editor *@
         <div style="flex:1;min-height:0;">
             <StandaloneCodeEditor @ref="_monacoEditor"
                                   Id="mush-editor"
@@ -278,7 +266,6 @@
                                   CssClass="mush-editor-fill" />
         </div>
 
-        @* Eval output *@
         @if (_evalLoading)
         {
             <MudProgressLinear Indeterminate="true" Color="Color.Success" Style="height:2px;flex-shrink:0;" />
@@ -296,7 +283,6 @@
             </div>
         }
 
-        @* Status bar *@
         @if (_saveMessage is not null)
         {
             <MudAlert Severity="@_saveSeverity" Dense="true" ShowCloseIcon="true"
@@ -310,8 +296,6 @@
 <HelpDrawer @ref="_helpDrawer" />
 
 @code {
-    // ── Open attribute tabs ───────────────────────────────────────────────────
-
     private sealed class AttrTab(MushObject obj, MushAttribute attr)
     {
         public MushObject Obj { get; } = obj;
@@ -336,24 +320,18 @@
     private string? _evalOutput;
     private bool _evalLoading;
 
-    // Collapse state (no CSS transitions — instant snap)
     private bool _objCollapsed;
     private bool _attrCollapsed;
 
-    // Search
     private string _attrSearch = string.Empty;
 
-    // Create-object inline prompt
     private MushObjectType? _createObjectType;
     private string _createObjectName = string.Empty;
 
-    // Create-attribute inline prompt
     private bool _showCreateAttr;
     private string _newAttrName = string.Empty;
     private ElementReference _newAttrInput;
     private bool _focusNewAttr;
-
-    // ── Attribute kind badges ─────────────────────────────────────────────────
 
     private static string AttrKindBadge(MushAttribute attr)
     {
@@ -384,7 +362,6 @@
         _   => "Text",
     };
 
-    // Glow rgb tuple per kind, for the badge box bg/border (command uses the live accent).
     private static string AttrKindGlow(MushAttribute attr) => AttrKindBadge(attr) switch
     {
         "$" => "var(--glow)",
@@ -397,15 +374,12 @@
     private static string KindBadgeStyle(MushAttribute attr)
         => $"background:rgba({AttrKindGlow(attr)},0.14);border:1px solid rgba({AttrKindGlow(attr)},0.3);color:{AttrKindColor(attr)};";
 
-    // One-line preview of the attribute body for the list sub-label.
     private static string AttrPreview(MushAttribute attr)
     {
         var v = (attr.Value ?? string.Empty).Replace('\n', ' ').Replace('\r', ' ').Trim();
         if (v.Length == 0) return "(empty)";
         return v.Length > 60 ? v[..60] + "…" : v;
     }
-
-    // ── Editor init ────────────────────────────────────────────────────────────
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -444,8 +418,6 @@
         if (ActiveTab is not null)
             ActiveTab.IsDirty = true;
     }
-
-    // ── Tab management ─────────────────────────────────────────────────────────
 
     private async Task OnAttributeSelected(MushAttribute? attr)
     {
@@ -504,8 +476,6 @@
         StateHasChanged();
     }
 
-    // ── Object / attribute loading ─────────────────────────────────────────────
-
     private async Task OnObjectSelected(int dbref)
     {
         _loadingAttrs = true;
@@ -552,8 +522,6 @@
         if (_monacoEditor is not null && ActiveTab is not null)
             await _monacoEditor.SetValue(ActiveTab.WorkingContent);
     }
-
-    // ── Save / Delete / Eval ───────────────────────────────────────────────────
 
     private async Task SaveAsync()
     {
@@ -608,8 +576,6 @@
         }
     }
 
-    // ── Create Object ──────────────────────────────────────────────────────────
-
     private void ShowCreateObjectDialog(MushObjectType type)
     {
         _createObjectType = type;
@@ -639,8 +605,6 @@
         if (e.Key == "Enter") await ExecuteCreateObjectAsync();
         else if (e.Key == "Escape") CancelCreateObject();
     }
-
-    // ── Create Attribute ───────────────────────────────────────────────────────
 
     private void ShowCreateAttr() { _showCreateAttr = true; _newAttrName = string.Empty; _focusNewAttr = true; }
     private void CancelCreateAttr() => _showCreateAttr = false;

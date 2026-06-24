@@ -20,9 +20,7 @@ public partial class ValidateService(
 	ILockService lockService)
 	: IValidateService
 {
-	// Thread-safe cache for compiled regexes for attribute validation
 	private readonly ConcurrentDictionary<string, Regex> _regexCache = new();
-	// Thread-safe cache for compiled glob patterns
 	private readonly ConcurrentDictionary<string, Regex> _globCache = new();
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
 		OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None> target)
@@ -85,7 +83,6 @@ public partial class ValidateService(
 			return true;
 		}
 
-		// Check if it's a standard lock type (try to parse the enum)
 		if (Enum.TryParse<LockType>(lockTypeName, ignoreCase: true, out _))
 		{
 			return true;
@@ -94,26 +91,22 @@ public partial class ValidateService(
 		// Check for user-defined locks (format: "User:AttributeName")
 		if (lockTypeName.StartsWith("User:", StringComparison.OrdinalIgnoreCase))
 		{
-			// Cannot contain pipe character
 			if (lockTypeName.Contains('|'))
 			{
 				return false;
 			}
 
-			// Extract the attribute name after "User:"
 			var colonIndex = lockTypeName.IndexOf(':');
 			if (colonIndex >= 0 && colonIndex < lockTypeName.Length - 1)
 			{
 				var attributeName = lockTypeName.Substring(colonIndex + 1).ToUpper();
 
-				// Validate as attribute name
 				return ValidAttributeNameRegex().IsMatch(attributeName);
 			}
 
 			return false;
 		}
 
-		// Unknown lock type
 		return false;
 	}
 
@@ -128,7 +121,6 @@ public partial class ValidateService(
 
 	private bool CheckAttributeRegex(string name, string regex, string value)
 	{
-		// Thread-safe cache access for compiled regexes
 		var reg = _regexCache.GetOrAdd(name, _ => new Regex(regex, RegexOptions.Compiled));
 		return reg.IsMatch(value);
 	}
@@ -143,7 +135,6 @@ public partial class ValidateService(
 	/// <returns>True or false</returns>
 	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute)
 	{
-		// Check attribute value byte length using configured limit
 		// Convert to plain text and measure UTF-8 bytes for multi-byte character support
 		var plainValue = value.ToPlainText();
 		var maxBytes = (int)configuration.CurrentValue.Limit.MaxAttributeValueLength;
@@ -198,10 +189,8 @@ public partial class ValidateService(
 				continue;
 			}
 
-			// Thread-safe cache access for compiled regex patterns
 			var regex = _globCache.GetOrAdd(pattern, p =>
 			{
-				// Convert glob pattern to regex
 				var regexPattern = "^" + Regex.Escape(p)
 					.Replace("\\*", ".*")  // * matches any characters
 					.Replace("\\?", ".")   // ? matches single character
@@ -253,13 +242,11 @@ public partial class ValidateService(
 			return false;
 		}
 
-		// Aliases should not contain control characters
 		if (plainAlias.Any(c => char.IsControl(c)))
 		{
 			return false;
 		}
 
-		// Aliases must be ASCII
 		return plainAlias.EnumerateRunes().All(x => x.IsAscii);
 	}
 

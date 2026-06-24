@@ -70,10 +70,8 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 				nats = new NatsConnection(new NatsOpts { Url = _natsOptions.Url });
 				await nats.ConnectAsync();
 				_logger.LogInformation("[NatsBridge] Connected. Subscribing to game.output.* and game.room.* (game.scene.* is now a plugin bridge leg)");
-				delay = 2; // reset backoff on successful connect
+				delay = 2;
 
-				// Phase 5: the game.scene.* leg moved into the Scene plugin as an IBridgeSubscriptionSource —
-				// it is run below via the catalog's BridgeSources, alongside any other plugin bridge legs.
 				var subscriptionTasks = new List<Task>
 				{
 					SubscribeOutputAsync(nats, stoppingToken),
@@ -89,7 +87,6 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 				}
 
 				await Task.WhenAll(subscriptionTasks);
-				// All subscription loops exited cleanly (cancellation token triggered).
 				break;
 			}
 			catch (OperationCanceledException)

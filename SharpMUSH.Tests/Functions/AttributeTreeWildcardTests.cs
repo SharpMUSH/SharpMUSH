@@ -9,18 +9,8 @@ public class AttributeTreeWildcardTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
-	// Setup helper to create a comprehensive attribute tree for testing
 	private async Task SetupAttributeTree()
 	{
-		// Create a comprehensive attribute tree structure:
-		// ROOT
-		// ROOT`CHILD1
-		// ROOT`CHILD1`GRANDCHILD1
-		// ROOT`CHILD1`GRANDCHILD2
-		// ROOT`CHILD2
-		// ROOT`CHILD2`GRANDCHILD3
-		// ROOTOTHER (similar name but not part of tree)
-
 		await Parser.FunctionParse(MModule.single("[attrib_set(%!/ROOT,root_value)]"));
 		await Parser.FunctionParse(MModule.single("[attrib_set(%!/ROOT`CHILD1,child1_value)]"));
 		await Parser.FunctionParse(MModule.single("[attrib_set(%!/ROOT`CHILD1`GRANDCHILD1,gc1_value)]"));
@@ -40,7 +30,6 @@ public class AttributeTreeWildcardTests
 		await SetupAttributeTree();
 		var result = (await Parser.FunctionParse(MModule.single("[lattr(%!/ROOT*)]")))?.Message!;
 
-		// * should NOT match backtick, so only ROOT and ROOTOTHER should match
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).OrderBy(x => x).ToArray();
 
 		await Assert.That(attrs).Contains("ROOT");
@@ -59,7 +48,6 @@ public class AttributeTreeWildcardTests
 		await SetupAttributeTree();
 		var result = (await Parser.FunctionParse(MModule.single("[lattr(%!/ROOT**)]")))?.Message!;
 
-		// ** should match everything including backticks
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
 		await Assert.That(attrs).Contains("ROOT");
@@ -81,14 +69,13 @@ public class AttributeTreeWildcardTests
 		await SetupAttributeTree();
 		var result = (await Parser.FunctionParse(MModule.single("[lattr(%!/ROOT`*)]")))?.Message!;
 
-		// ROOT`* should match only immediate children (no deeper nesting)
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
 		await Assert.That(attrs).Contains("ROOT`CHILD1");
 		await Assert.That(attrs).Contains("ROOT`CHILD2");
-		await Assert.That(attrs).DoesNotContain("ROOT"); // No backtick, so excluded
-		await Assert.That(attrs).DoesNotContain("ROOT`CHILD1`GRANDCHILD1"); // Has extra backtick
-		await Assert.That(attrs).DoesNotContain("ROOTOTHER"); // Different attribute
+		await Assert.That(attrs).DoesNotContain("ROOT");
+		await Assert.That(attrs).DoesNotContain("ROOT`CHILD1`GRANDCHILD1");
+		await Assert.That(attrs).DoesNotContain("ROOTOTHER");
 	}
 
 	/// <summary>
@@ -101,7 +88,6 @@ public class AttributeTreeWildcardTests
 		await SetupAttributeTree();
 		var result = (await Parser.FunctionParse(MModule.single("[lattr(%!/ROOT`**)]")))?.Message!;
 
-		// ROOT`** should match all descendants but not ROOT itself
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
 		await Assert.That(attrs).Contains("ROOT`CHILD1");
@@ -109,8 +95,8 @@ public class AttributeTreeWildcardTests
 		await Assert.That(attrs).Contains("ROOT`CHILD1`GRANDCHILD2");
 		await Assert.That(attrs).Contains("ROOT`CHILD2");
 		await Assert.That(attrs).Contains("ROOT`CHILD2`GRANDCHILD3");
-		await Assert.That(attrs).DoesNotContain("ROOT"); // Pattern starts with backtick
-		await Assert.That(attrs).DoesNotContain("ROOTOTHER"); // Different attribute
+		await Assert.That(attrs).DoesNotContain("ROOT");
+		await Assert.That(attrs).DoesNotContain("ROOTOTHER");
 	}
 
 	/// <summary>
@@ -159,17 +145,14 @@ public class AttributeTreeWildcardTests
 	{
 		await SetupAttributeTree();
 
-		// Count with * (should not include tree branches)
 		var count1 = (await Parser.FunctionParse(MModule.single("[nattr(%!/ROOT*)]")))?.Message!.ToPlainText();
-		await Assert.That(count1).IsEqualTo("2"); // ROOT and ROOTOTHER
+		await Assert.That(count1).IsEqualTo("2");
 
-		// Count with ** (should include all)
 		var count2 = (await Parser.FunctionParse(MModule.single("[nattr(%!/ROOT**)]")))?.Message!.ToPlainText();
-		await Assert.That(count2).IsEqualTo("7"); // All 7 attributes
+		await Assert.That(count2).IsEqualTo("7");
 
-		// Count immediate children
 		var count3 = (await Parser.FunctionParse(MModule.single("[nattr(%!/ROOT`*)]")))?.Message!.ToPlainText();
-		await Assert.That(count3).IsEqualTo("2"); // CHILD1 and CHILD2
+		await Assert.That(count3).IsEqualTo("2");
 	}
 
 	/// <summary>
@@ -181,14 +164,12 @@ public class AttributeTreeWildcardTests
 	{
 		await SetupAttributeTree();
 
-		// grep with * should not traverse tree
 		var result1 = (await Parser.FunctionParse(MModule.single("[grep(%!,ROOT*,value)]")))?.Message!;
 		var attrs1 = result1.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 		await Assert.That(attrs1).Contains("ROOT");
 		await Assert.That(attrs1).Contains("ROOTOTHER");
 		await Assert.That(attrs1).DoesNotContain("ROOT`CHILD1");
 
-		// grep with ** should traverse entire tree
 		var result2 = (await Parser.FunctionParse(MModule.single("[grep(%!,ROOT**,child)]")))?.Message!;
 		var attrs2 = result2.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 		await Assert.That(attrs2).Contains("ROOT`CHILD1");
@@ -205,7 +186,6 @@ public class AttributeTreeWildcardTests
 	{
 		await SetupAttributeTree();
 
-		// Match all attributes starting with ROOT (including tree)
 		var result = (await Parser.FunctionParse(MModule.single("[reglattr(%!/^ROOT)]")))?.Message!;
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
@@ -214,13 +194,11 @@ public class AttributeTreeWildcardTests
 		await Assert.That(attrs).Contains("ROOT`CHILD1`GRANDCHILD1");
 		await Assert.That(attrs).Contains("ROOTOTHER");
 
-		// Match only ROOT`CHILDx (not grandchildren)
 		// Pattern uses [12] as a regex character class to match '1' or '2'
 		// Brackets are escaped with \\[ \\] for the MUSH parser
 		var result2 = (await Parser.FunctionParse(MModule.single("[reglattr(%!/ROOT`CHILD\\[12\\])]")))?.Message!;
 		var attrs2 = result2.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
-		// The regex should find attributes matching ROOT`CHILD1 or ROOT`CHILD2
 		await Assert.That(attrs2.Length).IsGreaterThanOrEqualTo(2);
 		await Assert.That(attrs2.Any(a => a.Contains("CHILD1"))).IsTrue();
 		await Assert.That(attrs2.Any(a => a.Contains("CHILD2"))).IsTrue();
@@ -236,8 +214,6 @@ public class AttributeTreeWildcardTests
 		await SetupAttributeTree();
 
 		// wildgrep searches attribute VALUES (not names) for the wildcard pattern
-		// The pattern ** in the attribute name matches the entire tree
-		// The pattern *child* in the value matches values containing "child"
 		var result = (await Parser.FunctionParse(MModule.single("[wildgrep(%!,ROOT**,*child*)]")))?.Message!;
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
@@ -256,11 +232,9 @@ public class AttributeTreeWildcardTests
 	{
 		await SetupAttributeTree();
 
-		// Get first 2 attributes matching ROOT** pattern
 		var result = (await Parser.FunctionParse(MModule.single("[xattr(%!/ROOT**,1,2)]")))?.Message!;
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
-		// Should return first 2 attributes in sorted order
 		await Assert.That(attrs.Length).IsEqualTo(2);
 		// The exact attributes depend on sort order, but should be from the ROOT** set
 	}
@@ -272,7 +246,6 @@ public class AttributeTreeWildcardTests
 	[NotInParallel]
 	public async Task Test_SpecialCharacters_Escaped()
 	{
-		// Create attributes with special regex characters in names
 		await Parser.FunctionParse(MModule.single("[attrib_set(%!/TEST.DOT,value1)]"));
 		await Parser.FunctionParse(MModule.single("[attrib_set(%!/TEST_UNDERSCORE,value2)]"));
 		await Parser.FunctionParse(MModule.single("[attrib_set(%!/TEST-DASH,value3)]"));

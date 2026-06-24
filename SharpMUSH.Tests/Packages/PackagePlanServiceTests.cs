@@ -185,13 +185,11 @@ public class PackagePlanServiceTests
 
 		var changeset = _service.ComputeChangeset(inputs);
 
-		// One Attach object action, no Create/Delete; objid is the existing target.
 		var objchange = changeset.Objects.Single();
 		await Assert.That(objchange.Action).IsEqualTo(PackageObjectAction.Attach);
 		await Assert.That(objchange.Objid).IsEqualTo("#4:7");
 		await Assert.That(changeset.Objects.Any(o => o.Action == PackageObjectAction.Create)).IsFalse();
 
-		// The attribute is created on the target.
 		var attr = changeset.Attributes.Single(a => a.Attribute == "GET");
 		await Assert.That(attr.Action).IsEqualTo(PackageAttributeAction.Create);
 		await Assert.That(attr.Objid).IsEqualTo("#4:7");

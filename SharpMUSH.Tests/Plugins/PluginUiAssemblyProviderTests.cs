@@ -58,7 +58,6 @@ public class PluginUiAssemblyProviderTests
 	public async Task Get_HashMismatch_NotFound()
 	{
 		var bytes = Encoding.UTF8.GetBytes("THE-REAL-BYTES");
-		// Sidecar records a DIFFERENT (stale/tampered) hash → the on-disk bytes must fail verification.
 		var provider = NewProvider(StagePlugin(bytes, sidecarHash: new string('a', 64)));
 
 		var result = await provider.GetVerifiedAssemblyAsync(PluginId, Assembly);

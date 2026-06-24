@@ -82,8 +82,6 @@ public partial class ArangoDatabase : IPackageRegistryService
 	private static DateTimeOffset ParseTimestamp(string iso) =>
 		DateTimeOffset.Parse(iso, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 
-	// ── Installed packages ─────────────────────────────────────────────────
-
 	public async Task UpsertInstalledPackageAsync(InstalledPackageRecord package)
 	{
 		await arangoDb.Query.ExecuteAsync<object>(handle,
@@ -175,8 +173,6 @@ public partial class ArangoDatabase : IPackageRegistryService
 			});
 	}
 
-	// ── Package-created objects ────────────────────────────────────────────
-
 	public async Task UpsertPackageObjectAsync(PackageObjectRecord record)
 	{
 		await arangoDb.Query.ExecuteAsync<object>(handle,
@@ -222,8 +218,6 @@ public partial class ArangoDatabase : IPackageRegistryService
 				{ "ref", @ref }
 			});
 	}
-
-	// ── Managed attributes ─────────────────────────────────────────────────
 
 	public async Task UpsertManagedAttributeAsync(ManagedAttributeRecord record)
 	{
@@ -291,8 +285,6 @@ public partial class ArangoDatabase : IPackageRegistryService
 			});
 	}
 
-	// ── Managed object structure ────────────────────────────────────────────
-
 	public async Task UpsertManagedStructureAsync(ManagedStructureRecord record)
 	{
 		await arangoDb.Query.ExecuteAsync<object>(handle,
@@ -340,8 +332,6 @@ public partial class ArangoDatabase : IPackageRegistryService
 				{ "objid", objid }
 			});
 	}
-
-	// ── Dependencies (edge collection) ─────────────────────────────────────
 
 	public async Task SetPackageDependenciesAsync(string packageId, IReadOnlyList<PackageDependencyRecord> dependencies)
 	{
@@ -407,8 +397,6 @@ public partial class ArangoDatabase : IPackageRegistryService
 		return result.Select(d => new PackageDependencyRecord(d.PackageId, d.DependsOnId, d.Constraint)).ToList();
 	}
 
-	// ── Remotes ────────────────────────────────────────────────────────────
-
 	public async Task UpsertPackageRemoteAsync(PackageRemoteRecord remote)
 	{
 		await arangoDb.Query.ExecuteAsync<object>(handle,
@@ -464,8 +452,6 @@ public partial class ArangoDatabase : IPackageRegistryService
 				{ "name", name }
 			});
 	}
-
-	// ── Revisions ──────────────────────────────────────────────────────────
 
 	public async Task AddPackageRevisionAsync(PackageRevisionRecord revision)
 	{

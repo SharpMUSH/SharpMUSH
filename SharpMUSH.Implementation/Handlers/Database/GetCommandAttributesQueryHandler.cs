@@ -24,7 +24,6 @@ public class GetCommandAttributesQueryHandler(
 		var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		var noCommandPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-		// Scan local attributes first
 		await CommandAttributeScanner.ScanAttributes(sharpObj.Object().AllAttributes.Value, commandAttributes, seenNames,
 			noCommandPrefixes, isLocal: true, cancellationToken);
 

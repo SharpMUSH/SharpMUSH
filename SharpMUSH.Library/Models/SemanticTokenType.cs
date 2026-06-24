@@ -6,7 +6,6 @@ namespace SharpMUSH.Library.Models;
 /// </summary>
 public enum SemanticTokenType
 {
-	// Standard LSP semantic token types
 	/// <summary>
 	/// For namespace declarations and references.
 	/// </summary>
@@ -124,8 +123,6 @@ public enum SemanticTokenType
 	/// In MUSH: =, ,, ;, etc.
 	/// </summary>
 	Operator,
-
-	// MUSH-specific semantic token types
 
 	/// <summary>
 	/// For MUSH object references (dbrefs like #123).

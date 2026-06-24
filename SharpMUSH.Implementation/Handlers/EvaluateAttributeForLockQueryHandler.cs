@@ -23,14 +23,12 @@ public class EvaluateAttributeForLockQueryHandler(
 {
 	public async ValueTask<string?> Handle(EvaluateAttributeForLockQuery query, CancellationToken cancellationToken)
 	{
-		// Evaluate the attribute on the gated object with the unlocker as executor/enactor
 		// PennMUSH: call_ufun(&ufun, buff, player, player, pe_info, NULL)
 		// where player = unlocker, and the attribute is on target (gated object)
 		try
 		{
 			var unlockerRef = query.Unlocker.Object().DBRef;
 
-			// Push a parser state so CurrentState is available during attribute evaluation
 			var evalParser = parser.Push(new ParserState(
 				Registers: new([[]]),
 				IterationRegisters: [],

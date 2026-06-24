@@ -38,14 +38,11 @@ public class HelpTopicInlineParser : InlineParser
 
 	public override bool Match(InlineProcessor processor, ref StringSlice slice)
 	{
-		// slice.CurrentChar == '[' when called.
 		// Save start position so we can restore if the pattern does not match.
 		var savedStart = slice.Start;
 
-		// Advance past '['.
 		var c = slice.NextChar();
 
-		// Record where the topic text begins, then scan forward.
 		// Bail on '[' (nested bracket), '\n' (cross-line spans are not links), or '\0' (end).
 		var topicStart = slice.Start;
 		while (c != '\0' && c != ']' && c != '[' && c != '\n')
@@ -69,7 +66,6 @@ public class HelpTopicInlineParser : InlineParser
 			return false;
 		}
 
-		// Advance past ']'.
 		c = slice.NextChar();
 
 		// If followed by '(' or '[' this is a regular link or full reference link —

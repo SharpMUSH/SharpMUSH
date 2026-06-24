@@ -35,8 +35,6 @@ public class WikiRollbackAndRedlinkApiTests(ServerWebAppFactory factory)
 		return (await response.Content.ReadFromJsonAsync<WikiPageDto>())!;
 	}
 
-	// ── Rollback ──────────────────────────────────────────────────────────────
-
 	[Test]
 	public async Task Rollback_RestoresOldContent_AsNewRevision()
 	{
@@ -82,8 +80,6 @@ public class WikiRollbackAndRedlinkApiTests(ServerWebAppFactory factory)
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
-
-	// ── Existence check (redlinks) ────────────────────────────────────────────
 
 	[Test]
 	public async Task Exists_MixedRefs_ReportsEachCorrectly()

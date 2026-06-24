@@ -23,10 +23,8 @@ public class HelpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HelpWorks");
-		// Test that help command runs and returns the main help page
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help"));
 
-		// Verify that NotifyService was called with content containing "help newbie"
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
@@ -39,7 +37,6 @@ public class HelpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HelpTopic");
-		// Test help with the "newbie" topic
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help newbie"));
 
 		// The 'newbie' entry renders to exactly this body; assert the full opening
@@ -60,10 +57,8 @@ public class HelpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HelpWildcard");
-		// Test help with wildcard pattern - should list matching topics
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help help*"));
 
-		// Verify that NotifyService was called with a list of matching topics
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
@@ -81,10 +76,9 @@ public class HelpCommandTests
 	public async ValueTask HelpSearchWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test help/search switch - should find topics whose body CONTAINS the search term (content search)
+		// help/search finds topics whose body CONTAINS the search term (content search, not title match).
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help/search newbie"));
 
-		// Verify that NotifyService was called with "Matches:" format (content search result)
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -96,10 +90,9 @@ public class HelpCommandTests
 	public async ValueTask HelpNonExistentTopic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test help with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help nonexistenttopicxyz123"));
 
-		// Verify that NotifyService was called with "No entry for" (PennMUSH-compatible message)
+		// "No entry for" is the PennMUSH-compatible message.
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -111,10 +104,9 @@ public class HelpCommandTests
 	public async ValueTask HelpWithPrefixMatchWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test that a prefix match finds the topic (PennMUSH behavior: 'help newb' finds 'newbie')
+		// PennMUSH behavior: 'help newb' prefix-matches and finds 'newbie'.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help newb"));
 
-		// Should show the 'newbie' entry content (contains "MUSHing")
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>

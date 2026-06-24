@@ -81,13 +81,11 @@ public record SemanticTokensData
 	/// <returns>The encoded semantic tokens data.</returns>
 	public static SemanticTokensData FromTokens(IReadOnlyList<SemanticToken> tokens)
 	{
-		// Define the token types and modifiers legends
 		var tokenTypes = Enum.GetNames(typeof(SemanticTokenType));
 		var tokenModifiers = Enum.GetNames(typeof(SemanticTokenModifier))
 			.Where(name => name != nameof(SemanticTokenModifier.None))
 			.ToArray();
 
-		// Encode tokens in delta format
 		var data = new List<int>();
 		int prevLine = 0;
 		int prevChar = 0;

@@ -52,7 +52,6 @@ public class UtilityCommandTests
 		var guid = Guid.NewGuid();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@@ This is a comment {guid}"));
 
-		// Comment should not produce any output
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(x
@@ -66,7 +65,6 @@ public class UtilityCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookBasic");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("look"));
 
-		// look shows the current room name with dbref and flag symbols
 		// Use StartsWith because HALT flag ('h') gets set on Room Zero by other tests in the shared session
 		await NotifyService
 			.Received(1)
@@ -99,7 +97,6 @@ public class UtilityCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookAtObj");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("look #1"));
 
-		// looking at player #1 (God) shows the player name with dbref and flag symbols
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
@@ -111,11 +108,8 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamNameDbref");
-		// Grant wizard so the test player can examine any object
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		// Verify the name row has "Name(#dbref)" format (no space before '(') in plain text.
 		// We use plain-text check because name.Hilight() inserts ANSI codes (bold+bright-white) around the name.
-		// Player #1 is named "God" in the test database.
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
@@ -129,7 +123,6 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamNameAnsi");
-		// Grant wizard so the test player can examine any object
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		// The name row output must be an MString where the ANSI render contains escape codes,
 		// because the object name is wrapped with Hilight() which applies bold+bright-white (ESC[1;37m).
@@ -223,7 +216,6 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamRoomExits");
-		// Grant wizard so the test player can examine any object (room owned by player #1)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		// Dig a room with exits; the new room gets the return exit → examine should show Exits:
 		var digResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
@@ -235,7 +227,6 @@ public class UtilityCommandTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"examine {roomDbRef}"));
 
-		// The Exits: section should appear because the new room has the return exit (South;S)
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
@@ -261,27 +252,21 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamAnsiMarkup");
-		// Create an object, set a DESCRIBE with ANSI color, then examine it.
-		// The attribute value (an MString with markup) must survive through examine output.
 		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single("@create AnsiExamineTestObj"));
 		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		// [ansi(rh,...)] evaluates to an MString with red+bold markup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"@desc {objDbRef}=[ansi(rh,AnsiColorText)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"examine {objDbRef}"));
 
-		// Plain-text content of the attribute value must appear in examine output
-		// Examine produces 2 notifications containing "AnsiColorText": the header block and the attribute row
 		await NotifyService
 			.Received(2)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
-		// Both notifications are MStrings with ANSI markup (header has hilighted name, attribute has ansi value)
 		await NotifyService
 			.Received(2)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
@@ -309,7 +294,6 @@ public class UtilityCommandTests
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Owner: ")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
-		// Brief must NOT show description text
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
@@ -321,7 +305,6 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamOpaque");
-		// Grant wizard so the test player can examine any object
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine/opaque #1"));
 
@@ -336,11 +319,9 @@ public class UtilityCommandTests
 	public async ValueTask ExamineWithAttributePattern()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test examining with attribute pattern (e.g., examine #1/DESC*)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&examinewithattributepattern #1=jim"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1/exa*"));
 
-		// Should display header with "God(#1..." followed by matching attributes
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -352,12 +333,9 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamCurLoc");
-		// Grant wizard so the test player can examine room #0 (owned by player #1)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		// Test examining with no argument (examines current location)
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine"));
 
-		// Should display current location with "Room Zero(#0..." header
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
@@ -435,8 +413,6 @@ public class UtilityCommandTests
 	public async ValueTask ScanCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a unique object in the executor's room and give it a $-command attribute so
-		// @scan has a real match to discover and return.
 		var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
 		var objectName = $"ScanTestObj_{uniqueSuffix}";
 		var attrName = $"CMD_SCAN_{uniqueSuffix}";
@@ -446,11 +422,9 @@ public class UtilityCommandTests
 		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
 		await Assert.That(createdDbref).StartsWith("#").Because($"@create should return a dbref; got: '{createdDbref}'");
 
-		// Set a $-command attribute on the object: value starts with $pattern:code
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&{attrName} {createdDbref}=${commandWord} *:think scan test triggered"));
 
-		// @scan <commandword> test — searches the executor's location for matching $-commands
 		var scanResult = await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@scan {commandWord} test"));
 		var scanPlainText = scanResult.Message?.ToPlainText() ?? string.Empty;
@@ -467,7 +441,6 @@ public class UtilityCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@decompile #1"));
 
-		// Should receive notifications for decompiled output
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -494,9 +467,7 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask PageNoeval_EscapedEquals_DoesNotCrash()
 	{
-		// Should not throw; just produces a "who do you want to page" type message
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("page/noeval #1 \\= ="));
-		// If we got here without exception, the regression is fixed
 		await Assert.That(result).IsNotNull();
 	}
 }

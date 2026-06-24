@@ -36,9 +36,7 @@ public class LockIntegrationTests
 		return DBRef.Parse(result.Message!.ToPlainText()!);
 	}
 
-	// === lock() case insensitivity ===
 	// Oracle: lock(obj/Basic), lock(obj/basic), lock(obj/BASIC) all return same result
-
 	[Test]
 	[Arguments("Basic")]
 	[Arguments("basic")]
@@ -63,9 +61,7 @@ public class LockIntegrationTests
 		await Assert.That(result).IsEqualTo("1");
 	}
 
-	// === testlock() with #TRUE and #FALSE ===
 	// Oracle confirmed: testlock(#TRUE, me) = 1, testlock(#FALSE, me) = 0
-
 	[Test]
 	[Arguments("testlock(#TRUE,%#)", "1")]
 	[Arguments("testlock(#FALSE,%#)", "0")]
@@ -76,9 +72,7 @@ public class LockIntegrationTests
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
-	// === Boolean lock operators ===
 	// Oracle confirmed: AND (&), OR (|), NOT (!) all work in testlock
-
 	[Test]
 	[Arguments("testlock(#TRUE&#TRUE,%#)", "1")]
 	[Arguments("testlock(#TRUE&#FALSE,%#)", "0")]
@@ -108,10 +102,8 @@ public class LockIntegrationTests
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
-	// === elock with #TRUE and #FALSE locks set ===
 	// Oracle: @lock/use obj=#TRUE → elock(obj/Use, victim) = 1 for everyone
 	// Oracle: @lock/use obj=#FALSE → elock(obj/Use, victim) = 0 for everyone (including god)
-
 	[Test]
 	public async Task Elock_TrueLock_PassesForAll()
 	{
@@ -133,9 +125,7 @@ public class LockIntegrationTests
 		await Assert.That(result).IsEqualTo("0");
 	}
 
-	// === Attribute locks (ATTR:pattern) ===
 	// Oracle: testlock(RACE:Elf, me) = 1 when &RACE me=Elf
-
 	[Test]
 	public async Task Testlock_AttributeLock_ExactMatch()
 	{
@@ -166,9 +156,7 @@ public class LockIntegrationTests
 		await Assert.That(result).IsEqualTo("1");
 	}
 
-	// === Eval locks (ATTR/pattern) ===
 	// Oracle: @lock obj=CHECK/PASS → elock passes when &CHECK obj=PASS
-
 	[Test]
 	public async Task Elock_EvalLock_Passes()
 	{
@@ -191,20 +179,15 @@ public class LockIntegrationTests
 		await Assert.That(result).IsEqualTo("0");
 	}
 
-	// === Flag locks (FLAG^flagname) ===
 	// Oracle: testlock(FLAG^WIZARD, me) = 1 for wizards, 0 for mortals
-
 	[Test]
 	public async Task Testlock_FlagLock_Wizard()
 	{
-		// Player #1 (executor) should be a wizard
 		var result = await Eval("testlock(FLAG^WIZARD,%#)");
 		await Assert.That(result).IsEqualTo("1");
 	}
 
-	// === Indirect locks (@obj/locktype) ===
 	// Oracle: testlock(@obj/Use, me) checks obj's Use lock
-
 	[Test]
 	public async Task Testlock_IndirectLock_Passes()
 	{
@@ -225,9 +208,7 @@ public class LockIntegrationTests
 		await Assert.That(result).IsEqualTo("0");
 	}
 
-	// === llocks() with multiple lock types ===
 	// Oracle: llocks(obj) returns "Basic Use" when both are set
-
 	[Test]
 	public async Task Llocks_MultipleLocks()
 	{
@@ -236,7 +217,6 @@ public class LockIntegrationTests
 		await Command($"@lock/use #{obj.Number}=#TRUE");
 
 		var result = await Eval($"llocks(#{obj.Number})");
-		// Should contain both Basic and Use
 		await Assert.That(result).Contains("Basic");
 		await Assert.That(result).Contains("Use");
 	}
@@ -261,9 +241,7 @@ public class LockIntegrationTests
 		await Assert.That(llocksResult).Contains("Use");
 	}
 
-	// === lockowner() with lock set ===
 	// Oracle: lockowner(obj/Basic) returns the dbref of who set the lock
-
 	[Test]
 	public async Task Lockowner_WithLockSet()
 	{
@@ -274,8 +252,6 @@ public class LockIntegrationTests
 		// Lock was set by player #1
 		await Assert.That(result).IsEqualTo("#1");
 	}
-
-	// === lock() returns lock string ===
 
 	[Test]
 	public async Task Lock_ReturnsLockString()
@@ -296,8 +272,6 @@ public class LockIntegrationTests
 		await Assert.That(result).IsEqualTo("*UNLOCKED*");
 	}
 
-	// === lock() case insensitive lock name ===
-
 	[Test]
 	public async Task Lock_CaseInsensitiveLockName()
 	{
@@ -313,9 +287,7 @@ public class LockIntegrationTests
 		await Assert.That(upper).IsEqualTo("#1");
 	}
 
-	// === testlock with IS prefix (=) ===
 	// Oracle: testlock(=me, me) = 1 (exact IS check)
-
 	[Test]
 	public async Task Testlock_IsPrefix()
 	{
@@ -323,9 +295,7 @@ public class LockIntegrationTests
 		await Assert.That(result).IsEqualTo("1");
 	}
 
-	// === testlock with carry prefix (+) ===
 	// Oracle: testlock(+me, me) = 0 (can't carry yourself)
-
 	[Test]
 	public async Task Testlock_CarryPrefix_Self()
 	{
@@ -333,9 +303,7 @@ public class LockIntegrationTests
 		await Assert.That(result).IsEqualTo("0");
 	}
 
-	// === testlock with carry prefix (+) on carried object ===
 	// Oracle: testlock(+num(TestObj), me) = 1 when TestObj is in inventory
-
 	[Test]
 	[NotInParallel]
 	public async Task Testlock_CarryPrefix_CarriedObject()
@@ -347,9 +315,7 @@ public class LockIntegrationTests
 		await Assert.That(result).IsEqualTo("1");
 	}
 
-	// === testlock with owner prefix ($) ===
 	// Oracle: testlock($num(TestObj), me) = 1 when me owns TestObj
-
 	[Test]
 	public async Task Testlock_OwnerPrefix()
 	{

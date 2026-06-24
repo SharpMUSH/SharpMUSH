@@ -105,8 +105,6 @@ public sealed class HelpService
     }
 }
 
-// ── JSON shape ─────────────────────────────────────────────────────────────────
-
 internal sealed class MushDefsRaw
 {
     public Dictionary<string, DefEntry>? Functions { get; set; }

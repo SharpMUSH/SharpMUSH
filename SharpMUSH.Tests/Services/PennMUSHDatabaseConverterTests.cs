@@ -122,7 +122,6 @@ public class PennMUSHDatabaseConverterTests
 
 		await Assert.That(result.IsSuccessful).IsTrue();
 
-		// Verify God player was updated with custom name
 		var godPlayer = await database.GetObjectNodeAsync(new Library.Models.DBRef(1));
 		await Assert.That(godPlayer.IsT0).IsTrue();
 		await Assert.That(godPlayer.AsT0.Object.Name).IsEqualTo("CustomGod");
@@ -161,7 +160,6 @@ public class PennMUSHDatabaseConverterTests
 
 		await Assert.That(result.IsSuccessful).IsTrue();
 
-		// Verify Room #0 was updated with custom name
 		var room0 = await database.GetObjectNodeAsync(new Library.Models.DBRef(0));
 		await Assert.That(room0.IsT1).IsTrue();
 		await Assert.That(room0.AsT1.Object.Name).IsEqualTo("Custom Void");
@@ -204,7 +202,7 @@ public class PennMUSHDatabaseConverterTests
 					DBRef = 3,
 					Name = "Child Room",
 					Type = PennMUSHObjectType.Room,
-					Parent = 2 // Parent is Master Room
+					Parent = 2
 				}
 			]
 		};
@@ -213,8 +211,6 @@ public class PennMUSHDatabaseConverterTests
 
 		await Assert.That(result.IsSuccessful).IsTrue();
 
-		// Verify child room has parent set (would need to check the parent relationship)
-		// This is a basic test that conversion succeeded without errors
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.RoomsConverted).IsGreaterThanOrEqualTo(2);
 	}
@@ -256,7 +252,7 @@ public class PennMUSHDatabaseConverterTests
 					DBRef = 3,
 					Name = "Zoned Room",
 					Type = PennMUSHObjectType.Room,
-					Zone = 2 // Zone is Zone Master
+					Zone = 2
 				}
 			]
 		};
@@ -265,8 +261,6 @@ public class PennMUSHDatabaseConverterTests
 
 		await Assert.That(result.IsSuccessful).IsTrue();
 
-		// Verify zoned room has zone set (would need to check the zone relationship)
-		// This is a basic test that conversion succeeded without errors
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.RoomsConverted).IsGreaterThanOrEqualTo(2);
 	}

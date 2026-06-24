@@ -33,15 +33,12 @@ public class AttributeTreeWipeBranchTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WipeTree");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
-		// Build a small tree: foo, foo`bar, foo`bar`baz
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR`BAZ {objDbRef}=baz"));
 
-		// Wipe foo tree
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@wipe {objDbRef}/FOO"));
 
-		// All three attributes should be gone
 		var fooAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO",
 			IAttributeService.AttributeMode.Read, false);
 		var barAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO`BAR",
@@ -67,10 +64,8 @@ public class AttributeTreeWipeBranchTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "BranchAuto");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
-		// Set foo`bar without foo existing
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
 
-		// foo should be auto-created
 		var result = (await Parser.FunctionParse(MModule.single($"hasattr({objDbRef},FOO)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("1")
 			.Because("setting foo`bar should auto-create FOO branch");
@@ -86,13 +81,10 @@ public class AttributeTreeWipeBranchTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "BranchPres");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
-		// Set foo`bar
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=original"));
 
-		// Set foo`bar`baz (deeper)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR`BAZ {objDbRef}=deeper"));
 
-		// foo`bar should still have its value
 		var result = (await Parser.FunctionParse(MModule.single($"get({objDbRef}/FOO`BAR)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("original")
 			.Because("adding a child should not wipe the parent's value");
@@ -107,13 +99,11 @@ public class AttributeTreeWipeBranchTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LattrTop");
 
-		// Build tree
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAZ {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR`BAZ {objDbRef}=baz"));
 
-		// lattr(obj) should show FOO but not FOO`BAR or FOO`BAR`BAZ
 		var result = (await Parser.FunctionParse(MModule.single($"lattr({objDbRef})")))?.Message!;
 		var text = result.ToPlainText();
 
@@ -132,12 +122,10 @@ public class AttributeTreeWipeBranchTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LattrStar");
 
-		// Build tree
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR`BAZ {objDbRef}=baz"));
 
-		// lattr(obj/**) should show everything
 		var result = (await Parser.FunctionParse(MModule.single($"lattr({objDbRef}/**)")))?.Message!;
 		var text = result.ToPlainText();
 
@@ -158,7 +146,6 @@ public class AttributeTreeWipeBranchTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GetTree");
 
-		// Build tree with values
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {objDbRef}=root"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=middle"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR`BAZ {objDbRef}=leaf"));
@@ -182,11 +169,9 @@ public class AttributeTreeWipeBranchTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "FlagsTree");
 
-		// Build tree
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
 
-		// flags(obj/foo) should include ` because foo is a branch
 		var result = (await Parser.FunctionParse(MModule.single($"flags({objDbRef}/FOO)")))?.Message!;
 		var text = result.ToPlainText();
 
@@ -205,18 +190,14 @@ public class AttributeTreeWipeBranchTests
 		var dbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"BfRm_{uid}");
 		var d = $"#{dbRef.Number}";
 
-		// Create branch: FOO with child BAR
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BF{uid} {d}=parent_val"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BF{uid}`CHILD {d}=child_val"));
 
-		// Verify branch flag is set
 		var flagsBefore = (await Parser.FunctionParse(MModule.single($"flags({d}/BF{uid})")))?.Message!.ToPlainText();
 		await Assert.That(flagsBefore).Contains("`");
 
-		// Wipe the only child
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@wipe {d}/BF{uid}`CHILD"));
 
-		// Branch flag should be removed since FOO has no more children
 		var flagsAfter = (await Parser.FunctionParse(MModule.single($"flags({d}/BF{uid})")))?.Message!.ToPlainText();
 		await Assert.That(flagsAfter).DoesNotContain("`")
 			.Because("branch flag should be removed when last child is cleared");
@@ -256,15 +237,12 @@ public class AttributeTreeWipeBranchTests
 		var dbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"BfK_{uid}");
 		var d = $"#{dbRef.Number}";
 
-		// Create branch: FOO with two children
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BK{uid} {d}=parent_val"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BK{uid}`ONE {d}=val1"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BK{uid}`TWO {d}=val2"));
 
-		// Clear one child
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BK{uid}`ONE {d}="));
 
-		// Branch flag should still be present (TWO still exists)
 		var flags = (await Parser.FunctionParse(MModule.single($"flags({d}/BK{uid})")))?.Message!.ToPlainText();
 		await Assert.That(flags).Contains("`")
 			.Because("branch flag should remain while other children exist");

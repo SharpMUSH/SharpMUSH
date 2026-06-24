@@ -134,7 +134,6 @@ public class MessageCommandTests
 				TestHelpers.MatchingObject(executor),
 				INotifyService.NotificationType.Announce);
 
-		// Confirmation is sent via NotifyLocalized.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.MessageSentToRecipientsFormat), executor, executor)).IsTrue();
 	}

@@ -26,13 +26,10 @@ public class LSPMUSHCodeParser
 	{
 		try
 		{
-			// Use the parser's diagnostic capabilities
-			// The GetDiagnostics method is designed to be stateless
 			return _parser.GetDiagnostics(MModule.single(text), parseType);
 		}
 		catch (Exception ex)
 		{
-			// If parsing fails catastrophically, return a diagnostic
 			return new List<Diagnostic>
 			{
 				new()
@@ -58,13 +55,10 @@ public class LSPMUSHCodeParser
 	{
 		try
 		{
-			// Use the parser's semantic token capabilities
-			// The GetSemanticTokensData method is designed to be stateless
 			return _parser.GetSemanticTokensData(MModule.single(text), parseType);
 		}
 		catch (Exception ex)
 		{
-			// If analysis fails, return empty token data
 			Console.Error.WriteLine($"Semantic analysis error: {ex.Message}");
 			return new SemanticTokensData
 			{

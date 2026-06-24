@@ -27,27 +27,21 @@ public class SemaphoreCommandTests
 	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Arrange - create a unique object and semaphore attribute with underscore separator
 		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemNotify");
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
 		var testMessage = $"TaskExecuted_{uniqueId}";
 
-		// Queue a task that waits on the semaphore - use think to ensure output
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@wait {semObj}/{uniqueAttr}=think {testMessage}"));
 
-		// Give time for the task to be registered with the scheduler
 		await Task.Delay(200);
 
-		// Act - notify the semaphore to wake the waiting task
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@notify {semObj}/{uniqueAttr}"));
 
-		// Give the scheduler time to execute the queued task
 		await Task.Delay(2000);
 
-		// Assert - verify the waiting task was executed
 		await NotifyService.Received(1).Notify(
 			TestHelpers.MatchingObject(executor),
 			testMessage, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -56,15 +50,13 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask DolistInline_ShouldExecuteImmediately()
 	{
-		// Arrange
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var uniqueId = Guid.NewGuid().ToString("N");
 
-		// Act - @dolist/inline should execute immediately
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@dolist/inline a b c=@pemit #1=Inline{uniqueId}"));
 
-		// Assert - @dolist/inline a b c fires 3 iterations, each @pemit emits the same unique string.
+		// @dolist/inline a b c fires 3 iterations, each @pemit emits the same unique string.
 		// Received(3) is the exact count: one for element "a", one for "b", one for "c".
 		await NotifyService.Received(3).Notify(
 			TestHelpers.MatchingObject(executor),
@@ -74,15 +66,12 @@ public class SemaphoreCommandTests
 	[Test, Skip("Needs a better way of testing. This is too timing sensitive.")]
 	public async ValueTask DolistDefault_ShouldQueueCommands()
 	{
-		// Arrange
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var uniqueId = Guid.NewGuid().ToString("N");
 
-		// Act - @dolist (without /inline) should queue commands
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@dolist a b c=@pemit #1=Queued{uniqueId}"));
 
-		// Assert - verify queuing happened by checking that jobs were scheduled.
 		// @dolist (without /inline) queues commands; they must NOT execute synchronously.
 		await NotifyService
 			.DidNotReceive()
@@ -96,13 +85,11 @@ public class SemaphoreCommandTests
 	public async ValueTask NotifySetQ_CommandShouldAcceptParameters()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// This test verifies that @notify/setq accepts qreg parameters
-		// Fixed bug where CB.RSArgs was interfering with comma parsing
+		// Guards against CB.RSArgs interfering with comma parsing of qreg parameters.
 		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemSetQParam");
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
 
-		// Try calling @notify/setq without waiting task first to test parameter parsing
 		var result = await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@notify/setq {semObj}/{uniqueAttr}=0,TestValue"));
 
@@ -119,28 +106,21 @@ public class SemaphoreCommandTests
 	public async ValueTask NotifySetQ_ShouldSetQRegisterForWaitingTask()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Arrange - create a unique object and semaphore attribute with a unique test value
 		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemSetQWait");
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
-		var testValue = $"TestValue_{uniqueId.Substring(0, 8)}"; // Use unique value with GUID prefix
+		var testValue = $"TestValue_{uniqueId.Substring(0, 8)}";
 
-		// Queue a task that waits on the semaphore and will output the Q-register value
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@wait {semObj}/{uniqueAttr}=think QRegValue:%q0"));
 
-		// Give time for the task to be registered with the scheduler
 		await Task.Delay(200);
 
-		// Act - notify the semaphore with /setq to set Q-register 0
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@notify/setq {semObj}/{uniqueAttr}=0,{testValue}"));
 
-		// Give the scheduler time to execute the queued task
 		await Task.Delay(2000);
 
-		// Assert - verify the task executed with the correct Q-register value
-		// The waiting task should have been executed with %q0 set to our test value
 		await NotifyService.Received(1).Notify(
 			TestHelpers.MatchingObject(executor),
 			$"QRegValue:{testValue}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -149,12 +129,11 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask DrainCommand_Basic()
 	{
-		// Arrange - create a unique object and verify @drain command can execute
 		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemDrain");
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
 
-		// Act - drain (with nothing queued) - should not throw exception
+		// drain (with nothing queued) - should not throw exception
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@drain {semObj}/{uniqueAttr}"));
 
@@ -164,14 +143,13 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask WaitCommand_WithTime_CanExecute()
 	{
-		// Arrange & Act - just verify @wait command can execute without errors
 		var uniqueId = Guid.NewGuid().ToString("N");
 
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@wait 1=@pemit #1=Wait{uniqueId}"));
 
-		// No assertion - just verify no exceptions and command parses
-		// Note: We don't wait for execution as this tests command parsing, not scheduler execution
+		// No assertion - just verify no exceptions and command parses.
+		// We don't wait for execution as this tests command parsing, not scheduler execution.
 	}
 
 	/// <summary>
@@ -186,7 +164,6 @@ public class SemaphoreCommandTests
 		var attrA = $"WAITMULTI_A_{uniqueId}";
 		var attrB = $"WAITMULTI_B_{uniqueId}";
 
-		// @wait with braces containing two & commands separated by semicolon
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@wait 1={{&{attrA} {testObj}=valueA; &{attrB} {testObj}=valueB}}"));
 
@@ -268,20 +245,17 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask WaitCommand_EvaluatesFunctionsInAmpersandCallback()
 	{
-		// Arrange - create an isolated test object with a unique attribute name
 		var testObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WaitEvalAttr");
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"EVALTEST_{uniqueId[..8].ToUpper()}";
 
-		// Act - queue @wait with [add(1,1)] inside a & attribute-set command.
 		// Unix timestamp "1" is in the far past, so Quartz fires the job immediately.
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@wait 1={{&{uniqueAttr} {testObj}=[add(1,1)]}}"));
 
-		// Allow the scheduler to fire and the command-list consumer to execute
 		await Task.Delay(2000);
 
-		// Assert - PennMUSH evaluates [add(1,1)] → "2" before storing the attribute.
+		// PennMUSH evaluates [add(1,1)] → "2" before storing the attribute.
 		// SharpMUSH currently stores the literal "[add(1,1)]" instead (the bug).
 		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, uniqueAttr,
@@ -299,27 +273,21 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask WaitCommand_PatternMatchPreservesPercentZero()
 	{
-		// Arrange - create objects for the test
 		var storeObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WaitStore");
 		var uniqueId = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var uniqueAttr = $"WAITSTOR_{uniqueId}";
 		var cmdAttr = $"CMD_WAITST_{uniqueId}";
 
-		// Install a pattern-matched command that creates an object and uses @wait to store its dbref
-		// Pattern: $+waitstore_xxx *:@create %0; @wait 1={&WAITSTOR_xxx <storeObj>=[num(%0)]}
 		var cmdPattern = $"$+waitstore_{uniqueId.ToLower()} *:@create %0; @wait 1={{&{uniqueAttr} {storeObj}=[num(%0)]}}";
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&{cmdAttr} {storeObj}={cmdPattern}"));
 
-		// Act - trigger the pattern-matched command with a unique object name
 		var targetName = $"WaitTgt_{uniqueId}";
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"+waitstore_{uniqueId.ToLower()} {targetName}"));
 
-		// Wait for @create to complete and @wait callback to fire
 		await Task.Delay(3000);
 
-		// Assert - the attribute should contain the dbref of the created object (not empty, not literal)
 		var storeObjNode = await Mediator.Send(new GetObjectNodeQuery(storeObj));
 		var attr = await AttributeService.GetAttributeAsync(storeObjNode.Known, storeObjNode.Known, uniqueAttr,
 			IAttributeService.AttributeMode.Read, false);
@@ -346,20 +314,16 @@ public class SemaphoreCommandTests
 		var grpAttr = $"GROUPS_{uniqueId}";
 		var cmdAttr = $"CMD_BBSFL_{uniqueId}";
 
-		// Install a pattern-matched command that mimics +bbnewgroup:
-		// $+bbsflow_xxx *:@switch hasflag(%#,wizard)=1,{@create %0; @wait 1={@switch [setr(0,num(%0))]=#-1,{@pemit %#=Bad name},{&GROUPS_xxx <storeObj>=%q0}}}
 		var cmdPattern = $"$+bbsflow_{uniqueId.ToLower()} *:@switch hasflag(%#,wizard)=1,{{@create %0; @wait 1={{@switch [setr(0,num(%0))]=#-1,{{@pemit %#=Bad name}},{{&{grpAttr} {storeObj}=%q0}}}}}}";
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&{cmdAttr} {storeObj}={cmdPattern}"));
 
-		// Act - trigger the command
 		var targetName = $"BBSTgt_{uniqueId}";
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"+bbsflow_{uniqueId.ToLower()} {targetName}"));
 
 		await Task.Delay(3000);
 
-		// Assert - the groups attribute on storeObj should contain the dbref of the created object
 		var storeObjNode = await Mediator.Send(new GetObjectNodeQuery(storeObj));
 		var attr = await AttributeService.GetAttributeAsync(storeObjNode.Known, storeObjNode.Known, grpAttr,
 			IAttributeService.AttributeMode.Read, false);

@@ -17,7 +17,6 @@ public class ListenerRoutingServiceTests
 	[Test]
 	public async ValueTask ProcessNotificationAsync_WithNullLocation_ReturnsEarly()
 	{
-		// Arrange
 		var context = new NotificationContext(
 			Target: new DBRef(1, null),
 			Location: null,
@@ -25,21 +24,18 @@ public class ListenerRoutingServiceTests
 			ExcludedObjects: []
 		);
 
-		// Act - should not throw and should return early
 		await ListenerRoutingService.ProcessNotificationAsync(
 			context,
 			"Test message",
 			null,
 			INotifyService.NotificationType.Say);
 
-		// Assert - no exception means success
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
 	public async ValueTask ProcessNotificationAsync_WithAnnounceType_ReturnsEarly()
 	{
-		// Arrange
 		var context = new NotificationContext(
 			Target: new DBRef(1, null),
 			Location: new DBRef(0, null),
@@ -47,14 +43,12 @@ public class ListenerRoutingServiceTests
 			ExcludedObjects: []
 		);
 
-		// Act - Announce type should not trigger listeners
 		await ListenerRoutingService.ProcessNotificationAsync(
 			context,
 			"Private message",
 			null,
 			INotifyService.NotificationType.Announce);
 
-		// Assert - no exception means success
 		await ValueTask.CompletedTask;
 	}
 

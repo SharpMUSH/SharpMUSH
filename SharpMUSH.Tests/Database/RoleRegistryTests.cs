@@ -51,13 +51,11 @@ public class RoleRegistryTests
 		await Assert.That(role.Permissions[PortalPermission.WikiAdmin]).IsEqualTo(PermissionState.Allow);
 		await Assert.That(role.Permissions[PortalPermission.ServerAdmin]).IsEqualTo(PermissionState.Deny);
 
-		// Upsert replaces in full.
 		await Registry.UpsertRoleAsync(Role("test-alpha", 99));
 		var upgraded = await Registry.GetRoleAsync("test-alpha");
 		await Assert.That(upgraded.AsT0.Priority).IsEqualTo(99);
 		await Assert.That(upgraded.AsT0.Permissions.Count).IsEqualTo(0);
 
-		// List is ordered by priority DESC (test-alpha=99 before test-beta=35).
 		var ours = (await Registry.GetRolesAsync()).Where(r => r.Slug.StartsWith("test-")).ToList();
 		await Assert.That(ours.Count).IsEqualTo(2);
 		await Assert.That(ours[0].Slug).IsEqualTo("test-alpha");
@@ -74,7 +72,6 @@ public class RoleRegistryTests
 		var account = await Db.CreateAccountAsync("rbac-test-user", null, "password-hash-123");
 
 		await Registry.AssignRoleToAccountAsync(account.Id!, "test-assign");
-		// Idempotent — assigning twice doesn't duplicate.
 		await Registry.AssignRoleToAccountAsync(account.Id!, "test-assign");
 
 		var roles = await Registry.GetRolesForAccountAsync(account.Id!);
@@ -109,7 +106,6 @@ public class RoleRegistryTests
 		await Assert.That(wizard.IsT0).IsTrue();
 		await Assert.That(wizard.AsT0.IsSystem).IsTrue();
 		await Assert.That(wizard.AsT0.Permissions[PortalPermission.WikiAdmin]).IsEqualTo(PermissionState.Allow);
-		// Wizard does NOT get server.admin (God-only).
 		await Assert.That(wizard.AsT0.Permissions.GetValueOrDefault(PortalPermission.ServerAdmin, PermissionState.Inherit))
 			.IsNotEqualTo(PermissionState.Allow);
 	}

@@ -43,11 +43,9 @@ public class HelloUiManagedPackageExampleTests
 		var loaded = PluginLoaderService.LoadOne(HelloUiDllPath, NullLogger.Instance);
 		await Assert.That(loaded).IsNotNull();
 
-		// It registers services and contributes UI → load-once (NOT hot-unloadable).
 		await Assert.That(loaded!.IsUnloadable).IsFalse()
 			.Because("a plugin contributing IServiceRegistrar + IApplicationSource is a load-once seam");
 
-		// The host-shared seams must cast cleanly across the AssemblyLoadContext boundary.
 		await Assert.That(loaded.Plugin is IServiceRegistrar).IsTrue();
 		await Assert.That(loaded.Plugin is IApplicationSource).IsTrue();
 

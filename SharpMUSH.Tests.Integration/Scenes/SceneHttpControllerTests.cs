@@ -86,8 +86,6 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		return id;
 	}
 
-	// ── GET /api/scenes/{id} ───────────────────────────────────────────────────
-
 	[Test]
 	public async Task GetScene_PublicScene_Returns200WithMatchingId()
 	{
@@ -113,8 +111,6 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
-
-	// ── Visibility ─────────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task GetScene_PrivateSceneCallerIsMember_Returns200()
@@ -143,8 +139,6 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
 
-	// ── GET /api/scenes (list) ─────────────────────────────────────────────────
-
 	[Test]
 	public async Task ListScenes_RecentFilter_IncludesPublicScene()
 	{
@@ -168,8 +162,6 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(scenes).IsNotNull();
 		await Assert.That(scenes!.All(s => s.Id != hiddenId)).IsTrue();
 	}
-
-	// ── GET /api/scenes/{id}/poses ─────────────────────────────────────────────
 
 	[Test]
 	public async Task GetPoses_ReturnsPosesInChainOrder()
@@ -199,8 +191,6 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
 
-	// ── GET /api/scenes/{id}/members ───────────────────────────────────────────
-
 	[Test]
 	public async Task GetMembers_IncludesAddedMember()
 	{
@@ -214,8 +204,6 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(members!.Any(m => m.Role == "participant")).IsTrue();
 		await Assert.That(members.All(m => m.SceneId == sceneId)).IsTrue();
 	}
-
-	// ── GET /api/scenes/{id}/cast and /tags ────────────────────────────────────
 
 	[Test]
 	public async Task GetCast_ReturnsDisplayPersonas()

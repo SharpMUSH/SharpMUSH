@@ -19,7 +19,7 @@ public class ConnectionStateChangeHandler(
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
 	{
-		var connectionId = Guid.NewGuid().ToString("N")[..8]; // Unique ID for tracking
+		var connectionId = Guid.NewGuid().ToString("N")[..8];
 
 		logger.LogInformation(
 			"[{ConnectionId}] Connection state change: Handle={Handle}, Ref={Ref}, OldState={OldState}, NewState={NewState}",
@@ -51,7 +51,6 @@ public class ConnectionStateChangeHandler(
 					logger.LogInformation("[{ConnectionId}] Player {Ref} logged in on handle {Handle}",
 						connectionId, notification.PlayerRef, notification.Handle);
 
-					// Restore the player's persisted locale preference, if set.
 					if (notification.PlayerRef.HasValue)
 					{
 						var localeAttrs = database.GetAttributeAsync(notification.PlayerRef.Value, ["LOCALE"], cancellationToken);

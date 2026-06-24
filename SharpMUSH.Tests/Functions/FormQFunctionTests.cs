@@ -85,7 +85,7 @@ public class FormQFunctionTests
 		await Assert.That(result).IsEqualTo("done");
 	}
 
-	// formdecode() is PennMUSH-spec (help sharphttp FORMDECODE) and previously had no tests.
+	// formdecode() is PennMUSH-spec (help sharphttp FORMDECODE).
 	[Test]
 	[Arguments("formdecode(name=Joe&hobby=fishing)", "name hobby")] // no paramname → names
 	[Arguments("formdecode(name=Joe&hobby=fishing,name)", "Joe")]

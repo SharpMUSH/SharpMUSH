@@ -38,7 +38,6 @@ public partial class RecursiveMarkdownRenderer
 
 	private Ansi? ParseFontTagToAnsi(string tag)
 	{
-		// Extract color attribute: <font color="red"> or <font color="#FF0000">
 		var colorMatch = ColorAttributeRegex.Match(tag);
 		if (colorMatch.Success)
 		{
@@ -53,7 +52,6 @@ public partial class RecursiveMarkdownRenderer
 
 	private Ansi? ParseSpanTagToAnsi(string tag)
 	{
-		// Extract style attribute: <span style="color: red"> or <span style="background-color: blue">
 		var styleMatch = StyleAttributeRegex.Match(tag);
 		if (!styleMatch.Success)
 			return null;
@@ -80,7 +78,6 @@ public partial class RecursiveMarkdownRenderer
 
 	private Ansi? ParseColorTagToAnsi(string tag)
 	{
-		// Extract color value: <color red> or <color #FF0000>
 		var match = ColorTagRegex.Match(tag);
 		if (match.Success)
 		{
@@ -95,10 +92,9 @@ public partial class RecursiveMarkdownRenderer
 	{
 		colorStr = colorStr.Trim();
 
-		// Hex color: #RRGGBB or #RGB
 		if (colorStr.StartsWith("#"))
 		{
-			if (colorStr.Length == 7) // #RRGGBB
+			if (colorStr.Length == 7)
 			{
 				if (byte.TryParse(colorStr.AsSpan(1, 2), System.Globalization.NumberStyles.HexNumber, null, out var r) &&
 						byte.TryParse(colorStr.AsSpan(3, 2), System.Globalization.NumberStyles.HexNumber, null, out var g) &&

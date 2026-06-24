@@ -30,7 +30,6 @@
         return;
     }
 
-    @* ── Page header ── *@
     <div class="acct-header">
         <div class="acct-kicker">Account</div>
         <div class="acct-title">@AccountAuth.Username</div>
@@ -44,11 +43,9 @@
         </MudAlert>
     }
 
-    @* ── Profile section ── *@
     <div class="acct-card">
         <div class="acct-card-title">Profile</div>
 
-        @* Username *@
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
             @if (_editingUsername)
             {
@@ -67,7 +64,6 @@
             }
         </div>
 
-        @* Password *@
         <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:4px;">
             @if (_editingPassword)
             {
@@ -101,7 +97,6 @@
         }
     </div>
 
-    @* ── Characters section ── *@
     <div class="acct-card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
             <div class="acct-card-title" style="margin-bottom:0;">Characters</div>
@@ -146,7 +141,6 @@
             </MudTable>
         }
 
-        @* Create new character *@
         @if (_showCreateChar)
         {
             <div class="acct-divider"></div>
@@ -174,7 +168,6 @@
         }
     </div>
 
-    @* ── Logout ── *@
     <button class="acct-btn acct-btn-danger" @onclick="LogoutAsync">
         Log out of account
     </button>

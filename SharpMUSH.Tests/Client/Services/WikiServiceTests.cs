@@ -20,8 +20,6 @@ namespace SharpMUSH.Tests.Client.Services;
 /// </summary>
 public class WikiServiceTests
 {
-	// ── Helpers ────────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Returns a canned HTTP response and records the request for later inspection.
 	/// </summary>
@@ -86,8 +84,6 @@ public class WikiServiceTests
 		capturing = handler;
 		return BuildService(handler, out _);
 	}
-
-	// ── UpdatePageAsync ────────────────────────────────────────────────────
 
 	[Test]
 	public async Task UpdatePageAsync_200_ReturnsSuccessWithCorrectSlug()
@@ -196,8 +192,6 @@ public class WikiServiceTests
 		await Assert.That(contentType).IsEqualTo("application/json");
 	}
 
-	// ── GetWikiArticle ─────────────────────────────────────────────────────
-
 	[Test]
 	public async Task GetWikiArticle_200_ReturnsMappedArticle()
 	{
@@ -231,8 +225,6 @@ public class WikiServiceTests
 		await Assert.That(handler.CapturedRequest.RequestUri!.ToString())
 			.Contains("api/wiki/ns/main/general/home");
 	}
-
-	// ── CreatePageAsync ────────────────────────────────────────────────────
 
 	[Test]
 	public async Task CreatePageAsync_201_ReturnsMappedArticle()
