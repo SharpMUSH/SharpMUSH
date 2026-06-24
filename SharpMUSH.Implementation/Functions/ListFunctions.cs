@@ -136,7 +136,7 @@ public partial class Functions
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
-			enactor,
+			executor,
 			executor,
 			dbref,
 			LocateFlags.All);
@@ -227,7 +227,7 @@ public partial class Functions
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
-			enactor,
+			executor,
 			executor,
 			dbref,
 			LocateFlags.All);
@@ -392,7 +392,7 @@ public partial class Functions
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
-			enactor,
+			executor,
 			executor,
 			dbref,
 			LocateFlags.All);
@@ -746,7 +746,7 @@ public partial class Functions
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
-			enactor,
+			executor,
 			executor,
 			dbref,
 			LocateFlags.All);
@@ -909,7 +909,7 @@ public partial class Functions
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
-			enactor,
+			executor,
 			executor,
 			dbref,
 			LocateFlags.All);
@@ -1014,7 +1014,7 @@ public partial class Functions
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
-				enactor,
+				executor,
 				executor,
 				dbref,
 				LocateFlags.All);
@@ -1381,7 +1381,7 @@ public partial class Functions
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
-			enactor,
+			executor,
 			executor,
 			dbref,
 			LocateFlags.All);
@@ -1501,7 +1501,7 @@ public partial class Functions
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
-				enactor,
+				executor,
 				executor,
 				dbref,
 				LocateFlags.All);
@@ -1642,7 +1642,7 @@ public partial class Functions
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
-			enactor,
+			executor,
 			executor,
 			dbref,
 			LocateFlags.All);

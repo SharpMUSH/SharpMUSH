@@ -34,11 +34,11 @@ namespace SharpMUSH.Tests.Integration;
 /// Beats:
 ///   1. Setup       — boot, confirm plugin+package, create 3 players in a room.
 ///   2. Create+start— owner runs +scene/create then +scene/start (capture needs active).
-///   3. Join        — the others +scene/join and +scene/showas a persona; assert membership.
+///   3. Join        — the others +scene/join and +scene/as a persona; assert membership.
 ///   4. Capture     — each focused character pose/say/semiposes; assert in-order capture,
 ///                    correct author + showAs. A co-located but UNFOCUSED passer-by is NOT captured.
 ///   5. Edit/undo   — an author +scene/edit then +scene/undo; assert content versions.
-///   6. Recap/who   — +scene/recap transcript and +scene/who cast.
+///   6. Recap/who   — +scene/recall transcript and +scene/who cast.
 ///   7. Finish      — +scene/finish; assert status.
 /// </summary>
 [NotInParallel]
@@ -251,11 +251,10 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await EvalNum($"loc({bob})")).IsEqualTo(roomDbref);
 		await Assert.That(await EvalNum($"loc({carol})")).IsEqualTo(roomDbref);
 
-		// ── Beat 2: Create + start (run as the owner, Alice) ──────────────────────
-		// +scene/create binds the scene to %L (the room), makes Alice owner+focused, and sets
-		// status to the package default ("new"). Capture requires the scene be ACTIVE in the
-		// room (GetActiveSceneInRoomAsync filters Status=='active'), so +scene/start is needed
-		// before any pose is captured.
+		// ── Beat 2: Create (run as the owner, Alice) ──────────────────────────────
+		// +scene/create binds the scene to %L (the room), makes Alice owner+focused, and sets status
+		// to the package default — `active` (1.1.0) — so the scene is immediately the room's active
+		// scene and capture fires without a separate +scene/start.
 		var sceneTitle = $"The Tavern Meeting {Tag}";
 		var createMsgs = await RunAndCollectAs(11L, $"+scene/create {sceneTitle}");
 		Log($"[CREATE] {string.Join(" | ", createMsgs)}");
@@ -278,24 +277,24 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"scenefocus({alice})")).IsEqualTo(sceneId)
 			.Because("+scene/create focuses the creator on the new scene");
 
-		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("new")
-			.Because("the package default status is 'new'");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active")
+			.Because("the package default status is 'active' (created scenes are immediately live)");
 		await Assert.That(await EvalNum($"scene({sceneId}, owner)")).IsEqualTo(Num(alice))
 			.Because("the creator becomes the owner");
 		await Assert.That(await EvalNum($"scene({sceneId}, room)")).IsEqualTo(roomDbref)
 			.Because("+scene/create binds the scene to the creator's room (%L)");
 
-		// Before start, the room has no ACTIVE scene → scenewhere is NOT FOUND.
-		await Assert.That(await Eval($"scenewhere({roomDbref})")).StartsWith("#-1")
-			.Because("a 'new' scene is not yet the room's active scene");
+		// Created active → it is immediately the room's active scene (the capture pre-req).
+		await Assert.That(await Eval($"scenewhere({roomDbref})")).IsEqualTo(sceneId)
+			.Because("a created-active scene is the room's active scene with no separate start");
 
-		// Start it (owner-only). Now scenewhere resolves to our scene.
+		// +scene/start is idempotent on an already-active scene (it also resumes a paused one).
 		var startMsgs = await RunAndCollectAs(11L, "+scene/start");
 		Log($"[START] {string.Join(" | ", startMsgs)}");
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active")
-			.Because("+scene/start drives status to active");
+			.Because("+scene/start keeps the scene active");
 		await Assert.That(await Eval($"scenewhere({roomDbref})")).IsEqualTo(sceneId)
-			.Because("an active scene is now the room's active scene (capture pre-req)");
+			.Because("the scene remains the room's active scene (capture pre-req)");
 
 		// ── Beat 3: Join + showas (Bob and Carol) ─────────────────────────────────
 		var bobJoin = await RunAndCollectAs(12L, $"+scene/join {sceneId}");
@@ -307,10 +306,10 @@ public class SceneRoleplayIntegrationTests
 			.Because("+scene/join focuses the joiner on the scene");
 		await Assert.That(await Eval($"scenefocus({carol})")).IsEqualTo(sceneId);
 
-		// Personas via +scene/showas (recorded on the member edge and stamped onto future poses).
-		await RunAndCollectAs(11L, "+scene/showas Alice the Innkeeper");
-		await RunAndCollectAs(12L, "+scene/showas Bob the Bard");
-		await RunAndCollectAs(13L, "+scene/showas Carol the Cloaked");
+		// Personas via +scene/as (recorded on the member edge and stamped onto future poses).
+		await RunAndCollectAs(11L, "+scene/as Alice the Innkeeper");
+		await RunAndCollectAs(12L, "+scene/as Bob the Bard");
+		await RunAndCollectAs(13L, "+scene/as Carol the Cloaked");
 
 		await Assert.That(await Eval($"scenemember({sceneId}, {alice}, showas)")).IsEqualTo("Alice the Innkeeper");
 		await Assert.That(await Eval($"scenemember({sceneId}, {bob}, showas)")).IsEqualTo("Bob the Bard");
@@ -402,8 +401,8 @@ public class SceneRoleplayIntegrationTests
 			.Because("+scene/undo should restore the pre-edit content");
 
 		// ── Beat 6: Recap + who ───────────────────────────────────────────────────
-		// +scene/recap <count> prints the last <count> pose contents (Alice is focused).
-		var recapMsgs = await RunAndCollectAs(11L, "+scene/recap 10");
+		// +scene/recall <count> prints the last <count> pose contents (Alice is focused).
+		var recapMsgs = await RunAndCollectAs(11L, "+scene/recall 10");
 		var recap = string.Join("\n", recapMsgs);
 		Log($"[RECAP]\n{recap}");
 		await Assert.That(recap).Contains("lights a candle on the bar.")
@@ -453,7 +452,7 @@ public class SceneRoleplayIntegrationTests
 	}
 
 	/// <summary>
-	/// +scene/pot — the query-on-run Pose Tracker. Two members; one poses, one never does. The tracker
+	/// +pot — the query-on-run Pose Tracker. Two members; one poses, one never does. The tracker
 	/// must render (header + aligned rows), list both, and put the never-posed member (oldest) up next.
 	/// </summary>
 	[Test]
@@ -481,10 +480,10 @@ public class SceneRoleplayIntegrationTests
 		await RunAndCollectAs(21L, "pose stretches and yawns by the fire.");   // captured for Pat
 		// Quinn deliberately never poses → oldest (never) → up next.
 
-		var potMsgs = await RunAndCollectAs(21L, "+scene/pot");
+		var potMsgs = await RunAndCollectAs(21L, "+pot");
 		var lines = potMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()).ToList();
 		var table = string.Join("\n", lines);
-		Console.WriteLine("=== +scene/pot ===\n" + table);
+		Console.WriteLine("=== +pot ===\n" + table);
 
 		await Assert.That(table).Contains("Pose Tracker").Because("the +pot header should render");
 		await Assert.That(table).Contains($"Pat_{Tag}").Because("Pat (a poser) should be listed");
@@ -495,8 +494,8 @@ public class SceneRoleplayIntegrationTests
 			.Because("the never-posed member (Quinn) is oldest, so the up-next marker is on Quinn's row");
 	}
 
-	/// <summary>+scene/list — the align()'d scene browser. A created+started scene must appear in the
-	/// 'recent' table with its title and status.</summary>
+	/// <summary>+scene (bare) — the align()'d scene browser (active list). A created+started scene must
+	/// appear in the active table with its title and status.</summary>
 	[Test]
 	public async Task SceneList_RendersBrowserTableWithCreatedScene()
 	{
@@ -514,17 +513,17 @@ public class SceneRoleplayIntegrationTests
 		await RunAndCollectAs(31L, $"+scene/create ListTest_{Tag}");
 		await RunAndCollectAs(31L, "+scene/start");
 
-		var listMsgs = await RunAndCollectAs(31L, "+scene/list");
+		var listMsgs = await RunAndCollectAs(31L, "+scene");
 		var table = string.Join("\n", listMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
-		Console.WriteLine("=== +scene/list ===\n" + table);
+		Console.WriteLine("=== +scene ===\n" + table);
 
 		await Assert.That(table).Contains("Scenes").Because("the list header should render");
 		await Assert.That(table).Contains($"ListTest_{Tag}").Because("the created scene's title should appear in the table");
 		await Assert.That(table).Contains("active").Because("the status column should show the started scene as active");
 	}
 
-	/// <summary>+scene/schedule/add — a roomless future scene. Sets scheduledfor (millis), lands in the
-	/// 'scheduled' filter, and renders in the +scene/schedule table.</summary>
+	/// <summary>+scene/schedule — a roomless future scene. Sets scheduledfor (millis), lands in the
+	/// 'scheduled' filter, and renders in the +scene/upcoming table.</summary>
 	[Test]
 	public async Task SceneSchedule_AddsRoomlessFutureScene()
 	{
@@ -539,7 +538,7 @@ public class SceneRoleplayIntegrationTests
 		await God1($"@tel {sam}=#0");
 
 		// Schedule with raw epoch-seconds (convtime rejects it → SCHED_WHEN falls back to the number * 1000).
-		var schedMsgs = await RunAndCollectAs(41L, $"+scene/schedule/add Gala_{Tag}=2524608000");
+		var schedMsgs = await RunAndCollectAs(41L, $"+scene/schedule Gala_{Tag}=2524608000");
 		var schedLine = schedMsgs.First(m => m.Contains("Scheduled scene"));
 		var schedId = schedLine.Replace("Scheduled scene ", "").Split(' ')[0];
 		await Assert.That(schedId).IsNotEmpty().Because("the schedule confirmation should carry the new scene id");
@@ -550,15 +549,15 @@ public class SceneRoleplayIntegrationTests
 
 		// scenelist() is exercised through the verb (command-parser context) rather than Eval (the
 		// function-parser doesn't see the just-written scene in a collection scan; a key lookup does).
-		var listMsgs = await RunAndCollectAs(41L, "+scene/schedule");
+		var listMsgs = await RunAndCollectAs(41L, "+scene/upcoming");
 		var table = string.Join("\n", listMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
-		Console.WriteLine("=== +scene/schedule ===\n" + table);
+		Console.WriteLine("=== +scene/upcoming ===\n" + table);
 		await Assert.That(table).Contains("Scheduled Scenes").Because("the schedule header should render");
 		await Assert.That(table).Contains($"Gala_{Tag}").Because("the scheduled scene's title should appear");
 	}
 
 	/// <summary>+scene/deactivate keeps membership but clears focus; +scene/activate restores it.
-	/// +scene/summary sets the summary; +scene/info renders the card with it.</summary>
+	/// +scene/pitch sets the pitch; +scene &lt;id&gt; renders the card with it.</summary>
 	[Test]
 	public async Task SceneParticipation_DeactivateActivate_SummaryAndInfoCard()
 	{
@@ -578,8 +577,8 @@ public class SceneRoleplayIntegrationTests
 		var sceneId = await Eval($"get({tom}/MY.SID)");
 		await Assert.That(sceneId).IsNotEmpty();
 
-		// Summary (set while focused, owner-gated).
-		await RunAndCollectAs(51L, "+scene/summary A tense standoff at dawn.");
+		// Pitch (set while focused, owner-gated).
+		await RunAndCollectAs(51L, "+scene/pitch A tense standoff at dawn.");
 		await Assert.That(await Eval($"scene({sceneId}, summary)")).IsEqualTo("A tense standoff at dawn.");
 
 		// Deactivate: focus cleared, membership retained.
@@ -594,12 +593,12 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"scenefocus({tom})")).IsEqualTo(sceneId)
 			.Because("activate re-focuses the player");
 
-		// Info card renders the fields.
-		var infoMsgs = await RunAndCollectAs(51L, "+scene/info");
+		// Details card renders the fields (Volund-style `+scene <id>`).
+		var infoMsgs = await RunAndCollectAs(51L, $"+scene {sceneId}");
 		var card = string.Join("\n", infoMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
-		Console.WriteLine("=== +scene/info ===\n" + card);
-		await Assert.That(card).Contains("Summary").Because("the info card should have a Summary row");
-		await Assert.That(card).Contains("A tense standoff").Because("the summary text should render in the card");
+		Console.WriteLine("=== +scene <id> ===\n" + card);
+		await Assert.That(card).Contains("Pitch").Because("the details card should have a Pitch row");
+		await Assert.That(card).Contains("A tense standoff").Because("the pitch text should render in the card");
 		await Assert.That(card).Contains("active").Because("the Status row should show the scene is active");
 	}
 

@@ -907,8 +907,8 @@ public partial class Commands
 
 				var locate = await LocateService!.LocateAndNotifyIfInvalid(
 					parser,
-					enactor,
-					enactor,
+					executor,
+					executor,
 					objectName,
 					LocateFlags.All);
 
@@ -925,8 +925,8 @@ public partial class Commands
 			{
 				var locate = await LocateService!.LocateAndNotifyIfInvalid(
 					parser,
-					enactor,
-					enactor,
+					executor,
+					executor,
 					argText,
 					LocateFlags.All);
 
@@ -978,7 +978,7 @@ public partial class Commands
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
-		var description = (await AttributeService!.GetAttributeAsync(enactor, viewingKnown, "DESCRIBE",
+		var description = (await AttributeService!.GetAttributeAsync(executor, viewingKnown, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
 				attr => MModule.getLength(attr.Last().Value) == 0
@@ -1094,7 +1094,7 @@ public partial class Commands
 				var patternMode = IAttributeService.AttributePatternMode.Wildcard;
 
 				atrs = await AttributeService.GetAttributePatternAsync(
-					enactor,
+					executor,
 					viewingKnown,
 					attributePattern,
 					checkParents,
@@ -1102,7 +1102,7 @@ public partial class Commands
 			}
 			else
 			{
-				atrs = await AttributeService.GetVisibleAttributesAsync(enactor, viewingKnown);
+				atrs = await AttributeService.GetVisibleAttributesAsync(executor, viewingKnown);
 			}
 
 			if (atrs.IsAttribute)
@@ -1121,7 +1121,7 @@ public partial class Commands
 					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
 					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
 
-					if (!await PermissionService.CanViewAttribute(enactor, viewingKnown, attr))
+					if (!await PermissionService.CanViewAttribute(executor, viewingKnown, attr))
 					// || showPublicOnly && !showAll && !attr.IsVisual())
 					{
 						continue;
@@ -3123,7 +3123,7 @@ public partial class Commands
 		foreach (var target in nameListTargets)
 		{
 			var targetString = target.Match(dbref => dbref.ToString(), str => str);
-			var maybeLocateTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor,
+			var maybeLocateTarget = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 				targetString,
 				LocateFlags.All);
 
@@ -3497,7 +3497,7 @@ public partial class Commands
 
 		// Locate object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor, executor, dbref, LocateFlags.All);
+			executor, executor, dbref, LocateFlags.All);
 
 		if (locate.IsError)
 		{
@@ -4716,9 +4716,15 @@ public partial class Commands
 		var objectName = parts[0];
 		var attributeName = parts[1];
 
-		// Locate the target object
+		// Locate the target object AS THE EXECUTOR (looker=executor, perm=executor). The object running
+		// @trigger names and must control the target (the Controls(executor, target) check below), and
+		// PennMUSH matches command arguments relative to the executor (oracle-confirmed). Passing the
+		// enactor as the permission object made the looker-gate (LocateService: !Nearby && !See_All &&
+		// !Controls) fail when a mortal, REMOTE enactor triggered a $-command that does @trigger %!/attr.
+		// This only fixes the LOOKUP; @trigger's distinct semantics are unchanged — the attribute is still
+		// QUEUED to run AS the target object (the new executor), with the triggerer as the enactor (below).
 		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
-			parser, executor, enactor, objectName, LocateFlags.All);
+			parser, executor, executor, objectName, LocateFlags.All);
 
 		if (maybeObject.IsError)
 		{
@@ -5023,8 +5029,8 @@ public partial class Commands
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
-				enactor,
-				enactor,
+				executor,
+				executor,
 				objectName,
 				LocateFlags.All);
 
@@ -5041,8 +5047,8 @@ public partial class Commands
 		{
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
-				enactor,
-				enactor,
+				executor,
+				executor,
 				objectSpec,
 				LocateFlags.All);
 
@@ -5147,7 +5153,7 @@ public partial class Commands
 			if (!string.IsNullOrEmpty(attributePattern))
 			{
 				atrs = await AttributeService!.GetAttributePatternAsync(
-					enactor,
+					executor,
 					targetKnown,
 					attributePattern,
 					false, // don't check parents for decompile
@@ -5155,7 +5161,7 @@ public partial class Commands
 			}
 			else
 			{
-				atrs = await AttributeService!.GetVisibleAttributesAsync(enactor, targetKnown);
+				atrs = await AttributeService!.GetVisibleAttributesAsync(executor, targetKnown);
 			}
 
 			if (atrs.IsAttribute)
@@ -5918,7 +5924,7 @@ public partial class Commands
 
 		// Locate the object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor,
+			executor,
 			executor,
 			dbref,
 			LocateFlags.All);
@@ -6110,9 +6116,15 @@ public partial class Commands
 		var objectName = parts[0];
 		var attributeName = parts[1];
 
-		// Locate the target object
+		// Locate the target object AS THE EXECUTOR (looker=executor, perm=executor). @include runs as the
+		// executor and reads the attribute with the executor's permission (below), so the target lookup
+		// must use the executor too — NOT the enactor. Passing the enactor as the permission object made
+		// the looker-gate (LocateService: !Nearby && !See_All && !Controls) fire whenever a mortal, REMOTE
+		// enactor triggered a $-command on another object (e.g. a WIZARD helper in the master room) that
+		// @include'd %!/me — the target locate failed with "NOT PERMITTED TO EVALUATE ON LOOKER" even
+		// though the executor owns the object. (Mirror of the same fix already applied to the read below.)
 		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
-			parser, executor, enactor, objectName, LocateFlags.All);
+			parser, executor, executor, objectName, LocateFlags.All);
 
 		if (maybeObject.IsError)
 		{

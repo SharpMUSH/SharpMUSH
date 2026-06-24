@@ -102,7 +102,7 @@ public partial class Functions
 			var (dbref, attrName) = objAttr.AsT0;
 			dbref ??= executor.Object().DBRef.ToString();
 
-			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, enactor, executor, dbref, LocateFlags.All);
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All);
 			if (!locate.IsValid())
 			{
 				return CallState.Empty;
@@ -534,7 +534,7 @@ public partial class Functions
 		{
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
-				enactor,
+				executor,
 				executor,
 				playerStr,
 				LocateFlags.All);

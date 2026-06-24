@@ -276,6 +276,9 @@ public sealed class ArangoSceneStorage(IArangoStorageAccessor _accessor) : IScen
 			case "active":
 				aql = "FOR s IN @@c FILTER s.Status == 'active' SORT s.LastActivityAt DESC LIMIT @count RETURN s";
 				break;
+			case "finished":
+				aql = "FOR s IN @@c FILTER s.Status == 'finished' SORT s.LastActivityAt DESC LIMIT @count RETURN s";
+				break;
 			case "scheduled":
 			{
 				var filters = "FILTER s.ScheduledFor != null";

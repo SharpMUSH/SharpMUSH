@@ -56,7 +56,7 @@ public partial class Functions
 		var (dbref, attribute) = details;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, enactor, executor, dbref, LocateFlags.All, async realLocated =>
+			parser, executor, executor, dbref, LocateFlags.All, async realLocated =>
 			{
 				var contents = args.TryGetValue("1", out var tmpContents)
 					? tmpContents.Message!
@@ -97,7 +97,7 @@ public partial class Functions
 		var (dbref, attribute) = details;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, enactor, executor, dbref, LocateFlags.All, async realLocated =>
+			parser, executor, executor, dbref, LocateFlags.All, async realLocated =>
 			{
 				var contents = args.TryGetValue("1", out var tmpContents)
 					? tmpContents.Message!
@@ -1307,7 +1307,11 @@ public partial class Functions
 
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!;
-		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		// set() runs as the executor: it locates the target as the executor and sets the attribute/flag
+		// with the executor's permission (it must control the target). This was KnownEnactorObject — a
+		// misnamed/misassigned local that made set() locate AND permission-check as the enactor, so a
+		// forced/remote mortal enactor's set() ran with the wrong principal. PennMUSH set() uses the executor.
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		return (arg0, arg1) switch
 		{
@@ -1638,7 +1642,10 @@ public partial class Functions
 		var target = parser.CurrentState.Arguments.Count >= 3
 			? parser.CurrentState.Arguments["2"].Message!.ToPlainText()
 			: null;
-		var caller = await parser.CurrentState.KnownCallerObject(Mediator!);
+		// valid() runs as the executor: its optional <target> is located, and the default validation
+		// context, relative to the executor (PennMUSH matches function arguments to the executor) — not
+		// the caller one frame up the u() chain.
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var validationType = category switch
 		{
@@ -1673,9 +1680,9 @@ public partial class Functions
 				=> new CallState(await ValidateService!.Valid(validationType, str, new None()) ? "1" : "0"),
 
 			IValidateService.ValidationType.PlayerName when target is null
-				=> new CallState(await ValidateService!.Valid(validationType, str, caller) ? "1" : "0"),
+				=> new CallState(await ValidateService!.Valid(validationType, str, executor) ? "1" : "0"),
 			IValidateService.ValidationType.PlayerName
-				when await LocateService!.LocateAndNotifyIfInvalid(parser, caller, caller, target, LocateFlags.All)
+				when await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, target, LocateFlags.All)
 					is { IsAnyObject: true, AsAnyObject: var obj }
 				=> new CallState(await ValidateService!.Valid(validationType, str, obj) ? "1" : "0"),
 			IValidateService.ValidationType.PlayerName => ErrorMessages.Returns.CantSeeThat,
@@ -1684,9 +1691,9 @@ public partial class Functions
 				=> new CallState(await ValidateService!.Valid(validationType, str, await GetChannel(target ?? string.Empty)) ? "1" : "0"),
 
 			IValidateService.ValidationType.LockType when target is null
-				=> new CallState(await ValidateService!.Valid(validationType, str, caller) ? "1" : "0"),
+				=> new CallState(await ValidateService!.Valid(validationType, str, executor) ? "1" : "0"),
 			IValidateService.ValidationType.LockType
-				when await LocateService!.LocateAndNotifyIfInvalid(parser, caller, caller, target, LocateFlags.All)
+				when await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, target, LocateFlags.All)
 					is { IsAnyObject: true, AsAnyObject: var obj }
 				=> new CallState(await ValidateService!.Valid(validationType, str, obj) ? "1" : "0"),
 			IValidateService.ValidationType.LockType => ErrorMessages.Returns.CantSeeThat,

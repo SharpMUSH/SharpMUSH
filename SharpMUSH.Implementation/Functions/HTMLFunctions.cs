@@ -77,7 +77,7 @@ public partial class Functions
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
-			enactor,
+			executor,
 			executor,
 			playerStr,
 			PlayersPreference | AbsoluteMatch);
@@ -159,7 +159,7 @@ public partial class Functions
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
-			enactor,
+			executor,
 			executor,
 			playerStr,
 			PlayersPreference | AbsoluteMatch);

@@ -25,7 +25,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 		// The bootstrap installed the package at startup.
 		var package = await Registry.GetInstalledPackageAsync("common-functions");
 		await Assert.That(package.IsT0).IsTrue();
-		await Assert.That(package.AsT0.Version).IsEqualTo("1.0.0");
+		await Assert.That(package.AsT0.Version).IsEqualTo("1.1.0");
 
 		// Create mode: the package owns exactly one object (the functions thing).
 		var objects = await Registry.GetPackageObjectsAsync("common-functions");
@@ -57,5 +57,41 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 		await Assert.That(result!.Length).IsEqualTo(78);
 		await Assert.That(result).Contains("Title");
 		await Assert.That(result).Contains("=");
+	}
+
+	/// <summary>type=left brackets the title and pushes it to the left edge after a short border.</summary>
+	[Test]
+	public async Task Header_LeftType_BracketsAndLeftJustifies()
+	{
+		var result = (await factory.FunctionParser.FunctionParse(MModule.single("header(Test,40,left)")))?.Message!.ToString();
+
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.Length).IsEqualTo(40);
+		await Assert.That(result).Contains("[ Test ]");
+		await Assert.That(result).StartsWith("==");
+	}
+
+	/// <summary>type=right brackets the title and pushes it to the right edge before a short border.</summary>
+	[Test]
+	public async Task Footer_RightType_BracketsAndRightJustifies()
+	{
+		var result = (await factory.FunctionParser.FunctionParse(MModule.single("footer(Test,40,right)")))?.Message!.ToString();
+
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.Length).IsEqualTo(40);
+		await Assert.That(result).Contains("[ Test ]");
+		await Assert.That(result).EndsWith("==");
+	}
+
+	/// <summary>A title far wider than the rule is clipped to fit — never overflowing onto a new line.</summary>
+	[Test]
+	public async Task Header_LongTitle_IsClippedToWidth()
+	{
+		var huge = new string('x', 200);
+		var result = (await factory.FunctionParser.FunctionParse(MModule.single($"header({huge},40,left)")))?.Message!.ToString();
+
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.Length).IsEqualTo(40)
+			.Because("a long title must be truncated to fit, never wrapping past the width");
 	}
 }

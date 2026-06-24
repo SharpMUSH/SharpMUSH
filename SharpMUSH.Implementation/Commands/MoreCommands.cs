@@ -693,8 +693,8 @@ public partial class Commands
 
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
-				enactor,
-				enactor,
+				executor,
+				executor,
 				argText,
 				LocateFlags.All);
 

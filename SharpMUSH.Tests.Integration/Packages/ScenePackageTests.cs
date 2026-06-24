@@ -30,7 +30,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 		// The bootstrap installed the package at startup.
 		var package = await Registry.GetInstalledPackageAsync("scene");
 		await Assert.That(package.IsT0).IsTrue();
-		await Assert.That(package.AsT0.Version).IsEqualTo("1.0.0");
+		await Assert.That(package.AsT0.Version).IsEqualTo("1.5.0");
 
 		// Create mode: the package owns exactly one object (the Scene Logger thing).
 		var objects = await Registry.GetPackageObjectsAsync("scene");

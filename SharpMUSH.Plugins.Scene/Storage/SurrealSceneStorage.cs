@@ -283,6 +283,9 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			case "active":
 				query = $"SELECT {SceneFields} FROM scene WHERE status = 'active' ORDER BY lastActivityAt DESC LIMIT $count";
 				break;
+			case "finished":
+				query = $"SELECT {SceneFields} FROM scene WHERE status = 'finished' ORDER BY lastActivityAt DESC LIMIT $count";
+				break;
 			case "recent":
 			default:
 				query = $"SELECT {SceneFields} FROM scene ORDER BY lastActivityAt DESC LIMIT $count";
