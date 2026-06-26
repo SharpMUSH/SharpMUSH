@@ -83,26 +83,53 @@ public class WebSocketServer
 		{
 			var buffer = new byte[1024 * 4];
 			var receiveBuffer = new ArraySegment<byte>(buffer);
+			using var messageBuffer = new MemoryStream();
 
 			while (!ct.IsCancellationRequested && webSocket.State == WebSocketState.Open)
 			{
-				var result = await webSocket.ReceiveAsync(receiveBuffer, ct);
+				// A single text message can arrive fragmented across several ReceiveAsync calls.
+				// Accumulate until EndOfMessage and decode the complete UTF-8 payload once, so a
+				// fragmented control frame (e.g. NAWS JSON) is never partially parsed and then
+				// misrouted as a command, and multi-byte characters are never split mid-frame.
+				WebSocketReceiveResult result;
+				messageBuffer.SetLength(0);
+
+				do
+				{
+					result = await webSocket.ReceiveAsync(receiveBuffer, ct);
+
+					if (result.MessageType == WebSocketMessageType.Close)
+					{
+						await webSocket.CloseAsync(
+							WebSocketCloseStatus.NormalClosure,
+							"Connection closed",
+							ct);
+						break;
+					}
+
+					messageBuffer.Write(buffer, 0, result.Count);
+				}
+				while (!result.EndOfMessage);
 
 				if (result.MessageType == WebSocketMessageType.Close)
-				{
-					await webSocket.CloseAsync(
-						WebSocketCloseStatus.NormalClosure,
-						"Connection closed",
-						ct);
 					break;
-				}
 
-				if (result.MessageType == WebSocketMessageType.Text)
+				if (result.MessageType == WebSocketMessageType.Text && messageBuffer.Length > 0)
 				{
-					var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+					var message = Encoding.UTF8.GetString(messageBuffer.ToArray());
 
-					await _publishEndpoint.Publish(
-						new WebSocketInputMessage(nextPort, message), ct);
+					// Browser-sent JSON control frames are handled here and NOT forwarded as commands.
+					// NAWS reuses the same NAWSUpdateMessage path telnet uses (Height=rows, Width=cols).
+					if (WebSocketControlFrame.TryParseNaws(message, out var cols, out var rows))
+					{
+						await _publishEndpoint.Publish(
+							new NAWSUpdateMessage(nextPort, rows, cols), ct);
+					}
+					else
+					{
+						await _publishEndpoint.Publish(
+							new WebSocketInputMessage(nextPort, message), ct);
+					}
 				}
 			}
 		}

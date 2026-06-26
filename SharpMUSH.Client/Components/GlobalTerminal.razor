@@ -14,6 +14,7 @@
 <div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:13.5px;">
 
     <div id="@_outputId"
+         class="sharp-terminal-output"
          style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
         @foreach (var line in _displayLines)
         {
@@ -229,6 +230,11 @@
 
     private DotNetObjectReference<GlobalTerminal>? _selfRef;
     private IJSObjectReference? _cmdLinkHandle;
+    private DotNetObjectReference<GlobalTerminal>? _metricsRef;
+    private IJSObjectReference? _metricsHandle;
+    private int _lastCols;
+    private int _lastRows;
+    private bool _hasMeasured;
 
     protected override async Task OnInitializedAsync()
     {
@@ -316,6 +322,14 @@
                     "SharpMUSH.Terminal.attachCommandLinks", _outputId, _selfRef);
             }
             catch (JSException) { /* ignore if JS not ready */ }
+
+            _metricsRef = DotNetObjectReference.Create(this);
+            try
+            {
+                _metricsHandle = await JsRuntime.InvokeAsync<IJSObjectReference>(
+                    "SharpMUSH.Metrics.observe", _outputId, _metricsRef);
+            }
+            catch (JSException) { /* ignore if JS not ready */ }
         }
 
         if (_autoScroll)
@@ -332,6 +346,28 @@
         if (string.IsNullOrWhiteSpace(command) || !_connected) return;
         await Terminal.SendAsync(command);
     }
+
+    /// <summary>
+    /// Invoked from JS (via SharpMUSH.Metrics.observe) when the terminal output
+    /// element is resized. Sends a NAWS control frame so the server knows the
+    /// client's character-grid dimensions.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnTerminalResize(int cols, int rows)
+    {
+        // Remember the grid even before the socket connects (the first measurement fires on
+        // fonts-ready, which can precede connect). The remembered size is then sent once the
+        // connection is established (see OnConnectionChanged), so a connection that never resizes
+        // still reports its NAWS.
+        _lastCols = cols;
+        _lastRows = rows;
+        _hasMeasured = true;
+        if (Terminal.IsConnected)
+            await SendNawsAsync(cols, rows);
+    }
+
+    private Task SendNawsAsync(int cols, int rows) =>
+        Terminal.SendControlAsync($"{{\"type\":\"naws\",\"cols\":{cols},\"rows\":{rows}}}");
 
     private async Task AccountLoginAsync()
     {
@@ -492,6 +528,9 @@
     {
         _connected = connected;
         if (!connected) SetPlayerName(null);
+        // Report the grid for this connection now that it's up — covers the case where the initial
+        // measurement happened before connect and the user never resizes afterward.
+        else if (_hasMeasured) _ = SendNawsAsync(_lastCols, _lastRows);
         InvokeAsync(StateHasChanged);
     }
 
@@ -527,5 +566,14 @@
             catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
         }
         _selfRef?.Dispose();
+
+        if (_metricsHandle is not null)
+        {
+            try { await _metricsHandle.InvokeVoidAsync("dispose"); }
+            catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
+            try { await _metricsHandle.DisposeAsync(); }
+            catch (Exception ex) when (ex is JSException or ObjectDisposedException) { /* ignore during teardown */ }
+        }
+        _metricsRef?.Dispose();
     }
 }

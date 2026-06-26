@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public static class JsonHelpers
 {
-	private static readonly JsonSerializerOptions RelaxedJsonOptions = new()
+	internal static readonly JsonSerializerOptions RelaxedJsonOptions = new()
 	{
 		Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
 	};

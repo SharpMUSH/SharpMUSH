@@ -222,6 +222,15 @@ public partial class Commands
 			connectionCount.ToString(),
 			parser.CurrentState.Handle!.Value.ToString());
 
+		// Refresh everyone in the room the player just appeared in.
+		var connectRoomContainer = await foundDB.Location.WithCancellation(CancellationToken.None);
+		await EventService.TriggerEventAsync(
+			parser,
+			SharpEvents.RoomContents,
+			playerDbRef,
+			connectRoomContainer.Object().DBRef.ToString(),
+			"connect");
+
 		await SyncPlayerOutputPreferences(parser.CurrentState.Handle!.Value, foundDB.Object);
 
 		// Show post-login messages and auto-look (PennMUSH-compatible login experience)
@@ -262,6 +271,15 @@ public partial class Commands
 			$"#{foundPlayer.Object.Key}",
 			connectionCount.ToString(),
 			handle.ToString());
+
+		// Refresh everyone in the room the player just appeared in.
+		var tokenConnectRoomContainer = await foundPlayer.Location.WithCancellation(CancellationToken.None);
+		await EventService.TriggerEventAsync(
+			parser,
+			SharpEvents.RoomContents,
+			playerDbRef.Value,
+			tokenConnectRoomContainer.Object().DBRef.ToString(),
+			"connect");
 
 		await SyncPlayerOutputPreferences(handle, foundPlayer.Object);
 		await ShowPostLoginMessages(parser, handle, new AnySharpObject(foundPlayer));
@@ -408,6 +426,15 @@ public partial class Commands
 			$"#{selectedGuest.Object.Key}",
 			connectionCount.ToString(),
 			handle.ToString());
+
+		// Refresh everyone in the room the player just appeared in.
+		var guestConnectRoomContainer = await selectedGuest.Location.WithCancellation(CancellationToken.None);
+		await EventService.TriggerEventAsync(
+			parser,
+			SharpEvents.RoomContents,
+			playerDbRef,
+			guestConnectRoomContainer.Object().DBRef.ToString(),
+			"connect");
 
 		await SyncPlayerOutputPreferences(handle, selectedGuest.Object);
 

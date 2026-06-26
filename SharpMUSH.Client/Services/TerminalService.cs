@@ -18,6 +18,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 	private readonly ILogger<TerminalService> _logger = logger;
 	private readonly List<TerminalLine> _lines = new(MaxLines);
+	private readonly OobChannelStore _oob = new();
 	private long? _myPort;
 	private string? _serverUri;
 
@@ -40,6 +41,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	public long? MyPort => _myPort;
 
 	/// <inheritdoc/>
+	public IOobChannelStore OobChannels => _oob;
+
+	/// <inheritdoc/>
 	public string? ServerUri => _serverUri;
 
 	public IReadOnlyList<TerminalLine> Lines
@@ -50,6 +54,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	public async Task ConnectAsync(string serverUri)
 	{
 		_serverUri = serverUri;
+		// New connection/login: drop any OOB payloads from a previous session so the UI never
+		// renders stale cross-session data until fresh OOB arrives.
+		_oob.Clear();
 		wsService.MessageReceived -= HandleMessage;
 		wsService.ConnectionStateChanged -= HandleStateChange;
 		wsService.MessageReceived += HandleMessage;
@@ -174,6 +181,12 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	}
 
 	/// <inheritdoc/>
+	public async Task SendControlAsync(string controlJson)
+	{
+		await wsService.SendAsync(controlJson);
+	}
+
+	/// <inheritdoc/>
 	public async Task InitializePortAsync()
 	{
 		try
@@ -256,7 +269,8 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 				return;
 
 			case TerminalFrameKind.Oob:
-				// Structured out-of-band data: not for direct display (future hook).
+				// Structured out-of-band data: route to the channel store; never displayed.
+				_oob.Set(frame.Package, frame.DataJson);
 				return;
 
 			default:

@@ -1,7 +1,10 @@
 using Mediator;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers;
@@ -23,6 +26,7 @@ public class ConnectionStateEventHandler(
 	IEventService eventService,
 	IMUSHCodeParser parser,
 	INotifyService notifyService,
+	IMediator mediator,
 	IOptionsWrapper<SharpMUSHOptions> configuration)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
@@ -90,6 +94,21 @@ public class ConnectionStateEventHandler(
 					connectedSecs,
 					idleSecs,
 					$"{bytesRecv}/{bytesSent}/{commandCount}");
+
+				// Refresh the room's remaining occupants after the player disconnects.
+				// Resolve the player's location while the player object is still in the DB.
+				var playerNode = await mediator.Send(new GetObjectNodeQuery(notification.PlayerRef.Value));
+				if (!playerNode.IsNone && playerNode.IsPlayer)
+				{
+					var roomContainer = await playerNode.AsPlayer.Location.WithCancellation(CancellationToken.None);
+					var roomDbref = roomContainer.Object().DBRef.ToString();
+					await eventService.TriggerEventAsync(
+						parser,
+						SharpEvents.RoomContents,
+						notification.PlayerRef.Value,
+						roomDbref,
+						"disconnect");
+				}
 			}
 		}
 

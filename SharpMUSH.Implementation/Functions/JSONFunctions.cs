@@ -39,6 +39,48 @@ public partial class Functions
 			: new CallState(MModule.single(ErrorMessages.Returns.InvalidType));
 
 
+	/// <summary>
+	/// <c>json_array(&lt;list&gt;[, &lt;delimiter&gt;])</c> — assembles a MUSH list (split on the
+	/// delimiter argument, default a space) of already-formed JSON values into a JSON array.
+	/// Each element must itself be valid JSON (typically produced with <c>json(type, value)</c>);
+	/// elements are NOT quoted or re-escaped. Unlike <c>json(array, …)</c>, which takes each
+	/// element as a separate argument, this takes a single list, so it composes with
+	/// <c>iter()</c>: <c>json_array(iter(0 1 2 3, json(number, %i0)))</c> → <c>[0,1,2,3]</c>.
+	/// The argumentless form <c>json_array()</c> yields an empty array <c>[]</c>. Returns a BAD
+	/// ARGUMENT error if any element is not valid JSON.
+	/// </summary>
+	[SharpFunction(Name = "json_array", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
+	public static async ValueTask<CallState> json_array(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// No list argument at all → an empty array (the explicit argumentless form).
+		if (!parser.CurrentState.Arguments.TryGetValue("0", out var listArg))
+		{
+			return new CallState("[]");
+		}
+
+		var delimiter = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, " ");
+		var list = MModule.splitList(delimiter, (await listArg.ParsedMessage())!);
+
+		try
+		{
+			// Clone each element out of its JsonDocument so the documents (and their pooled
+			// buffers) are disposed before we serialize, rather than lingering until finalization.
+			var elements = new List<JsonElement>(list.Length);
+			foreach (var element in list)
+			{
+				using var document = JsonDocument.Parse(MModule.plainText(element));
+				elements.Add(document.RootElement.Clone());
+			}
+
+			return new CallState(JsonSerializer.Serialize(elements, JsonHelpers.RelaxedJsonOptions));
+		}
+		catch (JsonException)
+		{
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json_array"));
+		}
+	}
+
+
 	[SharpFunction(Name = "isjson", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public static ValueTask<CallState> IsJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -556,17 +598,24 @@ public partial class Functions
 
 			await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
 			{
-				if (connection.Metadata.GetValueOrDefault("GMCP", "0") != "1")
+				// WebSocket (portal) connections receive a structured OOB envelope the browser
+				// routes by package; GMCP-negotiated telnet connections receive a GMCP package.
+				// Any other connection (plain telnet without GMCP) is skipped.
+				if (connection.ConnectionType == "websocket")
 				{
-					continue;
+					await MessageBus!.Publish(new WebSocketOutputMessage(
+						connection.Handle,
+						WebSocketOobEnvelope.Build(package, message)));
+					sentCount++;
 				}
-
-				await MessageBus!.Publish(new GMCPOutputMessage(
-					connection.Handle,
-					package,
-					message));
-
-				sentCount++;
+				else if (connection.Metadata.GetValueOrDefault("GMCP", "0") == "1")
+				{
+					await MessageBus!.Publish(new GMCPOutputMessage(
+						connection.Handle,
+						package,
+						message));
+					sentCount++;
+				}
 			}
 		}
 

@@ -52,6 +52,29 @@ public class JsonFunctionUnitTests
 	}
 
 	[Test]
+	// json_array(<list>[,delimiter]) — assembles a list of already-formed JSON values into a
+	// JSON array. Each element must itself be valid JSON; elements are NOT quoted or re-escaped.
+	// The list is normally produced by iter(), which evaluates json(type,value) for each element.
+	[Arguments("json_array(1 2 3)", "[1,2,3]")]
+	// Canonical usage: iter() produces the per-element json(type,value); json_array() wraps it.
+	[Arguments("json_array(iter(0 1 2 3,json(number,%i0)))", "[0,1,2,3]")]
+	[Arguments("""json_array(iter(a b c,json(string,%i0)))""", """["a","b","c"]""")]
+	// Custom delimiter.
+	[Arguments("json_array(1|2|3,|)", "[1,2,3]")]
+	[Arguments("json_array()", "[]")]
+	// The whole point: embed a list-built array directly inside json(object,...).
+	[Arguments("""json(object,who,json_array(iter(One Two Three,json(string,%i0))))""", """{"who":["One","Two","Three"]}""")]
+	// Object elements pass through unquoted.
+	[Arguments("""json_array(iter(a b,json(object,k,json(string,%i0))))""", """[{"k":"a"},{"k":"b"}]""")]
+	// Elements that are not valid JSON are an error, like json(array,...).
+	[Arguments("json_array(a b c)", "#-1 BAD ARGUMENT FORMAT TO json_array")]
+	public async Task JsonArray(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
 	[Arguments("json(string,ansi(hr,foo))")]
 	[Arguments("json(object,key,json(string,ansi(hr,foo)))")]
 	public async Task JsonNotABadArgument(string function)

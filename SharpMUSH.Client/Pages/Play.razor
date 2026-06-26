@@ -1,6 +1,7 @@
 @page "/play"
 @attribute [Authorize]
 @using SharpMUSH.Client.Components
+@using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject IPlayTerminalService PlayTerminal
@@ -28,12 +29,56 @@
     <div class="play-side">
         <div class="play-card">
             <div class="play-fieldlabel">Here</div>
-            <div class="play-empty">— Connect to see who's here —</div>
+            @if (_here.Count == 0)
+            {
+                <div class="play-empty">— Connect to see who's here —</div>
+            }
+            else
+            {
+                @foreach (var e in _here)
+                {
+                    @if (!string.IsNullOrWhiteSpace(e.Cmd))
+                    {
+                        <div class="play-entry play-clickable"
+                             @onclick="@(() => RunEntry(e))">
+                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="play-entry">
+                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                        </div>
+                    }
+                }
+            }
         </div>
 
         <div class="play-card">
             <div class="play-fieldlabel">Exits</div>
-            <div class="play-empty">— No exits available —</div>
+            @if (_exits.Count == 0)
+            {
+                <div class="play-empty">— No exits available —</div>
+            }
+            else
+            {
+                @foreach (var e in _exits)
+                {
+                    @if (!string.IsNullOrWhiteSpace(e.Cmd))
+                    {
+                        <div class="play-entry play-clickable"
+                             @onclick="@(() => RunEntry(e))">
+                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="play-entry">
+                            @(string.IsNullOrWhiteSpace(e.Name) ? "(untitled)" : e.Name)
+                        </div>
+                    }
+                }
+            }
         </div>
 
         <div class="play-card">
@@ -148,6 +193,23 @@
         color: var(--text-faint);
     }
 
+    .play-entry {
+        font-family: var(--font-ui);
+        font-size: 13px;
+        color: var(--text-dim);
+        padding: 4px 6px;
+        border-radius: var(--radius);
+    }
+
+    .play-clickable {
+        cursor: pointer;
+    }
+
+    .play-clickable:hover {
+        background: var(--surface-2);
+        color: var(--text);
+    }
+
     .play-actions {
         display: flex;
         flex-direction: column;
@@ -184,11 +246,46 @@
 </style>
 
 @code {
+    private IReadOnlyList<OobEntry> _here = [];
+    private IReadOnlyList<OobEntry> _exits = [];
+
     protected override void OnInitialized()
-        => PlayTerminal.ConnectionStateChanged += OnConnectionChanged;
+    {
+        PlayTerminal.ConnectionStateChanged += OnConnectionChanged;
+        PlayTerminal.OobChannels.ChannelUpdated += OnChannelUpdated;
+        RefreshFromStore("room.contents");
+        RefreshFromStore("room.exits");
+    }
 
     private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
 
+    private void OnChannelUpdated(string package) => RefreshFromStore(package);
+
+    private void RefreshFromStore(string package)
+    {
+        switch (package)
+        {
+            case "room.contents":
+                _here = OobEntryParser.Parse(PlayTerminal.OobChannels.Get(package), "who");
+                break;
+            case "room.exits":
+                _exits = OobEntryParser.Parse(PlayTerminal.OobChannels.Get(package), "exits");
+                break;
+            default:
+                return;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RunEntry(OobEntry entry)
+    {
+        if (!string.IsNullOrWhiteSpace(entry.Cmd))
+            await PlayTerminal.SendAsync(entry.Cmd);
+    }
+
     public void Dispose()
-        => PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
+    {
+        PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
+        PlayTerminal.OobChannels.ChannelUpdated -= OnChannelUpdated;
+    }
 }
