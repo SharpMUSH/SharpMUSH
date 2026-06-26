@@ -16,7 +16,6 @@ public static class LoggingConfiguration
 	/// </summary>
 	public static bool IsRunningInKubernetes()
 	{
-		// Check for Kubernetes-specific environment variables
 		var kubernetesServiceHost = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");
 		var dotnetRunningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER");
 
@@ -32,7 +31,6 @@ public static class LoggingConfiguration
 	/// </summary>
 	public static bool IsRunningInGKE()
 	{
-		// First check environment variables for GCP project
 		var projectId = GetGoogleCloudProjectId();
 		if (!string.IsNullOrEmpty(projectId) && IsRunningInKubernetes())
 		{
@@ -56,7 +54,6 @@ public static class LoggingConfiguration
 			}
 			catch
 			{
-				// Ignore - not in GKE
 			}
 		}
 
@@ -88,7 +85,6 @@ public static class LoggingConfiguration
 			.MinimumLevel.Is(minimumLevel)
 			.Enrich.FromLogContext();
 
-		// Apply any namespace-specific overrides
 		if (overrides != null)
 		{
 			foreach (var (ns, level) in overrides)
@@ -97,7 +93,6 @@ public static class LoggingConfiguration
 			}
 		}
 
-		// Use JSON formatting in Kubernetes, plain text elsewhere
 		if (IsRunningInKubernetes())
 		{
 			// CompactJsonFormatter is the standard for Kubernetes log aggregation
@@ -105,7 +100,6 @@ public static class LoggingConfiguration
 		}
 		else
 		{
-			// Plain text for local development and testing
 			config.WriteTo.Console();
 		}
 

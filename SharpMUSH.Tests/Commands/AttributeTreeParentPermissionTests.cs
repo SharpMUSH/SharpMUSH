@@ -47,7 +47,6 @@ public class AttributeTreeParentPermissionTests
 		await Cmd($"&PP{uid}`SUB {parent}=inherited_sub");
 		await Cmd($"@parent {child}={parent}");
 
-		// Child should inherit attribute from parent
 		var r1 = await Eval(1, $"get({child}/PP{uid})");
 		await Assert.That(r1).IsEqualTo("inherited_val");
 
@@ -171,11 +170,9 @@ public class AttributeTreeParentPermissionTests
 		await Cmd($"@set {parent}/PPD{uid}=mortal_dark");
 		await Cmd($"@parent {child}={parent}");
 
-		// God can see it
 		var r1 = await Eval(1, $"get({child}/PPD{uid})");
 		await Assert.That(r1).IsEqualTo("secret");
 
-		// Mortal cannot
 		var r2 = await Eval(mortal.Handle, $"get({child}/PPD{uid})");
 		await Assert.That(r2).DoesNotContain("secret")
 			.Because("mortal should not see mortal_dark inherited attribute");
@@ -197,7 +194,6 @@ public class AttributeTreeParentPermissionTests
 		await Cmd($"@set {parent}/PPW{uid}=wizard");
 		await Cmd($"@parent {mortalDbRef}={parent}");
 
-		// Mortal CAN set local override — wiz on parent's copy doesn't block local creation
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PPW{uid} me=myval"));
 		var getResult = await Eval(mortal.Handle, $"get(me/PPW{uid})");
@@ -223,7 +219,6 @@ public class AttributeTreeParentPermissionTests
 		await Assert.That(r1).IsEqualTo("0")
 			.Because("hasattr should NOT find inherited attribute (only local)");
 
-		// hasattrp DOES check parents
 		var r2 = await Eval(1, $"hasattrp({child},PH{uid})");
 		await Assert.That(r2).IsEqualTo("1")
 			.Because("hasattrp should find inherited attribute");

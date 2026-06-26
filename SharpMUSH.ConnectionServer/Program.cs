@@ -26,7 +26,6 @@ public class Program
 
 		try
 		{
-			// Enable WebSocket support with keep-alive to detect dropped connections
 			var webSocketOptions = new WebSocketOptions
 			{
 				KeepAliveInterval = TimeSpan.FromSeconds(30)
@@ -35,13 +34,11 @@ public class Program
 			var webSocketHandler = app.Services.GetRequiredService<WebSocketServer>();
 			app.Map("/ws", webSocketHandler.HandleWebSocketAsync);
 
-			// Map API endpoints
 			app.MapControllers();
 			app.MapGet("/", () => "SharpMUSH Connection Server");
 			app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
 			app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow }));
 
-			// Prometheus metrics endpoint (for scraping, not for logging to console)
 			app.MapPrometheusScrapingEndpoint();
 
 			var logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -71,7 +68,6 @@ public class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
-		// Configure ConnectionServer options
 		var connectionServerOptions = new ConnectionServerOptions();
 		builder.Configuration.GetSection("ConnectionServer").Bind(connectionServerOptions);
 		builder.Services.AddSingleton(connectionServerOptions);
@@ -80,7 +76,6 @@ public class Program
 		{
 			logging.ClearProviders();
 
-			// Read Serilog configuration from appsettings.json (MinimumLevel, Overrides, WriteTo, Enrich)
 			var loggerConfig = new LoggerConfiguration()
 				.ReadFrom.Configuration(builder.Configuration);
 
@@ -97,22 +92,16 @@ public class Program
 			return NatsConnectionStateStore.CreateAsync(url, logger).GetAwaiter().GetResult();
 		});
 
-		// Add ConnectionService
 		builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
 
-		// Add Output Transformation Service
 		builder.Services.AddSingleton<IOutputTransformService, OutputTransformService>();
 
-		// Add Markup Output Renderer (serialized MString -> wire form per connection)
 		builder.Services.AddSingleton<IMarkupOutputRenderer, MarkupOutputRenderer>();
 
-		// Add DescriptorGeneratorService
 		builder.Services.AddSingleton<IDescriptorGeneratorService, DescriptorGeneratorService>();
 
-		// Add TelemetryService
 		builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
 
-		// Add WebSocketServer
 		builder.Services.AddSingleton<WebSocketServer>();
 
 		// Register the telnet interpreter factory (server mode) with the DI system.
@@ -120,10 +109,8 @@ public class Program
 		// callbacks are configured in TelnetServer.OnConnectedAsync via CreateBuilder().
 		builder.Services.AddTelnetServer();
 
-		// Add health monitoring service
 		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMonitoringService>();
 
-		// Add startup cleanup service to purge stale connection state
 		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.ConnectionCleanupService>();
 
 		// Configure NATS messaging (URL resolved lazily for the same reason as above)
@@ -148,26 +135,20 @@ public class Program
 				x.AddConsumer<MainProcessShutdownConsumer>();
 			});
 
-		// Configure Kestrel to listen for Telnet and WebSocket connections
 		builder.WebHost.ConfigureKestrel((context, options) =>
 		{
 			options.AddServerHeader = true;
 
-			// Listen for Telnet connections on configured port
 			options.ListenAnyIP(connectionServerOptions.TelnetPort, listenOptions =>
 			{
 				listenOptions.UseConnectionHandler<TelnetServer>();
 			});
 
-			// HTTP API port (for WebSocket and HTTP endpoints)
 			options.ListenAnyIP(connectionServerOptions.HttpPort);
 		});
 
-		// Add API controllers
 		builder.Services.AddControllers();
 
-		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection
-		// Prometheus exporter is compatible with both GKE Managed Prometheus and standard Prometheus
 		var isGKE = LoggingConfiguration.IsRunningInGKE();
 		var isK8s = LoggingConfiguration.IsRunningInKubernetes();
 
@@ -179,13 +160,11 @@ public class Program
 					serviceVersion: "1.0.0",
 					serviceInstanceId: Environment.MachineName);
 
-				// Add container resource detection for Kubernetes environments
 				if (isK8s)
 				{
 					resource.AddDetector(new ContainerResourceDetector());
 				}
 
-				// Add GKE-specific attributes for Google Cloud Monitoring compatibility
 				if (isGKE)
 				{
 					var projectId = LoggingConfiguration.GetGoogleCloudProjectId();

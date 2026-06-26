@@ -79,8 +79,6 @@ public sealed class SamplePlugin
 		return Task.Delay(Timeout.Infinite, ct);
 	}
 
-	// ----- Phase 2b: ICommandInterceptor (the C# analog of softcode @hook on a command) -----
-
 	/// <summary>Observe every command; veto the designated <see cref="VetoCommand"/> (returns false).</summary>
 	public ValueTask<bool> BeforeAsync(IMUSHCodeParser parser, string command)
 	{
@@ -96,8 +94,6 @@ public sealed class SamplePlugin
 		Interlocked.Increment(ref AfterCommandCount);
 		return ValueTask.CompletedTask;
 	}
-
-	// ----- Phase 2b: IObjectLifecycleHook -----
 
 	/// <summary>Record that an object was created (fires alongside the softcode OBJECT`CREATE event).</summary>
 	public ValueTask OnCreatedAsync(DBRef obj, DBRef creator)

@@ -12,10 +12,8 @@ public class SqlProviderSelectionTests
 	{
 		var options = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 
-		// Start with default config from test file
 		var baseConfig = ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst");
 
-		// Override with test SQL settings
 		var config = baseConfig with
 		{
 			Net = baseConfig.Net with

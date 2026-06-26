@@ -17,7 +17,7 @@ public sealed class InMemoryOttStore : IOttStore
 
 	public Task<string> CreateTokenAsync(DBRef playerRef, TimeSpan ttl, CancellationToken ct = default)
 	{
-		var token = Guid.NewGuid().ToString("N"); // 32 hex chars, no dashes
+		var token = Guid.NewGuid().ToString("N");
 		var entry = new Entry(playerRef, DateTimeOffset.UtcNow.Add(ttl));
 		_tokens[token] = entry;
 		return Task.FromResult(token);

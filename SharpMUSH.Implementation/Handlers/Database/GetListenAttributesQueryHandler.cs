@@ -35,10 +35,9 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 			if (!match.Success)
 				continue;
 
-			// Extract listen pattern
 			var pattern = match.Groups[1].Value;
 			var isRegex = attr.Flags.Any(flag => flag.Name.Equals("REGEXP", StringComparison.OrdinalIgnoreCase));
-			var behavior = ListenBehavior.AHear; // Default
+			var behavior = ListenBehavior.AHear;
 			if (attr.Flags.Any(flag => flag.Name == "AAHEAR"))
 				behavior = ListenBehavior.AAHear;
 			else if (attr.Flags.Any(flag => flag.Name == "AMHEAR"))
@@ -46,7 +45,6 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 
 			try
 			{
-				// Pre-compile the regex pattern
 				var regex = isRegex
 					? new Regex(pattern, RegexOptions.Compiled)
 					: new Regex(MModule.getWildcardMatchAsRegex(MModule.single(pattern)), RegexOptions.Compiled);

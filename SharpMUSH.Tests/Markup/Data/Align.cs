@@ -14,7 +14,6 @@ public static class Align
 {
 	public static IEnumerable<Func<AlignTestData>> AlignData()
 	{
-		// Basic two-column alignment
 		yield return () => new(
 			"30 30",
 			[A.single("a"), A.single("b")],
@@ -24,7 +23,6 @@ public static class Align
 			A.single("a                              b                             ")
 		);
 
-		// Multiple rows with word wrapping
 		yield return () => new(
 			"5 5",
 			[A.single("a1\na2"), A.single("b1")],
@@ -34,7 +32,6 @@ public static class Align
 			A.single("a1    b1   \na2         ")
 		);
 
-		// Uneven rows
 		yield return () => new(
 			"5 5",
 			[A.single("a1\na2"), A.single("b1\nb2\nb3")],
@@ -44,7 +41,6 @@ public static class Align
 			A.single("a1    b1   \na2    b2   \n      b3   ")
 		);
 
-		// Repeat option with word wrapping
 		yield return () => new(
 			"1. 5 1.",
 			[A.single("|"), A.single("this is a test"), A.single("|")],
@@ -54,7 +50,6 @@ public static class Align
 			A.single("| this  |\n| is a  |\n| test  |")
 		);
 
-		// Right justification
 		yield return () => new(
 			"5 >5",
 			[A.single("a1\na2"), A.single("b1\nb2\nb3")],
@@ -64,7 +59,6 @@ public static class Align
 			A.single("a1       b1\na2       b2\n         b3")
 		);
 
-		// Left column with repeat, right column with multiple rows
 		yield return () => new(
 			"5. >5",
 			[A.single("a1"), A.single("b1\nb2\nb3")],
@@ -74,7 +68,6 @@ public static class Align
 			A.single("a1       b1\na1       b2\na1       b3")
 		);
 
-		// Right column with repeat
 		yield return () => new(
 			"5 >5.",
 			[A.single("a1\na2\na3"), A.single("b1")],
@@ -84,7 +77,6 @@ public static class Align
 			A.single("a1       b1\na2       b1\na3       b1")
 		);
 
-		// Right alignment, two columns
 		yield return () => new(
 			">30 30",
 			[A.single("a"), A.single("b")],
@@ -94,7 +86,6 @@ public static class Align
 			A.single("                             a b                             ")
 		);
 
-		// Both columns right-aligned
 		yield return () => new(
 			">30 >30",
 			[A.single("a"), A.single("b")],
@@ -124,7 +115,6 @@ public static class Align
 			A.single("xxxxxxxxxWalkerxStaff & Developer")
 		);
 
-		// Custom filler character
 		yield return () => new(
 			"10 10",
 			[A.single("abc"), A.single("def")],
@@ -134,7 +124,6 @@ public static class Align
 			A.single("abc------- def-------")
 		);
 
-		// Custom column separator
 		yield return () => new(
 			"5 5",
 			[A.single("aa"), A.single("bb")],
@@ -144,7 +133,6 @@ public static class Align
 			A.single("aa   |bb   ")
 		);
 
-		// Custom row separator
 		yield return () => new(
 			"5 5",
 			[A.single("a1\na2"), A.single("b1\nb2")],
@@ -220,7 +208,6 @@ public static class Align
 		);
 		*/
 
-		// Multiple options combined (Repeat + NoFill)
 		yield return () => new(
 			"1.$ 8 1.$",
 			[A.single("+"), A.single("Header"), A.single("+")],
@@ -230,7 +217,6 @@ public static class Align
 			A.single("+Header--+")
 		);
 
-		// Word wrapping with proper space handling
 		yield return () => new(
 			"10",
 			[A.single("This is a test of word wrapping")],
@@ -240,7 +226,6 @@ public static class Align
 			A.single("This is a \ntest of   \nword      \nwrapping  ")
 		);
 
-		// Edge case: Empty column
 		yield return () => new(
 			"10 10",
 			[A.single(""), A.single("text")],
@@ -250,7 +235,6 @@ public static class Align
 			A.single("           text      ")
 		);
 
-		// Edge case: Single character columns
 		yield return () => new(
 			"1 1 1",
 			[A.single("a"), A.single("b"), A.single("c")],
@@ -260,7 +244,6 @@ public static class Align
 			A.single("a b c")
 		);
 
-		// Complex: Multiple repeating columns with wrapping center column
 		yield return () => new(
 			"2. 12 2.",
 			[A.single(">>"), A.single("The quick brown fox jumps"), A.single("<<")],
@@ -270,7 +253,6 @@ public static class Align
 			A.single(">> The quick    <<\n>> brown fox    <<\n>> jumps        <<")
 		);
 
-		// Three columns with different justifications
 		yield return () => new(
 			"<10 -10 >10",
 			[A.single("left"), A.single("center"), A.single("right")],

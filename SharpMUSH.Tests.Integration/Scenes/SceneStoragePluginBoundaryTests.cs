@@ -39,7 +39,6 @@ public class SceneStoragePluginBoundaryTests
 	[Test]
 	public async Task CoreProvider_DoesNotImplementISceneService()
 	{
-		// The active provider (Arango/Memgraph/Surreal) no longer carries scene storage.
 		await Assert.That(SceneServiceType.IsAssignableFrom(Database.GetType())).IsFalse();
 	}
 
@@ -47,7 +46,6 @@ public class SceneStoragePluginBoundaryTests
 	public async Task SceneService_IsProvidedByThePluginNotTheCoreProvider()
 	{
 		var scenes = SceneService;
-		// The storage came from the Scene plugin assembly, distinct from the core provider's assembly.
 		await Assert.That(scenes.GetType().Assembly).IsNotEqualTo(Database.GetType().Assembly);
 		await Assert.That(scenes.GetType().Assembly.GetName().Name).IsEqualTo("SharpMUSH.Plugins.Scene");
 	}
@@ -82,7 +80,6 @@ public class SceneStoragePluginBoundaryTests
 			.Invoke(scenes, [createdId])!;
 		await getTask;
 		var got = getTask.GetType().GetProperty("Result")!.GetValue(getTask)!;
-		// OneOf<Scene, NotFound>: IsT0 must be true (found).
 		var isT0 = (bool)got.GetType().GetProperty("IsT0")!.GetValue(got)!;
 		await Assert.That(isT0).IsTrue();
 	}

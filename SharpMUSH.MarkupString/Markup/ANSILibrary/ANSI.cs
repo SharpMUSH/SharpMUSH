@@ -1,4 +1,3 @@
-// Converted from ANSI.fs — ANSILibrary namespace
 // Original: https://github.com/WilliamRagstad/ANSIConsole/blob/main/ANSIConsole/
 using System;
 using System.Collections.Frozen;
@@ -8,8 +7,6 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace ANSILibrary;
-
-// ── Discriminated union: AnsiColor ────────────────────────────────────────────
 
 /// <summary>Represents a terminal color: 24-bit RGB, a raw ANSI byte sequence, or absent.</summary>
 [JsonDerivedType(typeof(AnsiColor.RGB), "RGB")]
@@ -34,8 +31,6 @@ public abstract record AnsiColor
         public NoAnsi() { }
     }
 }
-
-// ── ANSI SGR helpers ──────────────────────────────────────────────────────────
 
 /// <summary>Low-level ANSI SGR code builders and color-code constants.</summary>
 public static class ANSI
@@ -132,8 +127,6 @@ public static class ANSI
     }
 }
 
-// ── ANSIFormatting flags enum ─────────────────────────────────────────────────
-
 [Flags]
 public enum ANSIFormatting
 {
@@ -151,8 +144,6 @@ public enum ANSIFormatting
     Clear        = 1024,
     TrueClear    = 2048,
 }
-
-// ── ANSIString ────────────────────────────────────────────────────────────────
 
 /// <summary>
 /// Immutable value-object wrapping a text string with optional ANSI styling.
@@ -226,12 +217,10 @@ public sealed class ANSIString
 
     public override string ToString()
     {
-        // Apply case transforms first
         string result = _text;
         if (_formatting.HasFlag(ANSIFormatting.UpperCase)) result = result.ToUpper();
         if (_formatting.HasFlag(ANSIFormatting.LowerCase)) result = result.ToLower();
 
-        // Apply SGR formatting flags
         if (_formatting.HasFlag(ANSIFormatting.Bold))          result = ANSI.Bold + result;
         if (_formatting.HasFlag(ANSIFormatting.Faint))         result = ANSI.Faint + result;
         if (_formatting.HasFlag(ANSIFormatting.Italic))        result = ANSI.Italic + result;
@@ -241,7 +230,6 @@ public sealed class ANSIString
         if (_formatting.HasFlag(ANSIFormatting.Inverted))      result = ANSI.Inverted + result;
         if (_formatting.HasFlag(ANSIFormatting.StrikeThrough)) result = ANSI.StrikeThrough + result;
 
-        // Apply foreground color (with opacity interpolation if set)
         if (_opacity.HasValue && _colorForeground != null && _colorBackground != null)
         {
             if (_colorForeground is AnsiColor.RGB fg && _colorBackground is AnsiColor.RGB bg)
@@ -268,15 +256,12 @@ public sealed class ANSIString
             result = ANSI.Foreground(_colorForeground) + result;
         }
 
-        // Apply background color
         if (_colorBackground != null)
             result = ANSI.Background(_colorBackground) + result;
 
-        // Apply hyperlink
         if (_hyperlink != null)
             result = ANSI.Hyperlink(result, _hyperlink);
 
-        // Apply clear/trueclear
         if (_formatting.HasFlag(ANSIFormatting.TrueClear))
             result += ANSI.Clear;
 
@@ -286,8 +271,6 @@ public sealed class ANSIString
         return result;
     }
 }
-
-// ── StringExtensions ──────────────────────────────────────────────────────────
 
 public static class StringExtensions
 {
@@ -354,8 +337,6 @@ public static class StringExtensions
     public static ANSIString Link(this string text, string url) => text.ToANSI().SetHyperlink(url);
     public static ANSIString LinkANSI(this ANSIString text, string url) => text.SetHyperlink(url);
 }
-
-// ── Optimization ──────────────────────────────────────────────────────────────
 
 /// <summary>
 /// ANSI optimization functions for reducing redundant escape sequences.

@@ -221,7 +221,6 @@ public static class JsonHelpers
 				: element.GetRawText();
 		}
 
-		// Use Json.Path for proper JSONPath evaluation
 		try
 		{
 			var jsonPath = Json.Path.JsonPath.Parse(path);

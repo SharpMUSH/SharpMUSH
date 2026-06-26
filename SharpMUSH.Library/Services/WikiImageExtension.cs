@@ -121,8 +121,6 @@ internal sealed partial class WikiLinkInlineRenderer : HtmlObjectRenderer<LinkIn
 			: $"{ImageCssClass} {string.Join(' ', extra)}";
 	}
 
-	// ── Helpers ──────────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Renders a standard hyperlink anchor, matching the default Markdig output.
 	/// </summary>

@@ -22,14 +22,10 @@ public class CommunicationFunctionUnitTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		const string uniqueMessage = "Pemit_test_unique_message_for_verification";
 
-		// Execute the function with unique message
 		var result = (await Parser.FunctionParse(MModule.single($"pemit(#1,{uniqueMessage})")))?.Message!;
 
-		// Verify return value is empty (side effect function)
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 
-		// Verify NotifyService.Notify was called (message now passed through function)
-		// We check that Notify was called at least once with any AnySharpObject
 		await NotifyService
 			.Received(1)
 			.Notify(
@@ -42,10 +38,8 @@ public class CommunicationFunctionUnitTests
 	{
 		const string uniqueMessage = "PemitPort_test_unique_message_for_verification";
 
-		// Execute the function with unique message for port-based messaging
 		var result = (await Parser.FunctionParse(MModule.single($"pemit(1234,{uniqueMessage})")))?.Message!;
 
-		// Verify return value is empty (side effect function)
 		// Note: Port 1234 may not have a valid connection in the test environment,
 		// but the function should still return successfully
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
@@ -96,14 +90,10 @@ public class CommunicationFunctionUnitTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		const string uniqueMessage = "Nspemit_test_unique_message_for_verification";
 
-		// Execute the function with unique message
 		var result = (await Parser.FunctionParse(MModule.single($"nspemit(#1,{uniqueMessage})")))?.Message!;
 
-		// Verify return value is empty (side effect function)
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 
-		// Verify NotifyService.Notify was called (message now passed through function)
-		// We check that Notify was called at least once with any AnySharpObject
 		await NotifyService
 			.Received(1)
 			.Notify(

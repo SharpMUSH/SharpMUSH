@@ -26,7 +26,6 @@ public class NatsConnectionStateTests
 	[Test]
 	public async Task CanStoreAndRetrieveConnectionState()
 	{
-		// Arrange
 		var store = await CreateStateStoreAsync();
 		var handle = 12345L;
 		var connectionData = new ConnectionStateData
@@ -45,11 +44,9 @@ public class NatsConnectionStateTests
 			}
 		};
 
-		// Act
 		await store.SetConnectionAsync(handle, connectionData);
 		var retrieved = await store.GetConnectionAsync(handle);
 
-		// Assert
 		await Assert.That(retrieved).IsNotNull();
 		await Assert.That(retrieved!.Handle).IsEqualTo(handle);
 		await Assert.That(retrieved.PlayerRef).IsEqualTo(new DBRef(100));
@@ -63,7 +60,6 @@ public class NatsConnectionStateTests
 	[Test]
 	public async Task CanRemoveConnectionState()
 	{
-		// Arrange
 		var store = await CreateStateStoreAsync();
 		var handle = 23456L;
 		var connectionData = new ConnectionStateData
@@ -81,18 +77,15 @@ public class NatsConnectionStateTests
 
 		await store.SetConnectionAsync(handle, connectionData);
 
-		// Act
 		await store.RemoveConnectionAsync(handle);
 		var retrieved = await store.GetConnectionAsync(handle);
 
-		// Assert
 		await Assert.That(retrieved).IsNull();
 	}
 
 	[Test]
 	public async Task CanGetAllConnectionHandles()
 	{
-		// Arrange
 		var store = await CreateStateStoreAsync();
 		var handle1 = 34567L;
 		var handle2 = 34568L;
@@ -124,11 +117,9 @@ public class NatsConnectionStateTests
 		await store.SetConnectionAsync(handle2, data2);
 		await store.SetConnectionAsync(handle3, data3);
 
-		// Act
 		var handles = await store.GetAllHandlesAsync();
 		var handlesList = handles.ToList();
 
-		// Assert
 		await Assert.That(handlesList).Contains(handle1);
 		await Assert.That(handlesList).Contains(handle2);
 		await Assert.That(handlesList).Contains(handle3);
@@ -137,7 +128,6 @@ public class NatsConnectionStateTests
 	[Test]
 	public async Task CanGetAllConnections()
 	{
-		// Arrange
 		var store = await CreateStateStoreAsync();
 		var handle1 = 45678L;
 		var handle2 = 45679L;
@@ -160,11 +150,9 @@ public class NatsConnectionStateTests
 		await store.SetConnectionAsync(handle1, data1);
 		await store.SetConnectionAsync(handle2, data2);
 
-		// Act
 		var connections = await store.GetAllConnectionsAsync();
 		var connectionsList = connections.ToList();
 
-		// Assert
 		await Assert.That(connectionsList.Count).IsGreaterThanOrEqualTo(2);
 
 		var conn1 = connectionsList.FirstOrDefault(c => c.Handle == handle1);
@@ -182,7 +170,6 @@ public class NatsConnectionStateTests
 	[Test]
 	public async Task CanUpdatePlayerBinding()
 	{
-		// Arrange
 		var store = await CreateStateStoreAsync();
 		var handle = 56789L;
 		var initialData = new ConnectionStateData
@@ -195,12 +182,10 @@ public class NatsConnectionStateTests
 
 		await store.SetConnectionAsync(handle, initialData);
 
-		// Act
 		var playerRef = new DBRef(400);
 		await store.SetPlayerBindingAsync(handle, playerRef);
 		var updated = await store.GetConnectionAsync(handle);
 
-		// Assert
 		await Assert.That(updated).IsNotNull();
 		await Assert.That(updated!.PlayerRef).IsEqualTo(playerRef);
 		await Assert.That(updated.State).IsEqualTo("LoggedIn");
@@ -209,7 +194,6 @@ public class NatsConnectionStateTests
 	[Test]
 	public async Task CanUpdateMetadata()
 	{
-		// Arrange
 		var store = await CreateStateStoreAsync();
 		var handle = 67890L;
 		var initialData = new ConnectionStateData
@@ -222,11 +206,9 @@ public class NatsConnectionStateTests
 
 		await store.SetConnectionAsync(handle, initialData);
 
-		// Act
 		await store.UpdateMetadataAsync(handle, "NewKey", "NewValue");
 		var updated = await store.GetConnectionAsync(handle);
 
-		// Assert
 		await Assert.That(updated).IsNotNull();
 		await Assert.That(updated!.Metadata["Initial"]).IsEqualTo("Value");
 		await Assert.That(updated.Metadata["NewKey"]).IsEqualTo("NewValue");
@@ -235,7 +217,6 @@ public class NatsConnectionStateTests
 	[Test]
 	public async Task MultipleProcessesCanShareState()
 	{
-		// Arrange — simulate two different processes sharing the same NATS bucket
 		var storeProcess1 = await CreateStateStoreAsync();
 		var storeProcess2 = await CreateStateStoreAsync();
 
@@ -248,13 +229,11 @@ public class NatsConnectionStateTests
 			Metadata = new Dictionary<string, string> { { "Process", "1" } }
 		};
 
-		// Act — process 1 writes, process 2 reads and modifies
 		await storeProcess1.SetConnectionAsync(handle, connectionData);
 		var retrieved = await storeProcess2.GetConnectionAsync(handle);
 		await storeProcess2.SetPlayerBindingAsync(handle, new DBRef(500));
 		var updated = await storeProcess1.GetConnectionAsync(handle);
 
-		// Assert
 		await Assert.That(retrieved).IsNotNull();
 		await Assert.That(retrieved!.Handle).IsEqualTo(handle);
 		await Assert.That(retrieved.IpAddress).IsEqualTo("192.168.100.1");
@@ -267,7 +246,6 @@ public class NatsConnectionStateTests
 	[Test]
 	public async Task StatePersistsAcrossReconnection()
 	{
-		// Arrange
 		var store1 = await CreateStateStoreAsync();
 		var handle = 89012L;
 		var connectionData = new ConnectionStateData
@@ -284,7 +262,6 @@ public class NatsConnectionStateTests
 		var store2 = await CreateStateStoreAsync();
 		var retrieved = await store2.GetConnectionAsync(handle);
 
-		// Assert
 		await Assert.That(retrieved).IsNotNull();
 		await Assert.That(retrieved!.Handle).IsEqualTo(handle);
 		await Assert.That(retrieved.PlayerRef).IsEqualTo(new DBRef(600));
@@ -295,20 +272,16 @@ public class NatsConnectionStateTests
 	[Test]
 	public async Task NonExistentConnectionReturnsNull()
 	{
-		// Arrange
 		var store = await CreateStateStoreAsync();
 
-		// Act
 		var result = await store.GetConnectionAsync(99999L);
 
-		// Assert
 		await Assert.That(result).IsNull();
 	}
 
 	[Test]
 	public async Task CanHandleConcurrentUpdates()
 	{
-		// Arrange
 		var store = await CreateStateStoreAsync();
 		var handle = 11111L;
 		var connectionData = new ConnectionStateData
@@ -321,13 +294,11 @@ public class NatsConnectionStateTests
 
 		await store.SetConnectionAsync(handle, connectionData);
 
-		// Act — 10 concurrent metadata updates.
 		// UpdateMetadataAsync uses a single-shot revision-checked update (no retry loop)
 		// because ConnectionService holds the authoritative in-memory state; NATS is a
 		// best-effort cross-process replica only. Under high concurrency, writes
 		// to the same handle can race and a later whole-state write can drop keys
 		// added by an earlier writer.
-		// This test verifies the operation completes without errors.
 		var tasks = new List<Task>();
 		for (var i = 0; i < 10; i++)
 		{
@@ -340,7 +311,6 @@ public class NatsConnectionStateTests
 
 		var result = await store.GetConnectionAsync(handle);
 
-		// Assert — the store is not corrupted and at least one Key{n}=Value{n} pair survived.
 		await Assert.That(result).IsNotNull();
 		var survivedKeys = Enumerable.Range(0, 10)
 			.Where(i => result!.Metadata.TryGetValue($"Key{i}", out var v) && v == $"Value{i}")

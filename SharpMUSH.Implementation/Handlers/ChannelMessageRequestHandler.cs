@@ -25,7 +25,6 @@ public class ChannelMessageRequestHandler(
 		var channelMembers = await notification.Channel.Members.Value.ToArrayAsync(cancellationToken);
 		var chanName = notification.Channel.Name;
 
-		// Determine chat type character
 		var chatType = notification.MessageType switch
 		{
 			INotifyService.NotificationType.Pose => ":",
@@ -41,7 +40,6 @@ public class ChannelMessageRequestHandler(
 			_ => throw new ArgumentOutOfRangeException()
 		};
 
-		// Initialize mogrified values with defaults
 		var mogrifiedChanName = MModule.multiple([MModule.single("<"), chanName, MModule.single(">")]);
 		var mogrifiedTitle = notification.Title;
 		var mogrifiedPlayerName = notification.PlayerName;
@@ -52,7 +50,6 @@ public class ChannelMessageRequestHandler(
 		MString? blockMessage = null;
 		MString? formatOverride = null;
 
-		// Process mogrification if mogrifier is set
 		if (!string.IsNullOrEmpty(notification.Channel.Mogrifier))
 		{
 			var mogrifierResult = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(notification.Channel.Mogrifier)), cancellationToken);
@@ -61,7 +58,6 @@ public class ChannelMessageRequestHandler(
 				var mogrifierObj = mogrifierResult.Known();
 				var source = notification.Source.IsNone ? mogrifierObj : notification.Source.Known();
 
-				// Check if speaker passes Use lock on mogrifier
 				var passesUseLock = permissionService.PassesLock(source, mogrifierObj, LockType.Use);
 
 				if (passesUseLock)
@@ -76,24 +72,20 @@ public class ChannelMessageRequestHandler(
 						["4"] = new CallState(notification.Title)
 					};
 
-					// Check MOGRIFY`BLOCK
 					var blockResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`BLOCK", controlArgs);
 					if (MModule.getLength(blockResult) > 0)
 					{
 						blockMessage = blockResult;
 					}
 
-					// Only proceed with mogrification if not blocked
 					if (blockMessage == null)
 					{
-						// Check MOGRIFY`OVERRIDE
 						var overrideResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`OVERRIDE", controlArgs);
 						if (MModule.getLength(overrideResult) > 0 && !IsEmpty(overrideResult.ToPlainText()))
 						{
 							skipChatFormat = true;
 						}
 
-						// Check MOGRIFY`NOBUFFER
 						var nobufferResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`NOBUFFER", controlArgs);
 						if (MModule.getLength(nobufferResult) > 0 && !IsEmpty(nobufferResult.ToPlainText()))
 						{
@@ -113,7 +105,6 @@ public class ChannelMessageRequestHandler(
 							["7"] = new CallState(MModule.single(string.Join(" ", notification.Options)))
 						};
 
-						// MOGRIFY`CHANNAME
 						partArgs["0"] = new CallState(mogrifiedChanName);
 						var chanNameResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`CHANNAME", partArgs);
 						if (MModule.getLength(chanNameResult) > 0)
@@ -121,7 +112,6 @@ public class ChannelMessageRequestHandler(
 							mogrifiedChanName = chanNameResult;
 						}
 
-						// MOGRIFY`TITLE
 						partArgs["0"] = new CallState(mogrifiedTitle);
 						var titleResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`TITLE", partArgs);
 						if (MModule.getLength(titleResult) > 0)
@@ -129,7 +119,6 @@ public class ChannelMessageRequestHandler(
 							mogrifiedTitle = titleResult;
 						}
 
-						// MOGRIFY`PLAYERNAME
 						partArgs["0"] = new CallState(mogrifiedPlayerName);
 						var playerNameResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`PLAYERNAME", partArgs);
 						if (MModule.getLength(playerNameResult) > 0)
@@ -137,7 +126,6 @@ public class ChannelMessageRequestHandler(
 							mogrifiedPlayerName = playerNameResult;
 						}
 
-						// MOGRIFY`SPEECHTEXT
 						partArgs["0"] = new CallState(mogrifiedSays);
 						var saysResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`SPEECHTEXT", partArgs);
 						if (MModule.getLength(saysResult) > 0)
@@ -145,7 +133,6 @@ public class ChannelMessageRequestHandler(
 							mogrifiedSays = saysResult;
 						}
 
-						// MOGRIFY`MESSAGE
 						partArgs["0"] = new CallState(mogrifiedMessage);
 						var messageResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`MESSAGE", partArgs);
 						if (MModule.getLength(messageResult) > 0)
@@ -177,14 +164,12 @@ public class ChannelMessageRequestHandler(
 			}
 		}
 
-		// If message was blocked, send block message to speaker only and return
 		if (blockMessage != null && !notification.Source.IsNone)
 		{
 			await notifyService.Notify(notification.Source.Known(), blockMessage, notification.Source.Known, notification.MessageType);
 			return;
 		}
 
-		// Build the final message
 		var message = formatOverride ?? BuildDefaultMessage(chatType, mogrifiedChanName, mogrifiedPlayerName, mogrifiedTitle, mogrifiedSays, mogrifiedMessage);
 
 		using (logger.BeginScope(new Dictionary<string, string>
@@ -207,7 +192,6 @@ public class ChannelMessageRequestHandler(
 					var finalMessage = message;
 					if (!skipChatFormat)
 					{
-						// Apply individual player's @chatformat
 						finalMessage = await ApplyPlayerChatFormat(
 							member,
 							notification.Source,
@@ -269,7 +253,6 @@ public class ChannelMessageRequestHandler(
 		MString says,
 		string[] options)
 	{
-		// Look for CHATFORMAT`<channel> attribute on the player
 		var chatFormatAttrName = $"CHATFORMAT`{channelName.ToPlainText().ToUpper()}";
 
 		// Evaluate the chatformat attribute with standard arguments:

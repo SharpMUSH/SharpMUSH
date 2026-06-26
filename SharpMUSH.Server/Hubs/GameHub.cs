@@ -5,10 +5,6 @@ using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Messaging.Abstractions;
 using System.Security.Claims;
 
-// Phase 9: the scene realtime leg (ReceiveSceneMessage / JoinScene / LeaveScene / SceneGroupName /
-// SendToSceneAsync) moved OUT of GameHub into the Scene plugin's SceneHub (mapped at /hubs/scene). GameHub
-// no longer carries any scene-specific surface.
-
 namespace SharpMUSH.Server.Hubs;
 
 /// <summary>
@@ -139,7 +135,6 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger) : Hub<IGam
 			Context.ConnectionId, RoomGroupName(roomDbref));
 	}
 
-	// ── Server-side write operations ────────────────────────────────────────
 	// These are called by internal services (e.g. NatsBridgeService, REST controllers)
 	// to push output to connected clients.  They are NOT exposed as client-invokable
 	// hub methods — callers must inject IHubContext<GameHub, IGameHubClient>.

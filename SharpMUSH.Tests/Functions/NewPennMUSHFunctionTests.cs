@@ -89,7 +89,6 @@ public class NewPennMUSHFunctionTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single("convsecs(0)")))?.Message!;
 		// The exact output depends on the local timezone
-		// Just verify it contains a year
 		var resultText = result.ToPlainText();
 		await Assert.That(resultText).Contains("1969").Or.Contains("1970");
 	}
@@ -97,7 +96,6 @@ public class NewPennMUSHFunctionTests
 	[Test]
 	public async Task CONVTIME_HandlesInvalidInput()
 	{
-		// Test with invalid input returns #-1
 		var result = (await Parser.FunctionParse(MModule.single("convtime(invalid)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
 	}
@@ -122,7 +120,6 @@ public class NewPennMUSHFunctionTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single("config()")))?.Message!;
 		var resultText = result.ToPlainText();
-		// Just verify it returns something non-empty
 		await Assert.That(resultText).IsNotEmpty();
 	}
 
@@ -133,7 +130,6 @@ public class NewPennMUSHFunctionTests
 	[Test]
 	public async Task IDLESECS_ReturnsIdleTimeOrNegativeOne()
 	{
-		// Test that it returns a numeric value for the executor
 		// It may return -1 if not connected, which is valid
 		var result = (await Parser.FunctionParse(MModule.single("idlesecs()")))?.Message!;
 		var isNumeric = int.TryParse(result.ToPlainText(), out var idleTime);

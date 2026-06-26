@@ -67,7 +67,6 @@ public static class CommandAttributeScanner
 			if (!seenNames.Add(longName))
 				continue;
 
-			// Check if this attribute has no_command flag
 			if (attr.Flags.Any(flag => flag.Name == "no_command"))
 			{
 				// Block this attribute AND all tree descendants (propagate to cross-object noCommandPrefixes)
@@ -99,7 +98,6 @@ public static class CommandAttributeScanner
 
 			try
 			{
-				// Pre-compile the regex pattern
 				var regex = isRegex
 					? new Regex(pattern, RegexOptions.Compiled)
 					: new Regex(MModule.getWildcardMatchAsRegex(MModule.single(pattern)), RegexOptions.Compiled);

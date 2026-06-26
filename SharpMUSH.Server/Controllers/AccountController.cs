@@ -36,8 +36,6 @@ public class AccountController(
 		return await accountSessionStore.ValidateAsync(token);
 	}
 
-	// ── Characters ─────────────────────────────────────────────────────────────
-
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 
 	/// <summary>List all characters linked to the authenticated account.</summary>
@@ -155,8 +153,6 @@ public class AccountController(
 		return NoContent();
 	}
 
-	// ── Account Management ──────────────────────────────────────────────────────
-
 	public record ChangePasswordRequest(string OldPassword, string NewPassword);
 
 	/// <summary>Change the account password.</summary>
@@ -203,8 +199,6 @@ public class AccountController(
 			_ => NoContent(),
 			err => Conflict(err.Value));
 	}
-
-	// ── Logout ──────────────────────────────────────────────────────────────────
 
 	/// <summary>Invalidate the current account session token (logout).</summary>
 	[HttpPost("logout")]

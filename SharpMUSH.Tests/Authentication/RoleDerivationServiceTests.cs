@@ -69,7 +69,6 @@ public class RoleDerivationServiceTests
 	[Test]
 	public async ValueTask DeriveRole_DbrefOneIgnoresWizardFlag_ReturnsGod()
 	{
-		// #1 is always God regardless of flags
 		var role = _svc.DeriveRole(1, [Flag("WIZARD")]);
 		await Assert.That(role).IsEqualTo(PortalRole.God);
 	}

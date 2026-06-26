@@ -39,7 +39,6 @@ public sealed class ManagedPackageInstaller(
 			return new Error<string>($"Managed package '{manifest.Name}' has no 'binaries' block to deploy.");
 		}
 
-		// ── Trust gate (two parts, both required) ──────────────────────────────
 		if (!request.AllowManagedCode)
 		{
 			return new Error<string>(
@@ -55,7 +54,6 @@ public sealed class ManagedPackageInstaller(
 				+ "Add its id to ManagedPackages:AllowList (or enable AllowAll) before installing compiled code.");
 		}
 
-		// ── Server/contract compatibility ──────────────────────────────────────
 		if (!PluginContractVersion.Satisfies(manifest.Binary.MinServerVersion))
 		{
 			return new Error<string>(
@@ -63,7 +61,7 @@ public sealed class ManagedPackageInstaller(
 				+ $"this server provides {PluginContractVersion.Current}. Upgrade the server to install it.");
 		}
 
-		// ── Verify every file against its hash BEFORE writing anything ─────────
+		// Verify every file against its hash BEFORE writing anything.
 		var verified = new List<(string FileName, byte[] Bytes)>();
 		foreach (var file in manifest.Binary.Files)
 		{
@@ -85,7 +83,6 @@ public sealed class ManagedPackageInstaller(
 			verified.Add((file.FileName, bytes));
 		}
 
-		// ── Deposit (clean re-deploy: replace any prior directory for this id) ──
 		var targetDirectory = Path.Combine(_pluginsRoot, manifest.Name);
 		try
 		{

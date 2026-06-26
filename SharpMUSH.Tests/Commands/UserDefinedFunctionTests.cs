@@ -118,7 +118,7 @@ public class UserDefinedFunctionTests
 		var fn = $"argbound{U()}";
 		var attr = $"ARGBOUND{U()}";
 		await Cmd($"&{attr} me=ok");
-		await Cmd($"@function {fn}=me,{attr},2,2"); // min 2, max 2
+		await Cmd($"@function {fn}=me,{attr},2,2");
 
 		await Assert.That((await Eval($"{fn}(a)")).ToUpperInvariant()).Contains("AT LEAST");
 		await Assert.That((await Eval($"{fn}(a,b,c)")).ToUpperInvariant()).Contains("AT MOST");
@@ -219,19 +219,15 @@ public class UserDefinedFunctionTests
 		await Cmd($"&{attr} me=secret");
 		await Cmd($"@function {fn}=me,{attr}");
 
-		// Before restriction, anyone can call it.
 		var player = await NewNonWizardPlayer();
 		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("secret");
 
 		await Cmd($"@function/restrict {fn}=wizard");
 
-		// Non-wizard now gets the standard permission error, not the result.
 		await Assert.That((await EvalAs(player, $"{fn}()")).ToUpperInvariant()).Contains("PERMISSION DENIED");
 
-		// Wizard (#1) is still permitted.
 		await Assert.That(await Eval($"{fn}()")).IsEqualTo("secret");
 
-		// Clearing the restriction restores access for the non-wizard.
 		await Cmd($"@function/restrict {fn}=");
 		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("secret");
 	}
@@ -263,16 +259,13 @@ public class UserDefinedFunctionTests
 
 		await Cmd($"@function/clone {clone}={fn}");
 
-		// The clone works.
 		await Assert.That(await Eval($"{clone}()")).IsEqualTo("cloned");
 
-		// Restricting the clone must NOT affect the original.
 		await Cmd($"@function/restrict {clone}=wizard");
 		var player = await NewNonWizardPlayer();
 		await Assert.That((await EvalAs(player, $"{clone}()")).ToUpperInvariant()).Contains("PERMISSION DENIED");
 		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("cloned");
 
-		// Deleting the clone leaves the original intact.
 		await Cmd($"@function/delete {clone}");
 		await Assert.That(await Eval($"{clone}()")).Contains("COULD NOT FIND FUNCTION");
 		await Assert.That(await Eval($"{fn}()")).IsEqualTo("cloned");
@@ -290,11 +283,11 @@ public class UserDefinedFunctionTests
 
 		try
 		{
-			await Cmd($"@function/delete add");          // allow override
-			await Cmd($"@function add=me,{attr}");       // override built-in add()
+			await Cmd($"@function/delete add");
+			await Cmd($"@function add=me,{attr}");
 			await Assert.That(await Eval("add(2,3)")).IsEqualTo("overridden");
 
-			await Cmd("@function/builtin add");          // discard override, restore built-in
+			await Cmd("@function/builtin add");
 			await Assert.That(await Eval("add(2,3)")).IsEqualTo("5");
 		}
 		finally
@@ -318,7 +311,6 @@ public class UserDefinedFunctionTests
 		await Cmd($"@function/preserve {kept}");
 		await Cmd("@function/restore *");
 
-		// Preserved entry remains callable; unpreserved entry is gone.
 		await Assert.That(await Eval($"{kept}()")).IsEqualTo("here");
 		await Assert.That(await Eval($"{dropped}()")).Contains("COULD NOT FIND FUNCTION");
 

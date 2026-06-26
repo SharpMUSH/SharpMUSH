@@ -99,10 +99,6 @@ public class JwtService(
 		return await IssueTokensAsync(account, character, role, ct);
 	}
 
-	// -----------------------------------------------------------------------
-	// Helpers
-	// -----------------------------------------------------------------------
-
 	// account.Id is a non-secret GUID identifier placed in the standard JWT 'sub' claim
 	// per RFC 7519 §4.1.2. Username in 'unique_name' is a display name, not a password or
 	// secret. The token is signed (HMAC-SHA256) and transmitted only over TLS.

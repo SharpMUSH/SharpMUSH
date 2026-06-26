@@ -1,4 +1,3 @@
-// Converted from MarkupStringModule.fs — namespace MarkupString
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -14,13 +13,9 @@ using MarkupString.MarkupImplementation;
 
 namespace MarkupString;
 
-// ── Simple enums (were F# single-case DUs with no payload) ────────────────────
-
 public enum TrimType  { TrimStart, TrimEnd, TrimBoth }
 public enum PadType   { Left, Right, Center, Full }
 public enum TruncationType { Truncate, Overflow }
-
-// ── RenderFormat — abstract sealed record DU ──────────────────────────────────
 
 /// <summary>
 /// Type-safe discriminated union for selecting a render format.
@@ -46,8 +41,6 @@ public abstract record RenderFormat
     };
 }
 
-// ── IRenderStrategy ───────────────────────────────────────────────────────────
-
 public interface IRenderStrategy
 {
     string EncodeText(string text);
@@ -56,8 +49,6 @@ public interface IRenderStrategy
     string Postfix { get; }
     string Optimize(string text);
 }
-
-// ── Built-in strategy implementations ────────────────────────────────────────
 
 internal sealed class AnsiRenderStrategy : IRenderStrategy
 {
@@ -150,8 +141,6 @@ internal sealed class NativeRenderStrategy(IMarkup firstMarkup) : IRenderStrateg
     public string Optimize(string text) => firstMarkup.Optimize(text);
 }
 
-// ── AttributeRun struct ───────────────────────────────────────────────────────
-
 /// <summary>
 /// Describes a contiguous range of characters that share the same markup attributes.
 /// Runs are non-overlapping and ordered by Start position.
@@ -161,15 +150,11 @@ public readonly record struct AttributeRun(int Start, int Length, ImmutableArray
     public int End => Start + Length;
 }
 
-// ── RunStartComparer (private) ────────────────────────────────────────────────
-
 file sealed class RunStartComparer : IComparer<AttributeRun>
 {
     public static readonly RunStartComparer Instance = new();
     public int Compare(AttributeRun a, AttributeRun b) => a.Start.CompareTo(b.Start);
 }
-
-// ── ColorJsonConverter ─────────────────────────────────────────────────────────
 
 public sealed class ColorJsonConverter : JsonConverter<Color>
 {
@@ -205,8 +190,6 @@ public sealed class ColorJsonConverter : JsonConverter<Color>
             : $"#{value.R:x2}{value.G:x2}{value.B:x2}{value.A:x2}");
 }
 
-// ── MarkupString class ────────────────────────────────────────────────────────
-
 /// <summary>
 /// A flat, attributed markup string inspired by NSAttributedString.
 /// Fully immutable — text is a .NET string, runs are ImmutableArray&lt;AttributeRun&gt;.
@@ -216,7 +199,6 @@ public sealed class MarkupString
     private readonly string _text;
     private readonly ImmutableArray<AttributeRun> _runs;
 
-    // Lazily cached renders
     private readonly Lazy<string> _cachedToString;
     private readonly Lazy<string> _cachedAnsiRender;
     private readonly Lazy<string> _cachedHtmlRender;
@@ -344,7 +326,6 @@ public sealed class MarkupString
 
 public static partial class MarkupStringModule
 {
-    // ── Render strategy singletons ─────────────────────────────────────────────
     public static class RenderStrategies
     {
         public static readonly IRenderStrategy AnsiStrategy      = new AnsiRenderStrategy();
@@ -356,8 +337,6 @@ public static partial class MarkupStringModule
 
     public static IRenderStrategy ForFormat(RenderFormat format) => format.ToStrategy();
 
-    // ── Private binary search helper ──────────────────────────────────────────
-
     private static int FindFirstOverlappingRunIndex(ImmutableArray<AttributeRun> runs, int position)
     {
         if (runs.Length == 0) return 0;
@@ -368,7 +347,6 @@ public static partial class MarkupStringModule
         return Math.Max(0, insertionPoint - 1);
     }
 
-    // ── Cached singletons ────────────────────────────────────────────────────
     // MarkupString is immutable, so frequently-used identical instances can be shared.
 
     private static readonly MarkupString _empty = new(string.Empty, ImmutableArray<AttributeRun>.Empty);
@@ -401,7 +379,6 @@ public static partial class MarkupStringModule
             ImmutableArray.Create(new AttributeRun(0, str.Length, ImmutableArray<IMarkup>.Empty)))
     };
 
-    // F#-style lowercase alias kept for callers that use `single`
     public static MarkupString single(string? str) => str is null ? _empty : Single(str);
 
     public static MarkupString Empty() => _empty;
@@ -424,8 +401,6 @@ public static partial class MarkupStringModule
     }
     public static MarkupString markupSingleMulti((ImmutableArray<IMarkup>, string) t) =>
         MarkupSingleMulti(t.Item1, t.Item2);
-
-    // ── Core operations ────────────────────────────────────────────────────────
 
     public static string PlainText(MarkupString ams) => ams.ToPlainText();
     public static string plainText(MarkupString? ams) => ams?.ToPlainText() ?? string.Empty;
@@ -501,7 +476,6 @@ public static partial class MarkupStringModule
         if (ams.Length == 0) return Array.Empty<MarkupString>();
         string text = ams.Text;
 
-        // Collect split positions
         var positions = new List<int>();
         int pos = 0;
         while (pos < text.Length)
@@ -965,8 +939,6 @@ public static partial class MarkupStringModule
                                        int width, TruncationType truncType) =>
         Center2(ams, padStr, padStrRight, width, truncType);
 
-    // ── Wildcard / regex helpers ───────────────────────────────────────────────
-
     [GeneratedRegex(@"(?<!\\)\\\*")]
     private static partial Regex GlobPatternRegex();
     [GeneratedRegex(@"(?<!\\)\\\?")]
@@ -1029,8 +1001,6 @@ public static partial class MarkupStringModule
         GetMatches(input, GetWildcardMatchAsRegex(pattern));
     public static IEnumerable<(Match, IEnumerable<MarkupString>)> getWildcardMatches(MarkupString input, MarkupString pattern) =>
         GetWildcardMatches(input, pattern);
-
-    // ── Serialization ──────────────────────────────────────────────────────────
 
     private static readonly JsonSerializerOptions _serializationOptions = BuildSerializationOptions();
     private static JsonSerializerOptions BuildSerializationOptions()

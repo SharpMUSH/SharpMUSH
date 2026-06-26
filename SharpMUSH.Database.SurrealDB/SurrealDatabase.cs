@@ -151,13 +151,11 @@ public partial class SurrealDatabase(
 			var serialized = SerializeValue(kvp.Value);
 			var rawValue = SerializeValueRaw(kvp.Value);
 
-			// Replace occurrences inside ⟨...⟩ with raw value (no quotes for strings)
 			expandedQuery = System.Text.RegularExpressions.Regex.Replace(
 				expandedQuery,
 				$@"⟨([^⟩]*?){Regex.Escape(paramToken)}([^⟩]*?)⟩",
 				m => $"⟨{m.Groups[1].Value}{rawValue}{m.Groups[2].Value}⟩");
 
-			// Replace remaining occurrences with quoted value
 			expandedQuery = expandedQuery.Replace(paramToken, serialized);
 		}
 
@@ -475,7 +473,6 @@ public partial class SurrealDatabase(
 		var key = ExtractKey(objectId);
 		var parameters = new Dictionary<string, object?> { ["key"] = key };
 
-		// Get the owner's player record via graph traversal
 		var ownerResult = await ExecuteAsync(
 			"SELECT * FROM object:$key->has_owner->player",
 			parameters, ct);
@@ -486,7 +483,6 @@ public partial class SurrealDatabase(
 		var ownerPlayerRecord = ownerPlayers[0];
 		var ownerKey = ownerPlayerRecord.key;
 
-		// Get the object record for the owner via direct record ID
 		var ownerObjParams = new Dictionary<string, object?> { ["key"] = ownerKey };
 		var ownerObjResult = await ExecuteAsync(
 			"SELECT * FROM object:$key",
@@ -541,7 +537,6 @@ public partial class SurrealDatabase(
 			yield return MapRecordToFlag(record);
 		}
 
-		// Append the implicit type flag
 		yield return new SharpObjectFlag
 		{
 			Name = type,

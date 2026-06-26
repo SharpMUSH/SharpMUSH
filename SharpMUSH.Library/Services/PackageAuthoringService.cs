@@ -76,7 +76,6 @@ public partial class PackageAuthoringService(
 	public async Task<OneOf<string, Error<string>>> ExportAsync(
 		PackageAuthoringRequest request, CancellationToken cancellationToken = default)
 	{
-		// Read every selected object and build the dbref-number → token map.
 		var selections = new List<(AuthoringObjectSelection Selection, AuthoringObject Object)>();
 		var tokenByNumber = new Dictionary<int, string>();
 		foreach (var selection in request.Objects)
@@ -114,7 +113,6 @@ public partial class PackageAuthoringService(
 			}
 		}
 
-		// Substitute dbrefs in every included attribute; collect unclassified ones.
 		var unresolved = new SortedSet<string>(StringComparer.Ordinal);
 		string Tokenize(string value)
 		{

@@ -28,48 +28,40 @@ public class TelemetryService : ITelemetryService, IDisposable
 	{
 		_meter = new Meter("SharpMUSH", "1.0.0");
 
-		// Function invocation metrics
 		_functionInvocationDuration = _meter.CreateHistogram<double>(
 			"sharpmush.function.invocation.duration",
 			unit: "ms",
 			description: "Time taken to invoke a function");
 
-		// Command invocation metrics
 		_commandInvocationDuration = _meter.CreateHistogram<double>(
 			"sharpmush.command.invocation.duration",
 			unit: "ms",
 			description: "Time taken to invoke a command");
 
-		// Notification speed metrics
 		_notificationSpeed = _meter.CreateHistogram<double>(
 			"sharpmush.notification.speed",
 			unit: "ms",
 			description: "Time taken to send a notification");
 
-		// Connection event counter
 		_connectionEvents = _meter.CreateCounter<long>(
 			"sharpmush.connection.events",
 			description: "Count of connection events");
 
-		// Active connection count gauge
 		_activeConnectionCount = _meter.CreateObservableGauge<int>(
 			"sharpmush.connections.active",
 			() => _currentActiveConnectionCount,
 			description: "Number of active connections");
 
-		// Logged-in player count gauge
 		_loggedInPlayerCount = _meter.CreateObservableGauge<int>(
 			"sharpmush.players.logged_in",
 			() => _currentLoggedInPlayerCount,
 			description: "Number of logged-in players");
 
-		// Server health state gauge (1 = healthy, 0 = unhealthy)
 		_serverHealthState = _meter.CreateObservableGauge<int>(
 			"sharpmush.server.health",
 			() => _currentServerHealthState ? 1 : 0,
 			description: "Health state of the Server (1 = healthy, 0 = unhealthy)");
 
-		// ConnectionServer health state gauge (1 = healthy, 0 = unhealthy)
 		_connectionServerHealthState = _meter.CreateObservableGauge<int>(
 			"sharpmush.connectionserver.health",
 			() => _currentConnectionServerHealthState ? 1 : 0,

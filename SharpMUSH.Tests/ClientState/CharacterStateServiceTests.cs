@@ -6,8 +6,6 @@ namespace SharpMUSH.Tests.ClientState;
 
 public class CharacterStateServiceTests
 {
-	// ── helpers ──────────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Creates a mock IJSRuntime whose localStorage.getItem returns
 	/// <paramref name="storedValue"/>.
@@ -22,8 +20,6 @@ public class CharacterStateServiceTests
 		return js;
 	}
 
-	// ── initial state ────────────────────────────────────────────────────────
-
 	[Test]
 	public async Task InitialState_AllPropertiesAreNull()
 	{
@@ -32,8 +28,6 @@ public class CharacterStateServiceTests
 		await Assert.That(svc.CurrentCharacterName).IsNull();
 		await Assert.That(svc.CurrentRoomDbref).IsNull();
 	}
-
-	// ── SetCharacterAsync ────────────────────────────────────────────────────
 
 	[Test]
 	public async Task SetCharacterAsync_SetsDbrefAndName()
@@ -61,8 +55,6 @@ public class CharacterStateServiceTests
 		await svc.SetCharacterAsync("#5", "Gandalf");
 		await Assert.That(svc.CurrentRoomDbref).IsNull();
 	}
-
-	// ── SetRoomAsync ─────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task SetRoomAsync_SetsRoomDbref()
@@ -92,8 +84,6 @@ public class CharacterStateServiceTests
 		await Assert.That(fired).IsFalse();
 	}
 
-	// ── InitializeAsync ──────────────────────────────────────────────────────
-
 	[Test]
 	public async Task InitializeAsync_WithStoredValue_RestoresDbrefAndName()
 	{
@@ -115,7 +105,6 @@ public class CharacterStateServiceTests
 	[Test]
 	public async Task InitializeAsync_WithMalformedStored_LeavesPropertiesNull()
 	{
-		// No pipe separator — should not crash, should leave state empty
 		var svc = new CharacterStateService(MakeJs("nodivider"));
 		await svc.InitializeAsync();
 		await Assert.That(svc.CurrentCharacterDbref).IsNull();
@@ -129,8 +118,6 @@ public class CharacterStateServiceTests
 		await svc.InitializeAsync();
 		await Assert.That(svc.CurrentCharacterDbref).IsEqualTo("#5");
 	}
-
-	// ── overwrite ────────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task SetCharacterAsync_TwiceDifferentValues_ReturnsLatest()

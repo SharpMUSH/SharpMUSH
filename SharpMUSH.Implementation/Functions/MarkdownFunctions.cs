@@ -20,14 +20,12 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 
-		// Get markdown text, default to empty
 		var markdown = "";
 		if (args.TryGetValue("0", out var markdownArg))
 		{
 			markdown = markdownArg.Message!.ToPlainText();
 		}
 
-		// Get width parameter, default to 78
 		var width = 78;
 		if (args.TryGetValue("1", out var widthArg))
 		{
@@ -62,17 +60,14 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		// Get markdown text
 		var markdown = "";
 		if (args.TryGetValue("0", out var markdownArg))
 		{
 			markdown = markdownArg.Message!.ToPlainText();
 		}
 
-		// Get template object
 		var templateObjRef = args["1"].Message!.ToPlainText();
 
-		// Get width parameter, default to 78
 		var width = 78;
 		if (args.TryGetValue("2", out var widthArg))
 		{
@@ -83,14 +78,12 @@ public partial class Functions
 			}
 		}
 
-		// Locate the template object
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, templateObjRef, LocateFlags.All,
 			async templateObj =>
 			{
 				try
 				{
-					// Create custom renderer with template object
 					var customRenderer = new CustomizableMarkdownRenderer(
 						parser, executor, templateObj, AttributeService!, width);
 					var result = customRenderer.RenderMarkdown(markdown);

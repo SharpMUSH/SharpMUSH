@@ -25,7 +25,6 @@ public class ConfigCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config"));
 
-		// Should notify with "Configuration Categories:"
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigCategoriesHeader), executor, executor)).IsTrue();
 	}
 
@@ -35,7 +34,6 @@ public class ConfigCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config Net"));
 
-		// Should notify with "Options in Net:"
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat), executor, executor)).IsTrue();
 	}
 
@@ -45,7 +43,6 @@ public class ConfigCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config mud_name"));
 
-		// Should receive at least one notification about mud_name
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, executor)).IsTrue();
 	}
 
@@ -55,7 +52,6 @@ public class ConfigCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config test_string_CONFIG_invalid_option"));
 
-		// Should notify that option was not found
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor, executor)).IsTrue();
 	}
 
@@ -142,7 +138,6 @@ public class ConfigCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DoingPoll");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("doing"));
 
-		// Should notify with player list - verify we got a notification
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Any<OneOf.OneOf<MString, string>>(), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
@@ -155,7 +150,6 @@ public class ConfigCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DoingPollPat");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("doing Wiz*"));
 
-		// Should notify with filtered player list
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Any<OneOf.OneOf<MString, string>>(), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
@@ -165,10 +159,8 @@ public class ConfigCommandTests
 	public async ValueTask Enable_BooleanOption_ShowsImplementationMessage()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @enable with a known boolean option
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable noisy_whisper"));
 
-		// Should notify about the equivalent @config/set command
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, executor)).IsTrue();
 	}
 
@@ -176,10 +168,8 @@ public class ConfigCommandTests
 	public async ValueTask Disable_BooleanOption_ShowsImplementationMessage()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @disable with a known boolean option
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable noisy_whisper"));
 
-		// Should notify about the equivalent @config/set command
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, executor)).IsTrue();
 	}
 
@@ -187,10 +177,8 @@ public class ConfigCommandTests
 	public async ValueTask Enable_InvalidOption_ReturnsNotFound()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @enable with a non-existent option
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable test_string_ENABLE_invalid_option_xyz"));
 
-		// Should notify that option was not found
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, executor)).IsTrue();
 	}
 
@@ -198,10 +186,8 @@ public class ConfigCommandTests
 	public async ValueTask Disable_InvalidOption_ReturnsNotFound()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @disable with a non-existent option
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable test_string_DISABLE_invalid_option_xyz"));
 
-		// Should notify that option was not found
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, executor)).IsTrue();
 	}
 
@@ -209,10 +195,8 @@ public class ConfigCommandTests
 	public async ValueTask Enable_NonBooleanOption_ReturnsInvalidType()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @enable with a non-boolean option (e.g., mud_name)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable mud_name"));
 
-		// Should notify that it's not a boolean option
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, executor)).IsTrue();
 	}
 
@@ -220,10 +204,8 @@ public class ConfigCommandTests
 	public async ValueTask Disable_NonBooleanOption_ReturnsInvalidType()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @disable with a non-boolean option (e.g., probate_judge)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable probate_judge"));
 
-		// Should notify that it's not a boolean option
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, executor)).IsTrue();
 	}
 
@@ -231,10 +213,8 @@ public class ConfigCommandTests
 	public async ValueTask Enable_NoArguments_ShowsUsage()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @enable without arguments
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable"));
 
-		// Should show usage message
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, executor)).IsTrue();
 	}
 
@@ -242,10 +222,8 @@ public class ConfigCommandTests
 	public async ValueTask Disable_NoArguments_ShowsUsage()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @disable without arguments
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable"));
 
-		// Should show usage message
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, executor)).IsTrue();
 	}
 }

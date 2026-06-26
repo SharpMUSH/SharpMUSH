@@ -48,8 +48,6 @@ public class GalleryController(
 	/// <summary>A gallery image entry; mirrors the client model.</summary>
 	public record GalleryEntry(string AssetId, string FileName, string Url, string? Caption, int Order, bool IsIcon);
 
-	// ── Reads ────────────────────────────────────────────────────────────────
-
 	[HttpGet]
 	[AllowAnonymous]
 	public async Task<ActionResult<IReadOnlyList<GalleryEntry>>> List(string name, CancellationToken ct)
@@ -63,8 +61,6 @@ public class GalleryController(
 		var entries = await ReadGalleryAsync(character);
 		return entries.OrderBy(e => e.Order).ToList();
 	}
-
-	// ── Writes (owner / staff) ─────────────────────────────────────────────────
 
 	[HttpPost]
 	[Authorize]
@@ -105,7 +101,7 @@ public class GalleryController(
 			Url: $"/api/wiki-assets/{asset.Id}/{asset.FileName}",
 			Caption: null,
 			Order: entries.Count == 0 ? 0 : entries.Max(e => e.Order) + 1,
-			IsIcon: entries.Count == 0)); // first image becomes the icon by default
+			IsIcon: entries.Count == 0));
 
 		var write = await WriteGalleryAsync(character, entries);
 		if (write.IsT1) return StatusCode(StatusCodes.Status500InternalServerError, write.AsT1.Value);
@@ -168,8 +164,6 @@ public class GalleryController(
 		await assetService.DeleteAsync(assetId);
 		return Ok(entries.OrderBy(e => e.Order).ToList());
 	}
-
-	// ── Helpers ────────────────────────────────────────────────────────────────
 
 	private async Task<AnySharpObject?> ResolveCharacterAsync(string name, CancellationToken ct)
 	{

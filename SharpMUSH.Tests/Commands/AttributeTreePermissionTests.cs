@@ -66,15 +66,12 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PW{uid}`BAR`DEEP me=baz"));
 
-		// God sets wiz flag on the branch
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {mortalDbRef}/PW{uid}`BAR=wizard"));
 
-		// Mortal cannot overwrite wiz attribute
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PW{uid}`BAR me=newval"));
 
-		// Value should not have changed
 		var getResult = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PW{uid}`BAR)"));
 		await Assert.That(getResult!.Message!.ToPlainText()).IsEqualTo("baz")
 			.Because("mortal should not be able to overwrite wiz-flagged attribute");
@@ -98,18 +95,15 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PC{uid}`BAR`DEEP me=baz"));
 
-		// God sets wiz flag on the branch
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {mortalDbRef}/PC{uid}`BAR=wizard"));
 
-		// Mortal cannot modify existing child under wiz branch
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PC{uid}`BAR`DEEP me=newval"));
 		var getDeep = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PC{uid}`BAR`DEEP)"));
 		await Assert.That(getDeep!.Message!.ToPlainText()).IsEqualTo("baz")
 			.Because("mortal should not be able to modify child of wiz-flagged attribute");
 
-		// Mortal cannot create new child under wiz branch
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PC{uid}`BAR`NEWCHILD me=val"));
 		var getNew = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PC{uid}`BAR`NEWCHILD)"));
@@ -129,7 +123,6 @@ public class AttributeTreePermissionTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PermDark");
 		var mortalDbRef = mortal.DbRef.ToString();
 
-		// God creates tree on mortal
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&PD{uid} {mortalDbRef}=parent"));
 		await Parser.CommandParse(1, ConnectionService,
@@ -137,17 +130,14 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&PD{uid}`BAR`DEEP {mortalDbRef}=deeper"));
 
-		// Set mortal_dark on the branch
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {mortalDbRef}/PD{uid}`BAR=mortal_dark"));
 
-		// Mortal cannot see the dark attribute
 		var r1 = await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"think get(me/PD{uid}`BAR)"));
 		await Assert.That(r1.Message!.ToPlainText()).DoesNotContain("secret")
 			.Because("mortal should not see mortal_dark attribute");
 
-		// God CAN see it
 		var r2 = await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"think get({mortalDbRef}/PD{uid}`BAR)"));
 		await Assert.That(r2.Message!.ToPlainText()).Contains("secret");
@@ -171,11 +161,9 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&PDC{uid}`BAR`DEEP {mortalDbRef}=hidden"));
 
-		// Set mortal_dark on the branch
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {mortalDbRef}/PDC{uid}`BAR=mortal_dark"));
 
-		// Mortal cannot see child of dark attribute
 		var r1 = await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"think get(me/PDC{uid}`BAR`DEEP)"));
 		await Assert.That(r1.Message!.ToPlainText()).DoesNotContain("hidden")
@@ -200,11 +188,9 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&PDL{uid}`BAR`DEEP {mortalDbRef}=hidden"));
 
-		// Set mortal_dark on the branch
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {mortalDbRef}/PDL{uid}`BAR=mortal_dark"));
 
-		// Mortal's lattr(**) should NOT show dark branch or its children
 		var r1 = await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"think lattr(me/**)"));
 		var text = r1.Message!.ToPlainText();
@@ -231,24 +217,20 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PX{uid}`BAR me=baz"));
 
-		// God sets both wiz and mortal_dark
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {mortalDbRef}/PX{uid}`BAR=wizard"));
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {mortalDbRef}/PX{uid}`BAR=mortal_dark"));
 
-		// Mortal can't write (wiz blocks)
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PX{uid}`BAR me=newval"));
 		var getBlocked = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PX{uid}`BAR)"));
 		await Assert.That(getBlocked!.Message!.ToPlainText()).IsEqualTo("baz")
 			.Because("wiz flag should block mortal write");
 
-		// Remove wiz, mortal_dark stays
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {mortalDbRef}/PX{uid}`BAR=!wizard"));
 
-		// Mortal CAN write again (mortal_dark only blocks reading, not writing)
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PX{uid}`BAR me=newval"));
 		var getUnblocked = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PX{uid}`BAR)"));
@@ -272,18 +254,15 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PDW{uid}`BAR me=baz"));
 
-		// God sets mortal_dark (but NOT wiz)
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {mortalDbRef}/PDW{uid}`BAR=mortal_dark"));
 
-		// Mortal CAN write (dark only hides, doesn't lock)
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PDW{uid}`BAR me=newval"));
 		var getWrite = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PDW{uid}`BAR)"));
 		await Assert.That(getWrite!.Message!.ToPlainText()).IsEqualTo("newval")
 			.Because("mortal_dark does not prevent writing, only reading");
 
-		// Mortal CAN create children under dark branch
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MModule.single($"&PDW{uid}`BAR`CHILD me=val"));
 		var getChild = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PDW{uid}`BAR`CHILD)"));

@@ -91,7 +91,6 @@ public class ParserBehaviorUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// Nested function evaluation
 	[Test]
 	[Arguments("add(1,add(2,3))", "6")]
 	[Arguments("add(1,mul(2,3))", "7")]
@@ -102,7 +101,6 @@ public class ParserBehaviorUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// Function name case insensitivity
 	[Test]
 	[Arguments("ADD(1,2)", "3")]
 	[Arguments("Add(1,2)", "3")]

@@ -31,7 +31,6 @@ public partial class MemgraphDatabase
 		? password
 		: passwordService.HashPassword($"#{nextKey}:{now}", password);
 
-		// Single atomic query: create Object + Player nodes with all relationships
 		await ExecuteWithRetryAsync("""
 MATCH (loc {key: $locKey}) WHERE loc:Room OR loc:Player OR loc:Thing
 MATCH (hm {key: $homeKey}) WHERE hm:Room OR hm:Player OR hm:Thing
@@ -52,7 +51,6 @@ CREATE (p)-[:HAS_HOME]->(hm)
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var creatorKey = creator.Object.Key;
 
-		// Single atomic query: create Object + Room nodes with relationships
 		await ExecuteWithRetryAsync("""
 MATCH (owner:Player {key: $ownerKey})
 CREATE (o:Object {key: $key, name: $name, type: 'ROOM', creationTime: $now, modifiedTime: $now, locks: '{}', warnings: 0})
@@ -73,7 +71,6 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 		var locKey = ExtractKey(location.Id);
 		var homeKey = ExtractKey(home.Id);
 
-		// Single atomic query: create Object + Thing nodes with all relationships
 		await ExecuteWithRetryAsync("""
 MATCH (loc {key: $locKey}) WHERE loc:Room OR loc:Player OR loc:Thing
 MATCH (hm {key: $homeKey}) WHERE hm:Room OR hm:Player OR hm:Thing
@@ -97,7 +94,6 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 		var creatorKey = creator.Object.Key;
 		var locKey = ExtractKey(location.Id);
 
-		// Single atomic query: create Object + Exit nodes with all relationships
 		await ExecuteWithRetryAsync("""
 MATCH (loc {key: $locKey}) WHERE loc:Room OR loc:Player OR loc:Thing
 MATCH (owner:Player {key: $ownerKey})
@@ -430,7 +426,6 @@ CREATE (src)-[:AT_LOCATION]->(dest)
 	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken cancellationToken = default)
 	{
 		var objKey = obj.Object().Key;
-		// Remove existing parent edge
 		await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[r:HAS_PARENT]->() DELETE r", new { key = objKey }, cancellationToken);
 
 		if (parent != null)

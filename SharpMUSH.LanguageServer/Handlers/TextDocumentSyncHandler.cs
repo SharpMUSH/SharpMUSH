@@ -42,7 +42,6 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 
 		_documentManager.OpenDocument(uri, text, version);
 
-		// Publish diagnostics for the opened document
 		PublishDiagnostics(uri, text);
 
 		return Unit.Task;
@@ -53,12 +52,10 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 		var uri = request.TextDocument.Uri.ToString();
 		var version = request.TextDocument.Version ?? 0;
 
-		// Get the full text from the last change (assuming full document sync)
 		var text = request.ContentChanges.LastOrDefault()?.Text ?? string.Empty;
 
 		_documentManager.UpdateDocument(uri, text, version);
 
-		// Publish diagnostics for the updated document
 		PublishDiagnostics(uri, text);
 
 		return Unit.Task;
@@ -69,7 +66,6 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 		var uri = request.TextDocument.Uri.ToString();
 		_documentManager.CloseDocument(uri);
 
-		// Clear diagnostics for closed document
 		_languageServer.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
 		{
 			Uri = request.TextDocument.Uri,
@@ -81,7 +77,6 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 
 	public override Task<Unit> Handle(DidSaveTextDocumentParams request, CancellationToken cancellationToken)
 	{
-		// No special handling needed for save
 		return Unit.Task;
 	}
 
@@ -101,10 +96,8 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 	{
 		try
 		{
-			// Parse the document and get diagnostics using the stateless LSP parser
 			var diagnostics = _parser.GetDiagnostics(text, ParseType.Function);
 
-			// Convert to LSP diagnostics
 			var lspDiagnostics = diagnostics.Select(d => new OmniSharp.Extensions.LanguageServer.Protocol.Models.Diagnostic
 			{
 				Range = new OmniSharp.Extensions.LanguageServer.Protocol.Models.Range(
@@ -128,7 +121,6 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 		}
 		catch (Exception ex)
 		{
-			// Log error but don't crash the server
 #pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error publishing diagnostics: {ex.Message}");
 #pragma warning restore VSTHRD103

@@ -112,13 +112,11 @@ public class LocalizationService : ILocalizationService
 			{
 				try
 				{
-					// Verify this is actually a valid culture name
 					_ = CultureInfo.GetCultureInfo(dirName);
 					locales.Add(dirName);
 				}
 				catch (CultureNotFoundException)
 				{
-					// Not a valid culture directory — skip
 				}
 			}
 		}

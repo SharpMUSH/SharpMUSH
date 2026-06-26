@@ -47,7 +47,6 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
     {
         var path = request.RequestUri!.AbsolutePath.TrimStart('/');
 
-        // GET api/wiki/ns/{ns}/{category}/{slug}
         if (request.Method == HttpMethod.Get &&
             _nsRoute.Match(path) is { Success: true } getMatch)
         {
@@ -60,7 +59,6 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound));
         }
 
-        // POST api/wiki/exists — batch existence map for redlink rendering.
         // Refs use URL-path form: "ns/category/slug".
         if (request.Method == HttpMethod.Post && path == "api/wiki/exists")
         {
@@ -78,7 +76,6 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
             return Json(map);
         }
 
-        // POST api/wiki
         if (request.Method == HttpMethod.Post && path == "api/wiki")
         {
             var req = await request.Content!.ReadFromJsonAsync<CreateReq>(cancellationToken: cancellationToken);
@@ -89,7 +86,6 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
                 _ => new HttpResponseMessage(HttpStatusCode.Conflict));
         }
 
-        // PUT api/wiki/{id}
         if (request.Method == HttpMethod.Put &&
             _slugRoute.Match(path) is { Success: true } putMatch)
         {
@@ -289,7 +285,6 @@ public class WikiRedlinkRenderingTests : BunitContext
         }, TimeSpan.FromSeconds(5));
 
         await Assert.That(cut.Markup).Contains("href=\"/wiki/main/general/ghost_page\" class=\"wiki-redlink\"");
-        // The existing page's link stays a plain anchor.
         await Assert.That(cut.Markup).Contains("href=\"/wiki/main/general/real_target\"");
         await Assert.That(cut.Markup).DoesNotContain("href=\"/wiki/main/general/real_target\" class=\"wiki-redlink\"");
     }

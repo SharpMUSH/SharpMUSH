@@ -41,7 +41,6 @@ public class EndpointContributorTests
 
 		await Assert.That(contributor.WasInvoked).IsTrue();
 
-		// The mapped route must be present as a live endpoint with the contributor's pattern.
 		var dataSource = ((IEndpointRouteBuilder)app).DataSources
 			.SelectMany(ds => ds.Endpoints)
 			.OfType<RouteEndpoint>()

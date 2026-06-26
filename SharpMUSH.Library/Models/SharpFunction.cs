@@ -24,11 +24,9 @@ public class SharpFunction
 
 	public required string[] Restrictions { get; set; }
 
-	// Relationship
 	[JsonIgnore]
 	public SharpFunction? ClonedFrom { get; set; }
 
-	// Relationship
 	[JsonIgnore]
 	public SharpAttribute? Attribute { get; set; }
 }

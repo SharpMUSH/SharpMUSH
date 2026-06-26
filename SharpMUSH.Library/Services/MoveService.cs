@@ -55,7 +55,7 @@ public class MoveService(
 		{
 			if (current.Object().DBRef.Equals(objectDBRef))
 			{
-				return true; // Found a loop
+				return true;
 			}
 
 			var location = await current.Match<ValueTask<AnySharpContainer>>(
@@ -97,25 +97,19 @@ public class MoveService(
 		}
 		var enactorObj = enactorQuery.Known;
 
-		// 1. Check for containment loops
 		if (await WouldCreateLoop(objectToMove, destination))
 		{
 			return new Error<string>("Cannot move - it would create a containment loop.");
 		}
 
-		// 2. Check permissions
 		if (!await CanMoveAsync(enactorObj, objectToMove, destination))
 		{
 			return new Error<string>("Permission denied.");
 		}
 
-		// 3. Check and track move cost (quota system integration point)
-		// Note: In MUSH servers, quota typically affects object creation, not movement.
-		// This section is reserved for future quota-related move cost tracking if needed.
-		// The quota checking itself is implemented in object creation commands.
-		// For now, moves are allowed regardless of quota status.
+		// In MUSH servers, quota typically affects object creation, not movement;
+		// move cost tracking is reserved for future use, so moves are allowed regardless of quota.
 
-		// 4. Get old location for hooks
 		var oldLocation = await objectToMove.Match<ValueTask<DBRef>>(
 			async player =>
 			{
@@ -133,7 +127,6 @@ public class MoveService(
 				return location.Object().DBRef;
 			});
 
-		// 5. Trigger LEAVE hooks on old location (if not silent)
 		if (!silent && oldLocation != destObj.DBRef)
 		{
 			var oldLocQuery = await mediator.Send(new GetObjectNodeQuery(oldLocation));
@@ -144,7 +137,6 @@ public class MoveService(
 			}
 		}
 
-		// 6. Execute the actual database move
 		await mediator.Send(new MoveObjectCommand(
 			objectToMove,
 			destination,
@@ -153,7 +145,6 @@ public class MoveService(
 			cause,
 			OldContainer: oldLocation));
 
-		// 7. Trigger ENTER hooks on new location (if not silent)
 		if (!silent)
 		{
 			var destObjAny = destination.Match<AnySharpObject>(
@@ -163,7 +154,6 @@ public class MoveService(
 			await TriggerEnterHooksAsync(parser, objectToMove, destObjAny, enactorRef, cause);
 		}
 
-		// 8. Trigger teleport hooks if this is a teleport
 		if (!silent && cause.Equals("teleport", StringComparison.OrdinalIgnoreCase))
 		{
 			var destObjAny = destination.Match<AnySharpObject>(
@@ -173,7 +163,6 @@ public class MoveService(
 			await TriggerTeleportHooksAsync(parser, objectToMove, destObjAny, enactorRef);
 		}
 
-		// 9. Notify contents if the moved object is a container
 		if (!silent && (objectToMove.IsPlayer || objectToMove.IsThing))
 		{
 			await NotifyContentsOfMoveAsync(parser, objectToMove, oldLocation, destObj.DBRef);
@@ -296,7 +285,6 @@ public class MoveService(
 
 		if (oleaveAttr.IsAttribute)
 		{
-			// Get contents of old location to notify
 			var contents = new List<AnySharpContent>();
 			await foreach (var content in mediator.CreateStream(new GetContentsQuery(oldLocation.Object().DBRef)))
 			{
@@ -404,7 +392,6 @@ public class MoveService(
 
 		if (oenterAttr.IsAttribute)
 		{
-			// Get contents of new location to notify
 			var contents = new List<AnySharpContent>();
 			await foreach (var content in mediator.CreateStream(new GetContentsQuery(newLocation.Object().DBRef)))
 			{
@@ -558,7 +545,6 @@ public class MoveService(
 		DBRef oldLocation,
 		DBRef newLocation)
 	{
-		// Get contents of the container
 		var contents = new List<AnySharpContent>();
 		await foreach (var content in mediator.CreateStream(new GetContentsQuery(container.Object().DBRef)))
 		{
@@ -570,7 +556,6 @@ public class MoveService(
 			return;
 		}
 
-		// Get location names for notification
 		var oldLocQuery = await mediator.Send(new GetObjectNodeQuery(oldLocation));
 		var newLocQuery = await mediator.Send(new GetObjectNodeQuery(newLocation));
 
@@ -581,7 +566,6 @@ public class MoveService(
 
 			foreach (var content in contents)
 			{
-				// Notify each content that they have moved
 				// This is typically used for players inside vehicles or containers
 				await notifyService.Notify(
 					content.Object().DBRef,
@@ -593,7 +577,6 @@ public class MoveService(
 	/// <inheritdoc />
 	public async ValueTask<bool> RescueFromVoidAsync(AnySharpObject player, DBRef fallbackHome)
 	{
-		// Only players can be rescued from the void
 		if (!player.IsPlayer)
 		{
 			return false;
@@ -615,11 +598,9 @@ public class MoveService(
 			// If we can't even resolve the location, player is definitely in the void
 		}
 
-		// Player is in the void - notify them
 		await notifyService.Notify(player, ErrorMessages.Notifications.InTheVoid);
 		await notifyService.Notify(player, ErrorMessages.Notifications.VoidSendingHome);
 
-		// Try to move to home first
 		try
 		{
 			var home = await player.AsPlayer.Home.WithCancellation(CancellationToken.None);

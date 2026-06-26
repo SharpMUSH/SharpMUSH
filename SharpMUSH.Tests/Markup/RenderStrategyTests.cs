@@ -16,7 +16,6 @@ namespace SharpMUSH.Tests.Markup;
 /// </summary>
 public class RenderStrategyTests
 {
-	// ── AnsiRenderStrategy ────────────────────────────────────────
 
 	[Test]
 	public async Task AnsiStrategy_PlainText_PassesThrough()
@@ -92,15 +91,12 @@ public class RenderStrategyTests
 		var part2 = AMS.MarkupSingle(redMarkup, " World");
 		var combined = AMS.concat(part1, part2);
 
-		// Optimized version should merge redundant escape sequences
 		var optimized = AMS.optimize(combined);
 		var result = optimized.RenderWith(AMS.RenderStrategies.AnsiStrategy);
 
 		await Assert.That(result).Contains("Hello World");
 		await Assert.That(result).Contains("\u001b[");
 	}
-
-	// ── HtmlRenderStrategy ────────────────────────────────────────
 
 	[Test]
 	public async Task HtmlStrategy_PlainText_PassesThrough()
@@ -202,8 +198,6 @@ public class RenderStrategyTests
 		await Assert.That(result).IsEqualTo("");
 	}
 
-	// ── PlainTextRenderStrategy ───────────────────────────────────
-
 	[Test]
 	public async Task PlainTextStrategy_PlainText_PassesThrough()
 	{
@@ -261,8 +255,6 @@ public class RenderStrategyTests
 		await Assert.That(result).IsEqualTo("");
 	}
 
-	// ── forFormat function ────────────────────────
-
 	[Test]
 	public async Task ForFormat_Ansi_ReturnsAnsiStrategy()
 	{
@@ -307,8 +299,6 @@ public class RenderStrategyTests
 		await Assert.That(forFormatResult).IsEqualTo(toStrategyResult);
 	}
 
-	// ── RenderWith method ─────────────────────────────────────────
-
 	[Test]
 	public async Task RenderWith_AcceptsDifferentStrategies()
 	{
@@ -319,7 +309,6 @@ public class RenderStrategyTests
 		var htmlResult = ams.RenderWith(AMS.RenderStrategies.HtmlStrategy);
 		var plainResult = ams.RenderWith(AMS.RenderStrategies.PlainTextStrategy);
 
-		// All three should produce different outputs for marked-up text
 		await Assert.That(ansiResult).IsNotEqualTo(htmlResult);
 		await Assert.That(ansiResult).IsNotEqualTo(plainResult);
 		await Assert.That(htmlResult).IsNotEqualTo(plainResult);
@@ -339,26 +328,20 @@ public class RenderStrategyTests
 		var htmlResult = combined.RenderWith(AMS.RenderStrategies.HtmlStrategy);
 		var plainResult = combined.RenderWith(AMS.RenderStrategies.PlainTextStrategy);
 
-		// All should contain the plain text
 		await Assert.That(plainResult).IsEqualTo("Hello Red Blue");
 
-		// ANSI should have escape codes
 		await Assert.That(ansiResult).Contains("\u001b[");
 		await Assert.That(ansiResult).Contains("Hello ");
 		await Assert.That(ansiResult).Contains("Red ");
 		await Assert.That(ansiResult).Contains("Blue");
 
-		// HTML should have span tags
 		await Assert.That(htmlResult).Contains("<span");
 		await Assert.That(htmlResult).Contains("Hello ");
 	}
 
-	// ── Custom Strategy (extensibility) ───────────────────────────
-
 	[Test]
 	public async Task CustomStrategy_BBCode_WorksWithRenderWith()
 	{
-		// Create a custom BBCode render strategy to demonstrate extensibility
 		var bbCodeStrategy = new BBCodeRenderStrategy();
 
 		var redMarkup = M.Create(foreground: new AnsiColor.RGB(Color.Red));
@@ -403,7 +386,6 @@ public class RenderStrategyTests
 	[Test]
 	public async Task CustomStrategy_MarkdownBold_WorksWithRenderWith()
 	{
-		// Another custom strategy: Markdown-style bold
 		var markdownStrategy = new MarkdownBoldRenderStrategy();
 		var boldMarkup = M.Create(bold: true);
 		var ams = AMS.MarkupSingle(boldMarkup, "Important");
@@ -412,8 +394,6 @@ public class RenderStrategyTests
 
 		await Assert.That(result).IsEqualTo("**Important**");
 	}
-
-	// ── Strategy singletons ───────────────────────────────────────
 
 	[Test]
 	public async Task Singletons_AreSameInstance()
@@ -429,8 +409,6 @@ public class RenderStrategyTests
 		await Assert.That(ReferenceEquals(html1, html2)).IsTrue();
 		await Assert.That(ReferenceEquals(plain1, plain2)).IsTrue();
 	}
-
-	// ── Backward compatibility ────────────────────────────────────
 
 	[Test]
 	public async Task BackwardCompat_RenderAnsi_SameAsRenderWithAnsi()
@@ -475,23 +453,18 @@ internal class BBCodeRenderStrategy : IRenderStrategy
 			var result = text;
 			var details = ansiMarkup.Details;
 
-			// Apply bold
 			if (details.Bold)
 				result = $"[b]{result}[/b]";
 
-			// Apply italic
 			if (details.Italic)
 				result = $"[i]{result}[/i]";
 
-			// Apply underline
 			if (details.Underlined)
 				result = $"[u]{result}[/u]";
 
-			// Apply strikethrough
 			if (details.StrikeThrough)
 				result = $"[s]{result}[/s]";
 
-			// Apply foreground color
 			if (details.Foreground is AnsiColor.RGB rgb)
 				result = $"[color=#{rgb.Value.R:x2}{rgb.Value.G:x2}{rgb.Value.B:x2}]{result}[/color]";
 

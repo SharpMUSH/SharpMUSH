@@ -57,7 +57,6 @@ public partial class ArangoDatabase
 
 	public async ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken ct = default)
 	{
-		// Optimized query: Get parent ID directly instead of just the key
 		// cache: false to ensure fresh data after parent changes
 		var parentId = (await arangoDb.Query.ExecuteAsync<string>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v._id", cache: false,
@@ -73,7 +72,7 @@ public partial class ArangoDatabase
 
 	public async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string id, CancellationToken ct = default)
 	{
-		// Get zone ID directly - cache: false to ensure fresh data after zone changes
+		// cache: false to ensure fresh data after zone changes
 		var zoneId = (await arangoDb.Query.ExecuteAsync<string>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphZones} RETURN v._id", cache: false,
 				cancellationToken: ct))
@@ -383,7 +382,6 @@ public partial class ArangoDatabase
 	{
 		var zoneId = zone.Object().Id!;
 
-		// Query to find all objects that have this zone set
 		const string zoneQuery =
 			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphZones} RETURN v._id";
 
@@ -395,7 +393,6 @@ public partial class ArangoDatabase
 
 		await foreach (var id in queryIds.ToAsyncEnumerable().WithCancellation(ct))
 		{
-			// Parse the id safely - format should be "collection/key"
 			var parts = id.Split('/');
 			if (parts.Length == 2 && int.TryParse(parts[1], out var key))
 			{

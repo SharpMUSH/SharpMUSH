@@ -13,7 +13,6 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 {
 	private async IAsyncEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Regex Regex, bool IsRegex)> MatchUserDefinedCommandSelectMany(AnySharpObject sharpObj)
 	{
-		// Use Mediator query to get cached command attributes
 		var cachedCommands = await mediator.Send(new GetCommandAttributesQuery(sharpObj));
 
 		foreach (var cached in cachedCommands)

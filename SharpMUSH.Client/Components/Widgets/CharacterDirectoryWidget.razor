@@ -3,7 +3,6 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 <div>
-    @* Search + count *@
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
         <MudTextField @bind-Value="_search" Immediate="true"
                       Placeholder="@Loc["SearchCharacters"]"
@@ -16,7 +15,6 @@
         }
     </div>
 
-    @* Category filter pills — sourced entirely from the MUSH *@
     @if (!_loading && _categories.Count > 1)
     {
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">

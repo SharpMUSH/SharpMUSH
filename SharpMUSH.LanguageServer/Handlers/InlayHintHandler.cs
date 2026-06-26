@@ -38,7 +38,6 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 			var hints = new List<InlayHint>();
 			var lines = document.Text.Split('\n');
 
-			// Process each line in the requested range
 			var startLine = (int)request.Range.Start.Line;
 			var endLine = (int)request.Range.End.Line;
 
@@ -59,8 +58,6 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 
 	private void ProcessLineForHints(string line, int lineNum, List<InlayHint> hints)
 	{
-		// Match function calls: functionName(arg1, arg2, ...)
-		// Pattern to find function calls with parameters
 		var matches = FunctionCallWithArgsRegex().Matches(line);
 
 		foreach (Match match in matches)
@@ -69,23 +66,18 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 			var argsText = match.Groups[2].Value;
 			var argsAbsoluteStart = match.Groups[2].Index;
 
-			// Look up the function in the library
 			if (_parser.FunctionLibrary.TryGetValue(functionName.ToUpperInvariant(), out var functionDef))
 			{
 				var attr = functionDef.LibraryInformation.Attribute;
 
-				// Process arguments character by character to get accurate positions
 				var argPositions = FindArgumentPositions(argsText);
 
-				// Add hints for each argument
 				for (int i = 0; i < argPositions.Count && i < attr.MaxArgs; i++)
 				{
 					var argPos = argPositions[i];
 
-					// Create parameter name hint
 					var paramName = GetParameterName(functionName, i, attr);
 
-					// Add hint at the start of this argument (absolute position in line)
 					hints.Add(new InlayHint
 					{
 						Position = new Position(lineNum, argsAbsoluteStart + argPos),
@@ -105,7 +97,6 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 		var depth = 0;
 		var i = 0;
 
-		// Skip leading whitespace to find first argument
 		while (i < argsText.Length && char.IsWhiteSpace(argsText[i]))
 		{
 			i++;
@@ -113,10 +104,9 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 
 		if (i < argsText.Length)
 		{
-			positions.Add(i); // First argument position
+			positions.Add(i);
 		}
 
-		// Find subsequent argument positions
 		while (i < argsText.Length)
 		{
 			if (argsText[i] == '(' || argsText[i] == '[' || argsText[i] == '{')
@@ -129,7 +119,6 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 			}
 			else if (argsText[i] == ',' && depth == 0)
 			{
-				// Found argument separator - skip comma and whitespace
 				i++;
 				while (i < argsText.Length && char.IsWhiteSpace(argsText[i]))
 				{
@@ -137,7 +126,7 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 				}
 				if (i < argsText.Length)
 				{
-					positions.Add(i); // Next argument position
+					positions.Add(i);
 				}
 				continue;
 			}
@@ -150,13 +139,11 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 
 	private static string GetParameterName(string functionName, int index, Library.Attributes.SharpFunctionAttribute attr)
 	{
-		// Use parameter names from the attribute if available
 		if (attr.ParameterNames != null && attr.ParameterNames.Length > 0)
 		{
 			return ExpandParameterName(attr.ParameterNames, index);
 		}
 
-		// Fallback to generic parameter name
 		return $"arg{index + 1}";
 	}
 
@@ -168,21 +155,17 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 	/// </summary>
 	private static string ExpandParameterName(string[] parameterNames, int index)
 	{
-		// Find which parameter pattern applies to this index
 		int currentIndex = 0;
 
 		foreach (var paramName in parameterNames)
 		{
 			if (paramName.Contains("..."))
 			{
-				// This is a repeating parameter pattern
 				if (paramName.Contains("|"))
 				{
-					// Paired repeating pattern like "case...|result..."
 					var parts = paramName.Split('|');
 					var cleanParts = parts.Select(p => p.Replace("...", "").Trim()).ToArray();
 
-					// Calculate which part of the pair this index represents
 					var pairIndex = (index - currentIndex) / cleanParts.Length;
 					var partIndex = (index - currentIndex) % cleanParts.Length;
 
@@ -190,14 +173,12 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 				}
 				else
 				{
-					// Simple repeating pattern like "value..."
 					var cleanName = paramName.Replace("...", "").Trim();
 					return $"{cleanName}{index - currentIndex + 1}";
 				}
 			}
 			else
 			{
-				// Regular fixed parameter
 				if (index == currentIndex)
 				{
 					return paramName;
@@ -206,7 +187,6 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 			}
 		}
 
-		// If we get here, we've gone past all defined parameters
 		return $"arg{index + 1}";
 	}
 

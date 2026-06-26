@@ -31,19 +31,16 @@ public class PuebloMxpRenderTests
 	[Test]
 	public async Task AnsiColor_PreservedInPuebloMode()
 	{
-		// Create an MString with red foreground
 		var red = AnsiMarkup.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var mstr = MModule.MarkupSingle(red, "Red text");
 
 		var pueblo = mstr.Render("pueblo");
 		var ansi = mstr.Render("ansi");
 
-		// Pueblo should produce ANSI escape codes, not <FONT> HTML
 		await Assert.That(pueblo).Contains("\x1b[");
 		await Assert.That(pueblo).DoesNotContain("<FONT");
 		await Assert.That(pueblo).DoesNotContain("<span");
 
-		// Should be the same as ANSI rendering for color-only markup
 		await Assert.That(pueblo).IsEqualTo(ansi);
 	}
 
@@ -59,10 +56,8 @@ public class PuebloMxpRenderTests
 		var pueblo = mstr.Render("pueblo");
 		var ansiOutput = mstr.Render("ansi");
 
-		// Pueblo/MXP should include the <send> tag
 		await Assert.That(pueblo).Contains("<send href=\"North\" hint=\"North|n|no\">North</send>");
 
-		// ANSI should NOT include any HTML tags — HtmlMarkup with unknown tag just passes text through
 		await Assert.That(ansiOutput).DoesNotContain("<send");
 		await Assert.That(ansiOutput).StartsWith("North");
 	}
@@ -73,7 +68,6 @@ public class PuebloMxpRenderTests
 	[Test]
 	public async Task CombinedAnsiAndHtml_AdditiveInPuebloMode()
 	{
-		// Build: red-colored text with a <send> tag
 		var red = AnsiMarkup.Create(foreground: new AnsiColor.RGB(Color.Red));
 		var send = HtmlMarkup.Create("send", "href=\"North\"");
 		var mstr = MModule.MarkupSingleMulti(
@@ -81,7 +75,6 @@ public class PuebloMxpRenderTests
 
 		var pueblo = mstr.Render("pueblo");
 
-		// Should have both ANSI escape codes AND HTML <send> tags
 		await Assert.That(pueblo).Contains("\x1b[");
 		await Assert.That(pueblo).Contains("<send href=\"North\">");
 		await Assert.That(pueblo).Contains("</send>");

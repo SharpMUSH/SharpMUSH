@@ -102,8 +102,8 @@ public class ApplicationsGateTests
 		await Assert.That(result.Result).IsTypeOf<OkObjectResult>();
 	}
 
-	// ── SharpMUSHOptions with only the Database.AllowBrowserCode flag varied; the rest mirror the proven
-	//    defaults in ConfigurationControllerTests so the positional records bind correctly. ──
+	// SharpMUSHOptions with only the Database.AllowBrowserCode flag varied; the rest mirror the proven
+	// defaults in ConfigurationControllerTests so the positional records bind correctly.
 	private static SharpMUSHOptions OptionsWith(bool allowBrowserCode) => new()
 	{
 		Attribute = new AttributeOptions(

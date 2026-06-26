@@ -27,17 +27,14 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task ScenePackage_IsInstalled_WithWizardLoggerObjectAndAttributes()
 	{
-		// The bootstrap installed the package at startup.
 		var package = await Registry.GetInstalledPackageAsync("scene");
 		await Assert.That(package.IsT0).IsTrue();
 		await Assert.That(package.AsT0.Version).IsEqualTo("1.5.0");
 
-		// Create mode: the package owns exactly one object (the Scene Logger thing).
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		await Assert.That(objects.Count).IsEqualTo(1);
 		await Assert.That(objects.Single().Ref).IsEqualTo("logger");
 
-		// The capture hooks, verbs, and lifecycle attributes are managed on that object.
 		var attrs = (await Registry.GetManagedAttributesAsync("scene"))
 			.Select(m => m.Attribute).ToList();
 		await Assert.That(attrs).Contains("CMD`CAPTURE`POSE");

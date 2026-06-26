@@ -148,8 +148,6 @@ public class ApplicationsController(
 		return Ok(new { deleted = true });
 	}
 
-	// ── Helpers ──────────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Runs a GET against the schema route through the same dispatcher the <c>/http</c> route uses,
 	/// and confirms a successful, parseable-JSON response. Returns (ok, reason-when-not-ok).

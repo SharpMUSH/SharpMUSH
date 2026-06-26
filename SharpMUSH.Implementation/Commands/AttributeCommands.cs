@@ -25,7 +25,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		// Parse object/attribute
 		var objAttrText = MModule.plainText(objAttrArg.Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
@@ -37,7 +36,6 @@ public partial class Commands
 
 		var (dbref, attrName) = details;
 
-		// Locate object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, dbref, LocateFlags.All);
 
@@ -48,7 +46,6 @@ public partial class Commands
 
 		var targetObject = locate.AsSharpObject;
 
-		// Check if attribute exists
 		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName,
 		IAttributeService.AttributeMode.Read);
 
@@ -60,7 +57,6 @@ public partial class Commands
 
 		if (!args.TryGetValue("1", out var valueArg))
 		{
-			// Query mode - show lock status
 			var isLocked = attribute.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
 			await NotifyService!.NotifyLocalized(executor,
 				isLocked
@@ -70,7 +66,6 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		// Set mode
 		var lockValue = MModule.plainText(valueArg.Message!).ToLowerInvariant();
 		bool shouldLock;
 
@@ -88,7 +83,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidValue);
 		}
 
-		// Check permissions
 		var canSet = await PermissionService!.CanSet(executor, targetObject);
 		if (!canSet)
 		{
@@ -98,13 +92,10 @@ public partial class Commands
 
 		if (shouldLock)
 		{
-			// Lock the attribute and change ownership to executor
 			await AttributeService!.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
 
-			// Change ownership to executor (if executor is a player)
 			if (executor.IsPlayer)
 			{
-				// Re-set the attribute with new owner to change ownership
 				var currentValue = attribute.AsAttribute.Last().Value;
 				await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 			}
@@ -113,7 +104,6 @@ public partial class Commands
 		}
 		else
 		{
-			// Unlock the attribute
 			await AttributeService!.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeUnlocked), executor);
 		}
@@ -136,7 +126,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		// Parse source object/attribute
 		var sourceText = MModule.plainText(sourceArg.Message!);
 		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
 
@@ -148,7 +137,6 @@ public partial class Commands
 
 		var (sourceDbref, sourceAttr) = sourceDetails;
 
-		// Locate source object
 		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, sourceDbref, LocateFlags.All);
 
@@ -159,7 +147,6 @@ public partial class Commands
 
 		var sourceObject = sourceLocate.AsSharpObject;
 
-		// Get the source attribute
 		var sourceAttribute = await AttributeService!.GetAttributeAsync(executor, sourceObject, sourceAttr,
 		IAttributeService.AttributeMode.Read);
 
@@ -193,10 +180,8 @@ public partial class Commands
 			}
 
 			var (destDbref, destAttr) = destDetails;
-			// If no destination attribute name specified, use source attribute name
 			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
 
-			// Locate destination object
 			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, destDbref, LocateFlags.All);
 
@@ -208,7 +193,6 @@ public partial class Commands
 
 			var destObject = destLocate.AsSharpObject;
 
-			// Check permissions to set attribute on destination
 			var canSet = await PermissionService!.CanSet(executor, destObject);
 			if (!canSet)
 			{
@@ -216,7 +200,6 @@ public partial class Commands
 				continue;
 			}
 
-			// Set the attribute value
 			var setResult = await AttributeService!.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
 			if (setResult.IsT1)
@@ -225,7 +208,6 @@ public partial class Commands
 				continue;
 			}
 
-			// Copy flags if requested
 			if (copyFlags)
 			{
 				foreach (var flag in attrFlags)
@@ -266,7 +248,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		// Parse source object/attribute
 		var sourceText = MModule.plainText(sourceArg.Message!);
 		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
 
@@ -278,7 +259,6 @@ public partial class Commands
 
 		var (sourceDbref, sourceAttr) = sourceDetails;
 
-		// Locate source object
 		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, sourceDbref, LocateFlags.All);
 
@@ -289,7 +269,6 @@ public partial class Commands
 
 		var sourceObject = sourceLocate.AsSharpObject;
 
-		// Get the source attribute
 		var sourceAttribute = await AttributeService!.GetAttributeAsync(executor, sourceObject, sourceAttr,
 		IAttributeService.AttributeMode.Read);
 
@@ -323,10 +302,8 @@ public partial class Commands
 			}
 
 			var (destDbref, destAttr) = destDetails;
-			// If no destination attribute name specified, use source attribute name
 			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
 
-			// Locate destination object
 			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, destDbref, LocateFlags.All);
 
@@ -338,7 +315,6 @@ public partial class Commands
 
 			var destObject = destLocate.AsSharpObject;
 
-			// Check permissions to set attribute on destination
 			var canSet = await PermissionService!.CanSet(executor, destObject);
 			if (!canSet)
 			{
@@ -346,7 +322,6 @@ public partial class Commands
 				continue;
 			}
 
-			// Set the attribute value
 			var setResult = await AttributeService!.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
 			if (setResult.IsT1)
@@ -355,7 +330,6 @@ public partial class Commands
 				continue;
 			}
 
-			// Copy flags if requested
 			if (copyFlags)
 			{
 				foreach (var flag in attrFlags)
@@ -369,7 +343,6 @@ public partial class Commands
 
 		if (copiedCount > 0)
 		{
-			// Remove the source attribute after successful copy
 			var clearResult = await AttributeService!.ClearAttributeAsync(executor, sourceObject, sourceAttr,
 			IAttributeService.AttributePatternMode.Exact,
 			IAttributeService.AttributeClearMode.Safe);
@@ -406,7 +379,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		// Parse object/attribute
 		var objAttrText = MModule.plainText(objAttrArg.Message!);
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
@@ -418,7 +390,6 @@ public partial class Commands
 
 		var (dbref, attrName) = details;
 
-		// Locate object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, dbref, LocateFlags.All);
 
@@ -429,7 +400,6 @@ public partial class Commands
 
 		var targetObject = locate.AsSharpObject;
 
-		// Check if attribute exists
 		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName,
 		IAttributeService.AttributeMode.Read);
 
@@ -439,7 +409,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
-		// Locate new owner
 		var newOwnerText = MModule.plainText(ownerArg.Message!);
 		var ownerLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, newOwnerText, LocateFlags.All);
@@ -452,7 +421,6 @@ public partial class Commands
 
 		var newOwnerObject = ownerLocate.AsSharpObject;
 
-		// New owner must be a player (or we use their owner)
 		SharpPlayer newOwnerPlayer;
 		if (newOwnerObject.IsPlayer)
 		{
@@ -460,13 +428,10 @@ public partial class Commands
 		}
 		else
 		{
-			// Use the object's owner
 			newOwnerPlayer = await newOwnerObject.Object().Owner.WithCancellation(CancellationToken.None);
 		}
 
-		// Check permissions
-		// Mortals can only chown to themselves
-		// Wizards can chown to anyone
+		// Mortals can only chown to themselves; wizards can chown to anyone.
 		var isWizard = await executor.HasPower("WIZARD") || await executor.HasFlag("WIZARD");
 		var canSet = await PermissionService!.CanSet(executor, targetObject);
 
@@ -478,7 +443,6 @@ public partial class Commands
 
 		if (!isWizard)
 		{
-			// Mortals can only chown to themselves
 			if (executor.IsPlayer && newOwnerPlayer.Object.DBRef != executor.AsPlayer.Object.DBRef)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CanOnlyChownToYourself), executor);
@@ -495,7 +459,6 @@ public partial class Commands
 			}
 		}
 
-		// Change ownership by re-setting the attribute with new owner
 		var currentValue = attribute.AsAttribute.Last().Value;
 		var setResult = await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 
@@ -533,7 +496,6 @@ public partial class Commands
 
 		var (dbref, maybeAttribute) = details;
 
-		// Locate the object
 		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor,
 		executor,
@@ -547,7 +509,6 @@ public partial class Commands
 
 		var targetObject = locate.AsSharpObject;
 
-		// Check if executor can modify the object
 		var canModify = await PermissionService!.Controls(executor, targetObject);
 		if (!canModify)
 		{
@@ -555,7 +516,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		// Check if object has SAFE flag
 		var isSafe = await targetObject.HasFlag("SAFE");
 		if (isSafe)
 		{
@@ -563,10 +523,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.Safe);
 		}
 
-		// If no attribute pattern specified, wipe all attributes
 		if (string.IsNullOrEmpty(maybeAttribute))
 		{
-			// Wipe all attributes - use ClearAttributeAsync with wildcard pattern
 			await AttributeService!.ClearAttributeAsync(executor, targetObject, "**",
 			IAttributeService.AttributePatternMode.Wildcard,
 			IAttributeService.AttributeClearMode.Safe);
@@ -575,7 +533,6 @@ public partial class Commands
 		}
 		else
 		{
-			// Wipe matching attributes
 			await AttributeService!.ClearAttributeAsync(executor, targetObject, maybeAttribute,
 			IAttributeService.AttributePatternMode.Wildcard,
 			IAttributeService.AttributeClearMode.Safe);

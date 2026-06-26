@@ -73,7 +73,7 @@ public class BooleanExpressionUnitTests
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
 
-	[Arguments("name^Player*", true)]  // Should validate (name locks always valid syntactically)
+	[Arguments("name^Player*", true)]
 	[Arguments("name^test", true)]
 	[Arguments("name^*", true)]
 	[Test]
@@ -85,7 +85,7 @@ public class BooleanExpressionUnitTests
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
 
-	[Arguments("=me", true)]  // Exact object locks always valid syntactically
+	[Arguments("=me", true)]
 	[Arguments("=#1", true)]
 	[Arguments("=TestObject", true)]
 	[Test]
@@ -97,8 +97,8 @@ public class BooleanExpressionUnitTests
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
 
-	[Arguments("name^God", true)]  // DBRef #1 is named "God"
-	[Arguments("name^NonExistent", false)]  // This player name shouldn't exist
+	[Arguments("name^God", true)]
+	[Arguments("name^NonExistent", false)]
 	[Test]
 	public async Task NameExpressionMatching(string input, bool expected)
 	{
@@ -109,9 +109,9 @@ public class BooleanExpressionUnitTests
 		await Assert.That(bep.Compile(input)(player, player)).IsEqualTo(expected);
 	}
 
-	[Arguments("=#1", true)]  // Player #1 matches itself
-	[Arguments("=#2", false)]  // Player #1 doesn't match #2
-	[Arguments("=me", true)]  // Player #1 owned by itself, "me" should match
+	[Arguments("=#1", true)]
+	[Arguments("=#2", false)]
+	[Arguments("=me", true)]
 	[Test]
 	public async Task ExactObjectMatching(string input, bool expected)
 	{
@@ -122,7 +122,7 @@ public class BooleanExpressionUnitTests
 		await Assert.That(bep.Compile(input)(player, player)).IsEqualTo(expected);
 	}
 
-	[Arguments("dbreflist^testattr", true)]  // DBRef list locks are always valid syntactically
+	[Arguments("dbreflist^testattr", true)]
 	[Test]
 	public async Task DbRefListValidation(string input, bool expected)
 	{
@@ -132,9 +132,9 @@ public class BooleanExpressionUnitTests
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
 
-	[Arguments("ip^127.0.0.1", true)]  // IP locks are always valid syntactically
+	[Arguments("ip^127.0.0.1", true)]
 	[Arguments("ip^192.168.*", true)]
-	[Arguments("hostname^localhost", true)]  // Hostname locks are always valid syntactically
+	[Arguments("hostname^localhost", true)]
 	[Test]
 	public async Task HostLockValidation(string input, bool expected)
 	{
@@ -144,7 +144,7 @@ public class BooleanExpressionUnitTests
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
 
-	[Arguments("channel^Public", true)]  // Channel locks are always valid syntactically
+	[Arguments("channel^Public", true)]
 	[Test]
 	public async Task ChannelValidation(string input, bool expected)
 	{

@@ -100,7 +100,6 @@ public class TaskScheduler(
 		}
 		catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested)
 		{
-			// Graceful shutdown
 		}
 	}
 
@@ -202,8 +201,6 @@ int oldValue)
 		var triggerIdentity = $"dbref:{state.Executor}-{NextPid()}";
 		var triggerGroup = $"{SemaphoreGroup}:{dbRefAttribute}";
 
-		// DIAGNOSTIC: Log the group key being used for job creation
-
 		await _scheduler.ScheduleJob(
 			JobBuilder
 				.CreateForAsync<SemaphoreTask>()
@@ -287,8 +284,6 @@ int oldValue)
 	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
 		var groupKey = $"{SemaphoreGroup}:{dbAttribute}";
-
-		// DIAGNOSTIC: Log the group key being used for notification lookup
 
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(groupKey));
@@ -382,11 +377,10 @@ int oldValue)
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 
-		// Get the first waiting task
 		var firstTrigger = semaphoresForObject.FirstOrDefault();
 		if (firstTrigger == null)
 		{
-			return false; // No tasks waiting
+			return false;
 		}
 
 		try
@@ -405,14 +399,11 @@ int oldValue)
 
 			var data = job.JobDataMap;
 
-			// Get the current ParserState
 			if (!data.TryGetValue("State", out var stateObj) || stateObj is not ParserState state)
 			{
 				return false;
 			}
 
-			// Modify the Q-registers in the state
-			// We need to get the top dictionary from the Registers stack and add/update the Q-registers
 			if (state.Registers.TryPeek(out var registers))
 			{
 				foreach (var qreg in qRegisters)
@@ -422,7 +413,6 @@ int oldValue)
 			}
 			else
 			{
-				// If no registers stack exists, create one
 				var newRegisters = new Dictionary<string, MString>();
 				foreach (var qreg in qRegisters)
 				{
@@ -431,10 +421,8 @@ int oldValue)
 				state.Registers.Push(newRegisters);
 			}
 
-			// Update the job data with the modified state
 			data["State"] = state;
 
-			// Need to re-add the job to persist the changes
 			await _scheduler.AddJob(job, replace: true, storeNonDurableWhileAwaitingScheduling: true);
 
 			return true;
@@ -453,13 +441,11 @@ int oldValue)
 
 		if (count.HasValue)
 		{
-			// Drain only the specified number of tasks
 			var tasksToDrain = semaphoresForObject.Take(count.Value).ToList();
 			await _scheduler.UnscheduleJobs(tasksToDrain);
 		}
 		else
 		{
-			// Drain all tasks
 			await _scheduler.UnscheduleJobs(semaphoresForObject);
 		}
 	}
@@ -470,7 +456,6 @@ int oldValue)
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{DelayGroup}:{dbRef}"));
 		await _scheduler.UnscheduleJobs(delayed);
 
-		// Cancel pending channel entries for this dbref
 		var dbRefPrefix = $"dbref:{dbRef}-";
 		foreach (var kvp in _pendingEntries)
 		{
@@ -487,7 +472,6 @@ int oldValue)
 
 	public async ValueTask<bool> HaltByPid(long pid)
 	{
-		// Check channel entries first
 		if (_pendingEntries.TryRemove(pid, out var entry))
 		{
 			entry.Cts.Cancel();
@@ -495,7 +479,6 @@ int oldValue)
 			return true;
 		}
 
-		// Fall back to Quartz for semaphore/delay tasks
 		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var pidString = $"-{pid}";
 
@@ -528,7 +511,6 @@ int oldValue)
 			new string(x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
 				.TakeWhile(c => c != '-').ToArray()));
 
-		// Quartz tasks (semaphore, delay, scheduled)
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, ITrigger>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
@@ -543,7 +525,6 @@ int oldValue)
 			)).ToArray());
 		}
 
-		// Channel tasks (enqueue, direct-input)
 		foreach (var group in _pendingEntries.Values.GroupBy(e => e.Group))
 		{
 			yield return (group.Key, group.Select(e => (

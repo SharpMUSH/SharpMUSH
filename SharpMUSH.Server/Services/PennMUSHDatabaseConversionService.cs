@@ -37,7 +37,6 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		// Check if conversion is enabled via configuration
 		if (string.IsNullOrWhiteSpace(_databaseFilePath))
 		{
 			_logger.LogInformation("PennMUSH database conversion not configured (PENNMUSH_DATABASE_PATH not set)");
@@ -96,7 +95,6 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 					_logger.LogError("  ... and {Count} more errors", result.Errors.Count - 10);
 				}
 
-				// Optionally stop the application on conversion failure
 				if (_stopOnFailure)
 				{
 					_logger.LogCritical("Stopping application due to conversion failure");
@@ -108,7 +106,6 @@ public class PennMUSHDatabaseConversionService : BackgroundService
 		{
 			_logger.LogError(ex, "Fatal error during PennMUSH database conversion");
 
-			// Optionally stop the application on conversion exception
 			if (_stopOnFailure)
 			{
 				_logger.LogCritical("Stopping application due to conversion exception");

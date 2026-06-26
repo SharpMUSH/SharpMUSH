@@ -21,7 +21,6 @@ namespace SharpMUSH.Tests.Integration.Wiki;
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class WikiHttpControllerTests(ServerWebAppFactory factory)
 {
-	// DTO mirrors WikiController.WikiPageDto — only the fields the tests care about.
 	private record WikiPageDto(
 		string Id,
 		string Slug,
@@ -40,8 +39,6 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 
 	private record CreatePageRequest(string Title, string Markdown, string? Namespace);
 	private record UpdatePageRequest(string Markdown, string? EditSummary);
-
-	// ── GET ──────────────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task GetPage_HomeSlug_Returns200WithCorrectSlug()
@@ -65,8 +62,6 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
-
-	// ── PUT ──────────────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task PutPage_HomeSlug_Returns200AndUpdatesContent()
@@ -98,8 +93,6 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
 
-	// ── POST ──────────────────────────────────────────────────────────────────
-
 	[Test]
 	public async Task PostPage_NewPage_Returns201AndLocationHeader()
 	{
@@ -123,21 +116,17 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = factory.CreateHttpClient();
 
-		// Create a page first …
 		var title = $"Conflict Test {Guid.NewGuid():N}";
 		var first = await http.PostAsJsonAsync(
 			"api/wiki",
 			new CreatePageRequest(title, "first", null));
 		await Assert.That(first.StatusCode).IsEqualTo(HttpStatusCode.Created);
 
-		// … then try to create it again with the same title (same derived slug).
 		var second = await http.PostAsJsonAsync(
 			"api/wiki",
 			new CreatePageRequest(title, "second", null));
 		await Assert.That(second.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
 	}
-
-	// ── Round-trip ────────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task CreateThenUpdateThenGet_ContentRoundTrips()
@@ -146,7 +135,6 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 		var title = $"RoundTrip {Guid.NewGuid():N}";
 		const string updatedMarkdown = "## Round-trip\n\nFinal content.";
 
-		// POST
 		var created = await http.PostAsJsonAsync(
 			"api/wiki",
 			new CreatePageRequest(title, "# Initial", null));
@@ -154,21 +142,17 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 		var createdDto = await created.Content.ReadFromJsonAsync<WikiPageDto>();
 		await Assert.That(createdDto).IsNotNull();
 
-		// PUT
 		var slug = createdDto!.Slug;
 		var updated = await http.PutAsJsonAsync(
 			$"api/wiki/{Uri.EscapeDataString(slug)}",
 			new UpdatePageRequest(updatedMarkdown, "round-trip test"));
 		await Assert.That(updated.StatusCode).IsEqualTo(HttpStatusCode.OK);
 
-		// GET
 		var fetched = await http.GetFromJsonAsync<WikiPageDto>($"api/wiki/ns/main/general/{Uri.EscapeDataString(slug)}");
 		await Assert.That(fetched).IsNotNull();
 		await Assert.That(fetched!.MarkdownSource).IsEqualTo(updatedMarkdown);
 		await Assert.That(fetched.RevisionNumber).IsGreaterThan(createdDto.RevisionNumber);
 	}
-
-	// ── Revisions ─────────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task GetRevisions_AfterEdit_ReturnsHistoryNewestFirst()
@@ -191,7 +175,6 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 
 		await Assert.That(revisions).IsNotNull();
 		await Assert.That(revisions!.Count).IsGreaterThanOrEqualTo(1);
-		// Newest first; the snapshot saved on update captures the post-edit body.
 		await Assert.That(revisions[0].MarkdownSource).IsEqualTo("# v2");
 	}
 
@@ -242,8 +225,6 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
-
-	// ── Namespace listing ─────────────────────────────────────────────────────
 
 	[Test]
 	public async Task ListNamespacePages_MainNamespace_IncludesCreatedPage()

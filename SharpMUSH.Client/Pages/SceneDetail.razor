@@ -26,7 +26,6 @@ else
     <PageTitle>@SceneTitle(_scene!) — SharpMUSH</PageTitle>
     <div style="padding:var(--cpad);">
 
-        @* Header *@
         <div style="margin-bottom:20px;">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
                 @if (_scene!.IsLive)
@@ -49,7 +48,6 @@ else
             </div>
         </div>
 
-        @* Tag filter chip bar — built from the DISTINCT union of pose tags. *@
         @if (_allTags.Count > 0)
         {
             <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px;">
@@ -65,7 +63,6 @@ else
             </div>
         }
 
-        @* Transcript *@
         @{
             var visible = FilteredPoses();
         }
@@ -85,7 +82,6 @@ else
             </MudPaper>
         }
 
-        @* Actions *@
         <div style="display:flex;gap:10px;margin-top:16px;">
             @if (_scene!.IsLive)
             {

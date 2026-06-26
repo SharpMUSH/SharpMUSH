@@ -15,7 +15,6 @@ public class RoleDerivationService : IRoleDerivationService
 	/// <inheritdoc />
 	public PortalRole DeriveRole(int dbrefNumber, IEnumerable<SharpObjectFlag> flags)
 	{
-		// #1 is God regardless of flags
 		if (dbrefNumber == 1)
 			return PortalRole.God;
 

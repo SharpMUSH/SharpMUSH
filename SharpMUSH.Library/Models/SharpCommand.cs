@@ -20,11 +20,9 @@ public class SharpCommand
 
 	public required string[] Restrictions { get; set; }
 
-	// Relationship
 	[JsonIgnore]
 	public SharpCommand? ClonedFrom { get; set; }
 
-	// Relationship would need a Type field.
 	[JsonIgnore]
 	public Dictionary<string, SharpAttribute>? Hooks { get; set; }
 }

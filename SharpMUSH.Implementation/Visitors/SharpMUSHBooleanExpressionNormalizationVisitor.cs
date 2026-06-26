@@ -165,7 +165,6 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 	/// </summary>
 	private string ResolveToDbRef(string value)
 	{
-		// Already a dbref — return as-is
 		if (value.StartsWith('#'))
 			return value;
 
@@ -177,7 +176,6 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 		if (mediator == null || executor == null)
 			return value;
 
-		// Attempt to resolve the name to a dbref using the executor's context
 		try
 		{
 			var exec = executor!;

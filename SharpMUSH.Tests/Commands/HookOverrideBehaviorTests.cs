@@ -47,7 +47,7 @@ public class HookOverrideBehaviorTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookOvrLit");
 		try
 		{
-			// $@emit (.*)$ → %1 is everything after "@emit ". Capture it into RESULT (no re-emit ⇒ no recursion).
+			// No re-emit in the override body ⇒ no recursion.
 			await Parser.CommandParse(1, ConnectionService,
 				MModule.single($"&OVR {obj}=$(?i)^@emit (.*)$:&RESULT {obj}=%1"));
 			await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/OVR=regexp"));

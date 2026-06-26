@@ -21,9 +21,9 @@ public class NatsTestServer : IAsyncInitializer, IAsyncDisposable
 
 	public IContainer Instance => field ??= new ContainerBuilder("nats:2-alpine")
 		.WithNetwork(DockerNetwork.Instance)
-		.WithPortBinding(NatsPort, true) // Random host port
-		.WithResourceMapping(NatsConfig, NatsConfigPath) // Embed config with max_payload and JetStream
-		.WithCommand("-c", NatsConfigPath)               // Load config file
+		.WithPortBinding(NatsPort, true)
+		.WithResourceMapping(NatsConfig, NatsConfigPath)
+		.WithCommand("-c", NatsConfigPath)
 		.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Server is ready"))
 		.WithReuse(false)
 		.Build();

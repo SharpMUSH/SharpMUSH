@@ -22,10 +22,8 @@
 }
 else
 {
-    @* Three-pane mail layout *@
     <div style="display:flex;height:100%;overflow:hidden;">
 
-        @* Pane 1: Folders (180px) *@
         <div style="width:180px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface-3);display:flex;flex-direction:column;overflow-y:auto;">
             <div style="padding:14px 12px 8px;border-bottom:1px solid var(--border-soft);">
                 <MudText Class="section-kicker">Folders</MudText>
@@ -49,7 +47,6 @@ else
             </div>
         </div>
 
-        @* Pane 2: Message list (320px) *@
         <div style="width:320px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface);">
             <div style="padding:10px 14px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:8px;">
                 <MudText Style="font-size:13px;font-weight:600;flex:1;">@_folder</MudText>
@@ -95,7 +92,6 @@ else
             </div>
         </div>
 
-        @* Pane 3: Reading pane (flex) *@
         <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;">
             @if (_selected is null)
             {

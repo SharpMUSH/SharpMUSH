@@ -87,7 +87,6 @@
                                 <ChildContent>
                                     <div class="ph-panel-inner">
                                         <MudStack Spacing="3">
-                                            <!-- Add Word Form -->
                                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                                 <MudTextField @bind-Value="_newWord"
                                                               Label="@Loc["AddNewWord"].Value"
@@ -105,7 +104,6 @@
                                                 </MudButton>
                                             </MudStack>
 
-                                            <!-- Word List -->
                                             <div class="ph-words-label">@Loc["Words"]</div>
                                             @if (category.Value.Any())
                                             {
@@ -140,7 +138,6 @@
     </MudStack>
 </div>
 
-<!-- Add Category Dialog -->
 <MudDialog @bind-Visible="_showAddCategoryDialog">
     <DialogContent>
         <MudTextField @bind-Value="_newCategoryName"
@@ -218,7 +215,6 @@
             var response = await Http.PostAsJsonAsync($"/api/suggestion/{categoryKey}", " ");
             if (response.IsSuccessStatusCode)
             {
-                // Remove the placeholder word
                 await Http.DeleteAsync($"/api/suggestion/{categoryKey}/{Uri.EscapeDataString(" ")}");
                 
                 await LoadSuggestionsAsync();
@@ -308,7 +304,6 @@
         }
     }
 
-    // DTO for deserializing API response
     private class SuggestionDataResponse
     {
         public Dictionary<string, HashSet<string>>? Categories { get; set; }

@@ -13,8 +13,6 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 public class AccountServiceTests
 {
-	// ── Helpers ───────────────────────────────────────────────────────────────
-
 	private static (AccountService Service, ISharpDatabase Db, IPasswordService Passwords) Build()
 	{
 		var db = Substitute.For<ISharpDatabase>();
@@ -33,8 +31,6 @@ public class AccountServiceTests
 			CreatedAt = 1_000_000,
 			IsDisabled = isDisabled
 		};
-
-	// ── CreateAccountAsync ────────────────────────────────────────────────────
 
 	[Test]
 	public async ValueTask CreateAccount_NewDisplayName_CreatesAndReturnsAccount()
@@ -104,11 +100,8 @@ public class AccountServiceTests
 		var result = await svc.CreateAccountAsync("Bob", null, "pass");
 
 		await Assert.That(result.IsT0).IsTrue();
-		// Email check should never have been called
 		await db.DidNotReceive().GetAccountByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
-
-	// ── AuthenticateAsync ─────────────────────────────────────────────────────
 
 	[Test]
 	public async ValueTask AuthenticateAsync_ValidDisplayNameAndPassword_ReturnsAccount()
@@ -182,8 +175,6 @@ public class AccountServiceTests
 		await Assert.That(result).IsNull();
 	}
 
-	// ── ChangePasswordAsync ───────────────────────────────────────────────────
-
 	[Test]
 	public async ValueTask ChangePassword_CorrectOldPassword_UpdatesHash()
 	{
@@ -228,8 +219,6 @@ public class AccountServiceTests
 		await Assert.That(result.IsT1).IsTrue();
 		await Assert.That(result.AsT1.Value).Contains("not found");
 	}
-
-	// ── ChangeEmailAsync ──────────────────────────────────────────────────────
 
 	[Test]
 	public async ValueTask ChangeEmail_ValidPassword_NewEmailSet()
@@ -278,11 +267,8 @@ public class AccountServiceTests
 
 		await Assert.That(result.IsT0).IsTrue();
 		await db.Received(1).UpdateAccountEmailAsync("accounts/1", null, Arg.Any<CancellationToken>());
-		// Should not check whether null email is already taken
 		await db.DidNotReceive().GetAccountByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
-
-	// ── ChangeUsernameAsync ────────────────────────────────────────────────
 
 	[Test]
 	public async ValueTask ChangeDisplayName_Unique_UpdatesName()
@@ -311,8 +297,6 @@ public class AccountServiceTests
 		await Assert.That(result.IsT1).IsTrue();
 		await Assert.That(result.AsT1.Value).Contains("already taken");
 	}
-
-	// ── UsernameExistsAsync / EmailExistsAsync ─────────────────────────────
 
 	[Test]
 	public async ValueTask DisplayNameExists_WhenPresent_ReturnsTrue()
@@ -366,8 +350,6 @@ public class AccountServiceTests
 		await Assert.That(result).IsFalse();
 	}
 
-	// ── DeleteAccountAsync ────────────────────────────────────────────────────
-
 	[Test]
 	public async ValueTask DeleteAccountAsync_ForwardsToDatabase()
 	{
@@ -379,8 +361,6 @@ public class AccountServiceTests
 
 		await db.Received(1).DeleteAccountAsync("accounts/1", Arg.Any<CancellationToken>());
 	}
-
-	// ── DisableAccountAsync ───────────────────────────────────────────────────
 
 	[Test]
 	public async ValueTask DisableAccountAsync_AccountNotFound_ReturnsError()

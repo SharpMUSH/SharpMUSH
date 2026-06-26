@@ -1,4 +1,3 @@
-// Converted from ColumnModule.fs — module SharpMUSH.MarkupString.ColumnModule
 using System;
 using System.Text.RegularExpressions;
 

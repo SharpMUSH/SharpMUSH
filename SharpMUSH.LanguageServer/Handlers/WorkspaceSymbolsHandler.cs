@@ -30,7 +30,6 @@ public partial class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 		{
 			var query = request.Query?.ToLower() ?? string.Empty;
 
-			// Search through all documents
 			foreach (var (uri, document) in _documentManager.GetAllDocuments())
 			{
 				var lines = document.Text.Split('\n');
@@ -39,7 +38,6 @@ public partial class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 				{
 					var line = lines[i];
 
-					// Look for attribute definitions: &ATTRIBUTE_NAME
 					var attributeMatch = AttributeDefinitionRegex().Match(line);
 					if (attributeMatch.Success)
 					{
@@ -62,7 +60,6 @@ public partial class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 						}
 					}
 
-					// Look for function calls
 					var functionMatch = FunctionCallRegex().Match(line);
 					if (functionMatch.Success)
 					{
@@ -85,7 +82,6 @@ public partial class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 						}
 					}
 
-					// Look for commands
 					var commandMatch = CommandRegex().Match(line);
 					if (commandMatch.Success)
 					{

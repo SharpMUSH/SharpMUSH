@@ -4,8 +4,6 @@ using SharpMUSH.Library.Models.Packages;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
-// IManagedPackageBinarySource lives in this namespace.
-
 /// <summary>
 /// The orchestration layer of the package plan/apply model: gathers live game
 /// state and registry records for the plan engine, executes reviewed

@@ -30,10 +30,8 @@ public class FlagAndPowerCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagListCmd");
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		// Execute @flag/list
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/list"));
 
-		// Verify that a notification was sent with the flag list
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
@@ -44,43 +42,34 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Add_CreatesNewFlag()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
-		// Execute @flag/add
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 
-		// Verify the flag was created by querying the database
 		var createdFlag = await Mediator.Send(new GetObjectFlagQuery(flagName));
 		await Assert.That(createdFlag).IsNotNull();
 		await Assert.That(createdFlag!.Name).IsEqualTo(flagName);
 		await Assert.That(createdFlag.Symbol).IsEqualTo(symbol);
 		await Assert.That(createdFlag.System).IsFalse();
 
-		// Verify notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagCreatedWithSymbolFormat), executor, executor)).IsTrue();
 
-		// Cleanup - delete the flag
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
 
 	[Test]
 	public async ValueTask Flag_Add_PreventsSystemFlagCreation()
 	{
-		// Create a unique flag name
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
-		// Execute @flag/add
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 
-		// Verify the created flag is NOT a system flag
 		var createdFlag = await Mediator.Send(new GetObjectFlagQuery(flagName));
 		await Assert.That(createdFlag).IsNotNull();
 		await Assert.That(createdFlag!.System).IsFalse();
 
-		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
 
@@ -88,23 +77,15 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Add_PreventsDuplicateFlags()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a unique flag name
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
-		// Create the flag first time
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 
-		// Clear received calls to reset NSubstitute tracking
-
-
-		// Try to create it again
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 
-		// Verify error notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagAlreadyExistsFormat), executor, executor)).IsTrue();
 
-		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
 
@@ -112,7 +93,6 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Delete_RemovesNonSystemFlag()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a test flag first
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
@@ -122,14 +102,11 @@ public class FlagAndPowerCommandTests
 		));
 		await Assert.That(createdFlag).IsNotNull();
 
-		// Execute @flag/delete
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/delete {flagName}"));
 
-		// Verify the flag was deleted
 		var deletedFlag = await Mediator.Send(new GetObjectFlagQuery(flagName));
 		await Assert.That(deletedFlag).IsNull();
 
-		// Verify notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagDeletedFormat), executor, executor)).IsTrue();
 	}
 
@@ -137,10 +114,8 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Delete_PreventsSystemFlagDeletion()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Try to delete a system flag (e.g., WIZARD)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/delete WIZARD"));
 
-		// Verify error notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, executor)).IsTrue();
 	}
 
@@ -148,11 +123,9 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Delete_HandlesNonExistentFlag()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Try to delete a non-existent flag
 		var flagName = "NONEXISTENT_FLAG_XYZ123";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/delete {flagName}"));
 
-		// Verify error notification was sent with the exact error message produced by the implementation.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, executor)).IsTrue();
 	}
 
@@ -160,10 +133,8 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_List_DisplaysAllPowers()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Execute @power/list
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
 
-		// Verify that a notification was sent with the power list
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -174,43 +145,34 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Add_CreatesNewPower()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a unique power name for this test
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
-		// Execute @power/add
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
 
-		// Verify the power was created by querying the database
 		var createdPower = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(createdPower).IsNotNull();
 		await Assert.That(createdPower!.Name).IsEqualTo(powerName);
 		await Assert.That(createdPower.Alias).IsEqualTo(alias);
 		await Assert.That(createdPower.System).IsFalse();
 
-		// Verify notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerCreatedWithAliasFormat), executor, executor)).IsTrue();
 
-		// Cleanup - delete the power
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
 
 	[Test]
 	public async ValueTask Power_Add_PreventsSystemPowerCreation()
 	{
-		// Create a unique power name
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
-		// Execute @power/add
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
 
-		// Verify the created power is NOT a system power
 		var createdPower = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(createdPower).IsNotNull();
 		await Assert.That(createdPower!.System).IsFalse();
 
-		// Cleanup
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
 
@@ -218,7 +180,6 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Delete_RemovesNonSystemPower()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a test power first
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
@@ -228,14 +189,11 @@ public class FlagAndPowerCommandTests
 		));
 		await Assert.That(createdPower).IsNotNull();
 
-		// Execute @power/delete
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/delete {powerName}"));
 
-		// Verify the power was deleted
 		var deletedPower = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(deletedPower).IsNull();
 
-		// Verify notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerDeletedFormat), executor, executor)).IsTrue();
 	}
 
@@ -243,14 +201,11 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Delete_PreventsSystemPowerDeletion()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Try to delete a system power (e.g., BUILDER if it exists)
-		// First check if BUILDER exists and is a system power
 		var builderPower = await Mediator.Send(new GetPowerQuery("BUILDER"));
 		if (builderPower != null && builderPower.System)
 		{
 			await Parser.CommandParse(1, ConnectionService, MModule.single("@power/delete BUILDER"));
 
-			// Verify error notification was sent
 			await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemPowerFormat), executor, executor)).IsTrue();
 		}
 	}
@@ -259,11 +214,9 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Delete_HandlesNonExistentPower()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Try to delete a non-existent power
 		var powerName = "NONEXISTENT_POWER_XYZ123";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/delete {powerName}"));
 
-		// Verify error notification was sent with the exact error message produced by the implementation.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, executor)).IsTrue();
 	}
 
@@ -271,10 +224,8 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Add_RequiresBothArguments()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Try to create a flag without symbol
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/add TESTFLAG"));
 
-		// Verify error notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagAddRequiresNameAndSymbol), executor, executor)).IsTrue();
 	}
 
@@ -282,10 +233,8 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Add_RequiresBothArguments()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Try to create a power without alias
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/add TESTPOWER"));
 
-		// Verify error notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerAddRequiresNameAndAlias), executor, executor)).IsTrue();
 	}
 
@@ -293,28 +242,22 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Disable_DisablesNonSystemFlag()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
-		// Create the flag first
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 
-		// Disable the flag
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/disable {flagName}"));
 
-		// Verify the flag is disabled
 		var flag = await Mediator.Send(new GetObjectFlagQuery(flagName));
 		await Assert.That(flag).IsNotNull();
 		await Assert.That(flag!.Disabled).IsTrue();
 
-		// Verify notification was sent
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
 
@@ -322,29 +265,23 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Enable_EnablesDisabledFlag()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
-		// Create and disable the flag
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/disable {flagName}"));
 
-		// Enable the flag
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/enable {flagName}"));
 
-		// Verify the flag is enabled
 		var flag = await Mediator.Send(new GetObjectFlagQuery(flagName));
 		await Assert.That(flag).IsNotNull();
 		await Assert.That(flag!.Disabled).IsFalse();
 
-		// Verify notification was sent
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
 
@@ -353,11 +290,10 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Use WIZARD (a system flag stored in the ObjectFlags table).
-		// Note: PLAYER is a type flag added implicitly per-object and is NOT in the ObjectFlags table,
+		// PLAYER is a type flag added implicitly per-object and is NOT in the ObjectFlags table,
 		// so it cannot be looked up or disabled via @flag/disable.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/disable WIZARD"));
 
-		// Verify error notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, executor)).IsTrue();
 	}
 
@@ -365,28 +301,22 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Disable_DisablesNonSystemPower()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a unique power name for this test
 		var powerName = $"TEST_POWER_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
-		// Create the power first
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
 
-		// Disable the power
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/disable {powerName}"));
 
-		// Verify the power is disabled
 		var power = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(power).IsNotNull();
 		await Assert.That(power!.Disabled).IsTrue();
 
-		// Verify notification was sent
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
 
@@ -394,29 +324,23 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Enable_EnablesDisabledPower()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create a unique power name for this test
 		var powerName = $"TEST_POWER_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
-		// Create and disable the power
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/disable {powerName}"));
 
-		// Enable the power
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/enable {powerName}"));
 
-		// Verify the power is enabled
 		var power = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(power).IsNotNull();
 		await Assert.That(power!.Disabled).IsFalse();
 
-		// Verify notification was sent
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
 
@@ -424,10 +348,8 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Disable_PreventsSystemPowerDisable()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Try to disable a system power (Builder is a system power)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/disable Builder"));
 
-		// Verify error notification was sent
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDisableSystemPowerFormat), executor, executor)).IsTrue();
 	}
 
@@ -435,20 +357,17 @@ public class FlagAndPowerCommandTests
 	[NotInParallel]
 	public async ValueTask God_CanSetTrustFlag()
 	{
-		// God (#1) should be able to set any flag, including TRUST
 		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create GodTrustFlagTestObj"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {newDb}=TRUST"));
 
-		// Verify the TRUST flag was set by checking the database state directly
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 		await Assert.That(newObject.Object()).IsNotNull();
 		var flags = await newObject.Object()!.Flags.Value.ToArrayAsync();
 
 		await Assert.That(flags.Any(f => f.Name.Equals("TRUST", StringComparison.OrdinalIgnoreCase))).IsTrue();
 
-		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
 	}
 }

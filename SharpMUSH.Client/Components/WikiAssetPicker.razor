@@ -1,11 +1,6 @@
 @using SharpMUSH.Client.Services
 @inject WikiAssetService AssetService
 
-@*
-    Thumbnail grid of uploaded wiki assets. Clicking a thumbnail invokes
-    OnAssetSelected with a ready-to-insert markdown image snippet.
-*@
-
 @if (_isLoading)
 {
     <MudProgressCircular Indeterminate="true" Size="Size.Small" />

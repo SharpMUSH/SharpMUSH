@@ -34,7 +34,6 @@ public class LinkKindRenderTests
 
 		await Assert.That(json).Contains("LinkKind");
 
-		// Deserialise then re-serialise: the LinkKind survives the round-trip unchanged.
 		var back = MModule.deserialize(json);
 		await Assert.That(MModule.serialize(back)).IsEqualTo(json);
 	}
@@ -96,7 +95,6 @@ public class LinkKindRenderTests
 
 		var back = MModule.deserialize(json);
 
-		// Command kind survives the round-trip: HTML render emits xch_cmd, not href.
 		await Assert.That(back.Render("html")).Contains("xch_cmd=\"help topic\"");
 		await Assert.That(back.Render("html")).DoesNotContain("href=");
 	}
@@ -244,8 +242,6 @@ public class LinkKindRenderTests
 		await Assert.That(mxp).Contains("<COLOR FORE=");
 	}
 
-	// ── Accessibility: command links are keyboard-focusable ──────────────────────
-
 	[Test]
 	public async Task Html_CommandLink_IsKeyboardAccessible()
 	{
@@ -256,8 +252,6 @@ public class LinkKindRenderTests
 		await Assert.That(html).Contains("role=\"button\"");
 		await Assert.That(html).Contains("tabindex=\"0\"");
 	}
-
-	// ── Security: unsafe URL schemes are not rendered as clickable links ─────────
 
 	[Test]
 	public async Task IsSafeNavigableUrl_AllowsSafeSchemesAndRelative_BlocksDangerous()

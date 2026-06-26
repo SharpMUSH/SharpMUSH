@@ -257,7 +257,6 @@
 				_isConverting = true;
 				StateHasChanged();
 
-				// Start polling for progress with timer callback
 				_progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
 			}
 		}
@@ -271,7 +270,6 @@
 
 	private void OnTimerCallback(object? state)
 	{
-		// Fire-and-forget with exception handling
 		_ = Task.Run(async () =>
 		{
 			try
@@ -280,7 +278,6 @@
 			}
 			catch (Exception ex)
 			{
-				// Log error and stop polling
 				await JSRuntime.InvokeVoidAsync("console.error", $"Progress update failed: {ex.Message}");
 				_progressTimer?.Dispose();
 				_isConverting = false;
@@ -290,7 +287,6 @@
 
 	private async Task UpdateProgressAsync()
 	{
-		// Prevent concurrent executions
 		if (_isUpdatingProgress || _sessionId == null || !_isConverting)
 			return;
 
@@ -300,7 +296,6 @@
 		{
 			_progress = await ConversionService.GetProgressAsync(_sessionId);
 
-			// Check if conversion is complete
 			if (_progress?.PercentageComplete >= 100)
 			{
 				_result = await ConversionService.GetResultAsync(_sessionId);
@@ -313,7 +308,6 @@
 		catch (Exception ex)
 		{
 			await JSRuntime.InvokeVoidAsync("console.error", $"Error updating progress: {ex.Message}");
-			// Stop polling on error
 			_progressTimer?.Dispose();
 			_isConverting = false;
 		}

@@ -24,7 +24,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NewsSystemNotInitialized);
 		}
 
-		// No arguments - show main news
 		if (args.Count == 0)
 		{
 			var mainNews = await TextFileService.GetEntryAsync("news", "news");
@@ -42,7 +41,6 @@ public partial class Commands
 
 		var topic = args["0"].Message!.ToPlainText();
 
-		// /search switch - search content
 		if (switches.Contains("SEARCH"))
 		{
 			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
@@ -52,7 +50,6 @@ public partial class Commands
 			}
 			else if (matches.Count == 1)
 			{
-				// Only one match, show it
 				var searchContent = await TextFileService.GetEntryAsync("news", matches[0]);
 				if (searchContent != null)
 				{
@@ -62,14 +59,12 @@ public partial class Commands
 			}
 			else
 			{
-				// Multiple matches, list them
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsEntriesContaining), executor, topic);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
 		}
 
-		// Check for wildcard pattern
 		if (topic.Contains('*') || topic.Contains('?'))
 		{
 			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
@@ -79,7 +74,6 @@ public partial class Commands
 			}
 			else if (matches.Count == 1)
 			{
-				// Only one match, show it
 				var wildcardContent = await TextFileService.GetEntryAsync("news", matches[0]);
 				if (wildcardContent != null)
 				{
@@ -89,14 +83,12 @@ public partial class Commands
 			}
 			else
 			{
-				// Multiple matches, list them
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTopicsMatchingFormat), executor, topic);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
 		}
 
-		// Try exact match
 		var exactContent = await TextFileService.GetEntryAsync("news", topic);
 		if (exactContent != null)
 		{
@@ -119,7 +111,6 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		// Permission check - only wizards and royalty
 		if (!await executor.IsWizard())
 		{
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AdminCommandOnly), executor);
@@ -132,7 +123,6 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AhelpSystemNotInitialized);
 		}
 
-		// No arguments - show main admin help
 		if (args.Count == 0)
 		{
 			var mainAhelp = await TextFileService.GetEntryAsync("ahelp", "ahelp");
@@ -150,7 +140,6 @@ public partial class Commands
 
 		var topic = args["0"].Message!.ToPlainText();
 
-		// /search switch - search content
 		if (switches.Contains("SEARCH"))
 		{
 			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
@@ -160,7 +149,6 @@ public partial class Commands
 			}
 			else if (matches.Count == 1)
 			{
-				// Only one match, show it
 				var searchContent = await TextFileService.GetEntryAsync("ahelp", matches[0]);
 				if (searchContent != null)
 				{
@@ -170,14 +158,12 @@ public partial class Commands
 			}
 			else
 			{
-				// Multiple matches, list them
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpEntriesContaining), executor, topic);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
 		}
 
-		// Check for wildcard pattern
 		if (topic.Contains('*') || topic.Contains('?'))
 		{
 			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
@@ -187,7 +173,6 @@ public partial class Commands
 			}
 			else if (matches.Count == 1)
 			{
-				// Only one match, show it
 				var wildcardContent = await TextFileService.GetEntryAsync("ahelp", matches[0]);
 				if (wildcardContent != null)
 				{
@@ -197,14 +182,12 @@ public partial class Commands
 			}
 			else
 			{
-				// Multiple matches, list them
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTopicsMatchingFormat), executor, topic);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
 		}
 
-		// Try exact match
 		var exactContent = await TextFileService.GetEntryAsync("ahelp", topic);
 		if (exactContent != null)
 		{
@@ -224,7 +207,6 @@ public partial class Commands
 	[SharpCommand(Name = "ANEWS", Switches = ["SEARCH"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["topic"])]
 	public static async ValueTask<Option<CallState>> Anews(IMUSHCodeParser parser, SharpCommandAttribute attr)
 	{
-		// Just forward to Ahelp
 		return await Ahelp(parser, attr);
 	}
 }

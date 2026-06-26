@@ -5,8 +5,6 @@ namespace SharpMUSH.Tests.ClientState;
 
 public class NotificationServiceTests
 {
-	// ── initial state ────────────────────────────────────────────────────────
-
 	[Test]
 	public async Task InitialState_NoNotifications()
 	{
@@ -14,8 +12,6 @@ public class NotificationServiceTests
 		await Assert.That(svc.GetUnread().Count).IsEqualTo(0);
 		await Assert.That(svc.GetUnreadCount()).IsEqualTo(0);
 	}
-
-	// ── AddNotification ──────────────────────────────────────────────────────
 
 	[Test]
 	public async Task AddNotification_IncreasesUnreadCount()
@@ -66,8 +62,6 @@ public class NotificationServiceTests
 		await Assert.That(svc.GetUnreadCount()).IsEqualTo(3);
 	}
 
-	// ── MarkRead ─────────────────────────────────────────────────────────────
-
 	[Test]
 	public async Task MarkRead_ExistingNotification_DecrementsUnreadCount()
 	{
@@ -104,7 +98,7 @@ public class NotificationServiceTests
 	public async Task MarkRead_NonExistentId_DoesNotThrow()
 	{
 		var svc = new NotificationService();
-		svc.MarkRead(Guid.NewGuid()); // should be a no-op
+		svc.MarkRead(Guid.NewGuid());
 		await Assert.That(svc.GetUnreadCount()).IsEqualTo(0);
 	}
 
@@ -130,8 +124,6 @@ public class NotificationServiceTests
 		await Assert.That(svc.GetUnreadCount()).IsEqualTo(1);
 		await Assert.That(svc.GetUnread()[0].Title).IsEqualTo("Second");
 	}
-
-	// ── ClearAll ─────────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task ClearAll_RemovesAllNotifications()
@@ -159,11 +151,9 @@ public class NotificationServiceTests
 	public async Task ClearAll_WhenEmpty_DoesNotThrow()
 	{
 		var svc = new NotificationService();
-		svc.ClearAll(); // should be a no-op
+		svc.ClearAll();
 		await Assert.That(svc.GetUnreadCount()).IsEqualTo(0);
 	}
-
-	// ── GetUnreadCount ────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task GetUnreadCount_CountsOnlyUnread()
@@ -177,8 +167,6 @@ public class NotificationServiceTests
 		await Assert.That(svc.GetUnreadCount()).IsEqualTo(2);
 	}
 
-	// ── GetUnread returns snapshot ────────────────────────────────────────────
-
 	[Test]
 	public async Task GetUnread_ReturnsNewListEachTime()
 	{
@@ -187,7 +175,6 @@ public class NotificationServiceTests
 		var first = svc.GetUnread();
 		svc.AddNotification("B", "msg", NotificationType.Info);
 		var second = svc.GetUnread();
-		// Lists are separate instances
 		await Assert.That(first.Count).IsEqualTo(1);
 		await Assert.That(second.Count).IsEqualTo(2);
 	}

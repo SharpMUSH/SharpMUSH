@@ -17,8 +17,6 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// </remarks>
 public interface IPackageRegistryService
 {
-	// ── Installed packages ───────────────────────────────────────────────────
-
 	/// <summary>Creates or replaces the registry record for an installed package (keyed by <see cref="InstalledPackageRecord.Id"/>).</summary>
 	Task UpsertInstalledPackageAsync(InstalledPackageRecord package);
 
@@ -35,8 +33,6 @@ public interface IPackageRegistryService
 	/// </summary>
 	Task RemoveInstalledPackageAsync(string packageId);
 
-	// ── Package-created objects ──────────────────────────────────────────────
-
 	/// <summary>Records that a package created an object (idempotent on package+ref).</summary>
 	Task UpsertPackageObjectAsync(PackageObjectRecord record);
 
@@ -45,8 +41,6 @@ public interface IPackageRegistryService
 
 	/// <summary>Removes one created-object record (e.g. after the object is destroyed by an upgrade delete).</summary>
 	Task RemovePackageObjectAsync(string packageId, string @ref);
-
-	// ── Managed attributes (full baselines, decision 20.13) ─────────────────
 
 	/// <summary>Creates or replaces a managed-attribute baseline (keyed by package+objid+attribute).</summary>
 	Task UpsertManagedAttributeAsync(ManagedAttributeRecord record);
@@ -60,8 +54,6 @@ public interface IPackageRegistryService
 	/// <summary>Removes one managed-attribute record.</summary>
 	Task RemoveManagedAttributeAsync(string packageId, string objid, string attribute);
 
-	// ── Managed object structure (flags/powers/locks/attribute flags) ────────
-
 	/// <summary>Creates or replaces a managed object-structure baseline (keyed by package+objid).</summary>
 	Task UpsertManagedStructureAsync(ManagedStructureRecord record);
 
@@ -70,8 +62,6 @@ public interface IPackageRegistryService
 
 	/// <summary>Removes one managed object-structure baseline.</summary>
 	Task RemoveManagedStructureAsync(string packageId, string objid);
-
-	// ── Dependencies ─────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Replaces the dependency edges originating from a package (called per
@@ -85,8 +75,6 @@ public interface IPackageRegistryService
 	/// <summary>Lists what depends on a package (uninstall blocking, decision 20.6).</summary>
 	Task<IReadOnlyList<PackageDependencyRecord>> GetPackageDependentsAsync(string packageId);
 
-	// ── Remotes ──────────────────────────────────────────────────────────────
-
 	/// <summary>Creates or replaces a configured remote (keyed by name).</summary>
 	Task UpsertPackageRemoteAsync(PackageRemoteRecord remote);
 
@@ -98,8 +86,6 @@ public interface IPackageRegistryService
 
 	/// <summary>Removes a configured remote.</summary>
 	Task RemovePackageRemoteAsync(string name);
-
-	// ── Revisions (decision 20.13) ───────────────────────────────────────────
 
 	/// <summary>Appends a revision record (caller assigns the next monotonic number).</summary>
 	Task AddPackageRevisionAsync(PackageRevisionRecord revision);

@@ -15,8 +15,6 @@ public partial class ArangoDatabase : IWikiService
 
 	private static readonly WikiMarkdigPipeline _wikiRenderer = new();
 
-	// ── Read ──────────────────────────────────────────────────────────────────
-
 	public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
@@ -171,8 +169,6 @@ public partial class ArangoDatabase : IWikiService
 			.AsReadOnly();
 	}
 
-	// ── Write ─────────────────────────────────────────────────────────────────
-
 	public async Task<OneOf<WikiPage, Error<string>>> CreateAsync(
 		string title,
 		string markdown,
@@ -184,7 +180,6 @@ public partial class ArangoDatabase : IWikiService
 		var slug = Slugify(title);
 		var cat = WikiHelpers.NormalizeCategory(category);
 
-		// Enforce (namespace, category, slug) uniqueness
 		var existing = await GetBySlugAsync(slug, cat, ns);
 		if (existing.IsT0)
 			return new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{nsStr}' category '{cat}'.");
@@ -217,7 +212,6 @@ public partial class ArangoDatabase : IWikiService
 
 		var page = WikiPageFromJson(created.New);
 
-		// Save initial revision snapshot
 		await SaveWikiRevisionAsync(page, authorDbref, null);
 
 		return page;
@@ -276,7 +270,6 @@ public partial class ArangoDatabase : IWikiService
 
 		var key = ExtractKey(id);
 
-		// Remove all revisions first
 		await arangoDb.Query.ExecuteAsync<ArangoVoid>(handle,
 			"FOR r IN @@c FILTER r.PageId == @pageId REMOVE r IN @@c",
 			bindVars: new Dictionary<string, object>
@@ -346,8 +339,6 @@ public partial class ArangoDatabase : IWikiService
 		};
 	}
 
-	// ── Revisions ─────────────────────────────────────────────────────────────
-
 	public async Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
@@ -382,8 +373,6 @@ public partial class ArangoDatabase : IWikiService
 			? OneOf<WikiRevision, NotFound>.FromT0(WikiRevisionFromJson(elem))
 			: new NotFound();
 	}
-
-	// ── Internals ─────────────────────────────────────────────────────────────
 
 	private async Task SaveWikiRevisionAsync(WikiPage page, string editorDbref, string? editSummary)
 	{

@@ -29,13 +29,11 @@ public static class CryptoHelpers
 
 		var sBuilder = new StringBuilder();
 
-		// Loop through each byte of the hashed data and format each one as a hexadecimal string.
 		foreach (var bt in data)
 		{
-			sBuilder.Append(bt.ToString("x2")); // "x2" formats as a two-digit hexadecimal number
+			sBuilder.Append(bt.ToString("x2"));
 		}
 
-		// Return the hexadecimal string.
 		return sBuilder.ToString();
 	}
 }

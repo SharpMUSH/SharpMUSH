@@ -39,11 +39,9 @@ public class HookIgnoreBehaviorTests
 	/// <summary>Sets up an @EMIT override that writes <c>RAN=yes</c>, plus an @EMIT /ignore reading GATE.</summary>
 	private async Task ArmAsync(DBRef obj, string gateValue)
 	{
-		// Downstream observable: an @EMIT override (no re-emit ⇒ no recursion) that records it was reached.
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&OVR {obj}=$(?i)^@emit (.*)$:&RAN {obj}=yes"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/OVR=regexp"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/override @EMIT={obj},OVR"));
-		// The gate the /ignore hook evaluates.
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&GATE {obj}={gateValue}"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/ignore @EMIT={obj},GATE"));
 	}
@@ -54,7 +52,7 @@ public class HookIgnoreBehaviorTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookIgnTrue");
 		try
 		{
-			await ArmAsync(obj, "1"); // gate true
+			await ArmAsync(obj, "1");
 
 			await Parser.CommandParse(1, ConnectionService, MModule.single("@emit hello"));
 
@@ -74,7 +72,7 @@ public class HookIgnoreBehaviorTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookIgnFalse");
 		try
 		{
-			await ArmAsync(obj, "0"); // gate false
+			await ArmAsync(obj, "0");
 
 			await Parser.CommandParse(1, ConnectionService, MModule.single("@emit hello"));
 

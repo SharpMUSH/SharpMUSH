@@ -23,7 +23,6 @@ public class AdminConfigServiceTests
 	[Test]
 	public async Task ImportFromConfigFileAsync_PropagatesExceptionForInvalidResponse()
 	{
-		// Arrange
 		var logger = Substitute.For<ILogger<AdminConfigService>>();
 		var httpClient = Substitute.For<IHttpClientFactory>();
 
@@ -47,7 +46,7 @@ public class AdminConfigServiceTests
 
 		                             """;
 
-		// Act & Assert - The incomplete JSON causes a deserialization exception that the service propagates.
+		// The incomplete JSON causes a deserialization exception that the service propagates.
 		// This validates the service correctly surfaces failures rather than silently swallowing them.
 		await Assert.ThrowsAsync(async () => await service.ImportFromConfigFileAsync(configContent));
 	}
@@ -55,7 +54,6 @@ public class AdminConfigServiceTests
 	[Test]
 	public async Task ImportFromConfigFileAsync_HttpError_ShouldHandleGracefully()
 	{
-		// Arrange
 		var logger = Substitute.For<ILogger<AdminConfigService>>();
 		var httpClient = Substitute.For<IHttpClientFactory>();
 
@@ -70,21 +68,18 @@ public class AdminConfigServiceTests
 
 		const string configContent = "invalid config content";
 
-		// Act & Assert - Should handle HTTP errors gracefully
 		try
 		{
 			await service.ImportFromConfigFileAsync(configContent);
 		}
 		catch (Exception)
 		{
-			// Expected to handle HTTP error
 		}
 	}
 
 	[Test]
 	public async Task GetOptions_ShouldReturnConfiguration()
 	{
-		// Arrange
 		var logger = Substitute.For<ILogger<AdminConfigService>>();
 		var httpClient = Substitute.For<IHttpClientFactory>();
 
@@ -95,10 +90,9 @@ public class AdminConfigServiceTests
 
 		var service = new AdminConfigService(logger, httpClient);
 
-		// Act
 		var options = await service.GetOptionsAsync();
 
-		// Assert - should be T0 (list of config items), not T1 (error)
+		// should be T0 (list of config items), not T1 (error)
 		await Assert.That(options.IsT1).IsFalse();
 	}
 }

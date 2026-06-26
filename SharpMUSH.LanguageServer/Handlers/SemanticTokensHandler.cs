@@ -40,11 +40,8 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
 		try
 		{
-			// Get semantic tokens from the stateless LSP parser
 			var tokensData = _parser.GetSemanticTokens(document.Text, ParseType.Function);
 
-			// The data is already in LSP delta-encoded format
-			// Each token is 5 integers: [deltaLine, deltaChar, length, tokenType, modifiers]
 			for (int i = 0; i < tokensData.Data.Length; i += 5)
 			{
 				var deltaLine = tokensData.Data[i];
@@ -58,7 +55,6 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 		}
 		catch (Exception ex)
 		{
-			// Log error but don't crash
 #pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error generating semantic tokens: {ex.Message}");
 #pragma warning restore VSTHRD103
@@ -71,7 +67,6 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 		SemanticTokensCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
-		// Get token types and modifiers from parser with a sample
 		var sampleData = _parser.GetSemanticTokens("add(1,2)", ParseType.Function);
 
 		return new SemanticTokensRegistrationOptions

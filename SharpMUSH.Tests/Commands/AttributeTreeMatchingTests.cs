@@ -130,8 +130,6 @@ public class AttributeTreeMatchingTests
 		await Cmd($"&MN{uid}A`SUB {dbref}=3");
 		await Cmd($"&MN{uid}A`SUB`DEEP {dbref}=4");
 
-		// nattr counts root only (MN...A, MN...B = 2, plus whatever was there before)
-		// We just check that the child ones don't inflate the count
 		var resultAll = await Eval($"lattr({dbref}/MN{uid}**)");
 		var countAll = resultAll.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
 

@@ -9,14 +9,12 @@ public class StringFunctionBenchmarks : BaseBenchmark
 {
 	private IMUSHCodeParser? _parser;
 
-	// Fixed inputs
 	private static readonly MString MidInput = MModule.single("mid(abcdefghij,2,5)");
 	private static readonly MString LjustInput = MModule.single("ljust(hello,20)");
 	private static readonly MString RjustInput = MModule.single("rjust(hello,20)");
 	private static readonly MString TrimInput = MModule.single("trim(  hello world  )");
 	private static readonly MString CenterInput = MModule.single("center(hi,20)");
 
-	// Parameterized by length — pre-computed to avoid per-iteration string allocation
 	private static readonly MString Left10 = MModule.single($"left({new string('x', 10)},5)");
 	private static readonly MString Left100 = MModule.single($"left({new string('x', 100)},5)");
 	private static readonly MString Left1000 = MModule.single($"left({new string('x', 1000)},5)");

@@ -30,11 +30,9 @@ public class AlignUnitTests
 	[Test]
 	public async Task AlignWithInvalidParameters()
 	{
-		// Column count mismatch
 		var result1 = CallAlign("10 10", [A.single("a")], A.single(" "), A.single(" "), A.single("\n"));
 		await Assert.That(result1.ToPlainText()).IsEqualTo("#-1 COLUMN COUNT MISMATCH");
 
-		// Filler too long
 		var result2 = CallAlign("10", [A.single("a")], A.single("--"), A.single(" "), A.single("\n"));
 		await Assert.That(result2.ToPlainText()).IsEqualTo("#-1 FILLER MUST BE ONE CHARACTER");
 	}
@@ -42,7 +40,6 @@ public class AlignUnitTests
 	[Test]
 	public async Task AlignWithExplicitNewlines()
 	{
-		// Test that explicit newlines in text are handled correctly
 		var result = CallAlign("10", [A.single("line1\nline2\nline3")], A.single(" "), A.single(" "), A.single("\n"));
 		var expected = "line1     \nline2     \nline3     ";
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
@@ -51,7 +48,6 @@ public class AlignUnitTests
 	[Test]
 	public async Task AlignWithRepeatAndMixedContent()
 	{
-		// Test repeat columns with varying content lengths
 		var result = CallAlign(
 			"1. 20 1.",
 			[A.single("|"), A.single("short\nmedium text\nvery long content here"), A.single("|")],
@@ -62,7 +58,6 @@ public class AlignUnitTests
 
 		var lines = result.ToPlainText().Split(["\n"], StringSplitOptions.None);
 
-		// All lines should start and end with |
 		foreach (var line in lines)
 		{
 			await Assert.That(line).StartsWith("|");
@@ -73,7 +68,6 @@ public class AlignUnitTests
 	[Test]
 	public async Task AlignWithCustomSeparators()
 	{
-		// Test with various custom separators
 		var result = CallAlign(
 			"5 5 5",
 			[A.single("A"), A.single("B"), A.single("C")],
@@ -89,7 +83,6 @@ public class AlignUnitTests
 	[Test]
 	public async Task AlignWithNoColSepOption()
 	{
-		// Test that # option prevents column separator
 		var result = CallAlign(
 			"5# 5 5",
 			[A.single("A"), A.single("B"), A.single("C")],
@@ -98,7 +91,6 @@ public class AlignUnitTests
 			A.single("\n")
 		);
 
-		// First column should not have separator after it
 		var expected = "A    B    |C    ";
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
@@ -106,7 +98,6 @@ public class AlignUnitTests
 	[Test]
 	public async Task AlignWithFullJustification()
 	{
-		// Test full justification spreads words evenly
 		var result = CallAlign(
 			"_25",
 			[A.single("one two three four")],
@@ -117,10 +108,8 @@ public class AlignUnitTests
 
 		var resultText = result.ToPlainText();
 
-		// Should be exactly 25 characters
 		await Assert.That(resultText.Length).IsEqualTo(25);
 
-		// Should contain all words
 		await Assert.That(resultText.Contains("one")).IsTrue();
 		await Assert.That(resultText.Contains("two")).IsTrue();
 		await Assert.That(resultText.Contains("three")).IsTrue();

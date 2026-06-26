@@ -37,9 +37,6 @@ public class SqliteProvider : ISqlProvider
 	/// </summary>
 	public string Escape(string value)
 	{
-		// SQLite standard escaping: single quotes are escaped by doubling them
-		// Microsoft.Data.Sqlite doesn't provide a library function for this
-		// as it strongly encourages parameterized queries
 		return value.Replace("'", "''");
 	}
 

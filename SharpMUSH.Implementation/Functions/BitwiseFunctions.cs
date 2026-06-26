@@ -28,7 +28,6 @@ public partial class Functions
 		var fromBaseStr = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(1).Value.Message!);
 		var toBaseStr = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(2).Value.Message!);
 
-		// Parse the base arguments as integers
 		if (!int.TryParse(ArgHelpers.EmptyStringToZero(fromBaseStr), out var fromBase))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
@@ -62,24 +61,20 @@ public partial class Functions
 			input = input.Replace('+', '-').Replace('/', '_');
 		}
 
-		// Validate input according to fromBase
 		if (input.Length == 0 || input.Any(c => fromBaseChars.IndexOf(c) < 0 || fromBaseChars.IndexOf(c) >= fromBase))
 		{
 			return ValueTask.FromResult<CallState>(new(ErrorMessages.Returns.MalformedNumber));
 		}
 
-		// Convert input to base 10
 		var number = input.Aggregate(BigInteger.Zero,
 			(current, c) => current * fromBase + fromBaseChars.IndexOf(c));
 
-		// Directly return the number if toBase is 10
 		if (toBase == 10)
 		{
 			var numStr = number.ToString();
 			return ValueTask.FromResult<CallState>(new(isNegative && number != 0 ? "-" + numStr : numStr));
 		}
 
-		// Convert from base 10 to the desired base
 		var result = string.Empty;
 		while (number > 0)
 		{

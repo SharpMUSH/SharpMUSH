@@ -41,13 +41,10 @@ public class SceneCommandFunctionIntegrationTests
 		// Make it public so the read functions' visibility check lets anyone read it.
 		await Cmd($"@scene/set {sceneId}/public=1");
 
-		// Status starts at the create default.
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("new");
 
-		// @scene/set drives the status to active...
 		await Cmd($"@scene/set {sceneId}/status=active");
 
-		// ...and the read function sees it.
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active");
 	}
 
@@ -60,13 +57,11 @@ public class SceneCommandFunctionIntegrationTests
 		var poseId = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,hello phase3 pose)");
 		await Assert.That(poseId).DoesNotStartWith("#-1");
 
-		// sceneposes lists the scene's pose ids (space-joined).
 		var posesList = await Eval($"sceneposes({sceneId})");
 		await Assert.That(posesList).IsNotEmpty();
 		await Assert.That(posesList).DoesNotStartWith("#-1");
 		await Assert.That(posesList).Contains(poseId);
 
-		// scenepose returns the requested field of one pose.
 		await Assert.That(await Eval($"scenepose({sceneId}, {poseId}, content)")).Contains("hello phase3 pose");
 	}
 

@@ -24,10 +24,6 @@ public static class DatabaseConstants
 	public const string WikiPages = "node_wiki_pages";
 	public const string WikiRevisions = "node_wiki_revisions";
 
-	// Scene System (Area 7) collection/edge/graph names moved OUT of core into the Scene plugin
-	// (Phase 8): see SharpMUSH.Plugins.Scene.Storage.SceneArangoConstants. Removing the plugin leaves
-	// core with no knowledge of the scene graph.
-
 	// Softcode package manager system collections (decisions 20.3, 20.13).
 	// Not visible to softcode; travels with backups.
 	public const string Packages = "sys_packages";
@@ -75,9 +71,6 @@ public static class DatabaseConstants
 	public const string ReceivedMail = "edge_received_mail";
 	public const string HasZone = "edge_has_zone";
 	public const string AccountOwnsCharacter = "edge_account_owns_character";
-
-	// Scene System edges moved OUT of core into the Scene plugin (Phase 8):
-	// see SharpMUSH.Plugins.Scene.Storage.SceneArangoConstants.
 
 	/// <summary>
 	/// Describes the relationship between actualized types and their objects.
@@ -171,9 +164,6 @@ public static class DatabaseConstants
 	/// <see cref="Accounts"/> -> <see cref="AccountOwnsCharacter"/> -> <see cref="Players"/>
 	/// </summary>
 	public const string GraphAccounts = "graph_accounts";
-
-	// Scene System named graph (Area 7) moved OUT of core into the Scene plugin (Phase 8):
-	// see SharpMUSH.Plugins.Scene.Storage.SceneArangoConstants.GraphScene.
 
 	public const string TypeObject = "object";
 	public const string TypeString = "string";

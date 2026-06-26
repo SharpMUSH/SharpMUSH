@@ -75,7 +75,6 @@ public static class Pad
 		// Regression tests for bug where pad with Truncate mode and text length == width
 		// would call substring(0, 0) and return empty string instead of the original text
 
-		// Single character at exact width with Truncate - Right padding
 		yield return () => new(
 			A.single("|"),
 			A.single(" "),
@@ -85,7 +84,6 @@ public static class Pad
 			A.single("|")
 		);
 
-		// Single character at exact width with Truncate - Left padding
 		yield return () => new(
 			A.single("|"),
 			A.single(" "),
@@ -95,7 +93,6 @@ public static class Pad
 			A.single("|")
 		);
 
-		// Single character at exact width with Truncate - Center padding
 		yield return () => new(
 			A.single("X"),
 			A.single(" "),
@@ -105,7 +102,6 @@ public static class Pad
 			A.single("X")
 		);
 
-		// Multi-character at exact width with Truncate - Right padding
 		yield return () => new(
 			A.single("Test"),
 			A.single(" "),
@@ -115,7 +111,6 @@ public static class Pad
 			A.single("Test")
 		);
 
-		// Multi-character at exact width with Truncate - Left padding
 		yield return () => new(
 			A.single("Test"),
 			A.single(" "),
@@ -125,7 +120,6 @@ public static class Pad
 			A.single("Test")
 		);
 
-		// Multi-character at exact width with Truncate - Center padding
 		yield return () => new(
 			A.single("Word"),
 			A.single("-"),

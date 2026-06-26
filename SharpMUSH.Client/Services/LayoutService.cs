@@ -156,7 +156,6 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 			},
 			SidebarsOff),
 
-		// "global" and any unknown scope: the chrome shell.
 		_ => new LayoutConfiguration(
 			new Dictionary<WidgetZone, List<WidgetPlacement>>
 			{

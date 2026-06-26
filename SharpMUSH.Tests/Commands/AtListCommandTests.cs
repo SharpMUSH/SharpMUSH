@@ -23,10 +23,8 @@ public class AtListCommandTests
 	public async ValueTask List_NoSwitch_DisplaysHelpMessage()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Execute @list without switches
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list"));
 
-		// Verify that a notification was sent with help message
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -37,10 +35,8 @@ public class AtListCommandTests
 	public async ValueTask List_Flags_DisplaysFlagList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Execute @list/flags
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/flags"));
 
-		// Verify that a notification was sent with the flag list
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -51,10 +47,8 @@ public class AtListCommandTests
 	public async ValueTask List_Flags_Lowercase_DisplaysLowercaseFlagList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Execute @list/lowercase/flags (note: switch order matters)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/lowercase/flags"));
 
-		// Verify that a notification was sent with lowercase flag list
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -65,10 +59,8 @@ public class AtListCommandTests
 	public async ValueTask List_Powers_DisplaysPowerList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Execute @list/powers
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/powers"));
 
-		// Verify that a notification was sent with the power list
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -79,10 +71,8 @@ public class AtListCommandTests
 	public async ValueTask List_Locks_DisplaysLockTypes()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Execute @list/locks
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/locks"));
 
-		// Verify that a notification was sent with lock types
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -93,10 +83,8 @@ public class AtListCommandTests
 	public async ValueTask List_Attribs_DisplaysStandardAttributes()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Execute @list/attribs
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/attribs"));
 
-		// Verify that a notification was sent with standard attributes
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -107,10 +95,8 @@ public class AtListCommandTests
 	public async ValueTask List_Commands_DisplaysCommandList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Execute @list/commands
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/commands"));
 
-		// Verify that a notification was sent with commands
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -121,10 +107,8 @@ public class AtListCommandTests
 	public async ValueTask List_Functions_DisplaysFunctionList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Execute @list/functions
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/functions"));
 
-		// Verify that a notification was sent with functions
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -135,10 +119,8 @@ public class AtListCommandTests
 	public async ValueTask List_Motd_DisplaysMotdSettings()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Execute @list/motd
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/motd"));
 
-		// Verify that a notification was sent with MOTD settings
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),

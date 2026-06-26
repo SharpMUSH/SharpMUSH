@@ -34,7 +34,6 @@ public class SceneLocateArgumentTests
 	[Test]
 	public async Task SceneCreate_ResolvesOwner_FromMeKeyword()
 	{
-		// owner "me" must resolve to the enactor (#1), exactly as passing #1 explicitly would.
 		var id = await Eval($"scenecreate(,me,Locate owner {Guid.NewGuid():N})");
 		await Assert.That(id).DoesNotStartWith("#-1");
 		await Eval($"sceneset({id},public,1)");
@@ -48,7 +47,6 @@ public class SceneLocateArgumentTests
 		var id = await Eval($"scenecreate(,{God},Locate member {Guid.NewGuid():N})");
 		await Eval($"sceneset({id},public,1)");
 
-		// "me" must resolve to #1 — sceneaddmember returns the resolved member dbref on success.
 		await Assert.That(await Eval($"sceneaddmember({id},me,participant)")).IsEqualTo(God);
 		await Assert.That(await Eval($"scenemembers({id})")).Contains(God);
 	}
@@ -59,9 +57,6 @@ public class SceneLocateArgumentTests
 		var id = await Eval($"scenecreate(,{God},Locate focus {Guid.NewGuid():N})");
 		await Eval($"sceneset({id},public,1)");
 
-		// Join as a member, set focus, then read it back — every "me" must resolve to #1. Membership is
-		// added explicitly (as the +scene/create softcode does) so this exercises locate resolution and not
-		// the providers' differing handling of focusing a non-member.
 		await Eval($"sceneaddmember({id},me,participant)");
 		await Eval($"scenesetfocus(me,{id})");
 		await Assert.That(await Eval($"scenefocus(me)")).IsEqualTo(id);
@@ -70,7 +65,6 @@ public class SceneLocateArgumentTests
 	[Test]
 	public async Task SceneCreate_ResolvesOwner_FromPlayerName()
 	{
-		// owner by global player NAME ("God") must resolve to #1, not be stored as the literal name.
 		var id = await Eval($"scenecreate(,God,Locate name {Guid.NewGuid():N})");
 		await Assert.That(id).DoesNotStartWith("#-1");
 		await Eval($"sceneset({id},public,1)");
@@ -81,7 +75,6 @@ public class SceneLocateArgumentTests
 	[Test]
 	public async Task SceneWhere_ResolvesRoom_FromHereKeyword()
 	{
-		// Bind a scene to the enactor's current room via "here", activate it, then look it up via "here".
 		var id = await Eval($"scenecreate(here,{God},Locate here {Guid.NewGuid():N})");
 		await Assert.That(id).DoesNotStartWith("#-1");
 		await Eval($"sceneset({id},public,1)");

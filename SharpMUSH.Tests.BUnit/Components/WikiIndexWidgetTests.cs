@@ -73,9 +73,9 @@ public class WikiIndexWidgetTests : BunitContext
 		}, TimeSpan.FromSeconds(5));
 
 		var markup = cut.Markup;
-		await Assert.That(markup).Contains("Getting Started"); // page title
-		await Assert.That(markup).Contains("World Lore");       // page title
-		await Assert.That(markup).Contains("Guides");           // named category (capitalized)
-		await Assert.That(markup).Contains("General");          // fallback category for null
+		await Assert.That(markup).Contains("Getting Started");
+		await Assert.That(markup).Contains("World Lore");
+		await Assert.That(markup).Contains("Guides");
+		await Assert.That(markup).Contains("General");
 	}
 }

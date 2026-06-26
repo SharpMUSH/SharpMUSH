@@ -26,7 +26,6 @@
         Installed softcode packages. Upgrades always go through a reviewed plan — nothing applies automatically.
     </MudText>
 
-    @* ── Stat tiles ── *@
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
         @{
             var updatesAvailable = _installed is not null ? _installed.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable) : 0;
@@ -54,7 +53,6 @@
         }
     </div>
 
-    @* ── Tabs + search ── *@
     @if (_installed is not null)
     {
         var installedCount = _installed.Count;
@@ -77,7 +75,6 @@
         </div>
     }
 
-    @* ── Installed list ── *@
     @if (_installed is null)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
@@ -106,7 +103,6 @@
                 <MudPaper Elevation="0"
                           Style="display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);"
                           Class="pkg-row">
-                    @* Icon + name *@
                     <MudIcon Icon="@Icons.Material.Filled.Archive"
                              Style="font-size:20px;color:var(--accent);flex-shrink:0;" />
                     <div style="flex:1;min-width:0;">
@@ -170,7 +166,6 @@
                             }
                         </div>
                     </div>
-                    @* Actions *@
                     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
                         @if (update is null)
                         {
@@ -196,7 +191,6 @@
     }
 </div>
 
-@* History dialog *@
 <MudDialog @bind-Visible="_showHistory" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
     <TitleContent><MudText Typo="Typo.h6">@_historyPackage — revisions</MudText></TitleContent>
     <DialogContent>
@@ -235,7 +229,6 @@
     </DialogActions>
 </MudDialog>
 
-@* Uninstall confirm dialog *@
 <MudDialog @bind-Visible="_showUninstall">
     <TitleContent><MudText Typo="Typo.h6">Uninstall @_uninstallTarget?.Package.Id?</MudText></TitleContent>
     <DialogContent>

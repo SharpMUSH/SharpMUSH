@@ -46,7 +46,6 @@ public sealed class BotPrerenderMiddleware(
 		var host = context.Request.Host.Value;
 		var canonicalBase = $"{scheme}://{host}";
 
-		// Try to serve from cache first
 		var cached = prerenderCache.Get(path);
 		if (cached is not null)
 		{
@@ -62,7 +61,6 @@ public sealed class BotPrerenderMiddleware(
 
 		string? html = null;
 
-		// /wiki/{ns}/{category}/{slug} — canonical wiki page
 		if (path.StartsWith("/wiki/", StringComparison.OrdinalIgnoreCase))
 		{
 			var segments = path["/wiki/".Length..].Trim('/').Split('/');
@@ -80,7 +78,6 @@ public sealed class BotPrerenderMiddleware(
 				}
 			}
 		}
-		// /character/{name} — character profile alias → Character namespace (default category)
 		else if (path.StartsWith("/character/", StringComparison.OrdinalIgnoreCase))
 		{
 			var name = path["/character/".Length..].Trim('/');
@@ -94,7 +91,6 @@ public sealed class BotPrerenderMiddleware(
 				}
 			}
 		}
-		// /help/{topic} — help pages live in the Help namespace (default category)
 		else if (path.StartsWith("/help/", StringComparison.OrdinalIgnoreCase))
 		{
 			var topic = path["/help/".Length..].Trim('/');
@@ -117,7 +113,6 @@ public sealed class BotPrerenderMiddleware(
 			return;
 		}
 
-		// No pre-rendered content available — fall through to normal pipeline
 		await next(context);
 	}
 

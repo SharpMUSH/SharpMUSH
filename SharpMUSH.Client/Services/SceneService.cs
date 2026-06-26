@@ -11,8 +11,7 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class SceneService(IHttpClientFactory httpClientFactory, ILogger<SceneService> logger)
 {
-	// ── Server DTOs (mirror SceneController records; long Unix-millis timestamps) ──
-
+	// Mirror SceneController records; timestamps are long Unix-millis (deserialization contract).
 	private record SceneDto(
 		string Id,
 		string Status,
@@ -58,8 +57,6 @@ public class SceneService(IHttpClientFactory httpClientFactory, ILogger<SceneSer
 		string ShowAs,
 		bool IsCurrent,
 		long GrantedAt);
-
-	// ── Reads ─────────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Lists scenes by filter (active|recent|scheduled). Failures (network, server
@@ -184,8 +181,6 @@ public class SceneService(IHttpClientFactory httpClientFactory, ILogger<SceneSer
 			return [];
 		}
 	}
-
-	// ── Projection ──────────────────────────────────────────────────────────────
 
 	private static SceneSummary ToSummary(SceneDto d) => new(
 		d.Id, d.Status, d.IsPublic, d.IsTempRoom, d.ScheduledFor, d.StartedAt, d.LastActivityAt,

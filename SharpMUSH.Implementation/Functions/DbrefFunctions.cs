@@ -16,7 +16,6 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	// Attribute name constant for link type
 	private const string AttrLinkType = "_LINKTYPE";
 	private const string LinkTypeVariable = "variable";
 	private const string LinkTypeHome = "home";
@@ -205,8 +204,6 @@ public partial class Functions
 	[SharpFunction(Name = "entrances", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Entrances(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// entrances() finds all exits that lead to a location
-		// Format: entrances([<location>][, <type>][, <start>][, <count>])
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 
@@ -230,14 +227,12 @@ public partial class Functions
 			entrances.Add(exit);
 		}
 
-		// Parse type filter (default: all)
 		var typeFilter = "a";
 		if (args.TryGetValue("1", out var typeArg))
 		{
 			typeFilter = typeArg.Message!.ToPlainText()?.ToLower() ?? "a";
 		}
 
-		// Parse begin filter (default: 0)
 		var beginFilter = 0;
 		if (args.TryGetValue("2", out var beginArg))
 		{
@@ -247,7 +242,6 @@ public partial class Functions
 			}
 		}
 
-		// Parse end filter (default: int.MaxValue)
 		var endFilter = int.MaxValue;
 		if (args.TryGetValue("3", out var endArg))
 		{
@@ -257,19 +251,16 @@ public partial class Functions
 			}
 		}
 
-		// Filter by type and dbref range
 		var filtered = entrances.Where(entrance =>
 		{
 			var obj = entrance.Object();
 			var dbrefNum = obj.DBRef.Number;
 
-			// Filter by dbref range
 			if (dbrefNum < beginFilter || dbrefNum > endFilter)
 			{
 				return false;
 			}
 
-			// Filter by type
 			if (typeFilter.Contains('a'))
 			{
 				return true; // 'a' means all types
@@ -323,8 +314,6 @@ public partial class Functions
 	[SharpFunction(Name = "followers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Followers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// followers() returns list of objects following the target
-		// Objects follow by setting their FOLLOWING attribute to the target's dbref
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
@@ -332,18 +321,13 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// Query all objects that have FOLLOWING attribute set to this object's dbref
 				var targetDbref = found.Object().DBRef.ToString();
 				var followers = new List<string>();
 
-				// Use filtered query to get all objects more efficiently
-				// Note: We can't filter by attribute value in the database easily, 
-				// so we still need to check attributes in application code
 				var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
 
 				await foreach (var obj in allObjects)
 				{
-					// Get the FOLLOWING attribute for this object
 					var objAttributes = obj.Attributes.Value;
 					await foreach (var attr in objAttributes)
 					{
@@ -362,8 +346,6 @@ public partial class Functions
 	[SharpFunction(Name = "following", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Following(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// following() returns the object that the target is following
-		// Objects track who they follow via the FOLLOWING attribute
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
@@ -371,13 +353,11 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// Get the FOLLOWING attribute from the target object
 				var followingAttr = await AttributeService!.GetAttributeAsync(
 					executor, found, "FOLLOWING", IAttributeService.AttributeMode.Read, false);
 
 				if (followingAttr.IsAttribute)
 				{
-					// Return the dbref stored in the FOLLOWING attribute
 					return new CallState(followingAttr.AsAttribute.Last().Value.ToPlainText());
 				}
 
@@ -402,9 +382,7 @@ public partial class Functions
 		var found = locateResult.AsSharpObject;
 
 		return await found.Match<ValueTask<CallState>>(
-			// Player - return home
 			async player => (await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
-			// Room - return location (drop-to) or #-1
 			async room =>
 			{
 				var location = await room.Location.WithCancellation(CancellationToken.None);
@@ -414,9 +392,7 @@ public partial class Functions
 					thing => thing.Object.DBRef.ToString(),
 					_ => "#-1");
 			},
-			// Exit - return source room
 			async exit => (await exit.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
-			// Thing - return home
 			async thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef
 		);
 	}
@@ -425,23 +401,18 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "lock"])]
 	public static async ValueTask<CallState> LockFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// llockflags() lists all lock flags
-		// Format: llockflags([<lock type>])
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.Arguments;
 
 		if (args.Count == 0)
 		{
-			// Return all available lock flags
 			var flags = LockService!.LockPrivileges.Keys;
 			return new CallState(string.Join(" ", flags));
 		}
 
-		// With argument, return flags for a specific lock type
 		var lockType = args["0"].Message!.ToPlainText();
 		if (LockService!.SystemLocks.TryGetValue(lockType, out var lockFlags))
 		{
-			// Convert flags enum to string representation
 			var flagList = new List<string>();
 			if (lockFlags.HasFlag(Library.Services.LockService.LockFlags.Visual))
 				flagList.Add("visual");
@@ -466,18 +437,14 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "lock"])]
 	public static async ValueTask<CallState> LockFlagsObject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// lockflags() returns lock flags for a specific lock on an object
-		// Format: lockflags([<object>[/<locktype>]])
 		var args = parser.CurrentState.Arguments;
 
 		if (args.Count == 0)
 		{
-			// Return all available lock flag letters
 			// In PennMUSH: v=visual, n=no_inherit, c=no_clone, w=wizard, o=owner, l=locked
 			return new CallState("vncwol");
 		}
 
-		// Parse object/locktype
 		var argStr = args["0"].Message!.ToPlainText();
 		var parts = argStr.Split('/', 2);
 		var objectRef = parts[0];
@@ -503,7 +470,6 @@ public partial class Functions
 					return new CallState("#-1 NO SUCH LOCK");
 				}
 
-				// Convert flags to string
 				var flagChars = new List<char>();
 				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Visual))
 					flagChars.Add('v');
@@ -525,13 +491,11 @@ public partial class Functions
 	[SharpFunction(Name = "elock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "victim"])]
 	public static async ValueTask<CallState> EvaluateLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// elock() evaluates an object's lock against a victim
 		// PennMUSH format: elock(<object>/<lock name>, <victim>)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var victimArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		// Parse slash syntax from first arg
 		string lockName = "Basic";
 		var slashIdx = objArg.IndexOf('/');
 		if (slashIdx >= 0)
@@ -544,7 +508,6 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// Locate the victim
 				var victimResult = await LocateService!.Locate(parser, executor, executor, victimArg, LocateFlags.All);
 				if (!victimResult.IsValid())
 				{
@@ -561,14 +524,12 @@ public partial class Functions
 					return new CallState("1");
 				}
 
-				// Check permission: executor must be able to read the lock
 				// PennMUSH Can_Read_Lock: See_All || controls || ((Visual || lock visual) && passes Examine lock)
 				if (!await PermissionService!.CanReadLock(executor, found, lockData.Flags))
 				{
 					return new CallState("#-1");
 				}
 
-				// Evaluate the lock: does victim pass this lock?
 				var result = LockService!.Evaluate(lockData.LockString, found, victim);
 				return new CallState(result ? "1" : "0");
 			});
@@ -577,8 +538,6 @@ public partial class Functions
 	[SharpFunction(Name = "llocks", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Locks(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// llocks() lists all locks on an object
-		// Format: llocks([<object>])
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 
@@ -594,7 +553,6 @@ public partial class Functions
 			target = maybeTarget.AsAnyObject;
 		}
 
-		// Get all lock names from the object
 		var lockNames = target.Object().Locks.Keys;
 		return new CallState(string.Join(" ", lockNames));
 	}
@@ -602,8 +560,6 @@ public partial class Functions
 	[SharpFunction(Name = "locks", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> LocksRequired(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// locks() is like llocks() but requires an object argument
-		// Format: locks(<object>)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
@@ -614,7 +570,6 @@ public partial class Functions
 		}
 		var target = maybeTarget.AsAnyObject;
 
-		// Get all lock names from the object
 		var lockNames = target.Object().Locks.Keys;
 		return new CallState(string.Join(" ", lockNames));
 	}
@@ -630,57 +585,6 @@ public partial class Functions
 	[SharpFunction(Name = "locate", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player", "name", "type"])]
 	public static async ValueTask<CallState> Locate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		/*
-
-		 help locate()
-LOCATE()
-  locate(<looker>, <name>, <parameters>)
-
-  This function attempts to find an object called <name>, relative to the object <looker>. It's similar to the num() function, but you can be more specific about which type of object to find, and where to look for it. When attempting to match objects near to <looker> (anything but absolute, player name or "me" matches), you must control <looker>, have the See_All power or be nearby.
-
-  <parameters> is a string of characters which control the type of the object to find, and where (relative to <looker>) to look for it.
-
-  You can control the preferred types of the match with:
-    N - No type (this is the default)
-    E - Exits
-    L - Prefer an object whose Basic @lock <looker> passes
-    P - Players
-    R - Rooms
-    T - Things
-    F - Return #-1 if what's found is of a different type than the preferred one.
-    X - Never return #-2. Use the last dbref found if the match is ambiguous.
-
-  If type(s) are given, locate() will attempt to find an object with one of the given types first. If none are found, it will attempt to find any type of object, unless 'F' is specified, in which case it will return #-1.
-
-  You can control where to look with:
-    a - Absolute match (match <name> against any dbref)
-    c - Exits in the room <looker>
-    e - Exits in <looker>'s location
-    h - If <name> is "here", return <looker>'s location
-    i - Match <name> against the names of objects in <looker>'s inventory
-    l - Match <name> against the name of <looker>'s location
-    m - If <name> is "me", return <looker>'s dbref
-    n - Match <name> against the names of objects in <looker>'s location
-    p - If <name> begins with a *, match the rest against player names
-    z - English-style matching (my 2nd book) of <name> (see 'help matching')
-    * - All of the above (try a complete match). Default when no match parameters are given.
-    y - Match <name> against player names whether it begins with a * or not
-    x - Only match objects with the exact name <name>, no partial matches
-    s - Only match objects which <looker> controls. You must control <looker> or have the See_All power.
-
-  Just string all the parameters together. Spaces are ignored, so you can use spaces between paramaters for clarity if you wish.
-
-  Examples:
-  Find the dbref of the player whose name matches %0, or %#'s dbref if %0 is "me".
-    > think locate(%#, %0, PFym)
-  'PF' matches objects of type 'player' and nothing else, 'm' checks for the string "me", and 'y' matches the names of players.
-
-  Find the dbref of an object near %# called %0, including %# himself and his location. Prefer players or things, but accept rooms or exits if no players or things are found.
-    > think locate(%#, %0, PThmlni)
-  This prefers 'P'layers or 'T'hings, and compares %0 against the strings "here" and "me", and the names of %#'s location, his neighbours, and his inventory.
-
-  */
-
 		var args = parser.CurrentState.Arguments;
 		var lookerArg = args["0"].Message!.ToPlainText();
 		var nameArg = args["1"].Message!.ToPlainText();
@@ -688,7 +592,6 @@ LOCATE()
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		// First, locate the looker object
 		var maybeLooker =
 			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, lookerArg,
 				LocateFlags.All);
@@ -699,14 +602,11 @@ LOCATE()
 
 		var looker = maybeLooker.AsSharpObject;
 
-		// Parse the parameters string into LocateFlags
 		var locateFlags = ParseLocateParameters(parametersArg);
 
-		// Check if we need to determine type preferences
 		var preferredTypes = GetPreferredTypes(parametersArg);
 		var requireExactType = parametersArg.Contains('F', StringComparison.OrdinalIgnoreCase);
 
-		// Perform the locate operation
 		var maybeFound = await LocateService.Locate(parser, looker, executor, nameArg, locateFlags);
 
 		if (maybeFound.IsError)
@@ -721,7 +621,6 @@ LOCATE()
 
 		var found = maybeFound.WithoutError().WithoutNone();
 
-		// Check type preferences if specified
 		if (preferredTypes.Any())
 		{
 			var foundType = GetObjectType(found);
@@ -731,7 +630,6 @@ LOCATE()
 				{
 					return "#-1";
 				}
-				// If not requiring exact type, we still return the found object
 			}
 		}
 
@@ -743,13 +641,11 @@ LOCATE()
 		var flags = LocateFlags.NoTypePreference;
 		var paramUpper = parameters.ToUpperInvariant().Replace(" ", "");
 
-		// Handle special case of "*" meaning all flags
 		if (paramUpper.Contains('*'))
 		{
 			return LocateFlags.All;
 		}
 
-		// Parse location flags
 		if (paramUpper.Contains('A')) flags |= LocateFlags.AbsoluteMatch;
 		if (paramUpper.Contains('C')) flags |= LocateFlags.ExitsInTheRoomOfLooker;
 		if (paramUpper.Contains('E')) flags |= LocateFlags.ExitsInsideOfLooker;
@@ -801,12 +697,10 @@ LOCATE()
 	[SharpFunction(Name = "lock", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Lock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// lock() gets a lock string from an object
 		// PennMUSH format: lock(<object>[/<lock name>]) - slash syntax in single arg
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		// Parse slash syntax: "obj/locktype"
 		string lockName = "Basic";
 		var slashIdx = objArg.IndexOf('/');
 		if (slashIdx >= 0)
@@ -841,8 +735,6 @@ LOCATE()
 	[SharpFunction(Name = "lockfilter", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "lock", "list", "delimiter"])]
 	public static async ValueTask<CallState> LockFilter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// lockfilter() filters objects by lock evaluation
-		// Format: lockfilter(<object list>, <lock name>[, <lock eval>])
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 
@@ -878,7 +770,6 @@ LOCATE()
 				continue;
 			}
 
-			// Evaluate the lock
 			var passes = LockService!.Evaluate(lockData.LockString, found, executor);
 
 			if (passes == shouldPass)
@@ -893,13 +784,11 @@ LOCATE()
 	[SharpFunction(Name = "lockowner", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "lock"])]
 	public static async ValueTask<CallState> LockOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// lockowner(obj/lockname) returns the dbref of who set the lock
 		// PennMUSH tracks per-lock setter; SharpMUSH returns object owner as approximation.
 		// If no /lockname, defaults to Basic
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		// Parse slash syntax: "obj/locktype"
 		string lockName = "Basic";
 		var slashIdx = objArg.IndexOf('/');
 		if (slashIdx >= 0)
@@ -912,7 +801,6 @@ LOCATE()
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// Check lock exists (case-insensitive)
 				var lockKey = found.Object().Locks.Keys
 					.FirstOrDefault(k => string.Equals(k, lockName, StringComparison.OrdinalIgnoreCase));
 				if (lockKey == null || !found.Object().Locks.TryGetValue(lockKey, out _))
@@ -921,7 +809,6 @@ LOCATE()
 					return new CallState($"#{found.Object().DBRef.Number}");
 				}
 
-				// Return the object's owner as the lock setter
 				var owner = await found.Object().Owner.WithCancellation(CancellationToken.None);
 				return new CallState($"#{owner.Object.DBRef.Number}");
 			});
@@ -974,8 +861,6 @@ LOCATE()
 
 	private static async ValueTask<CallState> ListSearchInternal(IMUSHCodeParser parser, SharpFunctionAttribute _2, bool useRegex)
 	{
-		// lsearch() searches the database for objects matching criteria
-		// Format: lsearch(<player>, <class1>, <restriction1>, <class2>, <restriction2>, ...)
 		// Per PennMUSH documentation: comma-separated positional arguments, NOT equals syntax
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
@@ -985,7 +870,6 @@ LOCATE()
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		// First argument is the player (who owns the objects to search)
 		var classArg = args["0"].Message!.ToPlainText();
 		AnySharpObject? classObj = null;
 
@@ -999,7 +883,6 @@ LOCATE()
 			classObj = maybeClass.AsAnyObject;
 		}
 
-		// Build database-level filter from search criteria
 		var filter = new ObjectSearchFilter();
 		var types = new List<string>();
 		var namePattern = (string?)null;
@@ -1012,29 +895,23 @@ LOCATE()
 		int? start = null;
 		int? count = null;
 
-		// Process criteria as positional class/restriction pairs
 		var appLevelCriteria = new List<(string key, string value)>();
 
-		// Arguments come in pairs: class, restriction, class, restriction, ...
 		for (int i = 1; i < args.Count; i += 2)
 		{
-			// Need both class and restriction
 			if (i + 1 >= args.Count)
 			{
-				// Odd number of arguments after player - invalid
 				break;
 			}
 
 			var classType = args[i.ToString()].Message!.ToPlainText().Trim().ToUpperInvariant();
 			var restriction = args[(i + 1).ToString()].Message!.ToPlainText().Trim();
 
-			// Skip if class is "none"
 			if (classType.Equals("NONE", StringComparison.OrdinalIgnoreCase))
 			{
 				continue;
 			}
 
-			// Categorize criteria: database-level vs application-level
 			switch (classType)
 			{
 				case "TYPE":
@@ -1043,7 +920,6 @@ LOCATE()
 				case "NAME":
 					namePattern = restriction;
 					break;
-				// Type-specific name filters (shortcuts for TYPE + NAME)
 				case "EXITS":
 					types.Add("EXIT");
 					namePattern = restriction;
@@ -1089,7 +965,6 @@ LOCATE()
 					break;
 				case "LFLAGS":
 					// LFLAGS uses space-separated flag names instead of single characters
-					// Store for now - will need to convert to single-char format or handle separately
 					hasFlag = restriction;
 					break;
 				case "POWER":
@@ -1143,21 +1018,17 @@ LOCATE()
 				case "LISTEN":
 				case "COMMAND":
 					// These require attribute pattern matching - store for app-level evaluation
-					// Will be handled in the filtering loop below
 					break;
 			}
 		}
 
-		// Extract LISTEN and COMMAND criteria for app-level evaluation
 		var listenPattern = appLevelCriteria.FirstOrDefault(x => x.key == "LISTEN").value;
 		var commandPattern = appLevelCriteria.FirstOrDefault(x => x.key == "COMMAND").value;
 		var hasListenCriteria = !string.IsNullOrEmpty(listenPattern);
 		var hasCommandCriteria = !string.IsNullOrEmpty(commandPattern);
 
-		// Check if we need to convert SharpObject to AnySharpObject for app-level criteria
 		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0 || hasListenCriteria || hasCommandCriteria;
 
-		// Build filter object
 		// IMPORTANT: Only apply START/COUNT at database level if there are NO app-level criteria
 		// If there are app-level criteria, we must apply START/COUNT after filtering in application code
 		filter = new ObjectSearchFilter
@@ -1176,13 +1047,10 @@ LOCATE()
 			Limit = hasAppLevelCriteria ? null : count  // Only limit at DB level if no app-level filtering
 		};
 
-		// Query database with filters applied at database level
 		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
 
 		if (!hasAppLevelCriteria)
 		{
-			// No app-level criteria, just convert to dbrefs directly without fetching full objects
-			// START/COUNT already applied at database level
 			var results = new List<string>();
 			await foreach (var obj in filteredObjects)
 			{
@@ -1191,16 +1059,13 @@ LOCATE()
 			return new CallState(string.Join(" ", results));
 		}
 
-		// Apply application-level criteria (locks, evals, etc.)
 		// Optimize: Convert to AnySharpObject once per object and evaluate all criteria
 		var finalResults = new List<string>();
 		await foreach (var obj in filteredObjects)
 		{
-			// Convert the raw SharpObject to a properly-typed AnySharpObject once for all evaluations
 			var typedObj = await CreateAnySharpObjectFromSharpObject(obj);
 			bool matches = true;
 
-			// Evaluate pre-compiled lock criteria
 			foreach (var compiledLock in compiledLocks)
 			{
 				if (!compiledLock(typedObj, executor))
@@ -1210,12 +1075,10 @@ LOCATE()
 				}
 			}
 
-			// Evaluate eval expressions if locks passed
 			if (matches)
 			{
 				foreach (var (evalExpression, typeFilter) in compiledEvals)
 				{
-					// Check type filter if specified
 					if (typeFilter != null && !typedObj.Object().Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
 					{
 						matches = false;
@@ -1223,11 +1086,9 @@ LOCATE()
 					}
 
 					// Replace ## with the object's dbref number in the expression
-					// Use just the number (e.g., "1") for numeric comparisons
 					var objectDbRefNum = typedObj.Object().DBRef.Number.ToString();
 					var expression = evalExpression.Replace("##", objectDbRefNum);
 
-					// Evaluate the expression
 					var evalResult = await parser.FunctionParse(MModule.single(expression));
 					if (evalResult == null || !evalResult.Message.Truthy())
 					{
@@ -1237,10 +1098,8 @@ LOCATE()
 				}
 			}
 
-			// Evaluate LISTEN pattern if specified
 			if (matches && hasListenCriteria)
 			{
-				// Check if the object has any @listen attributes matching the pattern
 				var attributesResult = await AttributeService!.GetVisibleAttributesAsync(executor, typedObj);
 				if (!attributesResult.IsError)
 				{
@@ -1250,8 +1109,6 @@ LOCATE()
 																										 a.Name.StartsWith("LISTEN`", StringComparison.OrdinalIgnoreCase)))
 					{
 						var attrValue = attr.Value?.ToPlainText() ?? "";
-						// Check if the listen pattern matches our search pattern
-						// This is a wildcard match where * matches any characters
 						if (IsWildcardMatch(attrValue, listenPattern!))
 						{
 							hasMatchingListen = true;
@@ -1266,15 +1123,12 @@ LOCATE()
 				}
 				else
 				{
-					// If we can't get attributes, object doesn't match
 					matches = false;
 				}
 			}
 
-			// Evaluate COMMAND pattern if specified
 			if (matches && hasCommandCriteria)
 			{
-				// Check if the object has any $-commands matching the pattern
 				var attributesResult = await AttributeService!.GetVisibleAttributesAsync(executor, typedObj);
 				if (!attributesResult.IsError)
 				{
@@ -1284,14 +1138,12 @@ LOCATE()
 					{
 						var attrValue = attr.Value?.ToPlainText() ?? "";
 						// $-commands are in format: $command-pattern:action
-						// We need to extract the command pattern (between $ and :) and match it
 						var dollarIndex = attrValue.IndexOf('$');
 						if (dollarIndex >= 0)
 						{
 							var colonIndex = attrValue.IndexOf(':', dollarIndex);
 							if (colonIndex > dollarIndex)
 							{
-								// Extract just the command pattern part (after $ and before :) using Span
 								var commandPart = attrValue.AsSpan(dollarIndex + 1, colonIndex - dollarIndex - 1).ToString();
 								if (IsWildcardMatch(commandPart, commandPattern))
 								{
@@ -1309,7 +1161,6 @@ LOCATE()
 				}
 				else
 				{
-					// If we can't get attributes, object doesn't match
 					matches = false;
 				}
 			}
@@ -1320,7 +1171,6 @@ LOCATE()
 			}
 		}
 
-		// Apply START/COUNT at application level if we had app-level filtering
 		// This ensures pagination happens AFTER all runtime filters are applied
 		if (start.HasValue || count.HasValue)
 		{
@@ -1338,7 +1188,6 @@ LOCATE()
 	/// </summary>
 	private static bool IsWildcardMatch(string value, string pattern)
 	{
-		// Convert pattern to regex: escape special chars except *, then replace * with .*
 		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$";
 		return System.Text.RegularExpressions.Regex.IsMatch(value, regexPattern,
 			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
@@ -1350,8 +1199,6 @@ LOCATE()
 	/// </summary>
 	private static async Task<AnySharpObject> CreateAnySharpObjectFromSharpObject(SharpObject obj)
 	{
-		// The object needs to be fetched properly from the database to get the correct type-specific object
-		// We use the Mediator to fetch the fully-typed object asynchronously
 		var dbref = new DBRef(obj.Key, obj.CreationTime);
 		var result = await Mediator!.Send(new GetObjectNodeQuery(dbref));
 
@@ -1367,13 +1214,8 @@ LOCATE()
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["object", "class=restriction..."])]
 	public static async ValueTask<CallState> ListSearchRegex(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// lsearchr() is like lsearch but with regex support for name patterns
-		// We'll modify the behavior by passing a flag through the search
-
-		// Temporarily store the original arguments
 		var originalArgs = parser.CurrentState.Arguments;
 
-		// Call the shared search implementation with regex enabled
 		return await ListSearchInternal(parser, _2, useRegex: true);
 	}
 
@@ -1385,7 +1227,6 @@ LOCATE()
 		var hasErrorCallback = parser.CurrentState.Arguments.Count > 1
 			&& !string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["1"].Message?.ToPlainText());
 
-		// Parse optional object/attribute parameter for error callback
 		AnySharpObject? callbackObject = null;
 		string[]? callbackAttribute = null;
 
@@ -1418,7 +1259,6 @@ LOCATE()
 
 		var resultList = new List<string>();
 
-		// Process each name in the list
 		foreach (var item in namelist)
 		{
 			DBRef? resolvedDbref = null;
@@ -1427,7 +1267,6 @@ LOCATE()
 
 			if (item.IsT0)
 			{
-				// Already a dbref - validate it exists
 				var dbref = item.AsT0;
 				var exists = await Mediator!.Send(new GetBaseObjectNodeQuery(dbref));
 
@@ -1443,7 +1282,6 @@ LOCATE()
 			}
 			else
 			{
-				// String name - need to locate
 				var name = item.AsT1;
 				originalName = name;
 
@@ -1451,17 +1289,14 @@ LOCATE()
 
 				if (locateResult.IsValid())
 				{
-					// Found valid object
 					resolvedDbref = locateResult.AsAnyObject.Object().DBRef;
 				}
 				else if (locateResult.IsT4)
 				{
-					// None - not found
 					errorCode = -1;
 				}
 				else if (locateResult.IsT5)
 				{
-					// Error occurred - check if ambiguous or not found
 					var error = locateResult.AsT5;
 					if (error.Value.Contains("ambiguous", StringComparison.OrdinalIgnoreCase) ||
 							error.Value.Contains("#-2"))
@@ -1475,22 +1310,18 @@ LOCATE()
 				}
 				else
 				{
-					// Unknown error
 					errorCode = -1;
 				}
 			}
 
 			if (resolvedDbref.HasValue)
 			{
-				// Successfully resolved - add the dbref
 				resultList.Add($"#{resolvedDbref.Value.Number}");
 			}
 			else
 			{
-				// Failed to resolve - add error code
 				resultList.Add($"#{errorCode}");
 
-				// Call error callback if provided
 				if (hasErrorCallback && callbackObject != null && callbackAttribute != null)
 				{
 					var attrResult = await AttributeService!.GetAttributeAsync(
@@ -1507,7 +1338,6 @@ LOCATE()
 							.Replace("%0", originalName)
 							.Replace("%1", $"#{errorCode}");
 
-						// Parse and execute the command
 						await parser.CommandParse(MModule.single(substitutedCommand));
 					}
 				}
@@ -1544,18 +1374,15 @@ LOCATE()
 			LocateFlags.All,
 			async locate =>
 			{
-				// Get the location of the object
 				AnySharpContainer location;
 
 				if (locate.IsExit)
 				{
-					// For exits, get the source room (location)
 					var exitLocation = await locate.AsExit.Location.WithCancellation(CancellationToken.None);
 					location = exitLocation;
 				}
 				else if (locate.IsContent)
 				{
-					// For things and players, get their location
 					location = await locate.AsContent.Location();
 				}
 				else
@@ -1564,19 +1391,15 @@ LOCATE()
 					return "#-1";
 				}
 
-				// Get all contents of the location
 				var contents = await location.Content(Mediator!).ToListAsync();
 
-				// Find the current object in the list
 				var currentIndex = contents.FindIndex(x => x.Object().DBRef == locate.Object().DBRef);
 
 				if (currentIndex == -1 || currentIndex == contents.Count - 1)
 				{
-					// Object not found or is the last item
 					return "#-1";
 				}
 
-				// Return the next object
 				return contents[currentIndex + 1].Object().DBRef;
 			});
 	}
@@ -1584,14 +1407,11 @@ LOCATE()
 	[SharpFunction(Name = "nextdbref", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static async ValueTask<CallState> NextDbReference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// nextdbref() returns the next DB reference that will be assigned
-		// This requires knowing the highest dbref in the database
 		var allObjects = await Mediator!.CreateStream(new GetAllObjectsQuery())
 			.ToListAsync();
 
 		if (allObjects.Count == 0)
 		{
-			// If there are no objects, the next dbref would be #0
 			return new CallState("#0:0");
 		}
 
@@ -1606,7 +1426,6 @@ LOCATE()
 	[SharpFunction(Name = "nlsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
 	public static async ValueTask<CallState> NumberOfListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// nlsearch() returns the count of objects matching lsearch criteria
 		var result = await ListSearch(parser, _2);
 		var resultStr = result.Message?.ToPlainText() ?? "";
 
@@ -1625,7 +1444,6 @@ LOCATE()
 	[SharpFunction(Name = "nsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
 	public static ValueTask<CallState> NumberOfSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// nsearch() is an alias for nlsearch()
 		return NumberOfListSearch(parser, _2);
 	}
 
@@ -1648,7 +1466,6 @@ LOCATE()
 	[SharpFunction(Name = "numversion", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static ValueTask<CallState> NumVersion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Return a version number for compatibility
 		// Format: YYYYMMDDHHMMSS (like PennMUSH)
 		return ValueTask.FromResult<CallState>("20250102000000");
 	}
@@ -1734,7 +1551,6 @@ LOCATE()
 	[SharpFunction(Name = "rloc", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "levels"])]
 	public static async ValueTask<CallState> RecursiveLocation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// rloc() recursively gets location N levels up
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var levelsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
@@ -1751,7 +1567,6 @@ LOCATE()
 				var current = found;
 				for (var i = 0; i < levels; i++)
 				{
-					// Get location
 					if (current.IsContent)
 					{
 						var location = await current.AsContent.Location();
@@ -1825,7 +1640,6 @@ LOCATE()
 			LocateFlags.All,
 			async target =>
 			{
-				// Check if we can examine the object
 				if (!await PermissionService!.CanExamine(executor, target))
 				{
 					return "#-1";
@@ -1833,19 +1647,15 @@ LOCATE()
 
 				if (hasArg1)
 				{
-					// Setting zone is a side effect
 					if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 					{
 						return ErrorMessages.Returns.NoSideFx;
 					}
 
-					// Handle zone setting like @chzone
 					var arg1Str = arg1Value!.Message!.ToPlainText();
 
-					// Check if removing zone (setting to "none")
 					if (arg1Str.Equals("none", StringComparison.OrdinalIgnoreCase))
 					{
-						// Check permissions
 						if (!await PermissionService!.Controls(executor, target))
 						{
 							return ErrorMessages.Returns.PermissionDenied;
@@ -1855,7 +1665,6 @@ LOCATE()
 						return string.Empty;
 					}
 
-					// Locate the zone object
 					var maybeZone = await LocateService!.Locate(parser, executor, executor, arg1Str, LocateFlags.All);
 					if (!maybeZone.IsValid())
 					{
@@ -1876,7 +1685,6 @@ LOCATE()
 						return ErrorMessages.Returns.PermissionDenied;
 					}
 
-					// Check for cycles before setting the zone
 					if (!await HelperFunctions.SafeToAddZone(Mediator!, Database!, target, zone))
 					{
 						return ErrorMessages.Returns.ZoneLoop;
@@ -1885,7 +1693,6 @@ LOCATE()
 					// Handle flag/power stripping (simplified - no /preserve in function)
 					if (!target.IsPlayer)
 					{
-						// Clear privileged flags
 						if (await target.HasFlag("WIZARD"))
 						{
 							await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, target, "!WIZARD", false);
@@ -1904,7 +1711,7 @@ LOCATE()
 					return string.Empty;
 				}
 
-				// Get zone of the target object - query fresh from database
+				// query fresh from database
 				var freshTarget = await Mediator!.Send(new GetObjectNodeQuery(target.Object().DBRef));
 				var zoneObj = await freshTarget.Known.Object().Zone.WithCancellation(CancellationToken.None);
 				return zoneObj.IsNone
@@ -2417,7 +2224,6 @@ LOCATE()
 	/// </summary>
 	private static async ValueTask<bool?> FlagLetterCheck(AnySharpObject obj, string flagStr, bool orMode)
 	{
-		// Fetch all object flags once for symbol lookup
 		var allFlags = await Mediator!.CreateStream(new GetAllObjectFlagsQuery()).ToListAsync();
 
 		var ret = !orMode; // AND starts true, OR starts false
@@ -2436,7 +2242,6 @@ LOCATE()
 			var c = flagStr[i];
 			i++;
 
-			// Type check letters
 			if (c is 'P' or 'R' or 'T' or 'E')
 			{
 				bool typeMatch = c switch
@@ -2479,7 +2284,6 @@ LOCATE()
 			var flagDef = allFlags.FirstOrDefault(f => f.Symbol == c.ToString());
 			if (flagDef == null)
 			{
-				// Unknown flag symbol
 				// For AND: unknown required flag → false; negated unknown → true (not set)
 				// For OR: unknown with negate → true; unknown without → false
 				bool effectiveOnUnknown = negate; // !unknown = "not set" = true
@@ -2526,7 +2330,6 @@ LOCATE()
 			if (string.IsNullOrEmpty(flagName))
 				return null;
 
-			// Type names and special pseudo-flags
 			bool hasIt;
 			switch (flagName.ToUpperInvariant())
 			{
@@ -2593,7 +2396,6 @@ LOCATE()
 	[SharpFunction(Name = "orlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "powers"])]
 	public static async ValueTask<CallState> OrListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// orlpowers() checks a list of objects to see if ANY have ANY of the powers
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var powersArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();

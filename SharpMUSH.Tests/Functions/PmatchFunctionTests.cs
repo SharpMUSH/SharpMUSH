@@ -27,7 +27,6 @@ public class PmatchFunctionTests
 	[Test]
 	public async Task Pmatch_ResolvesPlayerInADifferentRoom()
 	{
-		// Create a target player and find its name.
 		var target = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "Faraway");
 		var node = await Mediator.Send(new GetObjectNodeQuery(target));
 		await Assert.That(node.IsNone).IsFalse();

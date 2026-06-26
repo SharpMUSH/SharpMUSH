@@ -58,7 +58,6 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Check for wildcard pattern (user explicitly included * or ?)
 		if (topic.Contains('*') || topic.Contains('?'))
 		{
 			var matches = (await TextFileService.SearchEntriesAsync("help", topic))
@@ -104,7 +103,6 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Fuzzy pattern fallback: insert * between words (spaces) and at alpha-to-digit boundaries
 		var fuzzyPattern = BuildFuzzyPattern(topic);
 		var fuzzyMatches = (await TextFileService.SearchEntriesAsync("help", fuzzyPattern))
 			.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
@@ -144,9 +142,9 @@ public partial class Commands
 			return topic;
 
 		var sb = new StringBuilder();
-		const int StateNone = 0;   // initial or after whitespace
-		const int StateAlpha = 1;  // last seen character was alphabetic
-		const int StateDigit = 2;  // last seen character was digit (after alpha)
+		const int StateNone = 0;
+		const int StateAlpha = 1;
+		const int StateDigit = 2;
 		var state = StateNone;
 
 		foreach (var c in topic)

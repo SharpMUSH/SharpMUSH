@@ -103,12 +103,10 @@ public class NotifyService(
 			return;
 		}
 
-		// Route to listeners if service is available and we have location context
 		if (listenerRoutingService != null && mediator != null && sender != null)
 		{
 			try
 			{
-				// Determine the location for listener routing
 				var location = await sender.Match<ValueTask<DBRef>>(
 					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
 					room => ValueTask.FromResult(room.Object.DBRef),
@@ -123,7 +121,6 @@ public class NotifyService(
 					ExcludedObjects: []
 				);
 
-				// Fire and forget - don't await to avoid blocking notification
 				await listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
 			}
 			catch
@@ -132,7 +129,6 @@ public class NotifyService(
 			}
 		}
 
-		// Publish markup per-connection; the ConnectionServer renders to the connection's wire format.
 		await foreach (var conn in connections.Get(who))
 		{
 			await PublishMarkup(conn.Handle, what);
@@ -203,7 +199,6 @@ public class NotifyService(
 			return;
 		}
 
-		// Publish prompt markup to each handle
 		foreach (var handle in handles)
 		{
 			await PublishMarkupPrompt(handle, what);
@@ -220,16 +215,13 @@ public class NotifyService(
 			return;
 		}
 
-		// Get all handles for the target location/object
 		var targetHandles = await connections.Get(who).Select(x => x.Handle).ToArrayAsync();
 
-		// Get all handles to exclude using async LINQ SelectMany over all except-DBRefs
 		var excludeHandles = await except.ToAsyncEnumerable()
 			.SelectMany(dbRef => connections.Get(dbRef))
 			.Select(conn => conn.Handle)
 			.ToHashSetAsync();
 
-		// Filter out excluded handles and notify the rest
 		var notifyHandles = targetHandles.Where(h => !excludeHandles.Contains(h)).ToArray();
 
 		if (notifyHandles.Length > 0)

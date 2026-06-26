@@ -97,7 +97,6 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 		}
 		catch (Exception ex)
 		{
-			// Best-effort cleanup of a partially written asset.
 			try { File.Delete(binPath); } catch { /* ignore */ }
 			try { File.Delete(MetaPath(id)); } catch { /* ignore */ }
 			return new Error<string>($"Failed to store asset: {ex.Message}");
@@ -137,7 +136,6 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 			}
 			catch (JsonException)
 			{
-				// Skip corrupt sidecar files.
 			}
 		}
 

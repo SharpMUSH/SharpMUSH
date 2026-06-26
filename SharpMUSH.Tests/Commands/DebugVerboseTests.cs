@@ -31,18 +31,14 @@ public class DebugVerboseTests
 		// Create a unique player as executor: the owned object's debug output goes to its owner.
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgEval");
-		// Arrange - Create test object and set DEBUG flag on it
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugEvalObj"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugEvalObj=DEBUG"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugEvalObj=!no_command"));
 
-		// Create a custom command on the object
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&test_cmd_eval DebugEvalObj=$test1command:@pemit me=[add(123,456)]"));
 
-		// Act - Execute the custom command as the test object
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugEvalObj=test1command"));
 
-		// Assert - Verify debug output contains the specific function call
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
@@ -51,7 +47,6 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(123,456\)\] :$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[add\(123,456\)\] :$"))), null, INotifyService.NotificationType.Announce);
 
-		// Assert - Verify debug output contains the specific result
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
@@ -60,7 +55,6 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(123,456\)\] => 579$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[add\(123,456\)\] => 579$"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugEvalObj"));
 	}
 
@@ -69,18 +63,14 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgNest");
-		// Arrange - Create test object and set DEBUG flag on it
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugNestObj"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugNestObj=DEBUG"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugNestObj=!no_command"));
 
-		// Create a custom command on the object
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&test_cmd_nest DebugNestObj=$test2command:@pemit me=[mul(add(11,22),3)]"));
 
-		// Act - Execute the custom command as the test object
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugNestObj=test2command"));
 
-		// Assert - Outer function
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
@@ -89,7 +79,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[mul\(add\(11,22\),3\)\] :$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[mul\(add\(11,22\),3\)\] :$"))), null, INotifyService.NotificationType.Announce);
 
-		// Assert - Inner function (has extra space for nesting indentation, matching PennMUSH)
+		// Inner function (has extra space for nesting indentation, matching PennMUSH)
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
@@ -98,7 +88,6 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! {2,}add\(11,22\) :$"),
 						str => Regex.IsMatch(str, @"^#\d+! {2,}add\(11,22\) :$"))), null, INotifyService.NotificationType.Announce);
 
-		// Assert - Final result should be 99
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
@@ -107,7 +96,6 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[mul\(add\(11,22\),3\)\] => 99$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[mul\(add\(11,22\),3\)\] => 99$"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugNestObj"));
 	}
 
@@ -116,14 +104,11 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VerbExec");
-		// Arrange - Create test object and set VERBOSE flag on it
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create VerboseObj"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set VerboseObj=VERBOSE"));
 
-		// Act - Execute a command as the test object with unique message
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force VerboseObj=@pemit me=UniqueTestMessage789"));
 
-		// Assert - Verify VERBOSE output (format: "#dbref] command")
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
@@ -132,7 +117,6 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+\] @pemit me=UniqueTestMessage789$"),
 						str => Regex.IsMatch(str, @"^#\d+\] @pemit me=UniqueTestMessage789$"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy VerboseObj"));
 	}
 
@@ -141,14 +125,11 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VerbNoDup");
-		// Arrange - Create test object and set VERBOSE flag on it
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create VerboseNoDupObj"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set VerboseNoDupObj=VERBOSE"));
 
-		// Act - Execute a think command as the test object
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force VerboseNoDupObj=think UniqueNoDup777"));
 
-		// Assert - Verbose output should show "think UniqueNoDup777" NOT "think think UniqueNoDup777"
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
@@ -165,7 +146,6 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("] think think"),
 						str => str.Contains("] think think"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy VerboseNoDupObj"));
 	}
 
@@ -174,14 +154,11 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VerbNoDupSw");
-		// Arrange - Create test object and set VERBOSE flag on it
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create VerboseNoDupSwitchObj"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set VerboseNoDupSwitchObj=VERBOSE"));
 
-		// Act - Execute a command with a switch as the test object
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force VerboseNoDupSwitchObj=@emit/noeval UniqueNoDupSwitch555"));
 
-		// Assert - Verbose output should show "@emit/noeval UniqueNoDupSwitch555" NOT "@emit/noeval @emit/noeval UniqueNoDupSwitch555"
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
@@ -198,7 +175,6 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("@emit/noeval @emit/noeval"),
 						str => str.Contains("@emit/noeval @emit/noeval"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy VerboseNoDupSwitchObj"));
 	}
 
@@ -207,18 +183,15 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DiagDbg");
-		// Diagnostic: Create a thing, add attribute, set DEBUG flag, verify flag is readable via inheritance query
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DiagDebugThing"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&DIAGFUNC_UNIQ2 DiagDebugThing=[add(1,2)]"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DiagDebugThing/DIAGFUNC_UNIQ2=DEBUG"));
 
-		// Get the DBRef of DiagDebugThing from the notification (created as "#N:...")
 		var createCall = NotifyService.ReceivedCalls()
 			.FirstOrDefault(c =>
 			{
 				var args = c.GetArguments();
 				if (args.Length < 2) return false;
-				// Legacy Notify path
 				if (args[1] is OneOf<MString, string> msg)
 					return msg.Match(m => m.ToString().Contains("DiagDebugThing"), s => s.Contains("DiagDebugThing"));
 				// NotifyLocalized path with sender overload: (who, key, sender, params object[] formatArgs)
@@ -247,7 +220,6 @@ public class DebugVerboseTests
 			createMsg = string.Empty;
 		}
 
-		// Extract DBRef number from "Created DiagDebugThing (#N)." or "#N"
 		var match = Regex.Match(createMsg, @"#(\d+)");
 		await Assert.That(match.Success).IsTrue().Because("Create notification should contain DBRef");
 		var dbrefNum = int.Parse(match.Groups[1].Value);
@@ -268,7 +240,6 @@ public class DebugVerboseTests
 		await Assert.That(hasDebugNew).IsTrue()
 			.Because($"GetAttributeWithInheritanceQuery must also return DEBUG flag (old flags: {string.Join(",", flagsOld.Select(f => f.Name))}, new flags: {string.Join(",", flagsNew.Select(f => f.Name))})");
 
-		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DiagDebugThing"));
 	}
 
@@ -277,17 +248,14 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AttrDbgForce");
-		// Arrange - Create test object WITHOUT DEBUG, set attribute with DEBUG flag
 		// The attribute must contain a command with a function argument so that VisitFunction is called.
 		// Using @emit [add(88,77)] ensures the bracket pattern is evaluated as a command argument.
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create AttrDebugForceTest"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&TESTFUNC_ATTRDBG_UNIQUE AttrDebugForceTest=@emit [add(88,77)]"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set AttrDebugForceTest/TESTFUNC_ATTRDBG_UNIQUE=DEBUG"));
 
-		// Act - Trigger the attribute (which uses WithAttributeDebug internally)
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@trigger AttrDebugForceTest/TESTFUNC_ATTRDBG_UNIQUE"));
 
-		// Assert - Should see debug output despite object not having DEBUG
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
@@ -296,7 +264,6 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(88,77\)\] => 165$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[add\(88,77\)\] => 165$"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy AttrDebugForceTest"));
 	}
 
@@ -305,17 +272,15 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AttrNoDbg");
-		// Arrange - Create test object WITH DEBUG but set attribute WITH NODEBUG
 		// The attribute must contain a command with a function argument so that VisitFunction is called.
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create AttrNoDebugSuppressTest"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest=DEBUG"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&TESTFUNC2_NODEBG_UNIQUE AttrNoDebugSuppressTest=@emit [add(55,44)]"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE=no_debug"));
 
-		// Act - Trigger the attribute (which uses WithAttributeDebug internally)
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@trigger AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE"));
 
-		// Assert - Should NOT see debug output (NODEBUG takes precedence over object DEBUG)
+		// NODEBUG takes precedence over object DEBUG
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
@@ -324,7 +289,6 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! add(55,44)"),
 						str => str.Contains("! add(55,44)"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy AttrNoDebugSuppressTest"));
 	}
 
@@ -333,14 +297,12 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgNoReg");
-		// Arrange - Create test object and set DEBUG flag
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugNoRegObj"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugNoRegObj=DEBUG"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugNoRegObj=!no_command"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&test_cmd_noreg DebugNoRegObj=$test3command:@pemit me=[setq(a,Hello)][setq(b,World)][strlen(%qa)]"));
 
-		// Act
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugNoRegObj=test3command"));
 
 		await NotifyService
@@ -367,7 +329,6 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("[Iter-Registers:"),
 						str => str.Contains("[Iter-Registers:"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugNoRegObj"));
 	}
 
@@ -744,7 +705,6 @@ public class DebugVerboseTests
 	[Test]
 	public async Task DebugForwardList_SendsDebugToSpecifiedPlayer()
 	{
-		// Arrange - Two players: owner and forward target
 		var ownerPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgFwdOwner");
 		var forwardPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -756,14 +716,11 @@ public class DebugVerboseTests
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MModule.single("&test_fwd DbgFwdObj=$dbgfwdcmd:@pemit me=[add(10,20)]"));
 
-		// Set DEBUGFORWARDLIST to the forward target's dbref
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MModule.single($"&DEBUGFORWARDLIST DbgFwdObj=#{forwardPlayer.DbRef.Number}"));
 
-		// Act
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgFwdObj=dbgfwdcmd"));
 
-		// Assert - Forward target receives debug output
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(forwardPlayer.DbRef),
@@ -772,7 +729,6 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! [add(10,20)]"),
 						str => str.Contains("! [add(10,20)]"))), null, INotifyService.NotificationType.Announce);
 
-		// Assert - Owner also still receives debug output
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(ownerPlayer.DbRef),
@@ -781,14 +737,12 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! [add(10,20)]"),
 						str => str.Contains("! [add(10,20)]"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgFwdObj"));
 	}
 
 	[Test]
 	public async Task DebugForwardList_MultipleTargets_SendsToAll()
 	{
-		// Arrange - Owner plus two forward targets
 		var ownerPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgMFwdOwn");
 		var target1 = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -802,14 +756,11 @@ public class DebugVerboseTests
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MModule.single("&test_mfwd DbgMFwdObj=$dbgmfwdcmd:@pemit me=[mul(3,7)]"));
 
-		// Set DEBUGFORWARDLIST with two space-separated dbrefs
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MModule.single($"&DEBUGFORWARDLIST DbgMFwdObj=#{target1.DbRef.Number} #{target2.DbRef.Number}"));
 
-		// Act
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgMFwdObj=dbgmfwdcmd"));
 
-		// Assert - Both targets receive debug
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(target1.DbRef),
@@ -826,14 +777,12 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! [mul(3,7)]"),
 						str => str.Contains("! [mul(3,7)]"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgMFwdObj"));
 	}
 
 	[Test]
 	public async Task DebugForwardList_NoAttribute_OnlySendsToOwner()
 	{
-		// Arrange - No DEBUGFORWARDLIST set
 		var ownerPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgNoFwdOwn");
 		var otherPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -845,12 +794,8 @@ public class DebugVerboseTests
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MModule.single("&test_nofwd DbgNoFwdObj=$dbgnofwdcmd:@pemit me=[sub(9,4)]"));
 
-		// No DEBUGFORWARDLIST set
-
-		// Act
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgNoFwdObj=dbgnofwdcmd"));
 
-		// Assert - Owner receives debug
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(ownerPlayer.DbRef),
@@ -859,7 +804,6 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! [sub(9,4)]"),
 						str => str.Contains("! [sub(9,4)]"))), null, INotifyService.NotificationType.Announce);
 
-		// Assert - Other player does NOT receive debug
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(otherPlayer.DbRef),
@@ -868,14 +812,12 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! [sub(9,4)]"),
 						str => str.Contains("! [sub(9,4)]"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgNoFwdObj"));
 	}
 
 	[Test]
 	public async Task DebugForwardList_InvalidTarget_DoesNotCrash()
 	{
-		// Arrange - DEBUGFORWARDLIST contains an invalid dbref
 		var ownerPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgBadFwdOwn");
 
@@ -885,14 +827,11 @@ public class DebugVerboseTests
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MModule.single("&test_badfwd DbgBadFwdObj=$dbgbadfwdcmd:@pemit me=[add(5,5)]"));
 
-		// Set DEBUGFORWARDLIST to a nonexistent dbref
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MModule.single("&DEBUGFORWARDLIST DbgBadFwdObj=#99999"));
 
-		// Act - Should not throw
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgBadFwdObj=dbgbadfwdcmd"));
 
-		// Assert - Owner still gets debug output (forwarding failure doesn't break normal flow)
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(ownerPlayer.DbRef),
@@ -901,7 +840,6 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! [add(5,5)]"),
 						str => str.Contains("! [add(5,5)]"))), null, INotifyService.NotificationType.Announce);
 
-		// Cleanup
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgBadFwdObj"));
 	}
 }

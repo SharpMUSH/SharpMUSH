@@ -112,7 +112,6 @@ public class SharpMUSHBooleanExpressionVisitor(
 		{
 			try
 			{
-				// Get the owner of the unlocker
 				var unlockerOwner = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
 				var unlockerOwnerDbRef = unlockerOwner.Object.DBRef;
 
@@ -215,10 +214,8 @@ if (parsedCarryOpt.IsSome())
 				return false;
 			}
 
-			// For name-based object lookup in inventory
 			try
 			{
-				// Use mediator query to find the object in unlocker's inventory
 				var locateResult = med.Send(
 					new LocateObjectQuery(unlockerObj, unlockerObj, target, LocateFlags.OnlyMatchObjectsInLookerInventory),
 					CancellationToken.None)
@@ -226,7 +223,7 @@ if (parsedCarryOpt.IsSome())
 					.ConfigureAwait(false).GetAwaiter().GetResult();
 
 				return locateResult.Match(
-					player => true,  // Found object in inventory
+					player => true,
 					room => true,
 					exit => true,
 					thing => true,
@@ -274,7 +271,6 @@ if (parsedCarryOpt.IsSome())
 		{
 			try
 			{
-				// Use mediator to query channel membership
 				// This checks if the unlocker (or their owner if they're an object) is on the channel
 				var isOnChannelQuery = new IsOnChannelQuery(unlockerObj, channel);
 				var result = med.Send(isOnChannelQuery, CancellationToken.None)
@@ -316,10 +312,8 @@ if (parsedCarryOpt.IsSome())
 					var dbrefs = listValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 					var unlockerDbRef = unlockerObj.Object().DBRef;
 
-					// Check if unlocker's dbref is in the list
 					foreach (var dbrefStr in dbrefs)
 					{
-						// Parse the dbref (handles both #123 and #123:timestamp formats)
 						var parsedDbRef = HelperFunctions.ParseDbRef(dbrefStr);
 						if (parsedDbRef.IsSome())
 						{
@@ -365,11 +359,9 @@ if (parsedCarryOpt.IsSome())
 		{
 			try
 			{
-				// Get the owner of the unlocker
 				var ownerTask = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
 				var owner = ownerTask.GetAwaiter().GetResult();
 
-				// Get the LASTIP attribute from the owner
 				var attrResult = med.Send(
 						new GetAttributeServiceQuery(owner, owner, "LASTIP", IAttributeService.AttributeMode.Execute, true),
 						CancellationToken.None)
@@ -411,11 +403,9 @@ if (parsedCarryOpt.IsSome())
 		{
 			try
 			{
-				// Get the owner of the unlocker
 				var ownerTask = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
 				var owner = ownerTask.GetAwaiter().GetResult();
 
-				// Get the LASTSITE attribute from the owner
 				var attrResult = med.Send(
 						new GetAttributeServiceQuery(owner, owner, "LASTSITE", IAttributeService.AttributeMode.Execute, true),
 						CancellationToken.None)
@@ -553,28 +543,23 @@ if (parsedCarryOpt.IsSome())
 
 					var actualValue = MModule.plainText(attributes.First().Value);
 
-					// Handle comparison operators
 					if (expectedValue.StartsWith('>'))
 					{
-						// Greater than comparison
 						var compareValue = expectedValue.Substring(1);
 						return string.Compare(actualValue, compareValue, StringComparison.OrdinalIgnoreCase) > 0;
 					}
 					else if (expectedValue.StartsWith('<'))
 					{
-						// Less than comparison
 						var compareValue = expectedValue.Substring(1);
 						return string.Compare(actualValue, compareValue, StringComparison.OrdinalIgnoreCase) < 0;
 					}
 					else if (expectedValue.Contains('*') || expectedValue.Contains('?'))
 					{
-						// Wildcard match
 						var pattern = MModule.getWildcardMatchAsRegex2(expectedValue);
 						return Regex.IsMatch(actualValue, pattern, RegexOptions.IgnoreCase);
 					}
 					else
 					{
-						// Exact match (case-insensitive)
 						return actualValue.Equals(expectedValue, StringComparison.OrdinalIgnoreCase);
 					}
 				},

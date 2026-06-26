@@ -157,10 +157,8 @@ public partial class Functions
 		var roomObjFormat = ArgHelpers.ParseRoomObjectFormat(objects);
 		if (roomObjFormat.HasValue)
 		{
-			// Parse room/obj format
 			var (roomName, objectNames) = roomObjFormat.Value;
 
-			// Locate the target room
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
@@ -181,7 +179,6 @@ public partial class Functions
 
 			targetRoom = locatedObject.AsContainer;
 
-			// Resolve objects to exclude
 			foreach (var objName in objectNames)
 			{
 				await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -199,7 +196,6 @@ public partial class Functions
 		}
 		else
 		{
-			// Traditional format: emit to executor's location, excluding listed objects
 			targetRoom = await executor.Where();
 			var objectList = ArgHelpers.NameList(objects);
 
@@ -243,15 +239,12 @@ public partial class Functions
 		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		// Determine notification type based on nospoof permissions
 		var notificationType = await PermissionService!.CanNoSpoof(executor)
 			? INotifyService.NotificationType.NSAnnounce
 			: INotifyService.NotificationType.Announce;
 
-		// Check if first argument is an integer list (port list)
 		if (IsIntegerList(recipients))
 		{
-			// Handle port-based messaging using CommunicationService
 			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 				.Select(long.Parse)
 				.ToArray();
@@ -260,14 +253,12 @@ public partial class Functions
 			return CallState.Empty;
 		}
 
-		// Handle object/player-based messaging
 		var recipientList = ArgHelpers.NameList(recipients);
 
 		foreach (var recipient in recipientList)
 		{
 			var recipientName = recipient.IsT0 ? recipient.AsT0.ToString() : recipient.AsT1;
 
-			// Use LocateAndNotifyIfInvalidWithCallStateFunction for proper error handling
 			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser,
 				executor,
@@ -300,7 +291,6 @@ public partial class Functions
 		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		// Determine notification type based on nospoof permissions
 		var notificationType = await PermissionService!.CanNoSpoof(executor)
 			? INotifyService.NotificationType.NSAnnounce
 			: INotifyService.NotificationType.Announce;
@@ -386,12 +376,10 @@ public partial class Functions
 		var zoneName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		// Determine notification type based on nospoof permissions
 		var notificationType = await PermissionService!.CanNoSpoof(executor)
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 
-		// Locate the zone object
 		await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser,
 			executor,
@@ -400,13 +388,10 @@ public partial class Functions
 			LocateFlags.All,
 			async zone =>
 			{
-				// Find all objects in the zone
 				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
 
-				// Get all rooms in the zone
 				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
 
-				// Send message to each room
 				await foreach (var room in rooms)
 				{
 					var roomContents = Mediator!.CreateStream(new GetContentsQuery(new DBRef(room.Key)))!;
@@ -441,10 +426,8 @@ public partial class Functions
 		var roomObjFormat = ArgHelpers.ParseRoomObjectFormat(objects);
 		if (roomObjFormat.HasValue)
 		{
-			// Parse room/obj format
 			var (roomName, objectNames) = roomObjFormat.Value;
 
-			// Locate the target room
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
@@ -465,7 +448,6 @@ public partial class Functions
 
 			targetRoom = locatedObject.AsContainer;
 
-			// Resolve objects to exclude
 			foreach (var objName in objectNames)
 			{
 				await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -483,11 +465,9 @@ public partial class Functions
 		}
 		else
 		{
-			// Traditional format: emit to executor's location, excluding listed objects
 			targetRoom = await executor.Where();
 			var objectList = ArgHelpers.NameList(objects);
 
-			// Resolve all objects to exclude
 			foreach (var obj in objectList)
 			{
 				var objName = obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1;
@@ -620,7 +600,6 @@ public partial class Functions
 		var objects = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		// Send message to contents of all specified objects
 		var objectList = ArgHelpers.NameListString(objects);
 
 		foreach (var obj in objectList)
@@ -663,7 +642,6 @@ public partial class Functions
 		var zoneName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		// Locate the zone object
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser,
 			executor,
@@ -672,13 +650,10 @@ public partial class Functions
 			LocateFlags.All,
 			async zone =>
 			{
-				// Find all objects in the zone
 				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
 
-				// Get all rooms in the zone
 				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
 
-				// Send message to each room
 				await foreach (var room in rooms)
 				{
 					var roomContents = Mediator!.CreateStream(new GetContentsQuery(new DBRef(room.Key)))!;

@@ -45,7 +45,6 @@ public partial class PennMUSHDatabaseParser
 			Version = "Unknown"
 		};
 
-		// Read header/version information
 		var versionLine = await ReadLineAsync(reader, cancellationToken);
 		if (versionLine != null)
 		{
@@ -53,10 +52,8 @@ public partial class PennMUSHDatabaseParser
 			_logger.LogInformation("Database version: {Version}", database.Version);
 		}
 
-		// Parse configuration flags if present
 		await ParseDatabaseHeaderAsync(reader, database, cancellationToken);
 
-		// Parse objects
 		while (true)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
@@ -68,7 +65,6 @@ public partial class PennMUSHDatabaseParser
 				break;
 			}
 
-			// Check if this is the start of an object
 			if (line.StartsWith('!'))
 			{
 				var obj = await ParseObjectAsync(reader, cancellationToken);
@@ -84,7 +80,6 @@ public partial class PennMUSHDatabaseParser
 			}
 			else
 			{
-				// Skip unexpected lines
 				await ReadLineAsync(reader, cancellationToken);
 			}
 		}
@@ -149,7 +144,6 @@ public partial class PennMUSHDatabaseParser
 			return null;
 		}
 
-		// Check for object marker
 		if (!line.StartsWith('!'))
 		{
 			_logger.LogWarning("Expected object marker, got: {Line}", line);
@@ -163,7 +157,6 @@ public partial class PennMUSHDatabaseParser
 			return null;
 		}
 
-		// Read object fields
 		var name = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
 		var location = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
 		var contents = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
@@ -171,7 +164,6 @@ public partial class PennMUSHDatabaseParser
 		var link = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
 		var next = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
 
-		// Locks
 		var lockLine = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
 		var locks = ParseLocks(lockLine);
 
@@ -179,11 +171,9 @@ public partial class PennMUSHDatabaseParser
 		var parent = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
 		var pennies = ParseInt(await ReadLineAsync(reader, cancellationToken));
 
-		// Flags and type
 		var flagsLine = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
 		var (type, flags) = ParseFlagsAndType(flagsLine);
 
-		// Powers
 		var powersLine = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
 		var powers = ParsePowers(powersLine);
 
@@ -191,11 +181,9 @@ public partial class PennMUSHDatabaseParser
 		var warningsLine = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
 		var warnings = ParseWarnings(warningsLine);
 
-		// Timestamps
 		var creationTime = ParseLong(await ReadLineAsync(reader, cancellationToken));
 		var modificationTime = ParseLong(await ReadLineAsync(reader, cancellationToken));
 
-		// Attributes
 		var attributes = new List<PennMUSHAttribute>();
 		await ParseAttributesAsync(reader, attributes, cancellationToken);
 
@@ -253,13 +241,11 @@ public partial class PennMUSHDatabaseParser
 				continue;
 			}
 
-			// Check if this is the start of next object or end of attributes
 			if (line.StartsWith('!'))
 			{
 				break;
 			}
 
-			// Check if this is an attribute header
 			if (line.StartsWith('<'))
 			{
 				await ReadLineAsync(reader, cancellationToken);
@@ -271,7 +257,6 @@ public partial class PennMUSHDatabaseParser
 			}
 			else
 			{
-				// Not an attribute marker
 				break;
 			}
 		}
@@ -321,7 +306,6 @@ public partial class PennMUSHDatabaseParser
 				break;
 			}
 
-			// Check if this is the start of next attribute or object
 			if (line.StartsWith('<') || line.StartsWith('!'))
 			{
 				break;
@@ -392,7 +376,7 @@ public partial class PennMUSHDatabaseParser
 	{
 		// Flags format typically includes type indicator
 		var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		var type = PennMUSHObjectType.Thing; // default
+		var type = PennMUSHObjectType.Thing;
 		var flags = new List<string>();
 
 		foreach (var part in parts)

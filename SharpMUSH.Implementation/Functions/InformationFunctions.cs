@@ -64,33 +64,26 @@ public partial class Functions
 		{
 			var arg = args["0"].Message!.ToPlainText()!;
 
-			// Try to determine if it's a folder number/name or a player
-			// Folders are typically numbers (0-15) or uppercase names (INBOX)
 			if (int.TryParse(arg, out var folderNum) && folderNum >= 0 && folderNum <= 15)
 			{
-				// Looks like a folder number
 				folderSpec = arg;
 			}
 			else if (arg.All(char.IsUpper) || arg.Equals("INBOX", StringComparison.OrdinalIgnoreCase))
 			{
-				// Looks like a folder name (all uppercase)
 				folderSpec = arg;
 			}
 			else
 			{
-				// Must be wizard to view other player's mail
 				if (!await executor.IsWizard())
 				{
 					return new CallState(ErrorMessages.Returns.PermissionDenied);
 				}
 
-				// Try to locate as player
 				var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 					parser, executor, executor, arg, LocateFlags.PlayersPreference);
 
 				if (locateResult.IsError || locateResult.IsNone)
 				{
-					// Not a player, try as folder name anyway
 					folderSpec = arg;
 				}
 				else
@@ -103,7 +96,6 @@ public partial class Functions
 		}
 		else if (args.Count == 2)
 		{
-			// Must be wizard to view other player's mail
 			if (!await executor.IsWizard())
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -122,7 +114,6 @@ public partial class Functions
 			folderSpec = args["1"].Message!.ToPlainText()!;
 		}
 
-		// Get mail for the folder
 		var folderMail = Mediator!.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, folderSpec ?? "INBOX"));
 		var mailArray = await folderMail.ToArrayAsync();
 
@@ -151,8 +142,6 @@ public partial class Functions
 	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["pid", "field", "delimiter"])]
 	public static async ValueTask<CallState> PIDInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// pidinfo() returns information about a process ID
-		// Format: pidinfo(<pid>[, <field>][, <delimiter>])
 		var args = parser.CurrentState.Arguments;
 		var pidStr = args["0"].Message!.ToPlainText();
 
@@ -168,7 +157,6 @@ public partial class Functions
 			? delimArg.Message!.ToPlainText()
 			: " ";
 
-		// Query semaphore tasks via Mediator
 		var semaphoreTasks = await Mediator!.CreateStream(new ScheduleSemaphoreQuery(pid)).ToListAsync();
 		if (semaphoreTasks.Count > 0)
 		{
@@ -176,7 +164,6 @@ public partial class Functions
 			return FormatTaskInfo(task, field, delimiter);
 		}
 
-		// If not found in semaphore tasks, return "NO SUCH PID"
 		return new CallState(ErrorMessages.Returns.NoSuchPid);
 	}
 
@@ -184,7 +171,6 @@ public partial class Functions
 	{
 		if (field == null)
 		{
-			// Return all fields: pid command executor status delay
 			var parts = new List<string>
 			{
 				task.Pid.ToString(),
@@ -196,7 +182,6 @@ public partial class Functions
 			return new CallState(string.Join(delimiter, parts));
 		}
 
-		// Return specific field
 		return field switch
 		{
 			"pid" => new CallState(task.Pid.ToString()),
@@ -229,13 +214,11 @@ public partial class Functions
 					_ => null
 				};
 
-				// If no second argument, return first alias or empty string
 				if (args.Count == 1)
 				{
 					return ValueTask.FromResult(new CallState(aliases?.FirstOrDefault() ?? string.Empty));
 				}
 
-				// With second argument, try to get the Nth alias (1-indexed)
 				var indexArg = args["1"].Message!.ToPlainText();
 				if (!int.TryParse(indexArg, out var index) || index < 1)
 				{
@@ -252,7 +235,6 @@ public partial class Functions
 	[SharpFunction(Name = "findable", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "looker"])]
 	public static async ValueTask<CallState> Findable(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// findable() checks if the first object can find the second object
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var lookerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var targetArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
@@ -267,10 +249,8 @@ public partial class Functions
 
 		var looker = maybeLooker.AsSharpObject;
 
-		// Try to locate the target from the looker's perspective
 		var maybeTarget = await LocateService.Locate(parser, looker, executor, targetArg, LocateFlags.All);
 
-		// If we can locate it, it's findable
 		return new CallState(maybeTarget.IsValid());
 	}
 
@@ -442,7 +422,6 @@ public partial class Functions
 	[SharpFunction(Name = "iname", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> IName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// iname() returns the initial/internal name (name without ANSI codes)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var obj = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 
@@ -480,12 +459,10 @@ public partial class Functions
 		var located = maybeLocate.AsSharpObject;
 		var locationDBRef = located.Object().DBRef;
 
-		// Determine which queues to query
 		bool includeWait = queueTypes.Contains("WAIT");
 		bool includeSemaphore = queueTypes.Contains("SEMAPHORE");
 		bool independent = queueTypes.Contains("INDEPENDENT");
 
-		// If no specific queue type is specified (only INDEPENDENT), default to wait+semaphore
 		if (!includeWait && !includeSemaphore)
 		{
 			includeWait = true;
@@ -494,7 +471,6 @@ public partial class Functions
 
 		var allPids = new List<long>();
 
-		// Get Wait queue PIDs (from @wait delays)
 		if (includeWait)
 		{
 			var waitPids = Mediator!.CreateStream(new ScheduleDelayQuery(locationDBRef));
@@ -504,7 +480,6 @@ public partial class Functions
 			}
 		}
 
-		// Get Semaphore queue PIDs
 		if (includeSemaphore)
 		{
 			var semaphorePids = Mediator!.CreateStream(new ScheduleSemaphoreQuery(locationDBRef));
@@ -525,18 +500,14 @@ public partial class Functions
 	[SharpFunction(Name = "lstats", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["type"])]
 	public static async ValueTask<CallState> LStats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// lstats() returns statistics about objects in the database
-		// Format: <players> <things> <exits> <rooms> <garbage>
 		var args = parser.CurrentState.Arguments;
 		var typeFilter = args.TryGetValue("0", out var typeArg)
 			? typeArg.Message!.ToPlainText().ToUpperInvariant()
 			: null;
 
-		// Get all objects from the database
 		var allObjects = await Mediator!.CreateStream(new GetAllObjectsQuery())
 			.ToListAsync();
 
-		// If a specific type is requested, filter and count only that type
 		if (!string.IsNullOrEmpty(typeFilter))
 		{
 			var count = typeFilter switch
@@ -552,7 +523,6 @@ public partial class Functions
 			return count >= 0 ? new CallState(count.ToString()) : new CallState(ErrorMessages.Returns.InvalidType);
 		}
 
-		// Count each type
 		var players = allObjects.Count(o => o.Type == "PLAYER");
 		var things = allObjects.Count(o => o.Type == "THING");
 		var exits = allObjects.Count(o => o.Type == "EXIT");
@@ -565,7 +535,6 @@ public partial class Functions
 	[SharpFunction(Name = "money", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Money(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Money/pennies are not supported in SharpMUSH
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MoneyFunctionNotSupported), executor);
 		return new CallState(ErrorMessages.Returns.ErrorNotSupported);
@@ -601,7 +570,6 @@ public partial class Functions
 	[SharpFunction(Name = "name", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "new name"])]
 	public static async ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		//   name(<object>[, <new name>])
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var obj = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var newName = parser.CurrentState.Arguments.GetValueOrDefault("1");
@@ -628,7 +596,6 @@ public partial class Functions
 	[SharpFunction(Name = "moniker", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Moniker(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// moniker() returns the moniker attribute or the name if no moniker is set
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var obj = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 
@@ -636,7 +603,6 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				// Try to get the MONIKER attribute
 				var monikerAttr = await AttributeService!.GetAttributeAsync(
 					executor, found, "MONIKER", IAttributeService.AttributeMode.Read);
 
@@ -650,7 +616,6 @@ public partial class Functions
 					}
 				}
 
-				// Fall back to name
 				return new CallState(found.Object().Name);
 			});
 	}
@@ -658,7 +623,6 @@ public partial class Functions
 	[SharpFunction(Name = "nearby", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object1", "object2"])]
 	public static async ValueTask<CallState> Nearby(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// nearby() checks if two objects are in the same location or nearby
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var obj1Arg = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var obj2Arg = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
@@ -682,11 +646,9 @@ public partial class Functions
 		var obj1 = maybeObj1.AsSharpObject;
 		var obj2 = maybeObj2.AsSharpObject;
 
-		// Get the room for both objects
 		var room1 = await LocateService.Room(obj1);
 		var room2 = await LocateService.Room(obj2);
 
-		// They're nearby if they're in the same room
 		return new CallState(room1.Object().DBRef == room2.Object().DBRef);
 	}
 
@@ -697,7 +659,6 @@ public partial class Functions
 	[SharpFunction(Name = "quota", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Quota(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// quota() returns quota information (objects owned / limit)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var obj = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 
@@ -705,19 +666,15 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				// Get the player owner of the object
 				var owner = await found.Object().Owner.WithCancellation(CancellationToken.None);
 
-				// Object has no owner - return "0 0" (0 objects owned, 0 quota limit)
 				if (owner is null)
 				{
 					return new CallState("0 0");
 				}
 
-				// Get the actual count of objects owned by the player
 				var ownedCount = await Mediator!.Send(new GetOwnedObjectCountQuery(owner));
 
-				// Return "owned quota" format (e.g., "42 100" means 42 objects owned of 100 quota)
 				return new CallState($"{ownedCount} {owner.Quota}");
 			});
 	}
@@ -734,8 +691,6 @@ public partial class Functions
 	[SharpFunction(Name = "textsearch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> TextSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// textsearch() searches for text in object attributes
-		// Format: textsearch(<class>, <pattern>, [<attribute>])
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 
@@ -745,11 +700,9 @@ public partial class Functions
 			? attrArg.Message!.ToPlainText()
 			: "*";
 
-		// Get all objects to search
 		var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
 		var results = new List<string>();
 
-		// Determine class filter
 		AnySharpObject? classObj = null;
 		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
 		{
@@ -761,10 +714,8 @@ public partial class Functions
 			classObj = maybeClass.AsAnyObject;
 		}
 
-		// Search through objects
 		await foreach (var obj in allObjects)
 		{
-			// Check ownership if class is specified
 			if (classObj != null)
 			{
 				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
@@ -774,23 +725,20 @@ public partial class Functions
 				}
 			}
 
-			// Get attributes and search
 			var attributes = obj.Attributes.Value;
 
 			await foreach (var attr in attributes)
 			{
-				// Check if attribute name matches pattern (simple contains for now)
 				if (attributePattern != "*" && !attr.Name.Contains(attributePattern, StringComparison.OrdinalIgnoreCase))
 				{
 					continue;
 				}
 
-				// Check if value contains pattern
 				var value = attr.Value.ToPlainText();
 				if (value.Contains(pattern, StringComparison.OrdinalIgnoreCase))
 				{
 					results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
-					break; // Found match in this object, move to next
+					break;
 				}
 			}
 		}
@@ -809,7 +757,6 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(string.Empty));
 		}
 
-		// Mode 1: No arguments - return all color names (check if args is empty or first arg is empty)
 		if (args.Count == 0 || string.IsNullOrEmpty(args["0"]?.Message?.ToPlainText()))
 		{
 			var allColors = colorsConfig.Colors
@@ -820,7 +767,6 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(string.Join(" ", allColors)));
 		}
 
-		// Mode 2: One argument - wildcard filter
 		if (args.Count == 1 || (args.Count == 2 && string.IsNullOrEmpty(args["1"]?.Message?.ToPlainText())))
 		{
 			var wildcardPattern = args["0"].Message!.ToString();
@@ -833,18 +779,14 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(string.Join(" ", matchingColors)));
 		}
 
-		// Mode 3: Two arguments - color specification and format
 		var colorSpec = args["0"].Message!.ToString();
 		var formatSpec = args["1"].Message!.ToString().ToLowerInvariant();
 
-		// Parse the format specification
 		var includeStyles = formatSpec.Contains("styles");
 		var formatType = formatSpec.Replace("styles", "").Trim();
 
-		// Parse the color specification
 		var (foregroundSpec, backgroundSpec, styles) = ParseColorSpecification(colorSpec);
 
-		// Process based on format type
 		var result = formatType switch
 		{
 			"hex" or "x" => FormatColorsAsHex(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
@@ -873,14 +815,12 @@ public partial class Functions
 
 		foreach (var part in parts)
 		{
-			// Check if it's a background color (starts with /)
 			if (part.StartsWith('/'))
 			{
 				background = part[1..];
 				continue;
 			}
 
-			// Extract leading ANSI codes from the part
 			var i = 0;
 			var currentStyles = stylesBuilder.ToString();
 			while (i < part.Length && IsAnsiControlChar(part[i]) && part[i] != '+' && part[i] != '#')
@@ -894,7 +834,6 @@ public partial class Functions
 				i++;
 			}
 
-			// The remainder is the color specification
 			var colorPart = part[i..];
 			if (!string.IsNullOrWhiteSpace(colorPart))
 			{
@@ -1078,19 +1017,16 @@ public partial class Functions
 
 	private static string FormatColorsAsAuto(string originalSpec, string? foreground, string? background, string styles, bool includeStyles)
 	{
-		// For auto mode, return in the same format as provided
 		return originalSpec;
 	}
 
 	private static string? ConvertColorToHex(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
-		// If already hex format
 		if (colorSpec.StartsWith('#'))
 		{
 			return colorSpec;
 		}
 
-		// If color name (with or without +)
 		if (colorSpec.StartsWith('+'))
 		{
 			colorSpec = colorSpec[1..];
@@ -1098,10 +1034,9 @@ public partial class Functions
 
 		if (config.ColorsByName.TryGetValue(colorSpec, out var color))
 		{
-			return "#" + color.rgb[2..]; // Remove "0x" prefix
+			return "#" + color.rgb[2..];
 		}
 
-		// Try xterm color
 		if (int.TryParse(colorSpec, out var xtermNum))
 		{
 			var xtermColors = config.Colors.Where(c => c.xterm == xtermNum).ToList();
@@ -1111,7 +1046,6 @@ public partial class Functions
 			}
 		}
 
-		// Try xterm prefix
 		if (colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out var xtermNum2))
 		{
 			var xtermColors = config.Colors.Where(c => c.xterm == xtermNum2).ToList();
@@ -1143,7 +1077,6 @@ public partial class Functions
 
 	private static int? ConvertColorToXterm(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
-		// If already xterm format
 		if (int.TryParse(colorSpec, out var xtermNum) && xtermNum >= 0 && xtermNum <= 255)
 		{
 			return xtermNum;
@@ -1154,7 +1087,6 @@ public partial class Functions
 			return xtermNum2;
 		}
 
-		// If color name
 		if (colorSpec.StartsWith('+'))
 		{
 			colorSpec = colorSpec[1..];
@@ -1170,48 +1102,41 @@ public partial class Functions
 
 	private static string? ConvertColorTo16Color(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
-		// Map to 16-color ANSI codes
-		// Basic ANSI colors: x=black, r=red, g=green, y=yellow, b=blue, m=magenta, c=cyan, w=white
-		// Add 'h' prefix for highlight (bright) versions
-
 		var xterm = ConvertColorToXterm(colorSpec, config);
 		if (xterm == null)
 		{
 			return null;
 		}
 
-		// Map xterm256 to 16-color ANSI
 		// This is a simplified mapping - PennMUSH has more sophisticated color distance calculations
 		return xterm.Value switch
 		{
-			0 => "x",     // black
-			1 => "r",     // red
-			2 => "g",     // green
-			3 => "y",     // yellow
-			4 => "b",     // blue
-			5 => "m",     // magenta
-			6 => "c",     // cyan
-			7 => "w",     // white
-			8 => "hx",    // bright black (gray)
-			9 => "hr",    // bright red
-			10 => "hg",   // bright green
-			11 => "hy",   // bright yellow
-			12 => "hb",   // bright blue
-			13 => "hm",   // bright magenta
-			14 => "hc",   // bright cyan
-			15 => "hw",   // bright white
+			0 => "x",
+			1 => "r",
+			2 => "g",
+			3 => "y",
+			4 => "b",
+			5 => "m",
+			6 => "c",
+			7 => "w",
+			8 => "hx",
+			9 => "hr",
+			10 => "hg",
+			11 => "hy",
+			12 => "hb",
+			13 => "hm",
+			14 => "hc",
+			15 => "hw",
 			_ => MapXtermColorTo16Color(xterm.Value, config)
 		};
 	}
 
 	private static string MapXtermColorTo16Color(int xterm, SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
-		// For colors beyond 16, find the closest match
-		// Get the RGB value and map to closest basic color
 		var colorMatch = config.Colors.Where(c => c.xterm == xterm).ToList();
 		if (colorMatch.Count == 0 || colorMatch[0].rgb == null)
 		{
-			return "w"; // default to white
+			return "w";
 		}
 
 		var rgb = colorMatch[0].rgb;
@@ -1220,11 +1145,9 @@ public partial class Functions
 		var g = int.Parse(rgbSpan.Slice(4, 2), System.Globalization.NumberStyles.HexNumber);
 		var b = int.Parse(rgbSpan.Slice(6, 2), System.Globalization.NumberStyles.HexNumber);
 
-		// Simple brightness check
 		var brightness = (r + g + b) / 3;
 		var highlight = brightness > 128 ? "h" : "";
 
-		// Determine dominant color
 		if (r > g && r > b)
 		{
 			return highlight + "r";
@@ -1251,7 +1174,7 @@ public partial class Functions
 		}
 		else if (brightness < 64)
 		{
-			return "x"; // black
+			return "x";
 		}
 		else
 		{
@@ -1263,7 +1186,6 @@ public partial class Functions
 	{
 		var result = new List<string>();
 
-		// If already a color name
 		if (colorSpec.StartsWith('+'))
 		{
 			colorSpec = colorSpec[1..];
@@ -1271,7 +1193,6 @@ public partial class Functions
 
 		if (config.ColorsByName.TryGetValue(colorSpec, out var color))
 		{
-			// Find all colors with the same RGB value
 			if (config.ColorsByRgb.TryGetValue(color.rgb, out var colors))
 			{
 				result.AddRange(colors.Select(c => c.name));
@@ -1279,7 +1200,6 @@ public partial class Functions
 			return result;
 		}
 
-		// Try hex format
 		if (colorSpec.StartsWith('#'))
 		{
 			var rgb = "0x" + colorSpec[1..];
@@ -1290,14 +1210,12 @@ public partial class Functions
 			return result;
 		}
 
-		// Try xterm format
 		if (int.TryParse(colorSpec, out var xtermNum) ||
 			(colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out xtermNum)))
 		{
 			var xtermColors = config.Colors.Where(c => c.xterm == xtermNum).ToList();
 			if (xtermColors.Count > 0)
 			{
-				// Get all colors with the same RGB as the first match
 				var rgb = xtermColors[0].rgb;
 				if (config.ColorsByRgb.TryGetValue(rgb, out var colors))
 				{
@@ -1312,7 +1230,6 @@ public partial class Functions
 	[SharpFunction(Name = "motd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static async ValueTask<CallState> Motd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Returns the current @motd/connect
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
 		return new CallState(motdData?.ConnectMotd ?? string.Empty);
 	}
@@ -1320,7 +1237,6 @@ public partial class Functions
 	[SharpFunction(Name = "wizmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = [])]
 	public static async ValueTask<CallState> WizMotd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Returns the current @motd/wizard
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
 		return new CallState(motdData?.WizardMotd ?? string.Empty);
 	}
@@ -1328,7 +1244,6 @@ public partial class Functions
 	[SharpFunction(Name = "downmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = [])]
 	public static async ValueTask<CallState> DownMotd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Returns the current @motd/down
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
 		return new CallState(motdData?.DownMotd ?? string.Empty);
 	}
@@ -1336,7 +1251,6 @@ public partial class Functions
 	[SharpFunction(Name = "fullmotd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = [])]
 	public static async ValueTask<CallState> FullMotd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Returns the current @motd/full
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
 		return new CallState(motdData?.FullMotd ?? string.Empty);
 	}
@@ -1347,12 +1261,10 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 
-		// Use generated ConfigMetadata to get all option names
 		var allOptionNames = ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys;
 
 		if (!args.TryGetValue("0", out var optionArg) || string.IsNullOrWhiteSpace(optionArg.Message?.ToPlainText()))
 		{
-			// Return list of config option names
 			var optionNames = allOptionNames
 				.Select(prop => ConfigGenerated.ConfigMetadata.PropertyToAttributeName[prop].ToLowerInvariant())
 				.OrderBy(n => n);
@@ -1361,7 +1273,6 @@ public partial class Functions
 
 		var searchTerm = optionArg.Message!.ToPlainText();
 
-		// Find matching property by attribute name (case-insensitive)
 		var matchingProperty = ConfigGenerated.ConfigMetadata.PropertyToAttributeName
 			.FirstOrDefault(kvp => kvp.Value.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
 

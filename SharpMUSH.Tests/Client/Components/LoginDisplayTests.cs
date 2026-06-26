@@ -13,17 +13,14 @@ public class LoginDisplayTests
 	[Test]
 	public async Task LoginDisplay_WhenNotAuthenticated_ShowsLoginButton()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Act
 		var cut = ctx.Render<LoginDisplay>();
 
-		// Assert
 		var loginButton = cut.Find("a[href='authentication/login']");
 		await Assert.That(loginButton).IsNotNull();
 		await Assert.That(loginButton.TextContent).Contains("Login");
@@ -32,7 +29,6 @@ public class LoginDisplayTests
 	[Test]
 	public async Task LoginDisplay_WhenAuthenticated_ShowsUsername()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
@@ -40,10 +36,8 @@ public class LoginDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Act
 		var cut = ctx.Render<LoginDisplay>();
 
-		// Assert
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("TestUser");
 	}
@@ -51,7 +45,6 @@ public class LoginDisplayTests
 	[Test]
 	public async Task LoginDisplay_WhenAuthenticated_ShowsLogoutButton()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
@@ -59,10 +52,8 @@ public class LoginDisplayTests
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Act
 		var cut = ctx.Render<LoginDisplay>();
 
-		// Assert
 		var logoutButton = cut.Find("button");
 		await Assert.That(logoutButton).IsNotNull();
 	}
@@ -70,17 +61,14 @@ public class LoginDisplayTests
 	[Test]
 	public async Task LoginDisplay_WhenNotAuthenticated_DoesNotShowUsername()
 	{
-		// Arrange
 		await using var ctx = new BunitContext();
 		ctx.AddAuthorization();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
 
-		// Act
 		var cut = ctx.Render<LoginDisplay>();
 
-		// Assert
 		var markup = cut.Markup;
 		await Assert.That(markup).DoesNotContain("TestUser");
 	}

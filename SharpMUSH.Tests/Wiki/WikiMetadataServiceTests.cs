@@ -23,8 +23,6 @@ public class WikiMetadataServiceTests
 		return result.AsT0;
 	}
 
-	// ── GetAllPagesAsync / CountPagesAsync ────────────────────────────────────
-
 	[Test]
 	public async Task GetAllPages_SpansNamespaces_OrderedByNamespaceThenSlug()
 	{
@@ -78,8 +76,6 @@ public class WikiMetadataServiceTests
 		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Help)).IsEqualTo(1);
 		await Assert.That(await svc.CountPagesAsync(WikiNamespace.Character)).IsEqualTo(0);
 	}
-
-	// ── SetMetadataAsync ──────────────────────────────────────────────────────
 
 	[Test]
 	public async Task SetMetadata_StoresNormalizedCategoryAndTags()
@@ -146,8 +142,6 @@ public class WikiMetadataServiceTests
 		await Assert.That(page.Tags.Count).IsEqualTo(0);
 	}
 
-	// ── GetByCategoryAsync / GetByTagAsync ────────────────────────────────────
-
 	[Test]
 	public async Task GetByCategory_ReturnsOnlyMatchingPages_CaseInsensitive()
 	{
@@ -162,7 +156,7 @@ public class WikiMetadataServiceTests
 		var lorePages = await svc.GetByCategoryAsync("LORE");
 
 		await Assert.That(lorePages.Count).IsEqualTo(2);
-		await Assert.That(lorePages[0].Title).IsEqualTo("Dragons"); // ordered by title
+		await Assert.That(lorePages[0].Title).IsEqualTo("Dragons");
 		await Assert.That(lorePages.All(p => p.Category == "lore")).IsTrue();
 	}
 

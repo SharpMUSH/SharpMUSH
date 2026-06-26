@@ -81,7 +81,6 @@ public partial class Functions
 			var curHilight = false;
 			var isBackground = false;
 
-			// Check if this is a background color (starts with /)
 			if (code.StartsWith("/"))
 			{
 				isBackground = true;
@@ -153,7 +152,6 @@ public partial class Functions
 
 			// Reset isBackground for character-by-character processing
 			isBackground = false;
-			// ansi code. each gets evaluated individually.
 			foreach (var chr in code)
 			{
 				switch (chr)
@@ -296,12 +294,10 @@ public partial class Functions
 			return CallState.Empty;
 		}
 
-		// Last arg is the delimiter (evaluate it)
 		var delimArg = args[(args.Count - 1).ToString()];
 		var delimParsed = await parser.FunctionParse(delimArg.Message!);
 		var delimiter = MModule.plainText(delimParsed!.Message);
 
-		// Evaluate all args except the last (delimiter)
 		var truthyValues = new List<string>();
 		for (var i = 0; i < args.Count - 1; i++)
 		{
@@ -326,7 +322,6 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var attributeName = args["0"].Message!.ToPlainText();
 
-		// If two args, second is the object to check on; otherwise use executor
 		AnySharpObject targetObj;
 		if (args.ContainsKey("1"))
 		{
@@ -357,7 +352,6 @@ public partial class Functions
 			return "0"; // No lock set means no restriction
 		}
 
-		// Evaluate the lock
 		var lockString = lockAttr.AsAttribute.Last().Value.ToPlainText();
 		if (string.IsNullOrWhiteSpace(lockString))
 		{
@@ -477,7 +471,6 @@ public partial class Functions
 					return ErrorMessages.Returns.InvalidObjectType;
 				}
 
-				// Determine new name (arg 1 if provided)
 				var newName = obj.Object().Name;
 				if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 				{
@@ -487,7 +480,6 @@ public partial class Functions
 				DBRef cloneDbRef;
 				var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 
-				// Create the appropriate object type
 				if (obj.IsThing)
 				{
 					cloneDbRef = await Mediator!.Send(new CreateThingCommand(
@@ -519,15 +511,12 @@ public partial class Functions
 					return ErrorMessages.Returns.InvalidObjectType;
 				}
 
-				// Get the cloned object
 				var clonedObjOptional = await Mediator!.Send(new GetObjectNodeQuery(cloneDbRef));
 				var clonedObj = clonedObjOptional.WithoutNone();
 
-				// Check preserve flag (arg 3)
 				var preserve = args.ContainsKey("3") &&
 					args["3"].Message!.ToPlainText().Equals("preserve", StringComparison.OrdinalIgnoreCase);
 
-				// Copy attributes (excluding system attributes)
 				await foreach (var attr in obj.Object().Attributes.Value)
 				{
 					if (!attr.Name.StartsWith("_"))
@@ -537,7 +526,6 @@ public partial class Functions
 					}
 				}
 
-				// Copy flags (excluding privileged ones unless preserve)
 				await foreach (var flag in obj.Object().Flags.Value)
 				{
 					if (preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
@@ -546,7 +534,6 @@ public partial class Functions
 					}
 				}
 
-				// Trigger OBJECT`CREATE event for the clone
 				await EventService!.TriggerEventAsync(
 					parser,
 					"OBJECT`CREATE",
@@ -645,12 +632,10 @@ public partial class Functions
 			return ErrorMessages.Returns.BadObjectName;
 		}
 
-		// Create the room
 		var response = await Mediator!.Send(new CreateRoomCommand(
 			roomName,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
 
-		// Return the room's dbref
 		return new CallState(response.ToString());
 	}
 
@@ -663,7 +648,6 @@ public partial class Functions
 			return new CallState("#-1 FUNCTION (No function name given)");
 		}
 
-		// First check if it's a built-in function
 		if (parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out _))
 		{
 			// Build function call string and re-parse: fn(add,1,2) -> add(1,2)
@@ -697,10 +681,8 @@ public partial class Functions
 	[SharpFunction(Name = "functions", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> FFunctions(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Get the function library from the parser
 		var functionLibrary = parser.FunctionLibrary;
 
-		// Get optional pattern argument
 		var pattern = "*";
 		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg0))
 		{
@@ -711,10 +693,8 @@ public partial class Functions
 			}
 		}
 
-		// Get all function names
 		var allFunctions = functionLibrary.Keys.OrderBy(x => x);
 
-		// Filter by pattern if specified (simple wildcard matching)
 		IEnumerable<string> filteredFunctions;
 		if (pattern == "*")
 		{
@@ -722,13 +702,11 @@ public partial class Functions
 		}
 		else
 		{
-			// Convert simple wildcard pattern to regex
 			var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
 			var regex = new Regex(regexPattern, RegexOptions.IgnoreCase);
 			filteredFunctions = allFunctions.Where(name => regex.IsMatch(name));
 		}
 
-		// Return space-separated list of function names
 		return ValueTask.FromResult(new CallState(string.Join(" ", filteredFunctions)));
 	}
 
@@ -884,10 +862,8 @@ public partial class Functions
 					return ErrorMessages.Returns.PermissionDenied;
 				}
 
-				// Handle different link types
 				if (exitObj.IsExit)
 				{
-					// Check for special link types
 					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
 					{
 						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeHome));
@@ -1103,45 +1079,38 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 
-		// Get the list
 		if (!args.TryGetValue("0", out var arg0))
 		{
 			return ValueTask.FromResult(CallState.Empty);
 		}
 		var listStr = arg0.Message!;
 
-		// Get the position (1-based)
 		if (!args.TryGetValue("1", out var arg1) ||
 				!int.TryParse(MModule.plainText(arg1.Message), out var position))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 
-		// Get the new value
 		if (!args.TryGetValue("2", out var arg2))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		}
 		var newValue = arg2.Message!;
 
-		// Get optional input delimiter (default is space)
 		var inputDelimiter = " ";
 		if (args.TryGetValue("3", out var arg3))
 		{
 			inputDelimiter = MModule.plainText(arg3.Message);
 		}
 
-		// Get optional output delimiter (default is same as input)
 		var outputDelimiter = inputDelimiter;
 		if (args.TryGetValue("4", out var arg4))
 		{
 			outputDelimiter = MModule.plainText(arg4.Message);
 		}
 
-		// Split the list
 		var items = MModule.splitList(MModule.single(inputDelimiter), listStr).ToList();
 
-		// Check if position is valid (1-based indexing)
 		if (position < 1 || position > items.Count)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
@@ -1150,7 +1119,6 @@ public partial class Functions
 		// Set the item at the position (convert to 0-based)
 		items[position - 1] = newValue;
 
-		// Join back with output delimiter
 		var result = string.Join(outputDelimiter, items.Select(x => MModule.plainText(x)));
 		return ValueTask.FromResult(new CallState(result));
 	}
@@ -1379,14 +1347,12 @@ public partial class Functions
 			executor, executor, objectName, LocateFlags.All,
 			async obj =>
 			{
-				// Check permissions
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return ErrorMessages.Returns.PermissionDenied;
 				}
 
-				// Evaluate the code using the AttributeService which handles executor context properly
-				// This evaluates the code from the perspective of the target object
+				// Evaluates the code from the perspective of the target object
 				var result = await AttributeService!.EvaluateAttributeFunctionAsync(
 					parser,
 					obj, // executor is the target object
@@ -1429,7 +1395,6 @@ public partial class Functions
 			command = args["1"].Message!;
 			switches = args.ContainsKey("2") ? args["2"].Message!.ToPlainText() : "all";
 
-			// Locate the looker object
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, lookerName, LocateFlags.All);
 			if (locateResult.IsError || locateResult.IsNone)
 			{
@@ -1438,29 +1403,24 @@ public partial class Functions
 			looker = locateResult.AsAnyObject;
 		}
 
-		// Check permissions - must control looker
 		if (!await PermissionService!.Controls(executor, looker))
 		{
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		// Collect objects to scan based on switches
 		var objectsToScan = new List<AnySharpObject>();
 		var switchList = switches.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-		// Determine which locations to check
 		bool checkMe = switchList.Contains("me") || switchList.Contains("all") || switchList.Contains("self");
 		bool checkInventory = switchList.Contains("inventory") || switchList.Contains("all") || switchList.Contains("self");
 		bool checkRoom = switchList.Contains("room") || switchList.Contains("all");
 		bool checkGlobals = switchList.Contains("globals") || switchList.Contains("all");
 
-		// Add looker itself
 		if (checkMe)
 		{
 			objectsToScan.Add(looker);
 		}
 
-		// Add looker's inventory
 		if (checkInventory && looker.IsContainer)
 		{
 			var inventory = await System.Linq.AsyncEnumerable.ToListAsync(
@@ -1471,7 +1431,6 @@ public partial class Functions
 			}
 		}
 
-		// Add looker's location and its contents
 		if (checkRoom)
 		{
 			var dbref = looker.Object().DBRef;
@@ -1483,7 +1442,6 @@ public partial class Functions
 				var location = locationOpt.WithoutNone();
 				objectsToScan.Add(location.WithExitOption());
 
-				// Add contents of the location
 				var contents = await System.Linq.AsyncEnumerable.ToListAsync(
 					Mediator!.CreateStream(new GetContentsQuery(location)));
 				foreach (var item in contents)
@@ -1493,7 +1451,6 @@ public partial class Functions
 			}
 		}
 
-		// Add Master Room objects
 		if (checkGlobals)
 		{
 			var masterRoomDbref = new DBRef(0);
@@ -1515,12 +1472,10 @@ public partial class Functions
 			}
 		}
 
-		// Remove duplicates
 		var uniqueObjects = objectsToScan
 			.Distinct()
 			.ToAsyncEnumerable();
 
-		// Use CommandDiscoveryService to find matching $-commands
 		var matchResult = await CommandDiscoveryService!.MatchUserDefinedCommand(
 			parser,
 			uniqueObjects,
@@ -1863,7 +1818,6 @@ public partial class Functions
 	[SharpFunction(Name = "slev", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> SLev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Return the current switch nesting depth
 		return ValueTask.FromResult(new CallState(parser.CurrentState.SwitchStack.Count));
 	}
 
@@ -1899,7 +1853,6 @@ public partial class Functions
 			}
 		}
 
-		// Now check if we're in a switch context
 		if (stack.Count == 0)
 		{
 			return ValueTask.FromResult(new CallState(string.Empty));
@@ -1912,7 +1865,6 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(string.Empty));
 		}
 
-		// Get the nth item from the stack (0 is top)
 		var item = stack.ElementAtOrDefault(depth);
 		return ValueTask.FromResult(new CallState(item ?? MModule.empty()));
 	}
@@ -1953,13 +1905,11 @@ public partial class Functions
 						var destinationContainer = destObj.AsContainer;
 						var targetContent = targetObj.AsContent;
 
-						// Check for containment loops
 						if (await MoveService!.WouldCreateLoop(targetContent, destinationContainer))
 						{
 							return ErrorMessages.Returns.WouldCreateLoop;
 						}
 
-						// Move the object
 						await Mediator!.Send(new MoveObjectCommand(
 							targetContent,
 							destinationContainer,
@@ -1986,7 +1936,6 @@ public partial class Functions
 			executor, executor, victimName, LocateFlags.All,
 			victim =>
 			{
-				// Validate the lock string
 				if (!LockService!.Validate(lockString, executor))
 				{
 					return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidLock));
@@ -2105,7 +2054,6 @@ public partial class Functions
 					}
 				}
 
-				// Clear each attribute
 				foreach (var attrName in attributesToClear)
 				{
 					await Mediator!.Send(new ClearAttributeCommand(obj.Object().DBRef, [attrName]));

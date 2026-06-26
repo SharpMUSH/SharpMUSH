@@ -28,8 +28,6 @@ public class GameEngineBridgeContractTests
         return bridge;
     }
 
-    // ── SendCommandAsync ─────────────────────────────────────────────────────
-
     [Test]
     public async Task SendCommandAsync_WhenAccepted_ReturnsAcceptedAck()
     {
@@ -71,8 +69,6 @@ public class GameEngineBridgeContractTests
             Arg.Any<CancellationToken>());
     }
 
-    // ── GetStateAsync ────────────────────────────────────────────────────────
-
     [Test]
     public async Task GetStateAsync_WhenStateAvailable_ReturnsSnapshot()
     {
@@ -109,8 +105,6 @@ public class GameEngineBridgeContractTests
             Arg.Is<EngineStateRequest>(r => r.CharacterDbref == "#77"),
             Arg.Any<CancellationToken>());
     }
-
-    // ── DTO structural tests ─────────────────────────────────────────────────
 
     [Test]
     public async Task EngineCommandRequest_RecordEquality()

@@ -31,7 +31,6 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	/// </summary>
 	protected override void ConfigureStartupConfiguration(IConfigurationBuilder configurationBuilder)
 	{
-		// No Prometheus configuration needed anymore
 	}
 
 	/// <summary>
@@ -46,7 +45,6 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 			.MinimumLevel.Override("SurrealDb", LogEventLevel.Error)
 			.MinimumLevel.Override("NATS", LogEventLevel.Error);
 
-		// Only write to console if explicitly enabled via environment variable
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
 		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) &&
 													 (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
@@ -84,10 +82,8 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 				var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 				var config = ReadPennMushConfig.Create(configFile);
 
-				// Create IOptionsMonitor for SqlService with test connection string
 				var sqlOptionsMonitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 
-				// Override SQL configuration with test values by parsing connection string
 				var sqlConfigOverride = config with
 				{
 					Net = config.Net with
@@ -141,7 +137,6 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 				port = trimmedPart.Substring(5);
 		}
 
-		// Combine host and port if both present
 		if (!string.IsNullOrEmpty(host) && !string.IsNullOrEmpty(port))
 			return $"{host}:{port}";
 

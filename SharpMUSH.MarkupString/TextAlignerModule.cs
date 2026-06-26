@@ -1,4 +1,3 @@
-// Converted from TextAlignerModule.fs — module SharpMUSH.MarkupString.TextAlignerModule
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,8 +11,6 @@ using LineResult  = (ColumnSpec Spec, global::MarkupString.MarkupString Remainde
 
 public static class TextAlignerModule
 {
-    // ── Private helpers ────────────────────────────────────────────────────────
-
     private static (int SplitPoint, bool FoundSpace) FindWrapPoint(global::MarkupString.MarkupString text, int width)
     {
         var plainText = text.ToPlainText().AsSpan();
@@ -191,12 +188,10 @@ public static class TextAlignerModule
         global::MarkupString.MarkupString filler,
         global::MarkupString.MarkupString columnSeparator)
     {
-        // Handle merging
         var mergedColumns = columns;
         for (int i = 0; i < mergedColumns.Count; i++)
             mergedColumns = HandleMerging(mergedColumns, i);
 
-        // Extract one line per column
         var lineResults = new List<LineResult>(mergedColumns.Count);
         foreach (var (spec, text) in mergedColumns)
         {
@@ -204,7 +199,6 @@ public static class TextAlignerModule
             lineResults.Add((spec, remainder, line));
         }
 
-        // Filter out empty merged columns
         var filteredLineResults = lineResults
             .Where(lr => !(lr.Line.Length == 0 &&
                 (lr.Spec.Options.HasFlag(ColumnOptions.MergeToLeft) ||
@@ -272,7 +266,6 @@ public static class TextAlignerModule
         return AlignLoop(cols, filler, columnSeparator, rowSeparator);
     }
 
-    // F#-style lowercase alias
     public static global::MarkupString.MarkupString align(
         string widths,
         IEnumerable<global::MarkupString.MarkupString> columns,

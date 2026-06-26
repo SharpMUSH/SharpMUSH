@@ -79,7 +79,6 @@ public partial class SurrealDatabase
 		if (flag == null || flag.System) return false;
 
 		var parameters = new Dictionary<string, object?> { ["name"] = name };
-		// Delete the flag and any edges referencing it
 		await ExecuteAsync(
 			"DELETE has_flags WHERE out = object_flag:⟨$name⟩;" +
 			"DELETE object_flag:⟨$name⟩",
@@ -96,7 +95,6 @@ public partial class SurrealDatabase
 			["fname"] = flag.Name
 		};
 
-		// Check if already set
 		var existing = await ExecuteAsync(
 			"SELECT count() AS cnt FROM has_flags WHERE in = object:$key AND out.name = $fname GROUP ALL",
 			parameters, cancellationToken);
@@ -105,7 +103,6 @@ public partial class SurrealDatabase
 		if (existingResults.Count > 0 && existingResults[0].cnt > 0)
 			return false;
 
-		// Relate directly using the flag's record ID
 		await ExecuteAsync(
 			"RELATE object:$key->has_flags->object_flag:⟨$fname⟩",
 			parameters, cancellationToken);
@@ -121,7 +118,6 @@ public partial class SurrealDatabase
 			["fname"] = flag.Name
 		};
 
-		// Check existence first
 		var countResponse = await ExecuteAsync(
 			"SELECT count() AS cnt FROM has_flags WHERE in = object:$key AND out.name = $fname GROUP ALL",
 			parameters, cancellationToken);
@@ -244,7 +240,6 @@ public partial class SurrealDatabase
 			["pname"] = power.Name
 		};
 
-		// Check if already set
 		var existing = await ExecuteAsync(
 			"SELECT count() AS cnt FROM has_powers WHERE in = object:$key AND out.name = $pname GROUP ALL",
 			parameters, cancellationToken);
@@ -268,7 +263,6 @@ public partial class SurrealDatabase
 			["pname"] = power.Name
 		};
 
-		// Check existence first
 		var countResponse = await ExecuteAsync(
 			"SELECT count() AS cnt FROM has_powers WHERE in = object:$key AND out.name = $pname GROUP ALL",
 			parameters, cancellationToken);

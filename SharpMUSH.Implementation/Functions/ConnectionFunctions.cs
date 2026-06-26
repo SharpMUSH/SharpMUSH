@@ -84,7 +84,6 @@ public partial class Functions
 		}
 		catch
 		{
-			// If iteration fails, return partial results
 		}
 
 		return new CallState(isCount ? uniqueAddresses.Count.ToString() : string.Join(osep, results));
@@ -113,7 +112,6 @@ public partial class Functions
 				return new CallState("-1");
 			}
 
-			// Check visibility of the connected player
 			var connectedPlayer = await Mediator!.Send(new GetObjectNodeQuery(data2.Ref.Value));
 			if (!await PermissionService!.CanSee(executor, connectedPlayer.Known))
 			{
@@ -132,7 +130,6 @@ public partial class Functions
 
 		var located = maybeLocate.AsPlayer;
 
-		// Check visibility before returning connection information
 		if (!await PermissionService!.CanSee(executor, located.Object))
 		{
 			return new CallState("-1");
@@ -270,7 +267,6 @@ public partial class Functions
 		}
 		catch
 		{
-			// If iteration fails, return partial results
 		}
 
 		return new CallState(isCount ? results.Count.ToString() : string.Join(osep, results));
@@ -306,11 +302,10 @@ public partial class Functions
 					continue;
 				}
 
-				// Format: DBREF NAME IPADDR HOSTNAME CONNECTION-TIME DISCONNECTION-TIME DISCONNECTION-REASON SSL WEBSOCKET
 				var fields = new List<string>
 				{
 					log.Properties.GetValueOrDefault("DBRef", "#-1"),
-					"Unknown", // Name - would need to look up from DBRef
+					"Unknown",
 					log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN"),
 					log.Properties.GetValueOrDefault("HostName", "UNKNOWN"),
 					log.Timestamp.ToUnixTimeSeconds().ToString(),
@@ -325,7 +320,6 @@ public partial class Functions
 		}
 		catch
 		{
-			// If iteration fails, return not found
 		}
 
 		return new CallState(ErrorMessages.Returns.ConnectionNotFound);
@@ -441,7 +435,6 @@ public partial class Functions
 				return new CallState("-1");
 			}
 
-			// Check visibility of the connected player
 			var connectedPlayer = await Mediator!.Send(new GetObjectNodeQuery(data2.Ref.Value));
 			if (!await PermissionService!.CanSee(executor, connectedPlayer.Known))
 			{
@@ -460,7 +453,6 @@ public partial class Functions
 
 		var locate = maybeLocate.AsPlayer;
 
-		// Check visibility before returning connection information
 		if (!await PermissionService!.CanSee(executor, locate.Object))
 		{
 			return new CallState("-1");
@@ -524,7 +516,7 @@ public partial class Functions
 		}
 
 		var viewer = executor;
-		var status = "online"; // default status
+		var status = "online";
 
 		if (args.ContainsKey("0"))
 		{
@@ -555,7 +547,6 @@ public partial class Functions
 									(status == "online" && x.State == IConnectionService.ConnectionState.LoggedIn) ||
 									(status == "offline" && x.State != IConnectionService.ConnectionState.LoggedIn));
 
-		// Filter connections viewer can see
 		var visibleConnections = new List<long>();
 		await foreach (var conn in allConnections)
 		{
@@ -617,14 +608,12 @@ public partial class Functions
 			return ErrorMessages.Returns.InvalidSecondArgument;
 		}
 
-		// Check if looker has See_All permission for offline/all status
 		var hasSeeAll = await looker.IsSee_All();
 		if ((status == "offline" || status == "all") && !hasSeeAll)
 		{
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		// Get connected player DBRefs
 		var connectedRefs = ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null)
@@ -633,14 +622,12 @@ public partial class Functions
 
 		var result = new List<string>();
 
-		// Get all players from database
 		var allPlayers = Mediator!.CreateStream(new GetAllPlayersQuery())!;
 		await foreach (var player in allPlayers)
 		{
 			var dbref = player.Object.DBRef;
 			var isConnected = connectedDbRefs.Contains(dbref);
 
-			// Filter based on status
 			var shouldInclude = status switch
 			{
 				"online" => isConnected,
@@ -654,7 +641,6 @@ public partial class Functions
 				continue;
 			}
 
-			// Apply permission check
 			AnySharpObject playerObj = player;
 			if (await PermissionService!.CanSee(looker, playerObj))
 			{
@@ -703,14 +689,12 @@ public partial class Functions
 			return ErrorMessages.Returns.InvalidSecondArgument;
 		}
 
-		// Check if looker has See_All permission for offline/all status
 		var hasSeeAll = await looker.IsSee_All();
 		if ((status == "offline" || status == "all") && !hasSeeAll)
 		{
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		// Get connected player DBRefs
 		var connectedRefsId = ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null)
@@ -719,14 +703,12 @@ public partial class Functions
 
 		var resultId = new List<string>();
 
-		// Get all players from database
 		var allPlayersId = Mediator!.CreateStream(new GetAllPlayersQuery())!;
 		await foreach (var player in allPlayersId)
 		{
 			var dbref = player.Object.DBRef;
 			var isConnected = connectedDbRefsId.Contains(dbref);
 
-			// Filter based on status
 			var shouldInclude = status switch
 			{
 				"online" => isConnected,
@@ -740,7 +722,6 @@ public partial class Functions
 				continue;
 			}
 
-			// Apply permission check
 			AnySharpObject playerObj = player;
 			if (await PermissionService!.CanSee(looker, playerObj))
 			{
@@ -788,7 +769,6 @@ public partial class Functions
 	[SharpFunction(Name = "nmwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = ["flags"])]
 	public static async ValueTask<CallState> NumberMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Count all connected players that are not hidden
 		var count = await ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
@@ -1111,7 +1091,6 @@ public partial class Functions
 
 		if (args.Count == 3)
 		{
-			// xwho(<looker>, <start>, <count>)
 			var arg0 = args["0"].Message!.ToPlainText();
 			if (!string.IsNullOrWhiteSpace(arg0))
 			{
@@ -1133,7 +1112,6 @@ public partial class Functions
 		}
 		else
 		{
-			// xwho(<start>, <count>)
 			if (!int.TryParse(args["0"].Message!.ToPlainText(), out start) ||
 					!int.TryParse(args["1"].Message!.ToPlainText(), out count))
 			{
@@ -1168,7 +1146,6 @@ public partial class Functions
 
 		if (args.Count == 3)
 		{
-			// xwhoid(<looker>, <start>, <count>)
 			var arg0 = args["0"].Message!.ToPlainText();
 			if (!string.IsNullOrWhiteSpace(arg0))
 			{
@@ -1190,7 +1167,6 @@ public partial class Functions
 		}
 		else
 		{
-			// xwhoid(<start>, <count>)
 			if (!int.TryParse(args["0"].Message!.ToPlainText(), out start) ||
 					!int.TryParse(args["1"].Message!.ToPlainText(), out count))
 			{
@@ -1231,20 +1207,17 @@ public partial class Functions
 		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
-			// Check if executor passes the zone lock
 			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 		}
 
-		// Get all players in rooms that are in this zone (excluding dark/hidden players)
 		var playersInZone = new List<string>();
 		var allPlayers = Mediator!.CreateStream(new GetAllPlayersQuery())!;
 
 		await foreach (var player in allPlayers)
 		{
-			// Skip dark/hidden players unless executor has SEE_ALL
 			if (!hasSeeAll)
 			{
 				AnySharpObject playerObj = player;
@@ -1255,10 +1228,8 @@ public partial class Functions
 				}
 			}
 
-			// Get player's location
 			var playerLocation = await player.Location.WithCancellation(CancellationToken.None);
 
-			// Check if the location's zone matches
 			var locationObj = playerLocation.WithExitOption();
 			var locationZone = await locationObj.Object().Zone.WithCancellation(CancellationToken.None);
 
@@ -1271,7 +1242,6 @@ public partial class Functions
 			}
 		}
 
-		// Default: space-separated list
 		return new CallState(string.Join(" ", playersInZone));
 	}
 
@@ -1293,23 +1263,19 @@ public partial class Functions
 		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
-			// Check if executor passes the zone lock
 			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 		}
 
-		// Get all players in rooms that are in this zone
 		var playersInZone = new List<string>();
 		var allPlayers = Mediator!.CreateStream(new GetAllPlayersQuery())!;
 
 		await foreach (var player in allPlayers)
 		{
-			// Get player's location
 			var playerLocation = await player.Location.WithCancellation(CancellationToken.None);
 
-			// Check if the location's zone matches
 			var locationObj = playerLocation.WithExitOption();
 			var locationZone = await locationObj.Object().Zone.WithCancellation(CancellationToken.None);
 
@@ -1322,18 +1288,15 @@ public partial class Functions
 			}
 		}
 
-		// Handle output format parameter if provided
 		if (args.TryGetValue("1", out var arg1Value))
 		{
 			var format = arg1Value.Message!.ToPlainText();
 			if (!string.IsNullOrWhiteSpace(format))
 			{
-				// Format output with specified delimiter
 				return new CallState(string.Join(format, playersInZone));
 			}
 		}
 
-		// Default: space-separated list
 		return new CallState(string.Join(" ", playersInZone));
 	}
 
@@ -1355,52 +1318,44 @@ public partial class Functions
 		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
-			// Check if executor passes the zone lock
 			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 		}
 
-		// Get all objects in the zone
 		var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
 		var objectList = new List<string>();
 
 		await foreach (var obj in zoneObjects)
 		{
-			// Get the full object to check permissions
 			var fullObj = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(obj.Key)));
 			if (fullObj.IsNone)
 			{
 				continue;
 			}
 
-			// Check if executor can see this object
 			if (hasSeeAll || await PermissionService!.CanExamine(executor, fullObj.Known))
 			{
 				objectList.Add($"#{obj.Key}");
 			}
 		}
 
-		// Handle output format parameter if provided
 		if (args.TryGetValue("1", out var arg1Value))
 		{
 			var format = arg1Value.Message!.ToPlainText();
 			if (!string.IsNullOrWhiteSpace(format))
 			{
-				// Format output with specified delimiter
 				return new CallState(string.Join(format, objectList));
 			}
 		}
 
-		// Default: space-separated list
 		return new CallState(string.Join(" ", objectList));
 	}
 
 	[SharpFunction(Name = "poll", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static async ValueTask<CallState> Poll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Get the current @poll value from expanded server data
 		var pollData = await ObjectDataService!.GetExpandedServerDataAsync<PollData>();
 		return new CallState(pollData?.Message ?? string.Empty);
 	}
@@ -1609,8 +1564,6 @@ public partial class Functions
 		ParameterNames = ["player"])]
 	public static async ValueTask<CallState> IdleSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// IDLESECS() is an alias for idle()
-		// When called with no argument (or an empty argument), return idle time for executor.
 		// Note: the parser always injects Arguments["0"] = CallState.Empty via DefaultIfEmpty,
 		// so ContainsKey("0") is always true. Check for a non-empty value instead.
 		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0State)
@@ -1621,7 +1574,6 @@ public partial class Functions
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-			// Find executor's connection; return -1 if not connected
 			var data = ConnectionService!.Get(executor.Object().DBRef);
 			var idleSeconds = await data
 				.Select(x => x.Idle?.TotalSeconds ?? -1)
@@ -1630,7 +1582,6 @@ public partial class Functions
 			return new CallState(((int)idleSeconds).ToString());
 		}
 
-		// With argument, delegate to idle()
 		return await IdleSeconds(parser, _2);
 	}
 }

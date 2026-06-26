@@ -34,7 +34,6 @@ public class DefinitionHandler : DefinitionHandlerBase
 			var line = request.Position.Line < lines.Length ? lines[request.Position.Line] : string.Empty;
 			var character = (int)request.Position.Character;
 
-			// Find the word at the cursor position
 			var wordStart = character;
 			var wordEnd = character;
 
@@ -55,7 +54,6 @@ public class DefinitionHandler : DefinitionHandlerBase
 
 			var word = line.Substring(wordStart, wordEnd - wordStart);
 
-			// Look for attribute definitions in the document
 			// Pattern: @set <object>/<attribute> or &<attribute>
 			var locations = new List<Location>();
 
@@ -63,7 +61,6 @@ public class DefinitionHandler : DefinitionHandlerBase
 			{
 				var currentLine = lines[i];
 
-				// Check for &<attribute> pattern
 				if (currentLine.Contains($"&{word}"))
 				{
 					var index = currentLine.IndexOf($"&{word}", StringComparison.OrdinalIgnoreCase);
@@ -79,7 +76,6 @@ public class DefinitionHandler : DefinitionHandlerBase
 					}
 				}
 
-				// Check for @set pattern
 				if (currentLine.Contains("@set") && currentLine.Contains($"/{word}"))
 				{
 					var index = currentLine.IndexOf($"/{word}", StringComparison.OrdinalIgnoreCase);

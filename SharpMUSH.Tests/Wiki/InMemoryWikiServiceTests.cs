@@ -12,8 +12,6 @@ namespace SharpMUSH.Tests.Wiki;
 /// </summary>
 public class InMemoryWikiServiceTests
 {
-	// ── Helpers ──────────────────────────────────────────────────────────────
-
 	private static IWikiService BuildService() =>
 		new InMemoryWikiService(new WikiMarkdigPipeline());
 
@@ -32,8 +30,6 @@ public class InMemoryWikiServiceTests
 		return result.AsT0;
 	}
 
-	// ── CreateAsync ──────────────────────────────────────────────────────────
-
 	[Test]
 	public async Task CreateAsync_ReturnsPageWithAssignedId()
 	{
@@ -50,7 +46,6 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, title: "My Cool Page");
 
-		// Slugify: lower, spaces→underscores
 		await Assert.That(page.Slug).IsEqualTo("my_cool_page");
 	}
 
@@ -148,7 +143,6 @@ public class InMemoryWikiServiceTests
 
 		await svc.SetMetadataAsync(page.Id, "rules", [], true);
 
-		// Now reachable under the new category, and no longer under the old one.
 		await Assert.That((await svc.GetBySlugAsync("dragons", "rules", WikiNamespace.Main)).IsT0).IsTrue();
 		await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).IsT1).IsTrue();
 	}
@@ -164,11 +158,8 @@ public class InMemoryWikiServiceTests
 		var result = await svc.SetMetadataAsync(lore.Id, "rules", [], true);
 
 		await Assert.That(result.IsT1).IsTrue();
-		// The original page is untouched and still in "lore".
 		await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).AsT0.Id).IsEqualTo(lore.Id);
 	}
-
-	// ── GetBySlugAsync ────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task GetBySlugAsync_ExistingPage_ReturnsPage()
@@ -176,7 +167,6 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, title: "Find Me");
 
-		// Slug generated from title: "find_me"
 		var result = await svc.GetBySlugAsync("find_me", "general", WikiNamespace.Main);
 
 		await Assert.That(result.IsT0).IsTrue();
@@ -198,13 +188,10 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		await CreatePageAsync(svc, title: "Ns Test", ns: WikiNamespace.Main);
 
-		// "ns_test" exists in Main but not in Help
 		var result = await svc.GetBySlugAsync("ns_test", "general", WikiNamespace.Help);
 
 		await Assert.That(result.IsT1).IsTrue();
 	}
-
-	// ── GetByIdAsync ──────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task GetByIdAsync_ExistingId_ReturnsPage()
@@ -226,8 +213,6 @@ public class InMemoryWikiServiceTests
 
 		await Assert.That(result.IsT1).IsTrue();
 	}
-
-	// ── UpdateAsync ───────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task UpdateAsync_ChangesMarkdownAndBumpsRevision()
@@ -266,8 +251,6 @@ public class InMemoryWikiServiceTests
 		await Assert.That(result.IsT1).IsTrue();
 	}
 
-	// ── DeleteAsync ───────────────────────────────────────────────────────────
-
 	[Test]
 	public async Task DeleteAsync_ExistingPage_ReturnsNoneAndRemovesPage()
 	{
@@ -302,8 +285,6 @@ public class InMemoryWikiServiceTests
 		await Assert.That(result.IsT1).IsTrue();
 	}
 
-	// ── GetRevisionsAsync ─────────────────────────────────────────────────────
-
 	[Test]
 	public async Task GetRevisionsAsync_AfterCreate_HasOneRevision()
 	{
@@ -330,8 +311,6 @@ public class InMemoryWikiServiceTests
 		await Assert.That(revisions.Count).IsEqualTo(3);
 	}
 
-	// ── GetRevisionAsync ──────────────────────────────────────────────────────
-
 	[Test]
 	public async Task GetRevisionAsync_ValidRevisionNumber_ReturnsRevision()
 	{
@@ -356,8 +335,6 @@ public class InMemoryWikiServiceTests
 
 		await Assert.That(result.IsT1).IsTrue();
 	}
-
-	// ── SetProtectionAsync ────────────────────────────────────────────────────
 
 	[Test]
 	public async Task SetProtectionAsync_SetsIsProtectedFlag()
@@ -384,8 +361,6 @@ public class InMemoryWikiServiceTests
 		await Assert.That(result.IsT1).IsTrue();
 	}
 
-	// ── GetByNamespaceAsync ───────────────────────────────────────────────────
-
 	[Test]
 	public async Task GetByNamespaceAsync_ReturnsOnlyPagesInNamespace()
 	{
@@ -400,8 +375,6 @@ public class InMemoryWikiServiceTests
 		await Assert.That(mainPages.Count).IsEqualTo(2);
 		await Assert.That(helpPages.Count).IsEqualTo(1);
 	}
-
-	// ── GetRecentChangesAsync ─────────────────────────────────────────────────
 
 	[Test]
 	public async Task GetRecentChangesAsync_ReturnsNewestFirst()
@@ -430,8 +403,6 @@ public class InMemoryWikiServiceTests
 		await Assert.That(recent.Count).IsEqualTo(3);
 	}
 
-	// ── WikiCache — render invalidation ───────────────────────────────────────
-
 	/// <summary>
 	/// After editing a page via <see cref="IWikiService.UpdateAsync"/>, the next
 	/// call to <see cref="IWikiService.GetBySlugAsync"/> must return HTML that
@@ -443,15 +414,12 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, markdown: "**original**");
 
-		// Confirm the initial render contains the original content
 		var before = (await svc.GetBySlugAsync(created.Slug, "general")).AsT0;
 		await Assert.That(before.RenderedHtml).Contains("original");
 
-		// Edit the page
 		var updateResult = await svc.UpdateAsync(created.Id, "**updated**", "#1", "edit");
 		await Assert.That(updateResult.IsT0).IsTrue();
 
-		// Next slug read must return the fresh HTML
 		var after = (await svc.GetBySlugAsync(created.Slug, "general")).AsT0;
 		await Assert.That(after.RenderedHtml).Contains("updated");
 		await Assert.That(after.RenderedHtml).DoesNotContain("original");

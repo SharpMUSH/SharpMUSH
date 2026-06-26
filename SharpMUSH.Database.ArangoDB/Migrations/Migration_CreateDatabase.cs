@@ -893,7 +893,6 @@ public class Migration_CreateDatabase : IArangoMigration
 				Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State)
 			});
 
-		/* Create Room Zero */
 		var roomZeroObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
 		{
 			_key = 0.ToString(),
@@ -904,7 +903,6 @@ public class Migration_CreateDatabase : IArangoMigration
 		});
 		var roomZeroRoom = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Rooms, new { });
 
-		/* Create Player One */
 		var playerOneObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
 		{
 			_key = 1.ToString(),
@@ -914,7 +912,6 @@ public class Migration_CreateDatabase : IArangoMigration
 			ModifiedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 		});
 
-		/* Create Room Zero */
 		var roomTwoObj = await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.Objects, new
 		{
 			_key = 2.ToString(),

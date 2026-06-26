@@ -77,7 +77,6 @@ public class PackageManifestServiceTests
 		await Assert.That(global.Flags).Contains("no_command");
 		await Assert.That(global.Attributes["CMD_+BBREAD"].Value).Contains("{{bbs_parent}}");
 
-		// Shorthand attribute form: ATTR: "value"
 		await Assert.That(manifest.Objects[1].Attributes["FN_FORMAT"].Value)
 			.IsEqualTo("plain string shorthand");
 	}
@@ -940,7 +939,6 @@ public class PackageManifestServiceTests
 		await Assert.That(internalTarget.IsT1).IsTrue();
 		await Assert.That(internalTarget.AsT1.Errors.Any(e => e.Path == "objects[1].target")).IsTrue();
 
-		// Configure target is allowed.
 		var configureTarget = _service.ParseManifest(
 			"""
 			package: hooks

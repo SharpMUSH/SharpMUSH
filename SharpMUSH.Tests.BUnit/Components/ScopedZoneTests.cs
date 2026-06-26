@@ -56,7 +56,6 @@ public class ScopedZoneTests : BunitContext
 			}
 		}, TimeSpan.FromSeconds(5));
 
-		// WelcomeText renders its markdown to HTML — the heading proves the widget resolved and ran.
 		await Assert.That(cut.Markup).Contains("HelloFromZone");
 		await Assert.That(cut.Markup).Contains("<h1");
 	}

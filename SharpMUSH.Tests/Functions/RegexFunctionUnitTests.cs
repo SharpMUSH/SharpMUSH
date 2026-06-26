@@ -9,14 +9,13 @@ public class RegexFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
-	// regmatch tests
 	[Test]
-	[Arguments("regmatch(test,test)", "1")] // Exact match
-	[Arguments("regmatch(test,t.*t)", "1")] // Pattern matches entire string
-	[Arguments("regmatch(test123,t.*t)", "0")] // Pattern doesn't match entire string
-	[Arguments("regmatch(test,TEST)", "0")] // Case sensitive
-	[Arguments("regmatch(test,tes)", "0")] // Should match entire string only
-	[Arguments("regmatch(test,.*)", "1")] // Matches entire string
+	[Arguments("regmatch(test,test)", "1")]
+	[Arguments("regmatch(test,t.*t)", "1")]
+	[Arguments("regmatch(test123,t.*t)", "0")]
+	[Arguments("regmatch(test,TEST)", "0")]
+	[Arguments("regmatch(test,tes)", "0")]
+	[Arguments("regmatch(test,.*)", "1")]
 	public async Task Regmatch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -26,7 +25,7 @@ public class RegexFunctionUnitTests
 	[Test]
 	[Arguments("regmatchi(test,TEST)", "1")]
 	[Arguments("regmatchi(TeSt,test)", "1")]
-	[Arguments("regmatchi(test,tes)", "0")] // Should match entire string only
+	[Arguments("regmatchi(test,tes)", "0")]
 	public async Task Regmatchi(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -126,7 +125,6 @@ public class RegexFunctionUnitTests
 	[Test]
 	[Arguments("regeditall(test,t,T)", "TesT")] // All matches
 																							// Note: The capstr function would need to be implemented for this test to work fully
-																							// [Arguments("regeditall(this test is the best string,(.)est,capstr($1)rash)", "this Trash is the Brash string")]
 	public async Task Regeditall(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -141,7 +139,6 @@ public class RegexFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// reswitch tests
 	[Test]
 	[Arguments("reswitch(test,t.*,match)", "match")]
 	[Arguments("reswitch(test,x.*,nomatch,t.*,match)", "match")]
@@ -153,7 +150,6 @@ public class RegexFunctionUnitTests
 	// Penn reswitch.4 — complex regex with special chars
 	// NOTE: Skipped — SharpMUSH evaluates NoParse pattern args via ParsedMessage(),
 	// so {4}, [A-Z], {6} get consumed by the parser. PennMUSH passes them raw.
-	// [Arguments(@"reswitch(test STRING,.\{4\}\s\[A-Z\]\{6\},9,t,1,E,2,0)", "9")]
 	public async Task Reswitch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -167,7 +163,6 @@ public class RegexFunctionUnitTests
 	[Arguments("reswitchi(test STRING,t,1,e,2,0)", "1")]
 	[Arguments("reswitchi(test STRING,E,1,0)", "1")]
 	// Penn reswitchi.12 — complex regex (same NoParse issue as reswitch.4)
-	// [Arguments(@"reswitchi(test STRING,.\{4\}\s\[A-Z\]\{6\},9,t,1,E,2,0)", "9")]
 	public async Task Reswitchi(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -181,7 +176,6 @@ public class RegexFunctionUnitTests
 	[Arguments("reswitchall(test STRING,t,1,e,2,0)", "12")]
 	[Arguments("reswitchall(test STRING,E,1,0)", "0")]
 	// Penn reswitchall.8 — complex regex (same NoParse issue as reswitch.4)
-	// [Arguments(@"reswitchall(test STRING,.\{4\}\s\[A-Z\]\{6\},9,t,1,E,2,0)", "91")]
 	public async Task Reswitchall(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -195,14 +189,12 @@ public class RegexFunctionUnitTests
 	[Arguments("reswitchalli(test STRING,t,1,e,2,0)", "12")]
 	[Arguments("reswitchalli(test STRING,E,1,0)", "1")]
 	// Penn reswitchalli.16 — complex regex (same NoParse issue as reswitch.4)
-	// [Arguments(@"reswitchalli(test STRING,.\{4\}\s\[A-Z\]\{6\},9,t,1,E,2,0)", "912")]
 	public async Task Reswitchalli(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// regrep tests - skipped as they require attribute service
 	[Test]
 	[Category("NeedsSetup")]
 	[Skip("Requires attribute service integration")]

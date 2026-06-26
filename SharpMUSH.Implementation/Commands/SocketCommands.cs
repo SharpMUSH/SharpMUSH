@@ -107,7 +107,6 @@ public partial class Commands
 		MaxArgs = 2, ParameterNames = ["player", "password"])]
 	public static async ValueTask<Option<CallState>> Connect(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Early HUH if already logged in.
 		if (ConnectionService!.Get(parser.CurrentState.Handle!.Value)?.Ref is not null)
 		{
 			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Huh?  (Type \"help\" for help.)");
@@ -122,13 +121,11 @@ public partial class Commands
 		var connectionData = ConnectionService.Get(handle);
 		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
 
-		// Check if this is a guest login attempt
 		if (username.Equals("guest", StringComparison.OrdinalIgnoreCase))
 		{
 			return await HandleGuestLogin(parser, handle, ipAddress);
 		}
 
-		// Check if this is a one-time token login from the web UI
 		if (username.Equals("token", StringComparison.OrdinalIgnoreCase))
 		{
 			return await HandleTokenLogin(parser, handle, password, ipAddress);
@@ -211,7 +208,6 @@ public partial class Commands
 			Logger?.LogInformation("Rehashed legacy password for player #{Key}", foundDB.Object.Key);
 		}
 
-		// Future feature: Site lock checking would go here
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
 		await ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
 
@@ -235,7 +231,6 @@ public partial class Commands
 			connectRoomContainer.Object().DBRef.ToString(),
 			"connect");
 
-		// Query player flags and send preferences to ConnectionServer for protocol-aware output formatting
 		await SyncPlayerOutputPreferences(parser.CurrentState.Handle!.Value, foundDB.Object);
 
 		// Show post-login messages and auto-look (PennMUSH-compatible login experience)
@@ -295,21 +290,18 @@ public partial class Commands
 
 	private static async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress)
 	{
-		// Check if guest logins are enabled
 		if (!Configuration!.CurrentValue.Net.Guests)
 		{
 			await NotifyService!.Notify(handle, "Guest logins are not enabled.");
 			return new CallState(ErrorMessages.Returns.GuestLoginsDisabled);
 		}
 
-		// Get all players and filter for those with Guest power
 		var guestPlayers = await Mediator!.CreateStream(new GetAllPlayersQuery())
 			.Where(async (player, _) => await player.Object.HasPower("Guest"))
 			.ToListAsync();
 
 		if (guestPlayers.Count == 0)
 		{
-			// Trigger SOCKET`LOGINFAIL for no guest characters
 			await EventService!.TriggerEventAsync(
 				parser,
 				"SOCKET`LOGINFAIL",
@@ -325,15 +317,12 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoGuestCharacters);
 		}
 
-		// Get max_guests configuration
 		var maxGuests = Configuration!.CurrentValue.Limit.MaxGuests;
 
-		// Find an appropriate guest character based on max_guests policy
 		SharpPlayer? selectedGuest = null;
 
 		if (maxGuests == -1)
 		{
-			// Find a guest that's not currently connected
 			selectedGuest = await guestPlayers.ToAsyncEnumerable()
 				.FirstOrDefaultAsync(async (guest, ct) =>
 				{
@@ -343,7 +332,6 @@ public partial class Commands
 
 			if (selectedGuest == null)
 			{
-				// Trigger SOCKET`LOGINFAIL for max guests reached
 				await EventService!.TriggerEventAsync(
 					parser,
 					"SOCKET`LOGINFAIL",
@@ -366,8 +354,6 @@ public partial class Commands
 		}
 		else
 		{
-			// Limited to maxGuests total connections
-			// Count total guest connections
 			var totalGuestConnections = await guestPlayers.ToAsyncEnumerable()
 				.Select((SharpPlayer guest, CancellationToken ct) =>
 				{
@@ -378,7 +364,6 @@ public partial class Commands
 
 			if (totalGuestConnections >= maxGuests)
 			{
-				// Trigger SOCKET`LOGINFAIL for max guests reached
 				await EventService!.TriggerEventAsync(
 					parser,
 					"SOCKET`LOGINFAIL",
@@ -394,7 +379,6 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.MaxGuestsReached);
 			}
 
-			// Find the guest with fewest connections
 			SharpPlayer? leastUsedGuest = null;
 			var minConnections = int.MaxValue;
 
@@ -416,7 +400,6 @@ public partial class Commands
 		if (selectedGuest == null)
 		{
 			// This shouldn't happen, but handle it just in case
-			// Trigger SOCKET`LOGINFAIL for unexpected guest selection failure
 			await EventService!.TriggerEventAsync(
 				parser,
 				"SOCKET`LOGINFAIL",
@@ -432,11 +415,9 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.GuestSelectionFailed);
 		}
 
-		// Bind the connection to the selected guest
 		var playerDbRef = new DBRef(selectedGuest.Object.Key, selectedGuest.Object.CreationTime);
 		await ConnectionService!.Bind(handle, playerDbRef);
 
-		// Trigger PLAYER`CONNECT event
 		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
 		await EventService!.TriggerEventAsync(
 			parser,
@@ -455,7 +436,6 @@ public partial class Commands
 			guestConnectRoomContainer.Object().DBRef.ToString(),
 			"connect");
 
-		// Query player flags and send preferences to ConnectionServer for protocol-aware output formatting
 		await SyncPlayerOutputPreferences(handle, selectedGuest.Object);
 
 		// Show post-login messages and auto-look (PennMUSH-compatible login experience)
@@ -471,14 +451,12 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		await NotifyService!.Notify(executor, MModule.single("GOODBYE."), executor);
 
-		// Display quit file if configured
 		var quitText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.QuitFile);
 		if (!string.IsNullOrWhiteSpace(quitText))
 		{
 			await NotifyService!.Notify(executor, quitText, executor);
 		}
 
-		// Clean up Server-side connection state
 		await ConnectionService!.Disconnect(handle);
 
 		// Tell ConnectionServer to close the actual socket connection
@@ -495,7 +473,6 @@ public partial class Commands
 	/// </summary>
 	private static async Task SyncPlayerOutputPreferences(long handle, SharpObject player)
 	{
-		// Query player flags: ANSI, COLOR, XTERM256
 		var ansiEnabled = await player.Flags.Value.AnyAsync(f =>
 			string.Equals(f.Name, "ANSI", StringComparison.OrdinalIgnoreCase));
 		var colorEnabled = await player.Flags.Value.AnyAsync(f =>
@@ -503,7 +480,6 @@ public partial class Commands
 		var xterm256Enabled = await player.Flags.Value.AnyAsync(f =>
 			string.Equals(f.Name, "XTERM256", StringComparison.OrdinalIgnoreCase));
 
-		// Send preferences to ConnectionServer via Kafka
 		if (MessageBus != null)
 		{
 			await MessageBus.Publish(new UpdatePlayerPreferencesMessage(
@@ -536,7 +512,6 @@ public partial class Commands
 	{
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
 
-		// Show MOTD (from database, fallback to motd.txt file)
 		var motdText = motdData?.ConnectMotd;
 		if (string.IsNullOrWhiteSpace(motdText))
 		{
@@ -547,7 +522,6 @@ public partial class Commands
 			await NotifyService!.Notify(handle, motdText);
 		}
 
-		// Show wizard MOTD for wizards/royalty
 		if (await player.IsWizard() || await player.IsRoyalty())
 		{
 			var wizmotdText = motdData?.WizardMotd;
@@ -561,7 +535,6 @@ public partial class Commands
 			}
 		}
 
-		// Show guest file for guest players
 		if (isGuest)
 		{
 			var guestText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.GuestFile);
@@ -571,7 +544,6 @@ public partial class Commands
 			}
 		}
 
-		// Auto-look at the player's current location
 		await parser.CommandParse(handle, ConnectionService!, MModule.single("look"));
 	}
 

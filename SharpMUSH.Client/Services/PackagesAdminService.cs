@@ -11,8 +11,6 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory)
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
-	// ── Installed / dashboard ────────────────────────────────────────────────
-
 	public async Task<IReadOnlyList<InstalledPackageDto>> GetInstalledAsync() =>
 		await Client.GetFromJsonAsync<IReadOnlyList<InstalledPackageDto>>("api/packages") ?? [];
 
@@ -40,8 +38,6 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory)
 			? await response.Content.ReadFromJsonAsync<PackageUpdateInfo>()
 			: null;
 	}
-
-	// ── Remotes & community ──────────────────────────────────────────────────
 
 	public async Task<IReadOnlyList<PackageRemoteRecord>> GetRemotesAsync() =>
 		await Client.GetFromJsonAsync<IReadOnlyList<PackageRemoteRecord>>("api/packages/remotes") ?? [];
@@ -75,8 +71,6 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory)
 		return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<ReadmeResponse>() : null;
 	}
 
-	// ── Browse / plan / apply ────────────────────────────────────────────────
-
 	public async Task<(PackageRepoSnapshot? Snapshot, string? Error)> BrowseAsync(string remote)
 	{
 		var response = await Client.GetAsync($"api/packages/remotes/{Uri.EscapeDataString(remote)}/browse");
@@ -100,8 +94,6 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory)
 			? (await response.Content.ReadFromJsonAsync<ApplyResponse>(), null)
 			: (null, await response.Content.ReadAsStringAsync());
 	}
-
-	// ── Authoring ────────────────────────────────────────────────────────────
 
 	public async Task<(PackageAuthoringScan? Scan, string? Error)> AuthorScanAsync(IReadOnlyList<string> objids)
 	{

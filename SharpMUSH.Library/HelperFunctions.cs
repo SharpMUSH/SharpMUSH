@@ -265,7 +265,6 @@ public static partial class HelperFunctions
 		=> await obj.Object().Flags.Value
 			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase));
 
-	// This may belong in the Permission Service.
 	public static async ValueTask<bool> CanDark(this AnySharpObject obj)
 		=> await obj.HasPower("Can_Dark") || await obj.IsWizard();
 
@@ -391,7 +390,6 @@ public static partial class HelperFunctions
 		var startDbRef = start.Object().DBRef;
 		var newRelatedDbRef = newRelated.Object().DBRef;
 
-		// Check for self-reference
 		if (startDbRef.Number == newRelatedDbRef.Number)
 		{
 			return false;
@@ -423,7 +421,6 @@ public static partial class HelperFunctions
 		var obj = match.Groups["Object"].Value;
 
 		var attr = match.Groups["Attribute"].Value;
-		// Attribute is optional in this method, so only validate if present
 		if (!string.IsNullOrEmpty(attr) && !IsValidAttributeName(attr))
 			return false;
 

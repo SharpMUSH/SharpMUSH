@@ -12,8 +12,6 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiService> logger)
 {
-	// ── Server DTO (mirrors WikiController.WikiPageDto) ───────────────────────
-
 	private record WikiPageDto(
 		string Id,
 		string Slug,
@@ -37,8 +35,6 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		string? EditSummary,
 		string MarkdownSource);
 
-	// ── Request bodies (mirrors WikiController request records) ───────────────
-
 	private record CreatePageRequest(string Title, string Markdown, string? Namespace, string? Category);
 	private record UpdatePageRequest(string Markdown, string? EditSummary);
 	private record SetMetadataRequest(string? Category, string[] Tags, bool Published);
@@ -49,8 +45,6 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 
 	/// <summary>Per-slug outcome of a batch operation (mirrors WikiController.BatchResult).</summary>
 	public record WikiBatchResult(IReadOnlyList<string> Succeeded, IReadOnlyList<string> Failed);
-
-	// ── Read ─────────────────────────────────────────────────────────────────
 
 	public async ValueTask<OneOf<WikiArticle, None>> GetWikiArticle(string slug, string? category = null, string? ns = null)
 	{
@@ -222,8 +216,6 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			return new None();
 		}
 	}
-
-	// ── Write ─────────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Creates a new wiki page on the server.
@@ -485,8 +477,6 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			return ex.Message;
 		}
 	}
-
-	// ── Projection ─────────────────────────────────────────────────────────────
 
 	private static WikiArticle ToArticle(WikiPageDto dto) =>
 		new(

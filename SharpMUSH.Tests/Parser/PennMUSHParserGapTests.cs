@@ -17,7 +17,6 @@ public class PennMUSHParserGapTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
-	// ============================================================
 	// GAP 1: FunctionFlags.Literal / lit() function
 	//
 	// PennMUSH behavior: lit() returns its argument with NO evaluation
@@ -27,7 +26,6 @@ public class PennMUSHParserGapTests
 	//
 	// FunctionFlags.Literal (1 << 1) is DEFINED in SharpMUSH but
 	// never referenced in the visitor.
-	// ============================================================
 
 	[Test]
 	[Arguments("lit(hello world)", "hello world")]
@@ -161,7 +159,6 @@ public class PennMUSHParserGapTests
 		await Assert.That(result).IsEqualTo("hello world");
 	}
 
-	// ============================================================
 	// GAP 2: PE_COMPRESS_SPACES
 	//
 	// PennMUSH behavior: PE_COMPRESS_SPACES is part of PE_DEFAULT.
@@ -178,7 +175,6 @@ public class PennMUSHParserGapTests
 	//
 	// SharpMUSH: No implementation whatsoever. Zero references to
 	// space compression in grammar, visitor, or ParserState.
-	// ============================================================
 
 	[Test]
 	[Arguments("cat(a,  b)", "a b")]
@@ -226,7 +222,6 @@ public class PennMUSHParserGapTests
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
-	// ============================================================
 	// GAP 3: %? substitution
 	//
 	// PennMUSH behavior: %? returns "<invocations> <recursions>"
@@ -235,7 +230,6 @@ public class PennMUSHParserGapTests
 	//
 	// SharpMUSH: returns parser.State.Count() (stack depth only,
 	// one number).
-	// ============================================================
 
 	[Test]
 	[Category("PennMUSH Parity - %? Substitution")]
@@ -245,7 +239,6 @@ public class PennMUSHParserGapTests
 		// SharpMUSH currently returns only one number
 		var result = (await Parser.FunctionParse(MModule.single("%?")))?.Message?.ToString();
 
-		// Should contain a space separating two numbers
 		await Assert.That(result).IsNotNull();
 		var parts = result!.Split(' ');
 		await Assert.That(parts.Length).IsEqualTo(2);
@@ -257,13 +250,10 @@ public class PennMUSHParserGapTests
 	[Category("PennMUSH Parity - %? Substitution")]
 	public async Task PercentQuestion_InvocationsIncrementWithFunctionCalls()
 	{
-		// After calling add(1,2), invocation count should be higher
 		var result = (await Parser.FunctionParse(MModule.single("[add(1,2)]%?")))?.Message?.ToString();
 
 		await Assert.That(result).IsNotNull();
-		// Should start with "3" (the add result) then "N M"
-		// The invocation count N should be > 0
-		var afterResult = result!.Substring(1).Trim(); // skip the "3"
+		var afterResult = result!.Substring(1).Trim();
 		var parts = afterResult.Split(' ');
 		await Assert.That(parts.Length).IsEqualTo(2);
 
@@ -298,9 +288,8 @@ public class PennMUSHParserGapTests
 		var result = (await Parser.FunctionParse(MModule.single("hello %?")))?.Message?.ToString();
 
 		await Assert.That(result).IsNotNull();
-		// "hello " then two numbers
 		await Assert.That(result!).StartsWith("hello ");
-		var afterHello = result!.Substring(6); // skip "hello "
+		var afterHello = result!.Substring(6);
 		var parts = afterHello.Split(' ');
 		await Assert.That(parts.Length).IsEqualTo(2);
 		await Assert.That(int.TryParse(parts[0], out _)).IsTrue();
@@ -317,12 +306,10 @@ public class PennMUSHParserGapTests
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!).EndsWith("done");
-		// Should have at least "N M done" format
 		var parts = result!.Split(' ');
 		await Assert.That(parts.Length).IsGreaterThanOrEqualTo(3);
 	}
 
-	// ============================================================
 	// GAP 4: PE_BUILTINONLY / fn() function
 	//
 	// PennMUSH behavior: fn(name, args...) calls ONLY the built-in
@@ -331,7 +318,6 @@ public class PennMUSHParserGapTests
 	// Source: src/funufun.c line 92, src/parse.c line 2785
 	//
 	// SharpMUSH: fn() appears completely non-functional (returns "").
-	// ============================================================
 
 	[Test]
 	[Arguments("fn(add,1,2)", "3")]
@@ -404,7 +390,6 @@ public class PennMUSHParserGapTests
 		await Assert.That(result!.Length).IsGreaterThan(0);
 	}
 
-	// ============================================================
 	// GAP 5: PE_USERFN tracking
 	//
 	// PennMUSH behavior: PE_USERFN flag is set when evaluating
@@ -414,13 +399,11 @@ public class PennMUSHParserGapTests
 	//
 	// This requires @function setup which needs CommandParser.
 	// Testing deferred to integration tests that can set up objects.
-	// ============================================================
 
 	// PE_USERFN tests require command execution context to set up
 	// @function definitions. See PennMUSHParserGapCommandTests for
 	// integration tests covering this gap.
 
-	// ============================================================
 	// GAP 6: Q-register handling in NoParse/NoEval mode
 	//
 	// PennMUSH behavior: In NoParse context (e.g., inside lit()),
@@ -435,7 +418,6 @@ public class PennMUSHParserGapTests
 	// - But lit() must be inside brackets or recognized as a function
 	//   call. If it's just text, %q<name> evaluates normally in the
 	//   outer context.
-	// ============================================================
 
 	[Test]
 	[Category("PennMUSH Parity - Q-Register NoParse")]
@@ -497,7 +479,6 @@ public class PennMUSHParserGapTests
 		await Assert.That(result).IsEqualTo("%q<foo>");
 	}
 
-	// ============================================================
 	// GAP 7: lsargs (list-style arguments)
 	//
 	// PennMUSH behavior: Commands with /lsargs flag split the
@@ -507,7 +488,6 @@ public class PennMUSHParserGapTests
 	//
 	// This requires @command/add setup which needs CommandParser.
 	// Testing deferred to integration tests.
-	// ============================================================
 
 	// lsargs tests require command execution to set up @command/add/lsargs.
 	// See PennMUSHParserGapCommandTests for integration tests.

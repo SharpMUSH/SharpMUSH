@@ -20,8 +20,6 @@ namespace SharpMUSH.Tests.Authentication;
 /// </summary>
 public class JwtServiceTests
 {
-	// ── Helpers ──────────────────────────────────────────────────────────────
-
 	private static JwtOptions DefaultOptions() => new()
 	{
 		SigningKey = "super-secret-test-key-32chars!!!",
@@ -108,8 +106,6 @@ public class JwtServiceTests
 			store, roleSvc, accountSvc, mediator);
 	}
 
-	// ── IssueTokensAsync ─────────────────────────────────────────────────────
-
 	[Test]
 	public async ValueTask IssueTokens_ReturnsAccessAndRefreshTokens()
 	{
@@ -189,8 +185,6 @@ public class JwtServiceTests
 			Arg.Any<CancellationToken>());
 	}
 
-	// ── RefreshAsync ─────────────────────────────────────────────────────────
-
 	[Test]
 	public async ValueTask Refresh_ValidToken_RevokesAndIssuesNew()
 	{
@@ -252,7 +246,6 @@ public class JwtServiceTests
 			.Returns(Task.FromResult<(string, DBRef)?>(("accounts/1", charRef)));
 		accountSvc.GetByIdAsync("accounts/1", Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<SharpAccount?>(MakeAccount()));
-		// Return a None (object not found)
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
 			.Returns(new AnyOptionalSharpObject(new None()));
 

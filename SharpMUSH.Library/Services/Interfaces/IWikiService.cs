@@ -16,8 +16,6 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// </remarks>
 public interface IWikiService
 {
-	// ── Read operations ──────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Retrieves a wiki page by its (namespace, category, slug) identity.
 	/// <paramref name="category"/> is normalised (null/blank → <c>general</c>).
@@ -62,8 +60,6 @@ public interface IWikiService
 	/// Lists pages carrying the given tag (case-insensitive), ordered by title.
 	/// </summary>
 	Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50);
-
-	// ── Write operations ──────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Creates a new wiki page. The (namespace, category, slug) identity must be unique.
@@ -114,8 +110,6 @@ public interface IWikiService
 		string? category,
 		IReadOnlyList<string> tags,
 		bool published);
-
-	// ── Revision operations ───────────────────────────────────────────────────
 
 	/// <summary>
 	/// Returns the revision history for a page, ordered by revision number descending,

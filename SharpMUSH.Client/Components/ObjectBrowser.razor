@@ -5,7 +5,6 @@
 
 <div style="display:flex;flex-direction:column;height:100%;min-height:0;">
 
-    @* Mode selector — Mine / Search / Here *@
     <div class="ob-modes">
         <button type="button" class="ob-mode @(_activeTab == 0 ? "ob-mode--on" : "")"
                 @onclick="LoadMyObjectsAsync" disabled="@_loading">
@@ -21,7 +20,6 @@
         </button>
     </div>
 
-    @* Search expression (Search mode only) *@
     @if (_activeTab == 1)
     {
         <div class="ob-searchwrap">
@@ -41,7 +39,6 @@
         <div class="ob-error">@_error</div>
     }
 
-    @* Object list — flat, grouped by type *@
     <div style="flex:1;overflow-y:auto;min-height:0;padding:6px;">
         @if (_loading)
         {

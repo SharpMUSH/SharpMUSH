@@ -14,12 +14,6 @@ public static class StatusMail
 		INotifyService notifyService,
 		MString? arg0, MString? arg1, string sw)
 	{
-		// --> STATUS = tagged, untagged, cleared, uncleared, read, unread, urgent or unurgent
-
-		// What is a good way to handle the 'tag, clear, read, urgent' values in one object call?
-		// These are all types of Mail Updates.
-		// { bool? tag, bool? clear, bool? read, bool? urgent }
-
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var filteredList = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor);
 		var statusString = arg1?.ToPlainText().ToUpper();
@@ -66,7 +60,6 @@ public static class StatusMail
 		{
 			await mediator.Send(new UpdateMailCommand(mail, mailUpdate));
 			// Use per-player inbox numbers (1-based index) instead of database IDs
-			// The index is calculated in-memory based on mail position in the filtered list
 			await notifyService.Notify(executor, $"Mail {index} updated.", executor);
 			idList.Add(index.ToString());
 			index++;

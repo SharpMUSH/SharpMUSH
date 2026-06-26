@@ -27,7 +27,6 @@ public class VerbCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@verb {verbObj}={verbObj},,VerbActorDefault_Value_52830,,VerbOthersDefault_Value_52830,,"));
 
-		// The actor message goes to the actor (verbObj) with no explicit sender (null).
 		await NotifyService
 			.Received(1)
 			.Notify(
@@ -49,7 +48,6 @@ public class VerbCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@verb {verbObj}={verbObj},WHAT_74102,DefaultWhat,OWHAT_74102,DefaultOwhat,,"));
 
-		// The actor message comes from WHAT_74102 attribute and is sent to actor (verbObj) with null sender.
 		await NotifyService
 			.Received(1)
 			.Notify(
@@ -70,7 +68,6 @@ public class VerbCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@verb {verbObj}={verbObj},WHAT_ARGS_91605,Default,,,,"));
 
-		// The actor message comes from WHAT_ARGS_91605 attribute and is sent to actor (verbObj) with null sender.
 		await NotifyService
 			.Received(1)
 			.Notify(
@@ -89,7 +86,6 @@ public class VerbCommandTests
 		// Provide only the victim with no actor/message args — args.Count < 2 triggers the Usage error
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@verb {verbObj}"));
 
-		// Usage error is sent to executor with executor as sender.
 		await NotifyService
 			.Received(1)
 			.Notify(

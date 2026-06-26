@@ -215,7 +215,6 @@ public partial class ArangoDatabase
 		var edges = result?.Where(x => x.To == channel.Id).ToList();
 		if (edges is null || edges.Count == 0) return;
 
-		// Remove all matching edges
 		foreach (var edge in edges)
 		{
 			await arangoDb.Graph.Edge.RemoveAsync<ArangoVoid>(handle,
@@ -234,7 +233,6 @@ public partial class ArangoDatabase
 				{ StartVertex, obj.Object().Id! }
 			}, cancellationToken: ct);
 
-		// Find the edge connecting to the specific channel
 		var edge = result?.FirstOrDefault(x => x.To == channel.Id);
 		if (edge is null) return;
 

@@ -16,8 +16,6 @@ namespace SharpMUSH.Server.Controllers;
 [Produces("application/json")]
 public abstract class ApiControllerBase : ControllerBase
 {
-    // ── Identity helpers ────────────────────────────────────────────────────
-
     /// <summary>The <c>sub</c> claim (account GUID) from the bearer token, or <see langword="null"/> if absent.</summary>
     protected string? CurrentAccountId =>
         User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -32,8 +30,6 @@ public abstract class ApiControllerBase : ControllerBase
     /// <summary>The <c>character_creation_time</c> claim parsed as <see cref="long"/>, or <see langword="null"/> if absent or non-numeric.</summary>
     protected long? CurrentCharacterCreationTime =>
         long.TryParse(User.FindFirstValue("character_creation_time"), out var t) ? t : null;
-
-    // ── Envelope helpers ───────────────────────────────────────────────────
 
     /// <summary>
     /// Returns HTTP 200 with the value wrapped in a success envelope.
@@ -51,8 +47,6 @@ public abstract class ApiControllerBase : ControllerBase
     /// Returns HTTP 204 No Content (no body).
     /// </summary>
     protected new NoContentResult NoContent() => base.NoContent();
-
-    // ── RFC 7807 error helpers ─────────────────────────────────────────────
 
     /// <summary>Returns HTTP 400 Bad Request as a Problem Details body.</summary>
     protected ObjectResult Problem400(string detail, string? title = null) =>
@@ -108,7 +102,6 @@ public sealed record ApiResponse<T>
     /// <summary>The response payload, present when <see cref="Succeeded"/> is <see langword="true"/>.</summary>
     public T? Data { get; init; }
 
-    // Private ctor — use factory methods
     private ApiResponse() { }
 
     /// <summary>Creates a successful response.</summary>

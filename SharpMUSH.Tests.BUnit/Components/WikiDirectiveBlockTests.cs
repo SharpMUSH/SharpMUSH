@@ -74,10 +74,8 @@ public class WikiDirectiveBlockTests : BunitContext
 				throw new InvalidOperationException("Page list not rendered yet.");
 		});
 
-		// Requested the category endpoint
 		await Assert.That(handler.LastRequestPath).IsEqualTo("/api/wiki/category/lore");
 
-		// Header and panel structure
 		await Assert.That(cut.Markup).Contains("wiki-directive-block");
 		await Assert.That(cut.Markup).Contains("Category: lore");
 		await Assert.That(cut.Markup).Contains("wiki-directive-list");

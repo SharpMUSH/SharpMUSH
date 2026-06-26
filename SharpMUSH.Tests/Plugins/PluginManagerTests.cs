@@ -30,7 +30,6 @@ public class PluginManagerTests
 	[Test]
 	public async Task TopologicalSort_LoadsDependencyBeforeDependent()
 	{
-		// "a" depends on "b" → b must come before a.
 		var a = new PluginLoaderService.PluginCandidate("a.dll", "a", ["b"], 0);
 		var b = new PluginLoaderService.PluginCandidate("b.dll", "b", [], 0);
 
@@ -51,14 +50,12 @@ public class PluginManagerTests
 		var ordered = PluginLoaderService.TopologicalSort([high, lowB, lowA], NullLogger.Instance)
 			.Select(c => c.Id).ToList();
 
-		// Lower priority first; equal priority breaks by id alphabetically; highest priority last.
 		await Assert.That(ordered).IsEquivalentTo(new[] { "alpha", "beta", "zeta" });
 	}
 
 	[Test]
 	public async Task TopologicalSort_CycleIsDetectedAndCyclicPluginsSkipped()
 	{
-		// a -> b -> a is a cycle; an independent "c" must still survive.
 		var a = new PluginLoaderService.PluginCandidate("a.dll", "a", ["b"], 0);
 		var b = new PluginLoaderService.PluginCandidate("b.dll", "b", ["a"], 0);
 		var c = new PluginLoaderService.PluginCandidate("c.dll", "c", [], 0);
@@ -91,14 +88,12 @@ public class PluginManagerTests
 	{
 		var manager = NewManager(out var commands, out var functions);
 
-		// Simulate an engine built-in already present.
 		var builtin = MakeCommand("THINK");
 		commands.Add("THINK", (builtin, true));
 
 		var pluginVersion = MakeCommand("THINK");
 		manager.RegisterPlugin(new FakePlugin("collider", commands: [pluginVersion], functions: []));
 
-		// The original built-in definition must remain (collision skipped, not overwritten).
 		await Assert.That(ReferenceEquals(commands["THINK"].LibraryInformation.Command, builtin.Command)).IsTrue();
 	}
 
@@ -107,7 +102,6 @@ public class PluginManagerTests
 	{
 		var manager = NewManager(out var commands, out var functions);
 
-		// A throwing plugin must not bubble out and must not corrupt the libraries.
 		var (cmdCount, fnCount) = manager.RegisterPlugin(new ThrowingPlugin());
 
 		await Assert.That(cmdCount).IsEqualTo(0);
@@ -115,7 +109,6 @@ public class PluginManagerTests
 		await Assert.That(commands.Count).IsEqualTo(0);
 		await Assert.That(functions.Count).IsEqualTo(0);
 
-		// A subsequent good plugin still registers — the manager is not left in a broken state.
 		manager.RegisterPlugin(new FakePlugin("good", commands: [MakeCommand("+OK")], functions: []));
 		await Assert.That(commands.ContainsKey("+OK")).IsTrue();
 	}
@@ -137,14 +130,12 @@ public class PluginManagerTests
 		var provider = services.BuildServiceProvider();
 		await Assert.That(provider.GetService<MarkerService>()).IsNotNull();
 
-		// Contribution interface classification.
 		await Assert.That(plugin is IServiceRegistrar).IsTrue();
 		await Assert.That(plugin is IFlagSource).IsTrue();
 		await Assert.That(plugin is IMigrationSource).IsTrue();
 		await Assert.That(((IFlagSource)plugin).Flags.Single().Name).IsEqualTo("PLUGINFLAG");
 		await Assert.That(((IMigrationSource)plugin).CypherStatements).IsNotEmpty();
 
-		// Phase 2b engine-extension hook classification.
 		await Assert.That(plugin is ICommandInterceptor).IsTrue();
 		await Assert.That(plugin is IConnectionHook).IsTrue();
 		await Assert.That(plugin is IObjectLifecycleHook).IsTrue();
@@ -157,7 +148,6 @@ public class PluginManagerTests
 		// returns false vetoes; a non-null override short-circuits; defaults are inert.
 		ICommandInterceptor interceptor = new MultiContributionPlugin();
 
-		// MultiContributionPlugin vetoes any command starting with "@veto" and overrides "@over".
 		await Assert.That(await interceptor.BeforeAsync(null!, "@veto stuff")).IsFalse();
 		await Assert.That(await interceptor.BeforeAsync(null!, "look")).IsTrue();
 
@@ -167,7 +157,6 @@ public class PluginManagerTests
 
 		await Assert.That(await interceptor.TryOverrideAsync(null!, "look")).IsNull();
 
-		// A bare interceptor with only the default methods neither vetoes nor overrides.
 		ICommandInterceptor inert = new InertInterceptor();
 		await Assert.That(await inert.BeforeAsync(null!, "anything")).IsTrue();
 		await Assert.That(await inert.TryOverrideAsync(null!, "anything")).IsNull();
@@ -182,7 +171,6 @@ public class PluginManagerTests
 		await Assert.That(catalog.MigrationSources).IsEmpty();
 		await Assert.That(catalog.BridgeSources).IsEmpty();
 		await Assert.That(catalog.AllFlags).IsEmpty();
-		// Phase 2b hook buckets.
 		await Assert.That(catalog.CommandInterceptors).IsEmpty();
 		await Assert.That(catalog.ConnectionHooks).IsEmpty();
 		await Assert.That(catalog.ObjectLifecycleHooks).IsEmpty();
@@ -216,7 +204,6 @@ public class PluginManagerTests
 
 		public IEnumerable<string> CypherStatements => ["CREATE INDEX ON :PluginThing(id)"];
 
-		// Phase 2b: veto "@veto*", override "@over*", everything else passes through.
 		public ValueTask<bool> BeforeAsync(IMUSHCodeParser parser, string command)
 			=> ValueTask.FromResult(!command.StartsWith("@veto", StringComparison.OrdinalIgnoreCase));
 

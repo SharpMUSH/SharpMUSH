@@ -48,7 +48,6 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 
 		try
 		{
-			// Ensure the stream exists before publishing
 			await js.CreateOrUpdateStreamAsync(
 				new StreamConfig(options.StreamName, [$"{options.SubjectPrefix}.>"])
 				{
@@ -88,7 +87,6 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 		_logger.LogTrace("[NATS-SEND] Publishing handle-based message to subject {Subject} - Type: {MessageType}, Handle: {Handle}",
 			subject, typeof(T).Name, message.Handle);
 
-		// Include handle in a header so consumers can route by connection
 		var headers = new NatsHeaders { { "X-Handle", message.Handle.ToString() } };
 		await _js.PublishAsync(subject, message, serializer: NatsJsonSerializer<T>.Default, headers: headers, cancellationToken: cancellationToken);
 

@@ -9,8 +9,6 @@ public class OffsetPaginationTests
 {
     private static IEnumerable<int> Seq(int count) => Enumerable.Range(1, count);
 
-    // ── Basic slicing ────────────────────────────────────────────────────────
-
     [Test]
     public async Task Paginate_Page0_ReturnsFirstN()
     {
@@ -33,7 +31,6 @@ public class OffsetPaginationTests
     [Test]
     public async Task Paginate_LastPage_ReturnsRemainder()
     {
-        // 25 items, pageSize 10: page 2 = items 21..25
         var result = OffsetPaginationHelper.Paginate(Seq(25), page: 2, pageSize: 10);
 
         await Assert.That(result.Items.Count).IsEqualTo(5);
@@ -47,8 +44,6 @@ public class OffsetPaginationTests
         await Assert.That(result.Items.Count).IsEqualTo(0);
     }
 
-    // ── TotalCount / TotalPages ───────────────────────────────────────────────
-
     [Test]
     public async Task Paginate_TotalCountMatchesSourceLength()
     {
@@ -60,7 +55,7 @@ public class OffsetPaginationTests
     public async Task Paginate_TotalPagesRoundsUp()
     {
         var result = OffsetPaginationHelper.Paginate(Seq(37), page: 0, pageSize: 10);
-        await Assert.That(result.TotalPages).IsEqualTo(4); // ceil(37/10)
+        await Assert.That(result.TotalPages).IsEqualTo(4);
     }
 
     [Test]
@@ -69,8 +64,6 @@ public class OffsetPaginationTests
         var result = OffsetPaginationHelper.Paginate(Seq(30), page: 0, pageSize: 10);
         await Assert.That(result.TotalPages).IsEqualTo(3);
     }
-
-    // ── HasNextPage / HasPreviousPage ─────────────────────────────────────────
 
     [Test]
     public async Task Paginate_Page0_HasNextPage_WhenMoreExists()
@@ -93,8 +86,6 @@ public class OffsetPaginationTests
         var result = OffsetPaginationHelper.Paginate(Seq(30), page: 1, pageSize: 10);
         await Assert.That(result.HasPreviousPage).IsTrue();
     }
-
-    // ── Parameter clamping ───────────────────────────────────────────────────
 
     [Test]
     public async Task Paginate_NegativePage_ClampedToZero()
@@ -120,8 +111,6 @@ public class OffsetPaginationTests
         await Assert.That(result.Items.Count).IsEqualTo(200);
     }
 
-    // ── FromSlice overload ───────────────────────────────────────────────────
-
     [Test]
     public async Task FromSlice_HonoursTotalCountFromCaller()
     {
@@ -141,8 +130,6 @@ public class OffsetPaginationTests
         var result = OffsetPaginationHelper.FromSlice<int>([], totalCount: 100, page: 0, pageSize: 10);
         await Assert.That(result.HasNextPage).IsTrue();
     }
-
-    // ── Empty source ─────────────────────────────────────────────────────────
 
     [Test]
     public async Task Paginate_EmptySource_ReturnsEmptyResult()

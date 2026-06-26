@@ -33,9 +33,6 @@ public class PostgreSqlProvider : ISqlProvider
 	/// </summary>
 	public string Escape(string value)
 	{
-		// PostgreSQL standard escaping: single quotes are escaped by doubling them
-		// This is equivalent to MySQL's quote escaping but PostgreSQL doesn't provide
-		// a library function for this as it strongly encourages parameterized queries
 		return value.Replace("'", "''");
 	}
 

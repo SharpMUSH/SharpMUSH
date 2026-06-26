@@ -39,7 +39,6 @@ public class ListFunctionUnitTests
 	[Arguments("iter(1|2|3,add(%i0,1),|,-)", "2-3-4")]
 	[Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%i1)),|,-)", "2 3 4-3 4 5-4 5 6")]
 	// TODO: %iL does not evaluate to the correct value.
-	// [Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%iL)),|,-)", "2 3 4-3 4 5-4 5 6")]
 	[Arguments("iter(1 2 3,##)", "1 2 3")]
 	[Arguments("iter(1 2 3,add(##,1))", "2 3 4")]
 	[Arguments("iter(1|2|3,##,|,-)", "1-2-3")]
@@ -49,8 +48,6 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	// Fixed: %$0 is for switches, not iterations.
-	// Using inum(0) for iteration number, which is the correct function.
 	// TODO: Implement #@ token as shorthand for inum(0).
 	[Test, NotInParallel]
 	[Arguments("iter(5 6 7,inum(0))", "1 2 3")]
@@ -79,29 +76,20 @@ public class ListFunctionUnitTests
 	[Test, NotInParallel]
 	public async Task SimpleAnsiTest()
 	{
-		// Simple test to check if ansi works at all
 		var result = (await Parser.FunctionParse(MModule.single("ansi(hr,test)")))?.Message!;
 
-		// Should contain ANSI escape codes
 		await Assert.That(result.ToString()).Contains("\u001b[");
 	}
 
 	[Test, NotInParallel]
 	public async Task IterationWithAnsiMarkup()
 	{
-		// Test case from issue: iter should preserve ANSI markup
-		// The problem: iter(lnum(1,5),%i0 --> [ansi(hr,%i0)],,%r)
-		// loses the ANSI markup
-
-		// First, test the working equivalent as a baseline
 		var expected = (await Parser.FunctionParse(
 			MModule.single("1 --> [ansi(hr,1)]%r2 --> [ansi(hr,2)]%r3 --> [ansi(hr,3)]%r4 --> [ansi(hr,4)]%r5 --> [ansi(hr,5)]")))?.Message!;
 
-		// Now test the iter version - it should produce the same result
 		var actual = (await Parser.FunctionParse(
 			MModule.single("iter(lnum(1,5),%i0 --> [ansi(hr,%i0)],,%r)")))?.Message!;
 
-		// Compare using the same method as other Markup tests
 		var resultBytes = System.Text.Encoding.Unicode.GetBytes(actual.ToString());
 		var expectedBytes = System.Text.Encoding.Unicode.GetBytes(expected.ToString());
 
@@ -193,8 +181,6 @@ public class ListFunctionUnitTests
 	// Penn sort.3/sort.4 — ANSI-aware sort. SharpMUSH preserves ANSI through sort
 	// (superior behavior), so sorted output retains formatting. PennMUSH strips it.
 	// Comparison is correct in both — only output representation differs.
-	// [Arguments("sort(a [ansi(h,a)] b [ansi(h,b)] c d [ansi(h,e)] f)", "a a b b c d e f")]
-	// [Arguments("sort(3 [ansi(h,1)] [ansi(y,7)] 5)", "1 3 5 7")]
 	public async Task Sort(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -310,7 +296,6 @@ public class ListFunctionUnitTests
 	[Test]
 	[Arguments("setunion(a b c,c d e)", "a b c d e")]
 	[Arguments("setunion(1 2 3,2 3 4)", "1 2 3 4")]
-	// Penn setunion space-delimited tests
 	[Arguments("setunion(,)", "")]
 	[Arguments("setunion(a,)", "a")]
 	[Arguments("setunion(,a)", "a")]
@@ -321,7 +306,6 @@ public class ListFunctionUnitTests
 	[Arguments("setunion(a b,b)", "a b")]
 	[Arguments("setunion(b a,b)", "a b")]
 	[Arguments("setunion(c a b a,a b c c)", "a b c")]
-	// Whitespace trimming tests
 	[Arguments("setunion( ,)", "")]
 	[Arguments("setunion(, )", "")]
 	[Arguments("setunion(a a a, )", "a")]
@@ -332,7 +316,7 @@ public class ListFunctionUnitTests
 	[Arguments("setunion( b a ,b)", "a b")]
 	[Arguments("setunion( b a , b)", "a b")]
 	[Arguments("setunion( c a b a,a b c c)", "a b c")]
-	// Numeric comparison mode tests (default sort is mudname/alpha — 0 ≠ 0.0 lexicographically)
+	// default sort is mudname/alpha — 0 ≠ 0.0 lexicographically
 	[Arguments("setunion(0 1 2, 0.0 1.0 2.0)", "0 1 2")]
 	[Arguments("setunion(0.0 1.0 2.0, 0 1 2)", "0.0 1.0 2.0")]
 	[Arguments("setunion(0 1 2, 0.0 1.0 2,,i)", "0 0.0 1 1.0 2")]
@@ -340,7 +324,6 @@ public class ListFunctionUnitTests
 	[Arguments("setunion(0 1 2, 0.0 1.0 2,,f)", "0 1 2")]
 	[Arguments("setunion(0 1 2, 0.0 1.0 2.3,,n)", "0 1 2")]
 	[Arguments("setunion(0 1 2, 0.0 1.0 2.3,,f)", "0 1 2 2.3")]
-	// Penn setunion ! delimiter tests
 	[Arguments("setunion(,,!)", "")]
 	[Arguments("setunion(!,,!)", "")]
 	[Arguments("setunion(,!,!)", "")]
@@ -376,7 +359,6 @@ public class ListFunctionUnitTests
 	[Test]
 	[Arguments("setinter(a b c,c d e)", "c")]
 	[Arguments("setinter(1 2 3,2 3 4)", "2 3")]
-	// Penn setinter space-delimited tests
 	[Arguments("setinter(,)", "")]
 	[Arguments("setinter(a,)", "")]
 	[Arguments("setinter(,a)", "")]
@@ -387,7 +369,6 @@ public class ListFunctionUnitTests
 	[Arguments("setinter(a b,b)", "b")]
 	[Arguments("setinter(b a,b)", "b")]
 	[Arguments("setinter(c a b a,a b c c)", "a b c")]
-	// Whitespace trimming tests
 	[Arguments("setinter( ,)", "")]
 	[Arguments("setinter(, )", "")]
 	[Arguments("setinter(a a a, )", "")]
@@ -398,7 +379,6 @@ public class ListFunctionUnitTests
 	[Arguments("setinter( b a ,b)", "b")]
 	[Arguments("setinter( b a , b)", "b")]
 	[Arguments("setinter( c a b a,a b c c)", "a b c")]
-	// Penn setinter ! delimiter tests
 	[Arguments("setinter(,,!)", "")]
 	[Arguments("setinter(!,,!)", "")]
 	[Arguments("setinter(,!,!)", "")]
@@ -429,7 +409,6 @@ public class ListFunctionUnitTests
 	[Test]
 	[Arguments("setdiff(a b c,c d e)", "a b")]
 	[Arguments("setdiff(1 2 3,2 3 4)", "1")]
-	// Penn setdiff space-delimited tests
 	[Arguments("setdiff(,)", "")]
 	[Arguments("setdiff(a,)", "a")]
 	[Arguments("setdiff(,a)", "")]
@@ -440,7 +419,6 @@ public class ListFunctionUnitTests
 	[Arguments("setdiff(a b,b)", "a")]
 	[Arguments("setdiff(b a,b)", "a")]
 	[Arguments("setdiff(c a b a,a b c c)", "")]
-	// Whitespace trimming tests
 	[Arguments("setdiff( ,)", "")]
 	[Arguments("setdiff(, )", "")]
 	[Arguments("setdiff(a a a, )", "a")]
@@ -451,7 +429,6 @@ public class ListFunctionUnitTests
 	[Arguments("setdiff( b a ,b)", "a")]
 	[Arguments("setdiff( b a , b)", "a")]
 	[Arguments("setdiff( c a b a,a b c c)", "")]
-	// Penn setdiff ! delimiter tests
 	[Arguments("setdiff(,,!)", "")]
 	[Arguments("setdiff(!,,!)", "")]
 	[Arguments("setdiff(,!,!)", "")]
@@ -520,7 +497,6 @@ public class ListFunctionUnitTests
 	public async Task RandomExtract(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
-		// Random result, just check it's not empty
 		await Assert.That(result.ToString()).IsNotEmpty();
 	}
 
@@ -529,7 +505,6 @@ public class ListFunctionUnitTests
 	public async Task RandomWord(string function)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
-		// Random result, just check it's not empty
 		await Assert.That(result.ToString()).IsNotEmpty();
 	}
 
@@ -693,7 +668,6 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("setsymdiff(a b c,b c d)", "a d")]
-	// Penn setsymdiff space-delimited tests
 	[Arguments("setsymdiff(,)", "")]
 	[Arguments("setsymdiff(a,)", "a")]
 	[Arguments("setsymdiff(,a)", "a")]
@@ -706,7 +680,6 @@ public class ListFunctionUnitTests
 	[Arguments("setsymdiff(c a b a,a b c c)", "")]
 	[Arguments("setsymdiff(a b,c d)", "a b c d")]
 	[Arguments("setsymdiff(a b c,c d)", "a b d")]
-	// Whitespace trimming tests
 	[Arguments("setsymdiff( ,)", "")]
 	[Arguments("setsymdiff(, )", "")]
 	[Arguments("setsymdiff(a a a, )", "a")]
@@ -717,7 +690,6 @@ public class ListFunctionUnitTests
 	[Arguments("setsymdiff( b a ,b)", "a")]
 	[Arguments("setsymdiff( b a , b)", "a")]
 	[Arguments("setsymdiff( c a b a,a b c c)", "")]
-	// Penn setsymdiff ! delimiter tests
 	[Arguments("setsymdiff(,,!)", "")]
 	[Arguments("setsymdiff(!,,!)", "")]
 	[Arguments("setsymdiff(,!,!)", "")]

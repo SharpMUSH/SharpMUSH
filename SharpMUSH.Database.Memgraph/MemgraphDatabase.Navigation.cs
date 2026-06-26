@@ -225,7 +225,6 @@ CREATE (src)-[:AT_LOCATION]->(dest)
 
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
 		{
-			// Skip self — already yielded above
 			if (item.Object().DBRef == obj) continue;
 			yield return item.WithRoomOption();
 		}
@@ -242,7 +241,6 @@ CREATE (src)-[:AT_LOCATION]->(dest)
 
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
 		{
-			// Skip self — already yielded above
 			if (item.Object().DBRef == obj.Object().DBRef) continue;
 			yield return item.WithRoomOption();
 		}

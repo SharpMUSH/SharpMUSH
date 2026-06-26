@@ -8,11 +8,7 @@ namespace SharpMUSH.Tests.Wiki;
 /// </summary>
 public class WikiMarkdigPipelineTests
 {
-	// ── Helpers ──────────────────────────────────────────────────────────────
-
 	private static WikiMarkdigPipeline Pipeline() => new();
-
-	// ── RenderToHtml — basic Markdown ─────────────────────────────────────────
 
 	[Test]
 	public async Task RenderToHtml_Bold_ProducesStrongTag()
@@ -57,14 +53,11 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(html).Contains("<code>foo()</code>");
 	}
 
-	// ── RenderToHtml — wiki-link syntax ──────────────────────────────────────
-
 	[Test]
 	public async Task RenderToHtml_SimpleWikiLink_ProducesAnchorWithSlugHref()
 	{
 		var html = Pipeline().RenderToHtml("See [[Getting Started]] for details.");
 
-		// Slug derived: "getting_started"
 		await Assert.That(html).Contains("href=\"/wiki/main/general/getting_started\"");
 		await Assert.That(html).Contains("Getting Started");
 	}
@@ -81,7 +74,6 @@ public class WikiMarkdigPipelineTests
 	[Test]
 	public async Task RenderToHtml_WikiLinkWithNamespacePrefix_IncludesPrefixInHref()
 	{
-		// [[Help:Getting Started]] → href="/wiki/help/general/getting_started"
 		var html = Pipeline().RenderToHtml("[[Help:Getting Started]]");
 
 		await Assert.That(html).Contains("href=\"/wiki/help/general/getting_started\"");
@@ -103,8 +95,6 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(html).Contains("href=\"/wiki/main/general/page_a\"");
 		await Assert.That(html).Contains("href=\"/wiki/main/general/page_b\"");
 	}
-
-	// ── RenderToHtml — security (DisableHtml) ────────────────────────────────
 
 	[Test]
 	public async Task RenderToHtml_RawHtmlTag_IsEscapedNotPassedThrough()
@@ -134,8 +124,6 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(html).DoesNotContain("<b onclick=");
 	}
 
-	// ── RenderToHtml — null guard ─────────────────────────────────────────────
-
 	[Test]
 	public async Task RenderToHtml_NullInput_ThrowsArgumentNullException()
 	{
@@ -144,8 +132,6 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(() => pipe.RenderToHtml(null!))
 			.Throws<ArgumentNullException>();
 	}
-
-	// ── ExtractPlainText ──────────────────────────────────────────────────────
 
 	[Test]
 	public async Task ExtractPlainText_Bold_StripsMdSyntax()
@@ -204,8 +190,6 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(text).DoesNotContain("#");
 	}
 
-	// ── WikiLinkExtension — named contract tests ───────────────────────────────
-
 	/// <summary>
 	/// [[My Page]] → &lt;a href="/wiki/main/general/my_page"&gt;My Page&lt;/a&gt;
 	/// </summary>
@@ -227,10 +211,8 @@ public class WikiMarkdigPipelineTests
 	[Test]
 	public async Task WikiLinkExtension_MissingPage_EmitsRedlinkClass()
 	{
-		// Build a minimal Markdig pipeline with the WikiLinkExtension registered.
 		var pipeline = WikiMarkdigPipeline.CreatePipeline();
 
-		// Build an AST manually: a document containing a paragraph with one WikiLinkInline.
 		var doc = new Markdig.Syntax.MarkdownDocument();
 		var para = new Markdig.Syntax.ParagraphBlock();
 		var inline = new Markdig.Syntax.Inlines.ContainerInline();
@@ -244,7 +226,6 @@ public class WikiMarkdigPipelineTests
 		para.Inline = inline;
 		doc.Add(para);
 
-		// Render the pre-built AST through Markdig's HTML renderer.
 		var writer = new System.IO.StringWriter();
 		var renderer = new Markdig.Renderers.HtmlRenderer(writer);
 		pipeline.Setup(renderer);
@@ -279,8 +260,6 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(html).DoesNotContain("my_page</"); // slug must not appear as link text
 	}
 
-	// ── Thread safety ─────────────────────────────────────────────────────────
-
 	[Test]
 	public async Task RenderToHtml_ConcurrentCalls_AllReturnValidHtml()
 	{
@@ -294,8 +273,6 @@ public class WikiMarkdigPipelineTests
 		foreach (var html in results)
 			await Assert.That(html).Contains("<a href=");
 	}
-
-	// ── Image handling ────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Standard Markdown image syntax should produce an &lt;img&gt; with
@@ -324,8 +301,6 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(html).Contains("loading=\"lazy\"");
 		await Assert.That(html).Contains("class=\"wiki-img\"");
 	}
-
-	// ── Image sizing via generic attributes ───────────────────────────────────
 
 	/// <summary>
 	/// <c>![alt](src){width=200 height=100}</c> emits width/height on the img tag.
@@ -397,8 +372,6 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(html).Contains("class=\"wiki-img\"");
 		await Assert.That(html).DoesNotContain("onload");
 	}
-
-	// ── Wiki directive containers (WikiDirectiveExtension) ───────────────────
 
 	/// <summary>::: category lore → placeholder div with data attributes.</summary>
 	[Test]
@@ -499,8 +472,6 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(text).DoesNotContain("category");
 		await Assert.That(text).DoesNotContain("lore");
 	}
-
-	// ── Mermaid diagrams (Markdig Diagrams extension) ────────────────────────
 
 	/// <summary>
 	/// A ```mermaid fenced block is emitted as a &lt;pre class="mermaid"&gt; (Markdig's

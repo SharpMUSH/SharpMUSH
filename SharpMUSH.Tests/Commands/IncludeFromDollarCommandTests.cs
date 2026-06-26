@@ -96,7 +96,6 @@ public class IncludeFromDollarCommandTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "IncQReg");
 		var token = $"qcmd{tag}";
 
-		// ';'-separated: set %q0, then @include a reader of %q0.
 		await Cmd($"&READ_Q_{tag} {obj}=@pemit %#=QVAL_{tag}:%q0");
 		await Cmd($"&DO_Q_{tag} {obj}=${token}:think [setq(0,qreg_{tag})];@include %!/READ_Q_{tag}");
 

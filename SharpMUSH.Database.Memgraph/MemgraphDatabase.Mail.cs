@@ -125,13 +125,11 @@ content: $content, subject: $subject})
 			subject = MModule.serialize(mail.Subject)
 		}, cancellationToken);
 
-		// RECEIVED_MAIL: Player -> Mail
 		await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: $toKey}), (m:Mail {key: $mailKey})
 CREATE (p)-[:RECEIVED_MAIL]->(m)
 """, new { toKey, mailKey }, cancellationToken);
 
-		// SENT_MAIL: Mail -> Object (sender's Object node)
 		await ExecuteWithRetryAsync("""
 MATCH (m:Mail {key: $mailKey}), (o:Object {key: $fromKey})
 CREATE (m)-[:SENT_MAIL]->(o)

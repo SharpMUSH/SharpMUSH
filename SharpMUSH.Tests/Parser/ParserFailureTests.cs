@@ -16,15 +16,11 @@ public class ParserFailureTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
-	// ─── Helper ────────────────────────────────────────────────────────────────
-
 	private async Task<string?> Eval(string input)
 	{
 		var result = await Parser.FunctionParse(MModule.single(input));
 		return result?.Message?.ToString();
 	}
-
-	// ─── Missing closing parenthesis ───────────────────────────────────────────
 
 	/// <summary>Baseline: what does the parser return for a valid expression?</summary>
 	[Test]
@@ -63,8 +59,6 @@ public class ParserFailureTests
 		await Assert.That(result).IsEqualTo("#-1 PARSER FAILURE: Expected ) or , at end of expression");
 	}
 
-	// ─── Missing closing bracket ───────────────────────────────────────────────
-
 	/// <summary>
 	/// Unclosed bracket evaluation expression. The bracket opener starts an
 	/// evaluated sub-expression, but the closing ']' is missing.
@@ -86,8 +80,6 @@ public class ParserFailureTests
 		await Assert.That(result).Contains("Expected ]");
 	}
 
-	// ─── Missing closing brace ─────────────────────────────────────────────────
-
 	/// <summary>
 	/// Unclosed brace pattern. Braces suppress function evaluation inside them.
 	/// </summary>
@@ -108,8 +100,6 @@ public class ParserFailureTests
 		await Assert.That(result).Contains("Expected }");
 	}
 
-	// ─── Multiple errors ───────────────────────────────────────────────────────
-
 	/// <summary>Two separate unclosed function calls in one expression.</summary>
 	[Test]
 	public async Task MultipleErrors_TwoUnclosedFunctions_CurrentBehavior()
@@ -117,8 +107,6 @@ public class ParserFailureTests
 		var result = await Eval("add(strcat(a,b)");
 		await Assert.That(result).IsEqualTo("#-1 PARSER FAILURE: Expected ) or , at end of expression");
 	}
-
-	// ─── Position accuracy (via ValidateAndGetErrors) ──────────────────────────
 
 	/// <summary>
 	/// Verifies the error column reported by the parser for a missing ')' at a
@@ -177,8 +165,6 @@ public class ParserFailureTests
 		await Assert.That(failureMsg).Contains(")");
 	}
 
-	// ─── Command parse modes ───────────────────────────────────────────────────
-
 	/// <summary>Missing paren in a CommandEqSplit context (e.g., &ATTR obj=add(1,2).</summary>
 	[Test]
 	public async Task MissingParen_InEqSplit_CurrentBehavior()
@@ -187,8 +173,6 @@ public class ParserFailureTests
 			MModule.single("some=add(1,2"), ParseType.CommandEqSplit);
 		await Assert.That(errors).IsNotEmpty();
 	}
-
-	// ─── Edge cases ────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// A trailing ')' with no matching opener is rewritten to OTHER by the

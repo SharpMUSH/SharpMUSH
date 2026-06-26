@@ -9,7 +9,6 @@
 <PageTitle>Diff: @Slug — SharpMUSH</PageTitle>
 
 <div class="wikidiff">
-    @* Header — prototype SectionTitle: back link + kicker + title + mode toggle *@
     <a class="wikidiff-back" href="@($"/wiki/{Ns}/{Category}/{Slug}/history")">
         <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:14px;" /> Revision history
     </a>
@@ -43,7 +42,6 @@
     }
     else
     {
-        @* Rev summary cards *@
         <div class="wikidiff-revbar">
             <div class="wikidiff-revcard">
                 <div class="wikidiff-revdate">@_fromRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
@@ -56,7 +54,6 @@
             </div>
         </div>
 
-        @* Stat line *@
         <div class="wikidiff-stats">
             <span class="wikidiff-stat-add">+@_addedCount added</span>
             <span class="wikidiff-stat-del">−@_removedCount removed</span>
@@ -68,7 +65,6 @@
 
         @if (_mode == "split")
         {
-            @* Side-by-side *@
             <div class="wikidiff-body wikidiff-split">
                 <div class="wikidiff-split-col">
                     <div class="wikidiff-split-head wikidiff-split-head--old">Rev @_fromRev.RevisionNumber — Old</div>
@@ -82,7 +78,6 @@
         }
         else
         {
-            @* Unified diff *@
             <div class="wikidiff-body">
                 @foreach (var hunk in _hunks)
                 {
@@ -159,7 +154,6 @@
         color: var(--text);
     }
 
-    /* Unified / Side-by-side pill segment */
     .wikidiff-toggle {
         display: flex;
         gap: 4px;
@@ -185,7 +179,6 @@
         color: var(--accent);
     }
 
-    /* Rev summary cards */
     .wikidiff-revbar {
         display: flex;
         align-items: center;
@@ -218,7 +211,6 @@
         text-overflow: ellipsis;
     }
 
-    /* Stat line */
     .wikidiff-stats {
         display: flex;
         align-items: center;
@@ -232,7 +224,6 @@
     .wikidiff-stat-del { color: #e57373; }
     .wikidiff-stat-sum { color: var(--text-faint); }
 
-    /* Diff body */
     .wikidiff-body {
         background: var(--surface-3);
         border: 1px solid var(--border-soft);
@@ -286,7 +277,6 @@
         font-size: 11.5px;
     }
 
-    /* Split view */
     .wikidiff-split {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -380,7 +370,6 @@
         _addedCount = 0;
         _removedCount = 0;
 
-        // Simple LCS-based unified diff — context = 3 lines
         var dp = ComputeLcs(oldLines, newLines);
         var changes = BuildChanges(oldLines, newLines, dp);
 
@@ -394,7 +383,6 @@
             var ch = changes[i];
             if (ch.Kind == DiffLineKind.Context)
             {
-                // Determine if we're near a change
                 var nearChange = false;
                 for (var j = Math.Max(0, i - ctx); j <= Math.Min(changes.Count - 1, i + ctx); j++)
                     if (changes[j].Kind != DiffLineKind.Context) { nearChange = true; break; }

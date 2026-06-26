@@ -79,10 +79,8 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 
 		var markerObjid = install.AsT0.CreatedObjects["marker"];
 
-		// AINSTALL ran on first install: it set its own marker attribute.
 		await Assert.That(await ReadAttributeAsync(markerObjid, "INSTALL_MARKER")).IsEqualTo("installed");
 
-		// AUPDATE did NOT run on a first install.
 		await Assert.That(await ReadAttributeAsync(markerObjid, "UPDATE_MARKER")).IsEqualTo("");
 
 		await Assert.That((await Installer.UninstallAsync(pkg)).IsT0).IsTrue();
@@ -132,7 +130,6 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 		var pkg = UniquePackageId();
 		var answers = new Dictionary<string, string>();
 
-		// First install, then prove the upgrade path.
 		var install = await Installer.ApplyAsync(Parse(Manifest(pkg, "1.0")), new PackageApplyRequest(Source(pkg), answers, []));
 		await Assert.That(install.IsT0).IsTrue();
 		var markerObjid = install.AsT0.CreatedObjects["marker"];
@@ -146,10 +143,8 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 		await Assert.That(upgrade.IsT0).IsTrue();
 		await Assert.That(upgrade.AsT0.CreatedObjects.Count).IsEqualTo(0);
 
-		// AUPDATE ran on the upgrade.
 		await Assert.That(await ReadAttributeAsync(markerObjid, "UPDATE_MARKER")).IsEqualTo("updated");
 
-		// AINSTALL did NOT re-run (the cleared marker stays cleared).
 		await Assert.That(await ReadAttributeAsync(markerObjid, "INSTALL_MARKER")).IsEqualTo("");
 
 		await Assert.That((await Installer.UninstallAsync(pkg)).IsT0).IsTrue();

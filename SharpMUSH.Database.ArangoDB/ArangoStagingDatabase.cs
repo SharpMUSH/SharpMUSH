@@ -46,14 +46,12 @@ public sealed class ArangoStagingDatabase : ArangoDatabase, IStagingDatabase
 		if (IsPromoted) throw new InvalidOperationException("Staging already promoted.");
 		if (_aborted) throw new InvalidOperationException("Staging was aborted.");
 
-		// Drop the original live database
 		if (await _arangoContext.Database.ExistAsync(_originalHandle))
 		{
 			await _arangoContext.Database.DropAsync(_originalHandle);
 			_logger.LogInformation("Dropped original database: {OriginalDb}", (string)_originalHandle);
 		}
 
-		// Swap the ArangoHandle on the live database instance to point at staging
 		SwapHandleOnLive();
 
 		IsPromoted = true;
@@ -85,7 +83,6 @@ public sealed class ArangoStagingDatabase : ArangoDatabase, IStagingDatabase
 		if (IsPromoted || _aborted) return;
 		_aborted = true;
 
-		// Drop the staging database — the live one is untouched
 		if (await _arangoContext.Database.ExistAsync(_stagingHandle))
 		{
 			await _arangoContext.Database.DropAsync(_stagingHandle);

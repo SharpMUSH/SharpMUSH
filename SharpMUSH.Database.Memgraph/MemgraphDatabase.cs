@@ -424,7 +424,6 @@ RETURN ownerObj, ownerTyped
 			yield return MapNodeToFlag(record["f"].As<INode>());
 		}
 
-		// Append the implicit type flag
 		yield return new SharpObjectFlag
 		{
 			Name = type,
@@ -616,7 +615,6 @@ RETURN o, p
 		}
 		else
 		{
-			// parentId is an Object ID — find the typed node first
 			var objKey = ExtractKey(parentId);
 			var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, ct);
 			if (typedResult.Result.Count == 0) yield break;
@@ -663,7 +661,6 @@ RETURN o, p
 		int startKey;
 		if (parentId.StartsWith("Attribute"))
 		{
-			// For attribute, find all descendants
 			var attrKey = ExtractKeyString(parentId);
 			var result = await ExecuteWithRetryAsync("MATCH (start:Attribute {key: $key})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute) RETURN child", new { key = attrKey }, ct);
 			foreach (var record in result.Result)

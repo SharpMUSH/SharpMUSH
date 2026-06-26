@@ -6,7 +6,6 @@
 <PageTitle>@Loc["Characters"] — SharpMUSH</PageTitle>
 
 <div class="char-page">
-    @* Header — prototype SectionTitle: kicker count + title *@
     <div class="char-header">
         <div>
             <div class="char-kicker">@HeaderKicker</div>
@@ -118,7 +117,6 @@
         _loading = false;
     }
 
-    // Hue from the name's first character, mirroring the prototype's AV_HUES avatar palette.
     private static int AvatarHue(string name)
     {
         var code = name.Length > 0 ? name[0] : 'A';

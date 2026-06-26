@@ -193,7 +193,6 @@ public class ParserPerformanceDiagnosticTests
 		Log($"Timestamp:          {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
 		Log("");
 
-		// ─── Phase 1: LL Mode (default production mode) ───
 		Log("═══════════════════════════════════════════════════════════════════════════════");
 		Log("  PHASE 1: LL MODE (Full LL(*) Prediction — Default Production Mode)");
 		Log("═══════════════════════════════════════════════════════════════════════════════");
@@ -224,7 +223,6 @@ public class ParserPerformanceDiagnosticTests
 		Log($"  Context sensitivities:      {llTotalContextSensitivities}");
 		Log("");
 
-		// ─── Phase 2: SLL Mode (Strong LL — faster, less powerful) ───
 		Log("═══════════════════════════════════════════════════════════════════════════════");
 		Log("  PHASE 2: SLL MODE (Strong LL Prediction — Faster Alternative)");
 		Log("═══════════════════════════════════════════════════════════════════════════════");
@@ -255,7 +253,6 @@ public class ParserPerformanceDiagnosticTests
 		Log($"  Context sensitivities:      {sllTotalContextSensitivities}");
 		Log("");
 
-		// ─── Phase 3: Comparison ───
 		Log("═══════════════════════════════════════════════════════════════════════════════");
 		Log("  PHASE 3: SLL vs LL COMPARISON");
 		Log("═══════════════════════════════════════════════════════════════════════════════");
@@ -267,7 +264,6 @@ public class ParserPerformanceDiagnosticTests
 		Log($"  SLL speedup factor:         {speedup:F2}x");
 		Log("");
 
-		// Compare syntax errors
 		var llOnlyErrors = llTotalSyntaxErrors - sllTotalSyntaxErrors;
 		var sllOnlyErrors = sllTotalSyntaxErrors - llTotalSyntaxErrors;
 		Log($"  LL syntax errors:           {llTotalSyntaxErrors}");
@@ -278,7 +274,6 @@ public class ParserPerformanceDiagnosticTests
 		else
 			Log($"  ⚠️ Error difference: LL has {llOnlyErrors} more, SLL has {sllOnlyErrors} more");
 
-		// Check for lines where results differ
 		var differingLines = new List<int>();
 		for (var i = 0; i < llResults.Count; i++)
 		{
@@ -304,7 +299,6 @@ public class ParserPerformanceDiagnosticTests
 		}
 		Log("");
 
-		// ─── Phase 4: Full Context Scan Details (LL mode) ───
 		Log("═══════════════════════════════════════════════════════════════════════════════");
 		Log("  PHASE 4: FULL CONTEXT SCAN DETAILS (LL MODE)");
 		Log("═══════════════════════════════════════════════════════════════════════════════");
@@ -316,7 +310,6 @@ public class ParserPerformanceDiagnosticTests
 		}
 		else
 		{
-			// Aggregate by rule
 			var fullContextByRule = llResults
 				.SelectMany(r => r.FullContextAttempts.Select(f => (r.LineNumber, f.Rule)))
 				.GroupBy(x => x.Rule)
@@ -333,7 +326,6 @@ public class ParserPerformanceDiagnosticTests
 			}
 			Log("");
 
-			// Show top 10 lines with most full context scans
 			var topLines = llResults
 				.Where(r => r.FullContextScanCount > 0)
 				.OrderByDescending(r => r.FullContextScanCount)
@@ -350,7 +342,6 @@ public class ParserPerformanceDiagnosticTests
 		}
 		Log("");
 
-		// ─── Phase 5: Ambiguity Details (LL mode) ───
 		Log("═══════════════════════════════════════════════════════════════════════════════");
 		Log("  PHASE 5: AMBIGUITY DETAILS (LL MODE)");
 		Log("═══════════════════════════════════════════════════════════════════════════════");
@@ -380,7 +371,6 @@ public class ParserPerformanceDiagnosticTests
 		}
 		Log("");
 
-		// ─── Phase 6: Context Sensitivity Details (LL mode) ───
 		Log("═══════════════════════════════════════════════════════════════════════════════");
 		Log("  PHASE 6: CONTEXT SENSITIVITY DETAILS (LL MODE)");
 		Log("═══════════════════════════════════════════════════════════════════════════════");
@@ -410,7 +400,6 @@ public class ParserPerformanceDiagnosticTests
 		}
 		Log("");
 
-		// ─── Phase 7: Summary and Recommendations ───
 		Log("═══════════════════════════════════════════════════════════════════════════════");
 		Log("  PHASE 7: SUMMARY AND RECOMMENDATIONS");
 		Log("═══════════════════════════════════════════════════════════════════════════════");
@@ -458,7 +447,6 @@ public class ParserPerformanceDiagnosticTests
 		Log("  The scans are O(n) in the size of the ambiguous region and are typically");
 		Log("  very fast for the short token spans involved in MUSH code.");
 
-		// Write output to file
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, DiagnosticsOutputFileName);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"\n[DIAGNOSTICS] Full output written to: {outputPath}");

@@ -133,13 +133,11 @@ public class AntlrParseTreeDiagnosticTests
 		sb.AppendLine($"PREDICTION MODE: {predictionMode}");
 		sb.AppendLine(new string('─', 70));
 
-// Step 1: Lex the input
 		var inputStream = new AntlrInputStream(input);
 		var lexer = new SharpMUSHLexer(inputStream);
 		var tokenStream = new CommonTokenStream(lexer);
 		tokenStream.Fill();
 
-// Show token stream
 		sb.AppendLine("TOKEN STREAM:");
 		var tokens = tokenStream.GetTokens();
 		for (var i = 0; i < tokens.Count; i++)
@@ -152,20 +150,16 @@ public class AntlrParseTreeDiagnosticTests
 
 		sb.AppendLine();
 
-// Step 2: Parse with diagnostic listeners
 		tokenStream.Seek(0);
 		var parser = new SharpMUSHParser(tokenStream);
 		parser.Interpreter.PredictionMode = predictionMode;
 
-// Add our custom Full Context Scan listener
 		var fullContextListener = new FullContextScanListener();
 		parser.RemoveErrorListeners();
 		parser.AddErrorListener(fullContextListener);
 
-// Add ANTLR4's built-in DiagnosticErrorListener for verbose reporting
 		parser.AddErrorListener(new DiagnosticErrorListener(false));
 
-// Add trace capture
 		var traceCapture = new TraceCapture(parser);
 		parser.AddParseListener(traceCapture);
 
@@ -174,16 +168,13 @@ public class AntlrParseTreeDiagnosticTests
 
 		var parseTree = context.ToStringTree(parser);
 
-// Step 3: Output parse tree
 		sb.AppendLine("PARSE TREE (ToStringTree):");
 		sb.AppendLine($"  {parseTree}");
 		sb.AppendLine();
 
-// Step 4: Output rule trace
 		sb.AppendLine("RULE TRACE (entry/exit with text):");
 		sb.AppendLine(traceCapture.Output.ToString());
 
-// Step 5: Report Full Context Scans
 		sb.AppendLine("FULL CONTEXT SCAN REPORT:");
 		if (fullContextListener.FullContextAttempts.Count == 0)
 		{
@@ -203,7 +194,6 @@ public class AntlrParseTreeDiagnosticTests
 
 		sb.AppendLine();
 
-// Step 6: Report ambiguities
 		sb.AppendLine("AMBIGUITY REPORT:");
 		if (fullContextListener.Ambiguities.Count == 0)
 		{
@@ -218,7 +208,6 @@ public class AntlrParseTreeDiagnosticTests
 
 		sb.AppendLine();
 
-// Step 7: Report context sensitivities
 		sb.AppendLine("CONTEXT SENSITIVITY REPORT:");
 		if (fullContextListener.ContextSensitivities.Count == 0)
 		{
@@ -233,7 +222,6 @@ public class AntlrParseTreeDiagnosticTests
 
 		sb.AppendLine();
 
-// Step 8: Report REAL syntax errors (not DiagnosticErrorListener reports)
 		sb.AppendLine("REAL SYNTAX ERRORS:");
 		if (fullContextListener.RealSyntaxErrors.Count == 0)
 		{
@@ -246,7 +234,6 @@ public class AntlrParseTreeDiagnosticTests
 				sb.AppendLine(error);
 		}
 
-// Step 9: Show parser state
 		sb.AppendLine();
 		sb.AppendLine("PARSER STATE AFTER PARSE:");
 		sb.AppendLine($"  inFunction    = {parser.inFunction}");
@@ -294,27 +281,22 @@ public class AntlrParseTreeDiagnosticTests
 		Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
 		Console.WriteLine();
 
-// Test with LL mode (default production mode)
 		Console.WriteLine("═══════════════════ LL MODE ═══════════════════");
 		var llResult = ParseAndDiagnose(input, PredictionMode.LL);
 		Console.WriteLine(llResult.FullOutput);
 
-// Test with SLL mode (faster, to check if it produces same result)
 		Console.WriteLine("═══════════════════ SLL MODE ═══════════════════");
 		var sllResult = ParseAndDiagnose(input, PredictionMode.SLL);
 		Console.WriteLine(sllResult.FullOutput);
 
-// Assertions
 		await Assert.That(llResult.RealSyntaxErrorCount).IsEqualTo(0)
 			.Because("Should parse without syntax errors - extra ) becomes generic text");
 		await Assert.That(sllResult.RealSyntaxErrorCount).IsEqualTo(0)
 			.Because("Should parse without syntax errors in SLL mode too");
 
-// Parse trees should be identical in both modes
 		await Assert.That(llResult.ParseTree).IsEqualTo(sllResult.ParseTree)
 			.Because("LL and SLL modes should produce identical parse trees for this input");
 
-// Verify the parse tree contains function rule nodes for ulambda and lit
 		await Assert.That(llResult.ParseTree).Contains("function")
 			.Because("parse tree should contain function rules for ulambda and lit");
 	}
@@ -448,7 +430,6 @@ public class AntlrParseTreeDiagnosticTests
 			Console.WriteLine();
 		}
 
-// Summary
 		Console.WriteLine(new string('═', 70));
 		Console.WriteLine("SUMMARY");
 		Console.WriteLine(new string('═', 70));
@@ -470,7 +451,6 @@ public class AntlrParseTreeDiagnosticTests
 			Console.WriteLine("context-sensitive parsing works.");
 		}
 
-// The key assertion: NO syntax errors
 		await Assert.That(syntaxErrorInputs).IsEmpty()
 			.Because("All common MUSH patterns should parse without syntax errors");
 	}
@@ -508,7 +488,6 @@ public class AntlrParseTreeDiagnosticTests
 			var sllResult = ParseAndDiagnose(input, PredictionMode.SLL);
 			Console.WriteLine(sllResult.FullOutput);
 
-// Assertions: no real syntax errors, parse trees match
 			await Assert.That(llResult.RealSyntaxErrorCount).IsEqualTo(0)
 				.Because($"'{input}' should parse without syntax errors - extra ) become generic text");
 			await Assert.That(sllResult.RealSyntaxErrorCount).IsEqualTo(0)
@@ -541,19 +520,15 @@ public class AntlrParseTreeDiagnosticTests
 // Minimal reproduction patterns — from simplest to line 57 fragment
 		var testCases = new[]
 		{
-// Pattern 1: Simplest — bare paren before bracket with function
 			("(x [name(%0)])", "Bare paren before bracket function"),
 
-// Pattern 2: Like BBS — text before bracket with function
 			("(text [name(%0)] more)", "Bare paren text with bracket function"),
 
-// Pattern 3: Multiple bracket functions after bare paren
 			("(text [add(1,2)] and [name(%0)])", "Two bracket functions after bare paren"),
 
-// Pattern 4: Nested function inside bracket after bare paren
 			("(text [ifelse(1,name(%0),name(%1))])", "Nested function in bracket after bare paren"),
 
-// Pattern 5: BBS line 57 fragment — the actual failing content
+			// BBS line 57 fragment — the actual failing content
 			("(New BB message ([member(v(groups),%1)]/%2) posted to '[name(%1)]' by [ifelse(hasattr(%1,anonymous),get(%1/anonymous),name(%0))]: %3)",
 				"BBS line 57 paren section"),
 		};
@@ -580,7 +555,6 @@ public class AntlrParseTreeDiagnosticTests
 			Console.WriteLine();
 		}
 
-// Summary
 		Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
 		Console.WriteLine("║  SUMMARY                                                           ║");
 		Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
@@ -594,7 +568,6 @@ public class AntlrParseTreeDiagnosticTests
 			Console.WriteLine();
 		}
 
-// Document which patterns fail
 		var failingCount = results.Count(r => r.Result.RealSyntaxErrorCount > 0);
 		Console.WriteLine($"Patterns with errors: {failingCount}/{results.Count}");
 		Console.WriteLine();

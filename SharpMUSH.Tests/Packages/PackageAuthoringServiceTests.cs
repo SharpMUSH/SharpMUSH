@@ -24,7 +24,6 @@ public class PackageAuthoringServiceTests
 	[Test, NotInParallel]
 	public async Task ScanAndExport_RoundTripsToValidManifest()
 	{
-		// Build two live things: one references the other AND an external object (#0).
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
 		var pm = pmNode.Match(p => p, _ => null!, _ => null!, _ => null!);
 		var location = pmNode.Match<AnySharpContainer>(p => p, _ => null!, _ => null!, t => t);
@@ -41,14 +40,12 @@ public class PackageAuthoringServiceTests
 		var coreObjid = core.DBRef.ToString();
 		var globalObjid = global.DBRef.ToString();
 
-		// ── Scan: external #0 is reported; in-selection refs are not ──────────
 		var scan = await Authoring.ScanAsync([coreObjid, globalObjid]);
 		await Assert.That(scan.IsT0).IsTrue();
 		await Assert.That(scan.AsT0.Objects.Count).IsEqualTo(2);
 		var external = scan.AsT0.ExternalDbrefs.Single();
 		await Assert.That(external.Dbref).IsEqualTo("#0");
 
-		// ── Export with #0 classified as $room_zero ────────────────────────────
 		var result = await Authoring.ExportAsync(new PackageAuthoringRequest(
 			"authored-pkg", "1.0.0", "Exported from live objects", "MIT", ["Tester"],
 			[
@@ -61,12 +58,10 @@ public class PackageAuthoringServiceTests
 		await Assert.That(result.IsT0).IsTrue();
 		var yaml = result.AsT0;
 
-		// No raw dbrefs survive; symbolic refs do.
 		await Assert.That(yaml).Contains("{{auth_core}}");
 		await Assert.That(yaml).Contains("{{$room_zero}}");
 		await Assert.That(yaml).DoesNotContain($"#{coreDbref.Number}/FN_FMT");
 
-		// And it re-parses as a fully valid manifest.
 		var parsed = new PackageManifestService().ParseManifest(yaml);
 		await Assert.That(parsed.IsT0).IsTrue();
 		await Assert.That(parsed.AsT0.Manifest.Name).IsEqualTo("authored-pkg");
@@ -78,8 +73,6 @@ public class PackageAuthoringServiceTests
 	[Test, NotInParallel]
 	public async Task FullRoundTrip_AuthorExportInstall_VerifyState()
 	{
-		// The Testing-checklist capstone: author from live objects → export →
-		// install the exported manifest as a NEW package → verify the clone.
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
 		var pm = pmNode.Match(p => p, _ => null!, _ => null!, _ => null!);
 		var location = pmNode.Match<AnySharpContainer>(p => p, _ => null!, _ => null!, t => t);
@@ -96,7 +89,6 @@ public class PackageAuthoringServiceTests
 			new Dictionary<string, AuthoringConfigureClassification>()));
 		await Assert.That(exported.IsT0).IsTrue();
 
-		// Install the exported manifest — a brand-new object gets created.
 		var manifest = new PackageManifestService().ParseManifest(exported.AsT0).AsT0.Manifest;
 		var installer = WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 		var applied = await installer.ApplyAsync(manifest, new PackageApplyRequest(

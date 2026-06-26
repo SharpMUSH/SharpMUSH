@@ -14,7 +14,6 @@ public static partial class SchemaBuilder
 	{
 		var schema = new ConfigurationSchema();
 
-		// Build from reflection + attributes
 		schema.Properties = BuildPropertiesFromReflection(options);
 		schema.Categories = BuildCategoriesFromProperties(schema.Properties);
 
@@ -28,7 +27,6 @@ public static partial class SchemaBuilder
 
 		foreach (var prop in properties.Values)
 		{
-			// Ensure category exists
 			if (!categories.ContainsKey(prop.Category))
 			{
 				categories[prop.Category] = new CategoryMetadata
@@ -43,7 +41,6 @@ public static partial class SchemaBuilder
 				groups[prop.Category] = new HashSet<GroupMetadata>(new GroupMetadataComparer());
 			}
 
-			// Add group if specified
 			if (!string.IsNullOrEmpty(prop.Group))
 			{
 				groups[prop.Category].Add(new GroupMetadata
@@ -55,7 +52,6 @@ public static partial class SchemaBuilder
 			}
 		}
 
-		// Convert groups to lists and sort
 		foreach (var category in categories.Values)
 		{
 			if (groups.TryGetValue(category.Name, out var categoryGroups))
@@ -72,7 +68,6 @@ public static partial class SchemaBuilder
 		var properties = new Dictionary<string, PropertyMetadata>();
 		var optionsType = typeof(SharpMUSHOptions);
 
-		// Iterate through all option category properties (Net, Chat, Limit, etc.)
 		foreach (var categoryProp in optionsType.GetProperties())
 		{
 			var categoryValue = categoryProp.GetValue(options);
@@ -81,10 +76,8 @@ public static partial class SchemaBuilder
 			var categoryType = categoryProp.PropertyType;
 			var categoryName = categoryProp.Name;
 
-			// Get the default instance to extract default values
 			var defaultInstance = GetDefaultInstance(categoryType);
 
-			// Iterate through properties in this category
 			foreach (var prop in categoryType.GetProperties())
 			{
 				var attr = prop.GetCustomAttribute<SharpConfigAttribute>();
@@ -123,20 +116,17 @@ public static partial class SchemaBuilder
 	{
 		if (string.IsNullOrEmpty(name)) return name;
 
-		// Handle snake_case: mud_name -> Mud Name, player_creation -> Player Creation
 		if (name.Contains('_'))
 		{
 			return string.Join(" ", name.Split('_')
 				.Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
 		}
 
-		// Handle all-lowercase words: logins -> Logins, guests -> Guests
 		if (name.All(char.IsLower))
 		{
 			return char.ToUpper(name[0]) + name.Substring(1);
 		}
 
-		// Handle PascalCase/camelCase: MudName -> Mud Name, mudName -> Mud Name
 		return PascalCaseSplitRegex().Replace(name, " $1").Trim();
 	}
 
@@ -144,12 +134,10 @@ public static partial class SchemaBuilder
 	{
 		try
 		{
-			// Try to create instance with default constructor
 			return Activator.CreateInstance(type);
 		}
 		catch
 		{
-			// If no default constructor, return null
 			return null;
 		}
 	}
@@ -196,13 +184,11 @@ public static partial class SchemaBuilder
 
 	private static string FormatCategoryDisplayName(string categoryName)
 	{
-		// Remove "Options" suffix if present
 		if (categoryName.EndsWith("Options"))
 		{
 			categoryName = categoryName.Substring(0, categoryName.Length - 7);
 		}
 
-		// Add spaces before capital letters
 		return PascalCaseSplitRegex().Replace(categoryName, " $1").Trim();
 	}
 

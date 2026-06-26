@@ -28,7 +28,6 @@ public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
 			.MinimumLevel.Override("SurrealDb", LogEventLevel.Error)
 			.MinimumLevel.Override("NATS", LogEventLevel.Error);
 
-		// Only write to console if explicitly enabled via environment variable
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
 		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) &&
 													 (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
@@ -41,14 +40,10 @@ public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
 		var log = logConfig.CreateLogger();
 		Log.Logger = log;
 
-		// Set environment variables for ConnectionServer to use test infrastructure
 		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
 		builder.ConfigureTestServices(sc =>
 		{
-			// Additional service overrides for testing can go here
-			// For example, you could substitute the IConnectionServerService
-			// or other dependencies if needed for specific tests
 		});
 	}
 }

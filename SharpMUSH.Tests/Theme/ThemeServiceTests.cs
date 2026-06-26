@@ -18,8 +18,6 @@ public class ThemeServiceTests
 		return js;
 	}
 
-	// ── Static default preset ────────────────────────────────────────────────
-
 	[Test]
 	public async Task GetDefaultPreset_ReturnsPresetWithExpectedName()
 	{
@@ -33,8 +31,6 @@ public class ThemeServiceTests
 		var preset = ThemeService.GetDefaultPreset();
 		await Assert.That(preset.IsDarkMode).IsTrue();
 	}
-
-	// ── Initial state ────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task GetCurrentThemeAsync_BeforeInit_ReturnsDefault()
@@ -60,8 +56,6 @@ public class ThemeServiceTests
 		var names = presets.Select(p => p.Name).ToList();
 		await Assert.That(names.Contains("Phosphor")).IsTrue();
 	}
-
-	// ── ApplyPresetAsync ──────────────────────────────────────────────────────
 
 	[Test]
 	public async Task ApplyPresetAsync_KnownPreset_ChangesCurrentTheme()
@@ -108,8 +102,6 @@ public class ThemeServiceTests
 		await Assert.That(eventFired).IsTrue();
 	}
 
-	// ── InitializeAsync ──────────────────────────────────────────────────────
-
 	[Test]
 	public async Task InitializeAsync_WithStoredValidPreset_RestoresThatPreset()
 	{
@@ -136,8 +128,6 @@ public class ThemeServiceTests
 		var current = await svc.GetCurrentThemeAsync();
 		await Assert.That(current.Name).IsEqualTo("Phosphor");
 	}
-
-	// ── ToMudTheme extension ─────────────────────────────────────────────────
 
 	[Test]
 	public async Task ToMudTheme_ReturnsNonNullTheme()

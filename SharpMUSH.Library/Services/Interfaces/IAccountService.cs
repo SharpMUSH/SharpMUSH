@@ -54,7 +54,6 @@ public interface IAccountService
 
 	ValueTask<SharpAccount?> GetByEmailAsync(string email, CancellationToken ct = default);
 
-	// Admin operations
 	ValueTask<OneOf<Success, Error<string>>> DisableAccountAsync(string accountId, CancellationToken ct = default);
 	ValueTask DeleteAccountAsync(string accountId, CancellationToken ct = default);
 }

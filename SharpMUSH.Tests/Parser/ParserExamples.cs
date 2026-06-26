@@ -20,11 +20,11 @@ public class ParserExamples
 
 		var testCases = new[]
 		{
-			"add(1,2)",           // Valid
-			"add(1,2",            // Missing closing paren
-			"test[unclosed",      // Missing closing bracket  
-			"func{missing",       // Missing closing brace
-			"nested(call[test)",  // Mismatched delimiters
+			"add(1,2)",
+			"add(1,2",
+			"test[unclosed",
+			"func{missing",
+			"nested(call[test)",
 		};
 
 		foreach (var testCase in testCases)
@@ -47,7 +47,6 @@ public class ParserExamples
 			}
 		}
 
-		// Just verify we got through the test
 		await Assert.That(testCases.Length).IsGreaterThan(0);
 	}
 

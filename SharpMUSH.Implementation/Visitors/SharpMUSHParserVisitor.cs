@@ -152,7 +152,6 @@ public class SharpMUSHParserVisitor(
 		{
 			case 0:
 				return null;
-			// Fast path for single child — no aggregation needed
 			case 1:
 			{
 				var only = node.GetChild(0);
@@ -160,7 +159,6 @@ public class SharpMUSHParserVisitor(
 			}
 		}
 
-		// Collect non-null child results to batch-merge at the end
 		var results = new List<CallState>(childCount);
 
 		for (var i = 0; i < childCount; i++)
@@ -169,7 +167,6 @@ public class SharpMUSHParserVisitor(
 			var childResult = child is null ? null : await child.Accept(this);
 			if (childResult is not null) results.Add(childResult);
 
-			// Halt evaluation if a limit has been exceeded
 			if (parser.CurrentState.LimitExceeded?.IsExceeded == true) break;
 		}
 
@@ -219,7 +216,6 @@ public class SharpMUSHParserVisitor(
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static CallState BatchMergeResults(List<CallState> results)
 	{
-		// Single pass: find the first result with Arguments
 		var argumentSource = results.FirstOrDefault(x => x.Arguments is not null);
 
 		if (argumentSource is not null)
@@ -471,38 +467,32 @@ public class SharpMUSHParserVisitor(
 
 			List<CallState> refinedArguments;
 
-			// Check function-level permissions
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-			// Check if function is restricted to Wizards
 			if (attribute.Flags.HasFlag(FunctionFlags.WizardOnly) && !await executor.IsWizard())
 			{
 				success = false;
 				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
-			// Check if function is restricted to Admins (Wizards or higher)
 			if (attribute.Flags.HasFlag(FunctionFlags.AdminOnly) && !await executor.IsWizard())
 			{
 				success = false;
 				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
-			// Check if function is restricted to God
 			if (attribute.Flags.HasFlag(FunctionFlags.GodOnly) && !executor.IsGod())
 			{
 				success = false;
 				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
-			// Check if function cannot be used by Guests
 			if (attribute.Flags.HasFlag(FunctionFlags.NoGuest) && await executor.IsGuest())
 			{
 				success = false;
 				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
-			// Check if function cannot be used by Gagged players
 			if (attribute.Flags.HasFlag(FunctionFlags.NoGagged) && await executor.HasFlag("GAGGED"))
 			{
 				success = false;
@@ -835,7 +825,6 @@ public class SharpMUSHParserVisitor(
 				ConnectionService.IncrementMetadata(parser.CurrentState.Handle.Value, "CommandCount");
 			}
 
-			// Step 1: Check if it's a SOCKET command
 			// Use AlternativeLookup for zero-allocation case-insensitive lookup
 			var socketCommandPattern = parser.CommandLibrary.Where(x
 				=> parser.CurrentState.Handle is not null
@@ -861,13 +850,11 @@ public class SharpMUSHParserVisitor(
 				return new None();
 			}
 
-			// Step 2a: Check for the channel single-token command.
 			if (command[..1] == Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
 			{
 				var channels = Mediator.CreateStream(new GetChannelListQuery());
 				var check = command[1..];
 
-				// Collect potential channel matches
 				var exactMatches = new List<SharpChannel>();
 				var partialMatches = new List<SharpChannel>();
 
@@ -884,7 +871,6 @@ public class SharpMUSHParserVisitor(
 					}
 				}
 
-				// Prefer exact matches over partial matches
 				SharpChannel? channel = null;
 				if (exactMatches.Count == 1)
 				{
@@ -896,7 +882,6 @@ public class SharpMUSHParserVisitor(
 				}
 				else if (exactMatches.Count > 1)
 				{
-					// Multiple exact matches - ambiguous
 					if (parser.CurrentState.Handle is not null)
 					{
 						await NotifyService.NotifyLocalized(parser.CurrentState.Handle.Value,
@@ -907,7 +892,6 @@ public class SharpMUSHParserVisitor(
 				}
 				else if (partialMatches.Count > 1)
 				{
-					// Multiple partial matches - ambiguous
 					if (parser.CurrentState.Handle is not null)
 					{
 						await NotifyService.NotifyLocalized(parser.CurrentState.Handle.Value,
@@ -924,7 +908,6 @@ public class SharpMUSHParserVisitor(
 				}
 			}
 
-			// Step 2b: Check for a single-token command
 			var singleTokenCommandPattern = parser.CommandLibrary.Where(x
 				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase)
 				   && x.Value.IsSystem
@@ -936,7 +919,6 @@ public class SharpMUSHParserVisitor(
 			}
 
 			var executorObject = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
-			// Step 3: Check exit Aliases
 			if (executorObject.IsContent)
 			{
 				var locate = await LocateService.Locate(
@@ -1031,7 +1013,6 @@ public class SharpMUSHParserVisitor(
 			// Step 11: Zone Master User Defined Commands
 			if (executorObject.IsContent)
 			{
-				// Get the location's zone
 				var executorLocation = await executorObject.AsContent.Location();
 				var locationZone =
 					await executorLocation.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
@@ -1220,13 +1201,11 @@ public class SharpMUSHParserVisitor(
 	private async ValueTask<Option<CallState>> HandleStandardAttributeCommand(
 		IMUSHCodeParser prs, MString src, CommandContext context, string rootCommand)
 	{
-		// Root command must start with @ to be a standard attribute command
 		if (!rootCommand.StartsWith('@'))
 		{
 			return new None();
 		}
 
-		// Strip the @ prefix and get the potential attribute name
 		var potentialAttrName = rootCommand[1..].ToUpperInvariant();
 		if (string.IsNullOrEmpty(potentialAttrName))
 		{
@@ -1246,17 +1225,14 @@ public class SharpMUSHParserVisitor(
 			.ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase) // Alphabetical tiebreaker
 			.FirstOrDefaultAsync();
 
-		// No matching standard attribute found
 		if (matchedEntry == null)
 		{
 			return new None();
 		}
 
-		// Parse arguments: expecting "object = value" format
 		var evalString = context.evaluationString();
 		if (evalString == null || evalString.IsEmpty)
 		{
-			// No arguments - show current value (query mode)
 			var handle = prs.CurrentState.Handle;
 			if (handle.HasValue)
 			{
@@ -1267,18 +1243,15 @@ public class SharpMUSHParserVisitor(
 			return CallState.Empty;
 		}
 
-		// Get the full text from the evaluation string (includes the command name)
 		var fullText = MModule.substring(
 			evalString.Start.StartIndex,
 			evalString.Stop.StopIndex - evalString.Start.StartIndex + 1,
 			src);
 
-		// Skip past the command name to get just the arguments
 		// The command format is: @attrname object=value
 		var spaceIndex = MModule.indexOf(fullText, " ");
 		if (spaceIndex == -1)
 		{
-			// No space, no arguments - show usage
 			var handle = prs.CurrentState.Handle;
 			if (handle.HasValue)
 			{
@@ -1289,21 +1262,17 @@ public class SharpMUSHParserVisitor(
 			return CallState.Empty;
 		}
 
-		// Get the arguments (everything after the space following the command)
 		var argsText = MModule.substring(spaceIndex + 1, MModule.getLength(fullText) - spaceIndex - 1, fullText);
 		var argsPlainText = argsText.ToPlainText();
 
-		// Split on = to get object and value
 		var equalsIndex = argsPlainText.IndexOf('=');
 		if (equalsIndex < 0)
 		{
 			// No = sign - clear/unset the attribute
 			var objectToClear = argsPlainText.Trim();
 
-			// Get executor for permission checks and notifications
 			var clearExecutor = (await prs.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 
-			// Locate the target object
 			var clearLocateResult = await LocateService.LocateAndNotifyIfInvalid(
 				prs, clearExecutor, clearExecutor, objectToClear, LocateFlags.All);
 
@@ -1314,12 +1283,10 @@ public class SharpMUSHParserVisitor(
 
 			var clearTargetObject = clearLocateResult.WithoutError().WithoutNone();
 
-			// Clear the attribute
 			var clearResult = await AttributeService.ClearAttributeAsync(
 				clearExecutor, clearTargetObject, matchedEntry.Name,
 				IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
 
-			// Notify the user of the result
 			var clearHandle = prs.CurrentState.Handle;
 
 			if (!clearHandle.HasValue)
@@ -1346,17 +1313,14 @@ public class SharpMUSHParserVisitor(
 			? argsPlainText[(equalsIndex + 1)..]
 			: string.Empty;
 
-		// Get the MString value from argsText (preserve markup)
-		// The equals sign is at equalsIndex in argsText, so value starts at equalsIndex + 1
+		// Preserve markup: the equals sign is at equalsIndex in argsText, so value starts at equalsIndex + 1
 		var valueLength = MModule.getLength(argsText) - equalsIndex - 1;
 		var valueMString = valueLength > 0
 			? MModule.substring(equalsIndex + 1, valueLength, argsText)
 			: MModule.single(valuePart);
 
-		// Get executor for permission checks and notifications
 		var executor = (await prs.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 
-		// Locate the target object
 		var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 			prs, executor, executor, objectPart, LocateFlags.All);
 
@@ -1371,11 +1335,9 @@ public class SharpMUSHParserVisitor(
 		// This allows @desc me=[add(1,2)] to store "3" rather than "[add(1,2)]"
 		var evaluatedValue = (await prs.FunctionParse(valueMString))?.Message ?? valueMString;
 
-		// Set the attribute
 		var setResult = await AttributeService.SetAttributeAsync(
 			executor, targetObject, matchedEntry.Name, evaluatedValue);
 
-		// Notify the user of the result
 		var handle2 = prs.CurrentState.Handle;
 
 		if (!handle2.HasValue)
@@ -1409,17 +1371,13 @@ public class SharpMUSHParserVisitor(
 			return new None();
 		}
 
-		// Hook execution integration
-		// Get executor for permission checks in hooks
 		var executor = await prs.CurrentState.ExecutorObject(Mediator);
 
-		// Prepare named registers for hooks
 		var namedRegisters = new Dictionary<string, MString>
 		{
 			["ARGS"] = src // The entire argument string before evaluation
 		};
 
-		// Parse switches for named register
 		var switchArray = switches.ToArray().AsReadOnly();
 		if (switchArray.Count > 0)
 		{
@@ -1429,7 +1387,6 @@ public class SharpMUSHParserVisitor(
 		// For EQSPLIT commands, populate LS/RS registers
 		if (libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit))
 		{
-			// Parse the source to find the = sign
 			var sourceText = src.ToString();
 			var equalsIndex = sourceText.IndexOf('=');
 			if (equalsIndex >= 0)
@@ -1448,7 +1405,6 @@ public class SharpMUSHParserVisitor(
 			namedRegisters["LS"] = src;
 		}
 
-		// Populate LSAx and RSAx registers based on arguments
 		for (int i = 0; i < arguments.Count; i++)
 		{
 			namedRegisters[$"LSA{i + 1}"] = arguments[i].Message ?? MModule.empty();
@@ -1456,10 +1412,8 @@ public class SharpMUSHParserVisitor(
 
 		namedRegisters["LSAC"] = MModule.single(arguments.Count.ToString());
 
-		// The src already contains the full command string (command name + switches + args)
 		var commandWithSwitches = src;
 
-		// Execute hooks with the new parser state that includes named registers
 		return await prs.With(state =>
 			{
 				// Save caller's numbered arguments (%0-%9) before overwriting with command's own args.
@@ -1468,7 +1422,6 @@ public class SharpMUSHParserVisitor(
 					.Where(x => int.TryParse(x.Key, out _))
 					.ToDictionary(x => x.Key, x => x.Value);
 
-				// Add named registers to the register stack
 				var newState = state with
 				{
 					Command = rootCommand,
@@ -1481,7 +1434,6 @@ public class SharpMUSHParserVisitor(
 					CallerArguments = callerArgs.Count > 0 ? callerArgs : null
 				};
 
-				// Push named registers onto the stack
 				foreach (var (key, value) in namedRegisters)
 				{
 					newState.AddRegister(key, value);
@@ -1684,7 +1636,6 @@ public class SharpMUSHParserVisitor(
 		AnyOptionalSharpObject executor,
 		CommandHook hook, Option<MString> commandInput = null!)
 	{
-		// Get the target object
 		var targetObject = await Mediator.Send(new GetObjectNodeQuery(hook.TargetObject));
 		if (targetObject.IsNone)
 		{
@@ -1718,7 +1669,6 @@ public class SharpMUSHParserVisitor(
 			// For OVERRIDE and EXTEND hooks, perform $-command matching
 			if (hook.HookType is "OVERRIDE" or "EXTEND" && commandInput.IsSome())
 			{
-				// Try to match $-commands on the hook object
 				var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
 					localParser,
 					new[] { targetObj }.ToAsyncEnumerable(),
@@ -1729,20 +1679,15 @@ public class SharpMUSHParserVisitor(
 					return new None();
 				}
 
-				// Execute the matched $-command
 				var matches = matchResult.AsValue();
 				if (hook.Inline)
 				{
-					// For inline execution, execute immediately
 					return await HandleUserDefinedCommandInline(localParser, matches);
 				}
 				else
 				{
-					// For queued execution, use normal handler
 					return await HandleUserDefinedCommand(localParser, matches);
 				}
-
-				// No match found for override/extend
 			}
 
 			// For other hook types (IGNORE, BEFORE, AFTER), execute the attribute directly
@@ -1782,7 +1727,6 @@ public class SharpMUSHParserVisitor(
 		IMUSHCodeParser prs,
 		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
 	{
-		// Execute inline - directly parse and return result instead of queueing
 		foreach (var (obj, attr, arguments) in matches)
 		{
 			var newParser = prs.Push(prs.CurrentState with
@@ -1795,13 +1739,11 @@ public class SharpMUSHParserVisitor(
 				Caller = prs.CurrentState.Executor
 			});
 
-			// Execute inline by parsing the command list directly
 			var commandList = MModule.substring(
 				attr.CommandListIndex!.Value,
 				MModule.getLength(attr.Value) - attr.CommandListIndex!.Value,
 				attr.Value);
 
-			// Parse and execute the command list synchronously
 			await newParser.CommandListParse(commandList);
 		}
 

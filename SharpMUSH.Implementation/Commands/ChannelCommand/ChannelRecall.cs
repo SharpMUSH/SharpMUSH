@@ -36,7 +36,6 @@ public static class ChannelRecall
 			}
 		}
 
-		// Retrieve messages from the recall buffer
 		var messages = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, linesInt))
 			.Select(x => x.Message)
 			.ToListAsync();

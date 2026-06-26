@@ -54,7 +54,6 @@ public class ZoneRendererEmptyTests : ZoneRendererTestBase
 			.Add(c => c.Zone, WidgetZone.TopBar)
 			.Add(c => c.Layout, layout));
 
-		// Nothing rendered — no DynamicComponent or MudAlert
 		await Assert.That(cut.Markup.Trim()).IsEqualTo(string.Empty);
 	}
 }
@@ -133,9 +132,7 @@ public class ZoneRendererErrorBoundaryTests : ZoneRendererTestBase
 			.Add(c => c.Zone, WidgetZone.TopBar)
 			.Add(c => c.Layout, LayoutWith("Thrower", "Healthy")));
 
-		// The healthy widget still rendered despite its sibling crashing …
 		await Assert.That(cut.Markup).Contains("healthy-widget-content");
-		// … and the crash surfaced as the per-widget error alert, naming the widget.
 		await Assert.That(cut.Markup).Contains("failed to render");
 		await Assert.That(cut.Markup).Contains("Thrower");
 	}
@@ -145,7 +142,6 @@ public class ZoneRendererErrorBoundaryTests : ZoneRendererTestBase
 	{
 		Services.AddSingleton(RegistryWith(("Thrower", typeof(ThrowingWidget))));
 
-		// Rendering must not throw — the ErrorBoundary contains the failure.
 		var cut = Render<ZoneRenderer>(p => p
 			.Add(c => c.Zone, WidgetZone.TopBar)
 			.Add(c => c.Layout, LayoutWith("Thrower")));
@@ -159,7 +155,6 @@ public class ZoneRendererUnknownWidgetTests : ZoneRendererTestBase
 	[TUnit.Core.Test]
 	public async Task ZoneRenderer_UnknownWidgetName_RendersNothing()
 	{
-		// Registry returns null for any lookup → descriptor not found → DynamicComponent not emitted
 		Services.AddSingleton(EmptyRegistry());
 
 		var layout = new LayoutConfiguration(

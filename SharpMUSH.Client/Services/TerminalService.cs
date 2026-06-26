@@ -22,7 +22,6 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	private long? _myPort;
 	private string? _serverUri;
 
-	// Pending correlated request: (request-id, completion source, accumulated lines)
 	private (string ReqId, TaskCompletionSource<string[]> Tcs, List<string> Buffer)? _pending;
 	private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
 

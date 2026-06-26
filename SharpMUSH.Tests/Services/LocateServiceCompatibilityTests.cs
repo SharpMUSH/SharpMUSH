@@ -30,7 +30,6 @@ public class LocateServiceCompatibilityTests
 
 	public LocateServiceCompatibilityTests()
 	{
-		// Load a real SharpMUSHOptions from the test config file
 		var configFile = Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 		var options = ReadPennMushConfig.Create(configFile);
 
@@ -45,7 +44,6 @@ public class LocateServiceCompatibilityTests
 	[Skip("Skip for now")]
 	public async Task LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits()
 	{
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
@@ -53,11 +51,9 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		// Mock GetContentsQuery for any container to return our thing
 		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -71,11 +67,9 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act
 		var result = await _locateService.Locate(_parser, player, player, "TestObject",
 			LocateFlags.MatchObjectsInLookerInventory);
 
-		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
@@ -87,7 +81,6 @@ public class LocateServiceCompatibilityTests
 		// Before fix: (!cur.IsExit && !string.Equals(...)) would match everything that DIDN'T match
 		// After fix: (!cur.IsExit && string.Equals(...)) only matches exact names
 
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
@@ -95,11 +88,9 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		// Mock GetContentsQuery for any container to return our thing
 		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -113,11 +104,9 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act
 		var result = await _locateService.Locate(_parser, player, player, "WrongName",
 			LocateFlags.MatchObjectsInLookerInventory);
 
-		// Assert
 		await Assert.That(result.IsNone).IsTrue();
 	}
 
@@ -126,11 +115,9 @@ public class LocateServiceCompatibilityTests
 	{
 		// This test verifies the fix for the NoTypePreference check
 
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -144,16 +131,13 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act - with NoTypePreference, should not match "me"
 		// Use PreferLockPass to prevent auto-adding flags that would interfere
 		var resultWithNoTypePreference = await _locateService.Locate(_parser, player, player, "me",
 			LocateFlags.NoTypePreference | LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 
-		// Act - without NoTypePreference, should match "me"
 		var resultWithoutNoTypePreference = await _locateService.Locate(_parser, player, player, "me",
 			LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 
-		// Assert
 		await Assert.That(resultWithNoTypePreference.IsNone || resultWithNoTypePreference.IsError).IsTrue();
 		await Assert.That(resultWithoutNoTypePreference.IsValid()).IsTrue();
 		await Assert.That(resultWithoutNoTypePreference.WithoutError().WithoutNone().Object().DBRef)
@@ -163,14 +147,12 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_PermissionCheck_ShouldUseCorrectLogic()
 	{
-		// Arrange
 		var room1 = _factory.CreateRoom(1001, "Room 1");
 		var room2 = _factory.CreateRoom(1002, "Room 2");
 
 		var player = _factory.CreatePlayer(1, "TestPlayer", room1);
 		var target = _factory.CreatePlayer(2, "TargetPlayer", room2);
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -212,18 +194,13 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_HereMatching_ShouldMatchCurrentLocation()
 	{
-		// Test MatchHereForLookerLocation flag with "here" keyword
-
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 
-		// Mock GetContentsQuery to return empty (not needed for "here")
 		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo =>
 				ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(AsyncEnumerable.Empty<AnySharpContent>()));
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -237,11 +214,9 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act - should match "here" to player's location
 		var result = await _locateService.Locate(_parser, player, player, "here",
 			LocateFlags.MatchHereForLookerLocation | LocateFlags.PreferLockPass);
 
-		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().IsRoom).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(999);
@@ -250,18 +225,13 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_AbsoluteDBRef_ShouldMatchByDBRef()
 	{
-		// Test AbsoluteMatch flag with #dbref format
-
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var thing = _factory.CreateThing(42, "TestObject", sharedRoom, player);
 
-		// Mock GetObjectNodeQuery to return the thing when queried by dbref
 		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 42), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<AnyOptionalSharpObject>(thing.WithNoneOption()));
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -275,11 +245,9 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act - search by absolute DBRef #42
 		var result = await _locateService.Locate(_parser, player, player, "#42",
 			LocateFlags.AbsoluteMatch | LocateFlags.PreferLockPass);
 
-		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(42, 0));
 	}
@@ -289,21 +257,16 @@ public class LocateServiceCompatibilityTests
 	[Skip("Skip for now")]
 	public async Task LocateMatch_TypePreference_ShouldRespectPlayerPreference()
 	{
-		// Test PlayersPreference flag prioritizes players over other objects
-
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var targetPlayer = _factory.CreatePlayer(5, "Bob", sharedRoom);
-		var thing = _factory.CreateThing(6, "Bob", sharedRoom, player); // Same name as player
+		var thing = _factory.CreateThing(6, "Bob", sharedRoom, player);
 
 		var contents = new[] { thing, targetPlayer }.ToAsyncEnumerable();
 
-		// Mock GetContentsQuery to return both objects  
 		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
 
-		// Mock GetPlayerQuery to return the player when searching with *
 		var playerResults = new[] { targetPlayer.AsPlayer }.ToAsyncEnumerable();
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => q.Name.Contains("Bob")), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(playerResults));
@@ -318,12 +281,10 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act - with PlayersPreference and wildcard, should match player #5 not thing #6
 		var result = await _locateService.Locate(_parser, player, player, "*Bob",
 			LocateFlags.PlayersPreference | LocateFlags.MatchOptionalWildCardForPlayerName |
 			LocateFlags.MatchObjectsInLookerInventory | LocateFlags.PreferLockPass);
 
-		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().IsPlayer).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
@@ -335,7 +296,6 @@ public class LocateServiceCompatibilityTests
 		// Directly tests that Match_List does prefix matching (PennMUSH string_match() behavior).
 		// Verifies that "Long" correctly locates an object named "LongObjectName" using prefix matching.
 
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var thing = _factory.CreateThing(3, "LongObjectName", sharedRoom, player);
@@ -346,7 +306,6 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		// Act - directly exercise Match_List with a prefix
 		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
 			_parser,
 			list,
@@ -370,9 +329,6 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_PartialMatching_ShouldNotFindObjectByPrefixWhenNoPartialMatchesSet()
 	{
-		// Ensure that the NoPartialMatches flag prevents prefix matching in Match_List.
-
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var thing = _factory.CreateThing(3, "LongObjectName", sharedRoom, player);
@@ -383,7 +339,6 @@ public class LocateServiceCompatibilityTests
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
-		// Act - NoPartialMatches disables prefix matching
 		var (bestMatch, _, curr, _, _, _) = await _locateService.Match_List(
 			_parser,
 			list,
@@ -397,7 +352,6 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.NoTypePreference | LocateFlags.NoPartialMatches,
 			"Long");
 
-		// Assert - no match expected
 		await Assert.That(curr).IsEqualTo(0);
 		await Assert.That(bestMatch.IsNone).IsTrue();
 	}
@@ -405,22 +359,18 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_PartialMatching_ShouldFindObjectByPartialName()
 	{
-		// Test partial name matching (non-exit objects).
 		// PennMUSH string_match() uses a prefix comparison, so searching for "Long"
 		// must locate an object named "LongObjectName".
 
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var thing = _factory.CreateThing(3, "LongObjectName", sharedRoom, player);
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		// Mock GetContentsQuery
 		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -447,20 +397,15 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_NoPartialMatches_ShouldRequireExactMatch()
 	{
-		// Test NoPartialMatches flag requires exact name match
-
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var thing = _factory.CreateThing(3, "LongObjectName", sharedRoom, player);
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		// Mock GetContentsQuery
 		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -474,11 +419,9 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act - with NoPartialMatches, partial name "Long" should NOT match "LongObjectName"
 		var result = await _locateService.Locate(_parser, player, player, "Long",
 			LocateFlags.MatchObjectsInLookerInventory | LocateFlags.NoPartialMatches);
 
-		// Assert - should not find the object
 		await Assert.That(result.IsNone).IsTrue();
 	}
 
@@ -487,20 +430,15 @@ public class LocateServiceCompatibilityTests
 	[Skip("Skip for now")]
 	public async Task LocateMatch_MatchObjectsInLookerLocation_ShouldFindObjectsInSameRoom()
 	{
-		// Test MatchObjectsInLookerLocation flag finds objects in the same room
-
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var thing = _factory.CreateThing(3, "RoomObject", sharedRoom, player);
 
 		var contents = new[] { thing, player }.ToAsyncEnumerable();
 
-		// Mock GetContentsQuery for the room to return objects in it
 		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -514,11 +452,9 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act - search for object in same location
 		var result = await _locateService.Locate(_parser, player, player, "RoomObject",
 			LocateFlags.MatchObjectsInLookerLocation);
 
-		// Assert
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
@@ -528,10 +464,8 @@ public class LocateServiceCompatibilityTests
 	[Skip("Skip for now")]
 	public async Task LocateMatch_MultipleObjects_ShouldHandleAmbiguousMatches()
 	{
-		// Test that when multiple objects have the same name, Locate handles ambiguity properly
 		// In PennMUSH, this typically returns an ambiguous match or the first/last depending on flags
 
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var thing1 = _factory.CreateThing(3, "Coin", sharedRoom, player);
@@ -539,11 +473,9 @@ public class LocateServiceCompatibilityTests
 
 		var contents = new[] { thing1, thing2 }.ToAsyncEnumerable();
 
-		// Mock GetContentsQuery
 		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -557,11 +489,9 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act - search for "Coin" with UseLastIfAmbiguous flag
 		var resultLast = await _locateService.Locate(_parser, player, player, "Coin",
 			LocateFlags.MatchObjectsInLookerInventory | LocateFlags.UseLastIfAmbiguous);
 
-		// Assert - with UseLastIfAmbiguous should return the second one (thing2 with key 4)
 		await Assert.That(resultLast.IsValid()).IsTrue();
 		await Assert.That(resultLast.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(4);
 	}
@@ -569,20 +499,15 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_VisibilityCheck_ShouldRespectCanExamine()
 	{
-		// Test that objects are only returned if executor can examine them
-
-		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var thing = _factory.CreateThing(3, "HiddenObject", sharedRoom, player);
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		// Mock GetContentsQuery
 		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -591,39 +516,32 @@ public class LocateServiceCompatibilityTests
 
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
 				Arg.Any<IPermissionService.InteractType>())
-			.Returns(false); // Can't interact/see
+			.Returns(false);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-			.Returns(false); // Can't examine
+			.Returns(false);
 
-		// Act - should not find the object due to visibility restrictions
 		var result = await _locateService.Locate(_parser, player, player, "HiddenObject",
 			LocateFlags.MatchObjectsInLookerInventory);
 
-		// Assert - should return None (not visible)
 		await Assert.That(result.IsNone).IsTrue();
 	}
 
 	[Test]
 	public async Task LocateMatch_DifferentExecutorAndLooker_ShouldCheckNearby()
 	{
-		// Test that when executor != looker and not nearby, permission check triggers
-
-		// Arrange
 		var room1 = _factory.CreateRoom(1001, "Room 1");
 		var room2 = _factory.CreateRoom(1002, "Room 2");
 
 		var looker = _factory.CreatePlayer(1, "LookerPlayer", room1);
-		var executor = _factory.CreatePlayer(2, "ExecutorPlayer", room2); // Different room
+		var executor = _factory.CreatePlayer(2, "ExecutorPlayer", room2);
 		var thing = _factory.CreateThing(3, "TestObject", room1, looker);
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		// Mock GetContentsQuery
 		_mediator.Send(Arg.Is<GetContentsQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<IAsyncEnumerable<AnySharpContent>?>(contents.Select(x => x.AsContent)));
 
-		// Mock GetPlayerQuery to return empty results
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
@@ -631,7 +549,6 @@ public class LocateServiceCompatibilityTests
 		_permissionService.Controls(executor, looker)
 			.Returns(false);
 
-		// Other controls return true
 		_permissionService.Controls(looker, looker)
 			.Returns(true);
 		_permissionService.Controls(executor, executor)
@@ -644,16 +561,12 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act - should fail with permission error because executor isn't nearby and doesn't control looker
 		var result = await _locateService.Locate(_parser, looker, executor, "TestObject",
 			LocateFlags.MatchObjectsInLookerInventory);
 
-		// Assert - should get NOT PERMITTED error because they're not nearby
 		await Assert.That(result.IsError).IsTrue();
 		await Assert.That(result.AsError.Value).Contains("NOT PERMITTED");
 	}
-
-	// ─── Visibility/CanInteract filtering ────────────────────────────────────────
 
 	[Test]
 	public async Task MatchList_CanInteract_False_SkipsObject()
@@ -682,8 +595,6 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(bestMatch.IsNone).IsTrue();
 	}
 
-	// ─── Exit matching (exact-only, no prefix) ───────────────────────────────────
-
 	[Test]
 	public async Task MatchList_ExitName_NoPrefixMatching()
 	{
@@ -711,8 +622,6 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_ExitName_ExactMatch_FindsExit()
 	{
-		// An exit found by its full name (exact match).
-
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var exit = _factory.CreateExit(10, "North", ["n"], sharedRoom);
@@ -735,8 +644,6 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_ExitAlias_ExactMatch_FindsExit()
 	{
-		// An exit found by its alias (exact match).
-
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var exit = _factory.CreateExit(10, "North", ["n", "go north"], sharedRoom);
@@ -781,13 +688,9 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(bestMatch.IsNone).IsTrue();
 	}
 
-	// ─── Player alias matching (exact and prefix) ────────────────────────────────
-
 	[Test]
 	public async Task MatchList_PlayerAlias_ExactMatch()
 	{
-		// A player found by exact alias.
-
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var target = _factory.CreatePlayer(5, "Wizard", ["Wiz", "Admin"], sharedRoom);
@@ -858,8 +761,6 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
 	}
-
-	// ─── Ambiguous matches ───────────────────────────────────────────────────────
 
 	[Test]
 	public async Task MatchList_TwoExactMatches_AmbiguousCounters()
@@ -942,8 +843,6 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(rightType).IsNotEqualTo(1);
 	}
 
-	// ─── Exact match beats partial match ────────────────────────────────────────
-
 	[Test]
 	public async Task MatchList_ExactMatchAfterPartial_ResetsToExact()
 	{
@@ -972,8 +871,6 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(4, 0));
 	}
 
-	// ─── OnlyMatchLookerControlledObjects per-candidate check ───────────────────
-
 	[Test]
 	public async Task MatchList_OnlyMatchControlled_SkipsUncontrolledCandidates()
 	{
@@ -991,26 +888,20 @@ public class LocateServiceCompatibilityTests
 				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
-		// Default: looker controls everything
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
-		// Except foreignThing: looker does not control it
 		_permissionService.Controls(player, foreignThing).Returns(false);
 
-		// Put ownedThing first so it is found, then foreignThing should be skipped
 		var list = new[] { ownedThing, foreignThing }.ToAsyncEnumerable();
 
 		var (bestMatch, _, curr, _, exact, _) = await _locateService.Match_List(
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.OnlyMatchLookerControlledObjects, "Widget");
 
-		// ownedThing matched; foreignThing skipped (not controls) — only 1 match
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
 		await Assert.That(bestMatch.IsValid()).IsTrue();
 		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
-
-	// ─── Case-insensitive matching ────────────────────────────────────────────────
 
 	[Test]
 	public async Task MatchList_CaseInsensitive_LowercaseQueryFindsUpperCaseName()
@@ -1055,8 +946,6 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(exact).IsTrue();
 		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
-
-	// ─── English-style ordinal matching ─────────────────────────────────────────
 
 	[Test]
 	public async Task MatchList_OrdinalEnglish_SecondOfThree_ReturnsSecond()
@@ -1138,17 +1027,13 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(flow).IsEqualTo(LocateService.ControlFlow.Continue); // never found the 5th → no Break
 	}
 
-	// ─── Type-preference filtering ───────────────────────────────────────────────
-
 	[Test]
 	public async Task MatchList_ThingsPreference_SkipsNonThings()
 	{
-		// ThingsPreference flag skips players and exits in the candidate list.
-
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var targetPlayer = _factory.CreatePlayer(5, "Widget", sharedRoom); // player named "Widget"
-		var thing = _factory.CreateThing(6, "Widget", sharedRoom, player); // thing named "Widget"
+		var targetPlayer = _factory.CreatePlayer(5, "Widget", sharedRoom);
+		var thing = _factory.CreateThing(6, "Widget", sharedRoom, player);
 
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
 				Arg.Any<IPermissionService.InteractType>())
@@ -1160,7 +1045,6 @@ public class LocateServiceCompatibilityTests
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.ThingsPreference, "Widget");
 
-		// Only the Thing should be matched
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(bestMatch.WithoutError().WithoutNone().IsPlayer).IsFalse();
 		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(6, 0));
@@ -1169,8 +1053,6 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_PlayersPreference_SkipsNonPlayers()
 	{
-		// PlayersPreference flag skips things and exits.
-
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var targetPlayer = _factory.CreatePlayer(5, "Widget", sharedRoom);
@@ -1190,8 +1072,6 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(bestMatch.WithoutError().WithoutNone().IsPlayer).IsTrue();
 		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
 	}
-
-	// ─── Locate() higher-level edge cases ────────────────────────────────────────
 
 	[Test]
 	public async Task Locate_HereWithOnlyMatchControlled_ErrorWhenLockerNotControlRoom()
@@ -1257,7 +1137,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Block all visibility checks
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
 				Arg.Any<IPermissionService.InteractType>())
@@ -1268,7 +1147,6 @@ public class LocateServiceCompatibilityTests
 		var result = await _locateService.Locate(_parser, player, player, "#42",
 			LocateFlags.AbsoluteMatch | LocateFlags.PreferLockPass);
 
-		// Absolute DBRef always returns the object regardless of visibility
 		await Assert.That(result.IsValid()).IsTrue();
 		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(42, 0));
 	}
@@ -1287,7 +1165,6 @@ public class LocateServiceCompatibilityTests
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
 		var thing = _factory.CreateThing(3, "TargetObject", sharedRoom, player);
 
-		// CanInteract returns true (object is searchable)
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
 				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
@@ -1298,13 +1175,10 @@ public class LocateServiceCompatibilityTests
 			_parser, list, player, player, new None(), false, 0, 0, 0,
 			LocateFlags.NoTypePreference | LocateFlags.NoVisibilityCheck, "TargetObject");
 
-		// Object found — NoVisibilityCheck does not affect Match_List itself
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(bestMatch.IsValid()).IsTrue();
 		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
-
-	// ─── ParseEnglish ordinal validation ────────────────────────────────────────
 
 	/// <summary>
 	/// Verifies that the ordinal validation logic (matching PennMUSH parse_english())

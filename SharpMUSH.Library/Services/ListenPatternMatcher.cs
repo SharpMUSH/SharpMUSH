@@ -27,16 +27,14 @@ public class ListenPatternMatcher(
 	{
 		var matches = new List<ListenMatch>();
 
-		// Get cached listen attributes for this object
 		var listenAttributes = await mediator.Send(new GetListenAttributesQuery(listener));
 		CollectMatches(listenAttributes, listener, message, speaker, matches);
 
-		// Check parent objects if requested and LISTEN_PARENT flag is set
 		if (checkParents)
 		{
 			var currentObject = listener;
 			var visitedObjects = new HashSet<int> { currentObject.Object().DBRef.Number };
-			const int maxParentDepth = 10; // Prevent infinite loops
+			const int maxParentDepth = 10;
 			var depth = 0;
 
 			while (depth < maxParentDepth)
@@ -48,21 +46,17 @@ public class ListenPatternMatcher(
 				var parent = parentAsync.Known;
 				var parentObject = parent.Object();
 
-				// Prevent infinite loops from circular parent relationships
 				if (visitedObjects.Contains(parentObject.DBRef.Number))
 					break;
 				visitedObjects.Add(parentObject.DBRef.Number);
 
-				// Check if parent has LISTEN_PARENT flag
 				var hasListenParent = await parentObject.Flags.Value.AnyAsync(f => f.Name == "LISTEN_PARENT");
 				if (!hasListenParent)
 					break;
 
-				// Get listen attributes from parent
 				var parentListenAttributes = await mediator.Send(new GetListenAttributesQuery(parent));
 				CollectMatches(parentListenAttributes, listener, message, speaker, matches);
 
-				// Move to next parent
 				currentObject = parent;
 				depth++;
 			}

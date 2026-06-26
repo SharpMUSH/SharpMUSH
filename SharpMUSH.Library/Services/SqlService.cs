@@ -42,7 +42,6 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 		var cvn = _config.CurrentValue.Net;
 
-		// Return null if no SQL configuration
 		if (string.IsNullOrWhiteSpace(cvn.SqlHost) && string.IsNullOrWhiteSpace(cvn.SqlDatabase))
 		{
 			return null;
@@ -50,7 +49,6 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 		var platform = cvn.SqlPlatform?.ToLowerInvariant() ?? "mysql";
 
-		// Build connection string to check if it has changed
 		var connectionString = platform switch
 		{
 			"mysql" or "mariadb" =>
@@ -62,7 +60,6 @@ public class SqlService : ISqlService, IAsyncDisposable
 			_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
 		};
 
-		// If connection string changed, dispose old provider and create new one
 		if (_currentProvider == null || _currentConnectionString != connectionString)
 		{
 			await _providerLock.WaitAsync();
@@ -83,7 +80,6 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 					_currentConnectionString = connectionString;
 
-					// Dispose old provider after setting new one
 					if (oldProvider != null)
 					{
 						await oldProvider.DisposeAsync();
@@ -127,7 +123,6 @@ public class SqlService : ISqlService, IAsyncDisposable
 		if (!string.IsNullOrWhiteSpace(database))
 			parts.Add($"Database={database}");
 
-		// Ensure we have at least a server to connect to
 		if (parts.Count == 0 || string.IsNullOrWhiteSpace(host))
 		{
 			throw new InvalidOperationException("MySQL connection string must include at minimum a server/host");
@@ -208,12 +203,10 @@ public class SqlService : ISqlService, IAsyncDisposable
 		await using var command = connection.CreateCommand();
 		command.CommandText = query;
 
-		// Add parameters to the command
 		for (var i = 0; i < parameters.Length; i++)
 		{
 			var param = command.CreateParameter();
 
-			// Set parameter name based on provider type
 			if (provider.ParameterPlaceholderFormat == "$")
 			{
 				// PostgreSQL uses numbered parameters like $1, $2, etc.
@@ -226,7 +219,6 @@ public class SqlService : ISqlService, IAsyncDisposable
 			}
 			else
 			{
-				// Default to named parameters
 				param.ParameterName = $"@p{i}";
 			}
 
@@ -285,12 +277,10 @@ public class SqlService : ISqlService, IAsyncDisposable
 		await using var command = connection.CreateCommand();
 		command.CommandText = query;
 
-		// Add parameters to the command
 		for (var i = 0; i < parameters.Length; i++)
 		{
 			var param = command.CreateParameter();
 
-			// Set parameter name based on provider type
 			if (provider.ParameterPlaceholderFormat == "$")
 			{
 				// PostgreSQL uses numbered parameters like $1, $2, etc.
@@ -303,7 +293,6 @@ public class SqlService : ISqlService, IAsyncDisposable
 			}
 			else
 			{
-				// Default to named parameters
 				param.ParameterName = $"@p{i}";
 			}
 

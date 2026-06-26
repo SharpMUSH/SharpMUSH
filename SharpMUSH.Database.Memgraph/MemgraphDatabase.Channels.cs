@@ -52,7 +52,6 @@ RETURN c
 		var serializedName = MModule.serialize(name);
 		var ownerObjKey = owner.Object.Key;
 
-		// Single atomic query: create channel, link owner, add owner as member
 		await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $ownerKey})
 CREATE (c:Channel {name: $name, markedUpName: $markedUpName, description: '', privs: $privs,

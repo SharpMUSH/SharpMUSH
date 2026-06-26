@@ -22,8 +22,6 @@ public class NavMenuTests : MudBlazorTestContext
 		return Render<NavMenu>(parameters => parameters.Add(p => p.IsCollapsed, false));
 	}
 
-	// ── Default (collapsed) mode ─────────────────────────────────────────────
-
 	[Test]
 	public async Task Collapsed_RendersCoreLinksWithoutText()
 	{
@@ -43,8 +41,6 @@ public class NavMenuTests : MudBlazorTestContext
 		// The brand/title block in the logo only renders when expanded.
 		await Assert.That(cut.FindAll(".phosphor-brand").Count).IsEqualTo(0);
 	}
-
-	// ── Expanded mode ────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task Expanded_RendersCoreNavigationLinks()
@@ -82,8 +78,6 @@ public class NavMenuTests : MudBlazorTestContext
 		var cut = RenderExpanded();
 		await Assert.That(cut.FindAll(".phosphor-brand").Count).IsEqualTo(1);
 	}
-
-	// ── Admin links are permission-gated ─────────────────────────────────────
 
 	[Test]
 	public async Task AdminLinks_Hidden_WhenNotAuthorized()

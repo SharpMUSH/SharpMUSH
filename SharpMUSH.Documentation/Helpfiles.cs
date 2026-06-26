@@ -15,7 +15,6 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	/// </summary>
 	public string? FindEntry(string topic)
 	{
-		// Try exact match first (case-insensitive)
 		if (IndexedHelp.TryGetValue(topic, out var content))
 		{
 			return content;
@@ -29,7 +28,6 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	/// </summary>
 	public IEnumerable<string> FindMatchingTopics(string pattern)
 	{
-		// Convert wildcard pattern to regex
 		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
 		var compiledRegex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -48,7 +46,6 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 
 	public void Index()
 	{
-		// Index .md files recursively
 		IndexMarkdownFilesRecursive(directory);
 	}
 
@@ -77,7 +74,6 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 			}
 		}
 
-		// Recursively index subdirectories
 		foreach (var subDir in dir.GetDirectories())
 		{
 			IndexMarkdownFilesRecursive(subDir);
@@ -127,7 +123,6 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		using var openText = file.OpenText();
 		var textBody = openText.ReadToEnd().Replace("\r\n", "\n");
 
-		// Match markdown headers: # Topic Name
 		var matches = MarkdownHeaders().Matches(textBody);
 
 		// Track consecutive headers (aliases) that share the same content block.
@@ -141,11 +136,9 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 			var topicName = match.Groups["Topic"].Value.Trim();
 			var startIndex = match.Index + match.Length;
 
-			// Find the end of this topic (next header or end of file)
 			var nextMatch = match.NextMatch();
 			var endIndex = nextMatch.Success ? nextMatch.Index : textBody.Length;
 
-			// Extract the content between this header and the next
 			var content = textBody.Substring(startIndex, endIndex - startIndex).Trim();
 
 			pendingTopics.Add(topicName);

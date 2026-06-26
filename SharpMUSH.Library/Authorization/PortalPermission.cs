@@ -16,22 +16,18 @@ public static class PortalPermission
 	/// <summary>JWT/claims type carrying one granted permission scope per value.</summary>
 	public const string ClaimType = "perm";
 
-	// ── Content: Wiki (read/create/edit/delete tiers + moderation) ──
 	public const string WikiRead = "wiki.read";
 	public const string WikiCreate = "wiki.create";
 	public const string WikiEdit = "wiki.edit";
 	public const string WikiDelete = "wiki.delete";
 	public const string WikiAdmin = "wiki.admin";
 
-	// ── Content: Media (contributor upload vs library management) ──
 	public const string MediaUpload = "media.upload";
 	public const string MediaAdmin = "media.admin";
 
-	// ── Build ──
 	public const string ApplicationsAdmin = "applications.admin";
 	public const string PackagesAdmin = "packages.admin";
 
-	// ── Manage ──
 	public const string ConfigAdmin = "config.admin";
 	public const string RolesAdmin = "roles.admin";
 	public const string PlayersView = "players.view";

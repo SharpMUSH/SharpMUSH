@@ -27,7 +27,7 @@ public class ArangoDBReadBenchmarks : BaseBenchmark
 	public async Task GetRoomContents()
 	{
 		await foreach (var _ in _database!.GetContentsAsync(_masterRoom!))
-		{ /* enumerate */ }
+		{ }
 	}
 
 	[Benchmark(Description = "GetLocationAsync(#1) — 1-hop traversal")]
@@ -38,7 +38,7 @@ public class ArangoDBReadBenchmarks : BaseBenchmark
 	public async Task GetAttribute()
 	{
 		await foreach (var _ in _database!.GetAttributeAsync(new DBRef(1), ["AADESC"]))
-		{ /* enumerate */ }
+		{ }
 	}
 }
 

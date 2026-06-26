@@ -151,13 +151,11 @@ public static partial class Substitutions
 		var symbolValue = symbol.Message!.ToString();
 		var stack = parser.CurrentState.SwitchStack;
 
-		// Parse the symbol number
 		if (!int.TryParse(symbolValue, out var symbolNumber) || symbolNumber < 0)
 		{
 			return new CallState(ErrorMessages.Returns.NonNegativeInteger);
 		}
 
-		// Check if we're in a switch context or if the depth is out of range
 		if (stack.Count == 0 || symbolNumber >= stack.Count)
 		{
 			return new CallState(ErrorMessages.Returns.RegisterRange);
@@ -173,13 +171,11 @@ public static partial class Substitutions
 	{
 		var stack = parser.CurrentState.SwitchStack;
 
-		// Check if we're in a switch context
 		if (stack.Count == 0)
 		{
 			return new CallState(ErrorMessages.Returns.RegisterRange);
 		}
 
-		// Get the outermost (last) item from the stack
 		var depth = stack.Count - 1;
 		var item = stack.ElementAtOrDefault(depth);
 		return new CallState(item ?? MModule.empty());

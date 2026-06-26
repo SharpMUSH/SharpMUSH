@@ -10,7 +10,6 @@
 <PageTitle>Roles — Admin — SharpMUSH</PageTitle>
 
 <div class="roleadmin">
-    @* ── Header ── *@
     <div class="roleadmin-head">
         <div>
             <div class="roleadmin-kicker">Manage · Access control</div>
@@ -39,7 +38,6 @@
     else if (_tab == Tab.Roles)
     {
         <div class="roleadmin-grid">
-            @* ── List (master) ── *@
             <div class="roleadmin-list">
                 @if (SortedRoles.Count == 0)
                 {
@@ -64,7 +62,6 @@
                 }
             </div>
 
-            @* ── Detail / editor ── *@
             <div class="roleadmin-detail">
                 @if (_editing is null)
                 {
@@ -92,7 +89,6 @@
                         </div>
                     </div>
 
-                    @* Top fields *@
                     <div class="ra-fields">
                         <div class="ra-field">
                             <div class="ra-field-label">Name</div>
@@ -111,7 +107,6 @@
                         </div>
                     </div>
 
-                    @* Permission matrix *@
                     @foreach (var group in PortalPermission.All.GroupBy(d => d.Group))
                     {
                         <div class="ra-section">
@@ -144,7 +139,6 @@
                         </div>
                     }
 
-                    @* Save / delete actions *@
                     <div class="ra-section ra-section--actions">
                         <button type="button" class="ra-btn ra-btn--primary" @onclick="SaveRole" disabled="@_saving">
                             <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:14px;" /> Save role
@@ -162,7 +156,6 @@
     }
     else
     {
-        @* ── Assignments ── *@
         <div class="roleadmin-assign">
             <div class="ra-search">
                 <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:14px;color:var(--text-faint);" />
@@ -263,7 +256,6 @@
     private bool _saving;
     private List<PortalRoleModel> _roles = [];
 
-    // Selected / editing role
     private PortalRoleModel? _selected;
     private PortalRoleModel? _editing;
     private string _editName = "";
@@ -271,7 +263,6 @@
     private int _editPriority;
     private Dictionary<string, string> _editPerms = new();
 
-    // Assignments
     private string _lookupName = "";
     private bool _looking;
     private bool _lookedUp;
@@ -417,8 +408,6 @@
             }
         }
     }
-
-    // ── Assignments ──
 
     private async Task OnLookupKeyDown(KeyboardEventArgs args)
     {

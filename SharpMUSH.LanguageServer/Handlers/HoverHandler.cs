@@ -36,7 +36,6 @@ public class HoverHandler : HoverHandlerBase
 			var line = request.Position.Line < lines.Length ? lines[request.Position.Line] : string.Empty;
 			var character = (int)request.Position.Character;
 
-			// Find the word at the cursor position
 			var wordStart = character;
 			var wordEnd = character;
 
@@ -57,7 +56,6 @@ public class HoverHandler : HoverHandlerBase
 
 			var word = line.Substring(wordStart, wordEnd - wordStart);
 
-			// Check if it's a function
 			if (_parser.FunctionLibrary.TryGetValue(word, out var functionDef))
 			{
 				var markdown = BuildFunctionHover(word, functionDef.LibraryInformation.Attribute);
@@ -74,7 +72,6 @@ public class HoverHandler : HoverHandlerBase
 				});
 			}
 
-			// Check if it's a command
 			if (_parser.CommandLibrary.TryGetValue(word, out var commandDef))
 			{
 				var markdown = BuildCommandHover(word, commandDef.LibraryInformation.Attribute);
@@ -91,7 +88,6 @@ public class HoverHandler : HoverHandlerBase
 				});
 			}
 
-			// Check for special patterns
 			var patternInfo = GetPatternInfo(word);
 			if (patternInfo != null)
 			{

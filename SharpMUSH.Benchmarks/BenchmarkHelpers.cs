@@ -15,7 +15,7 @@ namespace SharpMUSH.Benchmarks;
 internal static class BenchmarkHelpers
 {
 	private const string NatsImage = "nats:2.14-alpine";
-	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
+	private const int MaxPayloadBytes = 6 * 1024 * 1024;
 	private const string NatsConfigPath = "/etc/nats/nats.conf";
 	private static readonly byte[] NatsConfig = Encoding.UTF8.GetBytes(
 		$"max_payload: {MaxPayloadBytes}\njetstream: true\n");

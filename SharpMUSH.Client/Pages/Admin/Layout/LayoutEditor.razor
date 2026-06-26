@@ -45,7 +45,6 @@
                           ItemsClassSelector="@ItemsClass"
                           ItemDropped="OnDropped" Class="le-board">
             <ChildContent>
-                @* ── Palette ── *@
                 <div class="le-palette">
                     <div class="le-panel-label">Widgets</div>
                     <MudDropZone T="EditItem" Identifier="palette" Class="le-palette-zone" AllowReorder="false" />
@@ -59,7 +58,6 @@
                     </div>
                 </div>
 
-                @* ── Zones ── *@
                 <div class="le-zones">
                     @foreach (var zone in _scopeInfo.Zones)
                     {
@@ -235,7 +233,6 @@
     .le-item-btn:hover { color: var(--text); border-color: var(--border); }
     .le-item-btn--danger:hover { color: #e57373; border-color: rgba(229, 115, 115, 0.5); }
 
-    /* MudBlazor drag-and-drop feedback */
     ::deep .mud-drop-zone-drag-block-target { outline: 2px dashed rgba(var(--glow), 0.5); outline-offset: -4px; }
 </style>
 
@@ -267,7 +264,6 @@
     private static int ParseSpan(object? value)
         => int.TryParse(value?.ToString(), out var n) ? Math.Clamp(n, 1, 12) : 12;
 
-    // Per-item CSS class so grid zones lay their items out by span.
     private string ItemsClass(EditItem item, string dropzoneId)
         => !item.IsTemplate && IsGridZoneName(dropzoneId)
             ? $"le-span-{ClampSpan(item.Span)}"
@@ -326,14 +322,12 @@
         _leftWidth = layout.Settings.LeftSidebarWidth;
         _rightWidth = layout.Settings.RightSidebarWidth;
 
-        // Palette: every registered widget whose allowed zones overlap this scope's zones.
         _palette = Registry.GetAllWidgets()
             .Where(w => w.AllowedZones.Any(z => _scopeInfo!.Zones.Contains(z)))
             .OrderBy(w => w.DisplayName)
             .Select(w => new EditItem { WidgetName = w.Name, DisplayName = w.DisplayName, Zone = "palette", IsTemplate = true })
             .ToList();
 
-        // Placements per zone, in stored order.
         _zones = _scopeInfo!.Zones.ToDictionary(
             z => z.ToString(),
             z => (layout.Zones.TryGetValue(z, out var list) ? list : [])
@@ -449,7 +443,6 @@
         StateHasChanged();
     }
 
-    // Builds a LayoutConfiguration from the current edit state — used for both the live preview and Save.
     private LayoutConfiguration BuildPreviewLayout()
     {
         var zones = _scopeInfo!.Zones.ToDictionary(

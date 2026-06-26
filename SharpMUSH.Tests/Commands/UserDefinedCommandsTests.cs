@@ -24,11 +24,9 @@ public class UserDefinedCommandsTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcWildEq");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
-		// Set a $ command attribute with an EqSplit wildcard pattern on a unique object in room #0
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&UTEST_WILDEQ {obj}=${token} *=*:@emit {token} Boo! %0 - %1"));
 
-		// Fire the command — %0 should be "a", %1 should be "b"
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} a=b"));
 
 		await NotifyService
@@ -37,8 +35,6 @@ public class UserDefinedCommandsTests
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token} Boo! a - b")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
-
-	// ── Wildcard pattern tests ──────────────────────────────────────────────
 
 	/// <summary>
 	/// Single wildcard: $cmd * — %0 captures everything after the command name.
@@ -123,8 +119,6 @@ public class UserDefinedCommandsTests
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: A=foo B=bar C=baz")),
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
-
-	// ── Regex pattern tests ──────────────────────────────────────────────────
 
 	/// <summary>
 	/// Regex single capture group: %0 is the full match, %1 is the first capture group.
@@ -283,23 +277,18 @@ public class UserDefinedCommandsTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = TestIsolationHelpers.GenerateUniqueName("pic");
 
-		// Create parent and child objects
 		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"CmdParent_{token}");
 		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"CmdChild_{token}");
 
-		// Set parent relationship
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
 
-		// Ensure child does NOT have NO_COMMAND object flag, but parent DOES
-		// (so only the child fires the inherited command, not the parent directly)
+		// Child does NOT have NO_COMMAND but parent DOES, so only the child fires the inherited command
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
 
-		// Set $command on the parent
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Inherited {token}"));
 
-		// Fire the command — child should inherit it
 		await Parser.CommandParse(1, ConnectionService, MModule.single(token));
 
 		await NotifyService
@@ -325,20 +314,16 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
 
-		// Set tree command on parent: CMD`LEAF
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Leaf fired"));
 
-		// Set no_command on the tree root on child (blocks whole tree)
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&CMD_{token} {childObj}=$dummy:say dummy"));
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {childObj}/CMD_{token}=no_command"));
 
-		// The tree leaf command should be blocked
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
 
-		// Should NOT have received the leaf command notification
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -363,17 +348,14 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
 
-		// Parent has tree command
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Parent {token}"));
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Parent leaf"));
 
-		// Child overrides the root — should mask parent's tree descendants
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&CMD_{token} {childObj}=${token}:@pemit %#=Child {token}"));
 
-		// Fire root command — should get child's version
 		await Parser.CommandParse(1, ConnectionService, MModule.single(token));
 		await NotifyService
 			.Received(1)
@@ -381,7 +363,6 @@ public class UserDefinedCommandsTests
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Child {token}")),
 				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.Announce);
 
-		// Fire leaf command — should still work (parent's leaf not masked, child only overrides root name)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
 		await NotifyService
 			.Received(1)
@@ -404,18 +385,15 @@ public class UserDefinedCommandsTests
 		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NiPar_{token}");
 		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NiChi_{token}");
 
-		// Set up chain: child -> parent -> grand
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {parentObj}={grandObj}"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {grandObj}=no_command"));
 
-		// Grand has bar`baz command
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&CMD_{token}`LEAF {grandObj}=${token}leaf:@pemit %#=Grand leaf"));
 
-		// Parent has bar and bar`baz, but bar is no_inherit
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Parent root"));
 		await Parser.CommandParse(1, ConnectionService,
@@ -423,7 +401,7 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {parentObj}/CMD_{token}=no_inherit"));
 
-		// Fire leaf — parent's CMD_token has no_inherit so entire branch skipped, falls to grand
+		// parent's CMD_token has no_inherit so entire branch skipped, falls to grand
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
 
 		await NotifyService
@@ -450,17 +428,14 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
 
-		// Parent has tree commands
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Root {token}"));
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Leaf {token}"));
 
-		// Set no_command on parent's root attr
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@set {parentObj}/CMD_{token}=no_command"));
 
-		// Fire leaf — should get "Huh?" (no match), not "Leaf {token}"
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
 
 		await NotifyService
@@ -470,12 +445,9 @@ public class UserDefinedCommandsTests
 				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
-	// ── Leading-space $command matching (bug repro) ───────────────────────────
 	// Reported bug: a $command like `$test:@emit ...` does NOT match when the
 	// player types " test" (a leading space before the command). PennMUSH strips
 	// leading whitespace from a command before matching, so this SHOULD fire.
-	// These tests assert the expected (PennMUSH-compatible) behavior; if the bug
-	// is present they fail with a "Huh?" (zero notifications received).
 
 	/// <summary>
 	/// Control: an exact-match $command with NO leading space fires (baseline for the leading-space tests).
@@ -489,7 +461,6 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&UTEST_NOLEAD {obj}=${token}:@emit {token} Matched"));
 
-		// No leading space — the control case.
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}"));
 
 		await NotifyService
@@ -512,7 +483,6 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&UTEST_LEAD_TERM {obj}=${token}:@emit {token} Matched"));
 
-		// Leading space before the command (player typed " test").
 		await Parser.CommandParse(1, ConnectionService, MModule.single($" {token}"));
 
 		await NotifyService
@@ -536,7 +506,6 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&UTEST_LEAD_LIST {obj}=${token}:@emit {token} Matched"));
 
-		// Command-list entry point with a leading space before the command.
 		await listParser.CommandListParse(MModule.single($" {token}"));
 
 		await NotifyService
@@ -560,7 +529,6 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&UTEST_LEAD_SEMI {obj}=${token}:@emit {token} Matched"));
 
-		// A null command followed by a space-prefixed $command in the same list.
 		await listParser.CommandListParse(MModule.single($"@@ ignore;  {token}"));
 
 		await NotifyService
@@ -570,7 +538,6 @@ public class UserDefinedCommandsTests
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 	}
 
-	// ── Command-list per-command $command matching ────────────────────────────
 	// A $command that is part of a multi-command ';' list must match against its own per-command
 	// slice (EvaluateCommands computes `commandText` via the command's evaluationString span), NOT
 	// the whole list source. Otherwise its ^...$ pattern would be tested against "alpha;beta" and
@@ -589,7 +556,6 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&UTEST_SEMI_NOSPACE {obj}=${token}:@emit {token} Matched"));
 
-		// Second command in the list, NO leading space.
 		await listParser.CommandListParse(MModule.single($"@@ ignore;{token}"));
 
 		await NotifyService
@@ -612,7 +578,6 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&UTEST_TRAIL_TERM {obj}=${token}:@emit {token} Matched"));
 
-		// Trailing space after the command.
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} "));
 
 		await NotifyService
@@ -635,7 +600,6 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&UTEST_TRAIL_LIST {obj}=${token}:@emit {token} Matched"));
 
-		// Command-list entry point with a trailing space after the command.
 		await listParser.CommandListParse(MModule.single($"{token} "));
 
 		await NotifyService
@@ -714,7 +678,6 @@ public class UserDefinedCommandsTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&UTEST_SEMI_ARG {obj}=${token} *:@emit GREET=<%0>"));
 
-		// First command is a longer @emit; second is the wildcard $command with arg "Bob".
 		await listParser.CommandListParse(MModule.single($"@emit AAAAAAAAAA;{token} Bob"));
 
 		await NotifyService

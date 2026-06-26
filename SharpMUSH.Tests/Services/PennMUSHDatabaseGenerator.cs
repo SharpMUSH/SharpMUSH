@@ -28,7 +28,6 @@ public static class PennMUSHDatabaseGenerator
 		var tempFile = Path.Combine(Path.GetTempPath(), $"pennmush_test_{Guid.NewGuid()}.db");
 		await using var writer = new StreamWriter(tempFile, false, Encoding.UTF8);
 
-		// Write header
 		await writer.WriteLineAsync("~0");
 		await writer.WriteLineAsync("1");
 		await writer.WriteLineAsync($"!{DateTime.UtcNow.ToFileTimeUtc()}");
@@ -36,14 +35,12 @@ public static class PennMUSHDatabaseGenerator
 		var currentSize = new FileInfo(tempFile).Length;
 		var dbref = 0;
 
-		// Generate objects until we reach target size
 		while (currentSize < targetSizeBytes)
 		{
 			var objType = (PennMUSHObjectType)Random.Next(0, 4);
 			await WriteObjectAsync(writer, dbref, objType);
 			dbref++;
 
-			// Check size periodically (every 10 objects to avoid too many IO operations)
 			if (dbref % 10 == 0)
 			{
 				await writer.FlushAsync();
@@ -51,7 +48,6 @@ public static class PennMUSHDatabaseGenerator
 			}
 		}
 
-		// Write footer
 		await writer.WriteLineAsync("***END OF DUMP***");
 		await writer.FlushAsync();
 
@@ -68,19 +64,16 @@ public static class PennMUSHDatabaseGenerator
 		var tempFile = Path.Combine(Path.GetTempPath(), $"pennmush_test_{Guid.NewGuid()}.db");
 		await using var writer = new StreamWriter(tempFile, false, Encoding.UTF8);
 
-		// Write header
 		await writer.WriteLineAsync("~0");
 		await writer.WriteLineAsync("1");
 		await writer.WriteLineAsync($"!{DateTime.UtcNow.ToFileTimeUtc()}");
 
-		// Generate objects
 		for (var dbref = 0; dbref < objectCount; dbref++)
 		{
 			var objType = (PennMUSHObjectType)Random.Next(0, 4);
 			await WriteObjectAsync(writer, dbref, objType);
 		}
 
-		// Write footer
 		await writer.WriteLineAsync("***END OF DUMP***");
 		await writer.FlushAsync();
 
@@ -111,10 +104,8 @@ public static class PennMUSHDatabaseGenerator
 		await writer.WriteLineAsync("-1"); // zone
 		await writer.WriteLineAsync($"{pennies}"); // pennies
 
-		// Type line
 		await writer.WriteLineAsync(((int)type).ToString());
 
-		// Flags
 		var flagCount = Random.Next(0, 6);
 		var flags = Enumerable.Range(0, flagCount)
 			.Select(_ => CommonFlags[Random.Next(CommonFlags.Length)])
@@ -122,7 +113,6 @@ public static class PennMUSHDatabaseGenerator
 			.ToList();
 		await writer.WriteLineAsync(string.Join(" ", flags));
 
-		// Powers
 		var powerCount = Random.Next(0, 4);
 		var powers = Enumerable.Range(0, powerCount)
 			.Select(_ => CommonPowers[Random.Next(CommonPowers.Length)])
@@ -130,40 +120,33 @@ public static class PennMUSHDatabaseGenerator
 			.ToList();
 		await writer.WriteLineAsync(string.Join(" ", powers));
 
-		// Warnings (usually empty)
 		await writer.WriteLineAsync("");
 
-		// Creation time
 		await writer.WriteLineAsync(creationTime.ToString());
 
-		// Modification time
 		await writer.WriteLineAsync(modTime.ToString());
 
-		// Password (for players) or empty
 		if (type == PennMUSHObjectType.Player)
 		{
-			await writer.WriteLineAsync("$SHA1$1234$abcdefghijklmnopqrstuvwxyz0123456789"); // Fake SHA1 hash
+			await writer.WriteLineAsync("$SHA1$1234$abcdefghijklmnopqrstuvwxyz0123456789");
 		}
 		else
 		{
 			await writer.WriteLineAsync("");
 		}
 
-		// Attributes - between 10 and 100 per object
 		var attrCount = Random.Next(10, 101);
 		for (var i = 0; i < attrCount; i++)
 		{
 			await WriteAttributeAsync(writer, owner);
 		}
 
-		// Locks - between 1 and 5 per object
 		var lockCount = Random.Next(1, 6);
 		for (var i = 0; i < lockCount; i++)
 		{
 			await WriteLockAsync(writer);
 		}
 
-		// End marker
 		await writer.WriteLineAsync("<");
 	}
 
@@ -171,7 +154,6 @@ public static class PennMUSHDatabaseGenerator
 	{
 		var attrName = AttributeNames[Random.Next(AttributeNames.Length)];
 
-		// Sometimes add a branch name
 		if (Random.Next(0, 10) < 2)
 		{
 			attrName += "`" + Random.Next(1, 100);
@@ -190,11 +172,9 @@ public static class PennMUSHDatabaseGenerator
 		var flagStr = flags.Count > 0 ? string.Join(" ", flags) : "";
 		await writer.WriteLineAsync($"<{attrName}^{owner}^{flagStr}^{derefCount}>");
 
-		// Attribute value - random text between 50 and 500 characters
 		var valueLength = Random.Next(50, 501);
 		var value = GenerateRandomText(valueLength);
 
-		// Sometimes add ANSI escape sequences
 		if (Random.Next(0, 10) < 3)
 		{
 			value = $"\x1b[{Random.Next(30, 38)}m{value}\x1b[0m";
@@ -208,7 +188,6 @@ public static class PennMUSHDatabaseGenerator
 		var lockType = CommonLockTypes[Random.Next(CommonLockTypes.Length)];
 		var lockValue = $"#{Random.Next(0, 100)}";
 
-		// Sometimes add complex lock expressions
 		if (Random.Next(0, 10) < 4)
 		{
 			lockValue += $"|#{Random.Next(0, 100)}";

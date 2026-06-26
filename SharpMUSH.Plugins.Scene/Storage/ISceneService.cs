@@ -30,8 +30,6 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 /// </remarks>
 public interface ISceneService
 {
-	// ── Scenes ────────────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Creates a scene owned by <paramref name="ownerDbref"/> (starter defaults to
 	/// the owner). Pass an empty <paramref name="roomDbref"/> for a roomless
@@ -66,8 +64,6 @@ public interface ISceneService
 	/// <c>in_room</c> edge + <c>status=active</c>), or <c>NotFound</c>. (<c>scenewhere</c>.)
 	/// </summary>
 	Task<OneOf<Contracts.Scene, NotFound>> GetActiveSceneInRoomAsync(string roomDbref);
-
-	// ── Poses ─────────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Appends a pose (slot + first edit) to the end of the scene's <c>pose_next</c>
@@ -121,8 +117,6 @@ public interface ISceneService
 	/// <summary>Returns a pose's content-version history (oldest first). <c>NotFound</c> if the pose is missing.</summary>
 	Task<OneOf<IReadOnlyList<ScenePoseEdit>, NotFound>> GetPoseEditsAsync(string poseId);
 
-	// ── Members / focus ─────────────────────────────────────────────────────────
-
 	/// <summary>
 	/// Adds (or updates) the player's <c>member</c> edge with the free-string
 	/// <paramref name="role"/>. <c>NotFound</c> if the scene is missing.
@@ -151,8 +145,6 @@ public interface ISceneService
 	/// <summary>Sets the player's per-scene display persona on the <c>member</c> edge. <c>NotFound</c> if missing.</summary>
 	Task<OneOf<SceneMember, NotFound>> SetShowAsAsync(string sceneId, string playerDbref, string showAs);
 
-	// ── Plots ─────────────────────────────────────────────────────────────────
-
 	/// <summary>Creates a plot (null id) or updates an existing one.</summary>
 	Task<ScenePlot> UpsertPlotAsync(string? plotId, string title, string description, string ownerDbref);
 
@@ -164,8 +156,6 @@ public interface ISceneService
 
 	/// <summary>Unlinks a scene from a plot. <c>NotFound</c> if either is missing.</summary>
 	Task<OneOf<None, NotFound>> UnlinkSceneFromPlotAsync(string plotId, string sceneId);
-
-	// ── Derived reads ───────────────────────────────────────────────────────────
 
 	/// <summary>Returns the distinct opaque tags present across a scene's poses. <c>NotFound</c> if missing.</summary>
 	Task<OneOf<IReadOnlyList<string>, NotFound>> GetTagsAsync(string sceneId);

@@ -336,13 +336,10 @@ public class GeneralCommandTests
 	public async ValueTask WhereIs_NonPlayer_ReturnsError()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// First create a thing (non-player object)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create test_object_whereis"));
 
-		// Try to @whereis a non-player
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis test_object_whereis"));
 
-		// Should notify that it's not a player
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.WhereIsCanOnlyLocatePlayers), executor, executor)).IsTrue();
 	}
 
@@ -350,7 +347,6 @@ public class GeneralCommandTests
 	public async ValueTask Restart_ValidObject_Restarts()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @restart with a valid object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart #1"));
 
 		// @restart #1 targets the God player (#1 is a player) → RestartedPlayerAndObjectsFormat is always sent.
@@ -361,10 +357,8 @@ public class GeneralCommandTests
 	public async ValueTask Find_SearchesForObjects()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @find command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@find test"));
 
-		// Should notify about searching
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FindSearchingFormat), executor, executor)).IsTrue();
 	}
 
@@ -372,10 +366,8 @@ public class GeneralCommandTests
 	public async ValueTask Stats_ShowsDatabaseStatistics()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @stats command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
 
-		// Should notify about database statistics
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.StatsDatabaseStatisticsHeader), executor, executor)).IsTrue();
 	}
 
@@ -383,10 +375,8 @@ public class GeneralCommandTests
 	public async ValueTask Search_PerformsDatabaseSearch()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @search command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
 
-		// Should notify about search
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SearchAdvancedHeader), executor, executor)).IsTrue();
 	}
 
@@ -394,10 +384,8 @@ public class GeneralCommandTests
 	public async ValueTask Entrances_ShowsLinkedObjects()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @entrances command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances"));
 
-		// Should notify about entrances
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EntrancesToFormat), executor, executor)).IsTrue();
 	}
 
@@ -405,10 +393,8 @@ public class GeneralCommandTests
 	public async ValueTask Command_ShowsCommandInfo()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @command with a command name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@command @emit"));
 
-		// Should notify about command information
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), executor, executor)).IsTrue();
 	}
 
@@ -416,10 +402,8 @@ public class GeneralCommandTests
 	public async ValueTask Function_ListsGlobalFunctions()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @function with no arguments to list functions
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
 
-		// Should notify about global functions
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader), executor, executor)).IsTrue();
 	}
 
@@ -427,10 +411,8 @@ public class GeneralCommandTests
 	public async ValueTask Function_ShowsFunctionInfo()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @function with a function name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function name"));
 
-		// Should notify about function information
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionInfoNameFormat), executor, executor)).IsTrue();
 	}
 
@@ -438,7 +420,6 @@ public class GeneralCommandTests
 	public async ValueTask Map_ExecutesAttributeOverList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @map command — attribute does not exist on the unique object
 		var mapObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapTest");
 		var uniqueAttr = $"MAPATTR_{Guid.NewGuid():N}";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@map {mapObj}/{uniqueAttr}=foo bar baz"));
@@ -451,12 +432,10 @@ public class GeneralCommandTests
 	public async ValueTask Trigger_QueuesAttribute()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @trigger command — attribute does not exist on the unique object
 		var trigObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TrigTest");
 		var uniqueAttr = $"TRIGATTR_{Guid.NewGuid():N}";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@trigger {trigObj}/{uniqueAttr}=arg1,arg2"));
 
-		// Should notify with error since the attribute doesn't exist
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), executor, executor)).IsTrue();
 	}
 
@@ -464,13 +443,10 @@ public class GeneralCommandTests
 	public async ValueTask Include_InsertsAttributeInPlace()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @include command — attribute does not exist on the unique object
 		var inclObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclTest");
 		var uniqueAttr = $"INCLATTR_{Guid.NewGuid():N}";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@include {inclObj}/{uniqueAttr}=arg1,arg2"));
 
-		// Should attempt to locate the object and get the attribute
-		// Since the attribute doesn't exist, it outputs "Attribute <name> is empty."
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.IncludeAttributeIsEmptyFormat), executor, executor)).IsTrue();
 	}
 
@@ -484,7 +460,6 @@ public class GeneralCommandTests
 		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HaltQueueTest");
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@halt {thingDbRef}"));
 
-		// Should notify about halting
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -495,10 +470,8 @@ public class GeneralCommandTests
 	public async ValueTask PS_ShowsQueueStatus()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @ps command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
 
-		// Should notify about queue
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PsQueueForTargetFormat), executor, executor)).IsTrue();
 	}
 
@@ -506,10 +479,8 @@ public class GeneralCommandTests
 	public async ValueTask Select_MatchesFirstExpression()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @select command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@select test=foo,:action1,bar,:action2"));
 
-		// Should notify about select
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SelectTestingStringFormat), executor, executor)).IsTrue();
 	}
 
@@ -517,23 +488,18 @@ public class GeneralCommandTests
 	public async ValueTask Attribute_DisplaysAttributeInfo()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Create the attribute entry first so it exists in the standard table
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access DESCRIPTION="));
 
-		// Test @attribute command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute DESCRIPTION"));
 
-		// Should notify about attribute info
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCommandInfoFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
 	public async ValueTask Attribute_AccessCreatesAttributeEntry()
 	{
-		// Test @attribute/access command creates an attribute entry with no_command flag
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access MYATTR=no_command"));
 
-		// Verify the entry was created in the database
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
 		var entry = entries.FirstOrDefault(e => e.Name == "MYATTR");
@@ -545,25 +511,20 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_AccessValidatesFlags()
 	{
-		// Test @attribute/access validates flag names
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR=INVALIDFLAG"));
 
-		// Verify that no entry was created with an invalid flag
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
 		var entry = entries.FirstOrDefault(e => e.Name == "TESTATTR");
 
-		// Entry should not exist because the flag was invalid
 		await Assert.That(entry).IsNull();
 	}
 
 	[Test]
 	public async ValueTask Attribute_EntryFlagsAreAppliedWhenAttributeCreated()
 	{
-		// First create an attribute entry with no_command flag
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR2=no_command"));
 
-		// Verify the entry was created with correct flags
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
 		var entry = entries.FirstOrDefault(e => e.Name == "TESTATTR2");
@@ -580,14 +541,12 @@ public class GeneralCommandTests
 
 		await Assert.That(success).IsTrue();
 
-		// Verify the attribute was created with the no_command flag from the entry
 		var attrs = await Mediator.CreateStream(new Library.Queries.Database.GetAttributeQuery(new DBRef(1), ["TESTATTR2"]))
 			.ToArrayAsync();
 
 		var attr = attrs.LastOrDefault();
 		await Assert.That(attr).IsNotNull();
 
-		// Verify the attribute has the no_command flag from the entry
 		// This confirms that ArangoDatabase.cs:1832-1849 correctly applies flags from entries
 		await Assert.That(attr!.Flags.Any(f => f.Name.Equals("no_command", StringComparison.OrdinalIgnoreCase))).IsTrue();
 	}
@@ -597,17 +556,8 @@ public class GeneralCommandTests
 	public async ValueTask DoListWithDBRefNotificationBatching()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// This test validates that DBRef-based notifications respect batching scopes.
-		// Before the fix, Notify(DBRef) would bypass batching and send messages immediately.
-		// After the fix, messages should be accumulated and sent as a batch.
-		// We use the same pattern as DoListSimple - a simple message without iteration markers.
-
-		// Use @pemit which uses Notify(AnySharpObject) -> Notify(DBRef)
-		// This should call Notify three times with the same message
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=Batched test message"));
 
-		// Verify that Notify was called 3 times (once per iteration)
-		// All three should have been batched together internally, but we verify they all went through
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -619,10 +569,8 @@ public class GeneralCommandTests
 	public async ValueTask DoListBatchesToOtherPlayers()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Send to player #2 (different from enactor #1) — receiver is #2, not the executor
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@dolist/inline a b c=@pemit {executor}=DoListBatchesToOtherPlayers: Message to other player"));
 
-		// Verify all three notifications were called (target is #2, not the executor)
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -635,13 +583,9 @@ public class GeneralCommandTests
 	public async ValueTask NestedDoListBatching()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// This test validates that nested @dolists properly use ref-counting for batching context.
-		// Messages from both outer and inner loops should be batched together.
-
 		// Nested @dolist: outer has 2 items, inner has 2 items = 4 total pemits
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2={@dolist/inline a b=@pemit #1=Nested message}"));
 
-		// Verify 4 notifications were called (2 outer * 2 inner)
 		await NotifyService
 			.Received(4)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -653,11 +597,8 @@ public class GeneralCommandTests
 	public async ValueTask DoListWithoutBreak_AllMessagesReceived()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Negative test: Without @break, all loop iterations should send messages
-
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=DoListWithoutBreak_AllMessagesReceived"));
 
-		// Should receive exactly 3 messages (one per iteration)
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -669,15 +610,10 @@ public class GeneralCommandTests
 	public async ValueTask DoListWithBreakAfterFirst_OnlyFirstMessageReceived()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Positive test: @break should stop the loop after first iteration
-		// Use @break as a conditional command to stop after first iteration
-
-		// @break after first message - note: using command structure where @pemit runs, then @break stops further iterations
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived %iL;@break}"));
 
-		// With {@pemit; @break}, @pemit runs in each iteration then @break happens
-		// So we get 3 messages (one per loop start) but @break doesn't prevent them
-		// This is the actual MUSH behavior - @break affects the next iteration, not current
+		// With {@pemit; @break}, @pemit runs in each iteration then @break happens, so all 3
+		// messages fire — this is the actual MUSH behavior: @break affects the next iteration, not current.
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -699,15 +635,8 @@ public class GeneralCommandTests
 	public async ValueTask DoListWithBreakFlushesMessages()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// This test validates that @break properly flushes batched messages.
-		// Even with @break in the command list, the using statement should
-		// ensure messages are flushed via disposal.
-
-		// Loop with @break - both @pemit and @break execute in each iteration
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message before break; @break}"));
 
-		// With command list {@pemit; @break}, both execute in each iteration
-		// So we get 3 messages, and batching still works
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -719,18 +648,9 @@ public class GeneralCommandTests
 	public async ValueTask NestedDoListWithBreakFlushesMessages()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// This test validates that @break in a nested @dolist/inline properly handles
-		// the ref-counted batching context and still flushes messages.
-		// Note: With the command structure {@pemit; @break}, both commands execute
-		// in each iteration, so @break happens after the @pemit.
-
-		// Outer loop runs twice, inner loop has 3 items
-		// With {@pemit; @break}, the @pemit runs in each inner iteration
-		// Expected: 2 outer iterations * 3 inner iterations = 6 messages
+		// With {@pemit; @break}, @pemit runs in each inner iteration: 2 outer * 3 inner = 6 messages.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2={@dolist/inline a b c={@pemit #1=Inner message; @break}}"));
 
-		// Should receive 6 messages (all inner iterations run, @break is after @pemit)
-		// This validates that batching still works and flushes correctly even with @break
 		await NotifyService
 			.Received(6)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -741,9 +661,6 @@ public class GeneralCommandTests
 	public async ValueTask DoListWithDelimiter()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @dolist with /delimit switch
-		// Format: @dolist/delimit <delimiter> <list>=<action>
-		// Delimiter is separated by space from list
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@dolist/inline/delimit , apple,banana,orange=@pemit #1=Fruit: %i0"));
 

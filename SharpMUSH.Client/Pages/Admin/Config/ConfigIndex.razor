@@ -9,7 +9,6 @@
 <PageTitle>@Loc["Configuration"] - @Loc["AppTitle"]</PageTitle>
 
 <div class="config-home">
-    @* Header — prototype SectionTitle: kicker + title + description *@
     <div class="config-home-header">
         <div class="config-kicker">Admin · server configuration</div>
         <h1 class="config-title">@Loc["ServerConfiguration"]</h1>
@@ -63,7 +62,6 @@
         new("Advanced",    "Advanced",     "AdvancedCategoryDescription",    Icons.Material.Filled.Tune,       "/admin/config/attribute"),
     ];
 
-    // Maps nav group names to the schema category names they contain
     private static readonly Dictionary<string, string[]> GroupCategories = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Server"]      = ["Net", "Database"],
@@ -90,7 +88,6 @@
         }
         catch
         {
-            // Counts will just show 0 if schema unavailable
         }
         finally
         {

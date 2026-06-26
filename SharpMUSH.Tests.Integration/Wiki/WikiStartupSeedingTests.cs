@@ -27,8 +27,6 @@ public class WikiStartupSeedingTests
 		?? throw new InvalidOperationException(
 			"ISharpDatabase does not implement IWikiService in this backend configuration.");
 
-	// ── Seeding ───────────────────────────────────────────────────────────────
-
 	[Test]
 	public async Task HomePageIsSeeded_GetBySlugReturnsFound()
 	{
@@ -66,7 +64,6 @@ public class WikiStartupSeedingTests
 			.IsTrue()
 			.Because("StartupHandler seeds the Help:Markdown Guide page on startup");
 		await Assert.That(result.AsT0.Title).IsEqualTo("Markdown Guide");
-		// The rendered copy must carry the live recent-changes directive placeholder.
 		await Assert.That(result.AsT0.RenderedHtml).Contains("data-directive=\"recent\"");
 	}
 
@@ -78,8 +75,6 @@ public class WikiStartupSeedingTests
 		await Assert.That(result.IsT0).IsTrue();
 		await Assert.That(result.AsT0.Namespace).IsEqualTo("main");
 	}
-
-	// ── Cross-lookup consistency ──────────────────────────────────────────────
 
 	[Test]
 	public async Task HomePageIsSeeded_GetByIdRoundTrip()
@@ -97,8 +92,6 @@ public class WikiStartupSeedingTests
 		await Assert.That(byId.AsT0.Slug).IsEqualTo("home");
 	}
 
-	// ── PUT controller path reproduction ─────────────────────────────────────
-
 	/// <summary>
 	/// Reproduces the exact call sequence inside <c>WikiController.Put</c>:
 	/// <list type="number">
@@ -112,13 +105,11 @@ public class WikiStartupSeedingTests
 	[Test]
 	public async Task PutControllerPath_SlugLookupThenUpdateById_Succeeds()
 	{
-		// ── step 1: slug lookup (same as WikiController.Put) ──────────────────
 		var lookup = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
 		await Assert.That(lookup.IsT0).IsTrue();
 
 		var pageId = lookup.AsT0.Id;
 
-		// ── step 2: update by id (same as WikiController.Put) ─────────────────
 		var updateResult = await Wiki.UpdateAsync(
 			id: pageId,
 			markdown: lookup.AsT0.MarkdownSource + "\n\n<!-- PUT path test -->",
@@ -130,7 +121,6 @@ public class WikiStartupSeedingTests
 			.IsGreaterThan(lookup.AsT0.RevisionNumber)
 			.Because("UpdateAsync must increment the revision counter");
 
-		// ── step 3: verify the edit is visible via slug lookup ────────────────
 		var afterUpdate = await Wiki.GetBySlugAsync("home", "general", WikiNamespace.Main);
 		await Assert.That(afterUpdate.IsT0).IsTrue();
 		await Assert.That(afterUpdate.AsT0.MarkdownSource)

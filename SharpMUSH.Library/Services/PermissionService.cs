@@ -141,8 +141,6 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (attribute.Length == 0)
 			return false;
 
-		// Check all attributes in the path for execution permissions
-		// All must allow evaluation for the final attribute to be executable
 		return await attribute.ToAsyncEnumerable()
 			.AllAsync(async (attr, _) => await CanEvalAttr(viewer, target, attr));
 	}
@@ -157,8 +155,6 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (attribute.Length == 0)
 			return false;
 
-		// Check all attributes in the path for execution permissions
-		// All must allow evaluation for the final attribute to be executable
 		return await attribute.ToAsyncEnumerable()
 			.AllAsync(async (attr, _) => await CanEvalAttr(viewer, target, attr));
 	}
@@ -241,16 +237,6 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (type.HasFlag(IPermissionService.InteractType.Hear) && !lockService.Evaluate(LockType.Interact, to, from))
 			return false;
 
-		/*
-		 // This check exists for being able to insert a Modification to the code.
-		// Check if objects are in the same location or if 'from' controls 'to'
-		var fromStep = from.MinusRoom();
-		var toStep = to.MinusRoom();
-		
-		 return fromStep.Object().Id == (await toStep.Location()).Object().Id
-		    || toStep.Object().Id == (await fromStep.Location()).Object().Id
-		    || await Controls(to, from);
-		    */
 		return await ValueTask.FromResult(true);
 	}
 
@@ -295,21 +281,6 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	public ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
 	{
-		/*
-		 // D:\pennmush\src\move.c
-		 // Most details are in do_move (395)
-
-      if (!eval_lock_with(player, Location(player), Leave_Lock, pe_info)) {
-        fail_lock(player, Location(player), Leave_Lock,
-                  T("You can't go that way."), NOTHING);
-        return;
-      }
-
-      // could_doit(player, exit_m, pe_info)
-
-
-		 */
-
 		var _ = who;
 		var _2 = exit;
 		var _3 = destination;

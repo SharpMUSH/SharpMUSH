@@ -41,11 +41,10 @@ public class LayoutEditorTests : BunitContext
 	public LayoutEditorTests()
 	{
 		var registry = new WidgetRegistry();
-		registry.Register(new WikiIndexWidgetDescriptor());          // MainContent
-		registry.Register(new QuickLinksWidgetDescriptor());         // TopBar/sidebars/footer (no MainContent)
-		registry.Register(new CharacterGalleryWidgetDescriptor());   // MainContent/RightSidebar
+		registry.Register(new WikiIndexWidgetDescriptor());
+		registry.Register(new QuickLinksWidgetDescriptor());
+		registry.Register(new CharacterGalleryWidgetDescriptor());
 
-		// wiki-index scope exposes only MainContent.
 		var layout = new LayoutConfiguration(
 			new Dictionary<WidgetZone, List<WidgetPlacement>>
 			{
@@ -86,12 +85,10 @@ public class LayoutEditorTests : BunitContext
 		}, TimeSpan.FromSeconds(5));
 
 		var markup = cut.Markup;
-		// MainContent-capable widgets are offered in the palette.
 		await Assert.That(markup).Contains("Wiki Index");
 		await Assert.That(markup).Contains("Gallery");
 		// QuickLinks has no MainContent zone, so it is filtered out of this scope's palette.
 		await Assert.That(markup).DoesNotContain("Quick Links");
-		// The scope's single zone is rendered as a drop target.
 		await Assert.That(markup).Contains("MainContent");
 	}
 }

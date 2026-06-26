@@ -194,7 +194,6 @@ public class SceneRoleplayIntegrationTests
 		// God needs to be a wizard to create players / dig rooms cleanly.
 		await God1("@set #1=WIZARD");
 
-		// ── Beat 1: Setup ─────────────────────────────────────────────────────────
 		// 1a. Confirm the Scene plugin surface is live: a scene…() read function resolves
 		//     (an unknown id returns #-1 NOT FOUND, NOT a "no such function" error).
 		var unknownScene = await Eval($"scene(nope-{Tag}, status)");
@@ -251,7 +250,6 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await EvalNum($"loc({bob})")).IsEqualTo(roomDbref);
 		await Assert.That(await EvalNum($"loc({carol})")).IsEqualTo(roomDbref);
 
-		// ── Beat 2: Create (run as the owner, Alice) ──────────────────────────────
 		// +scene/create binds the scene to %L (the room), makes Alice owner+focused, and sets status
 		// to the package default — `active` (1.1.0) — so the scene is immediately the room's active
 		// scene and capture fires without a separate +scene/start.
@@ -296,7 +294,6 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"scenewhere({roomDbref})")).IsEqualTo(sceneId)
 			.Because("the scene remains the room's active scene (capture pre-req)");
 
-		// ── Beat 3: Join + showas (Bob and Carol) ─────────────────────────────────
 		var bobJoin = await RunAndCollectAs(12L, $"+scene/join {sceneId}");
 		Log($"[JOIN] Bob: {string.Join(" | ", bobJoin)}");
 		var carolJoin = await RunAndCollectAs(13L, $"+scene/join {sceneId}");
@@ -315,7 +312,6 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"scenemember({sceneId}, {bob}, showas)")).IsEqualTo("Bob the Bard");
 		await Assert.That(await Eval($"scenemember({sceneId}, {carol}, showas)")).IsEqualTo("Carol the Cloaked");
 
-		// Membership: all three are members; roles reflect owner vs participant.
 		var members = (await Eval($"scenemembers({sceneId})"))
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(Num).ToList();
 		Log($"[MEMBERS] {string.Join(" ", members)}");
@@ -325,13 +321,12 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"scenemember({sceneId}, {bob}, role)")).IsEqualTo("participant");
 		await Assert.That(await Eval($"scenemember({sceneId}, {carol}, role)")).IsEqualTo("participant");
 
-		// ── Beat 4: Pose capture from multiple characters (native pose/say/semipose) ─
 		// Each focused character poses natively; the @hook/override on POSE/SAY/SEMIPOSE
 		// reproduces the room emit AND records the pose into the scene.
-		await RunAndCollectAs(11L, "pose lights a candle on the bar.");          // POSE  (Alice)
-		await RunAndCollectAs(12L, "say Well met, friends!");                    // SAY   (Bob)
-		await RunAndCollectAs(13L, ";slips into the corner booth.");             // SEMI  (Carol)
-		await RunAndCollectAs(11L, "pose pours three ales.");                    // POSE  (Alice again)
+		await RunAndCollectAs(11L, "pose lights a candle on the bar.");
+		await RunAndCollectAs(12L, "say Well met, friends!");
+		await RunAndCollectAs(13L, ";slips into the corner booth.");
+		await RunAndCollectAs(11L, "pose pours three ales.");
 
 		var poseIds = (await Eval($"sceneposes({sceneId})"))
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -339,7 +334,6 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(poseIds.Length).IsEqualTo(4)
 			.Because("all four focused-in-room poses (pose/say/semi/pose) should have been captured");
 
-		// In-order, attributed to the right author with the right showAs and source.
 		// Pose 0 — Alice POSE: "<name> <message>".
 		await Assert.That(await EvalNum($"scenepose({sceneId}, {poseIds[0]}, author)")).IsEqualTo(Num(alice));
 		await Assert.That(await Eval($"scenepose({sceneId}, {poseIds[0]}, showas)")).IsEqualTo("Alice the Innkeeper");
@@ -384,7 +378,6 @@ public class SceneRoleplayIntegrationTests
 			.IsEqualTo(string.Empty)
 			.Because("Dave authored no captured poses");
 
-		// ── Beat 5: Edit + undo your own pose (Bob edits his SAY pose) ────────────
 		// +scene/edit <poseId>=<find>^^^<replace>; author-only is enforced by @scene/editpose.
 		var bobPoseId = poseIds[1];
 		await RunAndCollectAs(12L, $"+scene/edit {bobPoseId}=friends^^^companions");
@@ -395,12 +388,10 @@ public class SceneRoleplayIntegrationTests
 		var editCountAfter = await Eval($"scenepose({sceneId}, {bobPoseId}, editcount)");
 		Log($"[EDIT] editcount after edit: {editCountAfter}");
 
-		// Undo restores the previous version.
 		await RunAndCollectAs(12L, $"+scene/undo {bobPoseId}");
 		await Assert.That(await Eval($"scenepose({sceneId}, {bobPoseId}, content)")).Contains("Well met, friends!")
 			.Because("+scene/undo should restore the pre-edit content");
 
-		// ── Beat 6: Recap + who ───────────────────────────────────────────────────
 		// +scene/recall <count> prints the last <count> pose contents (Alice is focused).
 		var recapMsgs = await RunAndCollectAs(11L, "+scene/recall 10");
 		var recap = string.Join("\n", recapMsgs);
@@ -429,15 +420,12 @@ public class SceneRoleplayIntegrationTests
 		foreach (var persona in new[] { "Alice the Innkeeper", "Bob the Bard", "Carol the Cloaked" })
 			await Assert.That(cast).Contains(persona);
 
-		// ── Beat 7: Finish ────────────────────────────────────────────────────────
 		var finishMsgs = await RunAndCollectAs(11L, "+scene/finish");
 		Log($"[FINISH] {string.Join(" | ", finishMsgs)}");
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("finished")
 			.Because("+scene/finish drives status to finished");
-		// Finishing also clears the owner's focus.
 		await Assert.That(await Eval($"scenefocus({alice})")).StartsWith("#-1")
 			.Because("+scene/finish clears the owner's focus");
-		// A finished scene is no longer the room's active scene.
 		await Assert.That(await Eval($"scenewhere({roomDbref})")).StartsWith("#-1")
 			.Because("a finished scene is no longer the room's active scene");
 
@@ -714,7 +702,6 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(sayHeard.All(n => n.Sender != Num(loggerDbref))).IsTrue()
 			.Because("the Scene Logger must never be the sender of a captured say");
 
-		// POSE
 		var poseNotes = await RunAndCollectNotificationsAs(91L, "pose stands up.");
 		var poseHeard = poseNotes.Where(n => n.Message.Contains("stands up.")).ToList();
 		await Assert.That(poseHeard).IsNotEmpty();
@@ -722,7 +709,6 @@ public class SceneRoleplayIntegrationTests
 			await Assert.That(n.Sender).IsEqualTo(Num(eve))
 				.Because("the captured pose's sender must be the speaker");
 
-		// @EMIT
 		var emitNotes = await RunAndCollectNotificationsAs(91L, "@emit A bell tolls.");
 		var emitHeard = emitNotes.Where(n => n.Message.Contains("A bell tolls.")).ToList();
 		await Assert.That(emitHeard).IsNotEmpty();

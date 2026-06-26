@@ -53,7 +53,6 @@ public partial class ArangoDatabase
 				logger.LogInformation("Database dropped successfully.");
 			}
 
-			// Re-create and re-migrate
 			await Migrate(ct);
 
 			logger.LogInformation("Database wiped and re-initialized successfully.");

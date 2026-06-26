@@ -172,7 +172,6 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		// Export path needs a package id on the right-hand side.
 		if (!args.TryGetValue("1", out var idArg) || string.IsNullOrWhiteSpace(idArg.Message?.ToPlainText()))
 		{
 			await NotifyService!.Notify(executor,

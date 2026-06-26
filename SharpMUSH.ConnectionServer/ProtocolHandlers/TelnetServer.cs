@@ -76,7 +76,6 @@ public class TelnetServer : ConnectionHandler
 						_logger.LogDebug("Updated Pueblo capabilities for handle {Handle}", nextPort);
 					}
 
-					// Publish metadata update to main process
 					await _publishEndpoint.Publish(
 						new PuebloNegotiatedMessage(nextPort, input.TrimEnd()), ct);
 
@@ -135,7 +134,6 @@ public class TelnetServer : ConnectionHandler
 			await telnet.SendAsync(PuebloHelloBytes);
 		}
 
-		// Register connection in ConnectionService
 		await _connectionService.RegisterAsync(
 			nextPort,
 			remoteIp,
@@ -185,7 +183,6 @@ public class TelnetServer : ConnectionHandler
 		connection.Abort,
 		async (module, message) =>
 		{
-			// Send GMCP message using TelnetNegotiationCore library method
 			await telnet.SendGMCPCommand(module, message);
 		});
 
@@ -208,7 +205,6 @@ public class TelnetServer : ConnectionHandler
 			_logger.LogDebug(ex, "Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
 		}
 
-		// Disconnect and notify MainProcess
 		await _connectionService.DisconnectAsync(nextPort);
 		_descriptorGenerator.ReleaseTelnetDescriptor(nextPort);
 	}

@@ -12,7 +12,6 @@
     <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:4px;">Image Library</MudText>
     <MudText Style="color:var(--text-dim);font-size:14px;margin-bottom:24px;">Manage uploaded media assets used across the wiki and portal.</MudText>
 
-    @* ── Stat tiles ── *@
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
         @foreach (var tile in new[] {
             (_assets.Count.ToString(),                             "Total Assets",        Icons.Material.Filled.Image,        "var(--accent)"),
@@ -36,9 +35,7 @@
         }
     </div>
 
-    @* ── Toolbar ── *@
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-        @* Kind filter pills *@
         <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection"
                     SelectedValue="_kindFilter"
                     SelectedValueChanged="@(v => { _kindFilter = v ?? "all"; StateHasChanged(); })">
@@ -52,13 +49,11 @@
             }
         </MudChipSet>
         <MudSpacer />
-        @* Grid / List toggle *@
         <MudToggleGroup T="string" Value="_viewMode" ValueChanged="@(v => _viewMode = v ?? "grid")"
                         Color="Color.Primary" Style="gap:0;">
             <MudToggleItem Value="@("grid")" Text="Grid" />
             <MudToggleItem Value="@("list")" Text="List" />
         </MudToggleGroup>
-        @* Upload *@
         <MudFileUpload T="IBrowserFile"
                        Accept=".png,.jpg,.jpeg,.gif,.webp,.svg,.mp4,.webm,.pdf,.txt"
                        FilesChanged="@OnFileSelected"
@@ -82,14 +77,12 @@
     }
     else if (_viewMode == "grid")
     {
-        @* Grid view *@
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
             @foreach (var asset in FilteredAssets)
             {
                 var a = asset;
                 <MudPaper Elevation="0" Class="asset-card"
                           Style="border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;background:var(--surface);position:relative;">
-                    @* Thumbnail / kind icon placeholder *@
                     <div style="@($"height:120px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);overflow:hidden;")">
                         @if (AssetKind(a.ContentType) == "image")
                         {
@@ -129,7 +122,6 @@
     }
     else
     {
-        @* List view — MudDataGrid with mini thumbnail *@
         <MudDataGrid T="WikiAssetInfo" Items="@FilteredAssets"
                      Dense="true" Hover="true"
                      Class="mush-dark-grid"
@@ -201,7 +193,6 @@
     }
 </div>
 
-@* Delete confirmation *@
 <MudDialog @bind-Visible="_showDeleteConfirm">
     <TitleContent>
         <MudText Typo="Typo.h6">Delete asset?</MudText>

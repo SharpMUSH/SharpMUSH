@@ -43,8 +43,6 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	/// </summary>
 	private const string CharacterDbrefClaim = "character_dbref";
 
-	// ── DTO record types (long Unix-millis timestamps, passed straight through) ──
-
 	/// <summary>Scene data returned by the API. Timestamps are UTC Unix-millis (long).</summary>
 	public record SceneDto(
 		string Id,
@@ -94,8 +92,6 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 		bool IsCurrent,
 		long GrantedAt);
 
-	// ── DTO mapping ────────────────────────────────────────────────────────────
-
 	private static SceneDto ToDto(Contracts.Scene s) => new(
 		s.Id, s.Status, s.IsPublic, s.IsTempRoom, s.ScheduledFor, s.StartedAt, s.LastActivityAt,
 		s.PoseCount, s.OwnerDbref, s.OwnerName, s.StarterDbref, s.StarterName, s.RoomDbref, s.RoomName, s.Meta);
@@ -107,8 +103,6 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 
 	private static SceneMemberDto ToDto(SceneMember m) => new(
 		m.SceneId, m.MemberDbref, m.MemberName, m.Role, m.ShowAs, m.IsCurrent, m.GrantedAt);
-
-	// ── Visibility ───────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// The caller's character dbref, taken from the <c>character_dbref</c> JWT claim. Null when the
@@ -145,8 +139,6 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 		var member = await sceneService.GetMemberAsync(scene.Id, me);
 		return member.IsT0;
 	}
-
-	// ── Endpoints ────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// GET /api/scenes?filter=active|recent|scheduled&amp;count=50

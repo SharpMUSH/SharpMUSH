@@ -79,7 +79,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		_logger.LogInformation("Converting {Count} PennMUSH objects to SharpMUSH format", totalObjects);
 
-		// Helper to report progress
 		void ReportProgress(string phase, double percentComplete)
 		{
 			if (progress == null) return;
@@ -168,7 +167,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		_logger.LogInformation("Object creation phase - converting {Count} objects", pennDatabase.Objects.Count);
 
-		// If the database is empty, there's nothing to convert
 		if (pennDatabase.Objects.Count == 0)
 		{
 			_logger.LogInformation("Empty database - no objects to convert");
@@ -188,11 +186,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			playersConverted++; // Count reused object in totals
 			_logger.LogInformation("Reusing existing God player #1 from database migration");
 
-			// Update the name and password from PennMUSH if available
 			var godPennObject = pennDatabase.GetObject(1);
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
-				// Update God player name/password from PennMUSH data
 				await _database.SetObjectName(existingPlayer1.AsT0, MModule.single(godPennObject.Name), cancellationToken);
 
 				if (!string.IsNullOrEmpty(godPennObject.Password))
@@ -206,12 +202,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 		else
 		{
-			// No existing player, create one
 			var godPennObject = pennDatabase.GetObject(1);
 
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
-				// Create God player first - extract salt from PennMUSH password
 				var (godSalt, godHash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
 				tempGodDbRef = await _database.CreatePlayerAsync(
 					godPennObject.Name,
@@ -243,13 +237,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 		}
 
-		// Get the God player object for use as creator
 		var godPlayerObj = await _database.GetObjectNodeAsync(tempGodDbRef, cancellationToken);
 		if (!godPlayerObj.TryPickT0(out var godPlayerWrapped, out _))
 		{
 			throw new InvalidOperationException("Failed to retrieve God player after creation or reuse");
 		}
-		var godPlayer = godPlayerWrapped; // This is SharpPlayer directly
+		var godPlayer = godPlayerWrapped;
 
 		// Check if Room #0 already exists (from database migration)
 		DBRef tempRoom0DbRef;
@@ -263,18 +256,15 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			roomsConverted++; // Count reused object in totals
 			_logger.LogInformation("Reusing existing Limbo room #0 from database migration");
 
-			// Update the name from PennMUSH if available
 			var room0Penn = pennDatabase.GetObject(0);
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
-				// Update Room #0 name from PennMUSH data
 				await _database.SetObjectName(existingRoom0.AsT1, MModule.single(room0Penn.Name), cancellationToken);
 				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
 			}
 		}
 		else
 		{
-			// No existing room, create one
 			var room0Penn = pennDatabase.GetObject(0);
 
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
@@ -307,7 +297,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			// Master Room #2 already exists (from database migration), reuse it
 			_dbrefMapping[2] = new DBRef(2);
 
-			// Count reused object in appropriate counter based on PennMUSH type
 			var room2Penn = pennDatabase.GetObject(2);
 			if (room2Penn != null)
 			{
@@ -342,7 +331,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			_logger.LogDebug("Object #2 does not pre-exist in Sharp database, will be created in main loop");
 		}
 
-		// Now create all other objects
 		SharpRoom? room0 = null; // Cache the limbo room to avoid repeated lookups
 
 		foreach (var pennObj in pennDatabase.Objects)
@@ -439,7 +427,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						continue;
 				}
 
-				// Store mapping from PennMUSH DBRef to SharpMUSH DBRef
 				_dbrefMapping[pennObj.DBRef] = newDbRef;
 
 				_logger.LogDebug("Created object #{PennDBRef} -> {SharpDBRef}: {Name}",
@@ -468,7 +455,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			// Skip if we don't have a mapping for this object
 			if (!_dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
 			{
 				continue;
@@ -476,7 +462,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			try
 			{
-				// Get the Sharp object
 				var sharpObjResult = await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken);
 				if (sharpObjResult.IsNone)
 				{
@@ -496,7 +481,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 						if (container != null)
 						{
-							// Convert object to content (player, exit, or thing)
 							var hasContent = sharpObj.Match(
 								player => true,
 								room => false, // Rooms aren't content
@@ -513,7 +497,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 									thing => thing,
 									_ => throw new InvalidOperationException("None cannot be content"));
 
-								// Use MoveService to properly move the object
 								// Note: Passing null for parser as this is a system operation during conversion
 								var moveResult = await _moveService.ExecuteMoveAsync(
 									null!, // No parser context during conversion
@@ -534,7 +517,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					}
 				}
 
-				// Handle exit destination (link)
 				if (pennObj.Type == PennMUSHObjectType.Exit && pennObj.Link >= 0)
 				{
 					if (_dbrefMapping.TryGetValue(pennObj.Link, out var destDbRef))
@@ -550,10 +532,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					}
 				}
 
-				// Handle parent relationship
 				if (pennObj.Parent >= 0 && _dbrefMapping.TryGetValue(pennObj.Parent, out var parentDbRef))
 				{
-					// Set parent relationship
 					var parentObj = await _database.GetObjectNodeAsync(parentDbRef, cancellationToken);
 					if (!parentObj.IsNone)
 					{
@@ -566,10 +546,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					}
 				}
 
-				// Handle zone relationship
 				if (pennObj.Zone >= 0 && _dbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
 				{
-					// Set zone relationship
 					var zoneObj = await _database.GetObjectNodeAsync(zoneDbRef, cancellationToken);
 					if (!zoneObj.IsNone)
 					{
@@ -604,13 +582,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			// Skip if we don't have a mapping for this object
 			if (!_dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
 			{
 				continue;
 			}
 
-			// Skip if no attributes
 			if (pennObj.Attributes.Count == 0)
 			{
 				continue;
@@ -618,7 +594,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			try
 			{
-				// Get the Sharp object
 				var sharpObjResult = await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken);
 				if (sharpObjResult.IsNone)
 				{
@@ -628,22 +603,18 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 				var sharpObj = sharpObjResult.Known;
 
-				// Create each attribute
 				foreach (var pennAttr in pennObj.Attributes)
 				{
 					try
 					{
-						// Convert ANSI escape sequences to MarkupString
 						var value = AnsiEscapeParser.ConvertAnsiToMarkupString(pennAttr.Value);
 
-						// Log if escape sequences were converted
 						if (pennAttr.Value != null && pennAttr.Value.Contains('\x1b'))
 						{
 							_logger.LogTrace("Converted ANSI escape sequences from attribute {AttrName} on object #{DBRef}",
 								pennAttr.Name, pennObj.DBRef);
 						}
 
-						// Set the attribute using AttributeService
 						var result = await _attributeService.SetAttributeAsync(
 							sharpObj, // executor (system)
 							sharpObj, // object to set attribute on
@@ -655,7 +626,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							count++;
 							_logger.LogTrace("Set attribute {AttrName} on object #{DBRef}", pennAttr.Name, pennObj.DBRef);
 
-							// Set attribute flags if any
 							foreach (var flag in pennAttr.Flags)
 							{
 								await _attributeService.SetAttributeFlagAsync(sharpObj, sharpObj, pennAttr.Name, flag);
@@ -698,13 +668,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			// Skip if we don't have a mapping for this object
 			if (!_dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
 			{
 				continue;
 			}
 
-			// Skip if no locks
 			if (pennObj.Locks.Count == 0)
 			{
 				continue;
@@ -712,7 +680,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			try
 			{
-				// Get the Sharp object
 				var sharpObjResult = await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken);
 				if (sharpObjResult.IsNone)
 				{
@@ -722,7 +689,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 				var sharpObj = sharpObjResult.Known;
 
-				// Create each lock
 				foreach (var (lockName, lockString) in pennObj.Locks)
 				{
 					try
@@ -846,7 +812,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		if (saltedHash.Length < 3)
 			return (null, password);
 
-		// Extract the 2-character salt
 		var salt = saltedHash[..2];
 
 		// Return the salt and the full password (we keep the full format for verification)

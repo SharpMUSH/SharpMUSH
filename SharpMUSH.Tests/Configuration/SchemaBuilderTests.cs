@@ -44,7 +44,6 @@ public class SchemaBuilderTests
 	{
 		var schema = BuildSchema();
 
-		// A boolean still maps to a switch, a string still maps to a text field.
 		await Assert.That(schema.Properties["Cosmetic.AnnounceConnects"].Component).IsEqualTo("switch");
 		await Assert.That(schema.Properties["Cosmetic.MoneySingular"].Component).IsEqualTo("text");
 	}

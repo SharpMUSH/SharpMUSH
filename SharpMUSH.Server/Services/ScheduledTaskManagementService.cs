@@ -46,10 +46,10 @@ public partial class ScheduledTaskManagementService(
 			var unit = match.Groups[2].Value;
 			totalSeconds += unit switch
 			{
-				"d" => value * 86400,  // days
-				"h" => value * 3600,   // hours
-				"m" => value * 60,     // minutes
-				"s" => value,          // seconds
+				"d" => value * 86400,
+				"h" => value * 3600,
+				"m" => value * 60,
+				"s" => value,
 				_ => 0
 			};
 		}
@@ -68,7 +68,6 @@ public partial class ScheduledTaskManagementService(
 
 		_scheduler = await schedulerFactory.GetScheduler(cancellationToken);
 
-		// Schedule warning time update job if interval is configured
 		if (_warnInterval > TimeSpan.Zero)
 		{
 			var warningJob = JobBuilder.Create<UpdateWarningTimeJob>()
@@ -95,7 +94,6 @@ public partial class ScheduledTaskManagementService(
 			logger.LogInformation("Scheduled warning time update job with interval: {Interval}", checkInterval);
 		}
 
-		// Schedule purge time update job if interval is configured
 		if (_purgeInterval > TimeSpan.Zero)
 		{
 			var purgeJob = JobBuilder.Create<UpdatePurgeTimeJob>()

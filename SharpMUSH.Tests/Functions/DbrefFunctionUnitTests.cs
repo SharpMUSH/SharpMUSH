@@ -12,7 +12,6 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task Loc()
 	{
-		// Test loc function - should return the location of the current player
 		var result = (await Parser.FunctionParse(MModule.single("loc(%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#0:");
 	}
@@ -20,7 +19,6 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task Controls()
 	{
-		// Test controls function - a player should control themselves
 		var result = (await Parser.FunctionParse(MModule.single("controls(%#,%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
@@ -28,7 +26,6 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task Home()
 	{
-		// Test home function - should return the home of the current player
 		var result = (await Parser.FunctionParse(MModule.single("home(%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#0:");
 	}
@@ -38,7 +35,6 @@ public class DbrefFunctionUnitTests
 	{
 		// loc() on the current room (%l) should return drop-to or #-1
 		var result = (await Parser.FunctionParse(MModule.single("loc(%l)")))?.Message!;
-		// Should return either a dbref or #-1 (if no drop-to)
 		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1)$");
 	}
 
@@ -47,7 +43,6 @@ public class DbrefFunctionUnitTests
 	{
 		// home() on the current room (%l) should return drop-to or #-1
 		var result = (await Parser.FunctionParse(MModule.single("home(%l)")))?.Message!;
-		// Should return either a dbref or #-1 (if no drop-to)
 		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1)$");
 	}
 
@@ -160,7 +155,6 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task Lock_CaseInsensitive_LockName()
 	{
-		// lock() with case-variant lock names should all resolve the same lock
 		var createResult = (await Parser.FunctionParse(MModule.single("create(LockTestObj_CaseInsensitive)")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
@@ -175,12 +169,10 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task Lock_EmptyLockName_AfterSlash()
 	{
-		// lock(obj/) with empty lock name after slash
 		var createResult = (await Parser.FunctionParse(MModule.single("create(LockTestObj_EmptySlash)")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
 		var result = (await Parser.FunctionParse(MModule.single($"lock({dbref}/)")))?.Message!;
-		// Empty lock name should return no lock found
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -335,15 +327,12 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task NextDbref_ReturnsValidDbref()
 	{
-		// nextdbref() should return a valid dbref for the next object to be created
 		var result = (await Parser.FunctionParse(MModule.single("nextdbref()")))?.Message!;
 		var dbrefStr = result.ToPlainText();
 
-		// Should start with # and contain a colon
 		await Assert.That(dbrefStr).StartsWith("#");
 		await Assert.That(dbrefStr).Contains(":");
 
-		// Should be parseable as a dbref format
 		var parts = dbrefStr.TrimStart('#').Split(':');
 		await Assert.That(parts.Length).IsEqualTo(2);
 		await Assert.That(int.TryParse(parts[0], out _)).IsTrue();
@@ -352,15 +341,11 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task Lsearchr_WithRegexPattern()
 	{
-		// Create an object with a specific name pattern for testing
 		await Parser.FunctionParse(MModule.single("create(TestObject123)"));
 
-		// lsearchr() should support regex matching on names
-		// Search for objects with names matching the pattern "TestObject[0-9]+"
 		var result = (await Parser.FunctionParse(MModule.single("lsearchr(%#,NAME=TestObject[0-9]+)")))?.Message!;
 		var dbrefs = result.ToPlainText();
 
-		// Should find at least the object we created (if not empty)
 		// The result can be empty if the object wasn't visible or permissions prevented it
 		await Assert.That(dbrefs).IsNotNull();
 	}
@@ -369,11 +354,9 @@ public class DbrefFunctionUnitTests
 	[NotInParallel]
 	public async Task Lsearchr_BehavesLikeLsearch_WhenNoRegexNeeded()
 	{
-		// lsearchr() should work the same as lsearch() for simple patterns
 		var lsearchResult = (await Parser.FunctionParse(MModule.single("lsearch(%#,TYPE=PLAYER)")))?.Message!;
 		var lsearchrResult = (await Parser.FunctionParse(MModule.single("lsearchr(%#,TYPE=PLAYER)")))?.Message!;
 
-		// Both should return the same results for non-regex patterns
 		await Assert.That(lsearchrResult.ToPlainText()).IsEqualTo(lsearchResult.ToPlainText());
 	}
 
@@ -383,56 +366,43 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task ObjId_AcceptedByLocFunction()
 	{
-		// objid(%#) returns the full objid of the executor (e.g. #1:1234567890)
-		// loc() should accept this objid and return the same location as with a bare dbref
 		var objIdResult = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
 		var objId = objIdResult.ToPlainText();
 
 		var resultWithObjId = (await Parser.FunctionParse(MModule.single($"loc({objId})")))?.Message!;
 		var resultWithDbRef = (await Parser.FunctionParse(MModule.single("loc(%#)")))?.Message!;
 
-		// Both should return the same location
 		await Assert.That(resultWithObjId.ToPlainText()).IsEqualTo(resultWithDbRef.ToPlainText());
 	}
 
 	[Test]
 	public async Task ObjId_AcceptedByNameFunction()
 	{
-		// objid(%#) returns the full objid of the executor (e.g. #1:1234567890)
-		// name() should accept this objid and return the object's name
 		var objIdResult = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
 		var objId = objIdResult.ToPlainText();
 
 		var resultWithObjId = (await Parser.FunctionParse(MModule.single($"name({objId})")))?.Message!;
 		var resultWithDbRef = (await Parser.FunctionParse(MModule.single("name(%#)")))?.Message!;
 
-		// Both should return the same name
 		await Assert.That(resultWithObjId.ToPlainText()).IsEqualTo(resultWithDbRef.ToPlainText());
 	}
 
 	[Test]
 	public async Task ObjId_AcceptedByLocateFunction()
 	{
-		// locate() with an objid as the name argument should find the object
-		// First get the objid of the executor
 		var objIdResult = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
 		var objId = objIdResult.ToPlainText();
 
-		// Now locate using the full objid
 		var locateResult = (await Parser.FunctionParse(MModule.single($"first(locate(%#,{objId},*),;)")))?.Message!;
 
-		// Should find the object - result should match the bare dbref number
 		await Assert.That(locateResult.ToPlainText()).StartsWith("#1");
 	}
 
 	[Test]
 	public async Task ObjId_WithWrongTimestamp_FailsToLocate()
 	{
-		// An objid with a wrong timestamp should not locate the object
-		// Use a clearly invalid timestamp (0)
 		var locateResult = (await Parser.FunctionParse(MModule.single("locate(%#,#1:0,*)")))?.Message!;
 
-		// Should not find the object since timestamp 0 is wrong
 		await Assert.That(locateResult.ToPlainText()).IsEqualTo("#-1");
 	}
 
@@ -443,10 +413,8 @@ public class DbrefFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("%:")))?.Message!;
 		var objId = result.ToPlainText();
 
-		// Should match objid format: #N:M
 		await Assert.That(objId).Matches(@"^#\d+:\d+$");
 
-		// Should be consistent with objid(%#)
 		var objIdFromFunc = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
 		await Assert.That(objId).IsEqualTo(objIdFromFunc.ToPlainText());
 	}

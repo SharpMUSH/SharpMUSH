@@ -48,12 +48,10 @@ public class AttributeTreeLattrTests
 		await Cmd($"&{pfx}`LEAF {d}=Y");
 		await Cmd($"&{pfx}`LEAF`DEEP {d}=Z");
 
-		// tree** — root and all descendants
 		var allTree = await Eval($"lattr({d}/{pfx}**)");
 		await Assert.That(allTree).Contains(pfx);
 		await Assert.That(allTree).Contains($"{pfx}`LEAF");
 
-		// tree` — direct children only
 		var directChildren = await Eval($"lattr({d}/{pfx}`)");
 		await Assert.That(directChildren).Contains($"{pfx}`LEAF");
 		await Assert.That(directChildren).DoesNotContain($"{pfx}`LEAF`DEEP");
@@ -76,11 +74,9 @@ public class AttributeTreeLattrTests
 		await Cmd($"&{pfx}`BAZ {d}=3");
 		await Cmd($"&{pfx}D {d}=4");
 
-		// pfx* should match all four
 		var star = await Eval($"lattr({d}/{pfx}*)");
 		await Assert.That(star).Contains(pfx);
 
-		// pfx` should match only direct backtick children
 		var backtick = await Eval($"lattr({d}/{pfx}`)");
 		await Assert.That(backtick).Contains($"{pfx}`BAR");
 		await Assert.That(backtick).Contains($"{pfx}`BAZ");
@@ -123,13 +119,11 @@ public class AttributeTreeLattrTests
 		await Cmd($"&{pfx}`BAR`BAZ {d}=3");
 		await Cmd($"&{pfx}OTHER {d}=keep");
 
-		// Wipe pfx — should remove pfx, pfx`BAR, pfx`BAR`BAZ
 		await Cmd($"@wipe {d}/{pfx}");
 
 		await Assert.That(await Eval($"hasattr({d},{pfx})")).IsEqualTo("0");
 		await Assert.That(await Eval($"hasattr({d},{pfx}`BAR)")).IsEqualTo("0");
 		await Assert.That(await Eval($"hasattr({d},{pfx}`BAR`BAZ)")).IsEqualTo("0");
-		// OTHER should remain (different root)
 		await Assert.That(await Eval($"get({d}/{pfx}OTHER)")).IsEqualTo("keep");
 	}
 

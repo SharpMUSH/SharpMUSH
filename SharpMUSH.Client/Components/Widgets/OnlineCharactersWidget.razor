@@ -2,7 +2,6 @@
 @using SharpMUSH.Client.Services
 @inject CharacterDirectoryService CharacterDirectory
 
-@* Currently listed characters, linking to each profile. *@
 <MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
     <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Characters</MudText>
     @if (_loading)

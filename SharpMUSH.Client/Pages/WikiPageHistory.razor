@@ -10,7 +10,6 @@
 <PageTitle>History: @Slug — SharpMUSH</PageTitle>
 
 <div class="wikihist">
-    @* Header — prototype SectionTitle: back link + kicker + title + compare *@
     <a class="wikihist-back" href="@($"/wiki/{Ns}/{Category}/{Slug}")">
         <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:14px;" /> @_displayTitle
     </a>
@@ -46,7 +45,6 @@
     }
     else
     {
-        @* Radio-pair compare header *@
         <div style="display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px 80px;gap:4px;align-items:center;padding:6px 10px;border-bottom:2px solid var(--border);background:var(--surface-3);border-radius:var(--radius) var(--radius) 0 0;">
             <MudText Class="section-kicker" Style="grid-column:1;text-align:center;">Old</MudText>
             <MudText Class="section-kicker" Style="grid-column:2;text-align:center;">New</MudText>
@@ -71,7 +69,6 @@
                 <div style="@($"display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px;gap:4px;align-items:center;padding:8px 10px;background:{(altRow ? "var(--surface-3)" : "var(--surface)")};border-bottom:1px solid var(--border-soft);")"
                      @key="rev.RevisionNumber">
 
-                    @* Old radio — disabled for newest revision *@
                     <div style="display:flex;justify-content:center;">
                         <input type="radio" name="rev-old"
                                checked="@(_oldRev == rev.RevisionNumber)"
@@ -80,7 +77,6 @@
                                style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer;" />
                     </div>
 
-                    @* New radio — disabled for oldest revision *@
                     <div style="display:flex;justify-content:center;">
                         <input type="radio" name="rev-new"
                                checked="@(_newRev == rev.RevisionNumber)"
@@ -89,7 +85,6 @@
                                style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer;" />
                     </div>
 
-                    @* Timestamp + summary *@
                     <div style="min-width:0;">
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <MudText Style="font-size:13px;font-weight:600;">
@@ -109,7 +104,6 @@
                         }
                     </div>
 
-                    @* Author *@
                     <div style="display:flex;align-items:center;gap:6px;">
                         <MudAvatar Size="Size.Small"
                                    Style="@($"width:24px;height:24px;font-size:11px;background:hsl({Math.Abs(rev.EditorDbref.GetHashCode()) % 360},40%,30%);color:#fff;")">
@@ -120,7 +114,6 @@
                         </MudText>
                     </div>
 
-                    @* Size + delta *@
                     <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start;">
                         <MudText Style="font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">
                             @rev.MarkdownSource.Length.ToString("N0") B
@@ -134,7 +127,6 @@
                         }
                     </div>
 
-                    @* Actions *@
                     <div style="display:flex;gap:4px;align-items:center;justify-content:center;">
                         <MudTooltip Text="View this revision">
                             <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
@@ -179,7 +171,6 @@
         _revisions = [.. result];
         _loading = false;
 
-        // Default radio selection: new = latest (rev 0 in list = highest number), old = second
         if (_revisions.Count >= 2)
         {
             _newRev = _revisions[0].RevisionNumber;

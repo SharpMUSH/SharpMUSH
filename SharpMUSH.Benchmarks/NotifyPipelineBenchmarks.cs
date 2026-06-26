@@ -26,8 +26,6 @@ public class NotifyPipelineBenchmarks : BaseBenchmark
 		_parser = await TestParser().ConfigureAwait(false);
 	}
 
-	// ── Direct notify calls (no parsing) ──────────────────────────────────────
-
 	[Benchmark(Description = "INotifyService.Notify — single short message")]
 	public async Task NotifyShortMessage() =>
 		await _notifyService!.Notify(1L, ShortMsg, null);
@@ -49,8 +47,6 @@ public class NotifyPipelineBenchmarks : BaseBenchmark
 		for (var i = 0; i < 100; i++)
 			await _notifyService!.Notify(1L, ShortMsg, null);
 	}
-
-	// ── End-to-end command path (includes parsing + notify) ───────────────────
 
 	[Benchmark(Description = "CommandParse think — full output path")]
 	public async Task ThinkThroughPipeline() =>

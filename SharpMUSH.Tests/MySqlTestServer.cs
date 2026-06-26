@@ -25,7 +25,6 @@ public class MySqlTestServer : IAsyncInitializer, IAsyncDisposable
 	public string GetConnectionString(string databaseName)
 	{
 		var baseConnectionString = Instance.GetConnectionString();
-		// Replace the database name in the connection string
 		var builder = new MySqlConnector.MySqlConnectionStringBuilder(baseConnectionString)
 		{
 			Database = databaseName

@@ -112,17 +112,14 @@ public class PackageInstallServiceTests
 	[Test, NotInParallel]
 	public async Task InstallUpgradeRollbackUninstall_EndToEnd()
 	{
-		// The configure answer points at Room Zero.
 		var roomZero = (await Database.GetObjectNodeAsync(new DBRef(0))).Known().Object().DBRef.ToString();
 		var answers = new Dictionary<string, string> { ["storage"] = roomZero };
 		var manifestV1 = Parse(ManifestV1);
 
-		// ── Plan: everything is a create, nothing blocks ───────────────────────
 		var plan = await Installer.PlanAsync(manifestV1, answers);
 		await Assert.That(plan.IsBlocked).IsFalse();
 		await Assert.That(plan.Objects.Count(o => o.Action == PackageObjectAction.Create)).IsEqualTo(3);
 
-		// ── Install ────────────────────────────────────────────────────────────
 		var install = await Installer.ApplyAsync(manifestV1, new PackageApplyRequest(Source(), answers, []));
 		await Assert.That(install.IsT0).IsTrue();
 		var result = install.AsT0;
@@ -133,7 +130,6 @@ public class PackageInstallServiceTests
 		var boardObjid = result.CreatedObjects["board"];
 		var loungeObjid = result.CreatedObjects["lounge"];
 
-		// Objects really exist, owned structure intact.
 		var boardNode = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(boardObjid)!.Value);
 		await Assert.That(boardNode.IsNone()).IsFalse();
 		await Assert.That(boardNode.Known().Object().Name).IsEqualTo("E2E Board");
@@ -146,11 +142,9 @@ public class PackageInstallServiceTests
 		await Assert.That(cmd).DoesNotContain(boardObjid);
 		await Assert.That(await ReadAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-one-format");
 
-		// The engine-managed ref attrs hold the resolutions.
 		await Assert.That(await ReadAttributeAsync(boardObjid, "PM`REFS`BOARD")).IsEqualTo(boardObjid);
 		await Assert.That(await ReadAttributeAsync(boardObjid, "PM`REFS`STORAGE")).IsEqualTo(roomZero);
 
-		// Registry rows recorded: package, objects, baselines (full values), revision 1.
 		var installedRecord = await Registry.GetInstalledPackageAsync("e2e-pkg");
 		await Assert.That(installedRecord.AsT0.Version).IsEqualTo("1.0.0");
 		await Assert.That((await Registry.GetPackageObjectsAsync("e2e-pkg")).Count).IsEqualTo(3);
@@ -160,12 +154,10 @@ public class PackageInstallServiceTests
 		await Assert.That((await Registry.GetPackageRevisionsAsync("e2e-pkg")).Single().Kind)
 			.IsEqualTo(PackageRevisionKind.Install);
 
-		// ── Re-plan with no changes: everything NoChange ───────────────────────
 		var idle = await Installer.PlanAsync(manifestV1, answers);
 		await Assert.That(idle.Attributes.All(a => a.Action == PackageAttributeAction.NoChange)).IsTrue();
 		await Assert.That(idle.HasConflicts).IsFalse();
 
-		// ── Customize locally, then upgrade: ModifyModify conflict ─────────────
 		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
 		await Database.SetAttributeAsync(
 			PackageInstallService.ParseObjid(boardObjid)!.Value, ["FN_FMT"],
@@ -179,12 +171,10 @@ public class PackageInstallServiceTests
 		await Assert.That(conflict.LiveValue).IsEqualTo("my-custom-format");
 		await Assert.That(conflict.NewValue).IsEqualTo("version-two-format");
 
-		// Undecided conflict blocks apply.
 		var undecided = await Installer.ApplyAsync(manifestV2, new PackageApplyRequest(Source("commit-2"), answers, []));
 		await Assert.That(undecided.IsT1).IsTrue();
 		await Assert.That(undecided.AsT1.Value).Contains("Unresolved conflicts");
 
-		// Take theirs.
 		var upgrade = await Installer.ApplyAsync(manifestV2, new PackageApplyRequest(
 			Source("commit-2"), answers,
 			[new PackageConflictDecision(conflict.TargetRef, conflict.Attribute, PackageConflictResolution.TakeTheirs)]));
@@ -194,7 +184,6 @@ public class PackageInstallServiceTests
 		await Assert.That(await ReadAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-two-format");
 		await Assert.That((await Registry.GetInstalledPackageAsync("e2e-pkg")).AsT0.Version).IsEqualTo("1.1.0");
 
-		// ── Roll back to revision 1 ────────────────────────────────────────────
 		var rollback = await Installer.RollbackAsync("e2e-pkg", 1);
 		await Assert.That(rollback.IsT0).IsTrue();
 		await Assert.That(rollback.AsT0.Revision).IsEqualTo(3);
@@ -204,7 +193,6 @@ public class PackageInstallServiceTests
 		await Assert.That(afterRollback.AsT0.Version).IsEqualTo("1.0.0");
 		await Assert.That(afterRollback.AsT0.CurrentRevision).IsEqualTo(3);
 
-		// ── Uninstall ──────────────────────────────────────────────────────────
 		var uninstall = await Installer.UninstallAsync("e2e-pkg");
 		await Assert.That(uninstall.IsT0).IsTrue();
 		await Assert.That((await Registry.GetInstalledPackageAsync("e2e-pkg")).IsT1).IsTrue();
@@ -252,10 +240,8 @@ public class PackageInstallServiceTests
 		var answers = new Dictionary<string, string> { ["host"] = hostObjid };
 		var install = await Installer.ApplyAsync(manifest, new PackageApplyRequest(Source(), answers, []));
 		await Assert.That(install.IsT0).IsTrue();
-		// Attach mode created no owned objects.
 		await Assert.That(install.AsT0.CreatedObjects.Count).IsEqualTo(0);
 
-		// The attribute landed on the existing host; its own attrs are untouched.
 		await Assert.That(await ReadAttributeAsync(hostObjid, "CMD_X")).IsEqualTo("$+x:@pemit %#=managed");
 		await Assert.That(await ReadAttributeAsync(hostObjid, "PRE_EXISTING")).IsEqualTo("untouched");
 
@@ -322,7 +308,6 @@ public class PackageInstallServiceTests
 		await Assert.That(blocked.IsT1).IsTrue();
 		await Assert.That(blocked.AsT1.Value).Contains("attach-consumer");
 
-		// Remove the attacher, then the provider uninstalls cleanly.
 		await Assert.That((await Installer.UninstallAsync("attach-consumer")).IsT0).IsTrue();
 		await Assert.That(await ReadAttributeAsync(hubObjid, "FN_EXT")).IsEqualTo("");
 		await Assert.That((await Installer.UninstallAsync("attach-provider")).IsT0).IsTrue();
@@ -416,13 +401,11 @@ public class PackageInstallServiceTests
 
 		await Assert.That((await Installer.ApplyAsync(routes, new PackageApplyRequest(Source(), new Dictionary<string, string>(), []))).IsT0).IsTrue();
 
-		// Now the plan resolves and surfaces the registration as a note.
 		var plan = await Installer.PlanAsync(appPackage, answers);
 		await Assert.That(plan.IsBlocked).IsFalse();
 		await Assert.That(plan.Objects.Count).IsEqualTo(0);
 		await Assert.That(plan.Notes.Any(n => n.Contains("Registers application 'appdep'"))).IsTrue();
 
-		// Apply registers the portal application with the configure-resolved role.
 		var apply = await Installer.ApplyAsync(appPackage, new PackageApplyRequest(Source(), answers, []));
 		await Assert.That(apply.IsT0).IsTrue();
 		await Assert.That(apply.AsT0.CreatedObjects.Count).IsEqualTo(0);
@@ -441,7 +424,6 @@ public class PackageInstallServiceTests
 		await Assert.That(blockedUninstall.IsT1).IsTrue();
 		await Assert.That(blockedUninstall.AsT1.Value).Contains("appdep-app");
 
-		// Uninstalling the application package reclaims the registration.
 		await Assert.That((await Installer.UninstallAsync("appdep-app")).IsT0).IsTrue();
 		await Assert.That((await Applications.GetApplicationAsync("appdep")).IsT1).IsTrue();
 		await Assert.That((await Registry.GetInstalledPackageAsync("appdep-app")).IsT1).IsTrue();
@@ -508,10 +490,8 @@ public class PackageInstallServiceTests
 		var upgrade = await Installer.ApplyAsync(v2, new PackageApplyRequest(Source("commit-2"), new Dictionary<string, string>(), []));
 		await Assert.That(upgrade.IsT0).IsTrue();
 
-		// FN_DROP is gone from both the live object and the baseline registry...
 		await Assert.That(await ReadAttributeAsync(widgetObjid, "FN_DROP")).IsEqualTo("");
 		await Assert.That((await Registry.GetManagedAttributesAsync("flags-pkg")).Any(b => b.Attribute == "FN_DROP")).IsFalse();
-		// ...while FN_KEEP and its flags survive the upgrade untouched.
 		await Assert.That(await ReadAttributeAsync(widgetObjid, "FN_KEEP")).IsEqualTo("keep-me");
 		await Assert.That(await ReadAttributeFlagsAsync(widgetObjid, "FN_KEEP")).Contains("veiled");
 
@@ -599,8 +579,6 @@ public class PackageInstallServiceTests
 		await Assert.That((await Installer.UninstallAsync("struct-pkg")).IsT0).IsTrue();
 	}
 
-	// ── Phase 4: managed (compiled C# plugin DLL) packages ───────────────────
-
 	private static string CommandOnlyDllPath =>
 		System.IO.Path.Combine(AppContext.BaseDirectory, "plugins-unit", "command-only", "CommandOnlyPlugin.dll");
 
@@ -664,7 +642,6 @@ public class PackageInstallServiceTests
 				WebAppFactoryArg.Services.GetRequiredService<IPackageLifecycleRunner>(),
 				managedInstaller);
 
-			// Refused without the per-apply opt-in, and nothing deposited.
 			var refused = await installer.ApplyAsync(
 				manifest,
 				new PackageApplyRequest(Source(), new Dictionary<string, string>(), [], 10, AllowManagedCode: false),
@@ -674,7 +651,6 @@ public class PackageInstallServiceTests
 			await Assert.That((await Registry.GetInstalledPackageAsync("e2e-managed")).IsT1).IsTrue()
 				.Because("a refused managed install records nothing");
 
-			// Opt-in: deposit + record.
 			var applied = await installer.ApplyAsync(
 				manifest,
 				new PackageApplyRequest(Source(), new Dictionary<string, string>(), [], 10, AllowManagedCode: true),
@@ -691,7 +667,6 @@ public class PackageInstallServiceTests
 			await Assert.That(record.AsT0.DeployedFiles!).Contains("CommandOnlyPlugin.dll")
 				.Because("the deployed file list must round-trip through the active DB provider");
 
-			// Uninstall removes the directory and the registry record.
 			var uninstalled = await installer.UninstallAsync("e2e-managed");
 			await Assert.That(uninstalled.IsT0).IsTrue();
 			await Assert.That(System.IO.Directory.Exists(System.IO.Path.Combine(pluginsRoot, "e2e-managed"))).IsFalse();

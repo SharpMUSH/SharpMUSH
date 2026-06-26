@@ -79,11 +79,9 @@ public class MyrddinBBSIntegrationTests
 	{
 		var trimmed = line.TrimStart();
 
-		// Skip empty lines
 		if (string.IsNullOrWhiteSpace(trimmed))
 			return false;
 
-		// Skip comment lines starting with @@
 		if (trimmed.StartsWith("@@"))
 			return false;
 
@@ -142,12 +140,11 @@ public class MyrddinBBSIntegrationTests
 		var executionExceptions = new List<(int LineNumber, string Line, string Error)>();
 		var antlrErrorsByLine = new Dictionary<int, List<string>>();
 
-		// Track notification count before installation to separate install output from other test output
 		var preInstallNotificationCount = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
-		string? bbpocketDbref = null; // Will be set after @create bbpocket=10
-		string? mbboardDbref = null; // Will be set after @create mbboard=10
+		string? bbpocketDbref = null;
+		string? mbboardDbref = null;
 
 		for (var i = 0; i < scriptLines.Length; i++)
 		{
@@ -163,7 +160,6 @@ public class MyrddinBBSIntegrationTests
 
 			try
 			{
-				// Check for ANTLR parser errors on the line before executing it
 				var parseErrors = Parser.ValidateAndGetErrors(MModule.single(line), ParseType.CommandList);
 				if (parseErrors.Count > 0)
 				{
@@ -173,31 +169,27 @@ public class MyrddinBBSIntegrationTests
 				await Parser.CommandParse(1, ConnectionService, MModule.single(line));
 				executedLines++;
 
-				// After creating bbpocket, capture its actual dbref and set diagnostic flags
 				if (bbpocketDbref == null && line.TrimStart().StartsWith("@create bbpocket", StringComparison.OrdinalIgnoreCase))
 				{
 					var numResult = await Parser.CommandParse(1, ConnectionService,
 						MModule.single("think [num(bbpocket)]"));
 					bbpocketDbref = numResult.Message?.ToPlainText()?.Trim();
-					_bbpocketDbref = bbpocketDbref; // Share with all dependent tests
+					_bbpocketDbref = bbpocketDbref;
 					Log($"[BBS INSTALL] bbpocket created with dbref: {bbpocketDbref} (replacing #222 in remaining lines)");
 
-					// Set DEBUG, VERBOSE, PUPPET on bbpocket for comprehensive diagnostics
 					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {bbpocketDbref}=DEBUG"));
 					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {bbpocketDbref}=VERBOSE"));
 					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {bbpocketDbref}=PUPPET"));
 				}
 
-				// After creating mbboard, capture its actual dbref and set diagnostic flags
 				if (mbboardDbref == null && line.TrimStart().StartsWith("@create mbboard", StringComparison.OrdinalIgnoreCase))
 				{
 					var numResult = await Parser.CommandParse(1, ConnectionService,
 						MModule.single("think [num(mbboard)]"));
 					mbboardDbref = numResult.Message?.ToPlainText()?.Trim();
-					_mbboardDbref = mbboardDbref; // Share with dependent tests
+					_mbboardDbref = mbboardDbref;
 					Log($"[BBS INSTALL] mbboard created with dbref: {mbboardDbref}");
 
-					// Set DEBUG, VERBOSE, PUPPET on mbboard for comprehensive diagnostics
 					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {mbboardDbref}=DEBUG"));
 					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {mbboardDbref}=VERBOSE"));
 					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {mbboardDbref}=PUPPET"));
@@ -258,7 +250,6 @@ public class MyrddinBBSIntegrationTests
 			Log("[BBS INSTALL] WARNING: Failed to create regular test user — some tests may use God.");
 		}
 
-		// Track notification count after installation but before +bbread
 		var postInstallNotificationCount = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
@@ -503,7 +494,6 @@ public class MyrddinBBSIntegrationTests
 		var packageMessage = pkgMsgs.FirstOrDefault(m => m.Contains("BEGIN package.yaml"))
 			?? string.Join("\n", pkgMsgs);
 
-		// Extract just the YAML between the markers — this is the publishable manifest.
 		const string beginMarker = "----- BEGIN package.yaml -----";
 		const string endMarker = "----- END package.yaml -----";
 		var begin = packageMessage.IndexOf(beginMarker, StringComparison.Ordinal);
@@ -524,7 +514,6 @@ public class MyrddinBBSIntegrationTests
 		Console.WriteLine($"[BBS PACKAGE] Run log: {logPath}");
 		Console.WriteLine($"[BBS PACKAGE] Generated manifest: {manifestPath}");
 
-		// The extracted artifact is a complete manifest with the expected metadata.
 		await Assert.That(manifestYaml).Contains("format: 1")
 			.Because("the generated artifact should be a complete package manifest");
 		await Assert.That(manifestYaml).Contains("package: myrddin-bbs");
@@ -540,7 +529,6 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(manifestYaml).Contains("Global BBS v4.0.6")
 			.Because("the renamed mbboard object should be present in the manifest");
 
-		// bbpocket's function/config attribute schema.
 		foreach (var attr in new[] { "GET_GROUP", "NXT_MESS", "VALID_GROUPS", "VERSION", "BUFFER_SIZE" })
 		{
 			await Assert.That(manifestYaml).Contains(attr)
@@ -643,11 +631,9 @@ public class MyrddinBBSIntegrationTests
 
 		var groupName = $"TestGrp_{Guid.NewGuid():N}"[..20]; // Keep name short for BBS
 
-		// Track baseline notification count
 		var preTestNotifications = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
-		// +bbnewgroup should have no ANTLR parse errors
 		var newGroupCmd = $"+bbnewgroup {groupName}";
 		var parseErrors = Parser.ValidateAndGetErrors(MModule.single(newGroupCmd), ParseType.CommandList);
 		await Assert.That(parseErrors.Count).IsEqualTo(0)
@@ -658,7 +644,6 @@ public class MyrddinBBSIntegrationTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(newGroupCmd));
 		await Task.Delay(10000);
 
-		// Capture the group object's dbref and set DEBUG, VERBOSE, PUPPET on it
 		string? groupDbref = null;
 		try
 		{
@@ -690,7 +675,6 @@ public class MyrddinBBSIntegrationTests
 			Log($"[BBS NEWGROUP] WARNING: Exception looking up group dbref: {ex.Message}");
 		}
 
-		// Collect all notifications from +bbnewgroup (including @wait callback)
 		var postNewGroupNotifications = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
@@ -723,16 +707,13 @@ public class MyrddinBBSIntegrationTests
 				cantSeeMessages.Add((ngIndex, messageText));
 		}
 
-		// Reset baseline for +bbread
 		preTestNotifications = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
-		// +bbread should have no ANTLR parse errors
 		var bbreadParseErrors = Parser.ValidateAndGetErrors(MModule.single("+bbread"), ParseType.CommandList);
 		await Assert.That(bbreadParseErrors.Count).IsEqualTo(0)
 			.Because("+bbread command should not produce any ANTLR parser errors");
 
-		// Execute +bbread and collect output
 		await Parser.CommandParse(1, ConnectionService, MModule.single("+bbread"));
 
 		var bbreadMessages = new List<(int Index, string Message)>();
@@ -764,7 +745,6 @@ public class MyrddinBBSIntegrationTests
 			Log($"  [{idx}] {msg}");
 		}
 
-		// Summary
 		Log($"\n{new string('=', 78)}");
 		Log("BBS_NEWGROUP_THEN_BBREAD SUMMARY:");
 		Log($"  Group name: {groupName}");
@@ -798,18 +778,15 @@ public class MyrddinBBSIntegrationTests
 				Log($"  [{idx}] {Truncate(msg, 200)}");
 		}
 
-		// Write output file for this test
 		var outputFileRelative = Path.Combine(TestDataDir, "MyrddinBBS_NewGroup_TestOutput.txt");
 		var outputPath = Path.Combine(AppContext.BaseDirectory, outputFileRelative);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"[BBS NEWGROUP] Full test output written to: {outputPath}");
 
-		// The group name should appear in the +bbread output
 		var bbreadOutput = string.Join("\n", bbreadMessages.Select(m => m.Message));
 		await Assert.That(bbreadOutput).Contains(groupName)
 			.Because($"+bbread should list the newly created group '{groupName}'");
 
-		// No #-1 errors in the +bbread output
 		await Assert.That(bbreadErrors.Count).IsEqualTo(0)
 			.Because("there should be no #-1 errors in the +bbnewgroup/+bbread workflow");
 	}
@@ -841,9 +818,6 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS POST AND READ TEST - WITH DEBUG/VERBOSE/PUPPET ON ALL OBJECTS");
 		Log(new string('=', 78));
 
-		// ====================================================================
-		// Step 1: Post a message to group 1 using +bbpost 1/Title Goes Here=Body
-		// ====================================================================
 		var postCmd = "+bbpost 1/Title Goes Here=Body of the test post.";
 		var postParseErrors = Parser.ValidateAndGetErrors(MModule.single(postCmd), ParseType.CommandList);
 
@@ -872,7 +846,6 @@ public class MyrddinBBSIntegrationTests
 		// Using 10s to give Memgraph (which is ~50% slower than ArangoDB) enough margin.
 		await Task.Delay(10000);
 
-		// Collect +bbpost notifications
 		var postPostNotifications = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
@@ -909,9 +882,6 @@ public class MyrddinBBSIntegrationTests
 			Log($"  [{idx}] {Truncate(msg, 200)}");
 		}
 
-		// ====================================================================
-		// Step 2: Read the posted message with +bbread 1/1
-		// ====================================================================
 		var readCmd = "+bbread 1/1";
 		var readParseErrors = Parser.ValidateAndGetErrors(MModule.single(readCmd), ParseType.CommandList);
 
@@ -944,7 +914,6 @@ public class MyrddinBBSIntegrationTests
 		var postReadNotifications = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
-		// Collect +bbread 1/1 notifications
 		var readMessages = new List<(int Index, string Message)>();
 		var readErrors = new List<(int Index, string Message)>();
 
@@ -976,9 +945,6 @@ public class MyrddinBBSIntegrationTests
 			Log($"  [{idx}] {msg}");
 		}
 
-		// ====================================================================
-		// Step 3: Also run +bbread (list view) to see the full board state
-		// ====================================================================
 		var preListNotifications = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
@@ -1020,9 +986,6 @@ public class MyrddinBBSIntegrationTests
 			Log($"  [{idx}] {msg}");
 		}
 
-		// ====================================================================
-		// Step 4: Summary and mismatch documentation
-		// ====================================================================
 		Log($"\n{new string('=', 78)}");
 		Log("BBS POST/READ TEST SUMMARY:");
 		Log(new string('=', 78));
@@ -1072,25 +1035,17 @@ public class MyrddinBBSIntegrationTests
 
 		Log($"\n{new string('=', 78)}");
 
-		// Write output file for this test
 		var postReadOutputRelative = Path.Combine(TestDataDir, "MyrddinBBS_PostRead_TestOutput.txt");
 		var outputPath = Path.Combine(AppContext.BaseDirectory, postReadOutputRelative);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"[BBS POST/READ] Full test output written to: {outputPath}");
 
-		// ====================================================================
-		// Step 5: Assertions
-		// ====================================================================
-
-		// The +bbpost command should produce some output
 		await Assert.That(postMessages.Count).IsGreaterThan(0)
 			.Because("+bbpost should produce at least one notification");
 
-		// The +bbread 1/1 command should produce some output
 		await Assert.That(readMessages.Count).IsGreaterThan(0)
 			.Because("+bbread 1/1 should produce at least one notification");
 
-		// The post confirmation should include the correct title (not just the group number).
 		// Use StartsWith to avoid matching the VERBOSE output line (e.g., "#4] ...@pemit %#=You post your note about '%1'...")
 		// which contains the raw command code before %1 is substituted.
 		var postConfirmation = postMessages
@@ -1100,7 +1055,6 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(postConfirmation.Message).Contains("Title Goes Here")
 			.Because("+bbpost should use the correct title 'Title Goes Here', not the group number");
 
-		// The attributes (mess_lst, hdr, bdy) should all be SET on the group
 		var messLstSet = postMessages.Any(m => m.Message.Contains("mess_lst SET", StringComparison.OrdinalIgnoreCase)
 			|| m.Message.Contains("/mess_lst - Set.", StringComparison.OrdinalIgnoreCase));
 		await Assert.That(messLstSet).IsTrue()
@@ -1116,12 +1070,10 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(bdySet).IsTrue()
 			.Because("bdy_ attribute should be SET on the group after +bbpost");
 
-		// +bbread 1/1 should show the message header with the correct title
 		var readHasTitle = readMessages.Any(m => m.Message.Contains("Title Goes Here", StringComparison.OrdinalIgnoreCase));
 		await Assert.That(readHasTitle).IsTrue()
 			.Because("+bbread 1/1 should display the message title 'Title Goes Here'");
 
-		// +bbread 1/1 should show the message body
 		var readHasBody = readMessages.Any(m => m.Message.Contains("Body of the test post.", StringComparison.OrdinalIgnoreCase));
 		await Assert.That(readHasBody).IsTrue()
 			.Because("+bbread 1/1 should display the message body 'Body of the test post.'");
@@ -1343,7 +1295,6 @@ public class MyrddinBBSIntegrationTests
 		for (var i = 0; i < postMsgs.Count; i++)
 			Log($"  [post/{i}] {Truncate(postMsgs[i], 200)}");
 
-		// Read back message 2
 		var readMsgs = await RunAndCollect("+bbread 1/2", 10000);
 		Log($"  +bbread 1/2 notifications: {readMsgs.Count}");
 		for (var i = 0; i < readMsgs.Count; i++)

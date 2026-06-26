@@ -486,7 +486,6 @@ public class StartupHandler(
 		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
 		Configurable.FloatPrecision = (int)currentOptions.Cosmetic.FloatPrecision;
 
-		// Notify ConnectionServer that the main process is ready
 		logger.LogInformation("Publishing MainProcessReadyMessage to ConnectionServer.");
 		await messageBus.Publish(new MainProcessReadyMessage(DateTimeOffset.UtcNow, ServerVersion), cancellationToken);
 	}
@@ -563,7 +562,6 @@ public class StartupHandler(
 
 	public async Task StopAsync(CancellationToken cancellationToken)
 	{
-		// Notify ConnectionServer that the main process is shutting down
 		logger.LogInformation("Publishing MainProcessShutdownMessage to ConnectionServer.");
 		try
 		{

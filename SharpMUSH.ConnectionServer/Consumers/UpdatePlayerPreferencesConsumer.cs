@@ -25,7 +25,6 @@ public class UpdatePlayerPreferencesConsumer(
 
 		try
 		{
-			// Update the connection's preferences, preserving the existing locale
 			var existingPreferences = connection.Preferences;
 			var updatedPreferences = new PlayerOutputPreferences(
 				AnsiEnabled: message.AnsiEnabled,
@@ -34,7 +33,6 @@ public class UpdatePlayerPreferencesConsumer(
 				Locale: existingPreferences?.Locale ?? "en"
 			);
 
-			// Update in the connection service
 			var success = connectionService.UpdatePreferences(message.Handle, updatedPreferences);
 
 			if (success)

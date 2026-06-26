@@ -30,7 +30,6 @@ public class TcpWriteBenchmark
 			return;
 		}
 
-		// Get metrics via reflection
 		var getMetricsMethod = batchingServiceType.GetMethod("GetMetrics");
 		if (getMetricsMethod == null)
 		{
@@ -45,7 +44,6 @@ public class TcpWriteBenchmark
 			return;
 		}
 
-		// Extract tuple values via reflection
 		var metricsType = metricsResult.GetType();
 		var messagesReceived = (long)metricsType.GetField("Item1")!.GetValue(metricsResult)!;
 		var batchesFlushed = (long)metricsType.GetField("Item2")!.GetValue(metricsResult)!;
@@ -78,7 +76,6 @@ public class TcpWriteBenchmark
 			Console.WriteLine("Moderate batching - some benefit but could be better");
 		}
 
-		// Calculate how much time was spent in TCP writes vs total time
 		Console.WriteLine($"\nIf @dolist took ~17000ms and TCP writes took {totalTcpWriteTimeMs}ms,");
 		Console.WriteLine($"then TCP overhead is {(double)totalTcpWriteTimeMs / 17000.0 * 100:F1}% of total time.");
 

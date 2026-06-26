@@ -47,8 +47,6 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	/// <inheritdoc/>
 	public LibraryState ConnectionState => MapState(_innerState);
 
-	// ── Connect / Disconnect ─────────────────────────────────────────────────
-
 	/// <inheritdoc/>
 	public async Task ConnectAsync(string accessToken)
 	{
@@ -143,7 +141,6 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		}
 		catch (Exception ex)
 		{
-			// Catch-all: any other transient or unexpected error during connect.
 			_logger.LogError(ex, "[ConnectionStateService] StartAsync failed with unexpected exception");
 			SetState(SignalRState.Disconnected);
 			await DisposeHubAsync();
@@ -181,8 +178,6 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		return _hub.InvokeAsync("SendCommand", command);
 	}
 
-	// ── Scene realtime hub (/hubs/scene) ───────────────────────────────────────
-
 	/// <summary>
 	/// Opens the separate scene realtime connection and wires <c>ReceiveSceneMessage</c> to
 	/// <see cref="OnSceneEventReceived"/>. No-ops when the factory provides no scene hub URL (e.g. the
@@ -213,12 +208,9 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		}
 	}
 
-	// ── Scene group membership (ISceneHubControl) ──────────────────────────────
-
 	/// <inheritdoc/>
 	public Task JoinSceneAsync(string sceneId)
 	{
-		// Join on the scene hub if it is up; fall back silently when scene realtime is unavailable.
 		if (_sceneHub is null || _sceneHub.State != SignalRState.Connected) return Task.CompletedTask;
 		return _sceneHub.InvokeAsync("JoinScene", sceneId);
 	}
@@ -229,8 +221,6 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		if (_sceneHub is null || _sceneHub.State != SignalRState.Connected) return Task.CompletedTask;
 		return _sceneHub.InvokeAsync("LeaveScene", sceneId);
 	}
-
-	// ── State helpers ────────────────────────────────────────────────────────
 
 	private void SetState(SignalRState state)
 	{
@@ -246,8 +236,6 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		SignalRState.Reconnecting => LibraryState.Reconnecting,
 		_                         => LibraryState.Disconnected,
 	};
-
-	// ── Disposal ─────────────────────────────────────────────────────────────
 
 	private async Task DisposeHubAsync()
 	{

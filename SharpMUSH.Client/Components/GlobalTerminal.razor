@@ -13,7 +13,6 @@
 
 <div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:13.5px;">
 
-    @* Output area *@
     <div id="@_outputId"
          class="sharp-terminal-output"
          style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
@@ -24,7 +23,6 @@
         <div id="@_bottomId"></div>
     </div>
 
-    @* Connection bar *@
     <div class="sharp-terminal-connbar">
         <MudChip T="string"
                  Size="Size.Small"
@@ -57,13 +55,11 @@
         }
     </div>
 
-    @* Collapsible login settings panel *@
     @if (_showLoginPanel && !_connected)
     {
         <div style="padding:6px 10px;background:var(--surface);border-top:1px solid var(--border-soft);">
             @if (_showCharacterPicker)
             {
-                @* Account flow — character picker *@
                 <CharacterPicker ServerUri="@_serverUri"
                                  OnConnected="OnCharacterPickerConnected"
                                  OnCancelled="OnCharacterPickerCancelled" />
@@ -71,7 +67,6 @@
             else
             {
                 <MudTabs Rounded="false" MinimumTabWidth="100px" Style="font-size:12px;">
-                    @* ── Character tab (existing OTT flow) ── *@
                     <MudTabPanel Text="Character">
                         <div style="display:flex;flex-direction:column;gap:6px;padding-top:4px;">
                             <MudText Typo="Typo.caption" Style="color:#888;">
@@ -95,7 +90,6 @@
                         </div>
                     </MudTabPanel>
 
-                    @* ── Account tab ── *@
                     <MudTabPanel Text="Account">
                         @if (!_showAccountRegister)
                         {
@@ -165,7 +159,6 @@
         </div>
     }
 
-    @* Input bar — prototype MushTerminal form: accent caret + bare input + send *@
     <div class="sharp-terminal-input">
         <span class="term-prompt">›</span>
         <input class="term-input"
@@ -248,7 +241,6 @@
         _serverUri = DefaultServerUri;
         _connected = Terminal.IsConnected;
 
-        // Populate from existing buffer
         _displayLines.AddRange(Terminal.Lines);
 
         Terminal.LineReceived += OnLineReceived;
@@ -257,7 +249,6 @@
         // Restore player name from the shared terminal service (survives component re-mounts)
         _playerName = Terminal.ConnectedPlayerName;
 
-        // Load saved credentials
         var (savedPlayer, savedPassword, savedUri) = await Credentials.LoadAsync();
         _loginPlayer = savedPlayer;
         _loginPassword = savedPassword;
@@ -269,7 +260,6 @@
         if (!string.IsNullOrWhiteSpace(AccountAuth.Username))
             _accountIdentifier = AccountAuth.Username;
 
-        // If already connected and player name is unknown, try to fill from account
         if (_connected && _playerName is null && AccountAuth.Characters.Count > 0)
             _playerName = AccountAuth.Characters[0].Name;
 
@@ -294,7 +284,6 @@
             }
             else if (AccountAuth.IsLoggedIn)
             {
-                // Normal account path (production, or dev after a real login)
                 DebugLine("[DBG] account path entered");
                 var chars = AccountAuth.Characters.Count > 0
                     ? AccountAuth.Characters
@@ -303,7 +292,6 @@
                 DebugLine($"[DBG] account path: chars={chars.Count}");
                 if (chars.Count == 1)
                 {
-                    // Single character — auto-connect silently
                     var ott = await AccountAuth.GetOttForCharacterAsync(chars[0]);
                     DebugLine($"[DBG] account path: ott={(ott is null ? "NULL" : "OK")}");
                     if (ott is not null)
@@ -314,7 +302,6 @@
                 }
                 else if (chars.Count > 1)
                 {
-                    // Multiple characters — show picker
                     _showLoginPanel = true;
                     _showCharacterPicker = true;
                 }
@@ -381,8 +368,6 @@
 
     private Task SendNawsAsync(int cols, int rows) =>
         Terminal.SendControlAsync($"{{\"type\":\"naws\",\"cols\":{cols},\"rows\":{rows}}}");
-
-    // ── Account login / register ─────────────────────────────────────────────
 
     private async Task AccountLoginAsync()
     {

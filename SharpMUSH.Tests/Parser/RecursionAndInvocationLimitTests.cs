@@ -32,26 +32,18 @@ public class RecursionAndInvocationLimitTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "RecurseLim");
 
-		// Arrange: Create a recursive function with a counter
-		// Use add() to increment and check if we've exceeded limit
-		// This will recurse until it hits the limit (limit is 50 in test config)
 		var command = $"&RECURSE_LIM_UNIQUE {objDbRef}=[setq(c,add(r(c),1))][if(lte(r(c),105),[u({objDbRef}/RECURSE_LIM_UNIQUE)],DONE)]";
 
-		// Create the attribute
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Act: Evaluate the recursive function - should halt at limit
 		var result = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/RECURSE_LIM_UNIQUE)]"));
 
-		// Assert: Should get a limit error (recursion or invocation) - evaluation halts immediately
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
-		// Should hit either recursion or invocation limit
 		var hasRecursion = output.Contains("RECURSION");
 		var hasInvocation = output.Contains("INVOCATION");
 		await Assert.That(hasRecursion || hasInvocation).IsTrue();
-		// Should hit a limit, not complete successfully
 		await Assert.That(output).DoesNotContain("DONE");
 	}
 
@@ -69,7 +61,6 @@ public class RecursionAndInvocationLimitTests
 			nestedCalls = $"[strlen({nestedCalls})]";
 		}
 
-		// Act: Parse the deeply nested structure
 		var result = await FunctionParser.FunctionParse(MModule.single(nestedCalls));
 
 		await Assert.That(result).IsNotNull();
@@ -98,11 +89,9 @@ public class RecursionAndInvocationLimitTests
 			nested11 = $"[strlen({nested11})]";
 		}
 
-		// Act
 		var result10 = await FunctionParser.FunctionParse(MModule.single(nested10));
 		var result11 = await FunctionParser.FunctionParse(MModule.single(nested11));
 
-		// Assert
 		await Assert.That(result10).IsNotNull();
 		await Assert.That(result11).IsNotNull();
 
@@ -127,10 +116,8 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FUNC_A_LIM_UNIQUE {objDbRef}=[setq(a,add(r(a),1))][if(lte(r(a),120),[u({objDbRef}/FUNC_B_LIM_UNIQUE)],DONE_A)]"));
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FUNC_B_LIM_UNIQUE {objDbRef}=[setq(b,add(r(b),1))][if(lte(r(b),120),[u({objDbRef}/FUNC_A_LIM_UNIQUE)],DONE_B)]"));
 
-		// Act: Evaluate - should halt at limit
 		var result = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/FUNC_A_LIM_UNIQUE)]"));
 
-		// Assert: Should get some limit error - evaluation halts immediately
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
@@ -142,18 +129,14 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task CallLimit_IsEnforced()
 	{
-		// Arrange: The default CallLimit is 1000
-		// Create a very deeply nested parse structure
 		var nested = "test";
 		for (int i = 0; i < 1100; i++)
 		{
 			nested = $"[strlen({nested})]";
 		}
 
-		// Act
 		var result = await FunctionParser.FunctionParse(MModule.single(nested));
 
-		// Assert: Should hit some limit - evaluation halts
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
@@ -165,15 +148,10 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task FunctionInvocationLimit_ConfigurationExists()
 	{
-		// Arrange & Act: Get the configuration
 		var config = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
 
-		// Assert: Verify the configuration has the limit
 		await Assert.That(config.CurrentValue.Limit.FunctionInvocationLimit).IsGreaterThan(0u);
 		await Assert.That(config.CurrentValue.Limit.FunctionInvocationLimit).IsEqualTo(25000u);
-
-		// Note: This test documents that the configuration exists with test value 25000
-		// but additional testing is needed to verify if it's actually enforced
 	}
 
 	/// <summary>
@@ -182,13 +160,10 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task SimpleFunctionCall_NoLimits_Succeeds()
 	{
-		// Arrange: Simple function call well within all limits
 		var input = MModule.single("[strlen(hello world)]");
 
-		// Act
 		var result = await FunctionParser.FunctionParse(input);
 
-		// Assert: Should succeed
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("11");
 	}
@@ -205,10 +180,8 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&WRAP_LIM_UNIQUE {objDbRef}=[setq(w,add(r(w),1))][if(lte(r(w),120),[u({objDbRef}/INNER_LIM_UNIQUE)],DONE_W)]"));
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&INNER_LIM_UNIQUE {objDbRef}=[setq(i,add(r(i),1))][if(lte(r(i),120),[u({objDbRef}/WRAP_LIM_UNIQUE)],DONE_I)]"));
 
-		// Act: Execute - creates pattern WRAP->INNER->WRAP->INNER->...
 		var result = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/WRAP_LIM_UNIQUE)]"));
 
-		// Assert: Should eventually hit a limit - evaluation halts
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
@@ -220,15 +193,12 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task DefaultLimitValues_AreAsExpected()
 	{
-		// Arrange & Act
 		var config = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
 		var limits = config.CurrentValue.Limit;
 
-		// Assert: Document the test configuration values
 		await Assert.That(limits.MaxDepth).IsEqualTo(10u);
 		await Assert.That(limits.FunctionRecursionLimit).IsEqualTo(50u);
 		await Assert.That(limits.FunctionInvocationLimit).IsEqualTo(25000u);
-		// CallLimit is very large in test config
 		await Assert.That(limits.CallLimit).IsGreaterThanOrEqualTo(1000u);
 	}
 
@@ -238,8 +208,6 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task DifferentLimits_ReturnDifferentErrors()
 	{
-		// This test documents what errors are returned for what limits
-		// Evaluation halts immediately when limit is hit
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "DiffLimits");
 
 		var recursiveAttr = $"[setq(c,add(r(c),1))][if(lte(r(c),150),[u({objDbRef}/REC_LIM_UNIQUE)],DONE)]";
@@ -276,27 +244,19 @@ public class RecursionAndInvocationLimitTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "AllAttrMethods");
 
-		// Arrange: Create recursive attributes using different methods
-		// Each method should hit the same recursion tracking
-
-		// Test u() - standard user-defined function call
 		var uRecursive = $"[setq(c,add(r(c),1))][if(lte(r(c),105),[u({objDbRef}/U_REC_LIM_UNIQUE)],DONE)]";
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&U_REC_LIM_UNIQUE {objDbRef}={uRecursive}"));
 
-		// Test ufun() - user-defined function with default
 		var ufunRecursive = $"[setq(c,add(r(c),1))][if(lte(r(c),105),[ufun({objDbRef}/UFUN_REC_LIM_UNIQUE,default)],DONE)]";
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&UFUN_REC_LIM_UNIQUE {objDbRef}={ufunRecursive}"));
 
-		// Test ulocal() - local user-defined function
 		var ulocalRecursive = $"[setq(c,add(r(c),1))][if(lte(r(c),105),[ulocal({objDbRef}/ULOCAL_REC_LIM_UNIQUE)],DONE)]";
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&ULOCAL_REC_LIM_UNIQUE {objDbRef}={ulocalRecursive}"));
 
-		// Act: Test all three methods
 		var uResult = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/U_REC_LIM_UNIQUE)]"));
 		var ufunResult = await FunctionParser.FunctionParse(MModule.single($"[ufun({objDbRef}/UFUN_REC_LIM_UNIQUE)]"));
 		var ulocalResult = await FunctionParser.FunctionParse(MModule.single($"[ulocal({objDbRef}/ULOCAL_REC_LIM_UNIQUE)]"));
 
-		// Assert: All should hit recursion limits
 		await Assert.That(uResult).IsNotNull();
 		await Assert.That(ufunResult).IsNotNull();
 		await Assert.That(ulocalResult).IsNotNull();
@@ -309,12 +269,10 @@ public class RecursionAndInvocationLimitTests
 		Console.WriteLine($"ufun() recursion test: {ufunOutput}");
 		Console.WriteLine($"ulocal() recursion test: {ulocalOutput}");
 
-		// All should hit limits
 		await Assert.That(uOutput).Contains("#-1");
 		await Assert.That(ufunOutput).Contains("#-1");
 		await Assert.That(ulocalOutput).Contains("#-1");
 
-		// None should complete
 		await Assert.That(uOutput).DoesNotContain("DONE");
 		await Assert.That(ufunOutput).DoesNotContain("DONE");
 		await Assert.That(ulocalOutput).DoesNotContain("DONE");
@@ -393,7 +351,6 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService,
 			MModule.single($"@include {objDbRef}/CMDTRACK_A_LIM_UNIQUE"));
 
-		// Verify the composed output was sent as a notification
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),

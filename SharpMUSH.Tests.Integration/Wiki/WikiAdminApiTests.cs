@@ -18,7 +18,6 @@ namespace SharpMUSH.Tests.Integration.Wiki;
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class WikiAdminApiTests(ServerWebAppFactory factory)
 {
-	// DTO mirrors WikiController.WikiPageDto — only the fields the tests care about.
 	private record WikiPageDto(
 		string Id,
 		string Slug,
@@ -36,8 +35,6 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 	private record BatchProtectRequest(string[] Refs, bool IsProtected);
 	private record BatchDeleteRequest(string[] Refs);
 	private record BatchResult(List<string> Succeeded, List<string> Failed);
-
-	// ── Helpers ───────────────────────────────────────────────────────────────
 
 	/// <summary>
 	/// Test client pinned to the https base address. The server uses UseHttpsRedirection;
@@ -60,8 +57,6 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Created);
 		return (await response.Content.ReadFromJsonAsync<WikiPageDto>())!;
 	}
-
-	// ── /pages listing ────────────────────────────────────────────────────────
 
 	[Test]
 	public async Task ListAllPages_ReturnsPagesAndTotalCountHeader()
@@ -99,8 +94,6 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		await Assert.That(total).IsGreaterThanOrEqualTo(2);
 	}
 
-	// ── Metadata round-trip ───────────────────────────────────────────────────
-
 	[Test]
 	public async Task SetMetadata_RoundTripsCategoryTagsAndPublished()
 	{
@@ -114,7 +107,6 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		await Assert.That(put.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var updated = await put.Content.ReadFromJsonAsync<WikiPageDto>();
 		await Assert.That(updated).IsNotNull();
-		// Normalised to lower-case; tags de-duplicated.
 		await Assert.That(updated!.Category).IsEqualTo("lore");
 		await Assert.That(updated.Tags!.Count).IsEqualTo(2);
 		await Assert.That(updated.Tags!.Contains("dragons")).IsTrue();
@@ -139,8 +131,6 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 
 		await Assert.That(put.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 	}
-
-	// ── Category / tag listings ───────────────────────────────────────────────
 
 	[Test]
 	public async Task ListCategoryPages_ReturnsPagesInCategory()
@@ -177,8 +167,6 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		await Assert.That(pages).IsNotNull();
 		await Assert.That(pages!.Any(p => p.Slug == created.Slug)).IsTrue();
 	}
-
-	// ── Batch operations ──────────────────────────────────────────────────────
 
 	[Test]
 	public async Task BatchProtect_ProtectsAllRequestedPages()

@@ -12,7 +12,6 @@
 <PageTitle>Applications — Admin — SharpMUSH</PageTitle>
 
 <div class="appadmin">
-    @* ── Header ── *@
     <div class="appadmin-head">
         <div>
             <div class="appadmin-kicker">Build · Custom widgets</div>
@@ -28,7 +27,6 @@
         </div>
     </div>
 
-    @* ── Stat tiles ── *@
     <div class="appadmin-stats">
         @foreach (var tile in new[]
         {
@@ -57,7 +55,6 @@
     else
     {
         <div class="appadmin-grid">
-            @* ── List (master) ── *@
             <div class="appadmin-list">
                 <div class="aa-search">
                     <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:14px;color:var(--text-faint);" />
@@ -88,7 +85,6 @@
                 }
             </div>
 
-            @* ── Detail ── *@
             <div class="appadmin-detail">
                 @if (_selected is null)
                 {
@@ -124,7 +120,6 @@
                         </div>
                     </div>
 
-                    @* Meta grid *@
                     <div class="aa-meta-grid">
                         @foreach (var field in new (string Label, string Value)[]
                         {
@@ -143,7 +138,6 @@
                         }
                     </div>
 
-                    @* Zones *@
                     @if (_selected.ZoneEnums.Count > 0)
                     {
                         <div class="aa-section">
@@ -157,7 +151,6 @@
                         </div>
                     }
 
-                    @* Actions *@
                     <div class="aa-section">
                         <div class="aa-section-label">Actions</div>
                         <div class="aa-actions">

@@ -77,13 +77,11 @@ public partial class SurrealDatabase
 
 			var parameters = new Dictionary<string, object?> { ["key"] = currentKey };
 
-			// Get parent keys
 			var parentResponse = await ExecuteAsync(
 				"SELECT VALUE key FROM object:$key->has_parent->object",
 				parameters, cancellationToken);
 			var parentKeys = parentResponse.GetValue<List<int>>(0)!;
 
-			// Get zone keys
 			var zoneResponse = await ExecuteAsync(
 				"SELECT VALUE key FROM object:$key->has_zone->object",
 				parameters, cancellationToken);
@@ -95,7 +93,6 @@ public partial class SurrealDatabase
 
 			if (nextKeys.Count == 0) return false;
 
-			// BFS-style: check all next keys
 			foreach (var nk in nextKeys)
 			{
 				if (nk == targetKey) return true;
@@ -151,7 +148,6 @@ public partial class SurrealDatabase
 		var maxHops = depth == -1 ? 999 : depth;
 		var hops = 0;
 
-		// Walk at_location edges up to maxHops
 		int? lastValidContainerKey = null;
 
 		while (hops < maxHops)
@@ -245,7 +241,6 @@ public partial class SurrealDatabase
 	private async IAsyncEnumerable<SharpExit> GetExitsForKeyAsync(int containerKey, [EnumeratorCancellation] CancellationToken ct = default)
 	{
 		var parameters = new Dictionary<string, object?> { ["key"] = containerKey };
-		// Get exit keys by querying the exit table for items at this location
 		var response = await ExecuteAsync(
 			"SELECT VALUE key FROM exit WHERE key IN (SELECT VALUE in.key FROM at_location WHERE out.key = $key)",
 			parameters, ct);
@@ -300,7 +295,6 @@ public partial class SurrealDatabase
 
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
 		{
-			// Skip self — already yielded above
 			if (item.Object().DBRef == obj) continue;
 			yield return item.WithRoomOption();
 		}
@@ -317,7 +311,6 @@ public partial class SurrealDatabase
 
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, cancellationToken))
 		{
-			// Skip self — already yielded above
 			if (item.Object().DBRef == obj.Object().DBRef) continue;
 			yield return item.WithRoomOption();
 		}

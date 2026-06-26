@@ -61,7 +61,7 @@ public static class SendMail
 			Urgent = urgent,
 			Cleared = false,
 			Forwarded = false,
-			Folder = "INBOX", // All mail goes to the INBOX!
+			Folder = "INBOX",
 			Content = message,
 			Subject = subject,
 			From = new AsyncLazy<AnyOptionalSharpObject>(async _ =>
@@ -89,13 +89,12 @@ public static class SendMail
 					$"MAIL: You have received a message ({await mailList.CountAsync()}) from {sender.Object().Name}.", sender);
 			}
 
-			// Trigger AMAIL attribute if configured and present
 			if (configuration.CurrentValue.Attribute.AMail)
 			{
 				var playerAsAny = new AnySharpObject(player);
 				var amailAttr = await attributeService.GetAttributeAsync(
-					playerAsAny,  // executor is the player themselves
-					playerAsAny,  // object is also the player
+					playerAsAny,
+					playerAsAny,
 					"AMAIL",
 					IAttributeService.AttributeMode.Read,
 					false);
@@ -103,7 +102,6 @@ public static class SendMail
 				if (amailAttr.IsAttribute)
 				{
 					var attribute = amailAttr.AsAttribute.Last();
-					// Execute AMAIL attribute with player as executor and sender as enactor
 					await parser.With(state => state with
 					{
 						Executor = player.Object.DBRef,

@@ -32,14 +32,11 @@ public class AttributeTreeParentTests
 		var parentDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InhPar");
 		var childDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InhChild");
 
-		// Set parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
-		// Set attributes on parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {parentDbRef}=wibble"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {parentDbRef}=gleep"));
 
-		// Child should inherit
 		var fooResult = (await Parser.FunctionParse(MModule.single($"get({childDbRef}/FOO)")))?.Message!;
 		var barResult = (await Parser.FunctionParse(MModule.single($"get({childDbRef}/FOO`BAR)")))?.Message!;
 
@@ -61,17 +58,13 @@ public class AttributeTreeParentTests
 		var parentDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ShadPar");
 		var childDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ShadChild");
 
-		// Set parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
-		// Set tree on parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {parentDbRef}=wibble"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {parentDbRef}=gleep"));
 
-		// Set a deeper leaf on child — this shadows the entire parent branch
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR`BAZ {childDbRef}=boom"));
 
-		// Child's get(FOO) and get(FOO`BAR) should now be empty (shadowed)
 		var fooResult = (await Parser.FunctionParse(MModule.single($"get({childDbRef}/FOO)")))?.Message!;
 		var barResult = (await Parser.FunctionParse(MModule.single($"get({childDbRef}/FOO`BAR)")))?.Message!;
 
@@ -93,22 +86,17 @@ public class AttributeTreeParentTests
 		var parentDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "NoInhPar");
 		var childDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "NoInhChild");
 
-		// Set parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
-		// Set tree on parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {parentDbRef}=wibble"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {parentDbRef}=gleep"));
 
-		// Verify inheritance works before setting no_inherit
 		var beforeResult = (await Parser.FunctionParse(MModule.single($"get({childDbRef}/FOO`BAR)")))?.Message!;
 		await Assert.That(beforeResult.ToPlainText()).IsEqualTo("gleep")
 			.Because("should inherit before no_inherit is set");
 
-		// Set no_inherit on foo`bar
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentDbRef}/FOO`BAR=no_inherit"));
 
-		// Child should still get FOO but not FOO`BAR
 		var fooResult = (await Parser.FunctionParse(MModule.single($"get({childDbRef}/FOO)")))?.Message!;
 		var barResult = (await Parser.FunctionParse(MModule.single($"get({childDbRef}/FOO`BAR)")))?.Message!;
 
@@ -130,7 +118,6 @@ public class AttributeTreeParentTests
 		var childDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"LatChild_{uid}");
 		var pfx = $"LP{uid}";
 
-		// Set parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
 		// Setup: tree`leaf on parent, tree on child (matches oracle setup)

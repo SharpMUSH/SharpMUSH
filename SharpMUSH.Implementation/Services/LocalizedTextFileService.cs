@@ -10,10 +10,6 @@ namespace SharpMUSH.Implementation.Services;
 /// </summary>
 public class LocalizedTextFileService(ITextFileService textFileService) : ILocalizedTextFileService
 {
-	// -----------------------------------------------------------------------
-	// Helpers
-	// -----------------------------------------------------------------------
-
 	/// <summary>
 	/// Returns true when the locale requires a locale-aware lookup (i.e. it is
 	/// non-null, non-empty, and not the English baseline).
@@ -36,8 +32,8 @@ public class LocalizedTextFileService(ITextFileService textFileService) : ILocal
 	{
 		var slash = fileReference.IndexOf('/');
 		return slash < 0
-			? $"{fileReference}.{locale}"                          // "help"      → "help.fr"
-			: $"{fileReference[..slash]}.{locale}{fileReference[slash..]}"; // "news/help" → "news.fr/help"
+			? $"{fileReference}.{locale}"
+			: $"{fileReference[..slash]}.{locale}{fileReference[slash..]}";
 	}
 
 	/// <summary>
@@ -58,10 +54,6 @@ public class LocalizedTextFileService(ITextFileService textFileService) : ILocal
 		}
 		return await lookup(fileReference);
 	}
-
-	// -----------------------------------------------------------------------
-	// ILocalizedTextFileService
-	// -----------------------------------------------------------------------
 
 	/// <inheritdoc />
 	public Task<string?> GetEntryAsync(string fileReference, string entryName, string? locale = null)

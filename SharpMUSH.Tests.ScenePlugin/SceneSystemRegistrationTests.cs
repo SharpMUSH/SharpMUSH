@@ -48,8 +48,6 @@ public class SceneSystemRegistrationTests
 
 		var services = new ServiceCollection();
 		services.AddSingleton(calls);
-		// Force the active key to surrealdb and override its keyed storage with a recording fake so the
-		// chain is observable without a database.
 		var config = new ConfigurationBuilder()
 			.AddInMemoryCollection(new Dictionary<string, string?> { ["SHARPMUSH_DATABASE_PROVIDER"] = "surrealdb" })
 			.Build();
@@ -71,8 +69,6 @@ public class SceneSystemRegistrationTests
 		// Last-added behavior is outermost: Second wraps First wraps the storage core.
 		await Assert.That(calls).IsEquivalentTo(new[] { "second", "first", "core" });
 	}
-
-	// ── Fakes ──────────────────────────────────────────────────────────────────────
 
 	private sealed class FakeArangoAccessor : IArangoStorageAccessor
 	{

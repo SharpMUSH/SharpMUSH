@@ -150,7 +150,6 @@ public class GitPackageSourceServiceTests
 		await Assert.That(entry.PackageId).IsEqualTo("who-where");
 		await Assert.That(entry.Version).IsEqualTo("1.1.0");
 		await Assert.That(entry.Description).Contains("+who");
-		// Newest first.
 		await Assert.That(entry.Versions.Select(v => v.Version).ToArray())
 			.IsEquivalentTo((string[])["1.1.0", "1.0.0"]);
 		await Assert.That(entry.Versions[1].Commit).IsEqualTo(RevParse("who-where/v1.0.0"));

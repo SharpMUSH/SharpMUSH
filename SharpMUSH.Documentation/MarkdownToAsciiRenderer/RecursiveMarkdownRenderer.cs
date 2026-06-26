@@ -32,7 +32,6 @@ public partial class RecursiveMarkdownRenderer
 	private readonly int _maxWidth;
 	private readonly IMUSHCodeParser? _mushParser;
 
-	// Table border and separator character counts
 	private const int START_BORDER_WIDTH = 2; // "| "
 	private const int END_BORDER_WIDTH = 2; // " |"
 	private const int COLUMN_SEPARATOR_WIDTH = 3; // " | "
@@ -97,7 +96,6 @@ public partial class RecursiveMarkdownRenderer
 	{
 		return obj switch
 		{
-			// Block elements
 			MarkdownDocument doc => RenderDocument(doc),
 			HeadingBlock heading => RenderHeading(heading),
 			ParagraphBlock para => RenderParagraph(para),

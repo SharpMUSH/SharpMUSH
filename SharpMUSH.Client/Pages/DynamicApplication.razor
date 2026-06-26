@@ -7,9 +7,6 @@
 @inject SchemaAppService Schema
 @inject PluginComponentLoader ComponentLoader
 
-@* Renders a full-page Dynamic Application (Area 21): resolves the registry entry, fetches its
-   softcode-served Portal Schema Document, role-gates it, and picks the form or view renderer. *@
-
 <PageTitle>@(_app?.DisplayName ?? "Application")</PageTitle>
 
 <div class="app-page">
@@ -39,7 +36,6 @@
     }
     else if (_app.IsComponent)
     {
-        @* Compiled-component app: render the plugin-shipped Blazor component resolved by reflection. *@
         @if (_componentType is not null)
         {
             <DynamicComponent Type="_componentType" />

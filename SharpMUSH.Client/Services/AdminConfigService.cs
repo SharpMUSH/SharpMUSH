@@ -159,7 +159,6 @@ public static class SharpMUSHOptionsExtension
 
 		try
 		{
-			// Use reflection to get all properties and their values
 			var optionsType = typeof(SharpMUSHOptions);
 			var properties = optionsType.GetProperties();
 
@@ -193,8 +192,6 @@ public static class SharpMUSHOptionsExtension
 								_ => value.ToString() ?? "null"
 							};
 
-							// Get metadata from centralized source
-
 							configItems.Add(new AdminConfigService.ConfigItem
 							{
 								Section = options.Metadata[sectionProp.Name].Category,
@@ -208,7 +205,6 @@ public static class SharpMUSHOptionsExtension
 						}
 						catch (Exception ex)
 						{
-							// If we can't get a specific property, add an error entry
 							configItems.Add(new AdminConfigService.ConfigItem
 							{
 								Section = sectionName,
@@ -223,7 +219,6 @@ public static class SharpMUSHOptionsExtension
 				}
 				catch (Exception ex)
 				{
-					// If we can't process a section, add an error entry
 					configItems.Add(new AdminConfigService.ConfigItem
 					{
 						Section = prop.Name,
@@ -238,7 +233,6 @@ public static class SharpMUSHOptionsExtension
 		}
 		catch (Exception ex)
 		{
-			// If everything fails, return a single error item
 			return OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>>.FromT0([new AdminConfigService.ConfigItem
 			{
 				Section = "Error",

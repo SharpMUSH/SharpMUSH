@@ -11,7 +11,6 @@ public static partial class ReadPennMushConfig
 	{
 		string[] text;
 
-		// Use generated metadata instead of reflection
 		var propertyDictionary = ConfigMetadata.PropertyToAttributeName;
 		var configDictionary = ConfigMetadata.AttributeToPropertyName.Keys
 			.ToDictionary(key => key, _ => string.Empty);
@@ -27,7 +26,6 @@ public static partial class ReadPennMushConfig
 			throw;
 		}
 
-		// Parse config lines using regex pattern
 		foreach (var configLine in text
 							 .Where(line => configDictionary.Keys.Any(line.Trim().StartsWith))
 							 .Select(line => splitter.Match(line.Trim()))
@@ -37,7 +35,6 @@ public static partial class ReadPennMushConfig
 			configDictionary[configLine["Key"].Value] = configLine["Value"].Value;
 		}
 
-		// This is a lot of dupe work. This can likely be done with a proper bit of Reflection. 
 		var work = new SharpMUSHOptions()
 		{
 			Attribute = new AttributeOptions(
@@ -351,7 +348,6 @@ public static partial class ReadPennMushConfig
 
 	private static uint? DatabaseReference(string value, uint? fallback)
 	{
-		// Unset -> fallback default.
 		if (string.IsNullOrWhiteSpace(value))
 		{
 			return fallback;

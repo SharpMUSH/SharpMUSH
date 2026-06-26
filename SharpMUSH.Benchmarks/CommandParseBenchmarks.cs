@@ -9,7 +9,6 @@ public class CommandParseBenchmarks : BaseBenchmark
 {
 	private IMUSHCodeParser? _parser;
 
-	// Pre-computed inputs to eliminate per-iteration allocation overhead.
 	private static readonly MString ThinkSimpleInput = MModule.single("think Hello World");
 	private static readonly MString ThinkSubstInput = MModule.single("think %#");
 	private static readonly MString ThinkNameSubstInput = MModule.single("think %N");

@@ -10,7 +10,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
-// Configure Serilog for logging
 var logPath = Path.Combine(
 	Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
 	"SharpMUSH",
@@ -40,26 +39,20 @@ try
 				.SetMinimumLevel(LogLevel.Trace))
 			.WithServices(services =>
 			{
-				// Register document manager
 				services.AddSingleton<DocumentManager>();
 
-				// Register the underlying MUSH code parser with minimal dependencies
 				services.AddSingleton<IMUSHCodeParser>(sp =>
 				{
 					var logger = sp.GetRequiredService<ILogger<MUSHCodeParser>>();
 
-					// Create minimal libraries - LSP doesn't need full runtime
 					var functionLibrary = new LibraryService<string, FunctionDefinition>();
 					var commandLibrary = new LibraryService<string, CommandDefinition>();
 
-					// Create a minimal options wrapper
 					var options = new MinimalOptionsWrapper();
 
-					// Create the parser with minimal dependencies
 					return new MUSHCodeParser(logger, functionLibrary, commandLibrary, options, sp);
 				});
 
-				// Register the stateless LSP-specific parser wrapper
 				services.AddSingleton<LSPMUSHCodeParser>(sp =>
 				{
 					var parser = sp.GetRequiredService<IMUSHCodeParser>();

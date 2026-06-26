@@ -64,7 +64,6 @@ public class NetworkCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sitelock/list"));
 
-		// Verify the command executed and sent output to the user
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),

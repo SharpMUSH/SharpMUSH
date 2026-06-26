@@ -25,7 +25,6 @@ public class TextFileService : ITextFileService
 	private readonly IOptions<SharpMUSHOptions> _options;
 	private readonly ILogger<TextFileService> _logger;
 
-	// Category -> (EntryName -> IndexEntry with file position)
 	private readonly Dictionary<string, Dictionary<string, IndexEntry>> _categoryIndexes = new(StringComparer.OrdinalIgnoreCase);
 	private readonly object _indexLock = new();
 	private readonly AsyncLazy<bool> _initializationTask;
@@ -78,7 +77,6 @@ public class TextFileService : ITextFileService
 				return string.Join(separator, entries.Keys.OrderBy(k => k));
 			}
 
-			// Search all categories
 			var allEntries = _categoryIndexes.Values
 				.SelectMany(dict => dict.Keys)
 				.Distinct(StringComparer.OrdinalIgnoreCase)
@@ -103,7 +101,6 @@ public class TextFileService : ITextFileService
 			}
 			else
 			{
-				// Search all categories
 				foreach (var categoryDict in _categoryIndexes.Values)
 				{
 					if (categoryDict.TryGetValue(entryName, out indexEntry))
@@ -266,7 +263,6 @@ public class TextFileService : ITextFileService
 
 		var categoryIndex = new Dictionary<string, IndexEntry>(StringComparer.OrdinalIgnoreCase);
 
-		// Index only .md files
 		var mdFiles = Directory.GetFiles(categoryPath, "*.md");
 
 		foreach (var file in mdFiles)
@@ -365,7 +361,6 @@ public class TextFileService : ITextFileService
 			}
 		}
 
-		// If there are multiple consecutive headers, keep only the first
 		if (firstHeaderIndex >= 0 && lastConsecutiveHeaderIndex > firstHeaderIndex)
 		{
 			var remaining = string.Join('\n', lines.Skip(lastConsecutiveHeaderIndex + 1));
@@ -407,7 +402,6 @@ public class TextFileService : ITextFileService
 			return File.Exists(filePath) ? filePath : null;
 		}
 
-		// Search all categories
 		var categories = Directory.GetDirectories(baseDir);
 		foreach (var cat in categories)
 		{

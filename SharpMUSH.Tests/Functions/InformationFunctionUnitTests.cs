@@ -22,7 +22,6 @@ public class InformationFunctionUnitTests
 	public async Task MudName()
 	{
 		var result = (await Parser.FunctionParse(MModule.single("mudname()")))?.Message!;
-		// Should return a non-empty string
 		await Assert.That(result.ToPlainText()).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	}
 
@@ -168,7 +167,6 @@ public class InformationFunctionUnitTests
 	[Test]
 	public async Task Lstats_NoArguments()
 	{
-		// lstats() with no arguments should return counts for all types
 		var result = (await Parser.FunctionParse(MModule.single("lstats()")))?.Message!;
 		var stats = result.ToPlainText();
 
@@ -176,7 +174,6 @@ public class InformationFunctionUnitTests
 		var parts = stats.Split(' ');
 		await Assert.That(parts.Length).IsEqualTo(5);
 
-		// Each should be a valid number
 		foreach (var part in parts)
 		{
 			await Assert.That(int.TryParse(part, out _)).IsTrue();
@@ -190,11 +187,9 @@ public class InformationFunctionUnitTests
 	[Arguments("lstats(exit)", "")]
 	public async Task Lstats_WithTypeFilter(string str, string expected)
 	{
-		// lstats() with a type filter should return a single count
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		var count = result.ToPlainText();
 
-		// Should return a single number
 		await Assert.That(int.TryParse(count, out var num)).IsTrue();
 		await Assert.That(num).IsGreaterThanOrEqualTo(0);
 	}
@@ -212,7 +207,6 @@ public class InformationFunctionUnitTests
 	[Arguments("lstats(invalid)", "#-1 INVALID TYPE")]
 	public async Task Lstats_InvalidType(string str, string expected)
 	{
-		// Invalid type should return error
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
@@ -229,12 +223,10 @@ public class InformationFunctionUnitTests
 	[Test]
 	public async Task Pidinfo_ValidFormat()
 	{
-		// Test that pidinfo returns proper format for non-existent PID
 		// In a live environment with actual tasks, this would return task info
 		var result = (await Parser.FunctionParse(MModule.single("pidinfo(1)")))?.Message!;
 		var text = result.ToPlainText();
 
-		// Should either be "#-1 NO SUCH PID" (if no task) or task info
 		await Assert.That(text).IsNotNull();
 		await Assert.That(text).IsNotEmpty();
 	}
@@ -246,7 +238,6 @@ public class InformationFunctionUnitTests
 	[Arguments("pidinfo(1,status)", "")]
 	public async Task Pidinfo_WithField(string str, string expected)
 	{
-		// Test field parameter - should return either field value or error
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
@@ -257,10 +248,8 @@ public class InformationFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("colors()")))?.Message!;
 		var colors = result.ToPlainText();
 
-		// Should return a non-empty list of colors
 		await Assert.That(colors).IsNotEmpty();
 
-		// Should contain some known color names
 		await Assert.That(colors).Contains("red");
 		await Assert.That(colors).Contains("blue");
 		await Assert.That(colors).Contains("yellow");
@@ -273,7 +262,6 @@ public class InformationFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		var colors = result.ToPlainText();
 
-		// Should return colors matching the wildcard
 		await Assert.That(colors).IsNotEmpty();
 		await Assert.That(colors).Contains(expectedContains);
 	}
@@ -301,7 +289,6 @@ public class InformationFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		var xterm = result.ToPlainText();
 
-		// Should return a valid xterm number
 		await Assert.That(int.TryParse(xterm, out var xtermNum)).IsTrue();
 		await Assert.That(xtermNum).IsGreaterThanOrEqualTo(0);
 		await Assert.That(xtermNum).IsLessThanOrEqualTo(255);
@@ -314,7 +301,6 @@ public class InformationFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		var ansiCode = result.ToPlainText();
 
-		// Should return a valid ANSI color code
 		await Assert.That(ansiCode).IsNotEmpty();
 		// Yellow should map to 'y' or 'hy' (highlight yellow)
 		await Assert.That(ansiCode.Contains('y')).IsTrue();
@@ -327,7 +313,6 @@ public class InformationFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		var names = result.ToPlainText();
 
-		// Should return color names matching the hex value
 		await Assert.That(names).IsNotEmpty();
 		await Assert.That(names).Contains(expectedContains);
 	}
@@ -375,7 +360,6 @@ public class InformationFunctionUnitTests
 	[Test]
 	public async Task Motd_ReturnsConnectMotd()
 	{
-		// motd() should return the connect MOTD (empty by default)
 		var result = (await Parser.FunctionParse(MModule.single("motd()")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
@@ -383,7 +367,6 @@ public class InformationFunctionUnitTests
 	[Test]
 	public async Task WizMotd_ReturnsWizardMotd()
 	{
-		// wizmotd() should return the wizard MOTD (empty by default)
 		var result = (await Parser.FunctionParse(MModule.single("wizmotd()")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
@@ -391,7 +374,6 @@ public class InformationFunctionUnitTests
 	[Test]
 	public async Task DownMotd_ReturnsDownMotd()
 	{
-		// downmotd() should return the down MOTD (empty by default)
 		var result = (await Parser.FunctionParse(MModule.single("downmotd()")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
@@ -399,7 +381,6 @@ public class InformationFunctionUnitTests
 	[Test]
 	public async Task FullMotd_ReturnsFullMotd()
 	{
-		// fullmotd() should return the full MOTD (empty by default)
 		var result = (await Parser.FunctionParse(MModule.single("fullmotd()")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}

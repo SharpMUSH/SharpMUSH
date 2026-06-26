@@ -28,7 +28,6 @@ public class ChannelFunctionUnitTests
 	[Before(Test)]
 	public async Task SetupTestChannel()
 	{
-		// Get the test player (DBRef #1)
 		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
 		_testPlayer = playerNode.IsPlayer ? playerNode.AsPlayer : null;
 
@@ -44,7 +43,6 @@ public class ChannelFunctionUnitTests
 			_testPlayer
 		));
 
-		// Retrieve the created channel
 		var channelQuery = new GetChannelQuery(TestChannelName);
 		_testChannel = await Mediator.Send(channelQuery);
 	}
@@ -52,7 +50,6 @@ public class ChannelFunctionUnitTests
 	[After(Test)]
 	public async Task CleanupTestChannel()
 	{
-		// Clean up: Delete the test channel
 		if (_testChannel != null)
 		{
 			await Mediator.Send(new DeleteChannelCommand(_testChannel));
@@ -135,13 +132,11 @@ public class ChannelFunctionUnitTests
 		var userStartsOn = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
 		await Assert.That(userStartsOn.ToPlainText()).Contains("ON");
 
-		// TEST: Remove the player from the channel
 		await Mediator.Send(new RemoveUserFromChannelCommand(_testChannel, playerNode.AsPlayer));
 
 		var userEndsOff = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
 		await Assert.That(userEndsOff.ToPlainText()).IsEqualTo("OFF");
 
-		// CLEANUP: Add the player back to the channel
 		await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
 		var userIsPutBackOn = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
 		await Assert.That(userIsPutBackOn.ToPlainText()).Contains("ON");
@@ -160,7 +155,6 @@ public class ChannelFunctionUnitTests
 	public async Task Cdesc_ReturnsChannelDescription()
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"cdesc({TestChannelName})")))?.Message!;
-		// Description should be empty or a valid string
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -179,7 +173,6 @@ public class ChannelFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single($"clock({TestChannelName})")))?.Message!;
 		var lockStr = result.ToPlainText();
 
-		// Default is empty lock string
 		await Assert.That(lockStr).IsNotNull();
 	}
 
@@ -189,7 +182,6 @@ public class ChannelFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single($"ctitle(%#,{TestChannelName})")))?.Message!;
 		var title = result.ToPlainText();
 
-		// Player has no title by default
 		await Assert.That(title).IsEmpty();
 	}
 
@@ -197,7 +189,6 @@ public class ChannelFunctionUnitTests
 	public async Task Clflags_ReturnsLockFlags()
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"clflags({TestChannelName})")))?.Message!;
-		// Should return empty or list of lock flags
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -214,7 +205,6 @@ public class ChannelFunctionUnitTests
 	public async Task Crecall_ReturnsEmptyForNoHistory()
 	{
 		var result = (await Parser.FunctionParse(MModule.single($"crecall({TestChannelName})")))?.Message!;
-		// Should return empty or error message
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 

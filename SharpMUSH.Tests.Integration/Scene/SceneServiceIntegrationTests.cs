@@ -36,8 +36,6 @@ public class SceneServiceIntegrationTests
 		return id;
 	}
 
-	// ── Scene CRUD + meta ───────────────────────────────────────────────────────
-
 	[Test]
 	public async Task CreateScene_AssignsId_AndSnapshotsOwnerName()
 	{
@@ -45,7 +43,7 @@ public class SceneServiceIntegrationTests
 
 		await Assert.That(id).IsNotEmpty();
 		await Assert.That(id).DoesNotStartWith("#-1");
-		await Assert.That(await Eval($"scene({id}, ownername)")).IsNotEmpty(); // resolved + snapshotted from #1
+		await Assert.That(await Eval($"scene({id}, ownername)")).IsNotEmpty();
 	}
 
 	[Test]
@@ -82,8 +80,6 @@ public class SceneServiceIntegrationTests
 
 		await Assert.That(await Eval($"scene({id}, genre)")).IsEqualTo("noir");
 	}
-
-	// ── Poses: order, content, edit/undo ─────────────────────────────────────────
 
 	[Test]
 	public async Task AddPoses_AreReturnedInChainOrder()
@@ -143,8 +139,6 @@ public class SceneServiceIntegrationTests
 		await Eval($"scenedelpose({poseId})");
 		await Assert.That(await Eval($"scenepose({id}, {poseId}, deleted)")).IsEqualTo("1");
 	}
-
-	// ── Membership + focus ───────────────────────────────────────────────────────
 
 	[Test]
 	public async Task AddMember_ThenGetMembers_IncludesPlayer()

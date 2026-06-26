@@ -27,20 +27,16 @@ public class EventService(
 	{
 		try
 		{
-			// Get the event_handler config option
 			var eventHandlerDbRef = options.CurrentValue.Database.EventHandler;
 
-			// If no event handler is configured, return early
 			if (eventHandlerDbRef is null or 0)
 			{
 				return;
 			}
 
-			// Get the event handler object from the database
 			var eventHandlerRef = new DBRef((int)eventHandlerDbRef.Value, null);
 			var eventHandlerResult = await mediator.Send(new GetObjectNodeQuery(eventHandlerRef));
 
-			// If the event handler object doesn't exist, log warning and return
 			if (eventHandlerResult.IsNone)
 			{
 				logger.LogWarning(
@@ -53,7 +49,6 @@ public class EventService(
 			var eventHandler = eventHandlerResult.Known;
 			var handlerRef = eventHandler.Object().DBRef;
 
-			// Check if the event handler has an attribute matching the event name
 			var attributeResult = await attributeService.GetAttributeAsync(
 				eventHandler,
 				eventHandler,

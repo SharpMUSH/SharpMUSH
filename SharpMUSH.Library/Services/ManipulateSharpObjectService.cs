@@ -231,12 +231,11 @@ public class ManipulateSharpObjectService(
 
 					await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
 
-					// Publish notification for OBJECT`FLAG event
 					await publisher.Publish(new ObjectFlagChangedNotification(
 						obj,
 						realFlag.Name,
 						"FLAG",
-						false, // IsSet = false (clearing)
+						false,
 						executor.Object().DBRef));
 
 					break;
@@ -260,12 +259,11 @@ public class ManipulateSharpObjectService(
 
 				await mediator.Send(new SetObjectFlagCommand(obj, realFlag));
 
-				// Publish notification for OBJECT`FLAG event
 				await publisher.Publish(new ObjectFlagChangedNotification(
 					obj,
 					realFlag.Name,
 					"FLAG",
-					true, // IsSet = true (setting)
+					true,
 					executor.Object().DBRef));
 
 				break;
@@ -342,12 +340,12 @@ public class ManipulateSharpObjectService(
 
 		await mediator.Send(new SetObjectPowerCommand(obj, found));
 
-		// Publish notification for OBJECT`FLAG event (powers trigger same event)
+		// Powers trigger the same OBJECT`FLAG event as flags.
 		await publisher.Publish(new ObjectFlagChangedNotification(
 			obj,
 			found.Name,
 			"POWER",
-			true, // IsSet = true (setting)
+			true,
 			executor.Object().DBRef));
 
 		return true;
@@ -410,12 +408,12 @@ public class ManipulateSharpObjectService(
 
 		await mediator.Send(new UnsetObjectPowerCommand(obj, found));
 
-		// Publish notification for OBJECT`FLAG event (powers trigger same event)
+		// Powers trigger the same OBJECT`FLAG event as flags.
 		await publisher.Publish(new ObjectFlagChangedNotification(
 			obj,
 			found.Name,
 			"POWER",
-			false, // IsSet = false (clearing)
+			false,
 			executor.Object().DBRef));
 
 		return true;
@@ -432,7 +430,6 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		// Early return if object has no powers
 		if (!await obj.Object().Powers.Value.AnyAsync())
 		{
 			return true;
@@ -444,15 +441,13 @@ public class ManipulateSharpObjectService(
 
 		foreach (var power in objectPowers)
 		{
-			// Unset each power
 			await mediator.Send(new UnsetObjectPowerCommand(obj, power));
 
-			// Publish notification for each power cleared
 			await publisher.Publish(new ObjectFlagChangedNotification(
 				obj,
 				power.Name,
 				"POWER",
-				false, // IsSet = false (clearing)
+				false,
 				executor.Object().DBRef));
 
 			powersCleared++;
@@ -545,7 +540,6 @@ public class ManipulateSharpObjectService(
 	public async ValueTask<CallState> SetZone(AnySharpObject executor, AnySharpObject obj, AnySharpObject newZone,
 		bool notify)
 	{
-		// Check if executor controls the object
 		if (!await permissionService.Controls(executor, obj))
 		{
 			if (notify)
@@ -647,7 +641,6 @@ public class ManipulateSharpObjectService(
 		if (executor.IsGod())
 			return false;
 
-		// WIZARD flag: special restrictions
 		if (flagName == "WIZARD")
 		{
 			if (!negate)
@@ -662,7 +655,6 @@ public class ManipulateSharpObjectService(
 			}
 		}
 
-		// ROYALTY flag: special restrictions
 		if (flagName == "ROYALTY")
 		{
 			// Must not be guest target, and either Wizard or (Royalty + owns + not player)

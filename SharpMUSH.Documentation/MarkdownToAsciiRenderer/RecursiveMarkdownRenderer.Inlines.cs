@@ -27,12 +27,10 @@ public partial class RecursiveMarkdownRenderer
 		// DelimiterCount determines bold (2) vs italic (1)
 		if (emphasis.DelimiterCount == 2 || emphasis.DelimiterChar == '*')
 		{
-			// Bold
 			return RenderBold(content);
 		}
 		else
 		{
-			// Italic
 			return RenderItalic(content);
 		}
 	}
@@ -75,13 +73,11 @@ public partial class RecursiveMarkdownRenderer
 
 		if (string.IsNullOrWhiteSpace(url))
 		{
-			// No URL, just return the content
 			return content;
 		}
 
 		if (string.IsNullOrWhiteSpace(contentText))
 		{
-			// No text, use URL as display text
 			contentText = url;
 		}
 
@@ -137,7 +133,6 @@ public partial class RecursiveMarkdownRenderer
 			return MModule.empty();
 		}
 
-		// Create hyperlink with URL as both the text and the link
 		var linkMarkup = Ansi.Create(linkUrl: autolink.Url);
 		return MModule.MarkupSingle(linkMarkup, autolink.Url);
 	}
@@ -165,7 +160,6 @@ public partial class RecursiveMarkdownRenderer
 		if (ansi is null)
 			return MModule.empty();
 
-		// Collect sibling content until the matching closing tag, then wrap with markup.
 		var closingTag = $"</{tagName}>";
 		var contentParts = new List<MString>();
 		var sibling = html.NextSibling;

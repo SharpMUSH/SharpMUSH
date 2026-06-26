@@ -35,9 +35,7 @@ public class SceneDbrefResolutionTests
 	{
 		var id = await NewPublicSceneAsync("Dbref owner");
 
-		// The name snapshot should be captured...
 		await Assert.That(await Eval($"scene({id}, ownername)")).IsNotEmpty();
-		// ...and the live dbref must resolve back to #1.
 		await Assert.That(await Eval($"scene({id}, owner)")).IsEqualTo(God);
 	}
 
@@ -57,10 +55,8 @@ public class SceneDbrefResolutionTests
 	{
 		var id = await NewPublicSceneAsync("Dbref member");
 
-		// sceneaddmember returns the resolved member dbref on success.
 		await Assert.That(await Eval($"sceneaddmember({id},{God},participant)")).IsEqualTo(God);
 
-		// scenemembers lists members as their resolved dbref.
 		await Assert.That(await Eval($"scenemembers({id})")).Contains(God);
 	}
 }

@@ -16,7 +16,6 @@ public class SyntaxHighlightingTests
 
 		await Assert.That(tokens).IsNotEmpty();
 
-		// Should have at least one token
 		var firstToken = tokens[0];
 		await Assert.That(firstToken.Text).IsNotEmpty();
 		await Assert.That(firstToken.Type).IsNotEmpty();
@@ -29,7 +28,6 @@ public class SyntaxHighlightingTests
 
 		await Assert.That(tokens).IsNotEmpty();
 
-		// Should have function name, parentheses, arguments, comma
 		var functionToken = tokens.FirstOrDefault(t => t.Type == "FUNCHAR");
 		await Assert.That(functionToken).IsNotNull();
 		await Assert.That(functionToken!.Text).Contains("add(");
@@ -42,7 +40,6 @@ public class SyntaxHighlightingTests
 
 		await Assert.That(tokens).IsNotEmpty();
 
-		// Should have opening and closing brackets
 		var openBracket = tokens.FirstOrDefault(t => t.Type == "OBRACK");
 		var closeBracket = tokens.FirstOrDefault(t => t.Type == "CBRACK");
 
@@ -57,7 +54,6 @@ public class SyntaxHighlightingTests
 
 		await Assert.That(tokens).IsNotEmpty();
 
-		// Should have opening and closing braces
 		var openBrace = tokens.FirstOrDefault(t => t.Type == "OBRACE");
 		var closeBrace = tokens.FirstOrDefault(t => t.Type == "CBRACE");
 
@@ -73,7 +69,6 @@ public class SyntaxHighlightingTests
 
 		await Assert.That(tokens).IsNotEmpty();
 
-		// Each token should have valid positions
 		foreach (var token in tokens)
 		{
 			await Assert.That(token.StartIndex).IsGreaterThanOrEqualTo(0);
@@ -89,7 +84,6 @@ public class SyntaxHighlightingTests
 
 		await Assert.That(tokens).IsNotEmpty();
 
-		// Should have percent sign token
 		var percentToken = tokens.FirstOrDefault(t => t.Type == "PERCENT");
 		await Assert.That(percentToken).IsNotNull();
 	}
@@ -101,7 +95,6 @@ public class SyntaxHighlightingTests
 
 		await Assert.That(tokens).IsNotEmpty();
 
-		// Should have escape token
 		var escapeToken = tokens.FirstOrDefault(t => t.Type == "ESCAPE");
 		await Assert.That(escapeToken).IsNotNull();
 	}
@@ -114,7 +107,6 @@ public class SyntaxHighlightingTests
 
 		await Assert.That(tokens).IsNotEmpty();
 
-		// Should have multiple different token types
 		var tokenTypes = tokens.Select(t => t.Type).Distinct().ToList();
 		await Assert.That(tokenTypes.Count).IsGreaterThan(3);
 	}
@@ -135,7 +127,6 @@ public class SyntaxHighlightingTests
 
 		await Assert.That(tokens).IsNotEmpty();
 
-		// Reconstruct input from tokens
 		var reconstructed = string.Concat(tokens.Select(t => t.Text));
 		await Assert.That(reconstructed).IsEqualTo(input);
 	}

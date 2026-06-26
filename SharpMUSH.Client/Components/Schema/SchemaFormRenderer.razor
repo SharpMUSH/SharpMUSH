@@ -127,7 +127,6 @@ else
         SeedDefaults();
     }
 
-    // Seed unset fields with their schema default or prefill value.
     private void SeedDefaults()
     {
         foreach (var element in AllFields())
@@ -169,8 +168,6 @@ else
     {
         if (_pageIndex > 0) _pageIndex--;
     }
-
-    // ── Action dispatch ──────────────────────────────────────────────────────
 
     private async Task Dispatch(string actionName)
     {
@@ -235,7 +232,6 @@ else
         StateHasChanged();
     }
 
-    // Returns false (and populates field errors) when a required field is empty.
     private bool ValidateRequired()
     {
         _errors.Clear();
@@ -278,8 +274,6 @@ else
         }
     }
 
-    // ── Value helpers ──────────────────────────────────────────────────────────
-
     private string GetString(string key) => _values.TryGetValue(key, out var v) ? v?.ToString() ?? "" : "";
     private void SetString(string key, string? value) { _values[key] = value; _errors.Remove(key); }
 
@@ -295,8 +289,6 @@ else
     private void SetMulti(string key, IEnumerable<string> values) { _values[key] = values.ToList(); _errors.Remove(key); }
 
     private string? Error(string key) => _errors.TryGetValue(key, out var e) ? e : null;
-
-    // ── Element rendering ────────────────────────────────────────────────────
 
     private RenderFragment RenderElement(SchemaElement element) => __builder =>
     {
@@ -420,7 +412,7 @@ else
                                Error="@(error is not null)" ErrorText="@error" />
                 break;
 
-            default: // text
+            default:
                 <MudTextField T="string" Value="GetString(key)" ValueChanged="v => SetString(key, v)"
                               Label="@label" Variant="Variant.Outlined" Class="mb-2"
                               HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error"

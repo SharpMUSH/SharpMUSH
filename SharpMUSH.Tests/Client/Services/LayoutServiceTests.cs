@@ -42,8 +42,6 @@ public class LayoutServiceTests
 	private static HttpResponseMessage Ok(LayoutConfiguration layout)
 		=> new(HttpStatusCode.OK) { Content = JsonContent.Create(layout, options: LayoutSerialization.Options) };
 
-	// ─── GetDefaultLayout ─────────────────────────────────────────────────
-
 	[Test]
 	public async Task GetDefaultLayout_Global_HasChromeZonesAndQuickLinks()
 	{
@@ -77,8 +75,6 @@ public class LayoutServiceTests
 		await Assert.That(main.Select(p => p.WidgetName)).Contains("WikiBody");
 		await Assert.That(layout.Zones[WidgetZone.RightSidebar][0].WidgetName).IsEqualTo("CharacterGallery");
 	}
-
-	// ─── GetLayoutAsync ───────────────────────────────────────────────────
 
 	[Test]
 	public async Task GetLayoutAsync_WhenNotFound_ReturnsScopeDefault()
@@ -131,8 +127,6 @@ public class LayoutServiceTests
 		await Assert.That(layout.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("WikiIndex");
 	}
 
-	// ─── SaveLayoutAsync / ResetLayoutAsync ───────────────────────────────
-
 	[Test]
 	public async Task SaveLayoutAsync_Null_Throws()
 	{
@@ -173,7 +167,6 @@ public class LayoutServiceTests
 	[Test]
 	public async Task ResetLayoutAsync_Success_RestoresDefaultInCache()
 	{
-		// First GET returns a stored layout; DELETE succeeds; cache should revert to default afterward.
 		var stored = new LayoutConfiguration(
 			new Dictionary<WidgetZone, List<WidgetPlacement>> { [WidgetZone.MainContent] = [] },
 			new LayoutSettings(LeftSidebarEnabled: true, RightSidebarEnabled: true));

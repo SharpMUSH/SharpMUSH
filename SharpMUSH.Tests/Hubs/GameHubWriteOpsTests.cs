@@ -12,8 +12,6 @@ namespace SharpMUSH.Tests.Hubs;
 /// </summary>
 public class GameHubWriteOpsTests
 {
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
     private static (
         IHubContext<GameHub, IGameHubClient> hubContext,
         IGameHubClient groupClient,
@@ -36,8 +34,6 @@ public class GameHubWriteOpsTests
 
         return (hubContext, groupClient, clients);
     }
-
-    // ── SendToCharacterAsync ─────────────────────────────────────────────────
 
     [Test]
     public async Task SendToCharacterAsync_CallsCorrectGroup()
@@ -74,8 +70,6 @@ public class GameHubWriteOpsTests
         clients.Received(1).Group("char:#2");
     }
 
-    // ── SendToRoomAsync ──────────────────────────────────────────────────────
-
     [Test]
     public async Task SendToRoomAsync_CallsCorrectGroup()
     {
@@ -97,8 +91,6 @@ public class GameHubWriteOpsTests
 
         await groupClient.Received(1).ReceiveRoomEvent(msg);
     }
-
-    // ── BroadcastSystemMessageAsync ──────────────────────────────────────────
 
     [Test]
     public async Task BroadcastSystemMessageAsync_InvokesAll()

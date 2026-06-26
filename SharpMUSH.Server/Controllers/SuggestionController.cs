@@ -123,7 +123,6 @@ public class SuggestionController(
 			var normalizedWord = word.ToLower().Trim();
 			if (suggestionData.Categories[categoryKey].Remove(normalizedWord))
 			{
-				// Remove empty categories
 				if (suggestionData.Categories[categoryKey].Count == 0)
 				{
 					suggestionData.Categories.Remove(categoryKey);

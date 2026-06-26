@@ -22,7 +22,6 @@ public partial class Functions
 	private static async ValueTask<(AnySharpObject? Player, SharpChannel? Channel, CallState? Error)>
 		ResolvePlayerAndChannel(IMUSHCodeParser parser, AnySharpObject executor, string playerName, string channelName)
 	{
-		// Try arg0 as player first
 		var maybePlayer =
 			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, playerName,
 				LocateFlags.All);
@@ -59,7 +58,6 @@ public partial class Functions
 
 		var channel = maybeChannel.AsChannel;
 
-		// Check if player has permission to add to buffer
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 		if (maybeMemberStatus is null)
 		{
@@ -147,10 +145,8 @@ public partial class Functions
 
 		var channel = maybeChannel.AsChannel;
 
-		// If no second argument, return channel flags
 		if (!parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
 		{
-			// Return channel privileges as flags
 			var channelFlags = new List<string>();
 
 			foreach (var priv in channel.Privs)
@@ -161,7 +157,6 @@ public partial class Functions
 			return new CallState(string.Join(" ", channelFlags));
 		}
 
-		// If second argument, return player's status flags on the channel
 		var playerArg = arg1.Message!.ToPlainText();
 		var maybePlayer =
 			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg,
@@ -174,17 +169,15 @@ public partial class Functions
 
 		var player = maybePlayer.AsSharpObject;
 
-		// Get player's status on this channel
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player, channel);
 
 		if (maybeMemberStatus is null)
 		{
-			return CallState.Empty; // Player not on channel
+			return CallState.Empty;
 		}
 
 		var (_, status) = maybeMemberStatus;
 
-		// Build status flags
 		var statusFlags = new List<string>();
 		if (status.Combine is true) statusFlags.Add("COMBINE");
 		if (status.Gagged is true) statusFlags.Add("GAG");
@@ -199,7 +192,6 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		// Get player argument (default to executor)
 		var player = executor;
 		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg0) &&
 				!string.IsNullOrWhiteSpace(arg0.Message!.ToPlainText()))
@@ -214,18 +206,15 @@ public partial class Functions
 			player = maybePlayer.AsSharpObject;
 		}
 
-		// Get type argument (default to "all")
 		var type = "all";
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
 		{
 			type = arg1.Message!.ToPlainText().ToLower();
 		}
 
-		// Get all channels
 		var allChannels = Mediator!.CreateStream(new GetChannelListQuery());
 		var channelArray = await allChannels.ToArrayAsync();
 
-		// Filter based on type
 		var filteredChannels = new List<string>();
 		foreach (var channel in channelArray)
 		{
@@ -261,7 +250,6 @@ public partial class Functions
 
 		var channel = maybeChannel.AsChannel;
 
-		// If no second argument, return channel lock flags
 		if (!parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
 		{
 			var lockFlags = new List<string>();
@@ -275,7 +263,6 @@ public partial class Functions
 			return new CallState(string.Join(" ", lockFlags));
 		}
 
-		// If second argument provided, interpret as player and return their list status flags
 		var playerArg = arg1.Message!.ToPlainText();
 		var maybePlayer =
 			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg,
@@ -291,10 +278,9 @@ public partial class Functions
 
 		if (maybeMemberStatus is null)
 		{
-			return CallState.Empty; // Player not on channel
+			return CallState.Empty;
 		}
 
-		// Return the same as cflags with a player argument
 		var (_, status) = maybeMemberStatus;
 		var statusFlags = new List<string>();
 		if (status.Combine is true) statusFlags.Add("COMBINE");
@@ -321,14 +307,12 @@ public partial class Functions
 
 		var channel = maybeChannel.AsChannel;
 
-		// Get lock type argument (default to "join")
 		var lockType = "join";
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
 		{
 			lockType = arg1.Message!.ToPlainText().ToLower();
 		}
 
-		// Return the appropriate lock
 		var lockValue = lockType switch
 		{
 			"join" => channel.JoinLock,
@@ -398,14 +382,12 @@ public partial class Functions
 
 		var channel = maybeChannel.AsChannel;
 
-		// Check if player is on the channel
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 		if (maybeMemberStatus is null)
 		{
 			return new CallState(ErrorMessages.Returns.NotAMember);
 		}
 
-		// Get optional arguments
 		var lines = 10;
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1) &&
 				int.TryParse(arg1.Message!.ToPlainText(), out var parsedLines))
@@ -413,7 +395,6 @@ public partial class Functions
 			lines = parsedLines;
 		}
 
-		// Query the actual channel message history from the database
 		var messages = await Mediator!.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, lines))
 			.Select(x => x.Message)
 			.ToListAsync();
@@ -428,14 +409,12 @@ public partial class Functions
 		var playerArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		// Determine which arg is player and which is channel
 		var (player, channel, error) = await ResolvePlayerAndChannel(parser, executor, channelArg, playerArg);
 		if (error != null)
 		{
 			return error;
 		}
 
-		// Get player's status on this channel
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!, channel!);
 
 		if (maybeMemberStatus is null)
@@ -445,7 +424,6 @@ public partial class Functions
 
 		var (_, status) = maybeMemberStatus;
 
-		// Build status flags - starting with ON
 		var statusFlags = new List<string> { "ON" };
 		if (status.Gagged is true) statusFlags.Add("GAG");
 		if (status.Hide is true) statusFlags.Add("HIDE");
@@ -462,19 +440,17 @@ public partial class Functions
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		// Determine which arg is player and which is channel
 		var (player, channel, error) = await ResolvePlayerAndChannel(parser, executor, arg0, arg1);
 		if (error != null)
 		{
 			return error;
 		}
 
-		// Get player's status on this channel
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player!, channel!);
 
 		if (maybeMemberStatus is null)
 		{
-			return CallState.Empty; // Player not on channel
+			return CallState.Empty;
 		}
 
 		var (_, status) = maybeMemberStatus;
@@ -498,20 +474,16 @@ public partial class Functions
 
 		var channel = maybeChannel.AsChannel;
 
-		// Get all members
 		var members = await channel.Members.Value.ToArrayAsync();
 
-		// Get output separator (arg 1) or default to space
 		var outputSep = parser.CurrentState.Arguments.TryGetValue("1", out var arg1)
 			? arg1.Message!.ToPlainText()
 			: " ";
 
-		// Get list separator (arg 2) or default to outputSep
 		_ = parser.CurrentState.Arguments.TryGetValue("2", out var arg2)
 			? arg2.Message!.ToPlainText()
 			: outputSep;
 
-		// Build list of members
 		var memberList = members.Select(x => x.Member.Object().DBRef.ToString()).ToList();
 
 		return new CallState(string.Join(outputSep, memberList));
@@ -619,7 +591,6 @@ public partial class Functions
 
 		var channel = maybeChannel.AsChannel;
 
-		// Query the actual message count from the database
 		var count = await Mediator!.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
 			.CountAsync();
 
@@ -642,7 +613,6 @@ public partial class Functions
 
 		var channel = maybeChannel.AsChannel;
 
-		// Count all members
 		var memberCount = await channel.Members.Value.CountAsync();
 
 		return new CallState(memberCount.ToString());
@@ -652,7 +622,6 @@ public partial class Functions
 		ParameterNames = ["channel", "info-type"])]
 	public static async ValueTask<CallState> CInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Get channel information
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var infoType = parser.CurrentState.Arguments.TryGetValue("1", out var typeArg)
 			? typeArg.Message!.ToPlainText().ToLowerInvariant()
@@ -669,7 +638,6 @@ public partial class Functions
 
 		var channel = maybeChannel.AsChannel;
 
-		// Return information based on type
 		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
 		return infoType switch
 		{

@@ -9,14 +9,12 @@
 <PageTitle>@Loc["WikiAdmin"] — Admin — SharpMUSH</PageTitle>
 
 <div style="padding:var(--cpad);">
-    @* Header — prototype SectionTitle: kicker + title *@
     <div class="adminwiki-head">
         <div class="adminwiki-kicker">Staff · Wiki</div>
         <h1 class="adminwiki-title">@Loc["WikiAdmin"]</h1>
         <p class="adminwiki-intro">@Loc["WikiAdminDescription"]</p>
     </div>
 
-    @* ── Stat tiles ── *@
     <div class="adminwiki-stats">
         @foreach (var tile in new[] {
             (_totalPages, "Total pages", Icons.Material.Filled.Article,    false),
@@ -36,7 +34,6 @@
         }
     </div>
 
-    @* ── Data grid ── *@
     <MudDataGrid @ref="_grid"
                  T="WikiPageSummary"
                  ServerData="LoadServerData"
@@ -163,7 +160,6 @@
     </MudDataGrid>
 </div>
 
-@* Delete confirmation dialog *@
 <MudDialog @bind-Visible="_showDeleteConfirm">
     <TitleContent>
         <MudText Typo="Typo.h6">@Loc["WikiDeleteConfirmTitle"]</MudText>
@@ -179,7 +175,6 @@
     </DialogActions>
 </MudDialog>
 
-@* Per-row metadata dialog *@
 <MudDialog @bind-Visible="_showMetadataDialog">
     <TitleContent>
         <MudText Typo="Typo.h6">@Loc["WikiEditMetadata"]@(_metadataTarget is null ? string.Empty : $" — {_metadataTarget.Title}")</MudText>
@@ -238,7 +233,6 @@
     private List<string> _metaTags = [];
     private bool _metaPublished = true;
 
-    // Stats
     private bool _statsLoaded;
     private int _totalPages;
     private int _published;

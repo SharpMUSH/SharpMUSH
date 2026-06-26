@@ -10,7 +10,6 @@
 <div style="min-height:100vh;display:flex;align-items:stretch;background:var(--bg);">
     <MudGrid Spacing="0" Style="width:100%;margin:0;">
 
-        @* ── Left hero column ── *@
         <MudItem xs="12" sm="7" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);background:linear-gradient(135deg,#101113 0%,#16181b 100%);position:relative;overflow:hidden;">
             <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%, rgba(var(--glow),0.08) 0%, transparent 60%);pointer-events:none;"></div>
             <div style="max-width:420px;position:relative;z-index:1;">
@@ -45,11 +44,9 @@
             </div>
         </MudItem>
 
-        @* ── Right auth column ── *@
         <MudItem xs="12" sm="5" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);">
             <MudPaper Elevation="4" Style="width:100%;max-width:380px;padding:32px;border-radius:var(--radius-lg);background:var(--surface);border:1px solid var(--border);">
 
-                @* Toggle: Sign In / Register *@
                 <MudTabs @bind-ActivePanelIndex="_tabIndex" Elevation="0" Rounded="true" Centered="true" Class="mb-5">
                     <MudTabPanel Text="Sign In">
                         <div class="pa-0 pt-4">
