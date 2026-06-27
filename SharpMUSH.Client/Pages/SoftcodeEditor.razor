@@ -14,9 +14,25 @@
 
 @* Three-pane layout. IMPORTANT: no CSS transition on widths — Chrome freezes when
    transitioning between px and 1fr. Collapse is an instant class swap. *@
-<div class="sc-shell">
+<div class="sc-shell sc-shell--@(_mobilePane.ToString().ToLowerInvariant())">
 
-    <div class="sc-panel" style="@($"width:{(_objCollapsed ? "46px" : "220px")};flex-shrink:0;background:var(--surface);")">
+    @* Mobile-only pane switcher: the three IDE panes can't coexist on a phone, so show one at
+       a time. Selecting an object/attribute drills forward automatically (see handlers). *@
+    <div class="sc-mobilebar mobile-only">
+        <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Objects ? "sc-mobiletab--on" : "")"
+                @onclick="@(() => _mobilePane = MobilePane.Objects)">Objects</button>
+        <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Attrs ? "sc-mobiletab--on" : "")"
+                @onclick="@(() => _mobilePane = MobilePane.Attrs)">
+            Attributes@(_selectedObject is not null ? $" · #{_selectedObject.Dbref}" : "")
+        </button>
+        <button type="button" class="sc-mobiletab @(_mobilePane == MobilePane.Editor ? "sc-mobiletab--on" : "")"
+                @onclick="@(() => _mobilePane = MobilePane.Editor)"
+                disabled="@(ActiveTab is null)">
+            Editor@(ActiveTab is not null ? $" · &{ActiveTab.Attr.Name}" : "")
+        </button>
+    </div>
+
+    <div class="sc-panel sc-pane-objects" style="@($"width:{(_objCollapsed ? "46px" : "220px")};flex-shrink:0;background:var(--surface);")">
         <div style="display:flex;align-items:center;padding:8px 8px 6px;border-bottom:1px solid var(--border-soft);gap:6px;flex-shrink:0;">
             @if (!_objCollapsed)
             {
@@ -67,7 +83,7 @@
         }
     </div>
 
-    <div class="sc-panel" style="@($"width:{(_attrCollapsed ? "46px" : "248px")};flex-shrink:0;background:var(--surface);")">
+    <div class="sc-panel sc-pane-attrs" style="@($"width:{(_attrCollapsed ? "46px" : "248px")};flex-shrink:0;background:var(--surface);")">
         <div style="display:flex;align-items:center;padding:10px 10px 6px;gap:6px;flex-shrink:0;">
             @if (!_attrCollapsed)
             {
@@ -171,9 +187,9 @@
         }
     </div>
 
-    <div class="sc-panel" style="flex:1;min-width:0;background:#0c0f14;">
+    <div class="sc-panel sc-pane-editor" style="flex:1;min-width:0;background:#0c0f14;">
 
-        <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border-soft);background:var(--surface-3);flex-shrink:0;min-height:40px;">
+        <div class="sc-editor-toolbar" style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border-soft);background:var(--surface-3);flex-shrink:0;min-height:40px;">
             @if (ActiveTab is not null)
             {
                 <span class="sc-kind-badge" style="@KindBadgeStyle(ActiveTab.Attr)" title="@AttrKindLabel(ActiveTab.Attr)">@AttrKindBadge(ActiveTab.Attr)</span>
@@ -296,29 +312,63 @@
 <HelpDrawer @ref="_helpDrawer" />
 
 <style>
-    /* Mobile: the three side-by-side panels can't fit a phone — stack them and let
-       the page scroll. The editor panel gets a real height so Monaco can lay out. */
+    /* The mobile pane switcher itself is hidden on desktop (.mobile-only handles that).
+       On desktop all three panes show side by side as authored. */
+    .sc-mobilebar {
+        display: flex;
+        gap: 6px;
+        padding: 8px 10px;
+        background: var(--surface-3);
+        border-bottom: 1px solid var(--border-soft);
+        flex-shrink: 0;
+    }
+    .sc-mobiletab {
+        flex: 1;
+        min-height: 38px;
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
+        background: var(--surface);
+        color: var(--text-dim);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+    }
+    .sc-mobiletab--on {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: rgba(var(--glow), 0.1);
+    }
+    .sc-mobiletab:disabled { opacity: 0.4; cursor: default; }
+
+    /* Mobile: one full-height pane at a time, chosen by the switcher. The editor pane keeps
+       a real height so Monaco lays out; panes scroll internally rather than the page. */
     @@media (max-width: 760px) {
         .sc-shell {
             flex-direction: column !important;
-            height: auto !important;
-            overflow: visible !important;
-            gap: 10px !important;
-            padding: 12px !important;
+            height: 100% !important;
+            overflow: hidden !important;
+            gap: 0 !important;
+            padding: 0 !important;
         }
         .sc-shell .sc-panel {
             width: 100% !important;
-            flex-shrink: 1;
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            min-width: 0 !important;
         }
-        /* Object + attribute panels: cap height, scroll internally. */
-        .sc-shell .sc-panel:nth-child(1),
-        .sc-shell .sc-panel:nth-child(2) {
-            max-height: 42vh;
+        .sc-shell--objects .sc-pane-attrs,
+        .sc-shell--objects .sc-pane-editor,
+        .sc-shell--attrs   .sc-pane-objects,
+        .sc-shell--attrs   .sc-pane-editor,
+        .sc-shell--editor  .sc-pane-objects,
+        .sc-shell--editor  .sc-pane-attrs {
+            display: none !important;
         }
-        /* Editor panel: give Monaco a usable height (flex:1 is inert without a fixed parent height). */
-        .sc-shell .sc-panel:nth-child(3) {
-            min-height: 62dvh;
-        }
+        /* The editor toolbar has many controls — let them wrap instead of clipping. */
+        .sc-editor-toolbar { flex-wrap: wrap; min-height: 0; }
     }
 </style>
 
@@ -349,6 +399,10 @@
 
     private bool _objCollapsed;
     private bool _attrCollapsed;
+
+    // Which pane the mobile switcher shows. Inert on desktop (all three panes render there).
+    private enum MobilePane { Objects, Attrs, Editor }
+    private MobilePane _mobilePane = MobilePane.Objects;
 
     private string _attrSearch = string.Empty;
 
@@ -469,6 +523,9 @@
         if (_monacoEditor is not null)
             await _monacoEditor.SetValue(ActiveTab!.WorkingContent);
 
+        // Mobile drill-down: picking an attribute advances to the editor.
+        _mobilePane = MobilePane.Editor;
+
         StateHasChanged();
     }
 
@@ -518,6 +575,8 @@
                 Name = $"#{dbref}",
                 Attributes = await QueryService.GetAttributesAsync($"#{dbref}"),
             };
+            // Mobile drill-down: picking an object advances to its attributes.
+            _mobilePane = MobilePane.Attrs;
         }
         catch (Exception ex)
         {
