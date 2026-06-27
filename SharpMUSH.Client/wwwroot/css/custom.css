@@ -296,7 +296,7 @@ body {
 	overflow-y: auto;
 }
 /* When the command-terminal drawer is open, reserve its height so content isn't
-   hidden beneath it. The drawer is a fixed 300px on desktop and 70dvh on mobile
+   hidden beneath it. The drawer is a fixed 300px on desktop and 70svh on mobile
    (see the mobile block), and this offset tracks both. */
 .phosphor-main--terminal {
 	padding-bottom: 300px;
@@ -1342,8 +1342,13 @@ body {
      • Breakpoint is ALWAYS 760px. In .css files: `@media (max-width: 760px)`.
        In Razor <style> blocks: `@@media (max-width: 760px)` (Razor escapes `@`;
        a bare `@media` is parsed as a code transition and fails to compile).
-     • Full-height regions: use `100dvh` (falls back to `vh`) so the mobile
-       address bar doesn't crop content.
+     • Full-height regions: size with `svh` and a `vh` fallback —
+         height: 100vh;   /* fallback for browsers without svh */
+         height: 100svh;  /* fits the SMALL viewport, so it never crops under the
+                             mobile address bar and never resizes on scroll */
+       Default to `svh`, NOT `dvh`. `dvh` tracks the live viewport and recalculates
+       every time the toolbar slides in/out (layout jank); reserve it for the rare
+       element that must follow the visible viewport in real time.
      • Any flex/grid child holding wide content (terminal, tables, code, pre)
        needs `min-width: 0`; prefer `minmax(0, 1fr)` over a bare `1fr` track.
      • Min touch target 44px for interactive controls.
@@ -1463,11 +1468,12 @@ body {
 	/* Global widget asides step aside so content keeps the full width. */
 	.phosphor-widget-aside { display: none !important; }
 
-	/* Bottom command-terminal drawer: viewport-aware height, address-bar safe. */
+	/* Bottom command-terminal drawer: svh keeps the input row on-screen under the
+	   mobile address bar without resizing on scroll. */
 	.phosphor-terminal {
 		height: 70vh;
-		height: 70dvh;
-		max-height: 70dvh;
+		height: 70svh;
+		max-height: 70svh;
 	}
 
 	/* ── Touch targets ── */
@@ -1494,11 +1500,12 @@ body {
 	.phosphor-shell--bottomnav .phosphor-main {
 		padding-bottom: calc(58px + env(safe-area-inset-bottom));
 	}
-	/* When the terminal drawer is open it grows to 70dvh and covers the bottom bar,
+	/* When the terminal drawer is open it grows to 70svh and covers the bottom bar,
 	   so the content offset must match the drawer (not the 300px desktop value).
 	   Listed after the bar rule so it wins at equal specificity. */
 	.phosphor-main--terminal,
 	.phosphor-shell--bottomnav .phosphor-main--terminal {
-		padding-bottom: 70dvh;
+		padding-bottom: 70vh;
+		padding-bottom: 70svh;
 	}
 }

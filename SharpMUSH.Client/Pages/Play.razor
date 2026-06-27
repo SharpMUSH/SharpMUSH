@@ -262,10 +262,11 @@
             gap: 12px;
         }
         .play-term {
-            /* dvh tracks the visible viewport, so the mobile address bar doesn't
-               push the terminal input off-screen the way vh does. */
+            /* svh sizes to the small viewport (toolbars shown), so the terminal
+               input stays on-screen under the mobile address bar without resizing
+               on scroll the way dvh would. */
             height: 70vh;
-            height: 70dvh;
+            height: 70svh;
             min-height: 320px;
         }
         .play-term-header {
