@@ -45,6 +45,7 @@
     }
     else
     {
+        <div class="wikihist-table">
         <div style="display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px 80px;gap:4px;align-items:center;padding:6px 10px;border-bottom:2px solid var(--border);background:var(--surface-3);border-radius:var(--radius) var(--radius) 0 0;">
             <MudText Class="section-kicker" Style="grid-column:1;text-align:center;">Old</MudText>
             <MudText Class="section-kicker" Style="grid-column:2;text-align:center;">New</MudText>
@@ -145,8 +146,22 @@
                 </div>
             }
         </div>
+        </div>
     }
 </div>
+
+<style>
+    /* Phones: tighten the gutter, let the head (title + Compare button) stack, and
+       make the fixed-column revision table scroll horizontally inside its own box
+       instead of forcing the whole page wide. Selectors are doubled / descendant-
+       qualified to match the scoped (.razor.css) rules' specificity and win on order. */
+    @@media (max-width: 760px) {
+        .wikihist.wikihist { padding: 16px 12px; }
+        .wikihist .wikihist-head { flex-direction: column; align-items: flex-start; }
+        .wikihist-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .wikihist-table > div { min-width: 560px; }
+    }
+</style>
 
 @code {
     [Parameter] public required string Slug { get; set; }

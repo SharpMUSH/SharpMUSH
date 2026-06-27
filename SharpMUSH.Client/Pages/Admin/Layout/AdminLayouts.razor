@@ -40,6 +40,13 @@
     </div>
 </div>
 
+<style>
+    @@media (max-width: 760px) {
+        /* minmax(300px,1fr) can overflow very narrow phones — force one column. */
+        .laybrowse-grid { grid-template-columns: 1fr !important; }
+    }
+</style>
+
 @code {
     private IReadOnlyList<string> _customized = [];
 

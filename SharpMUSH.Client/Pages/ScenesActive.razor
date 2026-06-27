@@ -6,7 +6,7 @@
 
 <PageTitle>Active Scenes — SharpMUSH</PageTitle>
 
-<div style="padding:var(--cpad);">
+<div class="scenes-active-page" style="padding:var(--cpad);">
     <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">@Loc["SceneArchive"]</div>
     <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:4px;">Active Scenes</MudText>
     <div style="color:var(--text-dim);font-size:14px;margin-bottom:24px;">Sessions running right now.</div>
@@ -29,7 +29,7 @@
         <div style="display:flex;flex-direction:column;gap:10px;">
             @foreach (var scene in _scenes)
             {
-                <MudPaper Elevation="0"
+                <MudPaper Elevation="0" Class="scene-card"
                           Style="display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
                     <div style="flex:1;min-width:0;">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
@@ -39,7 +39,7 @@
                                 @SceneTitle(scene)
                             </MudText>
                         </div>
-                        <div style="display:flex;align-items:center;gap:14px;">
+                        <div class="scene-meta-row" style="display:flex;align-items:center;gap:14px;">
                             <MudText Style="font-size:12px;color:var(--text-dim);">
                                 <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:2px;font-size:13px;" />
                                 @scene.RoomName
@@ -53,7 +53,7 @@
                             </MudText>
                         </div>
                     </div>
-                    <div style="display:flex;gap:8px;flex-shrink:0;">
+                    <div class="scene-actions" style="display:flex;gap:8px;flex-shrink:0;">
                         <MudButton Variant="Variant.Text" Size="Size.Small"
                                    Style="color:var(--text-dim);text-transform:none;"
                                    Href="@($"/scenes/{scene.Id}")">
@@ -86,3 +86,29 @@
             ? t
             : $"Scene in {s.RoomName}";
 }
+
+<style>
+    /* Mobile: stack each active-scene card and let actions span full width. */
+    @@media (max-width: 760px) {
+        .scenes-active-page {
+            padding: 16px !important;
+        }
+        .scenes-active-page .scene-card {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 10px !important;
+            padding: 14px !important;
+        }
+        .scenes-active-page .scene-card .scene-meta-row {
+            flex-wrap: wrap;
+            gap: 8px 14px;
+        }
+        .scenes-active-page .scene-card .scene-actions {
+            width: 100%;
+        }
+        .scenes-active-page .scene-card .scene-actions .mud-button-root {
+            flex: 1;
+            min-height: 44px;
+        }
+    }
+</style>

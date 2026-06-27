@@ -3,7 +3,7 @@
 @inject ITerminalService Terminal
 @inject OttAuthService OttAuth
 
-<MudPaper Elevation="0" Style="padding:12px;min-width:320px;">
+<MudPaper Elevation="0" Class="char-picker" Style="padding:12px;">
     <MudText Typo="Typo.subtitle1" Style="margin-bottom:8px;">
         Welcome back, <strong>@AccountAuth.Username</strong>
     </MudText>
@@ -76,6 +76,20 @@
                    OnClick="ConnectAsCharacterAsync">Connect</MudButton>
     </div>
 </MudPaper>
+
+<style>
+    .char-picker {
+        min-width: 320px;
+    }
+
+    @@media (max-width: 760px) {
+        .char-picker {
+            min-width: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    }
+</style>
 
 @code {
     [Parameter] public string ServerUri { get; set; } = "ws://localhost:4202/ws";

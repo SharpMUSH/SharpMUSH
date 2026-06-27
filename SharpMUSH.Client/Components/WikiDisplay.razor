@@ -286,6 +286,17 @@ else
         .wiki-toc { display: none; }
     }
 
+    /* Phones: tighten gutters, shrink the display title, and keep wide prose
+       elements (code blocks, tables) scrolling inside the column instead of
+       widening the page. */
+    @@media (max-width: 760px) {
+        .wiki-article-grid,
+        .wiki-article { padding: 16px 12px; }
+        .wiki-article-title { font-size: 26px; }
+        .wiki-article-body pre { overflow-x: auto; }
+        .wiki-article-body table { display: block; overflow-x: auto; max-width: 100%; }
+    }
+
     .wiki-article-main { min-width: 0; }
 
     .wiki-back {

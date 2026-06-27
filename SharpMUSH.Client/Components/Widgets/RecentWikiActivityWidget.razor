@@ -3,7 +3,7 @@
 @using SharpMUSH.Client.Services
 @inject WikiService WikiService
 
-<MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
+<MudPaper Class="recent-wiki-widget" Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
     <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Recent Wiki Activity</MudText>
     @if (_loading)
     {
@@ -32,6 +32,12 @@
         <MudText Style="color:var(--text-faint);font-size:13px;">No recent wiki activity.</MudText>
     }
 </MudPaper>
+
+<style>
+    @@media (max-width: 760px) {
+        .recent-wiki-widget { padding: 14px !important; }
+    }
+</style>
 
 @code {
     [Parameter] public JsonElement? Config { get; set; }

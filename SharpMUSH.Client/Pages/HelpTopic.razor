@@ -18,6 +18,14 @@
     </section>
 </div>
 
+<style>
+    @@media (max-width: 760px) {
+        .help-page .help-body {
+            padding: 16px;
+        }
+    }
+</style>
+
 @code {
     [Parameter]
     public string Slug { get; set; } = string.Empty;

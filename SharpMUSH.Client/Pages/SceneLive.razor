@@ -28,9 +28,9 @@ else if (_notFound)
 }
 else
 {
-    <div style="display:flex;flex-direction:column;height:100%;">
+    <div class="scene-live-page" style="display:flex;flex-direction:column;height:100%;">
 
-        <div style="padding:12px var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <div class="scene-live-header" style="padding:12px var(--cpad);border-bottom:1px solid var(--border);background:var(--surface-3);display:flex;align-items:center;gap:12px;flex-shrink:0;">
             <MudChip T="string" Color="Color.Success" Size="Size.Small"
                      Style="font-size:10px;letter-spacing:0.06em;height:20px;padding:0 7px;">LIVE</MudChip>
             <MudText Style="font-size:15px;font-weight:600;">@SceneTitle(_scene!)</MudText>
@@ -63,7 +63,7 @@ else
             }
         </div>
 
-        <div style="padding:10px var(--cpad);border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:flex-end;gap:8px;flex-shrink:0;">
+        <div class="scene-live-compose" style="padding:10px var(--cpad);border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:flex-end;gap:8px;flex-shrink:0;">
             <MudSelect T="string" @bind-Value="_mode" Dense="true" Margin="Margin.Dense"
                        Variant="Variant.Outlined" Style="max-width:130px;">
                 <MudSelectItem Value="@("pose")">Pose</MudSelectItem>
@@ -261,3 +261,21 @@ else
             ? t
             : $"Scene in {s.RoomName}";
 }
+
+<style>
+    /* Mobile: let the live header wrap, and trim the generous --cpad horizontal
+       padding on the header / pose-log / compose bar so content isn't cramped. */
+    @@media (max-width: 760px) {
+        .scene-live-header {
+            flex-wrap: wrap;
+            gap: 8px !important;
+            padding: 10px 14px !important;
+        }
+        .scene-live-page .scene-log {
+            padding: 12px 14px !important;
+        }
+        .scene-live-compose {
+            padding: 10px 14px !important;
+        }
+    }
+</style>

@@ -9,7 +9,7 @@
 
 <PageTitle>Packages — Admin — SharpMUSH</PageTitle>
 
-<div style="padding:var(--cpad);">
+<div class="pkg-page" style="padding:var(--cpad);">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
         <MudText Typo="Typo.h4" Style="font-weight:700;">Softcode Packages</MudText>
         <MudSpacer />
@@ -26,7 +26,7 @@
         Installed softcode packages. Upgrades always go through a reviewed plan — nothing applies automatically.
     </MudText>
 
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+    <div class="pkg-stat-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
         @{
             var updatesAvailable = _installed is not null ? _installed.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable) : 0;
         }
@@ -251,6 +251,16 @@
         </MudButton>
     </DialogActions>
 </MudDialog>
+
+<style>
+    @@media (max-width: 760px) {
+        .pkg-stat-grid { grid-template-columns: 1fr 1fr !important; }
+        .pkg-tabs { flex-wrap: wrap; }
+        .pkg-search { flex: 1 1 100%; }
+        .pkg-search input { width: 100% !important; }
+        .pkg-row { flex-wrap: wrap !important; }
+    }
+</style>
 
 @code {
     private enum PkgTab { Installed, Updates }

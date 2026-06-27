@@ -8,7 +8,7 @@
 
 <PageTitle>Package Remotes — Admin — SharpMUSH</PageTitle>
 
-<div style="padding:var(--cpad);">
+<div class="pkg-page" style="padding:var(--cpad);">
     <div class="pkg-header">
         <div class="pkg-kicker">Build · Package sources</div>
         <h1 class="pkg-title">Package Remotes</h1>
@@ -140,6 +140,15 @@
         <MudButton OnClick="@(() => _showReadme = false)">Close</MudButton>
     </DialogActions>
 </MudDialog>
+
+<style>
+    @@media (max-width: 760px) {
+        /* "Add a remote" trust+branch row and community-listing rows stack; fields go full width.
+           The remotes table keeps its own horizontal scroll (mud-table-container). */
+        .pkg-page .flex-row { flex-wrap: wrap; }
+        .pkg-page .mud-input-control { max-width: 100% !important; }
+    }
+</style>
 
 @code {
     private IReadOnlyList<PackageRemoteRecord>? _remotes;

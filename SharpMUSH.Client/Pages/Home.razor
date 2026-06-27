@@ -6,6 +6,17 @@
 @* The landing page composes from the "home" layout scope. Its default arranges the stats, active
    scene, recent wiki activity, characters, and quickstart widgets in a 12-column grid; admins can
    recompose it in the layout editor. *@
-<div style="padding:var(--cpad);">
+<div class="home-dash">
     <ScopedZone Scope="@LayoutScopes.Home" Zone="WidgetZone.MainContent" />
 </div>
+
+<style>
+    .home-dash { padding: var(--cpad); }
+
+    /* On phones the widget grid (composed by the layout scope) collapses to one
+       column via the shell's responsive rules; here we just tighten the page gutter
+       so stacked widgets get the full width. */
+    @@media (max-width: 760px) {
+        .home-dash { padding: 16px 12px; }
+    }
+</style>

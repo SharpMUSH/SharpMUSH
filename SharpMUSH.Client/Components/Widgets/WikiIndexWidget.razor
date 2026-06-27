@@ -80,6 +80,20 @@
     }
 </div>
 
+<style>
+    /* Phones: tighten the hero + page gutter and force the category grid to a
+       single full-width column (the scoped rule uses a 340px min track that would
+       otherwise overflow narrow screens). Selectors are qualified to match the
+       scoped (.razor.css) specificity and win on source order. */
+    @@media (max-width: 760px) {
+        .wiki-index.wiki-index { padding: 16px 12px; }
+        .wiki-index .wiki-hero-body { padding: 22px 18px; }
+        .wiki-index .wiki-hero-title { font-size: 23px; }
+        .wiki-index .wiki-hero-search { max-width: none; }
+        .wiki-index .wiki-cat-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    }
+</style>
+
 @code {
     [Parameter] public JsonElement? Config { get; set; }
 

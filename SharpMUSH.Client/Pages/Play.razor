@@ -258,6 +258,8 @@
             min-height: 100%;
             overflow-x: hidden;
             overflow-y: auto;
+            padding: 12px;
+            gap: 12px;
         }
         .play-term {
             /* dvh tracks the visible viewport, so the mobile address bar doesn't
@@ -266,8 +268,24 @@
             height: 70dvh;
             min-height: 320px;
         }
+        .play-term-header {
+            flex-wrap: wrap;
+            padding: 10px 12px;
+        }
         .play-side {
             overflow: visible;
+        }
+        /* Comfortable, tappable list entries and quick-action links on a phone. */
+        .play-entry {
+            font-size: 14px;
+            padding: 9px 8px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+        }
+        .play-action {
+            min-height: 44px;
+            font-size: 14px;
         }
     }
 </style>

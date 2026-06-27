@@ -12,7 +12,7 @@
     <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:4px;">Image Library</MudText>
     <MudText Style="color:var(--text-dim);font-size:14px;margin-bottom:24px;">Manage uploaded media assets used across the wiki and portal.</MudText>
 
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;">
         @foreach (var tile in new[] {
             (_assets.Count.ToString(),                             "Total Assets",        Icons.Material.Filled.Image,        "var(--accent)"),
             (FormatBytes(TotalSizeBytes),                          "Storage Used",        Icons.Material.Filled.Storage,      "#5aa9ff"),
@@ -122,6 +122,7 @@
     }
     else
     {
+        <div style="overflow-x:auto;min-width:0;">
         <MudDataGrid T="WikiAssetInfo" Items="@FilteredAssets"
                      Dense="true" Hover="true"
                      Class="mush-dark-grid"
@@ -190,6 +191,7 @@
                 <MudText Color="Color.Secondary">No assets found.</MudText>
             </NoRecordsContent>
         </MudDataGrid>
+        </div>
     }
 </div>
 

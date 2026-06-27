@@ -5,7 +5,7 @@
 
 <PageTitle>@Loc["ConfigurationManagement"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 adminconfig-page">
     <MudStack Spacing="4">
         <MudCard>
             <MudCardHeader>
@@ -177,6 +177,18 @@
         </MudCard>
     </MudStack>
 </MudContainer>
+
+<style>
+    @@media (max-width: 760px) {
+        /* Stack the dictionary key/value editor rows so they don't overflow. */
+        .adminconfig-page .mud-stack-row {
+            flex-wrap: wrap;
+        }
+        .adminconfig-page .mud-input-control {
+            max-width: 100% !important;
+        }
+    }
+</style>
 
 @code {
     private IEnumerable<AdminConfigService.ConfigItem> ConfigItems { get; set; } = [];

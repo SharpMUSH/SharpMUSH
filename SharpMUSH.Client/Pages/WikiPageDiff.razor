@@ -315,6 +315,16 @@
         overflow-y: auto;
         color: var(--text);
     }
+
+    /* Phones: drop the page gutter, let the header (title + mode toggle) stack,
+       and collapse the side-by-side panes into a single stacked column. Diff
+       text already wraps (pre-wrap + break-word), so no horizontal scroll needed. */
+    @@media (max-width: 760px) {
+        .wikidiff { padding: 16px 12px; }
+        .wikidiff-head { flex-direction: column; align-items: flex-start; }
+        .wikidiff-split { grid-template-columns: minmax(0, 1fr); }
+        .wikidiff-pane { max-height: 50vh; }
+    }
 </style>
 
 @code {

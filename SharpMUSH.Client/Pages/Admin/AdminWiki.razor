@@ -34,6 +34,7 @@
         }
     </div>
 
+    <div class="adminwiki-grid-scroll">
     <MudDataGrid @ref="_grid"
                  T="WikiPageSummary"
                  ServerData="LoadServerData"
@@ -44,7 +45,7 @@
                  Class="mush-dark-grid"
                  Elevation="0">
         <ToolBarContent>
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%;flex-wrap:wrap;">
                 <MudSelect T="string"
                            Value="@_namespaceFilter"
                            ValueChanged="@OnNamespaceFilterChanged"
@@ -158,7 +159,15 @@
             <MudDataGridPager T="WikiPageSummary" />
         </PagerContent>
     </MudDataGrid>
+    </div>
 </div>
+
+<style>
+    .adminwiki-grid-scroll {
+        overflow-x: auto;
+        min-width: 0;
+    }
+</style>
 
 <MudDialog @bind-Visible="_showDeleteConfirm">
     <TitleContent>

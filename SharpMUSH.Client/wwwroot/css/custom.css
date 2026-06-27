@@ -1407,6 +1407,11 @@ body {
 		text-overflow: ellipsis;
 		font-size: 15px;
 	}
+	/* User switcher collapses to just the avatar so its name + caret don't run
+	   off the right edge of a phone. The menu still opens on tap. */
+	.phosphor-user-name { display: none !important; }
+	.phosphor-user-btn .mud-icon-root { display: none !important; }
+	.phosphor-user-btn { padding: 0; gap: 0; }
 
 	/* Global widget asides step aside so content keeps the full width. */
 	.phosphor-widget-aside { display: none !important; }

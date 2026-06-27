@@ -7,7 +7,7 @@
 
 <PageTitle>My Account — SharpMUSH</PageTitle>
 
-<div style="padding:var(--cpad);">
+<div class="acct-page" style="padding:var(--cpad);">
 
     @if (!AccountAuth.IsLoggedIn)
     {
@@ -46,7 +46,7 @@
     <div class="acct-card">
         <div class="acct-card-title">Profile</div>
 
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div class="acct-row" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
             @if (_editingUsername)
             {
                 <MudTextField @bind-Value="_newUsername" Label="Username"
@@ -64,7 +64,7 @@
             }
         </div>
 
-        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:4px;">
+        <div class="acct-row" style="display:flex;align-items:flex-start;gap:12px;margin-bottom:4px;">
             @if (_editingPassword)
             {
                 <div style="display:flex;flex-direction:column;gap:8px;flex:1;">
@@ -116,6 +116,7 @@
         }
         else
         {
+            <div class="acct-table-scroll">
             <MudTable Items="AccountAuth.Characters" Dense="true" Hover="true" Class="acct-table" Elevation="0">
                 <HeaderContent>
                     <MudTh>Name</MudTh>
@@ -139,6 +140,7 @@
                     </MudTd>
                 </RowTemplate>
             </MudTable>
+            </div>
         }
 
         @if (_showCreateChar)
@@ -173,6 +175,18 @@
     </button>
 
 </div>
+
+<style>
+    .acct-table-scroll { overflow-x: auto; }
+
+    @@media (max-width: 760px) {
+        .acct-page { padding: 16px !important; }
+        .acct-card { padding: 16px !important; }
+        .acct-title { font-size: 22px; }
+        .acct-row { flex-direction: column !important; align-items: stretch !important; }
+        .acct-row .acct-btn { width: 100%; }
+    }
+</style>
 
 @code {
     private bool _editingUsername;

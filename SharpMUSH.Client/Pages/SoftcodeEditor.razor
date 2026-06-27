@@ -295,6 +295,33 @@
 
 <HelpDrawer @ref="_helpDrawer" />
 
+<style>
+    /* Mobile: the three side-by-side panels can't fit a phone — stack them and let
+       the page scroll. The editor panel gets a real height so Monaco can lay out. */
+    @@media (max-width: 760px) {
+        .sc-shell {
+            flex-direction: column !important;
+            height: auto !important;
+            overflow: visible !important;
+            gap: 10px !important;
+            padding: 12px !important;
+        }
+        .sc-shell .sc-panel {
+            width: 100% !important;
+            flex-shrink: 1;
+        }
+        /* Object + attribute panels: cap height, scroll internally. */
+        .sc-shell .sc-panel:nth-child(1),
+        .sc-shell .sc-panel:nth-child(2) {
+            max-height: 42vh;
+        }
+        /* Editor panel: give Monaco a usable height (flex:1 is inert without a fixed parent height). */
+        .sc-shell .sc-panel:nth-child(3) {
+            min-height: 62dvh;
+        }
+    }
+</style>
+
 @code {
     private sealed class AttrTab(MushObject obj, MushAttribute attr)
     {

@@ -24,7 +24,7 @@ else if (_notFound)
 else
 {
     <PageTitle>@SceneTitle(_scene!) — SharpMUSH</PageTitle>
-    <div style="padding:var(--cpad);">
+    <div class="scene-detail-page" style="padding:var(--cpad);">
 
         <div style="margin-bottom:20px;">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
@@ -35,7 +35,7 @@ else
                 }
                 <MudText Typo="Typo.h4" Style="font-weight:700;line-height:1.2;">@SceneTitle(_scene!)</MudText>
             </div>
-            <div style="display:flex;align-items:center;gap:16px;color:var(--text-dim);font-size:13px;">
+            <div class="scene-detail-meta" style="display:flex;align-items:center;gap:16px;color:var(--text-dim);font-size:13px;">
                 <span>
                     <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:3px;" />
                     @_scene!.RoomName
@@ -149,3 +149,19 @@ else
             ? t
             : $"Scene in {s.RoomName}";
 }
+
+<style>
+    /* Mobile: trim padding, wrap the meta row, and tighten the pose-log padding. */
+    @@media (max-width: 760px) {
+        .scene-detail-page {
+            padding: 16px !important;
+        }
+        .scene-detail-page .scene-detail-meta {
+            flex-wrap: wrap;
+            gap: 6px 14px;
+        }
+        .scene-detail-page .scene-log {
+            padding: 12px !important;
+        }
+    }
+</style>

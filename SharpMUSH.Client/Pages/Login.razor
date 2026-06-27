@@ -10,7 +10,7 @@
 <div style="min-height:100vh;min-height:100dvh;display:flex;align-items:stretch;background:var(--bg);">
     <MudGrid Spacing="0" Style="width:100%;margin:0;">
 
-        <MudItem xs="12" sm="7" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);background:linear-gradient(135deg,#101113 0%,#16181b 100%);position:relative;overflow:hidden;">
+        <MudItem xs="12" sm="7" Class="login-hero" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);background:linear-gradient(135deg,#101113 0%,#16181b 100%);position:relative;overflow:hidden;">
             <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%, rgba(var(--glow),0.08) 0%, transparent 60%);pointer-events:none;"></div>
             <div style="max-width:420px;position:relative;z-index:1;">
                 <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;">
@@ -44,8 +44,8 @@
             </div>
         </MudItem>
 
-        <MudItem xs="12" sm="5" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);">
-            <MudPaper Elevation="4" Style="width:100%;max-width:380px;padding:32px;border-radius:var(--radius-lg);background:var(--surface);border:1px solid var(--border);">
+        <MudItem xs="12" sm="5" Class="login-form" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);">
+            <MudPaper Elevation="4" Class="login-form-paper" Style="width:100%;max-width:380px;padding:32px;border-radius:var(--radius-lg);background:var(--surface);border:1px solid var(--border);">
 
                 <MudTabs @bind-ActivePanelIndex="_tabIndex" Elevation="0" Rounded="true" Centered="true" Class="mb-5">
                     <MudTabPanel Text="Sign In">
@@ -114,6 +114,14 @@
         </MudItem>
     </MudGrid>
 </div>
+
+<style>
+    @@media (max-width: 760px) {
+        .login-hero { display: none !important; }
+        .login-form { flex-basis: 100% !important; max-width: 100% !important; padding: 16px !important; }
+        .login-form-paper { padding: 24px 20px !important; }
+    }
+</style>
 
 @code {
     private int _tabIndex = 0;
