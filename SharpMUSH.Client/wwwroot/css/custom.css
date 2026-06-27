@@ -26,6 +26,10 @@
 	--radius-lg: 14px;
 	--cpad: 30px;
 	--nav-letterspacing: 0.01em;
+	/* Documentation only: the mobile breakpoint. CSS media queries can't read a
+	   custom property in their condition, so every @media uses the literal 760px —
+	   keep them in sync with this value (and with sharpmushLayout.isNarrow in layout.js). */
+	--mobile-bp: 760px;
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
 	--font-mono: "Cascadia Mono", "Sarasa Mono SC", "DejaVu Sans Mono", "JetBrains Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;
@@ -1319,3 +1323,103 @@ body {
 .mush-ref { color: #c3e88d; font-style: italic; }
 .mush-atcmd { color: #ffcb6b; }
 .mush-danger { background: rgba(255, 83, 80, 0.25); border-bottom: 2px solid #ff5350; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE TOOLKIT + RESPONSIVE SHELL
+   Sub-project 0 of the mobile campaign. Everything below the 760px breakpoint.
+
+   Conventions for page authors (Batches 1–4):
+     • Breakpoint is ALWAYS 760px. In .css files: `@media (max-width: 760px)`.
+       In Razor <style> blocks: `@@media (max-width: 760px)` (Razor escapes `@`;
+       a bare `@media` is parsed as a code transition and fails to compile).
+     • Full-height regions: use `100dvh` (falls back to `vh`) so the mobile
+       address bar doesn't crop content.
+     • Any flex/grid child holding wide content (terminal, tables, code, pre)
+       needs `min-width: 0`; prefer `minmax(0, 1fr)` over a bare `1fr` track.
+     • Min touch target 44px for interactive controls.
+   Helper classes below are available to every page.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Backdrop behind the off-canvas nav drawer — inert until the shell is .nav-open. */
+.phosphor-nav-backdrop {
+	display: none;
+}
+
+/* ── Reusable helpers (consumed by the page batches) ── */
+.mobile-only { display: none; }
+
+@media (max-width: 760px) {
+	.mobile-only { display: revert; }
+	.desktop-only { display: none !important; }
+	.mobile-stack { flex-direction: column !important; }
+	.mobile-full { width: 100% !important; }
+}
+
+/* ══ Responsive shell: nav becomes an off-canvas overlay drawer ══ */
+@media (max-width: 760px) {
+	/* The sidebar leaves the flex flow and slides in over the content. It always
+	   renders full-width on mobile — the 62px desktop rail is never used here. */
+	.phosphor-sidebar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		bottom: 0;
+		width: 248px !important;
+		z-index: 1001;
+		transform: translateX(-100%);
+		transition: transform 0.22s ease;
+		box-shadow: 2px 0 24px rgba(0, 0, 0, 0.5);
+	}
+	.phosphor-shell--nav-open .phosphor-sidebar {
+		transform: translateX(0);
+	}
+	/* Keep brand/labels/text visible even if the desktop rail was collapsed. */
+	.phosphor-sidebar--collapsed { width: 248px !important; }
+
+	/* Dimmed backdrop, shown only while the drawer is open. */
+	.phosphor-nav-backdrop {
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 1000;
+		background: rgba(0, 0, 0, 0.55);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.22s ease;
+	}
+	.phosphor-shell--nav-open .phosphor-nav-backdrop {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	/* Content column now owns the full viewport width. */
+	.phosphor-content-col { width: 100%; }
+
+	/* ── Condense the topbar: drop the search box, kbd hint, language picker,
+	      and divider; keep hamburger · title · terminal · user menu. ── */
+	.phosphor-topbar { gap: 6px; padding: 0 10px; }
+	.phosphor-search,
+	.phosphor-search-kbd,
+	.phosphor-topbar-divider { display: none !important; }
+	.phosphor-topbar-title {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		font-size: 15px;
+	}
+
+	/* Global widget asides step aside so content keeps the full width. */
+	.phosphor-widget-aside { display: none !important; }
+
+	/* Bottom command-terminal drawer: viewport-aware height, address-bar safe. */
+	.phosphor-terminal {
+		height: 70vh;
+		height: 70dvh;
+		max-height: 70dvh;
+	}
+
+	/* ── Touch targets ── */
+	.phosphor-nav-link { min-height: 44px; }
+	.phosphor-icon-btn { min-width: 44px; min-height: 44px; }
+	.phosphor-user-btn { min-height: 44px; }
+}

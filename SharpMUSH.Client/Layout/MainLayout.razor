@@ -10,6 +10,7 @@
 @inject AccountAuthService AccountAuth
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ILayoutService LayoutService
+@inject IJSRuntime JS
 
 <MudPopoverProvider />
 <MudDialogProvider />
@@ -18,7 +19,10 @@
 @* Forces a hard browser refresh whenever the server unloads/reloads a plugin DLL (generic signal). *@
 <PluginChangeReloader />
 
-<div class="phosphor-shell">
+<div class="phosphor-shell @(_mobileNavOpen ? "phosphor-shell--nav-open" : "")">
+
+    @* Mobile-only: tapping the dimmed backdrop closes the off-canvas nav drawer. *@
+    <div class="phosphor-nav-backdrop" @onclick="CloseMobileNav"></div>
 
     <NavMenu IsCollapsed="@_sidebarCollapsed" />
 
@@ -167,6 +171,7 @@
 
 @code {
     private bool _sidebarCollapsed = false;
+    private bool _mobileNavOpen = false;
     private bool _isConfigRoute = false;
     private bool _terminalOpen = false;
     private string? _terminalPlayerName;
@@ -258,6 +263,7 @@
     {
         _ = InvokeAsync(async () =>
         {
+            _mobileNavOpen = false;
             UpdateConfigRouteState();
             await EnsureAccountRoutingAsync();
             StateHasChanged();
@@ -319,7 +325,23 @@
     private static bool IsHomePath(string currentPath)
         => string.IsNullOrEmpty(currentPath) || currentPath == "/";
 
-    private void ToggleSidebar() => _sidebarCollapsed = !_sidebarCollapsed;
+    // One hamburger, two behaviors by viewport: on a phone it opens the off-canvas
+    // drawer; on desktop it toggles the icon rail (unchanged). matchMedia keeps the
+    // breakpoint decision in JS so it always matches the 760px CSS breakpoint.
+    private async Task ToggleSidebar()
+    {
+        var narrow = await JS.InvokeAsync<bool>("sharpmushLayout.isNarrow");
+        if (narrow)
+            _mobileNavOpen = !_mobileNavOpen;
+        else
+            _sidebarCollapsed = !_sidebarCollapsed;
+    }
+
+    private void CloseMobileNav()
+    {
+        if (_mobileNavOpen)
+            _mobileNavOpen = false;
+    }
 
     private void ToggleTerminal() => _terminalOpen = !_terminalOpen;
 
