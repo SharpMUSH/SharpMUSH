@@ -26,22 +26,22 @@ else
     <PageTitle>@SceneTitle(_scene!) — SharpMUSH</PageTitle>
     <div class="scene-detail-page" style="padding:var(--cpad);">
 
-        <div style="margin-bottom:20px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <div style="margin-bottom:1.25rem;">
+            <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:0.375rem;">
                 @if (_scene!.IsLive)
                 {
                     <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                             Style="font-size:10px;letter-spacing:0.06em;height:20px;padding:0 7px;">LIVE</MudChip>
+                             Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">LIVE</MudChip>
                 }
                 <MudText Typo="Typo.h4" Style="font-weight:700;line-height:1.2;">@SceneTitle(_scene!)</MudText>
             </div>
-            <div class="scene-detail-meta" style="display:flex;align-items:center;gap:16px;color:var(--text-dim);font-size:13px;">
+            <div class="scene-detail-meta" style="display:flex;align-items:center;gap:1rem;color:var(--text-dim);font-size:0.8125rem;">
                 <span>
-                    <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:3px;" />
+                    <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:0.1875rem;" />
                     @_scene!.RoomName
                 </span>
                 <span>
-                    <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Style="vertical-align:middle;margin-right:3px;" />
+                    <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Style="vertical-align:middle;margin-right:0.1875rem;" />
                     @_scene!.PoseCount pose(s)
                 </span>
                 <span>@_scene!.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
@@ -50,7 +50,7 @@ else
 
         @if (_allTags.Count > 0)
         {
-            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px;">
+            <div style="display:flex;flex-wrap:wrap;gap:0.375rem;align-items:center;margin-bottom:0.875rem;">
                 <MudChip T="string" Size="Size.Small" Variant="@(_activeTag is null ? Variant.Filled : Variant.Outlined)"
                          Color="Color.Primary" OnClick="@(() => SetTag(null))">All</MudChip>
                 @foreach (var tag in _allTags)
@@ -73,7 +73,7 @@ else
         else
         {
             <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;">
-                <div class="scene-log" style="max-height:65vh;max-height:65svh;padding:16px;">
+                <div class="scene-log" style="max-height:65vh;max-height:65svh;padding:1rem;">
                     @foreach (var pose in visible)
                     {
                         <ScenePoseLine Pose="pose" />
@@ -82,7 +82,7 @@ else
             </MudPaper>
         }
 
-        <div style="display:flex;gap:10px;margin-top:16px;">
+        <div style="display:flex;gap:0.625rem;margin-top:1rem;">
             @if (_scene!.IsLive)
             {
                 <MudButton Href="@($"/scenes/{Id}/live")" Variant="Variant.Filled" Color="Color.Primary">
@@ -154,14 +154,14 @@ else
     /* Mobile: trim padding, wrap the meta row, and tighten the pose-log padding. */
     @@media (max-width: 760px) {
         .scene-detail-page {
-            padding: 16px !important;
+            padding: 1rem !important;
         }
         .scene-detail-page .scene-detail-meta {
             flex-wrap: wrap;
-            gap: 6px 14px;
+            gap: 0.375rem 0.875rem;
         }
         .scene-detail-page .scene-log {
-            padding: 12px !important;
+            padding: 0.75rem !important;
         }
     }
 </style>

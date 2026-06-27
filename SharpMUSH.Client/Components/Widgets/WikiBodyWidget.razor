@@ -8,14 +8,14 @@
 
 @if (!string.IsNullOrWhiteSpace(_name))
 {
-    <MudPaper Class="wiki-body-widget" Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+    <MudPaper Class="wiki-body-widget" Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
         <WikiView Slug="@_name" Mode="WikiView.WikiMode.View" />
     </MudPaper>
 }
 
 <style>
     @@media (max-width: 760px) {
-        .wiki-body-widget { padding: 14px !important; }
+        .wiki-body-widget { padding: 0.875rem !important; }
     }
 </style>
 

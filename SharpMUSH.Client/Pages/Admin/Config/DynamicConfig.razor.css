@@ -6,32 +6,32 @@
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 20px;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
 }
 
 .config-kicker {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--accent);
-    margin-bottom: 6px;
+    margin-bottom: 0.375rem;
 }
 
 .config-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 1.625rem;
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--text);
 }
 
 .config-desc {
-    margin: 6px 0 0;
+    margin: 0.375rem 0 0;
     font-family: var(--font-ui);
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--text-dim);
 }
 
@@ -42,8 +42,8 @@
 .config-section-page ::deep .save-bar {
     position: sticky;
     bottom: 0;
-    margin-top: 20px;
-    padding: 14px 18px;
+    margin-top: 1.25rem;
+    padding: 0.875rem 1.125rem;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -64,16 +64,16 @@
 
 .save-bar-actions {
     display: flex;
-    gap: 12px;
+    gap: 0.75rem;
 }
 
 /* ── Group title above each flat field card ── */
 .config-group-title {
     font-family: var(--font-ui);
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--text);
-    margin: 0 0 8px 2px;
+    margin: 0 0 0.5rem 0.125rem;
 }
 
 /* ── Flat field card ── */
@@ -86,7 +86,7 @@
 }
 
 .config-field-row {
-    padding: 18px 22px;
+    padding: 1.125rem 1.375rem;
 }
 
 .config-field-row:not(:first-child) {
@@ -96,7 +96,7 @@
 .config-field-row--inline {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 1.5rem;
 }
 
 .config-field-label {
@@ -106,46 +106,46 @@
 
 .config-field-name {
     font-family: var(--font-ui);
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--text);
-    margin-bottom: 3px;
+    margin-bottom: 0.1875rem;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .config-field-help {
     font-family: var(--font-ui);
-    font-size: 12.5px;
+    font-size: 0.78125rem;
     color: var(--text-dim);
 }
 
 .config-field-key {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text-faint);
     display: block;
-    margin-top: 2px;
+    margin-top: 0.125rem;
 }
 
 .config-field-error {
     font-family: var(--font-ui);
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--mud-palette-error, #e57373);
-    margin-top: 4px;
+    margin-top: 0.25rem;
 }
 
 .config-changed {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--accent);
     background: rgba(var(--glow), 0.12);
     border: 1px solid rgba(var(--glow), 0.3);
     border-radius: 99px;
-    padding: 1px 7px;
+    padding: 0.0625rem 0.4375rem;
 }
 
 .config-field-control {
@@ -156,7 +156,7 @@
 }
 
 .config-field-row--stacked .config-field-label {
-    margin-bottom: 12px;
+    margin-bottom: 0.75rem;
 }
 
 .config-field-control--full {
@@ -207,17 +207,17 @@
 /* ── Select pills ── */
 .config-pills {
     display: flex;
-    gap: 6px;
+    gap: 0.375rem;
     justify-content: flex-end;
     flex-wrap: wrap;
 }
 
 .config-pill {
-    padding: 6px 11px;
+    padding: 0.375rem 0.6875rem;
     border-radius: var(--radius);
     cursor: pointer;
     font-family: var(--font-ui);
-    font-size: 12px;
+    font-size: 0.75rem;
     border: 1px solid var(--border);
     background: transparent;
     color: var(--text-dim);
@@ -238,13 +238,13 @@
 /* ── Text / numeric input ── */
 .config-input {
     width: 100%;
-    padding: 9px 12px;
+    padding: 0.5625rem 0.75rem;
     background: var(--surface-3);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 0.8125rem;
     outline: none;
     transition: border-color 0.12s;
 }
@@ -265,25 +265,25 @@
 .config-chip-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 0.375rem;
     align-items: center;
     min-height: 30px;
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
 }
 
 .config-empty {
     font-family: var(--font-ui);
-    font-size: 12.5px;
+    font-size: 0.78125rem;
     color: var(--text-faint);
 }
 
 .config-chip {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 0.3125rem;
     font-family: var(--font-mono);
-    font-size: 11.5px;
-    padding: 3px 5px 3px 9px;
+    font-size: 0.71875rem;
+    padding: 0.1875rem 0.3125rem 0.1875rem 0.5625rem;
     border-radius: 99px;
     background: var(--surface-2);
     color: var(--text-dim);
@@ -301,9 +301,9 @@
     background: transparent;
     color: inherit;
     cursor: pointer;
-    font-size: 15px;
+    font-size: 0.9375rem;
     line-height: 1;
-    padding: 0 2px;
+    padding: 0 0.125rem;
     opacity: 0.7;
 }
 
@@ -315,21 +315,21 @@
 .config-dict {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 0.625rem;
 }
 
 .config-dict-entry {
     background: var(--surface-3);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius);
-    padding: 12px;
+    padding: 0.75rem;
 }
 
 .config-dict-entry-head {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
+    gap: 0.5rem;
+    margin-bottom: 0.625rem;
 }
 
 .config-icon-btn {
@@ -354,15 +354,15 @@
     align-self: flex-start;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 7px 12px;
+    gap: 0.375rem;
+    padding: 0.4375rem 0.75rem;
     border-radius: var(--radius);
     border: 1px dashed var(--border);
     background: transparent;
     color: var(--text-dim);
     cursor: pointer;
     font-family: var(--font-ui);
-    font-size: 12.5px;
+    font-size: 0.78125rem;
 }
 
 .config-add-btn:hover {
@@ -373,7 +373,7 @@
 @media (max-width: 600px) {
     .save-bar-content {
         flex-direction: column;
-        gap: 12px;
+        gap: 0.75rem;
     }
 
     .save-bar-actions {

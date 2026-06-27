@@ -11,11 +11,11 @@
 @inject IWebAssemblyHostEnvironment HostEnv
 @implements IAsyncDisposable
 
-<div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:13.5px;">
+<div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:0.84375rem;">
 
     <div id="@_outputId"
          class="sharp-terminal-output"
-         style="flex:1;min-height:0;overflow:auto;padding:12px 16px;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
+         style="flex:1;min-height:0;overflow:auto;padding:0.75rem 1rem;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
         @* When MinColumns is set (the /play terminal asks for 78), this inner track holds a
            floor width of that many characters. On a narrow screen the output scrolls
            horizontally rather than wrapping 78-col content down to the phone's ~50 columns —
@@ -43,7 +43,7 @@
                           Placeholder="ws://localhost:4202/ws"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
-                          Style="flex:1;font-size:12px;"
+                          Style="flex:1;font-size:0.75rem;"
                           OnKeyDown="OnUriKeyDown" />
             <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
                            title="Login settings"
@@ -63,7 +63,7 @@
 
     @if (_showLoginPanel && !_connected)
     {
-        <div style="padding:6px 10px;background:var(--surface);border-top:1px solid var(--border-soft);">
+        <div style="padding:0.375rem 0.625rem;background:var(--surface);border-top:1px solid var(--border-soft);">
             @if (_showCharacterPicker)
             {
                 <CharacterPicker ServerUri="@_serverUri"
@@ -72,22 +72,22 @@
             }
             else
             {
-                <MudTabs Rounded="false" MinimumTabWidth="100px" Style="font-size:12px;">
+                <MudTabs Rounded="false" MinimumTabWidth="100px" Style="font-size:0.75rem;">
                     <MudTabPanel Text="Character">
-                        <div style="display:flex;flex-direction:column;gap:6px;padding-top:4px;">
+                        <div style="display:flex;flex-direction:column;gap:0.375rem;padding-top:0.25rem;">
                             <MudText Typo="Typo.caption" Style="color:#888;">
                                 Player name is saved; password is sent once via HTTPS and never stored.
                             </MudText>
-                            <div style="display:flex;gap:8px;align-items:flex-end;">
+                            <div style="display:flex;gap:0.5rem;align-items:flex-end;">
                                 <MudTextField @bind-Value="_loginPlayer"
                                               Label="Player name"
                                               Variant="Variant.Outlined" Margin="Margin.Dense"
-                                              Style="flex:1;font-size:12px;" />
+                                              Style="flex:1;font-size:0.75rem;" />
                                 <MudTextField @bind-Value="_loginPassword"
                                               Label="Password (not stored)"
                                               InputType="InputType.Password"
                                               Variant="Variant.Outlined" Margin="Margin.Dense"
-                                              Style="flex:1;font-size:12px;" />
+                                              Style="flex:1;font-size:0.75rem;" />
                                 <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
                                            OnClick="SaveCredentialsAsync">Save name</MudButton>
                                 <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small"
@@ -99,20 +99,20 @@
                     <MudTabPanel Text="Account">
                         @if (!_showAccountRegister)
                         {
-                            <div style="display:flex;flex-direction:column;gap:6px;padding-top:4px;">
+                            <div style="display:flex;flex-direction:column;gap:0.375rem;padding-top:0.25rem;">
                                 <MudText Typo="Typo.caption" Style="color:#888;">
                                     Login with your SharpMUSH account to choose a character.
                                 </MudText>
-                                <div style="display:flex;gap:8px;align-items:flex-end;">
+                                <div style="display:flex;gap:0.5rem;align-items:flex-end;">
                                     <MudTextField @bind-Value="_accountIdentifier"
                                                   Label="Account name or email"
                                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                                  Style="flex:1;font-size:12px;" />
+                                                  Style="flex:1;font-size:0.75rem;" />
                                     <MudTextField @bind-Value="_accountPassword"
                                                   Label="Password (not stored)"
                                                   InputType="InputType.Password"
                                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                                  Style="flex:1;font-size:12px;" />
+                                                  Style="flex:1;font-size:0.75rem;" />
                                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                                                Disabled="_accountBusy"
                                                OnClick="AccountLoginAsync">Login</MudButton>
@@ -129,24 +129,24 @@
                         }
                         else
                         {
-                            <div style="display:flex;flex-direction:column;gap:6px;padding-top:4px;">
+                            <div style="display:flex;flex-direction:column;gap:0.375rem;padding-top:0.25rem;">
                                 <MudText Typo="Typo.caption" Style="color:#888;">
                                     Create a new account. Email is optional.
                                 </MudText>
-                                <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                                <div style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap;">
                                     <MudTextField @bind-Value="_regUsername"
                                                   Label="Account name (required)"
                                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                                  Style="flex:1;min-width:140px;font-size:12px;" />
+                                                  Style="flex:1;min-width:140px;font-size:0.75rem;" />
                                     <MudTextField @bind-Value="_regEmail"
                                                   Label="Email (optional)"
                                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                                  Style="flex:1;min-width:140px;font-size:12px;" />
+                                                  Style="flex:1;min-width:140px;font-size:0.75rem;" />
                                     <MudTextField @bind-Value="_regPassword"
                                                   Label="Password"
                                                   InputType="InputType.Password"
                                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                                  Style="flex:1;min-width:140px;font-size:12px;" />
+                                                  Style="flex:1;min-width:140px;font-size:0.75rem;" />
                                     <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
                                                Disabled="_accountBusy"
                                                OnClick="AccountRegisterAsync">Register</MudButton>
@@ -174,10 +174,10 @@
                disabled="@(!_connected)"
                placeholder="say hello   ·   pose waves   ·   look   ·   who" />
         <button type="button" class="term-send" @onclick="SendAsync" disabled="@(!_connected)" title="Send">
-            <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:14px;" />
+            <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:0.875rem;" />
         </button>
         <button type="button" class="term-clear" @onclick="ClearAsync" title="Clear terminal">
-            <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:15px;" />
+            <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:0.9375rem;" />
         </button>
     </div>
 </div>

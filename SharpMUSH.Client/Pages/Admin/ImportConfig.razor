@@ -34,7 +34,7 @@
 		<div class="config-field-card config-pad mt-4">
 			<div class="config-group-title">@Loc["SelectedFile"]</div>
 			<div class="config-file-row">
-				<MudIcon Icon="Icons.Material.Filled.Description" Style="font-size:18px;" />
+				<MudIcon Icon="Icons.Material.Filled.Description" Style="font-size:1.125rem;" />
 				<span class="config-list-name">@_selectedFile.Name</span>
 				<span class="config-file-size">(@($"{_selectedFile.Size / 1024.0:F1}") KB)</span>
 			</div>
@@ -44,8 +44,8 @@
 				<MudExpansionPanels Class="config-preview mt-4">
 					<MudExpansionPanel MaxHeight="400">
 						<TitleContent>
-							<div style="display: flex; align-items: center; gap: 8px;">
-								<MudIcon Icon="Icons.Material.Filled.Visibility" Style="font-size:18px;" />
+							<div style="display: flex; align-items: center; gap: 0.5rem;">
+								<MudIcon Icon="Icons.Material.Filled.Visibility" Style="font-size:1.125rem;" />
 								<span>@Loc["PreviewFileContent"]</span>
 							</div>
 						</TitleContent>
@@ -58,7 +58,7 @@
 
 			<div class="config-actions mt-4">
 				<button type="button" class="config-ghost-btn" @onclick="ClearSelection">
-					<MudIcon Icon="Icons.Material.Filled.Clear" Style="font-size:16px;" />
+					<MudIcon Icon="Icons.Material.Filled.Clear" Style="font-size:1rem;" />
 					@Loc["ClearSelection"]
 				</button>
 
@@ -72,7 +72,7 @@
 					}
 					else
 					{
-						<MudIcon Icon="Icons.Material.Filled.Upload" Style="font-size:16px;" />
+						<MudIcon Icon="Icons.Material.Filled.Upload" Style="font-size:1rem;" />
 						<span>@Loc["ImportConfiguration"]</span>
 					}
 				</button>

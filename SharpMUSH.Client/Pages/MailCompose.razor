@@ -10,7 +10,7 @@
 
 <div class="mail-compose-page" style="padding:var(--cpad);">
 
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:1.25rem;">
         <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Href="/mail"
                        Style="color:var(--text-dim);" />
         <div>
@@ -28,7 +28,7 @@
                       Lines="10" Margin="Margin.Dense" Class="mc-field mb-3" />
         <MudCheckBox @bind-Value="_urgent" Label="@Loc["Urgent"]" Color="Color.Error" Class="mb-4" />
 
-        <div class="mc-actions" style="display:flex;gap:10px;">
+        <div class="mc-actions" style="display:flex;gap:0.625rem;">
             <MudButton Variant="Variant.Filled"
                        Style="background:var(--accent);color:var(--accent-on);text-transform:none;font-weight:600;"
                        StartIcon="@Icons.Material.Filled.Send"
@@ -82,7 +82,7 @@
        comfortably tappable, stacked rows. */
     @@media (max-width: 760px) {
         .mail-compose-page {
-            padding: 16px !important;
+            padding: 1rem !important;
         }
         .mail-compose-page .mc-actions {
             flex-direction: column;

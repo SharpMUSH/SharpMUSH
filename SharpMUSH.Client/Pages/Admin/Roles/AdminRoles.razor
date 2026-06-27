@@ -25,7 +25,7 @@
             @if (_tab == Tab.Roles)
             {
                 <button type="button" class="ra-btn ra-btn--primary" @onclick="NewRole">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:14px;" /> New role
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> New role
                 </button>
             }
         </div>
@@ -66,10 +66,10 @@
                 @if (_editing is null)
                 {
                     <div class="ra-empty-detail">
-                        <MudIcon Icon="@Icons.Material.Filled.Shield" Style="font-size:40px;color:var(--text-faint);opacity:0.4;" />
+                        <MudIcon Icon="@Icons.Material.Filled.Shield" Style="font-size:2.5rem;color:var(--text-faint);opacity:0.4;" />
                         <span>Select a role, or create a new one.</span>
                         <button type="button" class="ra-btn ra-btn--primary" @onclick="NewRole">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:14px;" /> New role
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> New role
                         </button>
                     </div>
                 }
@@ -78,7 +78,7 @@
                     <div class="ra-detail-head">
                         <span class="ra-detail-dot" style="@($"background:{SafeColor(_editColor)};")"></span>
                         <div style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;">
                                 <h2 class="ra-detail-name">@(_editing.IsSystem ? _editing.Name : (string.IsNullOrWhiteSpace(_editName) ? "Untitled" : _editName))</h2>
                                 @if (_editing.IsSystem)
                                 {
@@ -141,12 +141,12 @@
 
                     <div class="ra-section ra-section--actions">
                         <button type="button" class="ra-btn ra-btn--primary" @onclick="SaveRole" disabled="@_saving">
-                            <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:14px;" /> Save role
+                            <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:0.875rem;" /> Save role
                         </button>
                         @if (!_editing.IsSystem)
                         {
                             <button type="button" class="ra-btn ra-btn--danger" @onclick="DeleteRole" disabled="@_saving">
-                                <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:14px;" /> Delete
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:0.875rem;" /> Delete
                             </button>
                         }
                     </div>
@@ -158,7 +158,7 @@
     {
         <div class="roleadmin-assign">
             <div class="ra-search">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:14px;color:var(--text-faint);" />
+                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;color:var(--text-faint);" />
                 <input value="@_lookupName" placeholder="Search by username…"
                        @oninput="@(e => _lookupName = e.Value?.ToString() ?? string.Empty)"
                        @onkeydown="OnLookupKeyDown" />
@@ -177,7 +177,7 @@
             @if (_lookedUp && _account is null)
             {
                 <div class="ra-empty-detail">
-                    <MudIcon Icon="@Icons.Material.Filled.PersonOff" Style="font-size:40px;color:var(--text-faint);opacity:0.4;" />
+                    <MudIcon Icon="@Icons.Material.Filled.PersonOff" Style="font-size:2.5rem;color:var(--text-faint);opacity:0.4;" />
                     <span>No account found for &ldquo;@_lookupName&rdquo;.</span>
                 </div>
             }
@@ -186,7 +186,7 @@
                 <div class="ra-account-card">
                     <div class="ra-account-head">
                         <div style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;">
                                 <h2 class="ra-detail-name">@_account.Username</h2>
                                 @if (_account.IsDisabled)
                                 {
@@ -229,7 +229,7 @@
                                     <button type="button" class="ra-add-chip" @onclick="@(() => AddAssignment(r.Slug))">
                                         <span class="ra-dot ra-dot--sm" style="@($"background:{SafeColor(r.Color)};")"></span>
                                         @r.Name
-                                        <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:14px;" />
+                                        <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" />
                                     </button>
                                 }
                             </div>
@@ -240,7 +240,7 @@
             else
             {
                 <div class="ra-empty-detail">
-                    <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Style="font-size:40px;color:var(--text-faint);opacity:0.4;" />
+                    <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Style="font-size:2.5rem;color:var(--text-faint);opacity:0.4;" />
                     <span>Search for an account to manage its roles.</span>
                 </div>
             }
@@ -251,9 +251,9 @@
 <style>
     @@media (max-width: 760px) {
         /* Permission rows: stack the label above a full-width tri-state for big touch targets. */
-        .ra-perm-row { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
+        .ra-perm-row { flex-direction: column !important; align-items: stretch !important; gap: 0.625rem !important; }
         .ra-tristate { width: 100%; justify-content: space-between; }
-        .ra-tri { flex: 1; text-align: center; padding: 10px 8px; }
+        .ra-tri { flex: 1; text-align: center; padding: 0.625rem 0.5rem; }
         .ra-field--narrow { flex: 1 1 140px !important; }
     }
 </style>

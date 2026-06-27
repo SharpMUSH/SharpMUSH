@@ -19,7 +19,7 @@
                 No account needed to read.
             </p>
             <div class="wiki-hero-search">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:16px;color:var(--text-faint);" />
+                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:1rem;color:var(--text-faint);" />
                 <input placeholder="Search the wiki…" value="@_search"
                        @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
             </div>
@@ -48,7 +48,7 @@
             {
                 <div class="wiki-cat">
                     <div class="wiki-cat-head">
-                        <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:16px;color:var(--accent);" />
+                        <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:1rem;color:var(--accent);" />
                         <h3 class="wiki-cat-title">@group.Key</h3>
                         <span class="wiki-cat-count">@group.Count()</span>
                     </div>
@@ -61,7 +61,7 @@
                                         <span class="wiki-page-title">@pg.Title</span>
                                         @if (pg.IsProtected)
                                         {
-                                            <span class="wiki-lock"><MudIcon Icon="@Icons.Material.Filled.Lock" Style="font-size:10px;" /> locked</span>
+                                            <span class="wiki-lock"><MudIcon Icon="@Icons.Material.Filled.Lock" Style="font-size:0.625rem;" /> locked</span>
                                         }
                                         @if (!pg.Published)
                                         {
@@ -86,11 +86,11 @@
        otherwise overflow narrow screens). Selectors are qualified to match the
        scoped (.razor.css) specificity and win on source order. */
     @@media (max-width: 760px) {
-        .wiki-index.wiki-index { padding: 16px 12px; }
-        .wiki-index .wiki-hero-body { padding: 22px 18px; }
-        .wiki-index .wiki-hero-title { font-size: 23px; }
+        .wiki-index.wiki-index { padding: 1rem 0.75rem; }
+        .wiki-index .wiki-hero-body { padding: 1.375rem 1.125rem; }
+        .wiki-index .wiki-hero-title { font-size: 1.4375rem; }
         .wiki-index .wiki-hero-search { max-width: none; }
-        .wiki-index .wiki-cat-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+        .wiki-index .wiki-cat-grid { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
     }
 </style>
 

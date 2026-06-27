@@ -37,7 +37,7 @@
 
         <header class="phosphor-topbar">
             <button class="phosphor-icon-btn" @onclick="ToggleSidebar" title="Toggle navigation">
-                <MudIcon Icon="@Icons.Material.Filled.Menu" Style="font-size:20px;" />
+                <MudIcon Icon="@Icons.Material.Filled.Menu" Style="font-size:1.25rem;" />
             </button>
             <div class="phosphor-topbar-title">@PageTitle()</div>
 
@@ -63,7 +63,7 @@
             <button class="@($"phosphor-icon-btn{(_terminalOpen ? " phosphor-icon-btn--active" : "")}")"
                     @onclick="ToggleTerminal"
                     title="@(_terminalOpen ? "Close Terminal" : "Open Terminal")">
-                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:18px;" />
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:1.125rem;" />
             </button>
 
             <div class="phosphor-topbar-divider"></div>
@@ -75,7 +75,7 @@
                         <button class="phosphor-user-btn" @onclick="@context.ToggleAsync">
                             <span class="phosphor-user-avatar">@UserInitial</span>
                             <span class="phosphor-user-name">@(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")</span>
-                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Style="font-size:15px;color:var(--text-faint);" />
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Style="font-size:0.9375rem;color:var(--text-faint);" />
                         </button>
                     </ActivatorContent>
                     <ChildContent>
@@ -143,14 +143,14 @@
         {
             <div class="phosphor-terminal">
                 <div class="phosphor-terminal-header">
-                    <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:15px;color:var(--accent);margin-right:9px;" />
-                    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);letter-spacing:0.05em;">command terminal</span>
-                    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);margin-left:8px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:0.9375rem;color:var(--accent);margin-right:0.5625rem;" />
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;">command terminal</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:0.6875rem;color:var(--text-faint);margin-left:0.5rem;">
                         · @(Terminal.IsConnected ? "connected" : "disconnected")
                     </span>
                     <div style="flex:1;"></div>
                     <button class="phosphor-icon-btn" @onclick="ToggleTerminal" title="Close Terminal">
-                        <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:18px;" />
+                        <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:1.125rem;" />
                     </button>
                 </div>
                 <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">

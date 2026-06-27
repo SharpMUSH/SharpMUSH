@@ -10,7 +10,7 @@
 <PageTitle>Packages — Admin — SharpMUSH</PageTitle>
 
 <div class="pkg-page" style="padding:var(--cpad);">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
+    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.25rem;">
         <MudText Typo="Typo.h4" Style="font-weight:700;">Softcode Packages</MudText>
         <MudSpacer />
         <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.TravelExplore"
@@ -22,11 +22,11 @@
         <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
                        OnClick="ReloadAsync" Disabled="_busy" />
     </div>
-    <MudText Style="color:var(--text-dim);font-size:14px;margin-bottom:20px;">
+    <MudText Style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.25rem;">
         Installed softcode packages. Upgrades always go through a reviewed plan — nothing applies automatically.
     </MudText>
 
-    <div class="pkg-stat-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+    <div class="pkg-stat-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:1.25rem;">
         @{
             var updatesAvailable = _installed is not null ? _installed.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable) : 0;
         }
@@ -39,11 +39,11 @@
         })
         {
             var (val, label, icon, color) = tile;
-            <MudPaper Elevation="0" Style="@($"padding:16px 18px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);")">
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <MudIcon Icon="@icon" Style="@($"color:{color};font-size:22px;")" />
+            <MudPaper Elevation="0" Style="@($"padding:1rem 1.125rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);")">
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <MudIcon Icon="@icon" Style="@($"color:{color};font-size:1.375rem;")" />
                     <div>
-                        <MudText Style="@($"font-size:22px;font-weight:700;color:{color};line-height:1.1;")">
+                        <MudText Style="@($"font-size:1.375rem;font-weight:700;color:{color};line-height:1.1;")">
                             @(_installed is null ? "—" : val)
                         </MudText>
                         <MudText Class="section-kicker" Style="opacity:0.7;">@label</MudText>
@@ -68,7 +68,7 @@
             </button>
             <div style="flex:1;"></div>
             <div class="pkg-search">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:16px;color:var(--text-faint);" />
+                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:1rem;color:var(--text-faint);" />
                 <input type="text" placeholder="Search packages…" value="@_search"
                        @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
             </div>
@@ -95,27 +95,27 @@
                 @(_tab == PkgTab.Updates ? "No packages have an update available." : "No packages match your search.")
             </MudAlert>
         }
-        <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;flex-direction:column;gap:0.5rem;">
             @foreach (var pkg in visible)
             {
                 var p = pkg;
                 _updates.TryGetValue(p.Package.Id, out var update);
                 <MudPaper Elevation="0"
-                          Style="display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);"
+                          Style="display:flex;align-items:center;gap:1rem;padding:0.875rem 1.125rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);"
                           Class="pkg-row">
                     <MudIcon Icon="@Icons.Material.Filled.Archive"
-                             Style="font-size:20px;color:var(--accent);flex-shrink:0;" />
+                             Style="font-size:1.25rem;color:var(--accent);flex-shrink:0;" />
                     <div style="flex:1;min-width:0;">
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
-                            <MudText Style="font-size:14px;font-weight:600;">@p.Package.Id</MudText>
+                        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.125rem;">
+                            <MudText Style="font-size:0.875rem;font-weight:600;">@p.Package.Id</MudText>
                             <MudChip T="string" Size="Size.Small"
-                                     Style="height:18px;font-size:10px;padding:0 5px;border:1px solid var(--border);">
+                                     Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;border:1px solid var(--border);">
                                 v@p.Package.Version
                             </MudChip>
                             @if (!string.IsNullOrEmpty(p.Package.SourceRepo))
                             {
                                 <MudChip T="string" Size="Size.Small"
-                                         Style="height:18px;font-size:10px;padding:0 5px;background:rgba(90,169,255,0.10);color:#5aa9ff;">
+                                         Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;background:rgba(90,169,255,0.10);color:#5aa9ff;">
                                     @p.Package.SourceRepo
                                 </MudChip>
                             }
@@ -124,49 +124,49 @@
                                 @if (update.InstalledTagMoved)
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Error"
-                                             Style="height:18px;font-size:10px;padding:0 5px;">
+                                             Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">
                                         tag moved!
                                     </MudChip>
                                 }
                                 else if (update.UpdateAvailable)
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Success"
-                                             Style="height:18px;font-size:10px;padding:0 5px;">
+                                             Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">
                                         @update.LatestVersion available
                                     </MudChip>
                                 }
                                 else
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Default"
-                                             Style="height:18px;font-size:10px;padding:0 5px;">
+                                             Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">
                                         current
                                     </MudChip>
                                 }
                                 @if (update.PathChangedAtHead)
                                 {
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                             Style="height:18px;font-size:10px;padding:0 5px;">
+                                             Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">
                                         dev drift
                                     </MudChip>
                                 }
                             }
                         </div>
-                        <div style="display:flex;align-items:center;gap:12px;">
-                            <MudText Style="font-size:12px;color:var(--text-faint);">
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                            <MudText Style="font-size:0.75rem;color:var(--text-faint);">
                                 installed @p.Package.InstalledAt.ToString("yyyy-MM-dd")
                             </MudText>
-                            <MudText Style="font-size:12px;color:var(--text-faint);">
+                            <MudText Style="font-size:0.75rem;color:var(--text-faint);">
                                 @p.ObjectCount obj / @p.ManagedAttributeCount attr
                             </MudText>
                             @if (p.Dependents.Count > 0)
                             {
-                                <MudText Style="font-size:12px;color:var(--text-faint);">
+                                <MudText Style="font-size:0.75rem;color:var(--text-faint);">
                                     required by @string.Join(", ", p.Dependents)
                                 </MudText>
                             }
                         </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+                    <div style="display:flex;align-items:center;gap:0.25rem;flex-shrink:0;">
                         @if (update is null)
                         {
                             <MudButton Variant="Variant.Text" Size="Size.Small"
@@ -206,7 +206,7 @@
                     var rev = revision;
                     <MudListItem T="string">
                         <MudStack Row="true" AlignItems="AlignItems.Center">
-                            <MudText Style="font-size:13px;">rev @rev.Revision — @rev.Kind @rev.Version</MudText>
+                            <MudText Style="font-size:0.8125rem;">rev @rev.Revision — @rev.Kind @rev.Version</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                 @rev.AppliedAt.ToString("yyyy-MM-dd HH:mm")
                             </MudText>

@@ -1,13 +1,13 @@
 .mc-kicker {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--accent);
 }
 .mc-title {
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 1.625rem;
     font-weight: 700;
     line-height: 1.1;
     color: var(--text);
@@ -18,7 +18,7 @@
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    padding: 24px;
+    padding: 1.5rem;
 }
 .mc-card ::deep .mc-field .mud-input-control-input-container .mud-input.mud-input-outlined {
     background: var(--surface-3);

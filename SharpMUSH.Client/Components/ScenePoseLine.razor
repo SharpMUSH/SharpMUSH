@@ -6,24 +6,24 @@
    rendered from its raw Markup client-side. Deleted poses render struck-through. *@
 <div class="scene-line scene-line--pose @(Pose.IsDeleted ? "ms-strike" : null)"
      style="@(Pose.IsDeleted ? "opacity:0.55;" : null)">
-    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;">
-        <span style="font-weight:600;color:var(--accent);font-size:13px;">@Pose.DisplayName</span>
+    <div style="display:flex;align-items:baseline;gap:0.5rem;margin-bottom:0.125rem;">
+        <span style="font-weight:600;color:var(--accent);font-size:0.8125rem;">@Pose.DisplayName</span>
         @if (Pose.WasEdited)
         {
             <span class="scene-edited-badge" title="@($"Edited {Pose.EditCount - 1} time(s)")"
-                  style="font-size:10px;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-faint);border:1px solid var(--border);border-radius:4px;padding:0 5px;">edited</span>
+                  style="font-size:0.625rem;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-faint);border:1px solid var(--border);border-radius:4px;padding:0 0.3125rem;">edited</span>
         }
-        <span style="font-size:11px;color:var(--text-faint);margin-left:auto;">
+        <span style="font-size:0.6875rem;color:var(--text-faint);margin-left:auto;">
             @Pose.CreatedAtUtc.ToLocalTime().ToString("HH:mm")
         </span>
     </div>
     <div class="scene-pose-body">@((MarkupString)SceneMarkupRenderer.ToHtml(Pose.Markup))</div>
     @if (Pose.Tags.Count > 0)
     {
-        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;">
+        <div style="display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.1875rem;">
             @foreach (var tag in Pose.Tags)
             {
-                <span style="font-size:10px;color:var(--text-faint);background:var(--surface-2);border-radius:4px;padding:0 5px;">@tag</span>
+                <span style="font-size:0.625rem;color:var(--text-faint);background:var(--surface-2);border-radius:4px;padding:0 0.3125rem;">@tag</span>
             }
         </div>
     }

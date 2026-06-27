@@ -11,7 +11,7 @@
 
 <div class="wikihist">
     <a class="wikihist-back" href="@($"/wiki/{Ns}/{Category}/{Slug}")">
-        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:14px;" /> @_displayTitle
+        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @_displayTitle
     </a>
     <div class="wikihist-head">
         <div>
@@ -46,7 +46,7 @@
     else
     {
         <div class="wikihist-table">
-        <div style="display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px 80px;gap:4px;align-items:center;padding:6px 10px;border-bottom:2px solid var(--border);background:var(--surface-3);border-radius:var(--radius) var(--radius) 0 0;">
+        <div style="display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px 80px;gap:0.25rem;align-items:center;padding:0.375rem 0.625rem;border-bottom:2px solid var(--border);background:var(--surface-3);border-radius:var(--radius) var(--radius) 0 0;">
             <MudText Class="section-kicker" Style="grid-column:1;text-align:center;">Old</MudText>
             <MudText Class="section-kicker" Style="grid-column:2;text-align:center;">New</MudText>
             <MudText Class="section-kicker" Style="grid-column:3;">Timestamp / Summary</MudText>
@@ -67,7 +67,7 @@
                 var isCurrent = i == 0;
                 var altRow = i % 2 == 1;
 
-                <div style="@($"display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px;gap:4px;align-items:center;padding:8px 10px;background:{(altRow ? "var(--surface-3)" : "var(--surface)")};border-bottom:1px solid var(--border-soft);")"
+                <div style="@($"display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px;gap:0.25rem;align-items:center;padding:0.5rem 0.625rem;background:{(altRow ? "var(--surface-3)" : "var(--surface)")};border-bottom:1px solid var(--border-soft);")"
                      @key="rev.RevisionNumber">
 
                     <div style="display:flex;justify-content:center;">
@@ -87,48 +87,48 @@
                     </div>
 
                     <div style="min-width:0;">
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <MudText Style="font-size:13px;font-weight:600;">
+                        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                            <MudText Style="font-size:0.8125rem;font-weight:600;">
                                 @rev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
                             </MudText>
                             @if (isCurrent)
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Primary"
-                                         Style="height:18px;font-size:10px;padding:0 5px;">current</MudChip>
+                                         Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">current</MudChip>
                             }
                         </div>
                         @if (!string.IsNullOrWhiteSpace(rev.EditSummary))
                         {
-                            <MudText Style="font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            <MudText Style="font-size:0.75rem;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                                 @rev.EditSummary
                             </MudText>
                         }
                     </div>
 
-                    <div style="display:flex;align-items:center;gap:6px;">
+                    <div style="display:flex;align-items:center;gap:0.375rem;">
                         <MudAvatar Size="Size.Small"
-                                   Style="@($"width:24px;height:24px;font-size:11px;background:hsl({Math.Abs(rev.EditorDbref.GetHashCode()) % 360},40%,30%);color:#fff;")">
+                                   Style="@($"width:24px;height:24px;font-size:0.6875rem;background:hsl({Math.Abs(rev.EditorDbref.GetHashCode()) % 360},40%,30%);color:#fff;")">
                             @(rev.EditorDbref.Length > 0 ? rev.EditorDbref[0].ToString().ToUpper() : "?")
                         </MudAvatar>
-                        <MudText Style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="@rev.EditorDbref">
+                        <MudText Style="font-size:0.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="@rev.EditorDbref">
                             @rev.EditorDbref
                         </MudText>
                     </div>
 
-                    <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start;">
-                        <MudText Style="font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">
+                    <div style="display:flex;flex-direction:column;gap:0.125rem;align-items:flex-start;">
+                        <MudText Style="font-size:0.6875rem;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">
                             @rev.MarkdownSource.Length.ToString("N0") B
                         </MudText>
                         @if (deltaBytes != 0)
                         {
                             <MudChip T="string" Size="Size.Small"
-                                     Style="@($"height:16px;font-size:10px;padding:0 4px;font-family:'JetBrains Mono',monospace;background:{ByteDeltaBackground(deltaBytes)};color:{ByteDeltaForeground(deltaBytes)};")">
+                                     Style="@($"height:16px;font-size:0.625rem;padding:0 0.25rem;font-family:'JetBrains Mono',monospace;background:{ByteDeltaBackground(deltaBytes)};color:{ByteDeltaForeground(deltaBytes)};")">
                                 @(deltaBytes > 0 ? "+" : "")@deltaBytes
                             </MudChip>
                         }
                     </div>
 
-                    <div style="display:flex;gap:4px;align-items:center;justify-content:center;">
+                    <div style="display:flex;gap:0.25rem;align-items:center;justify-content:center;">
                         <MudTooltip Text="View this revision">
                             <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
                                            Href="@($"/wiki/{Ns}/{Category}/{Slug}?rev={rev.RevisionNumber}")" />
@@ -156,7 +156,7 @@
        instead of forcing the whole page wide. Selectors are doubled / descendant-
        qualified to match the scoped (.razor.css) rules' specificity and win on order. */
     @@media (max-width: 760px) {
-        .wikihist.wikihist { padding: 16px 12px; }
+        .wikihist.wikihist { padding: 1rem 0.75rem; }
         .wikihist .wikihist-head { flex-direction: column; align-items: flex-start; }
         .wikihist-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .wikihist-table > div { min-width: 560px; }
