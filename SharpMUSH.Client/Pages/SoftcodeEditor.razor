@@ -64,7 +64,7 @@
         else
         {
             <div style="flex:1;overflow:hidden;padding:4px;">
-                <ObjectBrowser @ref="_objectBrowser" OnObjectSelected="OnObjectSelected" />
+                <ObjectBrowser @ref="_objectBrowser" OnObjectSelected="@(dbref => OnObjectSelected(dbref))" />
             </div>
 
             @if (_createObjectType.HasValue)
@@ -560,7 +560,10 @@
         StateHasChanged();
     }
 
-    private async Task OnObjectSelected(int dbref)
+    // advanceMobilePane: only true for a direct object pick. Internal refreshes
+    // (Save, Refresh attributes) reuse this method and must NOT yank the mobile user
+    // out of the editor back to the attributes pane.
+    private async Task OnObjectSelected(int dbref, bool advanceMobilePane = true)
     {
         _loadingAttrs = true;
         _saveMessage = null;
@@ -576,7 +579,8 @@
                 Attributes = await QueryService.GetAttributesAsync($"#{dbref}"),
             };
             // Mobile drill-down: picking an object advances to its attributes.
-            _mobilePane = MobilePane.Attrs;
+            if (advanceMobilePane)
+                _mobilePane = MobilePane.Attrs;
         }
         catch (Exception ex)
         {
@@ -594,7 +598,7 @@
     {
         if (_selectedObject is null) return;
         var dbref = _selectedObject.Dbref;
-        await OnObjectSelected(dbref);
+        await OnObjectSelected(dbref, advanceMobilePane: false);
         if (_selectedObject is not null)
         {
             foreach (var tab in _openTabs.Where(t => t.Obj.Dbref == dbref))

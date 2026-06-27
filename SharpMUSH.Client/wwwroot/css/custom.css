@@ -30,6 +30,10 @@
 	   custom property in their condition, so every @media uses the literal 760px —
 	   keep them in sync with this value (and with sharpmushLayout.isNarrow in layout.js). */
 	--mobile-bp: 760px;
+	/* Container padding to use inside mobile (<=760px) media queries — tighter than the
+	   desktop --cpad (30px) without depending on the density-compact toggle. Pages should
+	   prefer var(--cpad-mobile) over a hardcoded 16px in their @media blocks. */
+	--cpad-mobile: 16px;
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
 	--font-mono: "Cascadia Mono", "Sarasa Mono SC", "DejaVu Sans Mono", "JetBrains Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;
@@ -290,6 +294,12 @@ body {
 	flex: 1;
 	min-height: 0;
 	overflow-y: auto;
+}
+/* When the command-terminal drawer is open, reserve its height so content isn't
+   hidden beneath it. The drawer is a fixed 300px on desktop and 70dvh on mobile
+   (see the mobile block), and this offset tracks both. */
+.phosphor-main--terminal {
+	padding-bottom: 300px;
 }
 
 /* ── Widget aside columns (left / right sidebar zones) ── */
@@ -1436,7 +1446,8 @@ body {
 	.phosphor-topbar { gap: 6px; padding: 0 10px; }
 	.phosphor-search,
 	.phosphor-search-kbd,
-	.phosphor-topbar-divider { display: none !important; }
+	.phosphor-topbar-divider,
+	.phosphor-lang { display: none !important; }
 	.phosphor-topbar-title {
 		min-width: 0;
 		overflow: hidden;
@@ -1479,9 +1490,15 @@ body {
 		-webkit-backdrop-filter: blur(10px);
 		border-top: 1px solid var(--border-soft);
 	}
-	/* Keep page content clear of the fixed bar. The terminal drawer's inline
-	   padding-bottom (when open) still wins over this, which is what we want. */
+	/* Keep page content clear of the fixed bar. */
 	.phosphor-shell--bottomnav .phosphor-main {
 		padding-bottom: calc(58px + env(safe-area-inset-bottom));
+	}
+	/* When the terminal drawer is open it grows to 70dvh and covers the bottom bar,
+	   so the content offset must match the drawer (not the 300px desktop value).
+	   Listed after the bar rule so it wins at equal specificity. */
+	.phosphor-main--terminal,
+	.phosphor-shell--bottomnav .phosphor-main--terminal {
+		padding-bottom: 70dvh;
 	}
 }

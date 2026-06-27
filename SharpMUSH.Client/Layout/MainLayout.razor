@@ -58,7 +58,7 @@
                 <span class="phosphor-search-kbd">⌘K</span>
             </div>
 
-            <LanguagePicker />
+            <span class="phosphor-lang"><LanguagePicker /></span>
 
             <button class="@($"phosphor-icon-btn{(_terminalOpen ? " phosphor-icon-btn--active" : "")}")"
                     @onclick="ToggleTerminal"
@@ -128,8 +128,7 @@
             }
         </header>
 
-        <main class="phosphor-main"
-              style="@(_terminalOpen ? "padding-bottom:300px;" : "")">
+        <main class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
             @Body
         </main>
 
@@ -168,7 +167,11 @@
         {
             <nav class="phosphor-bottomnav mobile-only">
                 @BottomTab("/", Icons.Material.Filled.Home, Loc["Home"], exact: true)
-                @BottomTab("/play", Icons.Material.Filled.SportsEsports, Loc["Play"])
+                @* Gated like the sidebar's Play link: only when a character session is active. *@
+                @if (_characterActive)
+                {
+                    @BottomTab("/play", Icons.Material.Filled.SportsEsports, Loc["Play"])
+                }
                 @BottomTab("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
                 @BottomTab("/characters", Icons.Material.Filled.Groups, "Chars")
                 <button type="button"
@@ -195,6 +198,7 @@
     private bool _isConfigRoute = false;
     private bool _isPlayRoute = false;
     private bool _terminalOpen = false;
+    private bool _characterActive = false;
     private string? _terminalPlayerName;
     private bool _isDebugAuth;
     private LayoutConfiguration? _layout;
@@ -212,6 +216,10 @@
     protected override async Task OnInitializedAsync()
     {
         NavigationManager.LocationChanged += OnLocationChanged;
+        // Mirror the sidebar's Play gating on the bottom nav: a character session is
+        // "active" when the command terminal is connected.
+        _characterActive = Terminal.IsConnected;
+        Terminal.ConnectionStateChanged += OnCharacterConnectionChanged;
         UpdateConfigRouteState();
         await AccountAuth.InitAsync();
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -316,6 +324,13 @@
 
     private void ToggleMobileNav() => _mobileNavOpen = !_mobileNavOpen;
 
+    private void OnCharacterConnectionChanged(bool connected)
+        => InvokeAsync(() =>
+        {
+            _characterActive = connected;
+            StateHasChanged();
+        });
+
     private string PageTitle()
     {
         if (_isConfigRoute) return Loc["Configuration"];
@@ -399,5 +414,6 @@
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
         LayoutService.OnLayoutChanged -= HandleLayoutChanged;
+        Terminal.ConnectionStateChanged -= OnCharacterConnectionChanged;
     }
 }

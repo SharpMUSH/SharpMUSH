@@ -49,9 +49,10 @@ condition). A `--mobile-bp` token is added purely as documentation.
 Below 760px the sidebar becomes `position: fixed`, full-height, `z-index` above
 content, translated off-canvas (`translateX(-100%)`) by default and slid in when
 open. A dimmed **backdrop** covers the content and closes the drawer on tap. The
-drawer renders at its **full 232px width** (never the 62px rail) on mobile — icon
-rails are a desktop affordance. Overlay (not push) is chosen because the content
-column needs the full viewport width on a phone.
+drawer renders at its **full 248px width** (never the 62px rail) on mobile — icon
+rails are a desktop affordance. (The desktop sidebar is 232px; the mobile drawer is
+slightly wider at 248px for comfortable touch.) Overlay (not push) is chosen because
+the content column needs the full viewport width on a phone.
 
 Open/close state: a new `_mobileNavOpen` bool in `MainLayout`. The existing hamburger
 button drives the right thing per viewport via a tiny JS `matchMedia` check:
