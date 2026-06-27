@@ -1345,6 +1345,42 @@ body {
 	display: none;
 }
 
+/* ── Hybrid bottom navigation (mobile only; hidden here, shown in the @media block).
+   Primary destinations stay visible; the "Menu" tab opens the full grouped drawer. ── */
+.phosphor-bottomnav {
+	display: none;
+}
+.phosphor-bottomtab {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	text-decoration: none;
+	color: var(--text-faint);
+	font-family: var(--font-ui);
+	transition: color 0.14s;
+}
+.phosphor-bottomtab-icon {
+	font-size: 22px !important;
+}
+.phosphor-bottomtab-label {
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 10.5px;
+	letter-spacing: 0.02em;
+}
+.phosphor-bottomtab--on {
+	color: var(--accent);
+}
+
 /* ── Reusable helpers (consumed by the page batches) ── */
 .mobile-only { display: none; }
 
@@ -1427,4 +1463,25 @@ body {
 	.phosphor-nav-link { min-height: 44px; }
 	.phosphor-icon-btn { min-width: 44px; min-height: 44px; }
 	.phosphor-user-btn { min-height: 44px; }
+
+	/* ── Hybrid bottom navigation bar ── */
+	.phosphor-bottomnav {
+		display: flex;
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 40;
+		height: 58px;
+		padding-bottom: env(safe-area-inset-bottom);
+		background: color-mix(in srgb, var(--surface-3) 92%, transparent);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		border-top: 1px solid var(--border-soft);
+	}
+	/* Keep page content clear of the fixed bar. The terminal drawer's inline
+	   padding-bottom (when open) still wins over this, which is what we want. */
+	.phosphor-shell--bottomnav .phosphor-main {
+		padding-bottom: calc(58px + env(safe-area-inset-bottom));
+	}
 }

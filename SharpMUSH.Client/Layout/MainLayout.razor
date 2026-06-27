@@ -19,7 +19,7 @@
 @* Forces a hard browser refresh whenever the server unloads/reloads a plugin DLL (generic signal). *@
 <PluginChangeReloader />
 
-<div class="phosphor-shell @(_mobileNavOpen ? "phosphor-shell--nav-open" : "")">
+<div class="phosphor-shell @(_mobileNavOpen ? "phosphor-shell--nav-open" : "") @(_isPlayRoute ? "" : "phosphor-shell--bottomnav")">
 
     @* Mobile-only: tapping the dimmed backdrop closes the off-canvas nav drawer. *@
     <div class="phosphor-nav-backdrop" @onclick="CloseMobileNav"></div>
@@ -159,6 +159,26 @@
                 </div>
             </div>
         }
+
+        @* Mobile-only hybrid bottom navigation. The primary destinations stay visible (the
+           research-backed pattern for engagement/discoverability); "Menu" opens the full
+           grouped drawer for the long tail. Suppressed on /play so it doesn't fight that
+           page's terminal input at the bottom of the screen. *@
+        @if (!_isPlayRoute)
+        {
+            <nav class="phosphor-bottomnav mobile-only">
+                @BottomTab("/", Icons.Material.Filled.Home, Loc["Home"], exact: true)
+                @BottomTab("/play", Icons.Material.Filled.SportsEsports, Loc["Play"])
+                @BottomTab("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
+                @BottomTab("/characters", Icons.Material.Filled.Groups, "Chars")
+                <button type="button"
+                        class="phosphor-bottomtab @(_mobileNavOpen ? "phosphor-bottomtab--on" : "")"
+                        @onclick="ToggleMobileNav">
+                    <MudIcon Icon="@Icons.Material.Filled.Menu" Class="phosphor-bottomtab-icon" />
+                    <span class="phosphor-bottomtab-label">Menu</span>
+                </button>
+            </nav>
+        }
     </div>
 
     @if (_layout is not null && _layout.Settings.RightSidebarEnabled && !_isConfigRoute)
@@ -173,6 +193,7 @@
     private bool _sidebarCollapsed = false;
     private bool _mobileNavOpen = false;
     private bool _isConfigRoute = false;
+    private bool _isPlayRoute = false;
     private bool _terminalOpen = false;
     private string? _terminalPlayerName;
     private bool _isDebugAuth;
@@ -273,7 +294,27 @@
     private void UpdateConfigRouteState()
     {
         _isConfigRoute = NavigationManager.Uri.Contains("/admin/config");
+        _isPlayRoute = new Uri(NavigationManager.Uri).AbsolutePath.TrimEnd('/')
+            .Equals("/play", StringComparison.OrdinalIgnoreCase);
     }
+
+    // Bottom-nav tab: a link that highlights when its route is active.
+    private RenderFragment BottomTab(string href, string icon, string label, bool exact = false) =>
+        @<a href="@href" class="phosphor-bottomtab @(IsNavActive(href, exact) ? "phosphor-bottomtab--on" : "")">
+            <MudIcon Icon="@icon" Class="phosphor-bottomtab-icon" />
+            <span class="phosphor-bottomtab-label">@label</span>
+        </a>;
+
+    private bool IsNavActive(string href, bool exact)
+    {
+        var path = new Uri(NavigationManager.Uri).AbsolutePath.TrimEnd('/');
+        if (string.IsNullOrEmpty(path)) path = "/";
+        if (exact) return path == "/";
+        return path.Equals(href, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(href + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ToggleMobileNav() => _mobileNavOpen = !_mobileNavOpen;
 
     private string PageTitle()
     {
