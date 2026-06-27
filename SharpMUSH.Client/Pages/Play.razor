@@ -21,7 +21,7 @@
                 ● @(PlayTerminal.IsConnected ? "connected" : "disconnected")
             </span>
         </div>
-        <div style="flex:1;min-height:0;">
+        <div style="flex:1;min-height:0;min-width:0;">
             <GlobalTerminal TerminalOverride="PlayTerminal" ShowDiagnostics="false" />
         </div>
     </div>
@@ -104,7 +104,10 @@
 <style>
     .play-shell {
         display: grid;
-        grid-template-columns: 1fr 270px;
+        /* minmax(0, 1fr): a bare 1fr track refuses to shrink below its content's
+           min-content width, so the wide terminal canvas would push the whole
+           page wider than the viewport. minmax(0,…) lets the column shrink. */
+        grid-template-columns: minmax(0, 1fr) 270px;
         gap: 16px;
         padding: var(--cpad);
         height: 100%;
@@ -115,6 +118,7 @@
         display: flex;
         flex-direction: column;
         min-height: 0;
+        min-width: 0;
         border: 1px solid var(--border-soft);
         border-radius: var(--radius-lg);
         overflow: hidden;
@@ -168,6 +172,7 @@
         gap: 14px;
         overflow-y: auto;
         min-height: 0;
+        min-width: 0;
     }
 
     .play-card {
@@ -242,6 +247,28 @@
         height: 15px;
         flex-shrink: 0;
         color: var(--accent) !important;
+    }
+
+    /* ── Mobile: stack the terminal over the side panel and let the page scroll.
+       The two-column grid + height:100%/overflow:hidden is desktop-only. ── */
+    @@media (max-width: 760px) {
+        .play-shell {
+            grid-template-columns: minmax(0, 1fr);
+            height: auto;
+            min-height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .play-term {
+            /* dvh tracks the visible viewport, so the mobile address bar doesn't
+               push the terminal input off-screen the way vh does. */
+            height: 70vh;
+            height: 70dvh;
+            min-height: 320px;
+        }
+        .play-side {
+            overflow: visible;
+        }
     }
 </style>
 

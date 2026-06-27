@@ -102,6 +102,14 @@
 	--cpad: 16px;
 }
 
+/* Prevent mobile browsers (notably Chrome on Android) from auto-inflating
+   text — "font boosting" overrides explicit small font-sizes on wide text
+   blocks, which breaks fixed-width terminal layout and any fit-to-width sizing. */
+html, body {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
 body {
 	background-image: var(--mud-palette-background-gradient);
 	background-size: 200% 200%;
