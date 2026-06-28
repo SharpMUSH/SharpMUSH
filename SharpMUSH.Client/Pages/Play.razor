@@ -149,6 +149,19 @@
     .play-shell--focus .sharp-terminal-connbar {
         display: none;
     }
+    /* Trim the inner inset: the output carries an inline 0.75rem 1rem pad (needs
+       !important), and the header/input divider lines go too — so output, header,
+       and input read as one seamless surface filling the page. A hair of padding
+       keeps glyphs off the very edge. */
+    .play-shell--focus .sharp-terminal-output {
+        padding: 0.25rem 0.5rem !important;
+    }
+    .play-shell--focus .play-term-header {
+        border-bottom: none;
+    }
+    .play-shell--focus .sharp-terminal-input {
+        border-top: none;
+    }
 
     /* Header toggle button (Fullscreen / FullscreenExit). */
     .play-focus-btn {
