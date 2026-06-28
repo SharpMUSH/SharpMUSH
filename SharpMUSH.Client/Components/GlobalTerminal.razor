@@ -176,9 +176,12 @@
         <button type="button" class="term-send" @onclick="SendAsync" disabled="@(!_connected)" title="Send">
             <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:0.875rem;" />
         </button>
-        <button type="button" class="term-clear" @onclick="ClearAsync" title="Clear terminal">
-            <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:0.9375rem;" />
-        </button>
+        @if (ShowClearButton)
+        {
+            <button type="button" class="term-clear" @onclick="ClearAsync" title="Clear terminal">
+                <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:0.9375rem;" />
+            </button>
+        }
     </div>
 </div>
 
@@ -199,6 +202,10 @@
     /// additionally gated to the Development environment so production stays clean.
     /// </summary>
     [Parameter] public bool ShowDiagnostics { get; set; } = true;
+
+    /// <summary>Whether the inline Clear button shows in the input row. The /play terminal sets
+    /// this false because Clear lives in its settings menu instead.</summary>
+    [Parameter] public bool ShowClearButton { get; set; } = true;
 
     /// <summary>
     /// The player's preferred terminal width in character columns (min 78). When set (the
@@ -509,10 +516,17 @@
         _input = string.Empty;
     }
 
-    private Task ClearAsync()
+    /// <summary>Clears the terminal's display buffer. Public so a host page (e.g. /play, which
+    /// moves Clear into its settings menu) can trigger it via an @@ref.</summary>
+    public void ClearOutput()
     {
         _displayLines.Clear();
         StateHasChanged();
+    }
+
+    private Task ClearAsync()
+    {
+        ClearOutput();
         return Task.CompletedTask;
     }
 

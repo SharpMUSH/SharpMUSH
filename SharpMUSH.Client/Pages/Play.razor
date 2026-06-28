@@ -21,20 +21,37 @@
             <span class="play-conn @(PlayTerminal.IsConnected ? "play-conn--on" : "")">
                 ● @(PlayTerminal.IsConnected ? "connected" : "disconnected")
             </span>
-            <div class="play-cols"
-                 title="Preferred terminal width in columns (min 78). The font autoscales to fill it — more room means a bigger font. Reported to the server as your screen width.">
-                <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Style="font-size:0.95rem;" />
-                <input class="play-cols-input" type="number" min="78" max="240" step="1"
-                       value="@_targetCols" @onchange="OnColsChanged" @onclick:stopPropagation="true" />
-            </div>
-            <button class="play-focus-btn" @onclick="ToggleFocus"
-                    title="@(_focusMode ? "Show side panel" : "Focus terminal (hide side panel)")"
-                    aria-label="@(_focusMode ? "Show side panel" : "Focus terminal")">
-                <MudIcon Icon="@(_focusMode ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Style="font-size:1.125rem;" />
-            </button>
+            <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+                <ActivatorContent>
+                    <button type="button" class="play-focus-btn" @onclick="@context.ToggleAsync"
+                            title="Terminal settings" aria-label="Terminal settings">
+                        <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:1.05rem;" />
+                    </button>
+                </ActivatorContent>
+                <ChildContent>
+                    <div class="play-cfg" @onclick:stopPropagation="true">
+                        <div class="play-cfg-kicker">Terminal</div>
+                        <label class="play-cfg-row"
+                               title="Preferred terminal width in columns (min 78). The font autoscales to fill it — more room means a bigger font — and it's reported to the server as your screen width.">
+                            <span>Width (cols)</span>
+                            <input class="play-cols-input" type="number" min="78" max="240" step="1"
+                                   value="@_targetCols" @onchange="OnColsChanged" />
+                        </label>
+                        <button type="button" class="play-cfg-item" @onclick="ToggleFocus">
+                            <MudIcon Icon="@(_focusMode ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Style="font-size:1rem;" />
+                            <span>@(_focusMode ? "Exit focus mode" : "Focus mode")</span>
+                        </button>
+                        <button type="button" class="play-cfg-item" @onclick="ClearTerminal">
+                            <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:1rem;" />
+                            <span>Clear terminal</span>
+                        </button>
+                    </div>
+                </ChildContent>
+            </MudMenu>
         </div>
         <div style="flex:1;min-height:0;min-width:0;">
-            <GlobalTerminal TerminalOverride="PlayTerminal" ShowDiagnostics="false" TargetColumns="_targetCols" />
+            <GlobalTerminal @ref="_playTerm" TerminalOverride="PlayTerminal" ShowDiagnostics="false"
+                            TargetColumns="_targetCols" ShowClearButton="false" />
         </div>
     </div>
 
@@ -170,24 +187,62 @@
         border-top: none;
     }
 
-    /* Preferred-width control (columns). */
-    .play-cols {
+    /* Terminal settings menu (Width / Focus / Clear). */
+    .play-cfg {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+        padding: 0.375rem;
+        min-width: 12rem;
+    }
+    .play-cfg-kicker {
+        font-family: var(--font-mono);
+        font-size: 0.625rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        padding: 0.125rem 0.5rem 0.25rem;
+    }
+    .play-cfg-row {
         display: flex;
         align-items: center;
-        gap: 0.25rem;
-        flex-shrink: 0;
-        color: var(--text-faint);
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.375rem 0.5rem;
+        font-family: var(--font-ui);
+        font-size: 0.8125rem;
+        color: var(--text-dim);
+    }
+    .play-cfg-item {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        width: 100%;
+        padding: 0.5rem;
+        background: transparent;
+        border: none;
+        border-radius: var(--radius);
+        color: var(--text-dim);
+        font-family: var(--font-ui);
+        font-size: 0.8125rem;
+        text-align: left;
+        cursor: pointer;
+        min-height: 36px;
+    }
+    .play-cfg-item:hover {
+        background: var(--surface-2);
+        color: var(--text);
     }
     .play-cols-input {
-        width: 3.25rem;
-        height: 1.5rem;
-        padding: 0 0.25rem;
+        width: 3.5rem;
+        height: 1.625rem;
+        padding: 0 0.375rem;
         background: var(--surface-2);
         border: 1px solid var(--border-soft);
         border-radius: var(--radius);
         color: var(--text);
         font-family: var(--font-mono);
-        font-size: 0.71875rem;
+        font-size: 0.75rem;
         text-align: right;
     }
     .play-cols-input:focus {
@@ -398,9 +453,13 @@
     private IReadOnlyList<OobEntry> _here = [];
     private IReadOnlyList<OobEntry> _exits = [];
 
+    private GlobalTerminal? _playTerm;
+
     // Focus mode hides the side panel so the terminal fills the whole play area.
     private bool _focusMode;
     private void ToggleFocus() => _focusMode = !_focusMode;
+
+    private void ClearTerminal() => _playTerm?.ClearOutput();
 
     // The player's preferred terminal width in columns (min 78). The terminal autoscales its
     // font to fill this many columns; the value is also what the client reports over NAWS.
