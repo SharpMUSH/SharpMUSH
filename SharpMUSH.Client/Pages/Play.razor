@@ -129,13 +129,24 @@
         overflow: hidden;
     }
 
-    /* Focus mode: the terminal fills the whole play area; the side panel is hidden.
-       Works in every tier — on a phone it also reclaims the vertical space the
-       stacked panel used. The terminal's font-fit recomputes for the wider column. */
+    /* Focus mode: the terminal fills the whole play area edge-to-edge — side panel
+       hidden, borders gone, no outer padding. Only the header status bar, the output,
+       and the input remain (the bottom Connected/player/Disconnect bar is dropped).
+       The terminal's font-fit recomputes for the wider column. */
     .play-shell--focus {
         grid-template-columns: minmax(0, 1fr);
+        padding: 0;
+        gap: 0;
     }
     .play-shell--focus .play-side {
+        display: none;
+    }
+    .play-shell--focus .play-term {
+        border: none;
+        border-radius: 0;
+    }
+    /* These terminal classes are global (custom.css), so reach into the component. */
+    .play-shell--focus .sharp-terminal-connbar {
         display: none;
     }
 
@@ -317,6 +328,7 @@
             height: 100%;
             min-height: 0;
             overflow: hidden;
+            padding: 0;
         }
         .play-shell--focus .play-term {
             height: 100%;
