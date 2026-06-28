@@ -1338,12 +1338,20 @@ body {
 
 /* ═══════════════════════════════════════════════════════════════════════
    MOBILE TOOLKIT + RESPONSIVE SHELL
-   Sub-project 0 of the mobile campaign. Everything below the 760px breakpoint.
+   Phone / tablet-landscape / desktop, split by width AND input capability.
 
-   Conventions for page authors (Batches 1–4):
-     • Breakpoint is ALWAYS 760px. In .css files: `@media (max-width: 760px)`.
-       In Razor <style> blocks: `@@media (max-width: 760px)` (Razor escapes `@`;
-       a bare `@media` is parsed as a code transition and fails to compile).
+   Responsive model (3 tiers, width × input capability):
+     • PHONE content — `@media (max-width: 760px)`. Single-column stacking, condensed
+       chrome. This is the breakpoint page authors use for content. In Razor <style>
+       blocks write `@@media (max-width: 760px)` (Razor escapes `@`; a bare `@media`
+       is parsed as a code transition and fails to compile).
+     • TABLET / landscape phone — wider than 760px, so they KEEP the desktop
+       multi-column content (more readable). Don't add a single-column rule for them.
+     • TOUCH CHROME — `@media (max-width: 760px), (pointer: coarse)`. The shell nav
+       (drawer + bottom bar vs. desktop sidebar) keys off this so any touch device,
+       including a wide tablet or landscape phone, gets touch-friendly chrome while a
+       mouse/trackpad desktop keeps the sidebar. Mirrored by sharpmushLayout.isTouchChrome().
+     • TOUCH ergonomics — `@media (pointer: coarse)`: 44px min tap targets, no hover-only UI.
      • Full-height regions: size with `svh` and a `vh` fallback, e.g.
        "height: 100vh;" then "height: 100svh;" — the vh line is the fallback for
        browsers without svh; svh fits the SMALL viewport, so it never crops under
@@ -1401,17 +1409,42 @@ body {
 /* ── Reusable helpers (consumed by the page batches) ── */
 .mobile-only { display: none; }
 
+/* ══ PHONE-WIDTH content: single-column helpers + a condensed topbar. Tablets and
+   landscape phones are WIDER than this, so they keep the desktop multi-column content
+   (the readability win) — only their chrome goes touch-friendly (next block). ══ */
 @media (max-width: 760px) {
 	.mobile-only { display: revert; }
 	.desktop-only { display: none !important; }
 	.mobile-stack { flex-direction: column !important; }
 	.mobile-full { width: 100% !important; }
+
+	/* Condense the topbar: drop the search box, kbd hint, language picker, and divider.
+	   Tablets (>760px) keep them — they have the room. */
+	.phosphor-topbar { gap: 0.375rem; padding: 0 0.625rem; }
+	.phosphor-search,
+	.phosphor-search-kbd,
+	.phosphor-topbar-divider,
+	.phosphor-lang { display: none !important; }
+	.phosphor-topbar-title {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		font-size: 0.9375rem;
+	}
+	/* User switcher collapses to just the avatar so its name + caret don't run off the
+	   right edge of a phone. The menu still opens on tap. */
+	.phosphor-user-name { display: none !important; }
+	.phosphor-user-btn .mud-icon-root { display: none !important; }
+	.phosphor-user-btn { padding: 0; gap: 0; }
 }
 
-/* ══ Responsive shell: nav becomes an off-canvas overlay drawer ══ */
-@media (max-width: 760px) {
-	/* The sidebar leaves the flex flow and slides in over the content. It always
-	   renders full-width on mobile — the 62px desktop rail is never used here. */
+/* ══ TOUCH CHROME: the nav becomes an off-canvas drawer + a bottom tab bar. Applies to
+   any touch device (pointer: coarse) OR any narrow window — so phones, tablets, and
+   landscape phones all get the touch-friendly chrome instead of the desktop sidebar,
+   while a mouse/trackpad desktop (pointer: fine + wide) keeps the sidebar. Keep this
+   media condition in sync with sharpmushLayout.isTouchChrome() in layout.js. ══ */
+@media (max-width: 760px), (pointer: coarse) {
+	/* The sidebar leaves the flex flow and slides in over the content, full-width. */
 	.phosphor-sidebar {
 		position: fixed;
 		top: 0;
@@ -1423,9 +1456,7 @@ body {
 		transition: transform 0.22s ease;
 		box-shadow: 2px 0 24px rgba(0, 0, 0, 0.5);
 	}
-	.phosphor-shell--nav-open .phosphor-sidebar {
-		transform: translateX(0);
-	}
+	.phosphor-shell--nav-open .phosphor-sidebar { transform: translateX(0); }
 	/* Keep brand/labels/text visible even if the desktop rail was collapsed. */
 	.phosphor-sidebar--collapsed { width: 248px !important; }
 
@@ -1445,43 +1476,19 @@ body {
 		pointer-events: auto;
 	}
 
-	/* Content column now owns the full viewport width. */
+	/* Content column owns the full width now the sidebar is out of flow. */
 	.phosphor-content-col { width: 100%; }
-
-	/* ── Condense the topbar: drop the search box, kbd hint, language picker,
-	      and divider; keep hamburger · title · terminal · user menu. ── */
-	.phosphor-topbar { gap: 0.375rem; padding: 0 0.625rem; }
-	.phosphor-search,
-	.phosphor-search-kbd,
-	.phosphor-topbar-divider,
-	.phosphor-lang { display: none !important; }
-	.phosphor-topbar-title {
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		font-size: 0.9375rem;
-	}
-	/* User switcher collapses to just the avatar so its name + caret don't run
-	   off the right edge of a phone. The menu still opens on tap. */
-	.phosphor-user-name { display: none !important; }
-	.phosphor-user-btn .mud-icon-root { display: none !important; }
-	.phosphor-user-btn { padding: 0; gap: 0; }
 
 	/* Global widget asides step aside so content keeps the full width. */
 	.phosphor-widget-aside { display: none !important; }
 
 	/* Bottom command-terminal drawer: svh keeps the input row on-screen under the
-	   mobile address bar without resizing on scroll. */
+	   address bar without resizing on scroll. */
 	.phosphor-terminal {
 		height: 70vh;
 		height: 70svh;
 		max-height: 70svh;
 	}
-
-	/* ── Touch targets ── */
-	.phosphor-nav-link { min-height: 44px; }
-	.phosphor-icon-btn { min-width: 44px; min-height: 44px; }
-	.phosphor-user-btn { min-height: 44px; }
 
 	/* ── Hybrid bottom navigation bar ── */
 	.phosphor-bottomnav {
@@ -1510,4 +1517,11 @@ body {
 		padding-bottom: 70vh;
 		padding-bottom: 70svh;
 	}
+}
+
+/* ══ Touch ergonomics: 44px tap targets on any touch device, regardless of width. ══ */
+@media (pointer: coarse) {
+	.phosphor-nav-link { min-height: 44px; }
+	.phosphor-icon-btn { min-width: 44px; min-height: 44px; }
+	.phosphor-user-btn { min-height: 44px; }
 }

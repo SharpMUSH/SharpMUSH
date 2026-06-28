@@ -165,7 +165,7 @@
            page's terminal input at the bottom of the screen. *@
         @if (!_isPlayRoute)
         {
-            <nav class="phosphor-bottomnav mobile-only">
+            <nav class="phosphor-bottomnav">
                 @BottomTab("/", Icons.Material.Filled.Home, Loc["Home"], exact: true)
                 @* Gated like the sidebar's Play link: only when a character session is active. *@
                 @if (_characterActive)
@@ -386,7 +386,7 @@
     // breakpoint decision in JS so it always matches the 760px CSS breakpoint.
     private async Task ToggleSidebar()
     {
-        var narrow = await JS.InvokeAsync<bool>("sharpmushLayout.isNarrow");
+        var narrow = await JS.InvokeAsync<bool>("sharpmushLayout.isTouchChrome");
         if (narrow)
             _mobileNavOpen = !_mobileNavOpen;
         else

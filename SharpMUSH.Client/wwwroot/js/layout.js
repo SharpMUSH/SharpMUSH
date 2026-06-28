@@ -1,9 +1,15 @@
 // Small layout helpers for the responsive shell.
-// The mobile breakpoint MUST match the 760px used throughout custom.css.
 window.sharpmushLayout = {
-	// True when the viewport is at/below the mobile breakpoint, so the hamburger
-	// opens the off-canvas drawer instead of toggling the desktop rail.
+	// True when the shell is in "touch chrome" mode (off-canvas drawer + bottom nav rather
+	// than the desktop sidebar), so the hamburger opens the drawer instead of toggling the
+	// desktop rail. MUST stay in sync with the touch-chrome @media condition in custom.css:
+	// any touch device (pointer: coarse) OR a narrow window (<=760px).
+	isTouchChrome: function () {
+		return window.matchMedia('(max-width: 760px), (pointer: coarse)').matches;
+	},
+
+	// Back-compat alias.
 	isNarrow: function () {
-		return window.matchMedia('(max-width: 760px)').matches;
+		return this.isTouchChrome();
 	}
 };
