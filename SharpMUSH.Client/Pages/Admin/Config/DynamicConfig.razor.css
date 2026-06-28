@@ -51,6 +51,14 @@
     z-index: 10;
 }
 
+/* On phones the fixed bottom nav (58px) sits at bottom:0, so lift the sticky save
+   bar above it; otherwise the Save/Cancel controls hide behind the nav. */
+@media (max-width: 760px) {
+    .config-section-page ::deep .save-bar {
+        bottom: 58px;
+    }
+}
+
 .save-bar-content {
     display: flex;
     justify-content: space-between;

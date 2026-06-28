@@ -1344,10 +1344,10 @@ body {
      • Breakpoint is ALWAYS 760px. In .css files: `@media (max-width: 760px)`.
        In Razor <style> blocks: `@@media (max-width: 760px)` (Razor escapes `@`;
        a bare `@media` is parsed as a code transition and fails to compile).
-     • Full-height regions: size with `svh` and a `vh` fallback —
-         height: 100vh;   /* fallback for browsers without svh */
-         height: 100svh;  /* fits the SMALL viewport, so it never crops under the
-                             mobile address bar and never resizes on scroll */
+     • Full-height regions: size with `svh` and a `vh` fallback, e.g.
+       "height: 100vh;" then "height: 100svh;" — the vh line is the fallback for
+       browsers without svh; svh fits the SMALL viewport, so it never crops under
+       the mobile address bar and never resizes on scroll.
        Default to `svh`, NOT `dvh`. `dvh` tracks the live viewport and recalculates
        every time the toolbar slides in/out (layout jank); reserve it for the rare
        element that must follow the visible viewport in real time.

@@ -33,7 +33,9 @@
 }
 .pkg-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    /* min(360px, 100%) so the track never demands more than the container width —
+       on a phone narrower than 360px it collapses to one column instead of overflowing. */
+    grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
     gap: 1rem;
 }
 .pkg-card {

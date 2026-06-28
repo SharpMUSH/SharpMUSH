@@ -227,7 +227,8 @@
     }
     .le-item:hover { border-color: rgba(var(--glow), 0.4); }
     .le-item--template { background: rgba(var(--glow), 0.06); border-style: dashed; }
-    .le-item-name { font-family: var(--font-ui); font-size: 0.78125rem; color: var(--text); font-weight: 500; }
+    .le-item-name { font-family: var(--font-ui); font-size: 0.78125rem; color: var(--text); font-weight: 500;
+        flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .le-item-btn {
         width: 24px; height: 24px; display: grid; place-items: center; border-radius: 6px;
         border: 1px solid transparent; background: transparent; color: var(--text-faint); cursor: pointer;
