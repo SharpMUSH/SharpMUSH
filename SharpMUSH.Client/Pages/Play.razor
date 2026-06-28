@@ -5,6 +5,7 @@
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject IPlayTerminalService PlayTerminal
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Play — SharpMUSH</PageTitle>
@@ -20,6 +21,12 @@
             <span class="play-conn @(PlayTerminal.IsConnected ? "play-conn--on" : "")">
                 ● @(PlayTerminal.IsConnected ? "connected" : "disconnected")
             </span>
+            <div class="play-cols"
+                 title="Preferred terminal width in columns (min 78). The font autoscales to fill it — more room means a bigger font. Reported to the server as your screen width.">
+                <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Style="font-size:0.95rem;" />
+                <input class="play-cols-input" type="number" min="78" max="240" step="1"
+                       value="@_targetCols" @onchange="OnColsChanged" @onclick:stopPropagation="true" />
+            </div>
             <button class="play-focus-btn" @onclick="ToggleFocus"
                     title="@(_focusMode ? "Show side panel" : "Focus terminal (hide side panel)")"
                     aria-label="@(_focusMode ? "Show side panel" : "Focus terminal")">
@@ -27,7 +34,7 @@
             </button>
         </div>
         <div style="flex:1;min-height:0;min-width:0;">
-            <GlobalTerminal TerminalOverride="PlayTerminal" ShowDiagnostics="false" MinColumns="78" />
+            <GlobalTerminal TerminalOverride="PlayTerminal" ShowDiagnostics="false" TargetColumns="_targetCols" />
         </div>
     </div>
 
@@ -161,6 +168,31 @@
     }
     .play-shell--focus .sharp-terminal-input {
         border-top: none;
+    }
+
+    /* Preferred-width control (columns). */
+    .play-cols {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        flex-shrink: 0;
+        color: var(--text-faint);
+    }
+    .play-cols-input {
+        width: 3.25rem;
+        height: 1.5rem;
+        padding: 0 0.25rem;
+        background: var(--surface-2);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 0.71875rem;
+        text-align: right;
+    }
+    .play-cols-input:focus {
+        outline: none;
+        border-color: var(--accent);
     }
 
     /* Header toggle button (Fullscreen / FullscreenExit). */
@@ -369,6 +401,42 @@
     // Focus mode hides the side panel so the terminal fills the whole play area.
     private bool _focusMode;
     private void ToggleFocus() => _focusMode = !_focusMode;
+
+    // The player's preferred terminal width in columns (min 78). The terminal autoscales its
+    // font to fill this many columns; the value is also what the client reports over NAWS.
+    // Persisted per-browser in localStorage.
+    private const int MinCols = 78;
+    private const int MaxCols = 240;
+    private int _targetCols = MinCols;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "play.cols");
+            if (int.TryParse(stored, out var n))
+            {
+                var clamped = Math.Clamp(n, MinCols, MaxCols);
+                if (clamped != _targetCols)
+                {
+                    _targetCols = clamped;
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (JSException) { /* localStorage unavailable — keep the default */ }
+    }
+
+    private async Task OnColsChanged(ChangeEventArgs e)
+    {
+        _targetCols = int.TryParse(e.Value?.ToString(), out var n)
+            ? Math.Clamp(n, MinCols, MaxCols)
+            : MinCols;
+        try { await JS.InvokeVoidAsync("localStorage.setItem", "play.cols", _targetCols); }
+        catch (JSException) { /* best-effort persistence */ }
+        StateHasChanged();
+    }
 
     protected override void OnInitialized()
     {

@@ -4,19 +4,18 @@ window.SharpMUSH = window.SharpMUSH || {};
 // reports NAWS-style {cols, rows} on resize. Advance/line-height are measured from a hidden
 // probe (long run averages sub-pixel rounding); never derived from font-size.
 //
-// When minCols is set (the /play terminal asks for 78) and the column count at the element's
-// natural font-size would fall short, the font is scaled DOWN so exactly minCols columns fit
-// the visible width — so 78-col content (tables, ASCII art) is fully visible without
-// horizontal scrolling. The fit is closed-loop: glyph advance is not perfectly linear with
-// font-size (hinting widens small text), so we measure the real width at the candidate size
-// and correct until minCols actually fit. On a wide screen where minCols already fit, the
-// natural font-size is kept.
+// When a target column count is set for an element (the /play terminal — the player's
+// preferred line width, min 78), the font is SCALED so exactly that many columns fill the
+// available width: it grows on a roomy screen (bigger, more readable) and shrinks on a tight
+// one, clamped to a legible range. With no target, the natural grid at the base font is used.
 window.SharpMUSH.Metrics = {
-    // Never shrink below this — past it, fall back to horizontal scroll rather than illegible text.
-    MIN_FONT_PX: 6,
+    MIN_FONT_PX: 6,    // below this, fall back to horizontal scroll rather than illegible text
+    MAX_FONT_PX: 24,   // above this, stop growing (line-length cap) — content left-aligns
+    _targets: {},      // elementId -> target column count
+    _fire: {},         // elementId -> re-measure fn (so setTarget can refit immediately)
 
-    // Width (px) of `text` rendered in `el`'s font at a given size. Probe inherits the element's
-    // exact font context so the measurement matches what the browser will actually paint.
+    // Width (px) of `text` in `el`'s font at a given size, measured with the element's exact
+    // font context so it matches what the browser paints.
     _runWidth: function (el, cs, fontPx, text) {
         var probe = document.createElement('span');
         probe.style.position = 'absolute';
@@ -34,20 +33,20 @@ window.SharpMUSH.Metrics = {
         return w;
     },
 
-    measure: function (elementId, minCols) {
+    measure: function (elementId) {
         var el = document.getElementById(elementId);
         if (!el) return { cols: 80, rows: 24 };
 
         var clamp = function (v) { return v < 1 ? 1 : (v > 1000 ? 1000 : v); };
+        var target = this._targets[elementId] || 0;
 
-        // Measure at the element's BASE (stylesheet) font-size, independent of any prior fit.
+        // Measure at the base (stylesheet) font, independent of any fit we applied before.
         el.style.fontSize = '';
         var cs = getComputedStyle(el);
         var baseFontPx = parseFloat(cs.fontSize) || 13.5;
 
         var advance = this._runWidth(el, cs, baseFontPx, '0'.repeat(200)) / 200;
 
-        // Line-height probe (height of 5 lines / 5) at the base font.
         var lineHeight;
         (function () {
             var p = document.createElement('span');
@@ -66,45 +65,45 @@ window.SharpMUSH.Metrics = {
         var contentW = el.clientWidth - padX;
         var contentH = el.clientHeight - padY;
 
-        var naturalCols = Math.floor(contentW / advance);
-
-        // Fit-to-minimum: shrink the font so minCols columns span the width.
-        if (minCols && minCols > 0 && naturalCols < minCols) {
-            var target = contentW - 1; // leave the 78ch track a hair inside the box (no scrollbar)
+        // Fit-to-target: size the font so `target` columns span the width.
+        if (target && target > 0) {
+            var advanceRatio = advance / baseFontPx;
             var lineRatio = lineHeight / baseFontPx;
-            // First estimate from the linear ratio, then correct against the real rendered width.
-            var fitFont = target / minCols / (advance / baseFontPx);
-            for (var iter = 0; iter < 4; iter++) {
-                if (fitFont < this.MIN_FONT_PX) { fitFont = this.MIN_FONT_PX; break; }
-                var actual = this._runWidth(el, cs, fitFont, '0'.repeat(minCols));
-                if (actual <= target) break;
-                fitFont = Math.max(this.MIN_FONT_PX, fitFont * (target / actual));
+            var targetW = contentW - 1;            // a hair inside the box (no sub-pixel scrollbar)
+            var fitFont = targetW / target / advanceRatio;
+            if (fitFont > this.MAX_FONT_PX) fitFont = this.MAX_FONT_PX;
+            // Closed-loop: glyph advance isn't perfectly linear with size (hinting), so correct
+            // downward if the real width overflows. Growth is already bounded by MAX_FONT_PX.
+            for (var i = 0; i < 4; i++) {
+                if (fitFont <= this.MIN_FONT_PX) { fitFont = this.MIN_FONT_PX; break; }
+                var actual = this._runWidth(el, cs, fitFont, '0'.repeat(target));
+                if (actual <= targetW) break;
+                fitFont = Math.max(this.MIN_FONT_PX, fitFont * (targetW / actual));
             }
             el.style.fontSize = fitFont + 'px';
             var fitLine = lineRatio * fitFont;
-            return {
-                cols: minCols,
-                rows: clamp(Math.floor(contentH / fitLine))
-            };
+            return { cols: target, rows: clamp(Math.floor(contentH / fitLine)) };
         }
 
-        // No fit needed — base font-size already restored above.
+        // No target: natural grid at the base font.
         return {
-            cols: clamp(naturalCols),
+            cols: clamp(Math.floor(contentW / advance)),
             rows: clamp(Math.floor(contentH / lineHeight))
         };
     },
 
-    observe: function (elementId, dotNetRef, minCols) {
+    observe: function (elementId, dotNetRef, target) {
         var self = this;
         var el = document.getElementById(elementId);
         if (!el) return { dispose: function () { } };
+
+        self._targets[elementId] = target || 0;
 
         var last = { cols: 0, rows: 0 };
         var timer = null;
 
         function fire() {
-            var g = self.measure(elementId, minCols);
+            var g = self.measure(elementId);
             if (g.cols === last.cols && g.rows === last.rows) return;
             last = g;
             dotNetRef.invokeMethodAsync('OnTerminalResize', g.cols, g.rows);
@@ -113,6 +112,7 @@ window.SharpMUSH.Metrics = {
             if (timer) clearTimeout(timer);
             timer = setTimeout(fire, 150);
         }
+        self._fire[elementId] = fire;
 
         var ro = new ResizeObserver(schedule);
         ro.observe(el);
@@ -127,7 +127,17 @@ window.SharpMUSH.Metrics = {
             dispose: function () {
                 if (timer) clearTimeout(timer);
                 ro.disconnect();
+                delete self._targets[elementId];
+                delete self._fire[elementId];
             }
         };
+    },
+
+    // Live-update the preferred column count and refit immediately (forces a fresh report
+    // even if the grid happens to match, so the new font/NAWS take effect).
+    setTarget: function (elementId, target) {
+        this._targets[elementId] = target || 0;
+        var fire = this._fire[elementId];
+        if (fire) { fire(); } else { this.measure(elementId); }
     }
 };

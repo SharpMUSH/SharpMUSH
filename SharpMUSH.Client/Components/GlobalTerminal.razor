@@ -20,7 +20,7 @@
            floor width of that many characters. On a narrow screen the output scrolls
            horizontally rather than wrapping 78-col content down to the phone's ~50 columns —
            and the measured NAWS is floored to match (see OnTerminalResize). *@
-        <div class="sharp-terminal-track" style="@(MinColumns > 0 ? $"min-width:{MinColumns}ch;" : "")">
+        <div class="sharp-terminal-track" style="@(TargetColumns > 0 ? $"min-width:{TargetColumns}ch;" : "")">
             @foreach (var line in _displayLines)
             {
                 <div class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
@@ -201,12 +201,14 @@
     [Parameter] public bool ShowDiagnostics { get; set; } = true;
 
     /// <summary>
-    /// Minimum character columns this terminal guarantees. The /play terminal sets 78 so that
-    /// 78-column content (tables, ASCII art, fixed-width layouts) is preserved even on a phone:
-    /// the reported NAWS is floored to this value and the output gets a matching minimum-width
-    /// track that scrolls horizontally instead of wrapping below the floor. 0 = measure freely.
+    /// The player's preferred terminal width in character columns (min 78). When set (the
+    /// /play terminal), the font is auto-scaled so exactly this many columns fill the available
+    /// width — bigger on a roomy screen, smaller on a tight one — and this column count is what
+    /// is reported to the server over NAWS (so server-side <c>wrap()</c> / line layout matches
+    /// what the player sees). The output gets a matching <c>{n}ch</c> min-width track. 0 = no
+    /// preference, measure the natural grid at the base font.
     /// </summary>
-    [Parameter] public int MinColumns { get; set; }
+    [Parameter] public int TargetColumns { get; set; }
 
     private ITerminalService Terminal => TerminalOverride ?? DefaultTerminal;
 
@@ -249,6 +251,19 @@
     private int _lastCols;
     private int _lastRows;
     private bool _hasMeasured;
+    private int _observedTarget = -1;
+
+    // When the player changes their preferred width, push it to the metrics observer so it
+    // refits the font and reports the new column count over NAWS.
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_metricsHandle is not null && TargetColumns != _observedTarget)
+        {
+            _observedTarget = TargetColumns;
+            try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Metrics.setTarget", _outputId, TargetColumns); }
+            catch (JSException) { /* ignore if JS not ready */ }
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -341,7 +356,8 @@
             try
             {
                 _metricsHandle = await JsRuntime.InvokeAsync<IJSObjectReference>(
-                    "SharpMUSH.Metrics.observe", _outputId, _metricsRef, MinColumns);
+                    "SharpMUSH.Metrics.observe", _outputId, _metricsRef, TargetColumns);
+                _observedTarget = TargetColumns;
             }
             catch (JSException) { /* ignore if JS not ready */ }
         }
@@ -369,10 +385,8 @@
     [JSInvokable]
     public async Task OnTerminalResize(int cols, int rows)
     {
-        // Honor the column floor so the server wraps to (at least) the width the output track
-        // displays — otherwise a phone would report ~50 cols while the track shows 78.
-        if (MinColumns > 0 && cols < MinColumns)
-            cols = MinColumns;
+        // cols already reflects the player's preferred width when TargetColumns is set (the fit
+        // returns exactly that), so this is what we report to the server over NAWS.
 
         // Remember the grid even before the socket connects (the first measurement fires on
         // fonts-ready, which can precede connect). The remembered size is then sent once the
