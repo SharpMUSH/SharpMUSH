@@ -9,7 +9,7 @@
 
 <PageTitle>Play — SharpMUSH</PageTitle>
 
-<div class="play-shell">
+<div class="play-shell @(_focusMode ? "play-shell--focus" : "")">
 
     <div class="play-term">
         <div class="play-term-header">
@@ -20,6 +20,11 @@
             <span class="play-conn @(PlayTerminal.IsConnected ? "play-conn--on" : "")">
                 ● @(PlayTerminal.IsConnected ? "connected" : "disconnected")
             </span>
+            <button class="play-focus-btn" @onclick="ToggleFocus"
+                    title="@(_focusMode ? "Show side panel" : "Focus terminal (hide side panel)")"
+                    aria-label="@(_focusMode ? "Show side panel" : "Focus terminal")">
+                <MudIcon Icon="@(_focusMode ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Style="font-size:1.125rem;" />
+            </button>
         </div>
         <div style="flex:1;min-height:0;min-width:0;">
             <GlobalTerminal TerminalOverride="PlayTerminal" ShowDiagnostics="false" MinColumns="78" />
@@ -122,6 +127,36 @@
         border: 1px solid var(--border-soft);
         border-radius: var(--radius-lg);
         overflow: hidden;
+    }
+
+    /* Focus mode: the terminal fills the whole play area; the side panel is hidden.
+       Works in every tier — on a phone it also reclaims the vertical space the
+       stacked panel used. The terminal's font-fit recomputes for the wider column. */
+    .play-shell--focus {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .play-shell--focus .play-side {
+        display: none;
+    }
+
+    /* Header toggle button (Fullscreen / FullscreenExit). */
+    .play-focus-btn {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+        padding: 0;
+        border: none;
+        border-radius: var(--radius);
+        background: transparent;
+        color: var(--text-faint);
+        cursor: pointer;
+        transition: background 0.12s, color 0.12s;
+    }
+    .play-focus-btn:hover {
+        background: var(--surface-2);
+        color: var(--text);
     }
 
     .play-term-header {
@@ -276,6 +311,17 @@
         .play-side {
             overflow: visible;
         }
+        /* Focus mode on a phone: the terminal fills the content area instead of being
+           capped at 70svh with the (now hidden) panel's space left empty below it. */
+        .play-shell--focus {
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .play-shell--focus .play-term {
+            height: 100%;
+            min-height: 0;
+        }
         /* Comfortable, tappable list entries and quick-action links on a phone. */
         .play-entry {
             font-size: 0.875rem;
@@ -294,6 +340,10 @@
 @code {
     private IReadOnlyList<OobEntry> _here = [];
     private IReadOnlyList<OobEntry> _exits = [];
+
+    // Focus mode hides the side panel so the terminal fills the whole play area.
+    private bool _focusMode;
+    private void ToggleFocus() => _focusMode = !_focusMode;
 
     protected override void OnInitialized()
     {
