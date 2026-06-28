@@ -341,7 +341,7 @@
             try
             {
                 _metricsHandle = await JsRuntime.InvokeAsync<IJSObjectReference>(
-                    "SharpMUSH.Metrics.observe", _outputId, _metricsRef);
+                    "SharpMUSH.Metrics.observe", _outputId, _metricsRef, MinColumns);
             }
             catch (JSException) { /* ignore if JS not ready */ }
         }
