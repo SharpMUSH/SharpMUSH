@@ -12,12 +12,12 @@
 @if (!_characterActive)
 {
     <div style="padding:var(--cpad);">
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+        <EmptyState>
             <MudText>@Loc["MailNeedsCharacter"]</MudText>
             <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/characters" Class="mt-2">
                 @Loc["Characters"]
             </MudButton>
-        </MudAlert>
+        </EmptyState>
     </div>
 }
 else

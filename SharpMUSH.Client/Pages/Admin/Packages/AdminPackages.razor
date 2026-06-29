@@ -82,18 +82,18 @@
     }
     else if (_installed.Count == 0)
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+        <EmptyState>
             No packages installed yet. Configure a remote, then browse it to install your first package.
-        </MudAlert>
+        </EmptyState>
     }
     else
     {
         var visible = FilteredPackages().ToList();
         if (visible.Count == 0)
         {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            <EmptyState>
                 @(_tab == PkgTab.Updates ? "No packages have an update available." : "No packages match your search.")
-            </MudAlert>
+            </EmptyState>
         }
         <div style="display:flex;flex-direction:column;gap:0.5rem;">
             @foreach (var pkg in visible)
