@@ -1,0 +1,35 @@
+{
+  "repository": "SharpMUSH/SharpMUSH",
+  "assignee": "@copilot",
+  "issues": [
+    {
+      "title": "Implement Remaining General Commands Commands",
+      "body": "## Category: General Commands\n\nThis issue tracks the implementation of the remaining unimplemented commands in the General Commands category.\n\n**Progress Update:** This is an updated issue reflecting current state. Originally there were 107 unimplemented commands. After significant implementation work, 44 commands have been completed and all 117 functions have been implemented! \ud83c\udf89\n\n### Remaining Commands to Implement (3 items)\n\n- [ ] `@DECOMPILE`\n- [ ] `@EDIT`\n- [ ] `@GREP`\n\n\n### Implementation Requirements\n\n1. **Implementation**: Each command must be fully implemented according to PennMUSH specifications\n2. **Unit Tests**: Include comprehensive unit tests with:\n   - Test cases using actual/expected values\n   - Unique test strings for easy comparison (e.g., \"test_string_COMMANDNAME_case1\")\n   - Edge case testing (invalid arguments, permissions, etc.)\n3. **Documentation**: Update help files if needed\n4. **Compatibility**: Ensure PennMUSH compatibility where applicable\n\n### File Location\nCommands are located in: `SharpMUSH.Implementation/Commands/`\n\n### Testing Guidelines\n- Use descriptive test names: `Test_CommandName_Scenario`\n- Include unique identifiable strings in test data\n- Test both success and failure cases\n- Validate error messages and return values\n\n### Original Analysis\n- **Previously unimplemented:** 107 commands + 117 functions = 224 features\n- **Now complete:** 44 commands + 117 functions = 161 features \u2705\n- **Remaining:** 63 commands\n\nThis represents significant progress! Keep up the great work!\n\n### Total Remaining in Category: 3\n",
+      "labels": [
+        "enhancement",
+        "commands",
+        "general-commands"
+      ]
+    },
+    {
+      "title": "Implement Remaining Other/Administrative Commands",
+      "body": "## Category: Other/Administrative\n\nThis issue tracks the implementation of the remaining unimplemented commands in the Other/Administrative category.\n\n**Progress Update:** This is an updated issue reflecting current state. Originally there were 107 unimplemented commands. After significant implementation work, 44 commands have been completed and all 117 functions have been implemented! \ud83c\udf89\n\n### Remaining Commands to Implement (60 items)\n\n- [ ] `@ALLHALT`\n- [ ] `@ALLQUOTA`\n- [ ] `@BOOT`\n- [ ] `@CHOWNALL`\n- [ ] `@CHZONEALL`\n- [ ] `@CLOCK`\n- [ ] `@DBCK`\n- [ ] `@DISABLE`\n- [ ] `@DUMP`\n- [ ] `@ENABLE`\n- [ ] `@FLAG`\n- [ ] `@HIDE`\n- [ ] `@HOOK`\n- [ ] `@KICK`\n- [ ] `@LIST`\n- [ ] `@LOG`\n- [ ] `@LOGWIPE`\n- [ ] `@LSET`\n- [ ] `@MALIAS`\n- [ ] `@MOTD`\n- [ ] `@PCREATE`\n- [ ] `@POLL`\n- [ ] `@POOR`\n- [ ] `@POWER`\n- [ ] `@PURGE`\n- [ ] `@QUOTA`\n- [ ] `@READCACHE`\n- [ ] `@REJECTMOTD`\n- [ ] `@SHUTDOWN`\n- [ ] `@SITELOCK`\n- [ ] `@SLAVE`\n- [ ] `@SOCKSET`\n- [ ] `@SQUOTA`\n- [ ] `@SUGGEST`\n- [ ] `@UNRECYCLE`\n- [ ] `@WARNINGS`\n- [ ] `@WCHECK`\n- [ ] `@WIZMOTD`\n- [ ] `BRIEF`\n- [ ] `BUY`\n- [ ] `DESERT`\n- [ ] `DISMISS`\n- [ ] `DOING`\n- [ ] `DROP`\n- [ ] `EMPTY`\n- [ ] `ENTER`\n- [ ] `FOLLOW`\n- [ ] `GET`\n- [ ] `GIVE`\n- [ ] `HOME`\n- [ ] `INVENTORY`\n- [ ] `LEAVE`\n- [ ] `SCORE`\n- [ ] `SESSION`\n- [ ] `TEACH`\n- [ ] `UNFOLLOW`\n- [ ] `USE`\n- [ ] `WARN_ON_MISSING`\n- [ ] `WHISPER`\n- [ ] `WITH`\n\n\n### Implementation Requirements\n\n1. **Implementation**: Each command must be fully implemented according to PennMUSH specifications\n2. **Unit Tests**: Include comprehensive unit tests with:\n   - Test cases using actual/expected values\n   - Unique test strings for easy comparison (e.g., \"test_string_COMMANDNAME_case1\")\n   - Edge case testing (invalid arguments, permissions, etc.)\n3. **Documentation**: Update help files if needed\n4. **Compatibility**: Ensure PennMUSH compatibility where applicable\n\n### File Location\nCommands are located in: `SharpMUSH.Implementation/Commands/`\n\n### Testing Guidelines\n- Use descriptive test names: `Test_CommandName_Scenario`\n- Include unique identifiable strings in test data\n- Test both success and failure cases\n- Validate error messages and return values\n\n### Original Analysis\n- **Previously unimplemented:** 107 commands + 117 functions = 224 features\n- **Now complete:** 44 commands + 117 functions = 161 features \u2705\n- **Remaining:** 63 commands\n\nThis represents significant progress! Keep up the great work!\n\n### Total Remaining in Category: 60\n",
+      "labels": [
+        "enhancement",
+        "commands",
+        "other-administrative"
+      ]
+    }
+  ],
+  "update_date": "2025-11-06",
+  "progress": {
+    "original_total": 224,
+    "original_commands": 107,
+    "original_functions": 117,
+    "completed_commands": 44,
+    "completed_functions": 117,
+    "remaining_commands": 63,
+    "remaining_functions": 0,
+    "completion_percentage": 71.9
+  }
+}
