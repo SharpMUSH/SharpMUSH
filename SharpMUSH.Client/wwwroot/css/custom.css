@@ -1336,6 +1336,20 @@ body {
 .mush-atcmd { color: #ffcb6b; }
 .mush-danger { background: rgba(255, 83, 80, 0.25); border-bottom: 2px solid #ff5350; }
 
+/* CharacterPicker popover width. Global (not scoped .razor.css) because the class sits
+   on the component's root <MudPaper>, which carries MudPaper's scope, not the picker's —
+   a scoped `::deep` rule has no HTML ancestor to anchor to. */
+.char-picker {
+	min-width: 320px;
+}
+@media (max-width: 760px) {
+	.char-picker {
+		min-width: 0;
+		width: 100%;
+		box-sizing: border-box;
+	}
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    MOBILE TOOLKIT + RESPONSIVE SHELL
    Phone / tablet-landscape / desktop, split by width AND input capability.
