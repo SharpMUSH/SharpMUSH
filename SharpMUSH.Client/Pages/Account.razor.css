@@ -181,3 +181,27 @@
 .acct-card ::deep .acct-table tr:hover td {
     background: var(--surface-2) !important;
 }
+
+/* ── Table scroll wrapper ── */
+.acct-table-scroll {
+    overflow-x: auto;
+}
+
+@media (max-width: 760px) {
+    .acct-page {
+        padding: var(--cpad-mobile) !important;
+    }
+    .acct-card {
+        padding: var(--cpad-mobile) !important;
+    }
+    .acct-title {
+        font-size: 1.375rem;
+    }
+    .acct-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    .acct-row .acct-btn {
+        width: 100%;
+    }
+}

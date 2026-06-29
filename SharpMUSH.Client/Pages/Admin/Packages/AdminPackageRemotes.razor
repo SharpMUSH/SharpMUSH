@@ -141,15 +141,6 @@
     </DialogActions>
 </MudDialog>
 
-<style>
-    @@media (max-width: 760px) {
-        /* "Add a remote" trust+branch row and community-listing rows stack; fields go full width.
-           The remotes table keeps its own horizontal scroll (mud-table-container). */
-        .pkg-page .flex-row { flex-wrap: wrap; }
-        .pkg-page .mud-input-control { max-width: 100% !important; }
-    }
-</style>
-
 @code {
     private IReadOnlyList<PackageRemoteRecord>? _remotes;
     private CommunityReposResponse? _community;

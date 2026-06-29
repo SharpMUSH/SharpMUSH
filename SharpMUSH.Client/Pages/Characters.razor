@@ -81,22 +81,6 @@
     }
 </div>
 
-<style>
-    @@media (max-width: 760px) {
-        .char-page .char-grid {
-            grid-template-columns: minmax(0, 1fr);
-        }
-
-        .char-page .char-search {
-            width: 100%;
-        }
-
-        .char-page .char-card {
-            padding: 0.875rem;
-        }
-    }
-</style>
-
 @code {
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _all = [];
     private bool _loading = true;

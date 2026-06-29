@@ -1,1 +1,33 @@
 ::deep .active-folder .mud-nav-link-text { color: var(--accent) !important; }
+
+/* Mobile: collapse the three-column master-detail (folders | list | reading)
+   into a single scrolling column. Each pane spans full width, swaps its
+   right border for a bottom divider, and lets the page scroll. */
+@media (max-width: 760px) {
+    .mail-page {
+        flex-direction: column;
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+    .mail-folders {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        overflow: visible;
+    }
+    .mail-list {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        overflow: visible;
+        max-height: 45vh;
+        max-height: 45svh;
+    }
+    .mail-reading {
+        width: 100%;
+        overflow: visible;
+        min-height: 240px;
+    }
+}

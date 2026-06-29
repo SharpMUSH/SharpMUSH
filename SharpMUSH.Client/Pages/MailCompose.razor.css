@@ -29,3 +29,18 @@
 .mc-card ::deep .mc-field.mud-input-control:focus-within .mud-input-outlined-border {
     border-color: var(--accent) !important;
 }
+
+/* Mobile: trim the page padding and make the Send/Cancel buttons full-width,
+   comfortably tappable, stacked rows. */
+@media (max-width: 760px) {
+    .mail-compose-page {
+        padding: 1rem !important;
+    }
+    .mail-compose-page .mc-actions {
+        flex-direction: column;
+    }
+    .mail-compose-page .mc-actions ::deep .mud-button-root {
+        width: 100%;
+        min-height: 44px;
+    }
+}

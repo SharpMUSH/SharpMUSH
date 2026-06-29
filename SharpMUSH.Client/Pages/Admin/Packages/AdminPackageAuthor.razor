@@ -160,14 +160,6 @@
     </DialogActions>
 </MudDialog>
 
-<style>
-    @@media (max-width: 760px) {
-        /* Let the external-ref / metadata rows stack instead of clipping inside cards. */
-        .pkg-page .flex-row { flex-wrap: wrap; }
-        .pkg-page .mud-input-control { max-width: 100% !important; }
-    }
-</style>
-
 @code {
     private sealed class ExternalClassification
     {

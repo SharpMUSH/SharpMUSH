@@ -54,3 +54,27 @@
     color: var(--text-dim);
     font-size: 0.8125rem;
 }
+
+/* Mobile: stack each active-scene card and let actions span full width. */
+@media (max-width: 760px) {
+    .scenes-active-page {
+        padding: 1rem !important;
+    }
+    .scenes-active-page ::deep .scene-card {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.625rem !important;
+        padding: 0.875rem !important;
+    }
+    .scenes-active-page ::deep .scene-card .scene-meta-row {
+        flex-wrap: wrap;
+        gap: 0.5rem 0.875rem;
+    }
+    .scenes-active-page ::deep .scene-card .scene-actions {
+        width: 100%;
+    }
+    .scenes-active-page ::deep .scene-card .scene-actions .mud-button-root {
+        flex: 1;
+        min-height: 44px;
+    }
+}

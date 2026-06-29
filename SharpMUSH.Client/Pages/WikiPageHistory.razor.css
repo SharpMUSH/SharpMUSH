@@ -42,3 +42,14 @@
     color: var(--text-dim);
 }
 .wikihist-intro strong { color: var(--text); }
+
+/* Phones: tighten the gutter, let the head (title + Compare button) stack, and
+   make the fixed-column revision table scroll horizontally inside its own box
+   instead of forcing the whole page wide. Selectors are doubled / descendant-
+   qualified to match the scoped (.razor.css) rules' specificity and win on order. */
+@media (max-width: 760px) {
+    .wikihist.wikihist { padding: 1rem 0.75rem; }
+    .wikihist .wikihist-head { flex-direction: column; align-items: flex-start; }
+    .wikihist-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .wikihist-table > div { min-width: 560px; }
+}

@@ -56,3 +56,7 @@
     letter-spacing: -0.02em;
     line-height: 1;
 }
+.adminwiki-grid-scroll {
+    overflow-x: auto;
+    min-width: 0;
+}

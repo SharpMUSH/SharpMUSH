@@ -1,0 +1,12 @@
+/* Mobile: keep wide pose text (and long unbroken tokens / pasted URLs) inside
+   the column instead of forcing the whole scene log to scroll sideways. */
+@media (max-width: 760px) {
+    .scene-line {
+        min-width: 0;
+    }
+    .scene-line .scene-pose-body {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+}

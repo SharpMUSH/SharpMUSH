@@ -104,24 +104,3 @@
         }
     }
 }
-
-<style>
-    /* Mobile: trim padding, wrap long monospace body tokens so they don't force
-       horizontal scroll, and make the Reply/Delete buttons full-width & tappable. */
-    @@media (max-width: 760px) {
-        .mail-detail-page {
-            padding: 1rem !important;
-        }
-        .mail-detail-page .md-body {
-            overflow-wrap: anywhere;
-            word-break: break-word;
-        }
-        .mail-detail-page .md-actions {
-            flex-direction: column;
-        }
-        .mail-detail-page .md-actions .mud-button-root {
-            width: 100%;
-            min-height: 44px;
-        }
-    }
-</style>

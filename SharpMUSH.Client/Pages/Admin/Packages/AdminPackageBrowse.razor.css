@@ -62,3 +62,11 @@
     background: var(--accent) !important;
     color: var(--accent-on) !important;
 }
+
+@media (max-width: 760px) {
+    /* minmax(360px,1fr) would overflow a narrow phone — force a single column.
+       .mud-input-control is MudBlazor-rendered (MudSelect), so it needs ::deep
+       behind the page-authored .pkg-page ancestor. .pkg-grid is our own <div>. */
+    .pkg-grid { grid-template-columns: 1fr !important; }
+    .pkg-page ::deep .mud-input-control { max-width: 100% !important; }
+}

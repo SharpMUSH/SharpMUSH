@@ -134,21 +134,6 @@
     }
 </div>
 
-<style>
-    @@media (max-width: 760px) {
-        /* Inline field rows stack: label above a full-width control. */
-        .config-field-row--inline {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 0.75rem;
-        }
-        .config-field-row--inline .config-field-control {
-            width: 100%;
-            justify-content: flex-start;
-        }
-    }
-</style>
-
 @code {
     [Parameter]
     public string Category { get; set; } = string.Empty;

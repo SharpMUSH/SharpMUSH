@@ -304,3 +304,11 @@
     transition: all 0.12s;
 }
 .ra-add-chip:hover { border-color: rgba(var(--glow), 0.4); color: var(--accent); }
+
+@media (max-width: 760px) {
+    /* Permission rows: stack the label above a full-width tri-state for big touch targets. */
+    .ra-perm-row { flex-direction: column !important; align-items: stretch !important; gap: 0.625rem !important; }
+    .ra-tristate { width: 100%; justify-content: space-between; }
+    .ra-tri { flex: 1; text-align: center; padding: 0.625rem 0.5rem; }
+    .ra-field--narrow { flex: 1 1 140px !important; }
+}

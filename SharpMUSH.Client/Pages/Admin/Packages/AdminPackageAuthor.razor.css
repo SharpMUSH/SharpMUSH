@@ -56,3 +56,11 @@
     background: var(--accent) !important;
     color: var(--accent-on) !important;
 }
+
+@media (max-width: 760px) {
+    /* Let the external-ref / metadata rows stack instead of clipping inside cards.
+       .flex-row and .mud-input-control are MudBlazor-rendered (MudStack / MudTextField),
+       so they need ::deep behind the page-authored .pkg-page ancestor. */
+    .pkg-page ::deep .flex-row { flex-wrap: wrap; }
+    .pkg-page ::deep .mud-input-control { max-width: 100% !important; }
+}

@@ -33,3 +33,8 @@
     background: var(--surface-2); border: 1px solid var(--border);
 }
 .lay-badge--on { color: var(--accent); background: rgba(var(--glow), 0.12); border-color: rgba(var(--glow), 0.3); }
+
+@media (max-width: 760px) {
+    /* minmax(300px,1fr) can overflow very narrow phones — force one column. */
+    .laybrowse-grid { grid-template-columns: 1fr !important; }
+}

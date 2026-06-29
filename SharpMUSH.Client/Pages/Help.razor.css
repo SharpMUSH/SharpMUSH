@@ -39,3 +39,9 @@
     box-shadow: var(--shadow);
     padding: 1.375rem 1.625rem;
 }
+
+@media (max-width: 760px) {
+    .help-page .help-body {
+        padding: 1rem;
+    }
+}

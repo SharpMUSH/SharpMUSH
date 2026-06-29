@@ -33,12 +33,6 @@
     }
 </MudPaper>
 
-<style>
-    @@media (max-width: 760px) {
-        .recent-wiki-widget { padding: 0.875rem !important; }
-    }
-</style>
-
 @code {
     [Parameter] public JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;

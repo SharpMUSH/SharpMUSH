@@ -77,20 +77,6 @@
     </div>
 </MudPaper>
 
-<style>
-    .char-picker {
-        min-width: 320px;
-    }
-
-    @@media (max-width: 760px) {
-        .char-picker {
-            min-width: 0;
-            width: 100%;
-            box-sizing: border-box;
-        }
-    }
-</style>
-
 @code {
     [Parameter] public string ServerUri { get; set; } = "ws://localhost:4202/ws";
     [Parameter] public EventCallback OnConnected { get; set; }

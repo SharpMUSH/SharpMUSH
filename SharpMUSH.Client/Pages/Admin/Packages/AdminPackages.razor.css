@@ -74,3 +74,13 @@
 }
 
 .pkg-search input::placeholder { color: var(--text-faint); }
+
+@media (max-width: 760px) {
+    .pkg-page { padding: var(--cpad-mobile) !important; }
+    .pkg-stat-grid { grid-template-columns: 1fr 1fr !important; }
+    .pkg-tabs { flex-wrap: wrap; }
+    .pkg-search { flex: 1 1 100%; }
+    .pkg-search input { width: 100% !important; }
+    /* .pkg-row is applied via Class= on a child <MudPaper>, so it needs a leading ::deep. */
+    ::deep .pkg-row { flex-wrap: wrap !important; }
+}

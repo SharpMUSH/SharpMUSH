@@ -261,21 +261,3 @@ else
             ? t
             : $"Scene in {s.RoomName}";
 }
-
-<style>
-    /* Mobile: let the live header wrap, and trim the generous --cpad horizontal
-       padding on the header / pose-log / compose bar so content isn't cramped. */
-    @@media (max-width: 760px) {
-        .scene-live-header {
-            flex-wrap: wrap;
-            gap: 0.5rem !important;
-            padding: 0.625rem 0.875rem !important;
-        }
-        .scene-live-page .scene-log {
-            padding: 0.75rem 0.875rem !important;
-        }
-        .scene-live-compose {
-            padding: 0.625rem 0.875rem !important;
-        }
-    }
-</style>

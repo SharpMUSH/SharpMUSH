@@ -52,3 +52,12 @@
     background: var(--accent) !important;
     color: var(--accent-on) !important;
 }
+
+@media (max-width: 760px) {
+    /* "Add a remote" trust+branch row and community-listing rows stack; fields go full width.
+       The remotes table keeps its own horizontal scroll (mud-table-container).
+       .flex-row and .mud-input-control are MudBlazor-rendered (MudStack / MudTextField),
+       so they need ::deep behind the page-authored .pkg-page ancestor. */
+    .pkg-page ::deep .flex-row { flex-wrap: wrap; }
+    .pkg-page ::deep .mud-input-control { max-width: 100% !important; }
+}
