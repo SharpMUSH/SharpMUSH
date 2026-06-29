@@ -65,7 +65,7 @@
   <ItemGroup>
     <PackageReference Include="DotNext" Version="6.3.0" />
     <PackageReference Include="Markdig" Version="0.40.0" />
-    <PackageReference Include="DotNext.Threading" Version="6.3.0" />
+    <PackageReference Include="DotNext.Threading" Version="6.4.0" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.2" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.8" />
