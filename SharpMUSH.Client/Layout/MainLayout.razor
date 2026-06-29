@@ -10,6 +10,7 @@
 @inject AccountAuthService AccountAuth
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ILayoutService LayoutService
+@inject IJSRuntime JS
 
 <MudPopoverProvider />
 <MudDialogProvider />
@@ -18,7 +19,10 @@
 @* Forces a hard browser refresh whenever the server unloads/reloads a plugin DLL (generic signal). *@
 <PluginChangeReloader />
 
-<div class="phosphor-shell">
+<div class="phosphor-shell @(_mobileNavOpen ? "phosphor-shell--nav-open" : "") @(_isPlayRoute ? "" : "phosphor-shell--bottomnav")">
+
+    @* Mobile-only: tapping the dimmed backdrop closes the off-canvas nav drawer. *@
+    <div class="phosphor-nav-backdrop" @onclick="CloseMobileNav"></div>
 
     <NavMenu IsCollapsed="@_sidebarCollapsed" />
 
@@ -33,7 +37,7 @@
 
         <header class="phosphor-topbar">
             <button class="phosphor-icon-btn" @onclick="ToggleSidebar" title="Toggle navigation">
-                <MudIcon Icon="@Icons.Material.Filled.Menu" Style="font-size:20px;" />
+                <MudIcon Icon="@Icons.Material.Filled.Menu" Style="font-size:1.25rem;" />
             </button>
             <div class="phosphor-topbar-title">@PageTitle()</div>
 
@@ -54,12 +58,12 @@
                 <span class="phosphor-search-kbd">⌘K</span>
             </div>
 
-            <LanguagePicker />
+            <span class="phosphor-lang"><LanguagePicker /></span>
 
             <button class="@($"phosphor-icon-btn{(_terminalOpen ? " phosphor-icon-btn--active" : "")}")"
                     @onclick="ToggleTerminal"
                     title="@(_terminalOpen ? "Close Terminal" : "Open Terminal")">
-                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:18px;" />
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:1.125rem;" />
             </button>
 
             <div class="phosphor-topbar-divider"></div>
@@ -71,7 +75,7 @@
                         <button class="phosphor-user-btn" @onclick="@context.ToggleAsync">
                             <span class="phosphor-user-avatar">@UserInitial</span>
                             <span class="phosphor-user-name">@(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")</span>
-                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Style="font-size:15px;color:var(--text-faint);" />
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Style="font-size:0.9375rem;color:var(--text-faint);" />
                         </button>
                     </ActivatorContent>
                     <ChildContent>
@@ -124,8 +128,7 @@
             }
         </header>
 
-        <main class="phosphor-main"
-              style="@(_terminalOpen ? "padding-bottom:300px;" : "")">
+        <main class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
             @Body
         </main>
 
@@ -140,20 +143,44 @@
         {
             <div class="phosphor-terminal">
                 <div class="phosphor-terminal-header">
-                    <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:15px;color:var(--accent);margin-right:9px;" />
-                    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);letter-spacing:0.05em;">command terminal</span>
-                    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);margin-left:8px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:0.9375rem;color:var(--accent);margin-right:0.5625rem;" />
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;">command terminal</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:0.6875rem;color:var(--text-faint);margin-left:0.5rem;">
                         · @(Terminal.IsConnected ? "connected" : "disconnected")
                     </span>
                     <div style="flex:1;"></div>
                     <button class="phosphor-icon-btn" @onclick="ToggleTerminal" title="Close Terminal">
-                        <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:18px;" />
+                        <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:1.125rem;" />
                     </button>
                 </div>
                 <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
                     <GlobalTerminal />
                 </div>
             </div>
+        }
+
+        @* Mobile-only hybrid bottom navigation. The primary destinations stay visible (the
+           research-backed pattern for engagement/discoverability); "Menu" opens the full
+           grouped drawer for the long tail. Suppressed on /play so it doesn't fight that
+           page's terminal input at the bottom of the screen. *@
+        @if (!_isPlayRoute)
+        {
+            <nav class="phosphor-bottomnav">
+                @BottomTab("/", Icons.Material.Filled.Home, Loc["Home"], exact: true)
+                @* Gated like the sidebar's Play link: only when a character session is active. *@
+                @if (_characterActive)
+                {
+                    @BottomTab("/play", Icons.Material.Filled.SportsEsports, Loc["Play"])
+                }
+                @BottomTab("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
+                @BottomTab("/characters", Icons.Material.Filled.Groups, "Chars")
+                <button type="button"
+                        class="phosphor-bottomtab @(_mobileNavOpen ? "phosphor-bottomtab--on" : "")"
+                        @onclick="ToggleMobileNav">
+                    <MudIcon Icon="@Icons.Material.Filled.Menu" Class="phosphor-bottomtab-icon" />
+                    <span class="phosphor-bottomtab-label">Menu</span>
+                </button>
+            </nav>
         }
     </div>
 
@@ -167,8 +194,11 @@
 
 @code {
     private bool _sidebarCollapsed = false;
+    private bool _mobileNavOpen = false;
     private bool _isConfigRoute = false;
+    private bool _isPlayRoute = false;
     private bool _terminalOpen = false;
+    private bool _characterActive = false;
     private string? _terminalPlayerName;
     private bool _isDebugAuth;
     private LayoutConfiguration? _layout;
@@ -186,6 +216,10 @@
     protected override async Task OnInitializedAsync()
     {
         NavigationManager.LocationChanged += OnLocationChanged;
+        // Mirror the sidebar's Play gating on the bottom nav: a character session is
+        // "active" when the command terminal is connected.
+        _characterActive = Terminal.IsConnected;
+        Terminal.ConnectionStateChanged += OnCharacterConnectionChanged;
         UpdateConfigRouteState();
         await AccountAuth.InitAsync();
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -258,6 +292,7 @@
     {
         _ = InvokeAsync(async () =>
         {
+            _mobileNavOpen = false;
             UpdateConfigRouteState();
             await EnsureAccountRoutingAsync();
             StateHasChanged();
@@ -267,7 +302,34 @@
     private void UpdateConfigRouteState()
     {
         _isConfigRoute = NavigationManager.Uri.Contains("/admin/config");
+        _isPlayRoute = new Uri(NavigationManager.Uri).AbsolutePath.TrimEnd('/')
+            .Equals("/play", StringComparison.OrdinalIgnoreCase);
     }
+
+    // Bottom-nav tab: a link that highlights when its route is active.
+    private RenderFragment BottomTab(string href, string icon, string label, bool exact = false) =>
+        @<a href="@href" class="phosphor-bottomtab @(IsNavActive(href, exact) ? "phosphor-bottomtab--on" : "")">
+            <MudIcon Icon="@icon" Class="phosphor-bottomtab-icon" />
+            <span class="phosphor-bottomtab-label">@label</span>
+        </a>;
+
+    private bool IsNavActive(string href, bool exact)
+    {
+        var path = new Uri(NavigationManager.Uri).AbsolutePath.TrimEnd('/');
+        if (string.IsNullOrEmpty(path)) path = "/";
+        if (exact) return path == "/";
+        return path.Equals(href, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(href + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ToggleMobileNav() => _mobileNavOpen = !_mobileNavOpen;
+
+    private void OnCharacterConnectionChanged(bool connected)
+        => InvokeAsync(() =>
+        {
+            _characterActive = connected;
+            StateHasChanged();
+        });
 
     private string PageTitle()
     {
@@ -319,7 +381,23 @@
     private static bool IsHomePath(string currentPath)
         => string.IsNullOrEmpty(currentPath) || currentPath == "/";
 
-    private void ToggleSidebar() => _sidebarCollapsed = !_sidebarCollapsed;
+    // One hamburger, two behaviors by viewport: on a phone it opens the off-canvas
+    // drawer; on desktop it toggles the icon rail (unchanged). matchMedia keeps the
+    // breakpoint decision in JS so it always matches the 760px CSS breakpoint.
+    private async Task ToggleSidebar()
+    {
+        var narrow = await JS.InvokeAsync<bool>("sharpmushLayout.isTouchChrome");
+        if (narrow)
+            _mobileNavOpen = !_mobileNavOpen;
+        else
+            _sidebarCollapsed = !_sidebarCollapsed;
+    }
+
+    private void CloseMobileNav()
+    {
+        if (_mobileNavOpen)
+            _mobileNavOpen = false;
+    }
 
     private void ToggleTerminal() => _terminalOpen = !_terminalOpen;
 
@@ -336,5 +414,6 @@
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
         LayoutService.OnLayoutChanged -= HandleLayoutChanged;
+        Terminal.ConnectionStateChanged -= OnCharacterConnectionChanged;
     }
 }

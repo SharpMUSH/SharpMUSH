@@ -3,20 +3,20 @@
 }
 
 .adminsrv-header {
-    margin-bottom: 24px;
+    margin-bottom: 1.5rem;
 }
 .adminsrv-kicker {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--accent);
-    margin-bottom: 10px;
+    margin-bottom: 0.625rem;
 }
 .adminsrv-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 1.625rem;
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--text);
@@ -25,31 +25,31 @@
 .adminsrv-card {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 18px 20px;
+    gap: 1rem;
+    padding: 1.125rem 1.25rem;
     background: var(--surface);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
 }
 .adminsrv-card-icon {
-    font-size: 24px !important;
+    font-size: 1.5rem !important;
     color: var(--accent);
     flex-shrink: 0;
 }
 .adminsrv-card-body {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem;
 }
 .adminsrv-card-label {
     font-family: var(--font-ui);
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 600;
     color: var(--text);
 }
 .adminsrv-card-desc {
     font-family: var(--font-ui);
-    font-size: 12.5px;
+    font-size: 0.78125rem;
     color: var(--text-dim);
 }

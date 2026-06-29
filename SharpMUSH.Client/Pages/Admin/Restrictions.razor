@@ -44,7 +44,7 @@
                             <button type="button" class="config-primary-btn"
                                     @onclick="AddCommandRestriction"
                                     disabled="@(string.IsNullOrWhiteSpace(_newCommandName) || string.IsNullOrWhiteSpace(_newCommandRestrictionsText))">
-                                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:16px;" />
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:1rem;" />
                                 @Loc["Add"]
                             </button>
                         </div>
@@ -70,7 +70,7 @@
                                     <button type="button" class="config-icon-btn config-icon-btn--danger"
                                             title="@Loc["Delete"]"
                                             @onclick="@(() => DeleteCommandRestriction(restriction.Key))">
-                                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:16px;" />
+                                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:1rem;" />
                                     </button>
                                 </div>
                             }
@@ -99,7 +99,7 @@
                             <button type="button" class="config-primary-btn"
                                     @onclick="AddFunctionRestriction"
                                     disabled="@(string.IsNullOrWhiteSpace(_newFunctionName) || string.IsNullOrWhiteSpace(_newFunctionRestrictionsText))">
-                                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:16px;" />
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:1rem;" />
                                 @Loc["Add"]
                             </button>
                         </div>
@@ -125,7 +125,7 @@
                                     <button type="button" class="config-icon-btn config-icon-btn--danger"
                                             title="@Loc["Delete"]"
                                             @onclick="@(() => DeleteFunctionRestriction(restriction.Key))">
-                                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:16px;" />
+                                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:1rem;" />
                                     </button>
                                 </div>
                             }

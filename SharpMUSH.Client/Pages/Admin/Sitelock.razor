@@ -45,7 +45,7 @@
                 <button type="button" class="config-primary-btn"
                         @onclick="AddSitelockRule"
                         disabled="@(string.IsNullOrWhiteSpace(_newHostPattern) || string.IsNullOrWhiteSpace(_newAccessRulesText))">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:16px;" />
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:1rem;" />
                     @Loc["Add"]
                 </button>
             </div>
@@ -71,7 +71,7 @@
                         <button type="button" class="config-icon-btn config-icon-btn--danger"
                                 title="@Loc["Delete"]"
                                 @onclick="@(() => DeleteSitelockRule(rule.Key))">
-                            <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:16px;" />
+                            <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:1rem;" />
                         </button>
                     </div>
                 }

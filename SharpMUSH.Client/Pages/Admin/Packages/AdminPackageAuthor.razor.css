@@ -1,22 +1,22 @@
-.pkg-header { margin-bottom: 24px; }
+.pkg-header { margin-bottom: 1.5rem; }
 .pkg-kicker {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--accent);
-    margin-bottom: 6px;
+    margin-bottom: 0.375rem;
 }
 .pkg-title {
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 1.625rem;
     font-weight: 700;
     color: var(--text);
-    margin: 0 0 6px;
+    margin: 0 0 0.375rem;
 }
 .pkg-desc {
     color: var(--text-dim);
-    font-size: 14px;
+    font-size: 0.875rem;
     margin: 0;
     max-width: 760px;
 }
@@ -30,11 +30,11 @@
 .pkg-card-head {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 16px 20px;
+    gap: 0.625rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--border-soft);
     font-family: var(--font-display);
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 600;
     color: var(--text);
 }
@@ -48,11 +48,19 @@
     border: 1px solid rgba(var(--glow), 0.25);
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
 }
-.pkg-card-body { padding: 18px 20px; }
+.pkg-card-body { padding: 1.125rem 1.25rem; }
 .pkg-card-body ::deep .pkg-btn-primary {
     background: var(--accent) !important;
     color: var(--accent-on) !important;
+}
+
+@media (max-width: 760px) {
+    /* Let the external-ref / metadata rows stack instead of clipping inside cards.
+       .flex-row and .mud-input-control are MudBlazor-rendered (MudStack / MudTextField),
+       so they need ::deep behind the page-authored .pkg-page ancestor. */
+    .pkg-page ::deep .flex-row { flex-wrap: wrap; }
+    .pkg-page ::deep .mud-input-control { max-width: 100% !important; }
 }

@@ -33,7 +33,7 @@
                 <button type="button" class="config-primary-btn"
                         @onclick="AddBannedName"
                         disabled="@string.IsNullOrWhiteSpace(_newName)">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:16px;" />
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:1rem;" />
                     @Loc["AddName"]
                 </button>
             </div>
@@ -56,7 +56,7 @@
                         <button type="button" class="config-icon-btn config-icon-btn--danger"
                                 title="@Loc["Delete"]"
                                 @onclick="@(() => DeleteBannedName(name))">
-                            <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:16px;" />
+                            <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:1rem;" />
                         </button>
                     </div>
                 }

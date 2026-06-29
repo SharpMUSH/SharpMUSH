@@ -2,45 +2,45 @@
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 20px;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
 }
 
 .config-kicker {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--accent);
-    margin-bottom: 6px;
+    margin-bottom: 0.375rem;
 }
 
 .config-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 1.625rem;
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--text);
 }
 
 .config-desc {
-    margin: 6px 0 0;
+    margin: 0.375rem 0 0;
     font-family: var(--font-ui);
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--text-dim);
 }
 
 .config-tab-body {
-    padding-top: 18px;
+    padding-top: 1.125rem;
 }
 
 .config-group-title {
     font-family: var(--font-ui);
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--text);
-    margin: 0 0 8px 2px;
+    margin: 0 0 0.5rem 0.125rem;
 }
 
 .config-field-card {
@@ -52,12 +52,12 @@
 }
 
 .config-pad {
-    padding: 18px 22px;
+    padding: 1.125rem 1.375rem;
 }
 
 .config-add-fields {
     display: flex;
-    gap: 12px;
+    gap: 0.75rem;
     align-items: flex-end;
 }
 
@@ -69,22 +69,22 @@
 .config-field-label-text {
     display: block;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--text-faint);
-    margin-bottom: 6px;
+    margin-bottom: 0.375rem;
 }
 
 .config-input {
     width: 100%;
-    padding: 9px 12px;
+    padding: 0.5625rem 0.75rem;
     background: var(--surface-3);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 0.8125rem;
     outline: none;
     transition: border-color 0.12s;
 }
@@ -100,16 +100,16 @@
 .config-primary-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 0.375rem;
     flex-shrink: 0;
-    padding: 9px 16px;
+    padding: 0.5625rem 1rem;
     border-radius: var(--radius);
     border: none;
     background: var(--accent);
     color: var(--accent-on);
     cursor: pointer;
     font-family: var(--font-ui);
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
     transition: opacity 0.12s;
 }
@@ -127,8 +127,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 12px 22px;
+    gap: 0.75rem;
+    padding: 0.75rem 1.375rem;
 }
 
 .config-list-row:not(:first-child) {
@@ -138,26 +138,26 @@
 .config-list-text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 0.125rem;
     min-width: 0;
 }
 
 .config-list-name {
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--text);
 }
 
 .config-list-sub {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--text-dim);
 }
 
 .config-empty {
     font-family: var(--font-ui);
-    font-size: 12.5px;
+    font-size: 0.78125rem;
     color: var(--text-faint);
 }
 

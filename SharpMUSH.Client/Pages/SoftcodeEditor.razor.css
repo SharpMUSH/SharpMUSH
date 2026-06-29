@@ -1,7 +1,7 @@
 /* ── Editor shell: three rounded panels with a gap (prototype SoftcodeScreen) ── */
 .sc-shell {
     display: flex;
-    gap: 14px;
+    gap: 0.875rem;
     /* Match the standard content gutter (--cpad) so panels aren't cramped
        against the edges, mirroring the prototype's full-height padding. */
     padding: var(--cpad);
@@ -23,9 +23,9 @@
 .sc-search {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 0 10px;
-    margin: 0 10px 4px;
+    gap: 0.5rem;
+    padding: 0 0.625rem;
+    margin: 0 0.625rem 0.25rem;
     background: var(--surface-3);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -37,13 +37,13 @@
 .sc-search-input {
     flex: 1;
     min-width: 0;
-    padding: 8px 0;
+    padding: 0.5rem 0;
     background: transparent;
     border: none;
     outline: none;
     color: var(--text);
     font-family: var(--font-ui);
-    font-size: 12.5px;
+    font-size: 0.78125rem;
 }
 .sc-search-input::placeholder {
     color: var(--text-faint);
@@ -69,15 +69,15 @@
 .sc-add-btn {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px 9px;
+    gap: 0.3125rem;
+    padding: 0.25rem 0.5625rem;
     border-radius: var(--radius);
     cursor: pointer;
     border: 1px solid rgba(var(--glow), 0.3);
     background: rgba(var(--glow), 0.10);
     color: var(--accent);
     font-family: var(--font-ui);
-    font-size: 11.5px;
+    font-size: 0.71875rem;
     font-weight: 600;
     transition: background 0.14s;
 }
@@ -93,9 +93,9 @@
 .sc-add-row {
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 6px 8px;
-    margin-bottom: 6px;
+    gap: 0.4375rem;
+    padding: 0.375rem 0.5rem;
+    margin-bottom: 0.375rem;
     border-radius: var(--radius);
     border: 1px dashed rgba(var(--glow), 0.4);
     background: rgba(var(--glow), 0.05);
@@ -103,7 +103,7 @@
 .sc-add-amp {
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 .sc-add-input {
     flex: 1;
@@ -113,7 +113,7 @@
     outline: none;
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 12.5px;
+    font-size: 0.78125rem;
     text-transform: uppercase;
 }
 .sc-add-input::placeholder {
@@ -141,12 +141,12 @@
     width: 100%;
     text-align: left;
     display: block;
-    padding: 9px 10px;
+    padding: 0.5625rem 0.625rem;
     border-radius: var(--radius);
     cursor: pointer;
     border: none;
     background: transparent;
-    margin-bottom: 3px;
+    margin-bottom: 0.1875rem;
     transition: background 0.12s;
 }
 .sc-attr-item:hover {
@@ -159,8 +159,8 @@
 .sc-attr-row1 {
     display: flex;
     align-items: center;
-    gap: 7px;
-    margin-bottom: 3px;
+    gap: 0.4375rem;
+    margin-bottom: 0.1875rem;
 }
 .sc-kind-badge {
     width: 16px;
@@ -170,14 +170,14 @@
     display: grid;
     place-items: center;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     font-weight: 700;
 }
 .sc-attr-name {
     flex: 1;
     min-width: 0;
     font-family: var(--font-mono);
-    font-size: 12.5px;
+    font-size: 0.78125rem;
     font-weight: 500;
     color: var(--text-dim);
     white-space: nowrap;
@@ -191,11 +191,70 @@
 .sc-attr-desc {
     display: block;
     font-family: var(--font-ui);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--text-faint);
     line-height: 1.35;
-    padding-left: 23px;
+    padding-left: 1.4375rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* The mobile pane switcher itself is hidden on desktop (.mobile-only handles that).
+   On desktop all three panes show side by side as authored. */
+.sc-mobilebar {
+    display: flex;
+    gap: 0.375rem;
+    padding: 0.5rem 0.625rem;
+    background: var(--surface-3);
+    border-bottom: 1px solid var(--border-soft);
+    flex-shrink: 0;
+}
+.sc-mobiletab {
+    flex: 1;
+    min-height: 38px;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+.sc-mobiletab--on {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(var(--glow), 0.1);
+}
+.sc-mobiletab:disabled { opacity: 0.4; cursor: default; }
+
+/* Mobile: one full-height pane at a time, chosen by the switcher. The editor pane keeps
+   a real height so Monaco lays out; panes scroll internally rather than the page. */
+@media (max-width: 760px) {
+    .sc-shell {
+        flex-direction: column !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        gap: 0 !important;
+        padding: 0 !important;
+    }
+    .sc-shell .sc-panel {
+        width: 100% !important;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        min-width: 0 !important;
+    }
+    .sc-shell--objects .sc-pane-attrs,
+    .sc-shell--objects .sc-pane-editor,
+    .sc-shell--attrs   .sc-pane-objects,
+    .sc-shell--attrs   .sc-pane-editor,
+    .sc-shell--editor  .sc-pane-objects,
+    .sc-shell--editor  .sc-pane-attrs {
+        display: none !important;
+    }
+    /* The editor toolbar has many controls — let them wrap instead of clipping. */
+    .sc-editor-toolbar { flex-wrap: wrap; min-height: 0; }
 }

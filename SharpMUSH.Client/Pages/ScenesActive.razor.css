@@ -1,13 +1,13 @@
 .sa-kicker {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--accent);
 }
 .sa-title {
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 1.625rem;
     font-weight: 700;
     line-height: 1.1;
     color: var(--text);
@@ -15,8 +15,8 @@
 .sa-card {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 14px 18px;
+    gap: 1rem;
+    padding: 0.875rem 1.125rem;
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-soft);
     background: var(--surface);
@@ -30,14 +30,14 @@
 .sa-live {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 0.3125rem;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 0.625rem;
     letter-spacing: 0.06em;
     color: var(--accent);
     border: 1px solid rgba(var(--glow),0.3);
     border-radius: 999px;
-    padding: 1px 7px;
+    padding: 0.0625rem 0.4375rem;
 }
 .sa-live-dot {
     width: 6px;
@@ -50,7 +50,31 @@
     background: var(--surface);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
-    padding: 16px 20px;
+    padding: 1rem 1.25rem;
     color: var(--text-dim);
-    font-size: 13px;
+    font-size: 0.8125rem;
+}
+
+/* Mobile: stack each active-scene card and let actions span full width. */
+@media (max-width: 760px) {
+    .scenes-active-page {
+        padding: 1rem !important;
+    }
+    .scenes-active-page ::deep .scene-card {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.625rem !important;
+        padding: 0.875rem !important;
+    }
+    .scenes-active-page ::deep .scene-card .scene-meta-row {
+        flex-wrap: wrap;
+        gap: 0.5rem 0.875rem;
+    }
+    .scenes-active-page ::deep .scene-card .scene-actions {
+        width: 100%;
+    }
+    .scenes-active-page ::deep .scene-card .scene-actions .mud-button-root {
+        flex: 1;
+        min-height: 44px;
+    }
 }

@@ -3,28 +3,28 @@
 }
 
 .dbimport-header {
-	margin-bottom: 24px;
+	margin-bottom: 1.5rem;
 }
 .dbimport-kicker {
 	font-family: var(--font-mono);
-	font-size: 11px;
+	font-size: 0.6875rem;
 	letter-spacing: 0.18em;
 	text-transform: uppercase;
 	color: var(--accent);
-	margin-bottom: 10px;
+	margin-bottom: 0.625rem;
 }
 .dbimport-title {
 	margin: 0;
 	font-family: var(--font-display);
-	font-size: 26px;
+	font-size: 1.625rem;
 	font-weight: 600;
 	letter-spacing: -0.01em;
 	color: var(--text);
 }
 .dbimport-subtitle {
-	margin: 8px 0 0;
+	margin: 0.5rem 0 0;
 	font-family: var(--font-ui);
-	font-size: 13.5px;
+	font-size: 0.84375rem;
 	color: var(--text-dim);
 	max-width: 70ch;
 }
@@ -34,8 +34,8 @@
 	border: 1px solid var(--border-soft);
 	border-radius: var(--radius-lg);
 	box-shadow: var(--shadow);
-	padding: 20px;
-	margin-bottom: 16px;
+	padding: 1.25rem;
+	margin-bottom: 1rem;
 }
 
 .dbimport-dropzone {
@@ -46,60 +46,60 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 8px;
+	gap: 0.5rem;
 	min-height: 140px;
-	margin-top: 8px;
+	margin-top: 0.5rem;
 }
 .dbimport-dropzone-inner ::deep .dbimport-dropzone-icon {
-	font-size: 44px !important;
+	font-size: 2.75rem !important;
 	color: var(--accent);
 }
 .dbimport-dropzone-title {
 	font-family: var(--font-display);
-	font-size: 17px;
+	font-size: 1.0625rem;
 	font-weight: 600;
 	color: var(--text);
 }
 .dbimport-dropzone-hint {
 	font-family: var(--font-ui);
-	font-size: 12.5px;
+	font-size: 0.78125rem;
 	color: var(--text-dim);
 }
 
 .dbimport-section-label {
 	font-family: var(--font-mono);
-	font-size: 11px;
+	font-size: 0.6875rem;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--text-dim);
-	margin-bottom: 14px;
+	margin-bottom: 0.875rem;
 }
 
 .dbimport-file-row {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: 0.625rem;
 }
 .dbimport-file-row ::deep .dbimport-file-icon {
-	font-size: 20px !important;
+	font-size: 1.25rem !important;
 	color: var(--accent);
 }
 .dbimport-file-name {
 	font-family: var(--font-ui);
-	font-size: 14px;
+	font-size: 0.875rem;
 	color: var(--text);
 }
 .dbimport-file-size {
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: 0.75rem;
 	color: var(--text-faint);
 }
 
 .dbimport-actions {
 	display: flex;
 	justify-content: space-between;
-	gap: 12px;
-	margin-top: 18px;
+	gap: 0.75rem;
+	margin-top: 1.125rem;
 }
 .dbimport-actions-start {
 	justify-content: flex-start;
@@ -108,32 +108,32 @@
 .dbimport-progress-caption {
 	text-align: center;
 	font-family: var(--font-mono);
-	font-size: 13px;
+	font-size: 0.8125rem;
 	color: var(--text-dim);
-	margin-bottom: 18px;
+	margin-bottom: 1.125rem;
 }
 
 .dbimport-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-	gap: 14px;
+	gap: 0.875rem;
 }
 .dbimport-tile {
 	background: var(--surface-3);
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
-	padding: 16px;
+	padding: 1rem;
 }
 .dbimport-tile-wide {
 	grid-column: 1 / -1;
 }
 .dbimport-tile-label {
 	font-family: var(--font-mono);
-	font-size: 11px;
+	font-size: 0.6875rem;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--text-dim);
-	margin-bottom: 12px;
+	margin-bottom: 0.75rem;
 }
 .dbimport-tile-label-error {
 	color: #ff6b6b;
@@ -145,20 +145,20 @@
 .dbimport-stat-list {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: 0.5rem;
 }
 .dbimport-stat {
 	display: flex;
 	justify-content: space-between;
 	align-items: baseline;
-	gap: 12px;
+	gap: 0.75rem;
 	font-family: var(--font-ui);
-	font-size: 13.5px;
+	font-size: 0.84375rem;
 	color: var(--text-dim);
 }
 .dbimport-stat strong {
 	font-family: var(--font-mono);
-	font-size: 14px;
+	font-size: 0.875rem;
 	font-weight: 600;
 	color: var(--text);
 }
