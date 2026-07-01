@@ -15,13 +15,17 @@ public static class SocketKeepAlive
 
 	public static void Apply(Socket socket, TimeSpan userTimeout, int idleSeconds = 20, int intervalSeconds = 5, int retryCount = 3)
 	{
-		socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-		socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, idleSeconds);
-		socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, intervalSeconds);
-		socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, retryCount);
+		// SO_KEEPALIVE is universally supported; the per-probe timings are the cross-platform tuning
+		// (Windows + Linux). Each is best-effort so an option a platform lacks (e.g.
+		// TcpKeepAliveRetryCount on macOS) is skipped rather than failing the whole connection.
+		TrySet(socket, SocketOptionLevel.Socket, SocketOptionName.KeepAlive, 1);
+		TrySet(socket, SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, idleSeconds);
+		TrySet(socket, SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, intervalSeconds);
+		TrySet(socket, SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, retryCount);
 
-		// TCP_USER_TIMEOUT caps how long unacknowledged data may remain outstanding before the
-		// connection is dropped — the decisive knob for half-open detection. Linux-only; best-effort.
+		// TCP_USER_TIMEOUT caps how long unacknowledged (in-flight) data may remain outstanding before
+		// the connection is dropped — this catches a peer that vanishes mid-send, which the idle-only
+		// keep-alive probes above do not. Linux-only; there is no portable .NET equivalent. Best-effort.
 		if (OperatingSystem.IsLinux())
 		{
 			try
@@ -34,6 +38,18 @@ public static class SocketKeepAlive
 			{
 				// Kernel without TCP_USER_TIMEOUT support — the keep-alive probes above still apply.
 			}
+		}
+	}
+
+	private static void TrySet(Socket socket, SocketOptionLevel level, SocketOptionName name, int value)
+	{
+		try
+		{
+			socket.SetSocketOption(level, name, value);
+		}
+		catch (Exception ex) when (ex is SocketException or PlatformNotSupportedException)
+		{
+			// Option not supported on this platform — skip it and keep the ones that are.
 		}
 	}
 }
