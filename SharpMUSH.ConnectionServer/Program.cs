@@ -102,34 +102,25 @@ public class Program
 
 		builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
 
-		// Terminal output sequencing + JetStream-backed replay on reconnect. Enabled independently of
-		// any transport; when off, the connection path is byte-for-byte the original behavior.
-		var replayEnabled = builder.Configuration.GetValue<bool>("Replay:Enabled");
-		builder.Services.AddSingleton(new TerminalTransportOptions(SequencedOutput: replayEnabled));
-		if (replayEnabled)
+		// Terminal output sequencing + durable NATS-backed replay on reconnect is always on. Buffered
+		// output + resume tokens survive a ConnectionServer restart / instance change; the retention
+		// window is configurable (Replay:RetentionHours, default 24h). URL resolved lazily for the same
+		// reason as the connection state store above.
+		var replayRetention = TimeSpan.FromHours(builder.Configuration.GetValue("Replay:RetentionHours", 24.0));
+		builder.Services.AddSingleton<ITerminalReplayStore>(sp =>
 		{
-			// Durable NATS-backed replay: buffered output + resume tokens survive a restart / instance
-			// change. URL resolved lazily for the same reason as the connection state store above.
-			builder.Services.AddSingleton<ITerminalReplayStore>(sp =>
-			{
-				var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
-				return JetStreamTerminalReplayStore
-					.CreateAsync(url, sp.GetRequiredService<ILogger<JetStreamTerminalReplayStore>>())
-					.GetAwaiter().GetResult();
-			});
-			builder.Services.AddSingleton<IResumeTokenStore>(sp =>
-			{
-				var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
-				return NatsKvResumeTokenStore
-					.CreateAsync(url, sp.GetRequiredService<ILogger<NatsKvResumeTokenStore>>())
-					.GetAwaiter().GetResult();
-			});
-		}
-		else
+			var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
+			return JetStreamTerminalReplayStore
+				.CreateAsync(url, sp.GetRequiredService<ILogger<JetStreamTerminalReplayStore>>(), replayRetention)
+				.GetAwaiter().GetResult();
+		});
+		builder.Services.AddSingleton<IResumeTokenStore>(sp =>
 		{
-			builder.Services.AddSingleton<ITerminalReplayStore, TerminalReplayStore>();
-			builder.Services.AddSingleton<IResumeTokenStore, ResumeTokenService>();
-		}
+			var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
+			return NatsKvResumeTokenStore
+				.CreateAsync(url, sp.GetRequiredService<ILogger<NatsKvResumeTokenStore>>(), replayRetention)
+				.GetAwaiter().GetResult();
+		});
 		builder.Services.AddSingleton<ConnectionPump>();
 
 		builder.Services.AddSingleton<WebSocketServer>();

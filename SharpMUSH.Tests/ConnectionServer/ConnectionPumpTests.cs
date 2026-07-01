@@ -38,7 +38,6 @@ public class ConnectionPumpTests
 		IMessageBus bus,
 		IConnectionServerService conn,
 		IDescriptorGeneratorService desc,
-		bool sequenced = false,
 		ITerminalReplayStore? replay = null,
 		IResumeTokenStore? resume = null)
 		=> new(
@@ -47,8 +46,7 @@ public class ConnectionPumpTests
 			bus,
 			desc,
 			replay ?? new TerminalReplayStore(),
-			resume ?? new ResumeTokenService(),
-			new TerminalTransportOptions(sequenced));
+			resume ?? new ResumeTokenService());
 
 	[Test]
 	public async Task Publishes_input_frame_then_disconnects_on_close()
@@ -104,11 +102,11 @@ public class ConnectionPumpTests
 		await replay.AppendAsync(9, System.Text.Encoding.UTF8.GetBytes("three")); // seq 3
 		var oldToken = await resume.MintAsync(9);
 
-		var pump = MakePump(bus, conn, desc, sequenced: true, replay: replay, resume: resume);
+		var pump = MakePump(bus, conn, desc, replay: replay, resume: resume);
 		// New connection (handle 99) opens with a resume frame acking seq 1, then closes.
 		var transport = new FakeTransport($"{{\"resume\":\"{oldToken}\",\"lastSeq\":1}}", null);
 
-		await pump.RunAsync(transport, handle: 99, CancellationToken.None, resumeCapable: true);
+		await pump.RunAsync(transport, handle: 99, CancellationToken.None);
 
 		// Sent = [ resumeToken control frame for 99, replayed seq 2, replayed seq 3 ]
 		var replayed = transport.Sent

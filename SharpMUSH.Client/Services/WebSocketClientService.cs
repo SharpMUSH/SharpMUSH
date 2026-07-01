@@ -21,14 +21,9 @@ public class WebSocketClientService : IWebSocketClientService
 	private string? _serverUri;
 	private volatile bool _intentionalDisconnect;
 
-	/// <summary>
-	/// When true, this connection opts into server-side output sequencing + reconnect replay:
-	/// it connects with <c>?resume=1</c>, unwraps <c>{"seq","data"}</c> envelopes (tracking the
-	/// highest seq), stores the server's resume token, and re-sends <c>{"resume","lastSeq"}</c> on
-	/// reconnect so missed output is replayed. Off by default; the play terminal enables it.
-	/// </summary>
-	protected virtual bool ResumeEnabled => false;
-
+	// Reconnect replay is always on: the client unwraps {"seq","data"} envelopes (tracking the highest
+	// seq), stores the server's resume token, and re-sends {"resume","lastSeq"} on reconnect so the
+	// ConnectionServer replays output missed during a drop / network switch.
 	private string? _resumeToken;
 	private long _lastSeq;
 
@@ -89,17 +84,14 @@ public class WebSocketClientService : IWebSocketClientService
 
 			_cancellationTokenSource = new CancellationTokenSource();
 
-			var connectUri = ResumeEnabled
-				? (_serverUri.Contains('?') ? $"{_serverUri}&resume=1" : $"{_serverUri}?resume=1")
-				: _serverUri;
-			_logger.LogInformation("Connecting to WebSocket server: {ServerUri}", connectUri);
-			await _webSocket.ConnectAsync(new Uri(connectUri), _cancellationTokenSource.Token);
+			_logger.LogInformation("Connecting to WebSocket server: {ServerUri}", _serverUri);
+			await _webSocket.ConnectAsync(new Uri(_serverUri), _cancellationTokenSource.Token);
 
 			ConnectionStateChanged?.Invoke(this, _webSocket.State);
 			_logger.LogInformation("Connected to WebSocket server");
 
 			// On a reconnect (we already hold a resume token) ask the server to replay output we missed.
-			if (ResumeEnabled && _resumeToken is not null)
+			if (_resumeToken is not null)
 			{
 				var resumeFrame = Encoding.UTF8.GetBytes(
 					$"{{\"resume\":\"{_resumeToken}\",\"lastSeq\":{_lastSeq}}}");
@@ -205,7 +197,7 @@ public class WebSocketClientService : IWebSocketClientService
 	/// </summary>
 	private void SurfaceMessage(string message)
 	{
-		if (ResumeEnabled && TryHandleControlFrame(message, out var payload))
+		if (TryHandleControlFrame(message, out var payload))
 		{
 			if (payload is not null)
 				MessageReceived?.Invoke(this, payload);

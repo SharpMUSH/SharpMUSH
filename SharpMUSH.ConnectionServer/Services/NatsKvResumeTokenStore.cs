@@ -13,7 +13,7 @@ namespace SharpMUSH.ConnectionServer.Services;
 public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable
 {
 	private const string Bucket = "terminal_resume";
-	private static readonly TimeSpan Ttl = TimeSpan.FromSeconds(30);
+	private static readonly TimeSpan DefaultTtl = TimeSpan.FromHours(24);
 
 	private readonly NatsConnection _nats;
 	private readonly INatsKVStore _store;
@@ -27,14 +27,15 @@ public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable
 	}
 
 	public static async Task<NatsKvResumeTokenStore> CreateAsync(
-		string url, ILogger<NatsKvResumeTokenStore> logger, CancellationToken ct = default)
+		string url, ILogger<NatsKvResumeTokenStore> logger, TimeSpan? ttl = null, CancellationToken ct = default)
 	{
+		var maxAge = ttl ?? DefaultTtl;
 		var nats = new NatsConnection(new NatsOpts { Url = url });
 		await nats.ConnectAsync();
 		var js = new NatsJSContext(nats);
 		var kv = new NatsKVContext(js);
-		var store = await kv.CreateOrUpdateStoreAsync(new NatsKVConfig(Bucket) { MaxAge = Ttl }, ct);
-		logger.LogInformation("KV resume bucket '{Bucket}' ready (TTL {Ttl}s)", Bucket, Ttl.TotalSeconds);
+		var store = await kv.CreateOrUpdateStoreAsync(new NatsKVConfig(Bucket) { MaxAge = maxAge }, ct);
+		logger.LogInformation("KV resume bucket '{Bucket}' ready (TTL {Ttl})", Bucket, maxAge);
 		return new NatsKvResumeTokenStore(nats, store, logger);
 	}
 

@@ -8,13 +8,12 @@ namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 /// <summary>
 /// Owns the shared connection lifecycle: register the handle with its output delegate,
 /// pump inbound frames (routing browser control frames vs commands), and disconnect on close.
-/// Transport-agnostic — used by both WebSocket and WebTransport handlers, so QUIC connection
-/// migration underneath a WebTransport session is invisible to this loop.
+/// Transport-agnostic.
 ///
-/// When <see cref="TerminalTransportOptions.SequencedOutput"/> is on, outbound frames are wrapped
-/// with a per-handle sequence (for client ack) and buffered for replay, and an initial resume
-/// frame from the client triggers replay of missed output after a fresh reconnect. With it off,
-/// behavior is identical to the plain WebSocket path.
+/// Output is always sequence-wrapped (a per-handle seq for client ack) and buffered for replay,
+/// and an initial resume frame from the client triggers replay of missed output after a reconnect.
+/// The client stores the resume token and re-sends it on reconnect, so a session is recognised
+/// across a network switch / IP change at the application layer.
 /// </summary>
 public sealed class ConnectionPump(
 	ILogger<ConnectionPump> logger,
@@ -22,26 +21,15 @@ public sealed class ConnectionPump(
 	IMessageBus publishEndpoint,
 	IDescriptorGeneratorService descriptorGenerator,
 	ITerminalReplayStore replayStore,
-	IResumeTokenStore resumeTokens,
-	TerminalTransportOptions options)
+	IResumeTokenStore resumeTokens)
 {
-	/// <param name="resumeCapable">
-	/// Whether this specific connection opted into sequenced output + replay (e.g. via a
-	/// <c>?resume=1</c> query). Sequencing only activates when the server-wide flag AND the
-	/// per-connection opt-in are both set, so connections that don't understand seq envelopes
-	/// (the command terminal, legacy clients) keep receiving raw output.
-	/// </param>
-	public async Task RunAsync(IDuplexTransport transport, long handle, CancellationToken ct, bool resumeCapable = false)
+	public async Task RunAsync(IDuplexTransport transport, long handle, CancellationToken ct)
 	{
-		var sequenced = options.SequencedOutput && resumeCapable;
-
-		Func<byte[], ValueTask> output = sequenced
-			? async data =>
-			{
-				var (_, wrapped) = await replayStore.AppendAsync(handle, data, ct);
-				await transport.SendAsync(wrapped, ct);
-			}
-			: data => new ValueTask(transport.SendAsync(data, ct));
+		Func<byte[], ValueTask> output = async data =>
+		{
+			var (_, wrapped) = await replayStore.AppendAsync(handle, data, ct);
+			await transport.SendAsync(wrapped, ct);
+		};
 
 		await connectionService.RegisterAsync(
 			handle,
@@ -53,12 +41,9 @@ public sealed class ConnectionPump(
 			() => Encoding.UTF8,
 			() => _ = transport.CloseAsync());
 
-		if (sequenced)
-		{
-			// Hand the client a resume token (raw control frame) so it can request replay on reconnect.
-			var token = await resumeTokens.MintAsync(handle, ct);
-			await transport.SendAsync(Encoding.UTF8.GetBytes($"{{\"resumeToken\":\"{token}\"}}"), ct);
-		}
+		// Hand the client a resume token (raw control frame) so it can request replay on reconnect.
+		var token = await resumeTokens.MintAsync(handle, ct);
+		await transport.SendAsync(Encoding.UTF8.GetBytes($"{{\"resumeToken\":\"{token}\"}}"), ct);
 
 		try
 		{
@@ -69,7 +54,7 @@ public sealed class ConnectionPump(
 				if (message is null) break; // peer closed
 				if (message.Length == 0) continue;
 
-				if (first && sequenced && SeqEnvelope.TryReadResume(message, out var resumeToken, out var lastSeq))
+				if (first && SeqEnvelope.TryReadResume(message, out var resumeToken, out var lastSeq))
 				{
 					first = false;
 					await HandleResumeAsync(transport, resumeToken, lastSeq, ct);

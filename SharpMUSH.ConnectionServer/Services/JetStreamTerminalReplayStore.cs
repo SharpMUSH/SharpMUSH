@@ -16,7 +16,7 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 {
 	private const string StreamName = "TERMINAL_REPLAY";
 	private const string SubjectPrefix = "terminal.replay";
-	private static readonly TimeSpan MaxAge = TimeSpan.FromSeconds(60);
+	private static readonly TimeSpan DefaultRetention = TimeSpan.FromHours(24);
 
 	private readonly NatsConnection _nats;
 	private readonly NatsJSContext _js;
@@ -31,15 +31,16 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 	}
 
 	public static async Task<JetStreamTerminalReplayStore> CreateAsync(
-		string url, ILogger<JetStreamTerminalReplayStore> logger, CancellationToken ct = default)
+		string url, ILogger<JetStreamTerminalReplayStore> logger, TimeSpan? retention = null, CancellationToken ct = default)
 	{
+		var maxAge = retention ?? DefaultRetention;
 		var nats = new NatsConnection(new NatsOpts { Url = url });
 		await nats.ConnectAsync();
 		var js = new NatsJSContext(nats);
 		await js.CreateOrUpdateStreamAsync(
-			new StreamConfig(StreamName, [$"{SubjectPrefix}.>"]) { MaxAge = MaxAge },
+			new StreamConfig(StreamName, [$"{SubjectPrefix}.>"]) { MaxAge = maxAge },
 			ct);
-		logger.LogInformation("JetStream replay stream '{Stream}' ready (MaxAge {MaxAge}s)", StreamName, MaxAge.TotalSeconds);
+		logger.LogInformation("JetStream replay stream '{Stream}' ready (MaxAge {MaxAge})", StreamName, maxAge);
 		return new JetStreamTerminalReplayStore(nats, js, logger);
 	}
 
