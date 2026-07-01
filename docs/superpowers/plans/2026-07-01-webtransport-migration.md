@@ -1247,3 +1247,23 @@ namespaces. Deviations from the plan as written, and why:
   change intentionally deferred until the app can be run against the bUnit/live terminal, since that
   path is integration-tested infrastructure this session could not execute.
 - **JS module** (`webtransport.js`) has no unit harness in-repo; it is exercised by the Task 5 gate.
+
+### Interop gate result (empirical, 2026-07-01) — **NO-GO for current browsers**
+
+Ran the gate against a real browser (assembled `libmsquic` 2.5.9 + `libnuma` + a stub `libxdp.so.1`
+to get `QuicListener.IsSupported = true` on the dev box; minimal standalone host mounting the real
+`WebTransportServer` + `ConnectionPump`; **Playwright-driven Chromium 149** using the browser
+WebTransport API with `serverCertificateHashes`):
+
+- **HTTP/3 itself works** end-to-end: `curl --http3 https://localhost:4433/` returns `wthost up`,
+  and Kestrel serves H3 fine.
+- **The WebTransport session handshake fails**: Chromium 149 reports
+  `ERR_QUIC_PROTOCOL_ERROR` / "Opening handshake failed"; the request never reaches `AcceptAsync`
+  (falls through as 404). This is at Kestrel's WebTransport-session negotiation layer, **not** the
+  app code — the framing/pump/replay units all pass, and plain H3 proves the host wiring is correct.
+
+**Conclusion:** experimental Kestrel WebTransport (draft-02) does **not** interoperate with current
+Chromium (the design's risk #1, confirmed). Keep `WebTransport:Enabled=false`; WebSocket remains the
+transport via the negotiator's fallback (zero cost, already wired). Re-run this gate when Kestrel's
+WebTransport is finalized (tracked upstream for the .NET 11 timeframe) — the seam + client + replay
+are all in place to flip it on the day the handshake matches.
