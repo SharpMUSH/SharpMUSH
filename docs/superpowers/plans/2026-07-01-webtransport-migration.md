@@ -1205,3 +1205,45 @@ git commit -m "feat: resume/replay handshake for fresh-reconnect fallback path"
 - **Feature flag:** `WebTransport:Enabled` gates csproj-independent runtime mapping (T3/T4) and client negotiation (T9). Off ⇒ WS-only, today's behavior.
 - **Gate:** T5 is an explicit go/no-go before the expensive client tasks — consistent with design risk #1.
 - **Type consistency:** `IDuplexTransport.ReceiveTextAsync` returns `string?` everywhere; `ITransportClient.ConnectionStateChanged` is `EventHandler<bool>` in T6/T8/T9; `SeqEnvelope.ReadSeq(byte[])` used in T10/T11/T12.
+
+---
+
+## As-Built Notes (2026-07-01 execution) — deltas from the spec above
+
+Implemented on `spike/webtransport`; all new code builds clean under `TreatWarningsAsErrors` and is
+covered by 20 new TUnit tests (14 ConnectionServer, 6 ClientState) with zero regressions in those
+namespaces. Deviations from the plan as written, and why:
+
+- **Output delegates are `Func<byte[], ValueTask>`** (not `Func<byte[], Task>`); `ConnectionPump`
+  adapts via `new ValueTask(transport.SendAsync(...))`.
+- **`ITransportClient` was trimmed** to the members `WebSocketClientService` already exposes
+  (`Kind`, `IsConnected`, `MessageReceived`, `ConnectAsync/SendAsync/DisconnectAsync/ClearSendBuffer`,
+  `IAsyncDisposable`). The planned `ConnectionStateChanged: EventHandler<bool>` was dropped to avoid
+  clashing with the existing `EventHandler<WebSocketState>` event — no consumer needed it.
+- **Sequencing/replay is isolated, not surgical.** Rather than rewiring every output consumer through
+  a new `SendOutputAsync` on `ConnectionServerService`, the new logic lives in standalone units
+  (`SeqEnvelope`, `TerminalReplayStore`, `ResumeTokenService`) and is wired at the pump behind
+  `TerminalTransportOptions.SequencedOutput` (= `WebTransport:Enabled`). With the flag off (default),
+  the pump path is byte-for-byte identical to before — so existing WS behavior and its bUnit/
+  integration tests are untouched. `ReadSeq` is strict (throws on a frame with no `seq`).
+- **Resume semantics (minimal):** a fresh reconnect with `{"resume":token,"lastSeq":n}` replays
+  buffered frames after `n` from the old handle's buffer, then continues as a fresh connection
+  (game-session survival is out of scope, per the design). Grace is the buffer's 30 s / 200-frame bound.
+- **Kestrel:** WebTransport listens on a **dedicated HTTP/3 port** (`WebTransport:Port`, default 4203)
+  so the existing WS/telnet bindings are untouched. Self-signed ECDSA P-256 dev cert (< 14 days) in
+  `WebTransportDevCert`; SHA-256 logged for `serverCertificateHashes` pinning.
+- **CA2252:** `EnablePreviewFeatures=true` plus a file-scoped `#pragma warning disable CA2252` in
+  `WebTransportServer.cs` (the analyzer still fired for the preview WT APIs).
+- **WebTransportTransport is stream-based** (`Stream input, Stream output, …, Action onClose`) so it is
+  unit-testable with `MemoryStream`; `WebTransportServer` adapts the Kestrel `ConnectionContext`.
+
+### Remaining (needs the running app / interactive gate)
+
+- **Task 5 interop/migration proof** — cannot run in a headless sandbox (needs docker infra + HTTP/3 +
+  a real WT client). Script + instructions in `test-clients/`. This is the go/no-go for the WT path.
+- **Final terminal wiring** — `TransportNegotiator` is registered and unit-tested but the play terminal
+  (`PlayTerminalService` / `IPlayWebSocketClientService`) still connects via its WebSocket client
+  directly. Swapping it to `TransportNegotiator.SelectAsync(wsUri, wtUri)` is a small, single-site
+  change intentionally deferred until the app can be run against the bUnit/live terminal, since that
+  path is integration-tested infrastructure this session could not execute.
+- **JS module** (`webtransport.js`) has no unit harness in-repo; it is exercised by the Task 5 gate.
