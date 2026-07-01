@@ -33,13 +33,13 @@ public class ReplayAndResumeTests
 	public async Task ReplayStore_assigns_monotonic_seq_and_replays_after_lastSeq()
 	{
 		var store = new TerminalReplayStore();
-		var s1 = store.Append(9, Encoding.UTF8.GetBytes("one")).Seq;
-		var s2 = store.Append(9, Encoding.UTF8.GetBytes("two")).Seq;
-		var s3 = store.Append(9, Encoding.UTF8.GetBytes("three")).Seq;
+		var s1 = (await store.AppendAsync(9, Encoding.UTF8.GetBytes("one"))).Seq;
+		var s2 = (await store.AppendAsync(9, Encoding.UTF8.GetBytes("two"))).Seq;
+		var s3 = (await store.AppendAsync(9, Encoding.UTF8.GetBytes("three"))).Seq;
 
 		await Assert.That(new[] { s1, s2, s3 }).IsEquivalentTo(new[] { 1L, 2L, 3L });
 
-		var replay = store.After(9, lastSeq: 1);
+		var replay = await store.AfterAsync(9, lastSeq: 1);
 		await Assert.That(replay.Count).IsEqualTo(2);
 		await Assert.That(SeqEnvelope.ReadSeq(replay[0])).IsEqualTo(2L);
 	}
@@ -50,11 +50,11 @@ public class ReplayAndResumeTests
 		var now = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 		var clock = now;
 		var store = new TerminalReplayStore(() => clock);
-		store.Append(1, Encoding.UTF8.GetBytes("old"));
+		await store.AppendAsync(1, Encoding.UTF8.GetBytes("old"));
 		clock = now.AddSeconds(45); // past the 30s window
-		store.Append(1, Encoding.UTF8.GetBytes("fresh"));
+		await store.AppendAsync(1, Encoding.UTF8.GetBytes("fresh"));
 
-		var replay = store.After(1, lastSeq: 0);
+		var replay = await store.AfterAsync(1, lastSeq: 0);
 
 		await Assert.That(replay.Count).IsEqualTo(1); // only "fresh" survives the age cutoff
 	}
@@ -65,12 +65,14 @@ public class ReplayAndResumeTests
 		var now = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 		var clock = now;
 		var svc = new ResumeTokenService(() => clock);
-		var token = svc.Mint(handle: 55);
+		var token = await svc.MintAsync(handle: 55);
 
-		await Assert.That(svc.TryResolve(token, out var h1)).IsTrue();
+		var (found1, h1) = await svc.TryResolveAsync(token);
+		await Assert.That(found1).IsTrue();
 		await Assert.That(h1).IsEqualTo(55L);
 
 		clock = now.AddSeconds(31);
-		await Assert.That(svc.TryResolve(token, out _)).IsFalse();
+		var (found2, _) = await svc.TryResolveAsync(token);
+		await Assert.That(found2).IsFalse();
 	}
 }

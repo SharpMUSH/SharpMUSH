@@ -39,8 +39,8 @@ public class ConnectionPumpTests
 		IConnectionServerService conn,
 		IDescriptorGeneratorService desc,
 		bool sequenced = false,
-		TerminalReplayStore? replay = null,
-		ResumeTokenService? resume = null)
+		ITerminalReplayStore? replay = null,
+		IResumeTokenStore? resume = null)
 		=> new(
 			NullLogger<ConnectionPump>.Instance,
 			conn,
@@ -99,10 +99,10 @@ public class ConnectionPumpTests
 		var resume = new ResumeTokenService();
 
 		// A prior connection (handle 9) produced three output frames.
-		replay.Append(9, System.Text.Encoding.UTF8.GetBytes("one"));   // seq 1
-		replay.Append(9, System.Text.Encoding.UTF8.GetBytes("two"));   // seq 2
-		replay.Append(9, System.Text.Encoding.UTF8.GetBytes("three")); // seq 3
-		var oldToken = resume.Mint(9);
+		await replay.AppendAsync(9, System.Text.Encoding.UTF8.GetBytes("one"));   // seq 1
+		await replay.AppendAsync(9, System.Text.Encoding.UTF8.GetBytes("two"));   // seq 2
+		await replay.AppendAsync(9, System.Text.Encoding.UTF8.GetBytes("three")); // seq 3
+		var oldToken = await resume.MintAsync(9);
 
 		var pump = MakePump(bus, conn, desc, sequenced: true, replay: replay, resume: resume);
 		// New connection (handle 99) opens with a resume frame acking seq 1, then closes.

@@ -3,12 +3,11 @@ using System.Collections.Concurrent;
 namespace SharpMUSH.ConnectionServer.Services;
 
 /// <summary>
-/// Per-handle monotonic output sequence + a bounded, short-lived replay buffer. Used only when
-/// sequenced output is enabled (WebTransport feature flag). Backs the fallback replay path: when
-/// a client reconnects fresh (migration failed) it acks the highest seq it saw and the server
-/// replays buffered frames after it. Bounded by count and age to stay "minimal" (not full survival).
+/// In-memory <see cref="ITerminalReplayStore"/>: a per-handle bounded, short-lived output buffer.
+/// Bounded by count and age to stay "minimal". Does NOT survive a ConnectionServer restart — use
+/// <see cref="JetStreamTerminalReplayStore"/> for durable, restart-survivable replay.
 /// </summary>
-public sealed class TerminalReplayStore
+public sealed class TerminalReplayStore : ITerminalReplayStore
 {
 	private const int MaxFramesPerHandle = 200;
 	private static readonly TimeSpan MaxAge = TimeSpan.FromSeconds(30);
@@ -21,24 +20,22 @@ public sealed class TerminalReplayStore
 	// Test seam: inject a clock so age-based eviction is deterministic.
 	public TerminalReplayStore(Func<DateTimeOffset> now) => _now = now;
 
-	/// <summary>
-	/// Assigns the next sequence number for a handle (1-based), wraps the raw UTF-8 output in a
-	/// <see cref="SeqEnvelope"/>, records the wrapped frame for replay, and returns both. Wrapping
-	/// happens here so seq assignment, wrapping, and recording are atomic under the handle lock.
-	/// </summary>
-	public (long Seq, byte[] Wrapped) Append(long handle, byte[] rawUtf8)
+	public ValueTask<(long Seq, byte[] Wrapped)> AppendAsync(long handle, byte[] rawUtf8, CancellationToken ct = default)
 	{
 		var buffer = _buffers.GetOrAdd(handle, _ => new HandleBuffer());
-		return buffer.Append(rawUtf8, _now(), MaxFramesPerHandle);
+		return ValueTask.FromResult(buffer.Append(rawUtf8, _now(), MaxFramesPerHandle));
 	}
 
-	/// <summary>Returns recorded frames whose seq is greater than <paramref name="lastSeq"/>, oldest first.</summary>
-	public IReadOnlyList<byte[]> After(long handle, long lastSeq)
-		=> _buffers.TryGetValue(handle, out var buffer)
+	public ValueTask<IReadOnlyList<byte[]>> AfterAsync(long handle, long lastSeq, CancellationToken ct = default)
+		=> ValueTask.FromResult(_buffers.TryGetValue(handle, out var buffer)
 			? buffer.After(lastSeq, _now(), MaxAge)
-			: [];
+			: []);
 
-	public void Drop(long handle) => _buffers.TryRemove(handle, out _);
+	public ValueTask DropAsync(long handle, CancellationToken ct = default)
+	{
+		_buffers.TryRemove(handle, out _);
+		return ValueTask.CompletedTask;
+	}
 
 	private sealed class HandleBuffer
 	{

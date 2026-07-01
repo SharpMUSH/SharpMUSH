@@ -21,8 +21,8 @@ public sealed class ConnectionPump(
 	IConnectionServerService connectionService,
 	IMessageBus publishEndpoint,
 	IDescriptorGeneratorService descriptorGenerator,
-	TerminalReplayStore replayStore,
-	ResumeTokenService resumeTokens,
+	ITerminalReplayStore replayStore,
+	IResumeTokenStore resumeTokens,
 	TerminalTransportOptions options)
 {
 	public async Task RunAsync(IDuplexTransport transport, long handle, CancellationToken ct)
@@ -30,10 +30,10 @@ public sealed class ConnectionPump(
 		var sequenced = options.SequencedOutput;
 
 		Func<byte[], ValueTask> output = sequenced
-			? data =>
+			? async data =>
 			{
-				var (_, wrapped) = replayStore.Append(handle, data);
-				return new ValueTask(transport.SendAsync(wrapped, ct));
+				var (_, wrapped) = await replayStore.AppendAsync(handle, data, ct);
+				await transport.SendAsync(wrapped, ct);
 			}
 			: data => new ValueTask(transport.SendAsync(data, ct));
 
@@ -50,7 +50,7 @@ public sealed class ConnectionPump(
 		if (sequenced)
 		{
 			// Hand the client a resume token (raw control frame) so it can request replay on reconnect.
-			var token = resumeTokens.Mint(handle);
+			var token = await resumeTokens.MintAsync(handle, ct);
 			await transport.SendAsync(Encoding.UTF8.GetBytes($"{{\"resumeToken\":\"{token}\"}}"), ct);
 		}
 
@@ -97,18 +97,19 @@ public sealed class ConnectionPump(
 
 	private async Task HandleResumeAsync(IDuplexTransport transport, string resumeToken, long lastSeq, CancellationToken ct)
 	{
-		if (!resumeTokens.TryResolve(resumeToken, out var oldHandle))
+		var (found, oldHandle) = await resumeTokens.TryResolveAsync(resumeToken, ct);
+		if (!found)
 		{
 			logger.LogInformation("Resume token expired or unknown; continuing as fresh connection");
 			return;
 		}
 
-		var missed = replayStore.After(oldHandle, lastSeq);
+		var missed = await replayStore.AfterAsync(oldHandle, lastSeq, ct);
 		foreach (var frame in missed)
 			await transport.SendAsync(frame, ct);
 
-		replayStore.Drop(oldHandle);
-		resumeTokens.Invalidate(resumeToken);
+		await replayStore.DropAsync(oldHandle, ct);
+		await resumeTokens.InvalidateAsync(resumeToken, ct);
 		logger.LogInformation("Replayed {Count} frame(s) after resume of handle {OldHandle}", missed.Count, oldHandle);
 	}
 }

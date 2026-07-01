@@ -106,8 +106,8 @@ public class Program
 		// any transport; when off, the connection path is byte-for-byte the original behavior.
 		var replayEnabled = builder.Configuration.GetValue<bool>("Replay:Enabled");
 		builder.Services.AddSingleton(new TerminalTransportOptions(SequencedOutput: replayEnabled));
-		builder.Services.AddSingleton<TerminalReplayStore>();
-		builder.Services.AddSingleton<ResumeTokenService>();
+		builder.Services.AddSingleton<ITerminalReplayStore, TerminalReplayStore>();
+		builder.Services.AddSingleton<IResumeTokenStore, ResumeTokenService>();
 		builder.Services.AddSingleton<ConnectionPump>();
 
 		builder.Services.AddSingleton<WebSocketServer>();

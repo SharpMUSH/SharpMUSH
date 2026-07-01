@@ -4,10 +4,10 @@ using System.Security.Cryptography;
 namespace SharpMUSH.ConnectionServer.Services;
 
 /// <summary>
-/// Mints and resolves opaque resume tokens that bind a fresh reconnect back to a surviving handle
-/// within a short grace window. In-memory for this spike; a durable store could back it later.
+/// In-memory <see cref="IResumeTokenStore"/>. Does NOT survive a ConnectionServer restart — use
+/// <see cref="NatsKvResumeTokenStore"/> for durable, restart-survivable resume.
 /// </summary>
-public sealed class ResumeTokenService
+public sealed class ResumeTokenService : IResumeTokenStore
 {
 	private static readonly TimeSpan Ttl = TimeSpan.FromSeconds(30);
 
@@ -19,28 +19,31 @@ public sealed class ResumeTokenService
 	// Test seam: inject a clock so TTL expiry is deterministic.
 	public ResumeTokenService(Func<DateTimeOffset> now) => _now = now;
 
-	public string Mint(long handle)
+	public ValueTask<string> MintAsync(long handle, CancellationToken ct = default)
 	{
 		var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
 		_tokens[token] = new Entry(handle, _now() + Ttl);
-		return token;
+		return ValueTask.FromResult(token);
 	}
 
-	public bool TryResolve(string token, out long handle)
+	public ValueTask<(bool Found, long Handle)> TryResolveAsync(string token, CancellationToken ct = default)
 	{
-		handle = 0;
-		if (!_tokens.TryGetValue(token, out var entry)) return false;
+		if (!_tokens.TryGetValue(token, out var entry))
+			return ValueTask.FromResult((false, 0L));
 		if (_now() > entry.Expires)
 		{
 			_tokens.TryRemove(token, out _);
-			return false;
+			return ValueTask.FromResult((false, 0L));
 		}
 
-		handle = entry.Handle;
-		return true;
+		return ValueTask.FromResult((true, entry.Handle));
 	}
 
-	public void Invalidate(string token) => _tokens.TryRemove(token, out _);
+	public ValueTask InvalidateAsync(string token, CancellationToken ct = default)
+	{
+		_tokens.TryRemove(token, out _);
+		return ValueTask.CompletedTask;
+	}
 
 	private sealed record Entry(long Handle, DateTimeOffset Expires);
 }
