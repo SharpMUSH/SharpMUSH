@@ -102,6 +102,10 @@ public class Program
 
 		builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
 
+		var webTransportEnabled = builder.Configuration.GetValue<bool>("WebTransport:Enabled");
+		builder.Services.AddSingleton(new TerminalTransportOptions(SequencedOutput: webTransportEnabled));
+		builder.Services.AddSingleton<TerminalReplayStore>();
+		builder.Services.AddSingleton<ResumeTokenService>();
 		builder.Services.AddSingleton<ConnectionPump>();
 
 		builder.Services.AddSingleton<WebSocketServer>();

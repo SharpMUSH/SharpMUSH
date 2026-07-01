@@ -34,13 +34,29 @@ public class ConnectionPumpTests
 		}
 	}
 
+	private static ConnectionPump MakePump(
+		IMessageBus bus,
+		IConnectionServerService conn,
+		IDescriptorGeneratorService desc,
+		bool sequenced = false,
+		TerminalReplayStore? replay = null,
+		ResumeTokenService? resume = null)
+		=> new(
+			NullLogger<ConnectionPump>.Instance,
+			conn,
+			bus,
+			desc,
+			replay ?? new TerminalReplayStore(),
+			resume ?? new ResumeTokenService(),
+			new TerminalTransportOptions(sequenced));
+
 	[Test]
 	public async Task Publishes_input_frame_then_disconnects_on_close()
 	{
 		var bus = Substitute.For<IMessageBus>();
 		var conn = Substitute.For<IConnectionServerService>();
 		var desc = Substitute.For<IDescriptorGeneratorService>();
-		var pump = new ConnectionPump(NullLogger<ConnectionPump>.Instance, conn, bus, desc);
+		var pump = MakePump(bus, conn, desc);
 		var transport = new FakeTransport("look", null); // one command, then peer close
 
 		await pump.RunAsync(transport, handle: 42, CancellationToken.None);
@@ -58,7 +74,7 @@ public class ConnectionPumpTests
 		var bus = Substitute.For<IMessageBus>();
 		var conn = Substitute.For<IConnectionServerService>();
 		var desc = Substitute.For<IDescriptorGeneratorService>();
-		var pump = new ConnectionPump(NullLogger<ConnectionPump>.Instance, conn, bus, desc);
+		var pump = MakePump(bus, conn, desc);
 		var transport = new FakeTransport((string?)null); // immediate close
 
 		await pump.RunAsync(transport, handle: 7, CancellationToken.None);
@@ -71,5 +87,40 @@ public class ConnectionPumpTests
 			Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
 			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>());
+	}
+
+	[Test]
+	public async Task Sequenced_resume_replays_missed_frames_and_does_not_treat_resume_as_command()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var replay = new TerminalReplayStore();
+		var resume = new ResumeTokenService();
+
+		// A prior connection (handle 9) produced three output frames.
+		replay.Append(9, System.Text.Encoding.UTF8.GetBytes("one"));   // seq 1
+		replay.Append(9, System.Text.Encoding.UTF8.GetBytes("two"));   // seq 2
+		replay.Append(9, System.Text.Encoding.UTF8.GetBytes("three")); // seq 3
+		var oldToken = resume.Mint(9);
+
+		var pump = MakePump(bus, conn, desc, sequenced: true, replay: replay, resume: resume);
+		// New connection (handle 99) opens with a resume frame acking seq 1, then closes.
+		var transport = new FakeTransport($"{{\"resume\":\"{oldToken}\",\"lastSeq\":1}}", null);
+
+		await pump.RunAsync(transport, handle: 99, CancellationToken.None);
+
+		// Sent = [ resumeToken control frame for 99, replayed seq 2, replayed seq 3 ]
+		var replayed = transport.Sent
+			.Where(b =>
+			{
+				try { SeqEnvelope.ReadSeq(b); return true; } catch { return false; }
+			})
+			.Select(SeqEnvelope.ReadSeq)
+			.ToArray();
+		await Assert.That(replayed).IsEquivalentTo(new[] { 2L, 3L });
+
+		// The resume frame must not be published as a game command.
+		await bus.DidNotReceive().Publish(Arg.Any<WebSocketInputMessage>(), Arg.Any<CancellationToken>());
 	}
 }
