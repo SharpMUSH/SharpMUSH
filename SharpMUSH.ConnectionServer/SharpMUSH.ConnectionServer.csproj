@@ -7,16 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>default</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!-- Kestrel's WebTransport/HTTP-3 feature APIs are marked [RequiresPreviewFeatures]. -->
-    <EnablePreviewFeatures>true</EnablePreviewFeatures>
   </PropertyGroup>
-
-  <ItemGroup>
-    <!-- Opt the runtime into experimental WebTransport + HTTP/3 datagrams in Kestrel. -->
-    <RuntimeHostConfigurationOption
-      Include="Microsoft.AspNetCore.Server.Kestrel.Experimental.WebTransportAndH3Datagrams"
-      Value="true" Trim="false" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />

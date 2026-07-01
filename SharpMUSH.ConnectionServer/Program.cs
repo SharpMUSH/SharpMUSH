@@ -34,12 +34,6 @@ public class Program
 			var webSocketHandler = app.Services.GetRequiredService<WebSocketServer>();
 			app.Map("/ws", webSocketHandler.HandleWebSocketAsync);
 
-			if (app.Services.GetRequiredService<TerminalTransportOptions>().SequencedOutput)
-			{
-				var webTransportHandler = app.Services.GetRequiredService<WebTransportServer>();
-				app.Map("/wt", wtApp => wtApp.Run(webTransportHandler.HandleAsync));
-			}
-
 			app.MapControllers();
 			app.MapGet("/", () => "SharpMUSH Connection Server");
 			app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
@@ -108,31 +102,15 @@ public class Program
 
 		builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
 
-		var webTransportEnabled = builder.Configuration.GetValue<bool>("WebTransport:Enabled");
-		builder.Services.AddSingleton(new TerminalTransportOptions(SequencedOutput: webTransportEnabled));
+		// Terminal output sequencing + JetStream-backed replay on reconnect. Enabled independently of
+		// any transport; when off, the connection path is byte-for-byte the original behavior.
+		var replayEnabled = builder.Configuration.GetValue<bool>("Replay:Enabled");
+		builder.Services.AddSingleton(new TerminalTransportOptions(SequencedOutput: replayEnabled));
 		builder.Services.AddSingleton<TerminalReplayStore>();
 		builder.Services.AddSingleton<ResumeTokenService>();
 		builder.Services.AddSingleton<ConnectionPump>();
 
 		builder.Services.AddSingleton<WebSocketServer>();
-		builder.Services.AddSingleton<WebTransportServer>();
-
-		if (webTransportEnabled)
-		{
-			// WebTransport needs HTTP/3 + a cert meeting WebTransport requirements (the default
-			// dev cert does not qualify). Add a dedicated HTTP/3 endpoint so existing WebSocket/
-			// telnet bindings are untouched. The cert SHA-256 is logged so the browser/Node client
-			// can pin it via serverCertificateHashes in dev.
-			var wtPort = builder.Configuration.GetValue("WebTransport:Port", 4203);
-			builder.WebHost.ConfigureKestrel(kestrel =>
-			{
-				kestrel.Listen(System.Net.IPAddress.Any, wtPort, listen =>
-				{
-					listen.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2AndHttp3;
-					listen.UseHttps(WebTransportDevCert.Generate());
-				});
-			});
-		}
 
 		// Register the telnet interpreter factory (server mode) with the DI system.
 		// This resolves the logger from DI automatically. Protocol plugins and per-connection

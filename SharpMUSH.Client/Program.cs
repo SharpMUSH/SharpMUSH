@@ -43,12 +43,6 @@ builder.Services.AddSingleton<PackagesAdminService>();
 builder.Services.AddSingleton<BannedNamesService>();
 builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<IWebSocketClientService, WebSocketClientService>();
-// WebTransport terminal client + negotiator (WebTransport preferred, WebSocket fallback).
-builder.Services.AddSingleton<WebTransportClientService>();
-builder.Services.AddSingleton(sp => new TransportNegotiator(
-	sp.GetRequiredService<ILogger<TransportNegotiator>>(),
-	() => sp.GetRequiredService<WebTransportClientService>(),
-	() => (ITransportClient)sp.GetRequiredService<IWebSocketClientService>()));
 builder.Services.AddSingleton<ITerminalService, TerminalService>();
 // Second, independent connection for the /play page (player interactions), separate from the
 // command/softcode terminal above. Both are singletons so each survives navigation.
