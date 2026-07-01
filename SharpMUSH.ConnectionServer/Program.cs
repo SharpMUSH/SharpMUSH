@@ -170,16 +170,23 @@ public class Program
 				x.AddConsumer<MainProcessShutdownConsumer>();
 			});
 
+		var keepAlive = KeepAliveOptions.FromConfiguration(builder.Configuration);
+		builder.Services.AddSingleton(keepAlive);
+
 		builder.WebHost.ConfigureKestrel((context, options) =>
 		{
 			options.AddServerHeader = true;
 
 			options.ListenAnyIP(connectionServerOptions.TelnetPort, listenOptions =>
 			{
+				listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
 				listenOptions.UseConnectionHandler<TelnetServer>();
 			});
 
-			options.ListenAnyIP(connectionServerOptions.HttpPort);
+			options.ListenAnyIP(connectionServerOptions.HttpPort, listenOptions =>
+			{
+				listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
+			});
 		});
 
 		builder.Services.AddControllers();

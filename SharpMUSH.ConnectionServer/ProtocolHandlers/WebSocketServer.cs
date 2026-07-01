@@ -8,7 +8,8 @@ namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 /// </summary>
 public class WebSocketServer(
 	IDescriptorGeneratorService descriptorGenerator,
-	ConnectionPump pump)
+	ConnectionPump pump,
+	KeepAliveOptions keepAlive)
 {
 	public async Task HandleWebSocketAsync(HttpContext context)
 	{
@@ -18,7 +19,13 @@ public class WebSocketServer(
 			return;
 		}
 
-		var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+		// KeepAliveTimeout makes the server abort the socket when pongs stop arriving, so a half-open
+		// peer (abrupt drop) is detected in ~interval+timeout instead of lingering for minutes.
+		var webSocket = await context.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext
+		{
+			KeepAliveInterval = keepAlive.WsInterval,
+			KeepAliveTimeout = keepAlive.WsTimeout
+		});
 		var handle = descriptorGenerator.GetNextWebSocketDescriptor();
 		var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 		var hostname = context.Request.Headers.Host.ToString();
