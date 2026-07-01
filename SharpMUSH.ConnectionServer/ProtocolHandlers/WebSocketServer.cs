@@ -23,7 +23,10 @@ public class WebSocketServer(
 		var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 		var hostname = context.Request.Headers.Host.ToString();
 
+		// Clients that understand seq envelopes + resume opt in with ?resume=1.
+		var resumeCapable = context.Request.Query.ContainsKey("resume");
+
 		var transport = new WebSocketTransport(webSocket, remoteIp, hostname);
-		await pump.RunAsync(transport, handle, context.RequestAborted);
+		await pump.RunAsync(transport, handle, context.RequestAborted, resumeCapable);
 	}
 }

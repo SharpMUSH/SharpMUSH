@@ -25,9 +25,15 @@ public sealed class ConnectionPump(
 	IResumeTokenStore resumeTokens,
 	TerminalTransportOptions options)
 {
-	public async Task RunAsync(IDuplexTransport transport, long handle, CancellationToken ct)
+	/// <param name="resumeCapable">
+	/// Whether this specific connection opted into sequenced output + replay (e.g. via a
+	/// <c>?resume=1</c> query). Sequencing only activates when the server-wide flag AND the
+	/// per-connection opt-in are both set, so connections that don't understand seq envelopes
+	/// (the command terminal, legacy clients) keep receiving raw output.
+	/// </param>
+	public async Task RunAsync(IDuplexTransport transport, long handle, CancellationToken ct, bool resumeCapable = false)
 	{
-		var sequenced = options.SequencedOutput;
+		var sequenced = options.SequencedOutput && resumeCapable;
 
 		Func<byte[], ValueTask> output = sequenced
 			? async data =>

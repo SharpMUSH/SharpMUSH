@@ -15,7 +15,11 @@ public interface IPlayWebSocketClientService : IWebSocketClientService;
 
 /// <summary>A second WebSocket client instance, independent of the command terminal's.</summary>
 public sealed class PlayWebSocketClientService(ILogger<WebSocketClientService> logger)
-	: WebSocketClientService(logger), IPlayWebSocketClientService;
+	: WebSocketClientService(logger), IPlayWebSocketClientService
+{
+	// The play terminal opts into sequenced output + reconnect replay (NATS-backed on the server).
+	protected override bool ResumeEnabled => true;
+}
 
 /// <summary>Marker interface for the play-session terminal (the /play page connection).</summary>
 public interface IPlayTerminalService : ITerminalService;

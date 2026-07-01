@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
 
 namespace SharpMUSH.Client.Services;
 
@@ -19,6 +20,17 @@ public class WebSocketClientService : IWebSocketClientService
 	private Task? _receiveTask;
 	private string? _serverUri;
 	private volatile bool _intentionalDisconnect;
+
+	/// <summary>
+	/// When true, this connection opts into server-side output sequencing + reconnect replay:
+	/// it connects with <c>?resume=1</c>, unwraps <c>{"seq","data"}</c> envelopes (tracking the
+	/// highest seq), stores the server's resume token, and re-sends <c>{"resume","lastSeq"}</c> on
+	/// reconnect so missed output is replayed. Off by default; the play terminal enables it.
+	/// </summary>
+	protected virtual bool ResumeEnabled => false;
+
+	private string? _resumeToken;
+	private long _lastSeq;
 
 	/// <summary>Maximum number of messages to buffer while disconnected.</summary>
 	private const int MaxBufferedMessages = 500;
@@ -77,11 +89,24 @@ public class WebSocketClientService : IWebSocketClientService
 
 			_cancellationTokenSource = new CancellationTokenSource();
 
-			_logger.LogInformation("Connecting to WebSocket server: {ServerUri}", _serverUri);
-			await _webSocket.ConnectAsync(new Uri(_serverUri), _cancellationTokenSource.Token);
+			var connectUri = ResumeEnabled
+				? (_serverUri.Contains('?') ? $"{_serverUri}&resume=1" : $"{_serverUri}?resume=1")
+				: _serverUri;
+			_logger.LogInformation("Connecting to WebSocket server: {ServerUri}", connectUri);
+			await _webSocket.ConnectAsync(new Uri(connectUri), _cancellationTokenSource.Token);
 
 			ConnectionStateChanged?.Invoke(this, _webSocket.State);
 			_logger.LogInformation("Connected to WebSocket server");
+
+			// On a reconnect (we already hold a resume token) ask the server to replay output we missed.
+			if (ResumeEnabled && _resumeToken is not null)
+			{
+				var resumeFrame = Encoding.UTF8.GetBytes(
+					$"{{\"resume\":\"{_resumeToken}\",\"lastSeq\":{_lastSeq}}}");
+				await _webSocket.SendAsync(
+					new ArraySegment<byte>(resumeFrame),
+					WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
+			}
 
 			await FlushSendBufferAsync();
 
@@ -172,6 +197,45 @@ public class WebSocketClientService : IWebSocketClientService
 			_logger.LogDebug("Send buffer cleared ({Count} stale messages discarded)", count);
 	}
 
+	/// <summary>
+	/// Raises <see cref="MessageReceived"/>, first intercepting resume/seq control frames when
+	/// <see cref="ResumeEnabled"/>. A resume-token frame is consumed silently; a seq envelope has its
+	/// sequence tracked and its inner payload surfaced. Anything else is passed through unchanged, so a
+	/// resume-capable client talking to a non-sequencing server still works.
+	/// </summary>
+	private void SurfaceMessage(string message)
+	{
+		if (ResumeEnabled && TryHandleControlFrame(message, out var payload))
+		{
+			if (payload is not null)
+				MessageReceived?.Invoke(this, payload);
+			return;
+		}
+
+		MessageReceived?.Invoke(this, message);
+	}
+
+	private bool TryHandleControlFrame(string message, out string? payload)
+	{
+		payload = null;
+
+		if (ResumeFrameParser.TryReadResumeToken(message, out var token))
+		{
+			_resumeToken = token;
+			return true; // control frame consumed; nothing to surface
+		}
+
+		if (ResumeFrameParser.TryReadSeq(message, out var seq, out var data))
+		{
+			if (seq > _lastSeq)
+				_lastSeq = seq;
+			payload = data;
+			return true;
+		}
+
+		return false;
+	}
+
 	private async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
 	{
 		var buffer = new byte[1024 * 4];
@@ -212,7 +276,7 @@ public class WebSocketClientService : IWebSocketClientService
 				if (result.MessageType == WebSocketMessageType.Text && messageBuffer.Length > 0)
 				{
 					var message = Encoding.UTF8.GetString(messageBuffer.ToArray());
-					MessageReceived?.Invoke(this, message);
+					SurfaceMessage(message);
 				}
 			}
 		}

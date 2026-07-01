@@ -108,7 +108,7 @@ public class ConnectionPumpTests
 		// New connection (handle 99) opens with a resume frame acking seq 1, then closes.
 		var transport = new FakeTransport($"{{\"resume\":\"{oldToken}\",\"lastSeq\":1}}", null);
 
-		await pump.RunAsync(transport, handle: 99, CancellationToken.None);
+		await pump.RunAsync(transport, handle: 99, CancellationToken.None, resumeCapable: true);
 
 		// Sent = [ resumeToken control frame for 99, replayed seq 2, replayed seq 3 ]
 		var replayed = transport.Sent
