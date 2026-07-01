@@ -1,0 +1,63 @@
+using System.Security.Cryptography;
+using NATS.Client.Core;
+using NATS.Client.JetStream;
+using NATS.Client.KeyValueStore;
+
+namespace SharpMUSH.ConnectionServer.Services;
+
+/// <summary>
+/// NATS KV-backed <see cref="IResumeTokenStore"/>. Token → handle mappings live in a KV bucket with a
+/// short <see cref="NatsKVConfig.MaxAge"/> TTL, so resume works after a ConnectionServer restart /
+/// instance change (paired with <see cref="JetStreamTerminalReplayStore"/> for the durable buffer).
+/// </summary>
+public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable
+{
+	private const string Bucket = "terminal_resume";
+	private static readonly TimeSpan Ttl = TimeSpan.FromSeconds(30);
+
+	private readonly NatsConnection _nats;
+	private readonly INatsKVStore _store;
+	private readonly ILogger<NatsKvResumeTokenStore> _logger;
+
+	private NatsKvResumeTokenStore(NatsConnection nats, INatsKVStore store, ILogger<NatsKvResumeTokenStore> logger)
+	{
+		_nats = nats;
+		_store = store;
+		_logger = logger;
+	}
+
+	public static async Task<NatsKvResumeTokenStore> CreateAsync(
+		string url, ILogger<NatsKvResumeTokenStore> logger, CancellationToken ct = default)
+	{
+		var nats = new NatsConnection(new NatsOpts { Url = url });
+		await nats.ConnectAsync();
+		var js = new NatsJSContext(nats);
+		var kv = new NatsKVContext(js);
+		var store = await kv.CreateOrUpdateStoreAsync(new NatsKVConfig(Bucket) { MaxAge = Ttl }, ct);
+		logger.LogInformation("KV resume bucket '{Bucket}' ready (TTL {Ttl}s)", Bucket, Ttl.TotalSeconds);
+		return new NatsKvResumeTokenStore(nats, store, logger);
+	}
+
+	public async ValueTask<string> MintAsync(long handle, CancellationToken ct = default)
+	{
+		var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+		await _store.PutAsync(token, handle.ToString(), cancellationToken: ct);
+		return token;
+	}
+
+	public async ValueTask<(bool Found, long Handle)> TryResolveAsync(string token, CancellationToken ct = default)
+	{
+		var result = await _store.TryGetEntryAsync<string>(token, cancellationToken: ct);
+		if (!result.Success || result.Value.Value is null)
+			return (false, 0L);
+		return long.TryParse(result.Value.Value, out var handle) ? (true, handle) : (false, 0L);
+	}
+
+	public async ValueTask InvalidateAsync(string token, CancellationToken ct = default)
+	{
+		try { await _store.DeleteAsync(token, cancellationToken: ct); }
+		catch (Exception ex) { _logger.LogTrace(ex, "Resume token invalidate no-op for {Token}", token); }
+	}
+
+	public async ValueTask DisposeAsync() => await _nats.DisposeAsync();
+}

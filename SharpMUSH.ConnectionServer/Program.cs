@@ -106,8 +106,30 @@ public class Program
 		// any transport; when off, the connection path is byte-for-byte the original behavior.
 		var replayEnabled = builder.Configuration.GetValue<bool>("Replay:Enabled");
 		builder.Services.AddSingleton(new TerminalTransportOptions(SequencedOutput: replayEnabled));
-		builder.Services.AddSingleton<ITerminalReplayStore, TerminalReplayStore>();
-		builder.Services.AddSingleton<IResumeTokenStore, ResumeTokenService>();
+		if (replayEnabled)
+		{
+			// Durable NATS-backed replay: buffered output + resume tokens survive a restart / instance
+			// change. URL resolved lazily for the same reason as the connection state store above.
+			builder.Services.AddSingleton<ITerminalReplayStore>(sp =>
+			{
+				var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
+				return JetStreamTerminalReplayStore
+					.CreateAsync(url, sp.GetRequiredService<ILogger<JetStreamTerminalReplayStore>>())
+					.GetAwaiter().GetResult();
+			});
+			builder.Services.AddSingleton<IResumeTokenStore>(sp =>
+			{
+				var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
+				return NatsKvResumeTokenStore
+					.CreateAsync(url, sp.GetRequiredService<ILogger<NatsKvResumeTokenStore>>())
+					.GetAwaiter().GetResult();
+			});
+		}
+		else
+		{
+			builder.Services.AddSingleton<ITerminalReplayStore, TerminalReplayStore>();
+			builder.Services.AddSingleton<IResumeTokenStore, ResumeTokenService>();
+		}
 		builder.Services.AddSingleton<ConnectionPump>();
 
 		builder.Services.AddSingleton<WebSocketServer>();
