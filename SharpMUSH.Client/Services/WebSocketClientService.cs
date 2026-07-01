@@ -40,6 +40,12 @@ public class WebSocketClientService : IWebSocketClientService
 	private static readonly TimeSpan MaxReconnectDelay = TimeSpan.FromSeconds(30);
 
 	public event EventHandler<string>? MessageReceived;
+
+	/// <summary>
+	/// Raised when the server confirms a rebind to an existing (still-logged-in) session, so the
+	/// terminal can skip the re-login it would otherwise run after a reconnect.
+	/// </summary>
+	public event EventHandler? Reattached;
 	public event EventHandler<WebSocketState>? ConnectionStateChanged;
 
 	public bool IsConnected => _webSocket?.State == WebSocketState.Open;
@@ -90,15 +96,14 @@ public class WebSocketClientService : IWebSocketClientService
 			ConnectionStateChanged?.Invoke(this, _webSocket.State);
 			_logger.LogInformation("Connected to WebSocket server");
 
-			// On a reconnect (we already hold a resume token) ask the server to replay output we missed.
-			if (_resumeToken is not null)
-			{
-				var resumeFrame = Encoding.UTF8.GetBytes(
-					$"{{\"resume\":\"{_resumeToken}\",\"lastSeq\":{_lastSeq}}}");
-				await _webSocket.SendAsync(
-					new ArraySegment<byte>(resumeFrame),
-					WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
-			}
+			// Mandatory first frame: resume on reconnect (we hold a token), else hello. The server
+			// uses this to rebind a reconnect to the existing session or register a fresh one.
+			var firstFrame = _resumeToken is not null
+				? $"{{\"resume\":\"{_resumeToken}\",\"lastSeq\":{_lastSeq}}}"
+				: "{\"hello\":1}";
+			await _webSocket.SendAsync(
+				new ArraySegment<byte>(Encoding.UTF8.GetBytes(firstFrame)),
+				WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
 
 			await FlushSendBufferAsync();
 
@@ -210,6 +215,12 @@ public class WebSocketClientService : IWebSocketClientService
 	private bool TryHandleControlFrame(string message, out string? payload)
 	{
 		payload = null;
+
+		if (ResumeFrameParser.IsReattached(message))
+		{
+			Reattached?.Invoke(this, EventArgs.Empty);
+			return true; // consumed; the session continues, no re-login needed
+		}
 
 		if (ResumeFrameParser.TryReadResumeToken(message, out var token))
 		{

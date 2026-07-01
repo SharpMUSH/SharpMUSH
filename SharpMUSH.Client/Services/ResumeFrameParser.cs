@@ -9,6 +9,19 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public static class ResumeFrameParser
 {
+	/// <summary>True if the frame is the <c>{"reattached":true}</c> rebind acknowledgement.</summary>
+	public static bool IsReattached(string frame)
+	{
+		if (!LooksLikeJson(frame)) return false;
+		try
+		{
+			using var doc = JsonDocument.Parse(frame);
+			return doc.RootElement.TryGetProperty("reattached", out var el)
+				&& el.ValueKind == JsonValueKind.True;
+		}
+		catch (JsonException) { return false; }
+	}
+
 	/// <summary>True if the frame is a <c>{"resumeToken":"..."}</c> control frame.</summary>
 	public static bool TryReadResumeToken(string frame, out string? token)
 	{

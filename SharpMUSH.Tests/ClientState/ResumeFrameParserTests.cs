@@ -35,4 +35,13 @@ public class ResumeFrameParserTests
 		await Assert.That(ResumeFrameParser.TryReadSeq("look north", out _, out _)).IsFalse();
 		await Assert.That(ResumeFrameParser.TryReadResumeToken("plain text", out _)).IsFalse();
 	}
+
+	[Test]
+	public async Task Recognises_reattached_ack_only_when_true()
+	{
+		await Assert.That(ResumeFrameParser.IsReattached("{\"reattached\":true}")).IsTrue();
+		await Assert.That(ResumeFrameParser.IsReattached("{\"reattached\":false}")).IsFalse();
+		await Assert.That(ResumeFrameParser.IsReattached("{\"seq\":1,\"data\":\"x\"}")).IsFalse();
+		await Assert.That(ResumeFrameParser.IsReattached("look")).IsFalse();
+	}
 }
