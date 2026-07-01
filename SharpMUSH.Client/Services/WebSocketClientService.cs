@@ -10,8 +10,11 @@ namespace SharpMUSH.Client.Services;
 /// message buffering during disconnected periods so no output is lost when a
 /// user moves between cell towers or has a brief connectivity interruption.
 /// </summary>
-public class WebSocketClientService : IWebSocketClientService
+public class WebSocketClientService : IWebSocketClientService, ITransportClient
 {
+	/// <inheritdoc/>
+	public string Kind => "websocket";
+
 	private readonly ILogger<WebSocketClientService> _logger;
 	private ClientWebSocket? _webSocket;
 	private CancellationTokenSource? _cancellationTokenSource;
