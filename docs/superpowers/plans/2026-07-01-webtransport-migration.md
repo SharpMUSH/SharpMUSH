@@ -1267,3 +1267,38 @@ Chromium (the design's risk #1, confirmed). Keep `WebTransport:Enabled=false`; W
 transport via the negotiator's fallback (zero cost, already wired). Re-run this gate when Kestrel's
 WebTransport is finalized (tracked upstream for the .NET 11 timeframe) — the seam + client + replay
 are all in place to flip it on the day the handshake matches.
+
+---
+
+## RETARGET (2026-07-01): NATS JetStream replay over WebSocket
+
+Given the interop no-go, the target was switched from WebTransport migration to **durable
+reconnect replay over WebSocket, backed by NATS JetStream** — the reconnect-resilience half of the
+original idea, using infra SharpMUSH already runs. The transport seam, sequencing, and resume
+handshake carried over unchanged; the WebTransport transport/endpoint/client/negotiator/dev-cert and
+the preview-feature csproj flags were removed.
+
+**As built (all committed, tests green; the durable path is live-validated against real NATS):**
+
+- **Transport seam kept**: `IDuplexTransport` + `ConnectionPump` + `WebSocketTransport`.
+- **Pluggable stores** (async): `ITerminalReplayStore`, `IResumeTokenStore`. In-memory impls
+  (`TerminalReplayStore`, `ResumeTokenService`) for the default/off path and unit tests; durable impls
+  `JetStreamTerminalReplayStore` (output on `terminal.replay.<handle>`, 60 s `MaxAge`) and
+  `NatsKvResumeTokenStore` (token→handle in a 30 s-TTL KV bucket) selected in DI when `Replay:Enabled`.
+- **Per-connection opt-in**: sequencing activates only when the server flag AND a `?resume=1`
+  connection opt-in are both set, so the command terminal / legacy clients keep raw output.
+- **Client**: `WebSocketClientService` (shared by both terminals) unwraps `{"seq","data"}` envelopes,
+  tracks the highest seq, stores the `{"resumeToken"}`, and re-sends `{"resume","lastSeq"}` on
+  reconnect. The **play terminal** opts in (`ResumeEnabled => true`); the command terminal does not.
+  Parsing extracted to `ResumeFrameParser` (unit-tested).
+- **Validation**: `JetStreamReplayIntegrationTests` spins NATS via Testcontainers (podman) and proves
+  buffered output **and** the resume token survive a simulated ConnectionServer restart — i.e. a fresh
+  store instance replays the missed frames after the client's acked seq. Plus 54 unit tests.
+
+**Enable with** `Replay:Enabled=true` on the ConnectionServer (NATS already required); the play
+terminal then transparently replays missed output across a WebSocket drop/reconnect.
+
+**Not done / follow-ups:** only the play terminal opts in (command terminal unchanged by design);
+the client seq-tracking is covered via the pure `ResumeFrameParser` (the socket receive loop itself
+is exercised only by the running app / bUnit, not in this session); replay bound is 60 s / stream
+`MaxAge` (tune per need).
