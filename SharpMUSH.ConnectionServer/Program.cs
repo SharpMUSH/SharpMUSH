@@ -102,6 +102,8 @@ public class Program
 
 		builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
 
+		builder.Services.AddSingleton<ConnectionPump>();
+
 		builder.Services.AddSingleton<WebSocketServer>();
 
 		// Register the telnet interpreter factory (server mode) with the DI system.

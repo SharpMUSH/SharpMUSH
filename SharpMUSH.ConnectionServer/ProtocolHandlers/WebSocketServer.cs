@@ -1,33 +1,15 @@
 using SharpMUSH.ConnectionServer.Services;
-using SharpMUSH.Messaging.Messages;
-using SharpMUSH.Messaging.Abstractions;
-using System.Net.WebSockets;
-using System.Text;
 
 namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 
 /// <summary>
-/// Handles WebSocket protocol connections and publishes messages to the message queue
+/// Accepts WebSocket terminal connections and runs them through the shared
+/// <see cref="ConnectionPump"/> via a <see cref="WebSocketTransport"/> adapter.
 /// </summary>
-public class WebSocketServer
+public class WebSocketServer(
+	IDescriptorGeneratorService descriptorGenerator,
+	ConnectionPump pump)
 {
-	private readonly ILogger<WebSocketServer> _logger;
-	private readonly IConnectionServerService _connectionService;
-	private readonly IMessageBus _publishEndpoint;
-	private readonly IDescriptorGeneratorService _descriptorGenerator;
-
-	public WebSocketServer(
-		ILogger<WebSocketServer> logger,
-		IConnectionServerService connectionService,
-		IMessageBus publishEndpoint,
-		IDescriptorGeneratorService descriptorGenerator)
-	{
-		_logger = logger;
-		_connectionService = connectionService;
-		_publishEndpoint = publishEndpoint;
-		_descriptorGenerator = descriptorGenerator;
-	}
-
 	public async Task HandleWebSocketAsync(HttpContext context)
 	{
 		if (!context.WebSockets.IsWebSocketRequest)
@@ -37,114 +19,11 @@ public class WebSocketServer
 		}
 
 		var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-		var nextPort = _descriptorGenerator.GetNextWebSocketDescriptor();
-		var ct = context.RequestAborted;
-
+		var handle = descriptorGenerator.GetNextWebSocketDescriptor();
 		var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 		var hostname = context.Request.Headers.Host.ToString();
 
-		await _connectionService.RegisterAsync(
-			nextPort,
-			remoteIp,
-			hostname,
-			"websocket",
-			async data =>
-			{
-				if (webSocket.State == WebSocketState.Open)
-				{
-					await webSocket.SendAsync(
-						new ArraySegment<byte>(data),
-						WebSocketMessageType.Text,
-						true,
-						ct);
-				}
-			},
-			async data =>
-			{
-				if (webSocket.State == WebSocketState.Open)
-				{
-					await webSocket.SendAsync(
-						new ArraySegment<byte>(data),
-						WebSocketMessageType.Text,
-						true,
-						ct);
-				}
-			},
-			() => Encoding.UTF8,
-			() =>
-			{
-				if (webSocket.State == WebSocketState.Open)
-				{
-					_ = webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
-				}
-			});
-
-		try
-		{
-			var buffer = new byte[1024 * 4];
-			var receiveBuffer = new ArraySegment<byte>(buffer);
-			using var messageBuffer = new MemoryStream();
-
-			while (!ct.IsCancellationRequested && webSocket.State == WebSocketState.Open)
-			{
-				// A single text message can arrive fragmented across several ReceiveAsync calls.
-				// Accumulate until EndOfMessage and decode the complete UTF-8 payload once, so a
-				// fragmented control frame (e.g. NAWS JSON) is never partially parsed and then
-				// misrouted as a command, and multi-byte characters are never split mid-frame.
-				WebSocketReceiveResult result;
-				messageBuffer.SetLength(0);
-
-				do
-				{
-					result = await webSocket.ReceiveAsync(receiveBuffer, ct);
-
-					if (result.MessageType == WebSocketMessageType.Close)
-					{
-						await webSocket.CloseAsync(
-							WebSocketCloseStatus.NormalClosure,
-							"Connection closed",
-							ct);
-						break;
-					}
-
-					messageBuffer.Write(buffer, 0, result.Count);
-				}
-				while (!result.EndOfMessage);
-
-				if (result.MessageType == WebSocketMessageType.Close)
-					break;
-
-				if (result.MessageType == WebSocketMessageType.Text && messageBuffer.Length > 0)
-				{
-					var message = Encoding.UTF8.GetString(messageBuffer.ToArray());
-
-					// Browser-sent JSON control frames are handled here and NOT forwarded as commands.
-					// NAWS reuses the same NAWSUpdateMessage path telnet uses (Height=rows, Width=cols).
-					if (WebSocketControlFrame.TryParseNaws(message, out var cols, out var rows))
-					{
-						await _publishEndpoint.Publish(
-							new NAWSUpdateMessage(nextPort, rows, cols), ct);
-					}
-					else
-					{
-						await _publishEndpoint.Publish(
-							new WebSocketInputMessage(nextPort, message), ct);
-					}
-				}
-			}
-		}
-		catch (WebSocketException ex)
-		{
-			_logger.LogDebug(ex, "WebSocket connection {Handle} disconnected", nextPort);
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "Error handling WebSocket connection {Handle}", nextPort);
-		}
-		finally
-		{
-			await _connectionService.DisconnectAsync(nextPort);
-			_descriptorGenerator.ReleaseWebSocketDescriptor(nextPort);
-		}
+		var transport = new WebSocketTransport(webSocket, remoteIp, hostname);
+		await pump.RunAsync(transport, handle, context.RequestAborted);
 	}
 }
