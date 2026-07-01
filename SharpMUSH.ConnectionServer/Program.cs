@@ -121,7 +121,21 @@ public class Program
 				.CreateAsync(url, sp.GetRequiredService<ILogger<NatsKvResumeTokenStore>>(), replayRetention)
 				.GetAwaiter().GetResult();
 		});
-		builder.Services.AddSingleton<ConnectionPump>();
+		// Detached-session pinning: hold a dropped session for a grace window and rebind on reconnect.
+		var graceSeconds = builder.Configuration.GetValue("Session:GraceSeconds", 120.0);
+		builder.Services.AddSingleton<SessionSinkRegistry>();
+		builder.Services.AddSingleton<IGraceScheduler, TimerGraceScheduler>();
+		builder.Services.AddSingleton<DetachedSessionTracker>();
+		builder.Services.AddSingleton(sp => new ConnectionPump(
+			sp.GetRequiredService<ILogger<ConnectionPump>>(),
+			sp.GetRequiredService<IConnectionServerService>(),
+			sp.GetRequiredService<SharpMUSH.Messaging.Abstractions.IMessageBus>(),
+			sp.GetRequiredService<IDescriptorGeneratorService>(),
+			sp.GetRequiredService<ITerminalReplayStore>(),
+			sp.GetRequiredService<IResumeTokenStore>(),
+			sp.GetRequiredService<SessionSinkRegistry>(),
+			sp.GetRequiredService<DetachedSessionTracker>(),
+			TimeSpan.FromSeconds(graceSeconds)));
 
 		builder.Services.AddSingleton<WebSocketServer>();
 

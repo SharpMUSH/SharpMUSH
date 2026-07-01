@@ -6,14 +6,10 @@ using SharpMUSH.Messaging.Messages;
 namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 
 /// <summary>
-/// Owns the shared connection lifecycle: register the handle with its output delegate,
-/// pump inbound frames (routing browser control frames vs commands), and disconnect on close.
-/// Transport-agnostic.
-///
-/// Output is always sequence-wrapped (a per-handle seq for client ack) and buffered for replay,
-/// and an initial resume frame from the client triggers replay of missed output after a reconnect.
-/// The client stores the resume token and re-sends it on reconnect, so a session is recognised
-/// across a network switch / IP change at the application layer.
+/// Owns the shared connection lifecycle. Output is sequence-wrapped and buffered for replay, routed
+/// through a per-handle <see cref="SessionSink"/> so it can be rebound to a new socket on reconnect.
+/// On drop the session is DETACHED (held for a grace window) instead of disconnected, so a quick
+/// reconnect rebinds to the same handle and the engine never logs the character out.
 /// </summary>
 public sealed class ConnectionPump(
 	ILogger<ConnectionPump> logger,
@@ -21,54 +17,56 @@ public sealed class ConnectionPump(
 	IMessageBus publishEndpoint,
 	IDescriptorGeneratorService descriptorGenerator,
 	ITerminalReplayStore replayStore,
-	IResumeTokenStore resumeTokens)
+	IResumeTokenStore resumeTokens,
+	SessionSinkRegistry sinkRegistry,
+	DetachedSessionTracker detachedTracker,
+	TimeSpan grace)
 {
-	public async Task RunAsync(IDuplexTransport transport, long handle, CancellationToken ct)
+	public async Task RunAsync(IDuplexTransport transport, long candidateHandle, CancellationToken ct)
 	{
-		Func<byte[], ValueTask> output = async data =>
+		long handle;
+
+		var firstFrame = await transport.ReceiveTextAsync(ct);
+		if (firstFrame is null)
 		{
-			var (_, wrapped) = await replayStore.AppendAsync(handle, data, ct);
-			await transport.SendAsync(wrapped, ct);
-		};
+			descriptorGenerator.ReleaseWebSocketDescriptor(candidateHandle);
+			return; // peer closed before saying anything
+		}
 
-		await connectionService.RegisterAsync(
-			handle,
-			transport.RemoteIp,
-			transport.Hostname,
-			transport.Kind,
-			output,
-			output,
-			() => Encoding.UTF8,
-			() => _ = transport.CloseAsync());
+		if (SeqEnvelope.TryReadResume(firstFrame, out var token, out var lastSeq)
+			&& await TryRebindAsync(transport, token, lastSeq, ct) is { } rebound)
+		{
+			descriptorGenerator.ReleaseWebSocketDescriptor(candidateHandle);
+			handle = rebound;
+		}
+		else
+		{
+			handle = candidateHandle;
+			await RegisterFreshAsync(transport, handle, ct);
 
-		// Hand the client a resume token (raw control frame) so it can request replay on reconnect.
-		var token = await resumeTokens.MintAsync(handle, ct);
-		await transport.SendAsync(Encoding.UTF8.GetBytes($"{{\"resumeToken\":\"{token}\"}}"), ct);
+			if (SeqEnvelope.TryReadResume(firstFrame, out var deadToken, out var deadLastSeq))
+			{
+				// resume-to-dead: still replay the old handle's durable buffer, then continue fresh.
+				var (found, oldHandle) = await resumeTokens.TryResolveAsync(deadToken, ct);
+				if (found)
+					foreach (var f in await replayStore.AfterAsync(oldHandle, deadLastSeq, ct))
+						await transport.SendAsync(f, ct);
+			}
+			else if (!IsHello(firstFrame))
+			{
+				// Not hello and not resume — a real command arrived first; don't drop it.
+				await PublishInputAsync(handle, firstFrame, ct);
+			}
+		}
 
 		try
 		{
-			var first = true;
 			while (!ct.IsCancellationRequested)
 			{
 				var message = await transport.ReceiveTextAsync(ct);
-				if (message is null) break; // peer closed
+				if (message is null) break;
 				if (message.Length == 0) continue;
-
-				if (first && SeqEnvelope.TryReadResume(message, out var resumeToken, out var lastSeq))
-				{
-					first = false;
-					await HandleResumeAsync(transport, resumeToken, lastSeq, ct);
-					continue; // resume frame is not a command
-				}
-
-				first = false;
-
-				// Browser-sent JSON control frames are handled here and NOT forwarded as commands.
-				// NAWS reuses the same NAWSUpdateMessage path telnet uses (Height=rows, Width=cols).
-				if (WebSocketControlFrame.TryParseNaws(message, out var cols, out var rows))
-					await publishEndpoint.Publish(new NAWSUpdateMessage(handle, rows, cols), ct);
-				else
-					await publishEndpoint.Publish(new WebSocketInputMessage(handle, message), ct);
+				await PublishInputAsync(handle, message, ct);
 			}
 		}
 		catch (OperationCanceledException)
@@ -77,30 +75,74 @@ public sealed class ConnectionPump(
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error pumping {Kind} connection {Handle}", transport.Kind, handle);
+			logger.LogError(ex, "Error pumping connection {Handle}", handle);
 		}
 		finally
 		{
-			await connectionService.DisconnectAsync(handle);
-			descriptorGenerator.ReleaseWebSocketDescriptor(handle);
+			// Detach (hold the session) instead of disconnecting; the grace timer does the real
+			// disconnect if the client does not come back.
+			sinkRegistry.Get(handle)?.Detach();
+			detachedTracker.Detach(handle, async () =>
+			{
+				await connectionService.DisconnectAsync(handle);
+				descriptorGenerator.ReleaseWebSocketDescriptor(handle);
+				sinkRegistry.Remove(handle);
+			}, grace);
 		}
 	}
 
-	private async Task HandleResumeAsync(IDuplexTransport transport, string resumeToken, long lastSeq, CancellationToken ct)
+	/// <summary>Rebind to a live handle; returns the handle, or null to fall back to the fresh path.</summary>
+	private async Task<long?> TryRebindAsync(IDuplexTransport transport, string token, long lastSeq, CancellationToken ct)
 	{
-		var (found, oldHandle) = await resumeTokens.TryResolveAsync(resumeToken, ct);
-		if (!found)
-		{
-			logger.LogInformation("Resume token expired or unknown; continuing as fresh connection");
-			return;
-		}
+		var (found, oldHandle) = await resumeTokens.TryResolveAsync(token, ct);
+		if (!found) return null;
 
-		var missed = await replayStore.AfterAsync(oldHandle, lastSeq, ct);
-		foreach (var frame in missed)
-			await transport.SendAsync(frame, ct);
+		var sink = sinkRegistry.Get(oldHandle);
+		if (sink is null || connectionService.Get(oldHandle) is null)
+			return null; // session no longer alive → fresh path (will still durably replay)
 
-		await replayStore.DropAsync(oldHandle, ct);
-		await resumeTokens.InvalidateAsync(resumeToken, ct);
-		logger.LogInformation("Replayed {Count} frame(s) after resume of handle {OldHandle}", missed.Count, oldHandle);
+		detachedTracker.Reattach(oldHandle);           // cancel any grace timer
+		var previous = sink.Current;
+		sink.Attach(transport);
+		if (previous is not null)
+			await previous.CloseAsync();               // connection-steal: last write wins
+
+		await transport.SendAsync(Encoding.UTF8.GetBytes("{\"reattached\":true}"), ct);
+		foreach (var f in await replayStore.AfterAsync(oldHandle, lastSeq, ct))
+			await transport.SendAsync(f, ct);
+
+		logger.LogInformation("Reattached to session {Handle}", oldHandle);
+		return oldHandle;
 	}
+
+	private async Task RegisterFreshAsync(IDuplexTransport transport, long handle, CancellationToken ct)
+	{
+		var sink = sinkRegistry.GetOrCreate(handle);
+		sink.Attach(transport);
+
+		Func<byte[], ValueTask> output = async data =>
+		{
+			var (_, wrapped) = await replayStore.AppendAsync(handle, data, ct);
+			var current = sink.Current;
+			if (current is not null)
+				await current.SendAsync(wrapped, ct);
+		};
+
+		await connectionService.RegisterAsync(
+			handle, transport.RemoteIp, transport.Hostname, transport.Kind,
+			output, output, () => Encoding.UTF8, () => _ = sink.Current?.CloseAsync());
+
+		var token = await resumeTokens.MintAsync(handle, ct);
+		await transport.SendAsync(Encoding.UTF8.GetBytes($"{{\"resumeToken\":\"{token}\"}}"), ct);
+	}
+
+	private async Task PublishInputAsync(long handle, string message, CancellationToken ct)
+	{
+		if (WebSocketControlFrame.TryParseNaws(message, out var cols, out var rows))
+			await publishEndpoint.Publish(new NAWSUpdateMessage(handle, rows, cols), ct);
+		else
+			await publishEndpoint.Publish(new WebSocketInputMessage(handle, message), ct);
+	}
+
+	private static bool IsHello(string frame) => frame.Contains("\"hello\"");
 }

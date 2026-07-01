@@ -17,6 +17,9 @@ public class JetStreamReplayIntegrationTests
 	public async Task Replay_and_resume_survive_a_simulated_restart()
 	{
 		var strategy = new NatsTestContainerStrategy();
+		// Unique handle per run so the reused NATS container (24h retention) doesn't accumulate
+		// output from prior runs on the same subject.
+		var h = Math.Abs(BitConverter.ToInt64(Guid.NewGuid().ToByteArray()));
 		try
 		{
 			var url = await strategy.GetUrlAsync();
@@ -25,10 +28,10 @@ public class JetStreamReplayIntegrationTests
 			var replay1 = await JetStreamTerminalReplayStore.CreateAsync(url, NullLogger<JetStreamTerminalReplayStore>.Instance);
 			var tokens1 = await NatsKvResumeTokenStore.CreateAsync(url, NullLogger<NatsKvResumeTokenStore>.Instance);
 
-			await replay1.AppendAsync(9, Encoding.UTF8.GetBytes("one"));   // seq 1
-			await replay1.AppendAsync(9, Encoding.UTF8.GetBytes("two"));   // seq 2
-			await replay1.AppendAsync(9, Encoding.UTF8.GetBytes("three")); // seq 3
-			var token = await tokens1.MintAsync(9);
+			await replay1.AppendAsync(h, Encoding.UTF8.GetBytes("one"));   // seq 1
+			await replay1.AppendAsync(h, Encoding.UTF8.GetBytes("two"));   // seq 2
+			await replay1.AppendAsync(h, Encoding.UTF8.GetBytes("three")); // seq 3
+			var token = await tokens1.MintAsync(h);
 
 			await replay1.DisposeAsync();
 			await tokens1.DisposeAsync();
@@ -40,10 +43,10 @@ public class JetStreamReplayIntegrationTests
 			// Resume token still resolves to the old handle.
 			var (found, handle) = await tokens2.TryResolveAsync(token);
 			await Assert.That(found).IsTrue();
-			await Assert.That(handle).IsEqualTo(9L);
+			await Assert.That(handle).IsEqualTo(h);
 
 			// Buffered output after the client's acked seq is still replayable.
-			var replayed = await replay2.AfterAsync(9, lastSeq: 1);
+			var replayed = await replay2.AfterAsync(h, lastSeq: 1);
 			var seqs = replayed.Select(SeqEnvelope.ReadSeq).OrderBy(x => x).ToArray();
 			await Assert.That(seqs).IsEquivalentTo(new[] { 2L, 3L });
 
