@@ -59,8 +59,10 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		_oob.Clear();
 		wsService.MessageReceived -= HandleMessage;
 		wsService.ConnectionStateChanged -= HandleStateChange;
+		wsService.Reattached -= HandleReattached;
 		wsService.MessageReceived += HandleMessage;
 		wsService.ConnectionStateChanged += HandleStateChange;
+		wsService.Reattached += HandleReattached;
 
 		_logger.LogInformation("Connecting to {ServerUri}", serverUri);
 		await wsService.ConnectAsync(serverUri);
@@ -171,6 +173,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		await wsService.DisconnectAsync();
 		wsService.MessageReceived -= HandleMessage;
 		wsService.ConnectionStateChanged -= HandleStateChange;
+		wsService.Reattached -= HandleReattached;
 		AddSystemLine("Disconnected.");
 	}
 
@@ -313,6 +316,16 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		var connected = state == WebSocketState.Open;
 		ConnectionStateChanged?.Invoke(connected);
 		AddSystemLine(connected ? "Connection established." : $"Connection state: {state}");
+	}
+
+	/// <summary>
+	/// The server rebound this reconnect to the still-live session — we are already authenticated, so
+	/// cancel any pending login wait and do not re-login. The character never left.
+	/// </summary>
+	private void HandleReattached(object? sender, EventArgs e)
+	{
+		_loginCts?.Cancel();
+		AddSystemLine("Session resumed — reconnected without re-login.");
 	}
 
 	private void AddSystemLine(string text) => AddLine(text, TerminalLineSource.System);
