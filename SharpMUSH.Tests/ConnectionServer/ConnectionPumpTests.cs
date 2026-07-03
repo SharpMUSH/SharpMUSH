@@ -146,4 +146,41 @@ public class ConnectionPumpTests
 		// The resume frame is not published as a game command.
 		await bus.DidNotReceive().Publish(Arg.Any<WebSocketInputMessage>(), Arg.Any<CancellationToken>());
 	}
+
+	[Test]
+	public async Task Reattach_rotates_the_resume_token()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var replay = new TerminalReplayStore();
+		var resume = new ResumeTokenService();
+		var registry = new SessionSinkRegistry();
+
+		conn.Get(9).Returns(new ConnectionServerService.ConnectionData(
+			9, null, ConnectionServerService.ConnectionState.Connected,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+			() => System.Text.Encoding.UTF8, () => { }, null,
+			new SharpMUSH.ConnectionServer.Models.ProtocolCapabilities(), null, "websocket"));
+		registry.GetOrCreate(9).Detach();
+		var oldToken = await resume.MintAsync(9);
+
+		var pump = MakePump(bus, conn, desc, replay, resume, registry);
+		var transport = new FakeTransport($"{{\"resume\":\"{oldToken}\",\"lastSeq\":0}}", null);
+
+		await pump.RunAsync(transport, candidateHandle: 99, CancellationToken.None);
+
+		// The used token is now spent ...
+		var (oldStillValid, _) = await resume.TryResolveAsync(oldToken);
+		await Assert.That(oldStillValid).IsFalse();
+
+		// ... and a fresh token was issued that resolves to the same handle.
+		var newTokenFrame = transport.Sent
+			.Select(b => System.Text.Encoding.UTF8.GetString(b))
+			.First(s => s.Contains("resumeToken"));
+		var newToken = System.Text.Json.JsonDocument.Parse(newTokenFrame).RootElement.GetProperty("resumeToken").GetString()!;
+		var (newValid, newHandle) = await resume.TryResolveAsync(newToken);
+		await Assert.That(newValid).IsTrue();
+		await Assert.That(newHandle).IsEqualTo(9L);
+	}
 }

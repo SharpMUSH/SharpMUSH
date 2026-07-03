@@ -111,6 +111,12 @@ public sealed class ConnectionPump(
 		foreach (var f in await replayStore.AfterAsync(oldHandle, lastSeq, ct))
 			await transport.SendAsync(f, ct);
 
+		// Rotate the resume token: the one just used is now spent (single-use / forward-secure), and the
+		// client needs a fresh one so a *subsequent* drop can resume too.
+		await resumeTokens.InvalidateAsync(token, ct);
+		var newToken = await resumeTokens.MintAsync(oldHandle, ct);
+		await transport.SendAsync(Encoding.UTF8.GetBytes($"{{\"resumeToken\":\"{newToken}\"}}"), ct);
+
 		logger.LogInformation("Reattached to session {Handle}", oldHandle);
 		return oldHandle;
 	}
