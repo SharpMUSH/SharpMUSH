@@ -23,7 +23,7 @@
 		     assembly against the host's default load context — so FSharp.Core must be present beside the
 		     host binary for plugin loading to succeed. A host that loads plugins must carry its full
 		     dependency closure; this reference materializes FSharp.Core into the test host output. -->
-		<PackageReference Include="FSharp.Core" Version="10.1.203" />
+		<PackageReference Include="FSharp.Core" Version="10.1.301" />
 	</ItemGroup>
 
 	<ItemGroup>

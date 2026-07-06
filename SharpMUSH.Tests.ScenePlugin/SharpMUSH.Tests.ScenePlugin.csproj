@@ -13,8 +13,8 @@
 
   <ItemGroup>
     <PackageReference Include="TUnit" Version="1.19.16" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.9" />
     <!-- The fake IArangoStorageAccessor references Core.Arango types at runtime. -->
     <PackageReference Include="Core.Arango" Version="3.12.2" />
   </ItemGroup>
