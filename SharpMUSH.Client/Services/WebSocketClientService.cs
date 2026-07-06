@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
 
 namespace SharpMUSH.Client.Services;
 
@@ -12,12 +13,19 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class WebSocketClientService : IWebSocketClientService
 {
+
 	private readonly ILogger<WebSocketClientService> _logger;
 	private ClientWebSocket? _webSocket;
 	private CancellationTokenSource? _cancellationTokenSource;
 	private Task? _receiveTask;
 	private string? _serverUri;
 	private volatile bool _intentionalDisconnect;
+
+	// Reconnect replay is always on: the client unwraps {"seq","data"} envelopes (tracking the highest
+	// seq), stores the server's resume token, and re-sends {"resume","lastSeq"} on reconnect so the
+	// ConnectionServer replays output missed during a drop / network switch.
+	private string? _resumeToken;
+	private long _lastSeq;
 
 	/// <summary>Maximum number of messages to buffer while disconnected.</summary>
 	private const int MaxBufferedMessages = 500;
@@ -32,6 +40,12 @@ public class WebSocketClientService : IWebSocketClientService
 	private static readonly TimeSpan MaxReconnectDelay = TimeSpan.FromSeconds(30);
 
 	public event EventHandler<string>? MessageReceived;
+
+	/// <summary>
+	/// Raised when the server confirms a rebind to an existing (still-logged-in) session, so the
+	/// terminal can skip the re-login it would otherwise run after a reconnect.
+	/// </summary>
+	public event EventHandler? Reattached;
 	public event EventHandler<WebSocketState>? ConnectionStateChanged;
 
 	public bool IsConnected => _webSocket?.State == WebSocketState.Open;
@@ -81,6 +95,15 @@ public class WebSocketClientService : IWebSocketClientService
 
 			ConnectionStateChanged?.Invoke(this, _webSocket.State);
 			_logger.LogInformation("Connected to WebSocket server");
+
+			// Mandatory first frame: resume on reconnect (we hold a token), else hello. The server
+			// uses this to rebind a reconnect to the existing session or register a fresh one.
+			var firstFrame = _resumeToken is not null
+				? ResumeFrameParser.Resume(_resumeToken, _lastSeq)
+				: ResumeFrameParser.Hello();
+			await _webSocket.SendAsync(
+				new ArraySegment<byte>(Encoding.UTF8.GetBytes(firstFrame)),
+				WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
 
 			await FlushSendBufferAsync();
 
@@ -171,6 +194,51 @@ public class WebSocketClientService : IWebSocketClientService
 			_logger.LogDebug("Send buffer cleared ({Count} stale messages discarded)", count);
 	}
 
+	/// <summary>
+	/// Raises <see cref="MessageReceived"/>, first intercepting resume/seq control frames when
+	/// <see cref="ResumeEnabled"/>. A resume-token frame is consumed silently; a seq envelope has its
+	/// sequence tracked and its inner payload surfaced. Anything else is passed through unchanged, so a
+	/// resume-capable client talking to a non-sequencing server still works.
+	/// </summary>
+	private void SurfaceMessage(string message)
+	{
+		if (TryHandleControlFrame(message, out var payload))
+		{
+			if (payload is not null)
+				MessageReceived?.Invoke(this, payload);
+			return;
+		}
+
+		MessageReceived?.Invoke(this, message);
+	}
+
+	private bool TryHandleControlFrame(string message, out string? payload)
+	{
+		payload = null;
+
+		if (ResumeFrameParser.IsReattached(message))
+		{
+			Reattached?.Invoke(this, EventArgs.Empty);
+			return true; // consumed; the session continues, no re-login needed
+		}
+
+		if (ResumeFrameParser.TryReadResumeToken(message, out var token))
+		{
+			_resumeToken = token;
+			return true; // control frame consumed; nothing to surface
+		}
+
+		if (ResumeFrameParser.TryReadSeq(message, out var seq, out var data))
+		{
+			if (seq > _lastSeq)
+				_lastSeq = seq;
+			payload = data;
+			return true;
+		}
+
+		return false;
+	}
+
 	private async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
 	{
 		var buffer = new byte[1024 * 4];
@@ -211,7 +279,7 @@ public class WebSocketClientService : IWebSocketClientService
 				if (result.MessageType == WebSocketMessageType.Text && messageBuffer.Length > 0)
 				{
 					var message = Encoding.UTF8.GetString(messageBuffer.ToArray());
-					MessageReceived?.Invoke(this, message);
+					SurfaceMessage(message);
 				}
 			}
 		}

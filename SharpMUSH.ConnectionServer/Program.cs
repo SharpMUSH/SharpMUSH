@@ -102,6 +102,41 @@ public class Program
 
 		builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
 
+		// Terminal output sequencing + durable NATS-backed replay on reconnect is always on. Buffered
+		// output + resume tokens survive a ConnectionServer restart / instance change; the retention
+		// window is configurable (Replay:RetentionHours, default 24h). URL resolved lazily for the same
+		// reason as the connection state store above.
+		var replayRetention = TimeSpan.FromHours(builder.Configuration.GetValue("Replay:RetentionHours", 24.0));
+		builder.Services.AddSingleton<ITerminalReplayStore>(sp =>
+		{
+			var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
+			return JetStreamTerminalReplayStore
+				.CreateAsync(url, sp.GetRequiredService<ILogger<JetStreamTerminalReplayStore>>(), replayRetention)
+				.GetAwaiter().GetResult();
+		});
+		builder.Services.AddSingleton<IResumeTokenStore>(sp =>
+		{
+			var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
+			return NatsKvResumeTokenStore
+				.CreateAsync(url, sp.GetRequiredService<ILogger<NatsKvResumeTokenStore>>(), replayRetention)
+				.GetAwaiter().GetResult();
+		});
+		// Detached-session pinning: hold a dropped session for a grace window and rebind on reconnect.
+		var graceSeconds = builder.Configuration.GetValue("Session:GraceSeconds", 120.0);
+		builder.Services.AddSingleton<SessionSinkRegistry>();
+		builder.Services.AddSingleton<IGraceScheduler, TimerGraceScheduler>();
+		builder.Services.AddSingleton<DetachedSessionTracker>();
+		builder.Services.AddSingleton(sp => new ConnectionPump(
+			sp.GetRequiredService<ILogger<ConnectionPump>>(),
+			sp.GetRequiredService<IConnectionServerService>(),
+			sp.GetRequiredService<SharpMUSH.Messaging.Abstractions.IMessageBus>(),
+			sp.GetRequiredService<IDescriptorGeneratorService>(),
+			sp.GetRequiredService<ITerminalReplayStore>(),
+			sp.GetRequiredService<IResumeTokenStore>(),
+			sp.GetRequiredService<SessionSinkRegistry>(),
+			sp.GetRequiredService<DetachedSessionTracker>(),
+			TimeSpan.FromSeconds(graceSeconds)));
+
 		builder.Services.AddSingleton<WebSocketServer>();
 
 		// Register the telnet interpreter factory (server mode) with the DI system.
@@ -135,16 +170,23 @@ public class Program
 				x.AddConsumer<MainProcessShutdownConsumer>();
 			});
 
+		var keepAlive = KeepAliveOptions.FromConfiguration(builder.Configuration);
+		builder.Services.AddSingleton(keepAlive);
+
 		builder.WebHost.ConfigureKestrel((context, options) =>
 		{
 			options.AddServerHeader = true;
 
 			options.ListenAnyIP(connectionServerOptions.TelnetPort, listenOptions =>
 			{
+				listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
 				listenOptions.UseConnectionHandler<TelnetServer>();
 			});
 
-			options.ListenAnyIP(connectionServerOptions.HttpPort);
+			options.ListenAnyIP(connectionServerOptions.HttpPort, listenOptions =>
+			{
+				listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
+			});
 		});
 
 		builder.Services.AddControllers();

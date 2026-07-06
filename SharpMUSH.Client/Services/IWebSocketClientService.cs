@@ -18,6 +18,12 @@ public interface IWebSocketClientService : IAsyncDisposable
 	event EventHandler<WebSocketState>? ConnectionStateChanged;
 
 	/// <summary>
+	/// Raised when the server confirms a reconnect rebound to the existing (still-logged-in) session,
+	/// so consumers can skip any re-authentication and keep their session state.
+	/// </summary>
+	event EventHandler? Reattached;
+
+	/// <summary>
 	/// Gets whether the WebSocket is currently connected
 	/// </summary>
 	bool IsConnected { get; }
