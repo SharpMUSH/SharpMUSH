@@ -89,21 +89,14 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 	}
 
 	/// <summary>
-	/// Purges a session's buffered frames from the stream and drops its seq counter. Session ids are
-	/// unique per incarnation, so isolation does not depend on this — but purging reclaims stream storage
-	/// that MaxAge would otherwise hold for the full retention window.
+	/// Releases the ended session's in-memory seq bookkeeping so it does not accumulate for the process
+	/// lifetime. The durable buffer is left to age out via the stream's MaxAge (so a late resume-to-dead
+	/// still works); session ids are unique per incarnation, so nothing depends on an explicit purge.
 	/// </summary>
-	public async ValueTask DropAsync(string session, CancellationToken ct = default)
+	public ValueTask DropAsync(string session, CancellationToken ct = default)
 	{
 		_seq.TryRemove(session, out _);
-		try
-		{
-			await _js.PurgeStreamAsync(StreamName, new StreamPurgeRequest { Filter = Subject(session) }, ct);
-		}
-		catch (NatsJSApiException ex)
-		{
-			_logger.LogWarning(ex, "Replay purge failed for session {Session}", session);
-		}
+		return ValueTask.CompletedTask;
 	}
 
 	public async ValueTask DisposeAsync()

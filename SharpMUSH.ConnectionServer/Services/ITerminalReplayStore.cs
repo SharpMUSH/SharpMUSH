@@ -19,6 +19,6 @@ public interface ITerminalReplayStore
 	/// <summary>Wrapped frames with seq greater than <paramref name="lastSeq"/>, oldest first.</summary>
 	ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default);
 
-	/// <summary>Discards a session's buffered history.</summary>
+	/// <summary>Releases a session's replay resources once it has ended for good.</summary>
 	ValueTask DropAsync(string session, CancellationToken ct = default);
 }

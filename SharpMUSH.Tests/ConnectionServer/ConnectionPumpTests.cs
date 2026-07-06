@@ -57,6 +57,28 @@ public class ConnectionPumpTests
 		public ValueTask DropAsync(string session, CancellationToken ct = default) => ValueTask.CompletedTask;
 	}
 
+	// Records which sessions were dropped, to prove end-of-session cleanup fires.
+	private sealed class DropRecordingReplayStore : ITerminalReplayStore
+	{
+		public List<string> Dropped { get; } = [];
+		private long _seq;
+
+		public ValueTask<(long Seq, byte[] Wrapped)> AppendAsync(string session, byte[] rawUtf8, CancellationToken ct = default)
+		{
+			var seq = ++_seq;
+			return ValueTask.FromResult((seq, SeqEnvelope.Wrap(seq, rawUtf8)));
+		}
+
+		public ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default)
+			=> ValueTask.FromResult<IReadOnlyList<byte[]>>([]);
+
+		public ValueTask DropAsync(string session, CancellationToken ct = default)
+		{
+			Dropped.Add(session);
+			return ValueTask.CompletedTask;
+		}
+	}
+
 	private static ConnectionPump MakePump(
 		IMessageBus bus,
 		IConnectionServerService conn,
@@ -174,6 +196,25 @@ public class ConnectionPumpTests
 			.Select(SeqEnvelope.ReadSeq)
 			.ToArray();
 		await Assert.That(seqs).IsEquivalentTo(new[] { 2L });
+	}
+
+	[Test]
+	public async Task Grace_expiry_releases_the_sessions_replay_state()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var replay = new DropRecordingReplayStore();
+		var scheduler = new ManualScheduler();
+		var tracker = new DetachedSessionTracker(scheduler);
+		var pump = MakePump(bus, conn, desc, replay, tracker: tracker);
+		var transport = new FakeTransport("{\"hello\":1}", null);
+
+		await pump.RunAsync(transport, candidateHandle: 7, CancellationToken.None);
+		await scheduler.Captured!(); // grace expires → the session is over for good
+
+		// The fresh session's per-incarnation id is released so its seq bookkeeping cannot accumulate.
+		await Assert.That(replay.Dropped.Count).IsEqualTo(1);
 	}
 
 	[Test]

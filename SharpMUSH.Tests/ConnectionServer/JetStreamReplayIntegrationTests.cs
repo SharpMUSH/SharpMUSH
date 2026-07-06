@@ -60,31 +60,4 @@ public class JetStreamReplayIntegrationTests
 			await strategy.DisposeAsync();
 		}
 	}
-
-	[Test]
-	public async Task DropAsync_purges_a_handles_buffered_output()
-	{
-		var strategy = new NatsTestContainerStrategy();
-		var session = Guid.NewGuid().ToString("N");
-		try
-		{
-			var url = await strategy.GetUrlAsync();
-			var replay = await JetStreamTerminalReplayStore.CreateAsync(url, NullLogger<JetStreamTerminalReplayStore>.Instance);
-
-			await replay.AppendAsync(session, Encoding.UTF8.GetBytes("one"));
-			await replay.AppendAsync(session, Encoding.UTF8.GetBytes("two"));
-			await Assert.That((await replay.AfterAsync(session, lastSeq: 0)).Count).IsEqualTo(2);
-
-			// Dropping a session reclaims its buffered output.
-			await replay.DropAsync(session);
-
-			await Assert.That(await replay.AfterAsync(session, lastSeq: 0)).IsEmpty();
-
-			await replay.DisposeAsync();
-		}
-		finally
-		{
-			await strategy.DisposeAsync();
-		}
-	}
 }

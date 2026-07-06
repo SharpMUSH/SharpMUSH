@@ -25,6 +25,7 @@ public sealed class ConnectionPump(
 	public async Task RunAsync(IDuplexTransport transport, long candidateHandle, CancellationToken ct)
 	{
 		long handle;
+		string session;
 
 		var firstFrame = await transport.ReceiveTextAsync(ct);
 		if (firstFrame is null)
@@ -37,12 +38,12 @@ public sealed class ConnectionPump(
 			&& await TryRebindAsync(transport, token, lastSeq, ct) is { } rebound)
 		{
 			descriptorGenerator.ReleaseWebSocketDescriptor(candidateHandle);
-			handle = rebound;
+			(handle, session) = rebound;
 		}
 		else
 		{
 			handle = candidateHandle;
-			await RegisterFreshAsync(transport, handle, ct);
+			session = await RegisterFreshAsync(transport, handle, ct);
 
 			if (SeqEnvelope.TryReadResume(firstFrame, out var deadToken, out var deadLastSeq))
 			{
@@ -53,7 +54,7 @@ public sealed class ConnectionPump(
 					foreach (var f in await replayStore.AfterAsync(oldSession, deadLastSeq, ct))
 						await transport.SendAsync(f, ct);
 			}
-			else if (!IsHello(firstFrame))
+			else if (!SeqEnvelope.IsHello(firstFrame))
 			{
 				// Not hello and not resume — a real command arrived first; don't drop it.
 				await PublishInputAsync(handle, firstFrame, ct);
@@ -90,12 +91,15 @@ public sealed class ConnectionPump(
 				await connectionService.DisconnectAsync(handle);
 				descriptorGenerator.ReleaseWebSocketDescriptor(handle);
 				sinkRegistry.Remove(handle);
+				// The session is over for good — release its replay bookkeeping (the durable buffer itself
+				// ages out via the store's retention, so a late resume-to-dead still works).
+				await replayStore.DropAsync(session, CancellationToken.None);
 			}, grace);
 		}
 	}
 
-	/// <summary>Rebind to a live handle; returns the handle, or null to fall back to the fresh path.</summary>
-	private async Task<long?> TryRebindAsync(IDuplexTransport transport, string token, long lastSeq, CancellationToken ct)
+	/// <summary>Rebind to a live handle; returns the (handle, session), or null to fall back to the fresh path.</summary>
+	private async Task<(long Handle, string Session)?> TryRebindAsync(IDuplexTransport transport, string token, long lastSeq, CancellationToken ct)
 	{
 		var (found, oldHandle, oldSession) = await resumeTokens.TryResolveAsync(token, ct);
 		if (!found) return null;
@@ -121,10 +125,11 @@ public sealed class ConnectionPump(
 		await transport.SendAsync(SeqEnvelope.ResumeToken(newToken), ct);
 
 		logger.LogInformation("Reattached to session {Handle}", oldHandle);
-		return oldHandle;
+		return (oldHandle, oldSession);
 	}
 
-	private async Task RegisterFreshAsync(IDuplexTransport transport, long handle, CancellationToken ct)
+	/// <summary>Registers a fresh session and returns its per-incarnation session id.</summary>
+	private async Task<string> RegisterFreshAsync(IDuplexTransport transport, long handle, CancellationToken ct)
 	{
 		// A fresh incarnation gets a unique session id. Replay is keyed by it (never by the reusable
 		// handle), so a recycled handle's new occupant can never read this session's buffer, and vice
@@ -152,6 +157,7 @@ public sealed class ConnectionPump(
 
 		var token = await resumeTokens.MintAsync(handle, session, ct);
 		await transport.SendAsync(SeqEnvelope.ResumeToken(token), ct);
+		return session;
 	}
 
 	private async Task PublishInputAsync(long handle, string message, CancellationToken ct)
@@ -161,6 +167,4 @@ public sealed class ConnectionPump(
 		else
 			await publishEndpoint.Publish(new WebSocketInputMessage(handle, message), ct);
 	}
-
-	private static bool IsHello(string frame) => SeqEnvelope.IsHello(frame);
 }

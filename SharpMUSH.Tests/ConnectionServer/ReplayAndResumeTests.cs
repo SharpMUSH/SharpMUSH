@@ -98,6 +98,17 @@ public class ReplayAndResumeTests
 	}
 
 	[Test]
+	public async Task ReplayStore_Drop_releases_a_sessions_buffer()
+	{
+		var store = new TerminalReplayStore();
+		await store.AppendAsync("sess", Encoding.UTF8.GetBytes("x"));
+
+		await store.DropAsync("sess");
+
+		await Assert.That(await store.AfterAsync("sess", lastSeq: 0)).IsEmpty();
+	}
+
+	[Test]
 	public async Task ResumeToken_carries_both_handle_and_session()
 	{
 		var svc = new ResumeTokenService();
