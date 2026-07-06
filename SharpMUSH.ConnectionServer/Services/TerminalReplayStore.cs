@@ -12,7 +12,7 @@ public sealed class TerminalReplayStore : ITerminalReplayStore
 	private const int MaxFramesPerHandle = 200;
 	private static readonly TimeSpan MaxAge = TimeSpan.FromSeconds(30);
 
-	private readonly ConcurrentDictionary<long, HandleBuffer> _buffers = new();
+	private readonly ConcurrentDictionary<string, HandleBuffer> _buffers = new();
 	private readonly Func<DateTimeOffset> _now;
 
 	public TerminalReplayStore() : this(() => DateTimeOffset.UtcNow) { }
@@ -20,20 +20,20 @@ public sealed class TerminalReplayStore : ITerminalReplayStore
 	// Test seam: inject a clock so age-based eviction is deterministic.
 	public TerminalReplayStore(Func<DateTimeOffset> now) => _now = now;
 
-	public ValueTask<(long Seq, byte[] Wrapped)> AppendAsync(long handle, byte[] rawUtf8, CancellationToken ct = default)
+	public ValueTask<(long Seq, byte[] Wrapped)> AppendAsync(string session, byte[] rawUtf8, CancellationToken ct = default)
 	{
-		var buffer = _buffers.GetOrAdd(handle, _ => new HandleBuffer());
+		var buffer = _buffers.GetOrAdd(session, _ => new HandleBuffer());
 		return ValueTask.FromResult(buffer.Append(rawUtf8, _now(), MaxFramesPerHandle));
 	}
 
-	public ValueTask<IReadOnlyList<byte[]>> AfterAsync(long handle, long lastSeq, CancellationToken ct = default)
-		=> ValueTask.FromResult(_buffers.TryGetValue(handle, out var buffer)
+	public ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default)
+		=> ValueTask.FromResult(_buffers.TryGetValue(session, out var buffer)
 			? buffer.After(lastSeq, _now(), MaxAge)
 			: []);
 
-	public ValueTask DropAsync(long handle, CancellationToken ct = default)
+	public ValueTask DropAsync(string session, CancellationToken ct = default)
 	{
-		_buffers.TryRemove(handle, out _);
+		_buffers.TryRemove(session, out _);
 		return ValueTask.CompletedTask;
 	}
 

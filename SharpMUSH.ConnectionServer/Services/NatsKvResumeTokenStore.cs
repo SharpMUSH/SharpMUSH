@@ -39,19 +39,26 @@ public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable
 		return new NatsKvResumeTokenStore(nats, store, logger);
 	}
 
-	public async ValueTask<string> MintAsync(long handle, CancellationToken ct = default)
+	public async ValueTask<string> MintAsync(long handle, string session, CancellationToken ct = default)
 	{
 		var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
-		await _store.PutAsync(token, handle.ToString(), cancellationToken: ct);
+		// Value is "<handle>:<session>" — handle is numeric and the session id is a hex GUID, so ':' is an
+		// unambiguous separator.
+		await _store.PutAsync(token, $"{handle}:{session}", cancellationToken: ct);
 		return token;
 	}
 
-	public async ValueTask<(bool Found, long Handle)> TryResolveAsync(string token, CancellationToken ct = default)
+	public async ValueTask<(bool Found, long Handle, string Session)> TryResolveAsync(string token, CancellationToken ct = default)
 	{
 		var result = await _store.TryGetEntryAsync<string>(token, cancellationToken: ct);
 		if (!result.Success || result.Value.Value is null)
-			return (false, 0L);
-		return long.TryParse(result.Value.Value, out var handle) ? (true, handle) : (false, 0L);
+			return (false, 0L, string.Empty);
+
+		var value = result.Value.Value;
+		var sep = value.IndexOf(':');
+		if (sep <= 0 || !long.TryParse(value.AsSpan(0, sep), out var handle))
+			return (false, 0L, string.Empty);
+		return (true, handle, value[(sep + 1)..]);
 	}
 
 	public async ValueTask InvalidateAsync(string token, CancellationToken ct = default)

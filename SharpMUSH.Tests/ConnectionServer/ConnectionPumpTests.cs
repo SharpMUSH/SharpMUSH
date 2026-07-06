@@ -35,6 +35,28 @@ public class ConnectionPumpTests
 		}
 	}
 
+	// A replay store that honours its cancellation token (like the real JetStream store, whose
+	// PublishAsync throws when the token is canceled), so a canceled token in the output path is observable.
+	private sealed class CtHonoringReplayStore : ITerminalReplayStore
+	{
+		public List<byte[]> Appended { get; } = [];
+		private long _seq;
+
+		public ValueTask<(long Seq, byte[] Wrapped)> AppendAsync(string session, byte[] rawUtf8, CancellationToken ct = default)
+		{
+			ct.ThrowIfCancellationRequested();
+			var seq = ++_seq;
+			var wrapped = SeqEnvelope.Wrap(seq, rawUtf8);
+			Appended.Add(wrapped);
+			return ValueTask.FromResult((seq, wrapped));
+		}
+
+		public ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default)
+			=> ValueTask.FromResult<IReadOnlyList<byte[]>>([]);
+
+		public ValueTask DropAsync(string session, CancellationToken ct = default) => ValueTask.CompletedTask;
+	}
+
 	private static ConnectionPump MakePump(
 		IMessageBus bus,
 		IConnectionServerService conn,
@@ -72,6 +94,86 @@ public class ConnectionPumpTests
 		// Drop now DETACHES rather than disconnecting immediately.
 		await conn.DidNotReceive().DisconnectAsync(42);
 		await Assert.That(tracker.IsDetached(42)).IsTrue();
+	}
+
+	[Test]
+	public async Task First_frame_that_merely_contains_hello_is_published_not_swallowed()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var pump = MakePump(bus, conn, desc);
+		// A real first command whose text contains the substring "hello" (with quotes) — NOT the
+		// {"hello":1} handshake. It must reach the game, not be misread as the hello frame and dropped.
+		var transport = new FakeTransport("say \"hello\"", null);
+
+		await pump.RunAsync(transport, candidateHandle: 7, CancellationToken.None);
+
+		await bus.Received(1).Publish(
+			Arg.Is<WebSocketInputMessage>(m => m.Handle == 7 && m.Input == "say \"hello\""),
+			Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task Output_still_buffers_after_the_connection_token_is_canceled()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var replay = new CtHonoringReplayStore();
+
+		Func<byte[], ValueTask>? output = null;
+		_ = conn.RegisterAsync(
+			Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+			Arg.Do<Func<byte[], ValueTask>>(o => output = o),
+			Arg.Any<Func<byte[], ValueTask>>(),
+			Arg.Any<Func<System.Text.Encoding>>(), Arg.Any<Action>(),
+			Arg.Any<Func<string, string, ValueTask>?>(),
+			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>());
+
+		var pump = MakePump(bus, conn, desc, replay);
+		var cts = new CancellationTokenSource();
+		var transport = new FakeTransport("{\"hello\":1}", null);
+
+		await pump.RunAsync(transport, candidateHandle: 7, cts.Token);
+
+		// The socket dropped: RequestAborted (the connection token) is now canceled. Engine output during
+		// the detached grace window must STILL be buffered for replay — the output path must not be
+		// coupled to the dropped socket's cancellation token.
+		cts.Cancel();
+		await output!(System.Text.Encoding.UTF8.GetBytes("engine output"));
+
+		await Assert.That(replay.Appended).IsNotEmpty();
+	}
+
+	[Test]
+	public async Task Resume_to_dead_replays_the_tokens_session_not_the_reused_handle()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var replay = new TerminalReplayStore();
+		var resume = new ResumeTokenService();
+
+		// A now-DEAD session under handle 5 (conn.Get(5) is null → the rebind path fails, resume-to-dead
+		// fires). Its buffered output lives under a per-incarnation session id, and its token carries that id.
+		const string deadSession = "dead-incarnation";
+		await replay.AppendAsync(deadSession, System.Text.Encoding.UTF8.GetBytes("one")); // seq 1
+		await replay.AppendAsync(deadSession, System.Text.Encoding.UTF8.GetBytes("two")); // seq 2
+		var deadToken = await resume.MintAsync(5, deadSession);
+
+		var pump = MakePump(bus, conn, desc, replay, resume);
+		// The client reconnects onto the SAME, now-recycled handle 5 with the dead session's token.
+		var transport = new FakeTransport($"{{\"resume\":\"{deadToken}\",\"lastSeq\":1}}", null);
+
+		await pump.RunAsync(transport, candidateHandle: 5, CancellationToken.None);
+
+		// The dead incarnation's post-ack frame is replayed (keyed by the token's session, not the handle).
+		var seqs = transport.Sent
+			.Where(b => SeqEnvelope.TryReadSeq(b, out _))
+			.Select(SeqEnvelope.ReadSeq)
+			.ToArray();
+		await Assert.That(seqs).IsEquivalentTo(new[] { 2L });
 	}
 
 	[Test]
@@ -114,9 +216,10 @@ public class ConnectionPumpTests
 			new SharpMUSH.ConnectionServer.Models.ProtocolCapabilities(), null, "websocket"));
 		var sink9 = registry.GetOrCreate(9);
 		sink9.Detach();
-		await replay.AppendAsync(9, System.Text.Encoding.UTF8.GetBytes("one")); // seq 1
-		await replay.AppendAsync(9, System.Text.Encoding.UTF8.GetBytes("two")); // seq 2
-		var token = await resume.MintAsync(9);
+		const string session9 = "live-incarnation-9";
+		await replay.AppendAsync(session9, System.Text.Encoding.UTF8.GetBytes("one")); // seq 1
+		await replay.AppendAsync(session9, System.Text.Encoding.UTF8.GetBytes("two")); // seq 2
+		var token = await resume.MintAsync(9, session9);
 
 		var pump = MakePump(bus, conn, desc, replay, resume, registry, tracker);
 		var transport = new FakeTransport($"{{\"resume\":\"{token}\",\"lastSeq\":1}}", null);
@@ -163,7 +266,7 @@ public class ConnectionPumpTests
 			() => System.Text.Encoding.UTF8, () => { }, null,
 			new SharpMUSH.ConnectionServer.Models.ProtocolCapabilities(), null, "websocket"));
 		registry.GetOrCreate(9).Detach();
-		var oldToken = await resume.MintAsync(9);
+		var oldToken = await resume.MintAsync(9, "live-incarnation-9");
 
 		var pump = MakePump(bus, conn, desc, replay, resume, registry);
 		var transport = new FakeTransport($"{{\"resume\":\"{oldToken}\",\"lastSeq\":0}}", null);
@@ -171,7 +274,7 @@ public class ConnectionPumpTests
 		await pump.RunAsync(transport, candidateHandle: 99, CancellationToken.None);
 
 		// The used token is now spent ...
-		var (oldStillValid, _) = await resume.TryResolveAsync(oldToken);
+		var (oldStillValid, _, _) = await resume.TryResolveAsync(oldToken);
 		await Assert.That(oldStillValid).IsFalse();
 
 		// ... and a fresh token was issued that resolves to the same handle.
@@ -179,8 +282,10 @@ public class ConnectionPumpTests
 			.Select(b => System.Text.Encoding.UTF8.GetString(b))
 			.First(s => s.Contains("resumeToken"));
 		var newToken = System.Text.Json.JsonDocument.Parse(newTokenFrame).RootElement.GetProperty("resumeToken").GetString()!;
-		var (newValid, newHandle) = await resume.TryResolveAsync(newToken);
+		var (newValid, newHandle, newSession) = await resume.TryResolveAsync(newToken);
 		await Assert.That(newValid).IsTrue();
 		await Assert.That(newHandle).IsEqualTo(9L);
+		// The rotated token stays bound to the SAME incarnation, so a further drop still replays this session.
+		await Assert.That(newSession).IsEqualTo("live-incarnation-9");
 	}
 }

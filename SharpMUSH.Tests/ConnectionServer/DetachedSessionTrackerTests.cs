@@ -53,4 +53,38 @@ public class DetachedSessionTrackerTests
 
 		await Assert.That(fired).IsEqualTo(0);
 	}
+
+	[Test]
+	public async Task Fire_routes_a_synchronous_throw_to_onFault()
+	{
+		Exception? observed = null;
+		var boom = new InvalidOperationException("sync boom");
+
+		TimerGraceScheduler.Fire(() => throw boom, ex => observed = ex);
+
+		await Assert.That(observed).IsEqualTo(boom);
+	}
+
+	[Test]
+	public async Task Fire_observes_an_async_fault_instead_of_leaving_it_unobserved()
+	{
+		Exception? observed = null;
+		var boom = new InvalidOperationException("async boom");
+
+		// A faulted Task returned by the action must be observed (and routed), not dropped via `_ = action()`.
+		TimerGraceScheduler.Fire(() => Task.FromException(boom), ex => observed = ex);
+
+		await Assert.That(observed).IsNotNull();
+		await Assert.That(observed!.Message).IsEqualTo("async boom");
+	}
+
+	[Test]
+	public async Task Fire_does_not_invoke_onFault_on_success()
+	{
+		var faulted = false;
+
+		TimerGraceScheduler.Fire(() => Task.CompletedTask, _ => faulted = true);
+
+		await Assert.That(faulted).IsFalse();
+	}
 }

@@ -46,10 +46,11 @@ public sealed class ConnectionPump(
 
 			if (SeqEnvelope.TryReadResume(firstFrame, out var deadToken, out var deadLastSeq))
 			{
-				// resume-to-dead: still replay the old handle's durable buffer, then continue fresh.
-				var (found, oldHandle) = await resumeTokens.TryResolveAsync(deadToken, ct);
+				// resume-to-dead: still replay the old session's durable buffer, then continue fresh. Keyed
+				// by the token's session id, so it never picks up a later occupant of the same (reused) handle.
+				var (found, _, oldSession) = await resumeTokens.TryResolveAsync(deadToken, ct);
 				if (found)
-					foreach (var f in await replayStore.AfterAsync(oldHandle, deadLastSeq, ct))
+					foreach (var f in await replayStore.AfterAsync(oldSession, deadLastSeq, ct))
 						await transport.SendAsync(f, ct);
 			}
 			else if (!IsHello(firstFrame))
@@ -96,7 +97,7 @@ public sealed class ConnectionPump(
 	/// <summary>Rebind to a live handle; returns the handle, or null to fall back to the fresh path.</summary>
 	private async Task<long?> TryRebindAsync(IDuplexTransport transport, string token, long lastSeq, CancellationToken ct)
 	{
-		var (found, oldHandle) = await resumeTokens.TryResolveAsync(token, ct);
+		var (found, oldHandle, oldSession) = await resumeTokens.TryResolveAsync(token, ct);
 		if (!found) return null;
 
 		var sink = sinkRegistry.Get(oldHandle);
@@ -110,13 +111,13 @@ public sealed class ConnectionPump(
 			await previous.CloseAsync();               // connection-steal: last write wins
 
 		await transport.SendAsync(SeqEnvelope.Reattached(), ct);
-		foreach (var f in await replayStore.AfterAsync(oldHandle, lastSeq, ct))
+		foreach (var f in await replayStore.AfterAsync(oldSession, lastSeq, ct))
 			await transport.SendAsync(f, ct);
 
 		// Rotate the resume token: the one just used is now spent (single-use / forward-secure), and the
-		// client needs a fresh one so a *subsequent* drop can resume too.
+		// client needs a fresh one so a *subsequent* drop can resume too. Same incarnation → same session id.
 		await resumeTokens.InvalidateAsync(token, ct);
-		var newToken = await resumeTokens.MintAsync(oldHandle, ct);
+		var newToken = await resumeTokens.MintAsync(oldHandle, oldSession, ct);
 		await transport.SendAsync(SeqEnvelope.ResumeToken(newToken), ct);
 
 		logger.LogInformation("Reattached to session {Handle}", oldHandle);
@@ -125,22 +126,31 @@ public sealed class ConnectionPump(
 
 	private async Task RegisterFreshAsync(IDuplexTransport transport, long handle, CancellationToken ct)
 	{
+		// A fresh incarnation gets a unique session id. Replay is keyed by it (never by the reusable
+		// handle), so a recycled handle's new occupant can never read this session's buffer, and vice
+		// versa — closing the cross-session replay leak at its root rather than relying on purge timing.
+		var session = Guid.NewGuid().ToString("N");
+
 		var sink = sinkRegistry.GetOrCreate(handle);
 		sink.Attach(transport);
 
+		// The output path outlives this socket: after a drop the session is DETACHED and engine output
+		// must keep buffering to the replay store (and flow to a reattached transport) during the grace
+		// window. So it must NOT capture the per-connection token — that is RequestAborted, which cancels
+		// on drop and would abort buffering exactly when replay matters most.
 		Func<byte[], ValueTask> output = async data =>
 		{
-			var (_, wrapped) = await replayStore.AppendAsync(handle, data, ct);
+			var (_, wrapped) = await replayStore.AppendAsync(session, data, CancellationToken.None);
 			var current = sink.Current;
 			if (current is not null)
-				await current.SendAsync(wrapped, ct);
+				await current.SendAsync(wrapped, CancellationToken.None);
 		};
 
 		await connectionService.RegisterAsync(
 			handle, transport.RemoteIp, transport.Hostname, transport.Kind,
 			output, output, () => Encoding.UTF8, () => _ = sink.Current?.CloseAsync());
 
-		var token = await resumeTokens.MintAsync(handle, ct);
+		var token = await resumeTokens.MintAsync(handle, session, ct);
 		await transport.SendAsync(SeqEnvelope.ResumeToken(token), ct);
 	}
 
@@ -152,5 +162,5 @@ public sealed class ConnectionPump(
 			await publishEndpoint.Publish(new WebSocketInputMessage(handle, message), ct);
 	}
 
-	private static bool IsHello(string frame) => frame.Contains("\"hello\"");
+	private static bool IsHello(string frame) => SeqEnvelope.IsHello(frame);
 }
