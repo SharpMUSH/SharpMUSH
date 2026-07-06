@@ -74,7 +74,10 @@ public class PlaySidebarTests : BunitContext
         play.Lines.Returns(Array.Empty<SharpMUSH.Client.Models.TerminalLine>());
         Services.AddSingleton<IPlayTerminalService>(play);
 
-        var cut = Render<Play>();
+        // Play now hosts a MudMenu (terminal settings) which requires a MudPopoverProvider in
+        // the render tree, so host it inside MudHarness (provider contributes only an empty
+        // container, so the sidebar assertion is unaffected).
+        var cut = Render<MudHarness>(p => p.AddChildContent<Play>());
 
         store.Set("room.contents", "{\"who\":[{\"dbref\":\"#5\",\"name\":\"Bob\",\"cmd\":\"look #5\"}]}");
 

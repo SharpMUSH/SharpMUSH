@@ -19,7 +19,7 @@
                 No account needed to read.
             </p>
             <div class="wiki-hero-search">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:16px;color:var(--text-faint);" />
+                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:1rem;color:var(--text-faint);" />
                 <input placeholder="Search the wiki…" value="@_search"
                        @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
             </div>
@@ -48,7 +48,7 @@
             {
                 <div class="wiki-cat">
                     <div class="wiki-cat-head">
-                        <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:16px;color:var(--accent);" />
+                        <MudIcon Icon="@Icons.Material.Filled.Folder" Style="font-size:1rem;color:var(--accent);" />
                         <h3 class="wiki-cat-title">@group.Key</h3>
                         <span class="wiki-cat-count">@group.Count()</span>
                     </div>
@@ -61,7 +61,7 @@
                                         <span class="wiki-page-title">@pg.Title</span>
                                         @if (pg.IsProtected)
                                         {
-                                            <span class="wiki-lock"><MudIcon Icon="@Icons.Material.Filled.Lock" Style="font-size:10px;" /> locked</span>
+                                            <span class="wiki-lock"><MudIcon Icon="@Icons.Material.Filled.Lock" Style="font-size:0.625rem;" /> locked</span>
                                         }
                                         @if (!pg.Published)
                                         {

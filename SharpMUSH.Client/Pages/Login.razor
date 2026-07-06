@@ -7,45 +7,45 @@
 
 <PageTitle>Sign In — SharpMUSH</PageTitle>
 
-<div style="min-height:100vh;display:flex;align-items:stretch;background:var(--bg);">
+<div style="min-height:100vh;min-height:100svh;display:flex;align-items:stretch;background:var(--bg);">
     <MudGrid Spacing="0" Style="width:100%;margin:0;">
 
-        <MudItem xs="12" sm="7" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);background:linear-gradient(135deg,#101113 0%,#16181b 100%);position:relative;overflow:hidden;">
+        <MudItem xs="12" sm="7" Class="login-hero" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);background:linear-gradient(135deg,#101113 0%,#16181b 100%);position:relative;overflow:hidden;">
             <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%, rgba(var(--glow),0.08) 0%, transparent 60%);pointer-events:none;"></div>
             <div style="max-width:420px;position:relative;z-index:1;">
-                <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;">
+                <div style="display:flex;align-items:center;gap:0.875rem;margin-bottom:1.75rem;">
                     <img src="assets/Logo.svg" alt="SharpMUSH" style="height:48px;opacity:0.95;" />
                     <div>
                         <MudText Typo="Typo.h4" Style="font-weight:700;line-height:1.15;">SharpMUSH</MudText>
-                        <MudText Style="font-size:13px;color:var(--text-dim);">A Modern MUSH Server</MudText>
+                        <MudText Style="font-size:0.8125rem;color:var(--text-dim);">A Modern MUSH Server</MudText>
                     </div>
                 </div>
-                <MudText Typo="Typo.h5" Style="font-weight:600;margin-bottom:12px;line-height:1.3;">
+                <MudText Typo="Typo.h5" Style="font-weight:600;margin-bottom:0.75rem;line-height:1.3;">
                     A living world awaits.
                 </MudText>
-                <MudText Style="color:var(--text-dim);line-height:1.65;margin-bottom:24px;">
+                <MudText Style="color:var(--text-dim);line-height:1.65;margin-bottom:1.5rem;">
                     A text-based collaborative roleplay server built on the PennMUSH tradition —
                     reimagined with modern infrastructure and an open-source heart.
                 </MudText>
-                <div style="display:flex;gap:20px;">
+                <div style="display:flex;gap:1.25rem;">
                     <div style="text-align:center;">
-                        <MudText Style="font-size:22px;font-weight:700;color:var(--accent);">—</MudText>
-                        <MudText Style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;">Players</MudText>
+                        <MudText Style="font-size:1.375rem;font-weight:700;color:var(--accent);">—</MudText>
+                        <MudText Style="font-size:0.6875rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;">Players</MudText>
                     </div>
                     <div style="text-align:center;">
-                        <MudText Style="font-size:22px;font-weight:700;color:var(--accent);">—</MudText>
-                        <MudText Style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;">Scenes</MudText>
+                        <MudText Style="font-size:1.375rem;font-weight:700;color:var(--accent);">—</MudText>
+                        <MudText Style="font-size:0.6875rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;">Scenes</MudText>
                     </div>
                     <div style="text-align:center;">
-                        <MudText Style="font-size:22px;font-weight:700;color:var(--accent);">—</MudText>
-                        <MudText Style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;">Wiki Pages</MudText>
+                        <MudText Style="font-size:1.375rem;font-weight:700;color:var(--accent);">—</MudText>
+                        <MudText Style="font-size:0.6875rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;">Wiki Pages</MudText>
                     </div>
                 </div>
             </div>
         </MudItem>
 
-        <MudItem xs="12" sm="5" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);">
-            <MudPaper Elevation="4" Style="width:100%;max-width:380px;padding:32px;border-radius:var(--radius-lg);background:var(--surface);border:1px solid var(--border);">
+        <MudItem xs="12" sm="5" Class="login-form" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);">
+            <MudPaper Elevation="4" Class="login-form-paper" Style="width:100%;max-width:380px;padding:2rem;border-radius:var(--radius-lg);background:var(--surface);border:1px solid var(--border);">
 
                 <MudTabs @bind-ActivePanelIndex="_tabIndex" Elevation="0" Rounded="true" Centered="true" Class="mb-5">
                     <MudTabPanel Text="Sign In">
@@ -67,7 +67,7 @@
 
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                                        Disabled="_busy" OnClick="LoginAsync"
-                                       Style="font-weight:600;font-size:15px;height:44px;">
+                                       Style="font-weight:600;font-size:0.9375rem;height:44px;">
                                 @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
                                 Connect
                             </MudButton>
@@ -97,7 +97,7 @@
 
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                                        Disabled="_busy" OnClick="RegisterAsync"
-                                       Style="font-weight:600;font-size:15px;height:44px;">
+                                       Style="font-weight:600;font-size:0.9375rem;height:44px;">
                                 @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
                                 Create Account
                             </MudButton>
@@ -106,7 +106,7 @@
                 </MudTabs>
 
                 <MudDivider Class="my-3" />
-                <MudText Align="Align.Center" Style="font-size:13px;color:var(--text-faint);">
+                <MudText Align="Align.Center" Style="font-size:0.8125rem;color:var(--text-faint);">
                     Or connect directly via the
                     <MudLink Href="/play" Style="color:var(--accent);">terminal</MudLink>
                 </MudText>

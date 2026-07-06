@@ -19,10 +19,10 @@
         </div>
         <div class="appadmin-actions">
             <a class="aa-btn" href="/softcode">
-                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:14px;" /> Schema registry
+                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:0.875rem;" /> Schema registry
             </a>
             <button type="button" class="aa-btn aa-btn--primary" @onclick="@(() => Edit(null))">
-                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:14px;" /> New application
+                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> New application
             </button>
         </div>
     </div>
@@ -38,7 +38,7 @@
         {
             var (val, label, sub, icon, color) = tile;
             <div class="aa-stat">
-                <MudIcon Icon="@icon" Style="@($"font-size:22px;color:{color};")" />
+                <MudIcon Icon="@icon" Style="@($"font-size:1.375rem;color:{color};")" />
                 <div>
                     <div class="aa-stat-val" style="@($"color:{color};")">@(_loading ? "—" : val)</div>
                     <div class="aa-stat-label">@label</div>
@@ -57,7 +57,7 @@
         <div class="appadmin-grid">
             <div class="appadmin-list">
                 <div class="aa-search">
-                    <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:14px;color:var(--text-faint);" />
+                    <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;color:var(--text-faint);" />
                     <input value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)"
                            placeholder="Search apps or schemas…" />
                 </div>
@@ -73,7 +73,7 @@
                     <button type="button" class="aa-card @(on ? "aa-card--on" : "")" @onclick="@(() => _selected = a)">
                         <div class="aa-card-top">
                             <span class="aa-card-icon">
-                                <MudIcon Icon="@(a.Icon ?? Icons.Material.Filled.Apps)" Style="font-size:17px;" />
+                                <MudIcon Icon="@(a.Icon ?? Icons.Material.Filled.Apps)" Style="font-size:1.0625rem;" />
                             </span>
                             <div style="flex:1;min-width:0;">
                                 <div class="aa-card-name">@a.DisplayName</div>
@@ -89,10 +89,10 @@
                 @if (_selected is null)
                 {
                     <div class="aa-empty-detail">
-                        <MudIcon Icon="@Icons.Material.Filled.Apps" Style="font-size:40px;color:var(--text-faint);opacity:0.4;" />
+                        <MudIcon Icon="@Icons.Material.Filled.Apps" Style="font-size:2.5rem;color:var(--text-faint);opacity:0.4;" />
                         <span>Select an application, or register a new one.</span>
                         <button type="button" class="aa-btn aa-btn--primary" @onclick="@(() => Edit(null))">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:14px;" /> Register application
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> Register application
                         </button>
                     </div>
                 }
@@ -100,10 +100,10 @@
                 {
                     <div class="aa-detail-head">
                         <span class="aa-detail-icon">
-                            <MudIcon Icon="@(_selected.Icon ?? Icons.Material.Filled.Apps)" Style="font-size:22px;" />
+                            <MudIcon Icon="@(_selected.Icon ?? Icons.Material.Filled.Apps)" Style="font-size:1.375rem;" />
                         </span>
                         <div style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;">
                                 <h2 class="aa-detail-name">@_selected.DisplayName</h2>
                                 <span class="aa-kind" style="@($"background:{KindBackground(_selected.Kind)};color:{KindColor(_selected.Kind)};")">@_selected.Kind</span>
                                 <span class="aa-role">@_selected.MinimumRole</span>
@@ -112,10 +112,10 @@
                         </div>
                         <div class="aa-detail-headbtns">
                             <button type="button" class="aa-icon-btn" title="Edit" @onclick="@(() => Edit(_selected))">
-                                <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:16px;" />
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:1rem;" />
                             </button>
                             <button type="button" class="aa-icon-btn aa-icon-btn--danger" title="Remove" @onclick="@(() => Delete(_selected))">
-                                <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:16px;" />
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:1rem;" />
                             </button>
                         </div>
                     </div>
@@ -155,15 +155,15 @@
                         <div class="aa-section-label">Actions</div>
                         <div class="aa-actions">
                             <a class="aa-btn aa-btn--primary" href="@($"/apps/{_selected.Slug}")">
-                                <MudIcon Icon="@Icons.Material.Filled.OpenInBrowser" Style="font-size:14px;" /> Open app
+                                <MudIcon Icon="@Icons.Material.Filled.OpenInBrowser" Style="font-size:0.875rem;" /> Open app
                             </a>
                             <a class="aa-btn" href="/softcode">
-                                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:14px;" /> Edit in Softcode
+                                <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:0.875rem;" /> Edit in Softcode
                             </a>
                             @if (!string.IsNullOrEmpty(_selected.SchemaUrl))
                             {
                                 <a class="aa-btn" href="@_selected.SchemaUrl" target="_blank">
-                                    <MudIcon Icon="@Icons.Material.Filled.Link" Style="font-size:14px;" /> View schema
+                                    <MudIcon Icon="@Icons.Material.Filled.Link" Style="font-size:0.875rem;" /> View schema
                                 </a>
                             }
                         </div>

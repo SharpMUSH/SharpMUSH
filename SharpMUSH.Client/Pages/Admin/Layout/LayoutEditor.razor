@@ -13,19 +13,19 @@
 <div class="layedit">
     <div class="layedit-head">
         <div>
-            <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Filled.ArrowBack" Style="font-size:13px;" /> All layouts</a>
+            <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Filled.ArrowBack" Style="font-size:0.8125rem;" /> All layouts</a>
             <h1 class="layedit-title">@(_scopeInfo?.DisplayName ?? Scope)</h1>
             <p class="layedit-blurb">@(_scopeInfo?.Description)</p>
         </div>
         <div class="layedit-actions">
             <button type="button" class="le-btn @(_showPreview ? "le-btn--on" : "")" @onclick="@(() => _showPreview = !_showPreview)">
-                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:14px;" /> Preview
+                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;" /> Preview
             </button>
             <button type="button" class="le-btn" @onclick="ResetAsync" disabled="@_saving">
-                <MudIcon Icon="@Icons.Material.Filled.RestartAlt" Style="font-size:14px;" /> Reset to default
+                <MudIcon Icon="@Icons.Material.Filled.RestartAlt" Style="font-size:0.875rem;" /> Reset to default
             </button>
             <button type="button" class="le-btn le-btn--primary" @onclick="SaveAsync" disabled="@(_saving || !_dirty)">
-                <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:14px;" /> @(_saving ? "Publishing…" : "Publish")
+                <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:0.875rem;" /> @(_saving ? "Publishing…" : "Publish")
             </button>
         </div>
     </div>
@@ -50,7 +50,7 @@
                     <MudDropZone T="EditItem" Identifier="palette" Class="le-palette-zone" AllowReorder="false" />
                     <div class="le-hint">Drag a widget into a zone. Drag a placed widget back here to remove it.</div>
 
-                    <div class="le-panel-label" style="margin-top:18px;">Sidebars &amp; footer</div>
+                    <div class="le-panel-label" style="margin-top:1.125rem;">Sidebars &amp; footer</div>
                     <div class="le-settings">
                         <label class="le-toggle"><input type="checkbox" checked="@_leftOn" @onchange="@(e => { _leftOn = (bool)e.Value!; _dirty = true; })" /> Left sidebar</label>
                         <label class="le-toggle"><input type="checkbox" checked="@_rightOn" @onchange="@(e => { _rightOn = (bool)e.Value!; _dirty = true; })" /> Right sidebar</label>
@@ -63,7 +63,7 @@
                     {
                         <div class="le-zone">
                             <div class="le-zone-head">
-                                <MudIcon Icon="@ZoneIcon(zone)" Style="font-size:14px;color:var(--accent);" />
+                                <MudIcon Icon="@ZoneIcon(zone)" Style="font-size:0.875rem;color:var(--accent);" />
                                 <span>@zone</span>
                                 <span class="le-zone-hint">@(IsGridZone(zone) ? "12-column grid" : "horizontal — no width")</span>
                             </div>
@@ -75,7 +75,7 @@
             </ChildContent>
             <ItemRenderer>
                 <div class="le-item @(context.IsTemplate ? "le-item--template" : "")">
-                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Style="font-size:14px;color:var(--text-faint);" />
+                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Style="font-size:0.875rem;color:var(--text-faint);" />
                     <span class="le-item-name">@context.DisplayName</span>
                     @if (!context.IsTemplate)
                     {
@@ -83,7 +83,7 @@
                         @if (IsGridZoneName(context.Zone))
                         {
                             <div class="le-width" @onpointerdown:stopPropagation="true" title="Width in columns (1–12)">
-                                <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Style="font-size:13px;color:var(--text-faint);" />
+                                <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Style="font-size:0.8125rem;color:var(--text-faint);" />
                                 <input type="range" min="1" max="12" step="1" class="le-span-slider"
                                        value="@ClampSpan(context.Span)"
                                        @oninput="@(e => PreviewSpan(context, e.Value))"
@@ -94,13 +94,13 @@
                         }
                         @if (context.Config is not null)
                         {
-                            <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:12px;color:var(--accent);" Title="Has config" />
+                            <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:0.75rem;color:var(--accent);" Title="Has config" />
                         }
                         <button type="button" class="le-item-btn" title="Configure" @onclick="@(() => EditConfigAsync(context))" @onclick:stopPropagation="true">
-                            <MudIcon Icon="@Icons.Material.Filled.Settings" Style="font-size:13px;" />
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" Style="font-size:0.8125rem;" />
                         </button>
                         <button type="button" class="le-item-btn le-item-btn--danger" title="Remove" @onclick="@(() => Remove(context))" @onclick:stopPropagation="true">
-                            <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:13px;" />
+                            <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.8125rem;" />
                         </button>
                     }
                 </div>
@@ -112,7 +112,7 @@
             var preview = BuildPreviewLayout();
             <div class="le-preview">
                 <div class="le-preview-head">
-                    <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:14px;color:var(--accent);" />
+                    <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;color:var(--accent);" />
                     <span>Live preview</span>
                     <span class="le-preview-note">
                         Reflects unsaved changes@(Scope == LayoutScopes.Profile ? " · character widgets show a generic state here" : "")
@@ -131,110 +131,6 @@
         }
     }
 </div>
-
-<style>
-    .layedit { padding: var(--cpad); }
-    .layedit-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
-    .layedit-back {
-        display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 11px;
-        color: var(--text-faint); text-decoration: none; margin-bottom: 6px;
-    }
-    .layedit-back:hover { color: var(--accent); }
-    .layedit-title { margin: 0; font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--text); }
-    .layedit-blurb { margin: 6px 0 0; font-family: var(--font-ui); font-size: 13px; color: var(--text-dim); }
-    .layedit-actions { display: flex; gap: 10px; }
-
-    .le-btn {
-        display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: var(--radius);
-        border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
-        font-family: var(--font-ui); font-size: 12.5px; font-weight: 500; cursor: pointer; transition: all 0.12s;
-    }
-    .le-btn:hover:not(:disabled) { border-color: rgba(var(--glow), 0.4); }
-    .le-btn:disabled { opacity: 0.5; cursor: default; }
-    .le-btn--primary { background: var(--accent); color: var(--accent-on); border-color: transparent; font-weight: 600; }
-    .le-btn--primary:hover:not(:disabled) { filter: brightness(1.08); }
-
-    .le-board { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; }
-    @@media (max-width: 820px) { .le-board { grid-template-columns: 1fr; } }
-
-    .le-palette {
-        background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg);
-        padding: 16px; align-self: start;
-    }
-    .le-panel-label {
-        font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
-        color: var(--text-faint); margin-bottom: 10px;
-    }
-    .le-palette-zone { display: flex; flex-direction: column; gap: 7px; min-height: 40px; }
-    .le-hint { font-family: var(--font-ui); font-size: 11px; color: var(--text-faint); margin-top: 10px; line-height: 1.5; }
-    .le-settings { display: flex; flex-direction: column; gap: 8px; }
-    .le-toggle { display: flex; align-items: center; gap: 8px; font-family: var(--font-ui); font-size: 12.5px; color: var(--text-dim); cursor: pointer; }
-
-    .le-zones { display: flex; flex-direction: column; gap: 14px; }
-    .le-zone { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); overflow: hidden; }
-    .le-zone-head {
-        display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border-soft);
-        font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim);
-    }
-    .le-zone-drop { display: flex; flex-direction: column; gap: 7px; padding: 14px; min-height: 64px; }
-    .le-zone-drop--grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px; }
-    .le-zone-hint {
-        font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
-        color: var(--text-faint); margin-left: auto; padding: 1px 7px; border-radius: 99px;
-        background: var(--surface-2); border: 1px solid var(--border);
-    }
-    /* Grid spans for items inside a grid drop zone (applied to .mud-drop-item via ItemsClassSelector). */
-    .le-span-1 { grid-column: span 1; } .le-span-2 { grid-column: span 2; } .le-span-3 { grid-column: span 3; }
-    .le-span-4 { grid-column: span 4; } .le-span-5 { grid-column: span 5; } .le-span-6 { grid-column: span 6; }
-    .le-span-7 { grid-column: span 7; } .le-span-8 { grid-column: span 8; } .le-span-9 { grid-column: span 9; }
-    .le-span-10 { grid-column: span 10; } .le-span-11 { grid-column: span 11; } .le-span-12 { grid-column: span 12; }
-    @@media (max-width: 760px) {
-        .le-zone-drop--grid { grid-template-columns: 1fr; }
-        .le-zone-drop--grid > .mud-drop-item { grid-column: 1 / -1 !important; }
-    }
-
-    .le-width { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; }
-    .le-span-slider { width: 84px; accent-color: var(--accent); cursor: pointer; }
-    .le-span-num {
-        font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
-        min-width: 16px; text-align: center;
-    }
-
-    .le-preview { margin-top: 18px; border: 1px solid var(--border-soft); border-radius: var(--radius-lg); overflow: hidden; }
-    .le-preview-head {
-        display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border-soft);
-        background: var(--surface); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
-        text-transform: uppercase; color: var(--text-dim);
-    }
-    .le-preview-note {
-        margin-left: auto; text-transform: none; letter-spacing: 0;
-        font-family: var(--font-ui); font-size: 11px; color: var(--text-faint);
-    }
-    .le-preview-surface { padding: 16px; background: var(--bg); }
-    .le-preview-zone { margin-bottom: 14px; }
-    .le-preview-zone:last-child { margin-bottom: 0; }
-    .le-preview-zlabel {
-        font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
-        color: var(--text-faint); margin-bottom: 6px;
-    }
-    .le-btn--on { border-color: rgba(var(--glow), 0.5); color: var(--accent); }
-
-    .le-item {
-        display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-radius: var(--radius);
-        background: var(--surface-2); border: 1px solid var(--border); cursor: grab; user-select: none;
-    }
-    .le-item:hover { border-color: rgba(var(--glow), 0.4); }
-    .le-item--template { background: rgba(var(--glow), 0.06); border-style: dashed; }
-    .le-item-name { font-family: var(--font-ui); font-size: 12.5px; color: var(--text); font-weight: 500; }
-    .le-item-btn {
-        width: 24px; height: 24px; display: grid; place-items: center; border-radius: 6px;
-        border: 1px solid transparent; background: transparent; color: var(--text-faint); cursor: pointer;
-    }
-    .le-item-btn:hover { color: var(--text); border-color: var(--border); }
-    .le-item-btn--danger:hover { color: #e57373; border-color: rgba(229, 115, 115, 0.5); }
-
-    ::deep .mud-drop-zone-drag-block-target { outline: 2px dashed rgba(var(--glow), 0.5); outline-offset: -4px; }
-</style>
 
 @code {
     [Parameter] public string Scope { get; set; } = string.Empty;

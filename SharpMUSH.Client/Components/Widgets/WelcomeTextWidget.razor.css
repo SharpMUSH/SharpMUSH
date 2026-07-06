@@ -1,0 +1,10 @@
+.welcome-text-widget {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.welcome-text-widget img {
+    max-width: 100%;
+    height: auto;
+}

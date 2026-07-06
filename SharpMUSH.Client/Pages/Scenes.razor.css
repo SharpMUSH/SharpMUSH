@@ -2,3 +2,28 @@
     border-color: var(--accent) !important;
     background: var(--surface-2) !important;
 }
+
+/* Mobile: stack each scene card so the title block sits above its actions,
+   trim the page padding, and let the meta row wrap instead of overflowing. */
+@media (max-width: 760px) {
+    .scenes-page {
+        padding: 1rem !important;
+    }
+    .scenes-page ::deep .scene-card {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.625rem !important;
+        padding: 0.875rem !important;
+    }
+    .scenes-page ::deep .scene-card .scene-meta-row {
+        flex-wrap: wrap;
+        gap: 0.5rem 0.875rem;
+    }
+    .scenes-page ::deep .scene-card .scene-actions {
+        width: 100%;
+    }
+    .scenes-page ::deep .scene-card .scene-actions .mud-button-root {
+        flex: 1;
+        min-height: 44px;
+    }
+}

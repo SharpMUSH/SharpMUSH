@@ -41,9 +41,8 @@
 		     normally trimmed from output. The McMaster plugin loader eagerly walks the shared SharpMUSH.Library
 		     reference closure and resolves each referenced assembly against the host's default load context,
 		     so FSharp.Core must be present beside the host binary for plugin loading to succeed. -->
-		<PackageReference Include="FSharp.Core" Version="10.1.203" />
+		<PackageReference Include="FSharp.Core" Version="10.1.301" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.7" />
-		<PackageReference Include="Testcontainers" Version="4.11.0" />
 		<PackageReference Include="Testcontainers.ArangoDb" Version="4.11.0" />
 
 	</ItemGroup>
@@ -92,7 +91,6 @@
     <PackageReference Include="Asp.Versioning.Mvc" Version="10.0.0" />
     <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.8" />
     <None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">
       <Link>TextFiles\help\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

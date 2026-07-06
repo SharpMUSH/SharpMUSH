@@ -27,13 +27,14 @@
             <div class="adminwiki-stat">
                 <div class="adminwiki-stat-top">
                     <span class="adminwiki-stat-label">@label</span>
-                    <MudIcon Icon="@icon" Style="@($"font-size:14px;color:{(warn ? "#d9a23a" : "var(--accent)")};")" />
+                    <MudIcon Icon="@icon" Style="@($"font-size:0.875rem;color:{(warn ? "#d9a23a" : "var(--accent)")};")" />
                 </div>
                 <div class="adminwiki-stat-value">@(_statsLoaded ? val.ToString() : "—")</div>
             </div>
         }
     </div>
 
+    <div class="adminwiki-grid-scroll">
     <MudDataGrid @ref="_grid"
                  T="WikiPageSummary"
                  ServerData="LoadServerData"
@@ -44,7 +45,7 @@
                  Class="mush-dark-grid"
                  Elevation="0">
         <ToolBarContent>
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%;flex-wrap:wrap;">
                 <MudSelect T="string"
                            Value="@_namespaceFilter"
                            ValueChanged="@OnNamespaceFilterChanged"
@@ -92,12 +93,12 @@
             <SelectColumn T="WikiPageSummary" />
             <TemplateColumn Title="@Loc["WikiTitle"]" Sortable="false">
                 <CellTemplate>
-                    <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
                         @if (context.Item.IsProtected)
                         {
-                            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Warning" Style="font-size:13px;" />
+                            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Warning" Style="font-size:0.8125rem;" />
                         }
-                        <MudLink Href="@PageHref(context.Item)" Style="font-size:13px;">@context.Item.Title</MudLink>
+                        <MudLink Href="@PageHref(context.Item)" Style="font-size:0.8125rem;">@context.Item.Title</MudLink>
                     </div>
                 </CellTemplate>
             </TemplateColumn>
@@ -106,14 +107,14 @@
             <TemplateColumn Title="@Loc["WikiPublished"]" Sortable="false">
                 <CellTemplate>
                     <MudChip T="string" Size="Size.Small"
-                             Style="@($"height:18px;font-size:10px;padding:0 6px;background:{(context.Item.Published ? "rgba(0,200,100,0.12)" : "rgba(217,162,58,0.12)")};color:{(context.Item.Published ? "#6cde9a" : "#d9a23a")};")">
+                             Style="@($"height:18px;font-size:0.625rem;padding:0 0.375rem;background:{(context.Item.Published ? "rgba(0,200,100,0.12)" : "rgba(217,162,58,0.12)")};color:{(context.Item.Published ? "#6cde9a" : "#d9a23a")};")">
                         @(context.Item.Published ? "Published" : "Draft")
                     </MudChip>
                 </CellTemplate>
             </TemplateColumn>
             <TemplateColumn Title="@Loc["WikiUpdated"]" Sortable="false">
                 <CellTemplate>
-                    <MudText Style="font-size:12px;color:var(--text-dim);">
+                    <MudText Style="font-size:0.75rem;color:var(--text-dim);">
                         @context.Item.UpdatedAt.LocalDateTime.ToString("MMM d, yyyy")
                     </MudText>
                 </CellTemplate>
@@ -124,17 +125,17 @@
                     @foreach (var tag in context.Item.Tags.Take(3))
                     {
                         <MudChip T="string" Text="@tag" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined"
-                                 Style="height:18px;font-size:10px;padding:0 5px;" />
+                                 Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;" />
                     }
                     @if (context.Item.Tags.Count > 3)
                     {
-                        <MudText Style="font-size:10px;color:var(--text-faint);">+@(context.Item.Tags.Count - 3)</MudText>
+                        <MudText Style="font-size:0.625rem;color:var(--text-faint);">+@(context.Item.Tags.Count - 3)</MudText>
                     }
                 </CellTemplate>
             </TemplateColumn>
             <TemplateColumn Sortable="false">
                 <CellTemplate>
-                    <div style="display:flex;gap:2px;">
+                    <div style="display:flex;gap:0.125rem;">
                         <MudTooltip Text="Edit">
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
                                            Href="@($"{PageHref(context.Item)}/edit")" />
@@ -158,6 +159,7 @@
             <MudDataGridPager T="WikiPageSummary" />
         </PagerContent>
     </MudDataGrid>
+    </div>
 </div>
 
 <MudDialog @bind-Visible="_showDeleteConfirm">

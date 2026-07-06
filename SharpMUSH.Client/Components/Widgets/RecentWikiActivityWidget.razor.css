@@ -1,0 +1,3 @@
+@media (max-width: 760px) {
+    ::deep .recent-wiki-widget { padding: 0.875rem !important; }
+}

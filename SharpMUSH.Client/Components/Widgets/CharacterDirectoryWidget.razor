@@ -3,7 +3,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 <div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
         <MudTextField @bind-Value="_search" Immediate="true"
                       Placeholder="@Loc["SearchCharacters"]"
                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
@@ -11,13 +11,13 @@
                       Style="max-width:320px;" />
         @if (!_loading)
         {
-            <MudText Style="color:var(--text-faint);font-size:13px;">@Filtered.Count found</MudText>
+            <MudText Style="color:var(--text-faint);font-size:0.8125rem;">@Filtered.Count found</MudText>
         }
     </div>
 
     @if (!_loading && _categories.Count > 1)
     {
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.25rem;">
             <MudChip T="string" Variant="@(_selectedCategory is null ? Variant.Filled : Variant.Outlined)"
                      Color="@(_selectedCategory is null ? Color.Primary : Color.Default)"
                      Size="Size.Small" OnClick="() => _selectedCategory = null"
@@ -39,7 +39,7 @@
 
     @if (_loading)
     {
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.875rem;">
             @for (var i = 0; i < 8; i++)
             {
                 <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="80px" Style="border-radius:var(--radius);" />
@@ -48,7 +48,7 @@
     }
     else if (Filtered.Count == 0)
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@Loc["NoCharactersFound"]</MudAlert>
+        <EmptyState>@Loc["NoCharactersFound"]</EmptyState>
     }
     else
     {
@@ -56,28 +56,28 @@
         {
             @if (_selectedCategory is null && _categories.Count > 1)
             {
-                <MudText Style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;margin-top:8px;">
+                <MudText Style="font-size:0.6875rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:0.625rem;margin-top:0.5rem;">
                     @(group.Key.Length == 0 ? "Other" : group.Key)
                 </MudText>
             }
 
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.75rem;margin-bottom:1.25rem;">
                 @foreach (var character in group)
                 {
                     var hue = Math.Abs(character.Name.GetHashCode()) % 360;
                     <MudLink Href="@($"/character/{Uri.EscapeDataString(character.Name)}")"
                              Underline="Underline.None" Style="display:block;">
                         <MudPaper Elevation="0"
-                                  Style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);transition:border-color 0.12s,background 0.12s;cursor:pointer;"
+                                  Style="display:flex;align-items:center;gap:0.875rem;padding:0.875rem 1rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);transition:border-color 0.12s,background 0.12s;cursor:pointer;"
                                   Class="char-card">
                             <div style="position:relative;flex-shrink:0;">
-                                <MudAvatar Style="@($"background:hsl({hue},50%,30%);color:#fff;font-weight:600;font-size:15px;width:40px;height:40px;")">
+                                <MudAvatar Style="@($"background:hsl({hue},50%,30%);color:#fff;font-weight:600;font-size:0.9375rem;width:40px;height:40px;")">
                                     @character.Name[0].ToString().ToUpper()
                                 </MudAvatar>
                             </div>
                             <div style="min-width:0;">
-                                <MudText Style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@character.Name</MudText>
-                                <MudText Style="font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">@character.Dbref</MudText>
+                                <MudText Style="font-size:0.875rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@character.Name</MudText>
+                                <MudText Style="font-size:0.6875rem;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">@character.Dbref</MudText>
                             </div>
                         </MudPaper>
                     </MudLink>

@@ -3,8 +3,8 @@
 @using SharpMUSH.Client.Services
 @inject WikiService WikiService
 
-<MudPaper Elevation="0" Style="padding:20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
-    <MudText Style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Recent Wiki Activity</MudText>
+<MudPaper Class="recent-wiki-widget" Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
+    <MudText Style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;margin-bottom:0.75rem;">Recent Wiki Activity</MudText>
     @if (_loading)
     {
         @for (var i = 0; i < 4; i++)
@@ -16,20 +16,20 @@
     {
         @foreach (var wp in _recentChanges.Take(6))
         {
-            <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-soft);">
-                <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(wp.Title.GetHashCode()) % 360},55%,35%);font-size:11px;width:26px;height:26px;")">
+            <div style="display:flex;align-items:center;gap:0.625rem;padding:0.375rem 0;border-bottom:1px solid var(--border-soft);">
+                <MudAvatar Size="Size.Small" Style="@($"background:hsl({Math.Abs(wp.Title.GetHashCode()) % 360},55%,35%);font-size:0.6875rem;width:26px;height:26px;")">
                     @(wp.Title.Length > 0 ? wp.Title[0].ToString().ToUpper() : "W")
                 </MudAvatar>
                 <div style="flex:1;min-width:0;">
-                    <MudLink Href="@($"/wiki/{wp.Namespace}/{wp.Category}/{wp.Slug}")" Style="color:var(--text);font-size:13px;font-weight:500;">@wp.Title</MudLink>
-                    <MudText Style="font-size:11px;color:var(--text-faint);">@wp.UpdatedAt.ToLocalTime().ToString("MMM d")</MudText>
+                    <MudLink Href="@($"/wiki/{wp.Namespace}/{wp.Category}/{wp.Slug}")" Style="color:var(--text);font-size:0.8125rem;font-weight:500;">@wp.Title</MudLink>
+                    <MudText Style="font-size:0.6875rem;color:var(--text-faint);">@wp.UpdatedAt.ToLocalTime().ToString("MMM d")</MudText>
                 </div>
             </div>
         }
     }
     else
     {
-        <MudText Style="color:var(--text-faint);font-size:13px;">No recent wiki activity.</MudText>
+        <MudText Style="color:var(--text-faint);font-size:0.8125rem;">No recent wiki activity.</MudText>
     }
 </MudPaper>
 
