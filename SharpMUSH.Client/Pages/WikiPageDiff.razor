@@ -10,7 +10,7 @@
 
 <div class="wikidiff">
     <a class="wikidiff-back" href="@($"/wiki/{Ns}/{Category}/{Slug}/history")">
-        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:14px;" /> Revision history
+        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> Revision history
     </a>
     <div class="wikidiff-head">
         <div>
@@ -47,7 +47,7 @@
                 <div class="wikidiff-revdate">@_fromRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
                 <div class="wikidiff-revmeta">@_fromRev.EditorDbref · rev #@_fromRev.RevisionNumber</div>
             </div>
-            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="font-size:16px;color:var(--text-faint);flex-shrink:0;" />
+            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="font-size:1rem;color:var(--text-faint);flex-shrink:0;" />
             <div class="wikidiff-revcard wikidiff-revcard--new">
                 <div class="wikidiff-revdate">@_toRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
                 <div class="wikidiff-revmeta">@_toRev.EditorDbref · rev #@_toRev.RevisionNumber</div>
@@ -84,7 +84,7 @@
                     @if (hunk.Kind == DiffLineKind.Header)
                     {
                         <div class="wikidiff-hunk">
-                            <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:13px;color:var(--accent);" />
+                            <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:0.8125rem;color:var(--accent);" />
                             <span>@@@@ @hunk.Text @@@@</span>
                         </div>
                     }
@@ -114,208 +114,6 @@
         }
     }
 </div>
-
-<style>
-    .wikidiff {
-        padding: var(--cpad);
-    }
-    .wikidiff-back {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-family: var(--font-ui);
-        font-size: 13px;
-        color: var(--text-dim);
-        text-decoration: none;
-        margin-bottom: 16px;
-    }
-    .wikidiff-back:hover { color: var(--accent); }
-    .wikidiff-head {
-        display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 16px;
-        margin-bottom: 18px;
-    }
-    .wikidiff-kicker {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: var(--accent);
-        margin-bottom: 6px;
-    }
-    .wikidiff-title {
-        margin: 0;
-        font-family: var(--font-display);
-        font-size: 26px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        color: var(--text);
-    }
-
-    .wikidiff-toggle {
-        display: flex;
-        gap: 4px;
-        padding: 3px;
-        background: var(--surface);
-        border: 1px solid var(--border-soft);
-        border-radius: var(--radius);
-        flex-shrink: 0;
-    }
-    .wikidiff-toggle-btn {
-        padding: 6px 12px;
-        border-radius: var(--radius);
-        border: none;
-        cursor: pointer;
-        font-family: var(--font-ui);
-        font-size: 12.5px;
-        font-weight: 600;
-        background: transparent;
-        color: var(--text-dim);
-    }
-    .wikidiff-toggle-btn.active {
-        background: rgba(var(--glow), 0.12);
-        color: var(--accent);
-    }
-
-    .wikidiff-revbar {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        margin-bottom: 14px;
-    }
-    .wikidiff-revcard {
-        flex: 1;
-        min-width: 0;
-        padding: 11px 14px;
-        background: var(--surface);
-        border: 1px solid var(--border-soft);
-        border-radius: var(--radius);
-    }
-    .wikidiff-revcard--new {
-        border-color: rgba(var(--glow), 0.3);
-    }
-    .wikidiff-revdate {
-        font-family: var(--font-ui);
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text);
-    }
-    .wikidiff-revmeta {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        color: var(--text-faint);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .wikidiff-stats {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        margin-bottom: 12px;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        flex-wrap: wrap;
-    }
-    .wikidiff-stat-add { color: var(--accent); }
-    .wikidiff-stat-del { color: #e57373; }
-    .wikidiff-stat-sum { color: var(--text-faint); }
-
-    .wikidiff-body {
-        background: var(--surface-3);
-        border: 1px solid var(--border-soft);
-        border-radius: var(--radius-lg);
-        overflow: hidden;
-        font-family: var(--font-mono);
-        font-size: 13px;
-        line-height: 1.65;
-    }
-    .wikidiff-line {
-        display: flex;
-        border-left: 2px solid transparent;
-    }
-    .wikidiff-line--add {
-        background: rgba(var(--glow), 0.07);
-        border-left-color: var(--accent);
-    }
-    .wikidiff-line--del {
-        background: rgba(229, 115, 115, 0.08);
-        border-left-color: #e57373;
-    }
-    .wikidiff-line--ctx { background: transparent; }
-    .wikidiff-gutter {
-        width: 26px;
-        flex-shrink: 0;
-        text-align: center;
-        user-select: none;
-        border-right: 1px solid var(--border-soft);
-        padding: 2px 0;
-        color: var(--text-faint);
-    }
-    .wikidiff-gutter--add { color: var(--accent); }
-    .wikidiff-gutter--del { color: #e57373; }
-    .wikidiff-line--ctx .wikidiff-text { color: var(--text-dim); }
-    .wikidiff-line--del .wikidiff-text { color: var(--text-dim); }
-    .wikidiff-text {
-        padding: 2px 14px;
-        color: var(--text);
-        white-space: pre-wrap;
-        word-break: break-word;
-    }
-    .wikidiff-hunk {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 14px;
-        background: var(--surface-2);
-        border-top: 1px solid var(--border-soft);
-        border-bottom: 1px solid var(--border-soft);
-        color: var(--text-faint);
-        font-size: 11.5px;
-    }
-
-    .wikidiff-split {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        background: transparent;
-        border: none;
-        border-radius: 0;
-        overflow: visible;
-    }
-    .wikidiff-split-col { min-width: 0; }
-    .wikidiff-split-head {
-        padding: 6px 12px;
-        font-family: var(--font-mono);
-        font-size: 11px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--text-dim);
-        border: 1px solid var(--border-soft);
-        border-bottom: none;
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    }
-    .wikidiff-split-head--old { background: rgba(229, 115, 115, 0.08); }
-    .wikidiff-split-head--new { background: rgba(var(--glow), 0.07); }
-    .wikidiff-pane {
-        background: var(--surface-3);
-        border: 1px solid var(--border-soft);
-        border-top: none;
-        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-        padding: 12px;
-        font-family: var(--font-mono);
-        font-size: 12.5px;
-        line-height: 1.7;
-        white-space: pre-wrap;
-        word-break: break-word;
-        margin: 0;
-        max-height: 70vh;
-        overflow-y: auto;
-        color: var(--text);
-    }
-</style>
 
 @code {
     [Parameter] public required string Slug { get; set; }

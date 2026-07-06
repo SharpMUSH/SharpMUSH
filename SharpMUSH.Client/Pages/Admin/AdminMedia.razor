@@ -9,10 +9,10 @@
 <PageTitle>Image Library — Admin — SharpMUSH</PageTitle>
 
 <div style="padding:var(--cpad);">
-    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:4px;">Image Library</MudText>
-    <MudText Style="color:var(--text-dim);font-size:14px;margin-bottom:24px;">Manage uploaded media assets used across the wiki and portal.</MudText>
+    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:0.25rem;">Image Library</MudText>
+    <MudText Style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.5rem;">Manage uploaded media assets used across the wiki and portal.</MudText>
 
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.75rem;margin-bottom:1.25rem;">
         @foreach (var tile in new[] {
             (_assets.Count.ToString(),                             "Total Assets",        Icons.Material.Filled.Image,        "var(--accent)"),
             (FormatBytes(TotalSizeBytes),                          "Storage Used",        Icons.Material.Filled.Storage,      "#5aa9ff"),
@@ -21,11 +21,11 @@
         })
         {
             var (val, label, icon, color) = tile;
-            <MudPaper Elevation="0" Style="@($"padding:16px 18px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);")">
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <MudIcon Icon="@icon" Style="@($"color:{color};font-size:22px;")" />
+            <MudPaper Elevation="0" Style="@($"padding:1rem 1.125rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);")">
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <MudIcon Icon="@icon" Style="@($"color:{color};font-size:1.375rem;")" />
                     <div>
-                        <MudText Style="@($"font-size:22px;font-weight:700;color:{color};line-height:1.1;")">
+                        <MudText Style="@($"font-size:1.375rem;font-weight:700;color:{color};line-height:1.1;")">
                             @(_isLoading ? "—" : val)
                         </MudText>
                         <MudText Class="section-kicker" Style="opacity:0.7;">@label</MudText>
@@ -35,7 +35,7 @@
         }
     </div>
 
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;margin-bottom:0.875rem;">
         <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection"
                     SelectedValue="_kindFilter"
                     SelectedValueChanged="@(v => { _kindFilter = v ?? "all"; StateHasChanged(); })">
@@ -73,11 +73,11 @@
     }
     else if (FilteredAssets.Count == 0)
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No assets found.</MudAlert>
+        <EmptyState>No assets found.</EmptyState>
     }
     else if (_viewMode == "grid")
     {
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem;">
             @foreach (var asset in FilteredAssets)
             {
                 var a = asset;
@@ -92,25 +92,25 @@
                         else
                         {
                             <MudIcon Icon="@KindIcon(AssetKind(a.ContentType))"
-                                     Style="font-size:48px;color:var(--text-faint);" />
+                                     Style="font-size:3rem;color:var(--text-faint);" />
                         }
                     </div>
-                    <div style="padding:8px 10px;">
-                        <MudText Style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);" title="@a.FileName">
+                    <div style="padding:0.5rem 0.625rem;">
+                        <MudText Style="font-size:0.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);" title="@a.FileName">
                             @a.FileName
                         </MudText>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
-                            <MudText Style="font-size:11px;color:var(--text-faint);">@FormatBytes(a.SizeBytes)</MudText>
-                            <div style="display:flex;gap:2px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.25rem;">
+                            <MudText Style="font-size:0.6875rem;color:var(--text-faint);">@FormatBytes(a.SizeBytes)</MudText>
+                            <div style="display:flex;gap:0.125rem;">
                                 <MudTooltip Text="Copy URL">
                                     <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
-                                                   Style="padding:2px;min-width:0;"
+                                                   Style="padding:0.125rem;min-width:0;"
                                                    OnClick="@(() => CopyUrlAsync(a.Url))" />
                                 </MudTooltip>
                                 <MudTooltip Text="Delete">
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                                    Color="Color.Error"
-                                                   Style="padding:2px;min-width:0;"
+                                                   Style="padding:0.125rem;min-width:0;"
                                                    OnClick="@(() => ConfirmDeleteAsync(a))" />
                                 </MudTooltip>
                             </div>
@@ -122,6 +122,7 @@
     }
     else
     {
+        <div style="overflow-x:auto;min-width:0;">
         <MudDataGrid T="WikiAssetInfo" Items="@FilteredAssets"
                      Dense="true" Hover="true"
                      Class="mush-dark-grid"
@@ -136,47 +137,47 @@
                         else
                         {
                             <MudIcon Icon="@KindIcon(AssetKind(context.Item.ContentType))"
-                                     Style="font-size:20px;color:var(--text-faint);" />
+                                     Style="font-size:1.25rem;color:var(--text-faint);" />
                         }
                     </CellTemplate>
                 </TemplateColumn>
                 <TemplateColumn Title="File Name" Sortable="false">
                     <CellTemplate>
-                        <MudText Style="font-size:13px;">@context.Item.FileName</MudText>
+                        <MudText Style="font-size:0.8125rem;">@context.Item.FileName</MudText>
                     </CellTemplate>
                 </TemplateColumn>
                 <TemplateColumn Title="Kind" Sortable="false" CellStyle="width:80px;">
                     <CellTemplate>
                         <MudChip T="string" Size="Size.Small"
-                                 Style="height:18px;font-size:10px;padding:0 5px;">
+                                 Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">
                             @AssetKind(context.Item.ContentType)
                         </MudChip>
                     </CellTemplate>
                 </TemplateColumn>
                 <TemplateColumn Title="Size" Sortable="false" CellStyle="width:80px;">
                     <CellTemplate>
-                        <MudText Style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text-faint);">
+                        <MudText Style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:var(--text-faint);">
                             @FormatBytes(context.Item.SizeBytes)
                         </MudText>
                     </CellTemplate>
                 </TemplateColumn>
                 <TemplateColumn Title="Uploaded" Sortable="false" CellStyle="width:130px;">
                     <CellTemplate>
-                        <MudText Style="font-size:12px;color:var(--text-dim);">
+                        <MudText Style="font-size:0.75rem;color:var(--text-dim);">
                             @context.Item.UploadedAt.ToLocalTime().ToString("MMM d, yyyy")
                         </MudText>
                     </CellTemplate>
                 </TemplateColumn>
                 <TemplateColumn Title="Uploader" Sortable="false">
                     <CellTemplate>
-                        <MudText Style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text-dim);">
+                        <MudText Style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:var(--text-dim);">
                             @context.Item.UploaderDbref
                         </MudText>
                     </CellTemplate>
                 </TemplateColumn>
                 <TemplateColumn Sortable="false" CellStyle="width:80px;">
                     <CellTemplate>
-                        <div style="display:flex;gap:2px;">
+                        <div style="display:flex;gap:0.125rem;">
                             <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
                                            title="Copy URL" OnClick="@(() => CopyUrlAsync(context.Item.Url))" />
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
@@ -190,6 +191,7 @@
                 <MudText Color="Color.Secondary">No assets found.</MudText>
             </NoRecordsContent>
         </MudDataGrid>
+        </div>
     }
 </div>
 

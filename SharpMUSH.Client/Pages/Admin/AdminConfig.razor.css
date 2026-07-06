@@ -1,0 +1,9 @@
+@media (max-width: 760px) {
+    /* Stack the dictionary key/value editor rows so they don't overflow. */
+    .adminconfig-page ::deep .mud-stack-row {
+        flex-wrap: wrap;
+    }
+    .adminconfig-page ::deep .mud-input-control {
+        max-width: 100% !important;
+    }
+}

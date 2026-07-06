@@ -7,7 +7,7 @@
 
 <PageTitle>My Account — SharpMUSH</PageTitle>
 
-<div style="padding:var(--cpad);">
+<div class="acct-page" style="padding:var(--cpad);">
 
     @if (!AccountAuth.IsLoggedIn)
     {
@@ -46,7 +46,7 @@
     <div class="acct-card">
         <div class="acct-card-title">Profile</div>
 
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div class="acct-row" style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.875rem;">
             @if (_editingUsername)
             {
                 <MudTextField @bind-Value="_newUsername" Label="Username"
@@ -64,10 +64,10 @@
             }
         </div>
 
-        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:4px;">
+        <div class="acct-row" style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:0.25rem;">
             @if (_editingPassword)
             {
-                <div style="display:flex;flex-direction:column;gap:8px;flex:1;">
+                <div style="display:flex;flex-direction:column;gap:0.5rem;flex:1;">
                     <MudTextField @bind-Value="_oldPassword" Label="Current password"
                                   InputType="InputType.Password"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
@@ -75,7 +75,7 @@
                                   InputType="InputType.Password"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
                 </div>
-                <div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;flex-direction:column;gap:0.375rem;">
                     <button class="acct-btn acct-btn-primary" disabled="@_busy" @onclick="SavePasswordAsync">Save</button>
                     <button class="acct-btn acct-btn-ghost" @onclick="() => _editingPassword = false">Cancel</button>
                 </div>
@@ -98,7 +98,7 @@
     </div>
 
     <div class="acct-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.875rem;">
             <div class="acct-card-title" style="margin-bottom:0;">Characters</div>
             <button class="acct-btn acct-btn-outline" @onclick="RefreshCharactersAsync" disabled="@_busy">
                 <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Class="mr-1" />
@@ -116,6 +116,7 @@
         }
         else
         {
+            <div class="acct-table-scroll">
             <MudTable Items="AccountAuth.Characters" Dense="true" Hover="true" Class="acct-table" Elevation="0">
                 <HeaderContent>
                     <MudTh>Name</MudTh>
@@ -139,13 +140,14 @@
                     </MudTd>
                 </RowTemplate>
             </MudTable>
+            </div>
         }
 
         @if (_showCreateChar)
         {
             <div class="acct-divider"></div>
             <div class="acct-subtitle">Create new character</div>
-            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+            <div style="display:flex;gap:0.625rem;align-items:flex-end;flex-wrap:wrap;">
                 <MudTextField @bind-Value="_newCharName" Label="Character name"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" Style="flex:1;min-width:140px;" />
                 <MudTextField @bind-Value="_newCharPassword" Label="Password"
@@ -161,7 +163,7 @@
         }
         else
         {
-            <button class="acct-btn acct-btn-outline" style="margin-top:16px;"
+            <button class="acct-btn acct-btn-outline" style="margin-top:1rem;"
                     @onclick="() => { _showCreateChar = true; _charError = null; }">
                 + Create new character
             </button>

@@ -16,7 +16,7 @@
            Style="z-index:1400;">
     <div style="display:flex;flex-direction:column;height:100%;background:#1a1a1a;color:#d4d4d4;">
 
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #333;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-bottom:1px solid #333;flex-shrink:0;">
             <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Secondary" Size="Size.Small" />
             <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Style="flex:1;">MUSH Help</MudText>
 
@@ -33,7 +33,7 @@
             </MudTooltip>
         </div>
 
-        <div style="padding:8px 12px;border-bottom:1px solid #333;flex-shrink:0;">
+        <div style="padding:0.5rem 0.75rem;border-bottom:1px solid #333;flex-shrink:0;">
             <MudAutocomplete T="HelpEntry"
                              Value="_searchValue"
                              SearchFunc="SearchEntries"
@@ -48,19 +48,19 @@
                              ShowProgressIndicator="true"
                              Dense="true"
                              FullWidth="true"
-                             Style="font-family:monospace;font-size:13px;" />
+                             Style="font-family:monospace;font-size:0.8125rem;" />
         </div>
 
-        <div style="flex:1;overflow-y:auto;padding:12px 16px;" id="help-drawer-content" @ref="_contentRef">
+        <div style="flex:1;overflow-y:auto;padding:0.75rem 1rem;" id="help-drawer-content" @ref="_contentRef">
             @if (_current is null)
             {
-                <div style="color:#666;font-style:italic;font-size:13px;margin-top:16px;">
+                <div style="color:#666;font-style:italic;font-size:0.8125rem;margin-top:1rem;">
                     Search above or click "📖 Show full help" in the editor.
                 </div>
             }
             else
             {
-                <div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #333;">
+                <div style="margin-bottom:0.625rem;padding-bottom:0.5rem;border-bottom:1px solid #333;">
                     <MudText Typo="Typo.h6" Style="font-family:monospace;color:#9cdcfe;">
                         @(_current.IsCommand ? _current.Name : _current.Name + "()")
                     </MudText>

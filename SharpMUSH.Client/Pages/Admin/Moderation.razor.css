@@ -1,15 +1,15 @@
-.ph-header { margin-bottom: 24px; }
+.ph-header { margin-bottom: 1.5rem; }
 .ph-kicker {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--accent);
-    margin-bottom: 6px;
+    margin-bottom: 0.375rem;
 }
 .ph-title {
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 1.625rem;
     font-weight: 600;
     color: var(--text);
     margin: 0;
@@ -19,20 +19,20 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 14px;
-    padding: 56px 24px;
+    gap: 0.875rem;
+    padding: 3.5rem 1.5rem;
     background: var(--surface);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
 }
 .ph-empty-icon {
-    font-size: 40px;
+    font-size: 2.5rem;
     color: var(--text-faint);
 }
 .ph-empty-text {
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 0.8125rem;
     letter-spacing: 0.04em;
     color: var(--text-dim);
 }

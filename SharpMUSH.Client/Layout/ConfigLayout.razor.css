@@ -2,13 +2,13 @@
     padding: var(--cpad);
     display: grid;
     grid-template-columns: 230px 1fr;
-    gap: 22px;
+    gap: 1.375rem;
     align-items: start;
 }
 
 @media (max-width: 900px) {
     .config-shell {
         grid-template-columns: 1fr;
-        gap: 14px;
+        gap: 0.875rem;
     }
 }

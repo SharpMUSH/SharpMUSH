@@ -1,0 +1,14 @@
+@* Standard "nothing here" message — the outlined info alert used for empty lists/sections
+   across the portal. Centralised so every empty state reads the same and can evolve in one
+   place. Renders identically to the inline `<MudAlert Severity="Severity.Info"
+   Variant="Variant.Outlined">…</MudAlert>` it replaces. *@
+<MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="@Class">
+    @ChildContent
+</MudAlert>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Optional extra CSS classes passed through to the alert.</summary>
+    [Parameter] public string? Class { get; set; }
+}

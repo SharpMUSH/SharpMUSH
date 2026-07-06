@@ -5,7 +5,7 @@
 .zone-grid {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    gap: 16px;
+    gap: 1rem;
     align-items: stretch;
 }
 

@@ -1,0 +1,13 @@
+/* Mobile: trim padding, wrap the meta row, and tighten the pose-log padding. */
+@media (max-width: 760px) {
+    .scene-detail-page {
+        padding: 1rem !important;
+    }
+    .scene-detail-page .scene-detail-meta {
+        flex-wrap: wrap;
+        gap: 0.375rem 0.875rem;
+    }
+    .scene-detail-page .scene-log {
+        padding: 0.75rem !important;
+    }
+}

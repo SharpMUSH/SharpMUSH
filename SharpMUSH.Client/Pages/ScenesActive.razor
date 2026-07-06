@@ -6,14 +6,14 @@
 
 <PageTitle>Active Scenes — SharpMUSH</PageTitle>
 
-<div style="padding:var(--cpad);">
-    <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">@Loc["SceneArchive"]</div>
-    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:4px;">Active Scenes</MudText>
-    <div style="color:var(--text-dim);font-size:14px;margin-bottom:24px;">Sessions running right now.</div>
+<div class="scenes-active-page" style="padding:var(--cpad);">
+    <div style="font-size:0.6875rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);font-family:'JetBrains Mono',monospace;">@Loc["SceneArchive"]</div>
+    <MudText Typo="Typo.h4" Style="font-weight:700;margin-bottom:0.25rem;">Active Scenes</MudText>
+    <div style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.5rem;">Sessions running right now.</div>
 
     @if (_loading)
     {
-        <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;flex-direction:column;gap:0.625rem;">
             @for (var i = 0; i < 4; i++)
             {
                 <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="72px" Style="border-radius:var(--radius);" />
@@ -22,38 +22,38 @@
     }
     else if (_scenes.Count == 0)
     {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No active scenes running.</MudAlert>
+        <EmptyState>No active scenes running.</EmptyState>
     }
     else
     {
-        <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;flex-direction:column;gap:0.625rem;">
             @foreach (var scene in _scenes)
             {
-                <MudPaper Elevation="0"
-                          Style="display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+                <MudPaper Elevation="0" Class="scene-card"
+                          Style="display:flex;align-items:center;gap:1rem;padding:0.875rem 1.125rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
                     <div style="flex:1;min-width:0;">
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.1875rem;">
                             <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                                     Style="font-size:10px;letter-spacing:0.06em;height:20px;padding:0 7px;">LIVE</MudChip>
-                            <MudText Style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                     Style="font-size:0.625rem;letter-spacing:0.06em;height:20px;padding:0 0.4375rem;">LIVE</MudChip>
+                            <MudText Style="font-size:0.875rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                                 @SceneTitle(scene)
                             </MudText>
                         </div>
-                        <div style="display:flex;align-items:center;gap:14px;">
-                            <MudText Style="font-size:12px;color:var(--text-dim);">
-                                <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:2px;font-size:13px;" />
+                        <div class="scene-meta-row" style="display:flex;align-items:center;gap:0.875rem;">
+                            <MudText Style="font-size:0.75rem;color:var(--text-dim);">
+                                <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Style="vertical-align:middle;margin-right:0.125rem;font-size:0.8125rem;" />
                                 @scene.RoomName
                             </MudText>
-                            <MudText Style="font-size:12px;color:var(--text-faint);">
-                                <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Style="vertical-align:middle;margin-right:2px;font-size:13px;" />
+                            <MudText Style="font-size:0.75rem;color:var(--text-faint);">
+                                <MudIcon Icon="@Icons.Material.Filled.Notes" Size="Size.Small" Style="vertical-align:middle;margin-right:0.125rem;font-size:0.8125rem;" />
                                 @scene.PoseCount pose(s)
                             </MudText>
-                            <MudText Style="font-size:12px;color:var(--text-faint);">
+                            <MudText Style="font-size:0.75rem;color:var(--text-faint);">
                                 Started @scene.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
                             </MudText>
                         </div>
                     </div>
-                    <div style="display:flex;gap:8px;flex-shrink:0;">
+                    <div class="scene-actions" style="display:flex;gap:0.5rem;flex-shrink:0;">
                         <MudButton Variant="Variant.Text" Size="Size.Small"
                                    Style="color:var(--text-dim);text-transform:none;"
                                    Href="@($"/scenes/{scene.Id}")">
