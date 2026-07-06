@@ -51,8 +51,13 @@ public sealed class ConnectionPump(
 				// by the token's session id, so it never picks up a later occupant of the same (reused) handle.
 				var (found, _, oldSession) = await resumeTokens.TryResolveAsync(deadToken, ct);
 				if (found)
+				{
 					foreach (var f in await replayStore.AfterAsync(oldSession, deadLastSeq, ct))
 						await transport.SendAsync(f, ct);
+					// Spend the token, as the rebind path does — it is single-use, so a retry can't re-fetch
+					// this buffer. The fresh registration above already issued this connection a new token.
+					await resumeTokens.InvalidateAsync(deadToken, ct);
+				}
 			}
 			else if (!SeqEnvelope.IsHello(firstFrame))
 			{
@@ -145,10 +150,20 @@ public sealed class ConnectionPump(
 		// on drop and would abort buffering exactly when replay matters most.
 		Func<byte[], ValueTask> output = async data =>
 		{
-			var (_, wrapped) = await replayStore.AppendAsync(session, data, CancellationToken.None);
-			var current = sink.Current;
-			if (current is not null)
-				await current.SendAsync(wrapped, CancellationToken.None);
+			try
+			{
+				var (_, wrapped) = await replayStore.AppendAsync(session, data, CancellationToken.None);
+				var current = sink.Current;
+				if (current is not null)
+					await current.SendAsync(wrapped, CancellationToken.None);
+			}
+			catch (Exception ex)
+			{
+				// A transient replay-store / transport failure must not propagate back into the engine's
+				// output path and tear down higher-level workflows; swallow-and-log, as the other output
+				// handlers do (e.g. OutputMessageConsumers).
+				logger.LogError(ex, "Error writing output on handle {Handle}", handle);
+			}
 		};
 
 		await connectionService.RegisterAsync(

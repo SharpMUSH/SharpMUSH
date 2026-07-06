@@ -154,7 +154,7 @@ public class ConnectionPumpTests
 			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>());
 
 		var pump = MakePump(bus, conn, desc, replay);
-		var cts = new CancellationTokenSource();
+		using var cts = new CancellationTokenSource();
 		var transport = new FakeTransport("{\"hello\":1}", null);
 
 		await pump.RunAsync(transport, candidateHandle: 7, cts.Token);
@@ -196,6 +196,10 @@ public class ConnectionPumpTests
 			.Select(SeqEnvelope.ReadSeq)
 			.ToArray();
 		await Assert.That(seqs).IsEquivalentTo(new[] { 2L });
+
+		// The consumed token is spent (single-use), so a retry can't re-fetch the buffer.
+		var (stillValid, _, _) = await resume.TryResolveAsync(deadToken);
+		await Assert.That(stillValid).IsFalse();
 	}
 
 	[Test]

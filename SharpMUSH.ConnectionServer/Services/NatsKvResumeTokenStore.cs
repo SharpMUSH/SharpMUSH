@@ -56,7 +56,10 @@ public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable
 
 		var value = result.Value.Value;
 		var sep = value.IndexOf(':');
-		if (sep <= 0 || !long.TryParse(value.AsSpan(0, sep), out var handle))
+		// Require a non-empty handle AND session: the session is part of the security boundary (it scopes
+		// replay to one incarnation), so a malformed/corrupt entry with an empty session is rejected rather
+		// than resolved to session "".
+		if (sep <= 0 || sep == value.Length - 1 || !long.TryParse(value.AsSpan(0, sep), out var handle))
 			return (false, 0L, string.Empty);
 		return (true, handle, value[(sep + 1)..]);
 	}
