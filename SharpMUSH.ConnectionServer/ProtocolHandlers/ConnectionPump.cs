@@ -75,6 +75,8 @@ public sealed class ConnectionPump(
 		}
 		catch (Exception ex)
 		{
+			// Intentional per-connection boundary: an unexpected error on one connection is logged and
+			// the session detached (finally), never allowed to escape and disrupt the server.
 			logger.LogError(ex, "Error pumping connection {Handle}", handle);
 		}
 		finally
@@ -107,7 +109,7 @@ public sealed class ConnectionPump(
 		if (previous is not null)
 			await previous.CloseAsync();               // connection-steal: last write wins
 
-		await transport.SendAsync(Encoding.UTF8.GetBytes("{\"reattached\":true}"), ct);
+		await transport.SendAsync(SeqEnvelope.Reattached(), ct);
 		foreach (var f in await replayStore.AfterAsync(oldHandle, lastSeq, ct))
 			await transport.SendAsync(f, ct);
 
@@ -115,7 +117,7 @@ public sealed class ConnectionPump(
 		// client needs a fresh one so a *subsequent* drop can resume too.
 		await resumeTokens.InvalidateAsync(token, ct);
 		var newToken = await resumeTokens.MintAsync(oldHandle, ct);
-		await transport.SendAsync(Encoding.UTF8.GetBytes($"{{\"resumeToken\":\"{newToken}\"}}"), ct);
+		await transport.SendAsync(SeqEnvelope.ResumeToken(newToken), ct);
 
 		logger.LogInformation("Reattached to session {Handle}", oldHandle);
 		return oldHandle;
@@ -139,7 +141,7 @@ public sealed class ConnectionPump(
 			output, output, () => Encoding.UTF8, () => _ = sink.Current?.CloseAsync());
 
 		var token = await resumeTokens.MintAsync(handle, ct);
-		await transport.SendAsync(Encoding.UTF8.GetBytes($"{{\"resumeToken\":\"{token}\"}}"), ct);
+		await transport.SendAsync(SeqEnvelope.ResumeToken(token), ct);
 	}
 
 	private async Task PublishInputAsync(long handle, string message, CancellationToken ct)

@@ -56,6 +56,8 @@ public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable
 
 	public async ValueTask InvalidateAsync(string token, CancellationToken ct = default)
 	{
+		// Best-effort: invalidation is an optimisation (the KV TTL expires the token anyway), so any
+		// failure — missing key, transient NATS error — is intentionally swallowed rather than surfaced.
 		try { await _store.DeleteAsync(token, cancellationToken: ct); }
 		catch (Exception ex) { _logger.LogTrace(ex, "Resume token invalidate no-op for {Token}", token); }
 	}

@@ -138,7 +138,7 @@ public class ConnectionPumpTests
 
 		// Sent = [ {"reattached":true}, replayed seq 2 ]
 		var seqs = transport.Sent
-			.Where(b => { try { SeqEnvelope.ReadSeq(b); return true; } catch { return false; } })
+			.Where(b => SeqEnvelope.TryReadSeq(b, out _))
 			.Select(SeqEnvelope.ReadSeq)
 			.ToArray();
 		await Assert.That(seqs).IsEquivalentTo(new[] { 2L });

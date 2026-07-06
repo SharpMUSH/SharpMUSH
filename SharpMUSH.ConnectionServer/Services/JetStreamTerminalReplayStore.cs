@@ -80,10 +80,8 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 			new NatsJSFetchOpts { MaxMsgs = 500 }, cancellationToken: ct))
 		{
 			if (msg.Data is null) continue;
-			long seq;
-			try { seq = SeqEnvelope.ReadSeq(msg.Data); }
-			catch { continue; }
-			if (seq > lastSeq) result.Add(msg.Data);
+			if (SeqEnvelope.TryReadSeq(msg.Data, out var seq) && seq > lastSeq)
+				result.Add(msg.Data);
 		}
 
 		return result;

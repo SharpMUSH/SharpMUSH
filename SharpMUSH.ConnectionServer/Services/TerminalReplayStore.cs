@@ -61,11 +61,10 @@ public sealed class TerminalReplayStore : ITerminalReplayStore
 			lock (_gate)
 			{
 				var cutoff = now - maxAge;
-				var result = new List<byte[]>();
-				foreach (var entry in _entries)
-					if (entry.Seq > lastSeq && entry.At >= cutoff)
-						result.Add(entry.Payload);
-				return result;
+				return _entries
+					.Where(entry => entry.Seq > lastSeq && entry.At >= cutoff)
+					.Select(entry => entry.Payload)
+					.ToList();
 			}
 		}
 

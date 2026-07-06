@@ -99,8 +99,8 @@ public class WebSocketClientService : IWebSocketClientService
 			// Mandatory first frame: resume on reconnect (we hold a token), else hello. The server
 			// uses this to rebind a reconnect to the existing session or register a fresh one.
 			var firstFrame = _resumeToken is not null
-				? $"{{\"resume\":\"{_resumeToken}\",\"lastSeq\":{_lastSeq}}}"
-				: "{\"hello\":1}";
+				? ResumeFrameParser.Resume(_resumeToken, _lastSeq)
+				: ResumeFrameParser.Hello();
 			await _webSocket.SendAsync(
 				new ArraySegment<byte>(Encoding.UTF8.GetBytes(firstFrame)),
 				WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
