@@ -14,7 +14,7 @@ SharpMUSH is a modern MUSH server that *targets* PennMUSH compatibility but dive
 - **A function after literal text needs `[brackets]`** to evaluate: `think Kept: [filter(...)]`. A bare leading function evaluates on its own: `&F obj=add(%0,1)` is fine; `&F obj=ibreak()add(%0,1)` is NOT — write `ibreak()[add(%0,1)]`.
 - **Never bracket a bare %-substitution.** `%0`, `%q<name>`, `%#` — as-is. `[%0]` does nothing.
 - **Player-typed input is single-command mode**: a `;` typed at the client is literal text. Command lists (`;`-separated) exist only inside stored attributes and command arguments. Brace `{}` a segment whose own `;` must not split the list.
-- **Attribute trees use backticks**, never dots: `` CMD`SETRANK ``, `` DATA`GUILD`<objid> ``. `*`/`?` wildcards stop at a backtick; `**` crosses it (`examine obj/BRANCH\`**`).
+- **Attribute trees use backticks**, never dots: `` CMD`SETRANK ``, `` DATA`GUILD`<objid> ``. `*`/`?` wildcards stop at a backtick; `**` crosses it (``examine obj/BRANCH`**``).
 - `%0`–`%9` = arguments; `%#` = enactor dbref; `%:` = enactor objid; `%q<name>` = named q-register (set with `setq(name, value)`; register names are case-insensitive).
 
 ## Core substitutions & tools
@@ -41,7 +41,7 @@ Never build nested `@switch` ladders for validation. Guard with `@assert`/`@brea
 - Factor reusable guards/steps into `` INC`<NAME> `` attributes pulled in with `@include` (runs inline; its `@break` stops the caller; `/nobreak`, `/localize`, `/clearregs` fence that off).
 - `@include/chain me/INC`A me/INC`B me/INC`C=%0` runs a pipeline: same args to every link, shared q-registers, a fired `@break`/`@assert` short-circuits the rest.
 - Naming: `` CMD`<NAME> `` for $-commands, `` FUN` `` for functions, `` INC` `` for includes, `` DATA` `` for data; grow a second level (`` CMD`WIZARD`<NAME> ``) to lock whole branches at once.
-- Regex commands need the attribute flagged: `@set obj/CMD\`X=Regex`; read named captures with `r(Name, args)`. Match switches loosely and validate inside — an over-tight pattern gives players a bare `Huh?`.
+- Regex commands need the attribute flagged: ``@set obj/CMD`X=Regex``; read named captures with `r(Name, args)`. Match switches loosely and validate inside — an over-tight pattern gives players a bare `Huh?`.
 
 ## Data: one datum per leaf
 
@@ -54,7 +54,7 @@ Never pack fields into one delimited value (`name|date|dues`). One attribute tre
 &DATA`#30:171943`DUES obj=150
 ```
 
-Read directly: `get(obj/DATA\`#30:171943\`DUES)`. Key by **objid**, not dbref or name. Game-wide attribute defaults: `@attribute/access DATA=wizard no_command` (persists — no @startup needed).
+Read directly: ``get(obj/DATA`#30:171943`DUES)``. Key by **objid**, not dbref or name. Game-wide attribute defaults: `@attribute/access DATA=wizard no_command` (persists — no @startup needed).
 
 ## Pipeline functions (SharpMUSH-specific; prefer over hand-rolled loops)
 
@@ -68,7 +68,7 @@ Read directly: `get(obj/DATA\`#30:171943\`DUES)`. Key by **objid**, not dbref or
 | `json_group_by(<keyattr>, <list>[, <delim>])` | key computed per element (`%0`); JSON object of arrays | bucketing (group players by faction) |
 | `map` / `fold` / `filter` / `filterbool` / `iter` | classic | per-element transform / reduce / select |
 
-Validation one-liner (instead of filter+setr gymnastics): `@assert every(FN\`ISNUM, %0, , bad)=@pemit %#=Not numbers: %q<bad>` with `` &FN`ISNUM obj=isnum(%0) ``. (These functions are mid-2026 additions — older builds may lack them; `help chain()` confirms.)
+Validation one-liner (instead of filter+setr gymnastics): ``@assert every(FN`ISNUM, %0, , bad)=@pemit %#=Not numbers: %q<bad>`` with `` &FN`ISNUM obj=isnum(%0) ``. (These functions are mid-2026 additions — older builds may lack them; `help chain()` confirms.)
 
 ## Pre-populated world (do NOT create or configure these)
 
@@ -114,7 +114,7 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 
 | Mistake | Fix |
 |---|---|
-| `@create Event Handler` + `@config/set event_handler=…` | `#9` exists and is configured — just `&EVENT\`NAME #9=…` |
+| `@create Event Handler` + `@config/set event_handler=…` | `#9` exists and is configured — just ``&EVENT`NAME #9=…`` |
 | `$GET /path:` $-command HTTP handling, `@pemit %#=` as body, telnet-port URL | `` GET`PATH `` sub-handler on `#8`; `think` = body; URL under `/http/` |
 | `CMD.NAME`, `GUILD.56` dot-namespaces | Backtick trees: `` CMD`NAME ``, `` DATA`GUILD`<objid> `` |
 | `name\|date\|dues` packed values | One leaf per datum |
