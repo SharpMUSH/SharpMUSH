@@ -497,7 +497,18 @@ public class WizardCommandTests
 	public async ValueTask ChownallCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chownall #1"));
+
+		// Chown a throwaway player's objects instead of God's (#1). @chownall on a player
+		// without /preserve strips WIZARD/ROYALTY and sets HALT on every swept object; God
+		// owns the shared system handlers (#8 HTTP Handler, #9 Event Handler), so
+		// "@chownall #1" would de-wizard and HALT them and — because the test DB is shared
+		// PerTestSession — poison those handlers for every later test in the run.
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ChownallOwner");
+		var thingName = TestIsolationHelpers.GenerateUniqueName("ChownallThing");
+		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@create {thingName}"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chownall #{owner.DbRef.Number}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, executor)).IsTrue();
 	}

@@ -3,17 +3,17 @@
 # http_per_second
 # @config http_per_second
 # @config http_handler
-If http_handler `@config` is a dbref of a valid player, SharpMUSH will support HTTP requests reaching its mush port. It is very low level, and a little tricky to understand.
+Unlike PennMUSH, **SharpMUSH pre-populates the HTTP handler**: a new database is seeded with an **HTTP Handler object (#8)**, the "http_handler" config already points at it, and the default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&PATCH`, `&HEAD`) are already installed on it — see [http routing]. You extend the API by adding routed sub-attributes, not by creating a handler. This is low level, and a little tricky to understand.
 
-If an HTTP Handler isn't set, or a given method attribute doesn't exist on the http handler object, Penn will default to responding with mud_url or an error page.
+If the HTTP Handler is unset, or no matching method/route attribute exists on the handler object, SharpMUSH responds with a plain `404 Not Found`.
 
-`@config http_per_second` must also be a postive number to enable HTTP commands, and they will be limited by that amount.
+`@config http_per_second` must also be a positive number to enable HTTP commands, and they will be limited by that amount. On a fresh instance both "http_handler" and "http_per_second" are set for you; change them only to move or disable the HTTP surface.
 
-When an HTTP request hits the SharpMUSH port, SharpMUSH invisibly logs in to the HTTP Handler player (`@config http_handler`), and executes an `@include me/<method>`. e.g: \`@include me/get\`.
+The HTTP surface is served under a dedicated **`/http/`** path (so it can't shadow the web portal's own routes). When a request to `http://<mush>/http/<path>` arrives, SharpMUSH invisibly runs the HTTP Handler object (`@config http_handler`), executing an `@include me/<method>`. e.g: \`@include me/get\`.
 
 Immediately when the `@include` finishes, the http request is complete. Any queued entries (such as `@wait`, `$-commands`, etc) are not going to be sent to the HTTP client - you'll need to code using `@include`, `/inline` switches, and the like.
 
-- *%0* will be the pathname, e.g: "/", "/path/to", "/foo?bar=baz", etc.
+- *%0* will be the pathname **with the `/http` prefix stripped** — a request to `/http/path/to?foo=bar` arrives as *%0* = "/path/to?foo=bar". So *%0* is "/", "/path/to", "/foo?bar=baz", etc.
 - *%1* will be the body of the request. If it's json, use json_query to deal with it. If it's form-encoded, look at [formdecode()]
 
 Anything sent to the HTTP Handler player during evaluation of this code is included in the body sent to the HTTP Client. There is a maximum size of BUFFER_LEN for the body of the response.
@@ -193,9 +193,9 @@ The default HTTP verb handlers (see [http examples]) call formq() on the query s
 - [setq()]
 
 # HTTP ROUTING
-SharpMUSH seeds default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&PATCH`, `&HEAD`) onto the http_handler (#4) at first startup. They are seeded once and **never overwritten** — edit them freely.
+SharpMUSH seeds default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&PATCH`, `&HEAD`) onto the http_handler (#8) at first startup. They are seeded once and **never overwritten** — edit them freely.
 
-Each default verb attribute routes by URL path to a backtick-namespaced sub-attribute:
+Each default verb attribute routes by URL path to a backtick-namespaced sub-attribute. (Paths below are as the handler sees them — i.e. the browser URL `/http/api/users` with the `/http` mount prefix already stripped.)
 
 ```sharp
 GET /api/users?name=Joe+Smith   =>   @include me/GET`API`USERS=<body>
@@ -210,7 +210,7 @@ The sub-attribute receives *%0* = the raw request body. The body is left raw on 
 To serve `GET /api/users`:
 
 ```sharp
-> &GET`API`USERS #4=@respond/type application/json ; think json(object,hello,json(string,%q<form.name>))
+> &GET`API`USERS #8=@respond/type application/json ; think json(object,hello,json(string,%q<form.name>))
 ```
 
 The router guards the dispatch with `@assert`: a request whose path maps to no sub-attribute — including the bare root `/` — answers **404 API NOT FOUND** and stops. The seeded router for each verb is:
@@ -236,7 +236,9 @@ SharpMUSH also seeds these routed sub-attributes (used by the web portal; edit f
 # HTTP EXAMPLES
 There are a number of HTTP Examples.
 
-Examples all assume the following:
+These examples show the **simple, direct-verb** style: the whole `&GET`/`&POST` attribute answers the request itself. Note this *replaces* the seeded verb routers, so the examples set up their own dedicated handler to avoid clobbering the pre-populated #8 routers. For a real game you would usually keep the seeded routers on #8 and add routed sub-attributes instead (see [http routing]).
+
+Examples all assume the following dedicated handler:
 
 ```sharp
 > @pcreate HTTPHandler=digest(md5,rand())
@@ -276,7 +278,7 @@ Return a JSON array of users to any GET request:
 > &GET *HTTPHandler=@respond/type application/json ; think u(names)
 ```
 
-Check: http://yourmush:port/dbrefs
+Check: http://yourmush:port/http/dbrefs
 
 As above, but if path is "who". If it's "dbrefs", no names:
 
@@ -287,8 +289,8 @@ As above, but if path is "who". If it's "dbrefs", no names:
 ```
 
 Check:
-- http://yourmush:port/dbrefs
-- http://yourmush:port/who
+- http://yourmush:port/http/dbrefs
+- http://yourmush:port/http/who
 
 Look at something, whose name is passed by ?name=... value:
 
@@ -296,7 +298,7 @@ Look at something, whose name is passed by ?name=... value:
 > &GET *HTTPHandler=look [formdecode(after(%0,?),name)]
 ```
 
-Check: http://yourmush:port/look?name=here
+Check: http://yourmush:port/http/look?name=here
 
 # HTTP POST
 Suppose you want a web hook for notifications from an external system.<br>
@@ -306,7 +308,7 @@ HTTP via POST is ideal for that:
 > &POST *HTTPHandler=@chat [formdecode(%1,channel)]=[formdecode(%1,msg)]
 ```
 
-Check: Use a language or form to POST to http://yourmush:port/ with values "channel" and "msg"
+Check: Use a language or form to POST to http://yourmush:port/http/ with values "channel" and "msg"
 
 POST is often a good way to get a JSON blob as well:
 

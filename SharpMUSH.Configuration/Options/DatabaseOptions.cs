@@ -104,7 +104,7 @@ public record DatabaseOptions(
 	[property: SharpConfig(
 		Name = "event_handler",
 		Category = "Database",
-		Description = "Object that handles global events",
+		Description = "Wizard object that handles global events (default: the seeded Event Handler, #9)",
 		ValidationPattern = @"^\d*$",
 		Group = "Handlers",
 		Order = 1,
@@ -114,7 +114,7 @@ public record DatabaseOptions(
 	[property: SharpConfig(
 		Name = "http_handler",
 		Category = "Database",
-		Description = "Player object that handles HTTP requests",
+		Description = "Wizard object that handles HTTP requests (default: the seeded HTTP Handler, #8)",
 		ValidationPattern = @"^\d*$",
 		Group = "Handlers",
 		Order = 2,

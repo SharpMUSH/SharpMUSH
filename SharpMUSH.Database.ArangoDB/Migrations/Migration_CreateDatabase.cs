@@ -1062,17 +1062,21 @@ public class Migration_CreateDatabase : IArangoMigration
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = packageManagerObj.Id, To = packageManagerPlayer.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = packageManagerObj.Id, To = wizard.Id });
 
-		// HTTP Handler (#8): thing owned by God, lives in Master Room
+		// HTTP Handler (#8): wizard thing owned by God, lives in Master Room. WIZARD so its
+		// handler softcode runs with its own elevated permissions (it executes as itself).
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = httpHandlerThing.Id, To = httpHandlerObj.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = httpHandlerThing.Id, To = roomTwoRoom.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = httpHandlerThing.Id, To = roomTwoRoom.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = httpHandlerObj.Id, To = playerOnePlayer.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = httpHandlerObj.Id, To = wizard.Id });
 
-		// Event Handler (#9): thing owned by God, lives in Master Room
+		// Event Handler (#9): wizard thing owned by God, lives in Master Room. WIZARD so its
+		// event attributes run with their own elevated permissions (it executes as itself).
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = eventHandlerThing.Id, To = eventHandlerObj.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = eventHandlerThing.Id, To = roomTwoRoom.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = eventHandlerThing.Id, To = roomTwoRoom.Id });
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = eventHandlerObj.Id, To = playerOnePlayer.Id });
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = eventHandlerObj.Id, To = wizard.Id });
 	}
 
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialSharpAttributeEntries(
