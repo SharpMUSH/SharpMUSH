@@ -5842,7 +5842,6 @@ public partial class Commands
 			if (!hasNoBreak && targets.Length > 1)
 			{
 				var texts = new List<string>(targets.Length);
-				string? firstLongName = null;
 
 				foreach (var target in targets)
 				{
@@ -5853,7 +5852,7 @@ public partial class Commands
 						return new CallState(ErrorMessages.Returns.InvalidPath);
 					}
 
-					var (error, attribute, text) = await ReadTarget(parts[0], parts[1]);
+					var (error, _, text) = await ReadTarget(parts[0], parts[1]);
 					if (error is not null)
 					{
 						return error;
@@ -5864,7 +5863,6 @@ public partial class Commands
 						continue; // empty attribute (already notified) contributes nothing
 					}
 
-					firstLongName ??= attribute!.LongName!.ToUpper();
 					texts.Add(text);
 				}
 
@@ -5874,7 +5872,11 @@ public partial class Commands
 				}
 
 				var combined = string.Join(" ; ", texts);
-				lastResult = await ExecuteAttributeWithTracking(parser, firstLongName ?? "@INCLUDE", async () =>
+				// Track recursion under a stable synthetic key for the whole combined chain, rather than
+				// pinning it to the first link's attribute name (which would misattribute depth to an
+				// arbitrary link). The @/backtick form cannot collide with a real attribute LongName.
+				const string chainRecursionKey = "@INCLUDE`CHAIN";
+				lastResult = await ExecuteAttributeWithTracking(parser, chainRecursionKey, async () =>
 					await parser.With(
 						state => state with { EnvironmentRegisters = envArgs, Caller = state.Executor },
 						p => p.CommandListParse(MModule.single(combined))) ?? CallState.Empty);
@@ -5947,8 +5949,8 @@ public partial class Commands
 
 			if (attributeResult.IsError)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeNoSuchAttributeFormat), executor, attributeName);
-				return (new CallState(ErrorMessages.Returns.NoSuchAttribute), null, null);
+				// Surface the real error (e.g. a permission failure) instead of masking it as "no such attribute".
+				return (new CallState(attributeResult.AsError.Value), null, null);
 			}
 
 			if (attributeResult.IsNone)

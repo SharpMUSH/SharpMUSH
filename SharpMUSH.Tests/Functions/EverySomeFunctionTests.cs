@@ -64,4 +64,23 @@ public class EverySomeFunctionTests
 		// Nothing failed: the register is set, but empty.
 		await Check($"[every(#{objNum}/ISNUM, 1 2 3, , fails)]:%q<fails>", "1:");
 	}
+
+	[Test, NotInParallel]
+	public async Task LambdaPredicateReturnsOneZero()
+	{
+		// The #lambda branch must produce the same results as an attribute predicate.
+		await Check(@"every(#lambda/isnum\(\%0\), 1 2 3)", "1");
+		await Check(@"every(#lambda/isnum\(\%0\), 1 a 2)", "0");
+		await Check(@"some(#lambda/isnum\(\%0\), a 2 b)", "1");
+		await Check(@"some(#lambda/isnum\(\%0\), a b c)", "0");
+	}
+
+	[Test, NotInParallel]
+	public async Task LambdaBranchCapturesNonMatchesInRegister()
+	{
+		// With a register the lambda branch evaluates every element (no short-circuit) and
+		// collects the failures — the same contract as the attribute branch.
+		await Check(@"[every(#lambda/isnum\(\%0\), 1 a 2 b, , fails)]:%q<fails>", "0:a b");
+		await Check(@"[some(#lambda/isnum\(\%0\), 1 a 2 b, , fails)]:%q<fails>", "1:a b");
+	}
 }

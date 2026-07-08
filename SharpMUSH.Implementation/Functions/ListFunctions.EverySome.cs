@@ -64,17 +64,36 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
-			foreach (var (item, result) in list.Zip(lambdaResults, (item, result) => (item, result)))
+			// Evaluate the lambda per item (not via the batch helper) so short-circuiting is honored:
+			// every() stops on the first failure and some() on the first success when no register is
+			// given. This also keeps predicate side-effects (e.g. setq) from firing past that point,
+			// matching the non-lambda branch below.
+			foreach (var item in list)
 			{
+				var result = await AttributeService!.EvaluateAttributeFunctionAsync(
+					parser, executor, rawAttrArg,
+					new Dictionary<string, CallState> { { "0", new CallState(item) } });
+
 				if (result.Truthy())
 				{
 					sawPass = true;
+
+					// some() without a register can stop at the first success.
+					if (!isEvery && registerName is null)
+					{
+						break;
+					}
 				}
 				else
 				{
 					sawFail = true;
 					failures.Add(item);
+
+					// every() without a register can stop at the first failure.
+					if (isEvery && registerName is null)
+					{
+						break;
+					}
 				}
 			}
 		}
