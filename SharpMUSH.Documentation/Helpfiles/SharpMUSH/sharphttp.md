@@ -5,7 +5,7 @@
 # @config http_handler
 Unlike PennMUSH, **SharpMUSH pre-populates the HTTP handler**: a new database is seeded with an **HTTP Handler object (#8)**, the "http_handler" config already points at it, and the default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&PATCH`, `&HEAD`) are already installed on it — see [http routing]. You extend the API by adding routed sub-attributes, not by creating a handler. This is low level, and a little tricky to understand.
 
-If the HTTP Handler is unset, or no matching method/route attribute exists on the handler object, SharpMUSH responds with mud_url or an error page.
+If the HTTP Handler is unset, or no matching method/route attribute exists on the handler object, SharpMUSH responds with a plain `404 Not Found`.
 
 `@config http_per_second` must also be a positive number to enable HTTP commands, and they will be limited by that amount. On a fresh instance both "http_handler" and "http_per_second" are set for you; change them only to move or disable the HTTP surface.
 

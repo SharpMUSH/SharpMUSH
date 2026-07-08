@@ -22,10 +22,10 @@ If you would rather use a different object, point the config at it with `@config
 # EVENT EXAMPLES
 Suppose you want random dbsave messages:
 ```sharp
-> &DUMP\`COMPLETE Event Handler=@config/set dump_complete=SAVE: [v(randword(lattr(me/dumpmsg\`*)))]
-> &DUMPMSG\`NOTHING Event=The Database has been saved, nothing to see here.
-> &DUMPMSG\`GRETZKY Event=The Database saves, but Gretzky scores!
-> &DUMPMSG\`GEICO Event=The Database saved 15% by switching to Geico!
+> &DUMP`COMPLETE Event Handler=@config/set dump_complete=SAVE: [v(randword(lattr(me/dumpmsg`*)))]
+> &DUMPMSG`NOTHING Event=The Database has been saved, nothing to see here.
+> &DUMPMSG`GRETZKY Event=The Database saves, but Gretzky scores!
+> &DUMPMSG`GEICO Event=The Database saved 15% by switching to Geico!
 > @dump
 SAVE: The Database has been saved, nothing to see here.
 > @dump
@@ -35,7 +35,7 @@ SAVE: The Database saved 15% by switching to Geico!
 Or admin want to be notified when a player connect attempt fails:
 ```sharp
 > @set Event=wizard
-> &SOCKET\`LOGINFAIL Event=@wizwall/emit On descriptor '%0' from IP '%1' a failed connect attempt to '%4': '%3'
+> &SOCKET`LOGINFAIL Event=@wizwall/emit On descriptor '%0' from IP '%1' a failed connect attempt to '%4': '%3'
 (Later, a player attempts to log in as #1)
 Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed connect attempt to '#1': 'invalid password'
 ```
@@ -47,7 +47,7 @@ Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed conne
 # EVENT EXAMPLES2
 Suppose you want `@pcreated` players to be powered builder, set shared and zonelocked to roys, but players created at the connect screen to not be. Set the handler on the seeded Event Handler (#9). Distinguish the two cases with the event's *how* argument (%2 — one of pcreate, create, register), **not** %#: for a connect-screen create %# is #1 (God), so `@assert %#` would not skip it.
 ```sharp
-> &PLAYER\`CREATE #9=@assert strmatch(%2,pcreate) ; @pemit %#=Auto-Setting [name(%0)] Builder and shared ; @power %0=builder ; @lock/zone %0=FLAG^ROYALTY ; @set %0=shared
+> &PLAYER`CREATE #9=@assert strmatch(%2,pcreate) ; @pemit %#=Auto-Setting [name(%0)] Builder and shared ; @power %0=builder ; @lock/zone %0=FLAG^ROYALTY ; @set %0=shared
 > @pcreate Grid-BC
 Auto-Setting Grid-BC Builder and Shared
 ```
@@ -125,7 +125,7 @@ Events in the log tree get triggered whenever the game logs any information to a
 
 ### Example
 ```sharp
-&OBJECT\`FLAG event handler=@cemit Admin=capstr(lcstr(%2)) %1 [lcstr(%4)] on [name(%0)] by %n.
+&OBJECT`FLAG event handler=@cemit Admin=capstr(lcstr(%2)) %1 [lcstr(%4)] on [name(%0)] by %n.
 ```
 
 # EVENT SQL
@@ -148,8 +148,8 @@ If these attributes exist, then penn will **NOT** perform what it usually does w
 
 To mimic old behaviour:
 ```sharp
-&SIGNAL\`USR1 Event Handler=@nspemit/list lwho()=GAME: Reboot w/o disconnect from game account, please wait. ; @shutdown/reboot
-&SIGNAL\`USR2 Event Handler=@dump
+&SIGNAL`USR1 Event Handler=@nspemit/list lwho()=GAME: Reboot w/o disconnect from game account, please wait. ; @shutdown/reboot
+&SIGNAL`USR2 Event Handler=@dump
 ```
 
 # EVENT PLAYER
