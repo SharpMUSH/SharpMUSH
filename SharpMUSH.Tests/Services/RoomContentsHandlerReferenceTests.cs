@@ -70,7 +70,8 @@ public class RoomContentsHandlerReferenceTests
 			await Assert.That(room).StartsWith("#");
 
 			// Fire the event via the same service path that movement/connect/disconnect use.
-			// TriggerEventAsync runs with God as executor, same elevated-permission context.
+			// TriggerEventAsync runs the handler (#9) with its own permissions; #9 is seeded WIZARD,
+			// so it retains the elevated (see-all) access this handler needs.
 			await EventService.TriggerEventAsync(
 				WebAppFactoryArg.CommandParser,
 				SharpEvents.RoomContents,

@@ -44,7 +44,7 @@ public class EventServiceTests
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask TriggerEventWithSystemEnactor()
 	{
-		// Test that events with null enactor (system events) use #-1 as the enactor
+		// Test that events with null enactor (system events) use God (#1) as the enactor
 		await ValueTask.CompletedTask;
 	}
 }

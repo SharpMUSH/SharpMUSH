@@ -10,8 +10,8 @@ Unlike PennMUSH, **SharpMUSH pre-populates the event handler**: a new database i
 
 If you would rather use a different object, point the config at it with `@config/set event_handler=<dbref>` and set the "event_handler" option in your mush.cnf so it survives dumps and is receiving events even during startup. On a fresh instance this is optional.
 
-**How handler code runs (differs from PennMUSH):**
-- Event attributes are executed with elevated permissions — effectively as **God (#1)** — so a handler can `@set`, `@power`, `@lock`, etc. other objects without the handler needing to be flagged wizard.
+**How handler code runs:**
+- Event attributes run with the handler object's **own permissions** (it executes as itself, like the HTTP handler and any normal attribute). The seeded Event Handler **#9 is a WIZARD object**, so out of the box it can `@set`, `@power`, `@lock`, and see-all as an admin handler needs. If you point event_handler at your own object, flag it wizard (`@set <obj>=wizard`) to grant it those powers.
 - The enactor (%#) is the executor that caused the event. For a **system event with no executor** (an automatic dump, a signal, an idle-boot), %# is **#1 (God)**, not #-1. If the causer has been destroyed since, %# is #1 as well. Because %# is a real dbref either way, use an event's own arguments (not %#) to distinguish system- from player-caused triggers.
 
 
@@ -51,7 +51,7 @@ Suppose you want `@pcreated` players to be powered builder, set shared and zonel
 > @pcreate Grid-BC
 Auto-Setting Grid-BC Builder and Shared
 ```
-Note there is no `@set #9=wizard` step — event handlers already run with God's permissions, so #9 can `@power` and `@lock` the new player as-is.
+Note there is no `@set #9=wizard` step — the seeded #9 is already a wizard object, so it runs with its own elevated permissions and can `@power`/`@lock` the new player as-is. (A custom, non-wizard handler object would need `@set <obj>=wizard` first.)
 
 The Event Handler object, since it's handling so many events, may become cluttered with attributes. We recommend using `@trigger` and `@include` to separate events to multiple objects.
 

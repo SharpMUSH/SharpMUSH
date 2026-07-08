@@ -278,6 +278,18 @@ MATCH (o:Object {key: 7}), (f:ObjectFlag {name: 'WIZARD'})
 MERGE (o)-[:HAS_FLAG]->(f)
 """, ct: cancellationToken);
 
+			// HTTP Handler (#8) and Event Handler (#9) are WIZARD so their handler softcode runs
+			// with its own elevated permissions (each executes as itself).
+			await ExecuteWithRetryAsync("""
+MATCH (o:Object {key: 8}), (f:ObjectFlag {name: 'WIZARD'})
+MERGE (o)-[:HAS_FLAG]->(f)
+""", ct: cancellationToken);
+
+			await ExecuteWithRetryAsync("""
+MATCH (o:Object {key: 9}), (f:ObjectFlag {name: 'WIZARD'})
+MERGE (o)-[:HAS_FLAG]->(f)
+""", ct: cancellationToken);
+
 			await SeedPluginFlags(cancellationToken);
 			await RunPluginCypherMigrations(cancellationToken);
 

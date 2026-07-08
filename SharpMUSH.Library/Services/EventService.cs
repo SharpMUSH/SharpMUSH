@@ -74,13 +74,13 @@ public class EventService(
 			// Resolve the enactor (%#) for this event.
 			// PennMUSH contract: %# is the object that caused the event (e.g. the player who
 			// connected, the wizard who ran @tel). For system events with no real actor, enactor
-			// is null → we fall back to #-1, and then to the handler object itself so that
-			// %# is never a non-existent dbref inside handler code.
+			// is null → we fall back to God (#1) so that %# is always a real, existing dbref
+			// inside handler code (rather than a #-1 that many functions reject).
 			var eventEnactorRef = enactor ?? new DBRef(-1, null);
 			DBRef resolvedEnactorRef;
 			if (eventEnactorRef.Number < 0)
 			{
-				// System event: no real actor — handler runs as God (elevated).
+				// System event: no real actor — use God (#1) as the enactor.
 				resolvedEnactorRef = new DBRef(1, null);
 			}
 			else
@@ -108,17 +108,13 @@ public class EventService(
 			// on an empty ImmutableStack). Using CommandListParse (not FunctionParse) so that the
 			// attribute body can run commands such as &attr obj=val, @emit, @switch, etc.
 			//
-			// Executor = God (#1) — the "ignorePermissions: true" mechanism from the original
-			//   EvaluateAttributeFunctionAsync path: God is IsSee_All and IsGod, so the Nearby
-			//   check in Locate() is bypassed and CanSet() always succeeds. This matches the
-			//   elevated-permissions semantics events require.
+			// Executor = the event handler itself (also %! and %@) — the handler runs with ITS OWN
+			//   permissions, exactly like the HTTP handler (HttpHandlerCommandService) and normal
+			//   attribute execution. The seeded Event Handler (#9) is a WIZARD object, so it can
+			//   @set/@power/@lock and see-all as an admin handler needs; a custom, non-wizard
+			//   handler object runs unprivileged (flag it wizard to grant elevated powers).
 			// Enactor = resolvedEnactorRef (%# — the object that caused the event)
 			// Caller  = handlerRef (%@ — who triggered this evaluation; the handler itself)
-			//
-			// Note: %! inside the handler will be #1 (God). If softcode needs the handler object,
-			// it can use num(handler_name) or a named q-register. This is the same trade-off as
-			// the original EvaluateAttributeFunctionAsync(ignorePermissions:true) path.
-			var godRef = new DBRef(1, null);
 			var isEmpty = parser.State.IsEmpty;
 			var evalParser = parser.Push(new ParserState(
 				Registers: new([[]]),
@@ -136,7 +132,7 @@ public class EventService(
 					: parser.CurrentState.CommandInvoker,
 				Switches: [],
 				Arguments: argsDict,
-				Executor: godRef,
+				Executor: handlerRef,
 				Enactor: resolvedEnactorRef,
 				Caller: handlerRef,
 				Handle: isEmpty ? null : parser.CurrentState.Handle,
