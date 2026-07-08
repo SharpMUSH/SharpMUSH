@@ -88,18 +88,26 @@ public sealed class ConnectionPump(
 		}
 		finally
 		{
-			// Detach (hold the session) instead of disconnecting; the grace timer does the real
-			// disconnect if the client does not come back.
-			sinkRegistry.Get(handle)?.Detach();
-			detachedTracker.Detach(handle, async () =>
+			// Only tear down if THIS pump's transport is still the sink's active one. If a newer pump
+			// rebound this handle while we were exiting (connection-steal), it has already Attached its own
+			// transport and cancelled the grace timer — so our exit must not detach its transport or
+			// schedule a disconnect for the live session it now owns. Ownership is "I am sink.Current".
+			var sink = sinkRegistry.Get(handle);
+			if (sink is not null && ReferenceEquals(sink.Current, transport))
 			{
-				await connectionService.DisconnectAsync(handle);
-				descriptorGenerator.ReleaseWebSocketDescriptor(handle);
-				sinkRegistry.Remove(handle);
-				// The session is over for good — release its replay bookkeeping (the durable buffer itself
-				// ages out via the store's retention, so a late resume-to-dead still works).
-				await replayStore.DropAsync(session, CancellationToken.None);
-			}, grace);
+				// Detach (hold the session) instead of disconnecting; the grace timer does the real
+				// disconnect if the client does not come back.
+				sink.Detach();
+				detachedTracker.Detach(handle, async () =>
+				{
+					await connectionService.DisconnectAsync(handle);
+					descriptorGenerator.ReleaseWebSocketDescriptor(handle);
+					sinkRegistry.Remove(handle);
+					// The session is over for good — release its replay bookkeeping (the durable buffer itself
+					// ages out via the store's retention, so a late resume-to-dead still works).
+					await replayStore.DropAsync(session, CancellationToken.None);
+				}, grace);
+			}
 		}
 	}
 
@@ -129,7 +137,7 @@ public sealed class ConnectionPump(
 		var newToken = await resumeTokens.MintAsync(oldHandle, oldSession, ct);
 		await transport.SendAsync(SeqEnvelope.ResumeToken(newToken), ct);
 
-		logger.LogInformation("Reattached to session {Handle}", oldHandle);
+		logger.LogInformation("Reattached handle {Handle} to session {Session}", oldHandle, oldSession);
 		return (oldHandle, oldSession);
 	}
 

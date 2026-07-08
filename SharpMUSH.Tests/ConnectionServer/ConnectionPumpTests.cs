@@ -35,6 +35,39 @@ public class ConnectionPumpTests
 		}
 	}
 
+	// A transport that plays its frames, then — once, when the socket drains (before it reports the
+	// drop with null) — runs an injected callback. Used to interleave a "connection-steal" by a newer
+	// pump into the exact window between this pump's receive loop ending and its finally running.
+	private sealed class DrainCallbackTransport(Func<Task> onDrain, params string?[] frames) : IDuplexTransport
+	{
+		private readonly Queue<string?> _frames = new(frames);
+		private bool _fired;
+		public List<byte[]> Sent { get; } = [];
+		public bool Closed { get; private set; }
+		public string Kind => "fake";
+		public string RemoteIp => "1.2.3.4";
+		public string Hostname => "host";
+
+		public Task SendAsync(ReadOnlyMemory<byte> data, CancellationToken ct)
+		{
+			Sent.Add(data.ToArray());
+			return Task.CompletedTask;
+		}
+
+		public async Task<string?> ReceiveTextAsync(CancellationToken ct)
+		{
+			if (_frames.Count > 0) return _frames.Dequeue();
+			if (!_fired) { _fired = true; await onDrain(); }
+			return null;
+		}
+
+		public Task CloseAsync()
+		{
+			Closed = true;
+			return Task.CompletedTask;
+		}
+	}
+
 	// A replay store that honours its cancellation token (like the real JetStream store, whose
 	// PublishAsync throws when the token is canceled), so a canceled token in the output path is observable.
 	private sealed class CtHonoringReplayStore : ITerminalReplayStore
@@ -332,5 +365,39 @@ public class ConnectionPumpTests
 		await Assert.That(newHandle).IsEqualTo(9L);
 		// The rotated token stays bound to the SAME incarnation, so a further drop still replays this session.
 		await Assert.That(newSession).IsEqualTo("live-incarnation-9");
+	}
+
+	[Test]
+	public async Task Old_pump_exit_does_not_detach_a_transport_a_newer_pump_stole()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var registry = new SessionSinkRegistry();
+		var tracker = new DetachedSessionTracker(new ManualScheduler());
+
+		// The newer pump's transport — attached to the sink by the "steal" and expected to survive.
+		var newerTransport = new FakeTransport();
+
+		// The old pump owns handle 7 (fresh registration attaches its own transport to the sink). When its
+		// socket drains, simulate a NEWER pump that rebound handle 7 in the meantime — exactly what
+		// TryRebindAsync does: Attach its own transport to the sink and cancel the grace timer.
+		var oldTransport = new DrainCallbackTransport(
+			() =>
+			{
+				registry.Get(7)!.Attach(newerTransport); // newer pump now owns the sink
+				tracker.Reattach(7);                      // and cancelled any pending grace timer
+				return Task.CompletedTask;
+			},
+			"look");
+
+		var pump = MakePump(bus, conn, desc, registry: registry, tracker: tracker);
+		await pump.RunAsync(oldTransport, candidateHandle: 7, CancellationToken.None);
+
+		// The old pump's finally must recognize it no longer owns the sink and leave the steal intact:
+		// the newer transport stays attached, no disconnect is scheduled for the now-live session.
+		await Assert.That(ReferenceEquals(registry.Get(7)!.Current, newerTransport)).IsTrue();
+		await Assert.That(tracker.IsDetached(7)).IsFalse();
+		await conn.DidNotReceive().DisconnectAsync(7);
 	}
 }
