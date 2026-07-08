@@ -281,6 +281,19 @@ public class ListFunctionUnitTests
 		await Check($"arrow(#{objNum}/DOUBLE #{objNum}/INC, 5)", "11");
 	}
 
+	[Test, NotInParallel]
+	public async Task ChainWithIterationBreak()
+	{
+		var objNum = await CreateObjectWithAttribute("chainbrk_obj", "S1", "add(%0,1)");
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&S2 #{objNum}=ibreak()[add(%0,10)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&S3 #{objNum}=mul(%0,100)"));
+
+		// S1: 0 -> 1. S2: ibreak() short-circuits the chain and yields add(1,10)=11. S3 is skipped,
+		// so the result is 11 (not the 1100 you'd get if S3 ran).
+		var result = (await Parser.FunctionParse(MModule.single($"chain(#{objNum}/S1 #{objNum}/S2 #{objNum}/S3, 0)")))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo("11");
+	}
+
 	[Test]
 	[Arguments("ldelete(a b c d,2)", "a c d")]
 	[Arguments("ldelete(a|b|c|d,2,|)", "a|c|d")]

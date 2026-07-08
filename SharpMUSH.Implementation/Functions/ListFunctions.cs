@@ -459,50 +459,72 @@ public partial class Functions
 			}
 		}
 
-		foreach (var token in tokens)
+		// Push an iteration context so a step can short-circuit the pipeline with ibreak(), exactly as it
+		// would inside iter()/map(). itext(0)/inum(0) inside a step then see the running value and step.
+		var wrappedIteration = new IterationWrapper<MString>
+		{ Value = accumulator, Break = false, NoBreak = false, Iteration = 0 };
+		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
+
+		try
 		{
-			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(token);
-			if (objAttr is { IsT1: true, AsT1: false })
+			foreach (var token in tokens)
 			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+				var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(token);
+				if (objAttr is { IsT1: true, AsT1: false })
+				{
+					return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+				}
+
+				var (dbref, attrName) = objAttr.AsT0;
+				dbref ??= executor.ToString();
+
+				var locate = await LocateService!.LocateAndNotifyIfInvalid(
+					parser, executor, executor, dbref, LocateFlags.All);
+				if (!locate.IsValid())
+				{
+					return CallState.Empty;
+				}
+
+				var located = locate.WithoutError().WithoutNone();
+
+				var maybeAttr = await AttributeService!.GetAttributeAsync(
+					executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
+				if (maybeAttr.IsNone)
+				{
+					return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+				}
+
+				if (maybeAttr.IsError)
+				{
+					return new CallState(maybeAttr.AsError.Value);
+				}
+
+				var attrValue = maybeAttr.AsAttribute.Last().Value;
+
+				wrappedIteration.Value = accumulator;
+				wrappedIteration.Iteration++;
+
+				// %0 is the running value threaded from the previous step; %1, %2, ... are the side-arguments.
+				var env = new Dictionary<string, CallState>(sideArgs) { ["0"] = new CallState(accumulator) };
+
+				var stepParser = parser.Push(parser.CurrentState with
+				{
+					Arguments = new Dictionary<string, CallState>(env),
+					EnvironmentRegisters = env
+				});
+
+				accumulator = (await stepParser.FunctionParse(attrValue))!.Message!;
+
+				// A step called ibreak(): stop the pipeline and return the value produced so far.
+				if (wrappedIteration.Break)
+				{
+					break;
+				}
 			}
-
-			var (dbref, attrName) = objAttr.AsT0;
-			dbref ??= executor.ToString();
-
-			var locate = await LocateService!.LocateAndNotifyIfInvalid(
-				parser, executor, executor, dbref, LocateFlags.All);
-			if (!locate.IsValid())
-			{
-				return CallState.Empty;
-			}
-
-			var located = locate.WithoutError().WithoutNone();
-
-			var maybeAttr = await AttributeService!.GetAttributeAsync(
-				executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
-			if (maybeAttr.IsNone)
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
-			}
-
-			if (maybeAttr.IsError)
-			{
-				return new CallState(maybeAttr.AsError.Value);
-			}
-
-			var attrValue = maybeAttr.AsAttribute.Last().Value;
-
-			// %0 is the running value threaded from the previous step; %1, %2, ... are the side-arguments.
-			var env = new Dictionary<string, CallState>(sideArgs) { ["0"] = new CallState(accumulator) };
-
-			var stepParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = new Dictionary<string, CallState>(env),
-				EnvironmentRegisters = env
-			});
-
-			accumulator = (await stepParser.FunctionParse(attrValue))!.Message!;
+		}
+		finally
+		{
+			parser.CurrentState.IterationRegisters.TryPop(out _);
 		}
 
 		return new CallState(accumulator);

@@ -991,6 +991,8 @@ You say, "--X--"
 
   The `<base>` value is passed as %0 to the first attribute. The result of each attribute is then passed as %0 to the next, threading one accumulating value along the whole list. Any extra `<arg0>, <arg1>, ...` are passed unchanged as %1, %2, ... to *every* attribute, so each step can reach the same side inputs. The result of the last attribute is returned. If `<attribute list>` is empty, `<base>` is returned unchanged.
 
+  A step may call ibreak() to short-circuit the pipeline: the remaining attributes are skipped, and the value produced by that step is returned. chain() counts as an iteration level, so itext(0) and inum(0) inside a step give the running value and the step number.
+
   Each attribute is evaluated as by ufun() -- with the privileges of the object it is set on -- and you must be able to read it. Object names in the list may not contain spaces (use "me" or a dbref), since spaces separate the attributes. arrow() is an alias for chain().
 
   chain() is close kin to fold(): fold() walks a list of *data*, passing each element in turn as %0; chain() walks a list of *attributes*, passing one threaded result as %0 while carrying the same optional arguments to each step.
@@ -1010,6 +1012,7 @@ You say, "*HELLO*!"
 - [fold()]
 - [map()]
 - [iter()]
+- [ibreak()]
 - [ufun()]
 - [@include3]
 # CHECKPASS()
