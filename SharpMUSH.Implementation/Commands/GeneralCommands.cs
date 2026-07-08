@@ -5948,6 +5948,7 @@ public partial class Commands
 			if (attributeResult.IsError)
 			{
 				// Surface the real error (e.g. a permission failure) instead of masking it as "no such attribute".
+				await NotifyService!.Notify(executor, attributeResult.AsError.Value, executor);
 				return (new CallState(attributeResult.AsError.Value), null, null);
 			}
 
