@@ -432,6 +432,86 @@ public partial class Functions
 		return new CallState(accumulator);
 	}
 
+	[SharpFunction(Name = "chain", MinArgs = 2, MaxArgs = 32, Flags = FunctionFlags.Regular, ParameterNames = ["attributes", "base", "arguments..."])]
+	public static async ValueTask<CallState> Chain(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		var attrListStr = MModule.plainText(parser.CurrentState.Arguments["0"].Message!)!;
+		var tokens = attrListStr.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+		// The base is the value threaded through the pipeline; it becomes %0 for the first attribute.
+		var accumulator = parser.CurrentState.Arguments["1"].Message ?? MModule.empty();
+
+		if (tokens.Length == 0)
+		{
+			return new CallState(accumulator);
+		}
+
+		// Fixed side-arguments: chain(<list>, <base>, <arg0>, <arg1>, ...) exposes <arg0> as %1, <arg1> as
+		// %2, ... to EVERY attribute in the chain (carried down each step, as in PennMUSH's chain()).
+		var sideArgs = new Dictionary<string, CallState>();
+		for (var i = 2; i < parser.CurrentState.Arguments.Count; i++)
+		{
+			if (parser.CurrentState.Arguments.TryGetValue(i.ToString(), out var sideArg))
+			{
+				sideArgs[(i - 1).ToString()] = sideArg;
+			}
+		}
+
+		foreach (var token in tokens)
+		{
+			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(token);
+			if (objAttr is { IsT1: true, AsT1: false })
+			{
+				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+			}
+
+			var (dbref, attrName) = objAttr.AsT0;
+			dbref ??= executor.ToString();
+
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(
+				parser, executor, executor, dbref, LocateFlags.All);
+			if (!locate.IsValid())
+			{
+				return CallState.Empty;
+			}
+
+			var located = locate.WithoutError().WithoutNone();
+
+			var maybeAttr = await AttributeService!.GetAttributeAsync(
+				executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
+			if (maybeAttr.IsNone)
+			{
+				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+			}
+
+			if (maybeAttr.IsError)
+			{
+				return new CallState(maybeAttr.AsError.Value);
+			}
+
+			var attrValue = maybeAttr.AsAttribute.Last().Value;
+
+			// %0 is the running value threaded from the previous step; %1, %2, ... are the side-arguments.
+			var env = new Dictionary<string, CallState>(sideArgs) { ["0"] = new CallState(accumulator) };
+
+			var stepParser = parser.Push(parser.CurrentState with
+			{
+				Arguments = new Dictionary<string, CallState>(env),
+				EnvironmentRegisters = env
+			});
+
+			accumulator = (await stepParser.FunctionParse(attrValue))!.Message!;
+		}
+
+		return new CallState(accumulator);
+	}
+
+	[SharpFunction(Name = "arrow", MinArgs = 2, MaxArgs = 32, Flags = FunctionFlags.Regular, ParameterNames = ["attributes", "base", "arguments..."])]
+	public static ValueTask<CallState> Arrow(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> Chain(parser, _2);
+
 	[SharpFunction(Name = "grab", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> Grab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
