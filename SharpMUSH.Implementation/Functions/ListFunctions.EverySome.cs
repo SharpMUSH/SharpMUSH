@@ -1,4 +1,3 @@
-using MoreLinq.Extensions;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
