@@ -167,17 +167,18 @@ You say, "is"
 
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
-| [elements()]     | [extract()]      | [filter()]       | [filterbool()]   |
-| [first()]        | [fold()]         | [grab()]         | [graball()]      |
-| [index()]        | [itemize()]      | [items()]        | [iter()]         |
-| [last()]         | [ldelete()]      | [linsert()]      | [lreplace()]     |
-| [lockfilter()]   | [map()]          | [match()]        | [matchall()]     |
+| [chain()]        | [elements()]     | [every()]        | [extract()]      |
+| [filter()]       | [filterbool()]   | [filterq()]      | [first()]        |
+| [fold()]         | [grab()]         | [graball()]      | [index()]        |
+| [itemize()]      | [items()]        | [iter()]         | [jiter()]        |
+| [last()]         | [ldelete()]      | [linsert()]      | [lockfilter()]   |
+| [lreplace()]     | [map()]          | [match()]        | [matchall()]     |
 | [member()]       | [mix()]          | [munge()]        | [namegrab()]     |
 | [namegraball()]  | [randword()]     | [remove()]       | [rest()]         |
 | [revwords()]     | [setdiff()]      | [setinter()]     | [setsymdiff()]   |
-| [setunion()]     | [shuffle()]      | [sort()]         | [sortby()]       |
-| [sortkey()]      | [splice()]       | [step()]         | [table()]        |
-| [unique()]       | [wordpos()]      | [words()]        |                  |
+| [setunion()]     | [shuffle()]      | [some()]         | [sort()]         |
+| [sortby()]       | [sortkey()]      | [splice()]       | [step()]         |
+| [table()]        | [unique()]       | [wordpos()]      | [words()]        |
 
 **See Also:**
 - [LISTS]
@@ -983,6 +984,38 @@ You say, "--X--"
 - [align()]
 - [ljust()]
 - [rjust()]
+# CHAIN()
+`chain(<attribute list>, <base>[, <arg0>[, ... , <argN>]])`
+
+  chain() threads a value through a sequence of user-defined attributes -- the functional "pipeline", or thread-first "arrow" (as in Clojure's `->`), pattern. `<attribute list>` is a space-separated list of `[<object>/]<attribute>` names.
+
+  The `<base>` value is passed as %0 to the first attribute. The result of each attribute is then passed as %0 to the next, threading one accumulating value along the whole list. Any extra `<arg0>, <arg1>, ...` are passed unchanged as %1, %2, ... to *every* attribute, so each step can reach the same side inputs. The result of the last attribute is returned. If `<attribute list>` is empty, `<base>` is returned unchanged.
+
+  A step may call ibreak() to short-circuit the pipeline: the remaining attributes are skipped, and the value produced by that step is returned. chain() counts as an iteration level, so itext(0) and inum(0) inside a step give the running value and the step number.
+
+  Each attribute is evaluated as by ufun(). Object names in the list may not contain spaces (use "me" or a dbref), since spaces separate the attributes.
+
+  chain() is close kin to fold(): fold() walks a list of *data*, passing each element in turn as %0; chain() walks a list of *attributes*, passing one threaded result as %0 while carrying the same optional arguments to each step.
+
+  Example -- thread a string through two steps (%0 is the running value, %1 the shared side-arg):
+```sharp
+> &WRAP me=%1%0%1
+> &SHOUT me=ucstr(%0)!
+> say chain(WRAP SHOUT, hello, *)
+You say, "*HELLO*!"
+```
+
+  WRAP wraps the base "hello" in the side-arg "*" to make "*hello*"; that result becomes %0 for SHOUT, which upper-cases it and appends "!".
+
+
+**See Also:**
+- [fold()]
+- [map()]
+- [iter()]
+- [ibreak()]
+- [jiter()]
+- [ufun()]
+- [@include3]
 # CHECKPASS()
 `checkpass(<player>, <string>)`
 
@@ -1586,6 +1619,35 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 - [@doing]
 - [poll()]
 # E()
+# EVERY()
+# SOME()
+`every([<object>/]<attribute>, <list>[, <delimiter>[, <register>]])`<br>
+`some([<object>/]<attribute>, <list>[, <delimiter>[, <register>]])`
+
+  These functions evaluate `<attribute>` as a boolean predicate against each element of `<list>` (the element is passed as %0), and return 1 or 0. An element passes when the result is boolean-true, by the same rule as filterbool().
+
+  every() returns 1 if EVERY element passes, and 0 otherwise. An empty list is vacuously true: every() returns 1.
+
+  some() returns 1 if ANY element passes, and 0 otherwise. An empty list returns 0.
+
+  If `<register>` is given, the q-register of that name is set to the delimiter-joined list of the elements that did NOT pass the predicate (an empty string when none failed) — the same reject-capture convention as filterq(). Without a register, evaluation short-circuits (every() stops at the first failure, some() at the first success); requesting a register evaluates the whole list so every failure is collected.
+
+  Example — validate input and name the offenders:
+```sharp
+> &ISNUM me=isnum(%0)
+> think [every(ISNUM, 12 apples 7 pears, , bad)]: %q<bad>
+0: apples pears
+```
+
+  The same shape works as a command guard: `@assert every(ISNUM, %0, , bad)=@pemit %#=Not numbers: %q<bad>`
+
+
+**See Also:**
+- [filter()]
+- [filterbool()]
+- [filterq()]
+- [setq()]
+- [chain()]
 # EXP()
 `e([<number>])`
 
@@ -1860,7 +1922,31 @@ You say, "1 3 5"
 - [firstof()]
 - [allof()]
 - [lockfilter()]
+- [filterq()]
+- [every()]
+- [some()]
 - [boolean values]
+# FILTERQ()
+`filterq(<register>, [<object>/]<attribute>, <list>[, <delimiter>[, <osep>[, <arg1>[, ... , <argN>]]]])`
+
+  filterq() is filter() with reject-capture: it returns the elements of `<list>` for which `<attribute>` evaluates to exactly 1, osep-joined — and ALSO sets the q-register `<register>` to the elements that were filtered OUT (osep-joined; an empty string when nothing was rejected).
+
+  The register is the FIRST argument, following the setq()/setr() convention, because filter()'s positions after `<osep>` already carry extra predicate arguments (available to each evaluation as %1, %2, ...) for PennMUSH compatibility. filterq() keeps those extra arguments, shifted one position to the right.
+
+  Example:
+```sharp
+> &ISNUM me=isnum(%0)
+> think Kept: [filterq(bad, ISNUM, 12 apples 7 pears)] / Dropped: %q<bad>
+Kept: 12 7 / Dropped: apples pears
+```
+
+
+**See Also:**
+- [filter()]
+- [filterbool()]
+- [every()]
+- [some()]
+- [setq()]
 # FINDABLE()
 `findable(<object>, <victim>)`
 
@@ -2747,6 +2833,30 @@ You say, "1:red 1:red 2:blue 2:blue 3:green 3:green"
 - [hostname()]
 - [ports()]
 - [lports()]
+# JITER()
+`jiter(<attribute list>, <input>[, <osep>])`
+
+  jiter() — juxtapositioned iteration — evaluates each attribute in the space-separated `<attribute list>` with the SAME `<input>` passed as %0, and returns the results side by side, joined by `<osep>` (default: one space).
+
+  Where iter() and map() walk a list of data through one function, and chain() threads one value THROUGH a list of attributes (each step receiving the previous step's result), jiter() fans one input ACROSS a list of attributes — every step receives the original input. The classic use is computing the fields of a record from a single object.
+
+  Each attribute is evaluated as by ufun(). Object names in the list may not contain spaces (use "me" or a dbref), since spaces separate the attributes.
+
+  Example:
+```sharp
+> &FNAME me=name(%0)
+> &FTYPE me=type(%0)
+> say jiter(FNAME FTYPE, %#, |)
+You say, "One|PLAYER"
+```
+
+
+**See Also:**
+- [chain()]
+- [map()]
+- [iter()]
+- [fold()]
+- [ufun()]
 # LAST()
 `last(<list>[, <delimiter>])`
 
@@ -6192,7 +6302,7 @@ a          b          areallylon d
 # JSON FUNCTIONS
   JSON functions are used to create and modify JSON objects.
 
-`isjson()    json()     json_array()     json_map()     json_query()     json_mod()`
+`isjson()    json()     json_array()     json_group_by()     json_map()     json_query()     json_mod()`
 
   These functions are used to output JSON objects to GMCP and WebSocket connections.
 
@@ -6307,6 +6417,28 @@ think isjson("quoted")
   [0,1,2,3]<br>
   > think json(object, who, json_array(iter(a b c, json(string, %i0))))<br>
   {"who": ["a","b","c"]}
+# JSON_GROUP_BY()
+`json_group_by([<object>/]<attribute>, <list>[, <delimiter>])`
+
+  json_group_by() buckets the elements of `<list>` by a computed key: `<attribute>` (or a #lambda) is evaluated once per element — the element passed as %0, as in filter() and map() — and its result becomes that element's group key. The result is a JSON object mapping each key, in first-seen order, to a JSON array of the elements that produced it.
+
+  Because the key is computed by an attribute, it can be anything derived from the element: an attribute fetched off a dbref, a substring, a classification. An empty list yields {}. Use json_query() to take the result apart.
+
+  Example — group the contents of a room by faction:
+```sharp
+> &FACTIONOF me=get(%0/FACTION)
+> think json_group_by(FACTIONOF, lcon(here))
+{"Rebels":["#12","#40"],"Empire":["#7"]}
+```
+
+
+**See Also:**
+- [json()]
+- [json_array()]
+- [json_query()]
+- [filter()]
+- [map()]
+- [chain()]
 # JSON_MAP()
 `json_map([<object>/]<attribute>, <json>[, <osep>[, <arg>[, ..., <argN>]]])`
 

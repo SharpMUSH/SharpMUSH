@@ -5775,12 +5775,11 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
-	[SharpCommand(Name = "@INCLUDE", Switches = ["LOCALIZE", "CLEARREGS", "NOBREAK"],
+	[SharpCommand(Name = "@INCLUDE", Switches = ["LOCALIZE", "CLEARREGS", "NOBREAK", "CHAIN"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 31, ParameterNames = ["file"])]
 	public static async ValueTask<Option<CallState>> Include(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 
@@ -5791,69 +5790,21 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoAttributeSpecified);
 		}
 
-		var parts = attributePath.Split('/', 2);
-		if (parts.Length < 2)
-		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyObjectAttributePath), executor);
-			return new CallState(ErrorMessages.Returns.InvalidPath);
-		}
+		var hasChain = switches.Contains("CHAIN");
+		var hasNoBreak = switches.Contains("NOBREAK");
+		var hasClearRegs = switches.Contains("CLEARREGS");
+		var hasLocalize = switches.Contains("LOCALIZE");
 
-		var objectName = parts[0];
-		var attributeName = parts[1];
+		// With /chain the left side is a space-separated list of <object>/<attribute> targets, run in order
+		// and sharing one q-register set (that is how a chain hands off from step to step). Each target's
+		// object must be space-free (a dbref, "me", or a single-word name), since spaces separate the targets.
+		// Without /chain there is a single target whose object name may contain spaces as usual.
+		string[] targets = hasChain
+			? attributePath.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+			: [attributePath];
 
-		// Locate the target object AS THE EXECUTOR (looker=executor, perm=executor). @include runs as the
-		// executor and reads the attribute with the executor's permission (below), so the target lookup
-		// must use the executor too — NOT the enactor. Passing the enactor as the permission object made
-		// the looker-gate (LocateService: !Nearby && !See_All && !Controls) fire whenever a mortal, REMOTE
-		// enactor triggered a $-command on another object (e.g. a WIZARD helper in the master room) that
-		// @include'd %!/me — the target locate failed with "NOT PERMITTED TO EVALUATE ON LOOKER" even
-		// though the executor owns the object. (Mirror of the same fix already applied to the read below.)
-		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
-			parser, executor, executor, objectName, LocateFlags.All);
-
-		if (maybeObject.IsError)
-		{
-			return maybeObject.AsError;
-		}
-
-		var targetObject = maybeObject.AsSharpObject;
-
-		// Get the attribute with the EXECUTOR's read permission — the included commands run as the
-		// executor, so this mirrors u()/$-command dispatch. Reading as the enactor was wrong: it broke
-		// the common pattern of a $-command on a (e.g. WIZARD) object @include'ing its own helper tails
-		// when a mortal enactor triggered it — the attr read failed and the error went to the executor,
-		// so the enactor saw nothing.
-		var attributeResult = await AttributeService!.GetAttributeAsync(
-			executor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
-
-		if (attributeResult.IsError)
-		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeNoSuchAttributeFormat), executor, attributeName);
-			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
-		}
-
-		if (attributeResult.IsNone)
-		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeAttributeIsEmptyFormat), executor, attributeName);
-			return CallState.Empty;
-		}
-
-		var attribute = attributeResult.AsAttribute.Last();
-		var attributeText = attribute.Value.ToPlainText();
-		var attributeLongName = attribute.LongName!.ToUpper();
-
-		// Strip ^...: or $...: prefixes for listen/command patterns using Span
-		if (attributeText.StartsWith("^") || attributeText.StartsWith("$"))
-		{
-			var colonIndex = attributeText.IndexOf(':');
-			if (colonIndex > 0)
-			{
-				attributeText = attributeText.AsSpan(colonIndex + 1).TrimStart().ToString();
-			}
-		}
-
-		// Build EnvironmentRegisters from provided arguments so %0, %1, ... are substituted.
-		// args["0"] is the attribute path; args["1"], args["2"], ... map to %0, %1, ...
+		// Build EnvironmentRegisters once so %0, %1, ... are substituted — the same args reach every target
+		// in a chain. args["0"] is the target list; args["1"], args["2"], ... map to %0, %1, ...
 		var envArgs = new Dictionary<string, CallState>(parser.CurrentState.EnvironmentRegisters);
 		for (var i = 1; i < args.Count; i++)
 		{
@@ -5863,12 +5814,9 @@ public partial class Commands
 			}
 		}
 
-		// Implement /localize: save Q-registers so the included code cannot permanently change
-		// the caller's Q-registers. /clearregs: start the included code with empty Q-registers.
-		// NOTE: Save must happen before Clear (both use a single TryPeek for safety).
-		var hasClearRegs = switches.Contains("CLEARREGS");
-		var hasLocalize = switches.Contains("LOCALIZE");
-
+		// /localize: save Q-registers so the included code cannot permanently change the caller's registers.
+		// /clearregs: start the included code with empty Q-registers. Both apply around the WHOLE chain;
+		// within a chain the targets still share registers. (Save must happen before Clear.)
 		Dictionary<string, MString>? savedRegisters = null;
 		if ((hasLocalize || hasClearRegs) && parser.CurrentState.Registers.TryPeek(out var includeTopRegs))
 		{
@@ -5883,28 +5831,87 @@ public partial class Commands
 			}
 		}
 
-		// Execute the attribute content in-place without creating a queue entry.
+		// Run the targets. Default: run a multi-target chain as ONE command list so an @break/@assert in a
+		// link short-circuits the remaining links (VisitCommandList contains the break at the list boundary,
+		// as it does for a normal @include). /nobreak: run each target on its own so a break is confined to
+		// its link and the chain carries on. A single target is just the ordinary @include.
 		try
 		{
-			var hasNoBreak = switches.Contains("NOBREAK");
+			Option<CallState> lastResult = CallState.Empty;
 
-			var result = await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
+			if (!hasNoBreak && targets.Length > 1)
 			{
-				var execResult = await parser.With(
-					state => state with { EnvironmentRegisters = envArgs, Caller = state.Executor },
-					p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MModule.single(attributeText))));
+				var texts = new List<string>(targets.Length);
 
-				// Handle NOBREAK switch to prevent @break/@assert propagation.
-				// When set, @break/@assert from included code shouldn't propagate to calling list.
-				if (hasNoBreak && parser.CurrentState.ExecutionStack.TryPeek(out var execution) && execution.CommandListBreak)
+				foreach (var parts in targets.Select(target => target.Split('/', 2)))
 				{
-					parser.CurrentState.ExecutionStack.TryPop(out _);
+					if (parts.Length < 2)
+					{
+						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyObjectAttributePath), executor);
+						return new CallState(ErrorMessages.Returns.InvalidPath);
+					}
+
+					var (error, _, text) = await ReadTarget(parts[0], parts[1]);
+					if (error is not null)
+					{
+						return error;
+					}
+
+					if (text is null)
+					{
+						continue; // empty attribute (already notified) contributes nothing
+					}
+
+					texts.Add(text);
 				}
 
-				return execResult ?? CallState.Empty;
-			});
+				if (texts.Count == 0)
+				{
+					return CallState.Empty;
+				}
 
-			return result;
+				var combined = string.Join(" ; ", texts);
+				// Key recursion tracking by the chain's own target-list identity (mirroring how single-target
+				// @include keys on the attribute LongName): the SAME chain nested within itself shares a
+				// bucket, so genuine whole-chain recursion is still caught, while DIFFERENT chains get
+				// DIFFERENT buckets, so ordinary non-recursive nesting is not falsely limited. (A constant key
+				// would collapse every chain into one bucket; the first link's name would collide unrelated
+				// chains that share that link.) The "@INCLUDE`CHAIN`" prefix cannot collide with a real
+				// attribute LongName. Recursion originating in a SINGLE link is caught independently of this
+				// key: a nested @include of that link runs through RunOne under the link's own LongName.
+				var chainRecursionKey = "@INCLUDE`CHAIN`" + string.Join("`", targets).ToUpperInvariant();
+				lastResult = await ExecuteAttributeWithTracking(parser, chainRecursionKey, async () =>
+					await parser.With(
+						state => state with { EnvironmentRegisters = envArgs, Caller = state.Executor },
+						p => p.CommandListParse(MModule.single(combined))) ?? CallState.Empty);
+
+				return lastResult;
+			}
+
+			// Single target, or a /nobreak chain: run each target on its own (its break is contained).
+			foreach (var parts in targets.Select(target => target.Split('/', 2)))
+			{
+				if (parts.Length < 2)
+				{
+					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyObjectAttributePath), executor);
+					return new CallState(ErrorMessages.Returns.InvalidPath);
+				}
+
+				var (error, attribute, text) = await ReadTarget(parts[0], parts[1]);
+				if (error is not null)
+				{
+					return error;
+				}
+
+				if (text is null)
+				{
+					continue;
+				}
+
+				lastResult = await RunOne(attribute!, text);
+			}
+
+			return lastResult;
 		}
 		catch (Exception ex)
 		{
@@ -5921,6 +5928,74 @@ public partial class Commands
 					regsToRestore[key] = value;
 				}
 			}
+		}
+
+		// Locate -> read -> strip $/^ prefix. Returns a (notified) error CallState on a hard failure;
+		// Text=null for an empty attribute (already notified); otherwise the attribute and its stripped text.
+		async ValueTask<(CallState? Error, SharpAttribute? Attribute, string? Text)> ReadTarget(string objectName, string attributeName)
+		{
+			// Locate + read AS THE EXECUTOR (looker=executor, perm=executor): @include runs as the executor,
+			// mirroring u()/$-command dispatch -- NOT the enactor (which broke remote $-command triggers on
+			// WIZARD helper objects).
+			var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+				parser, executor, executor, objectName, LocateFlags.All);
+
+			if (maybeObject.IsError)
+			{
+				return (maybeObject.AsError, null, null);
+			}
+
+			var targetObject = maybeObject.AsSharpObject;
+
+			var attributeResult = await AttributeService!.GetAttributeAsync(
+				executor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
+
+			if (attributeResult.IsError)
+			{
+				// Surface the real error (e.g. a permission failure) instead of masking it as "no such attribute".
+				await NotifyService!.Notify(executor, attributeResult.AsError.Value, executor);
+				return (new CallState(attributeResult.AsError.Value), null, null);
+			}
+
+			if (attributeResult.IsNone)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeAttributeIsEmptyFormat), executor, attributeName);
+				return (null, null, null);
+			}
+
+			var attribute = attributeResult.AsAttribute.Last();
+			var attributeText = attribute.Value.ToPlainText();
+
+			// Strip ^...: or $...: listen/command prefixes.
+			if (attributeText.StartsWith("^") || attributeText.StartsWith("$"))
+			{
+				var colonIndex = attributeText.IndexOf(':');
+				if (colonIndex > 0)
+				{
+					attributeText = attributeText.AsSpan(colonIndex + 1).TrimStart().ToString();
+				}
+			}
+
+			return (null, attribute, attributeText);
+		}
+
+		// Execute one already-read target in-place with the shared env args, containing an @break when /nobreak.
+		async ValueTask<CallState> RunOne(SharpAttribute attribute, string text)
+		{
+			return await ExecuteAttributeWithTracking(parser, attribute.LongName!.ToUpper(), async () =>
+			{
+				var execResult = await parser.With(
+					state => state with { EnvironmentRegisters = envArgs, Caller = state.Executor },
+					p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MModule.single(text))));
+
+				// /nobreak: contain an @break/@assert so it doesn't propagate to the calling action list.
+				if (hasNoBreak && parser.CurrentState.ExecutionStack.TryPeek(out var execution) && execution.CommandListBreak)
+				{
+					parser.CurrentState.ExecutionStack.TryPop(out _);
+				}
+
+				return execResult ?? CallState.Empty;
+			});
 		}
 	}
 

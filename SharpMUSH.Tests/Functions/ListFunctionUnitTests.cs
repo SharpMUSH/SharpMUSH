@@ -257,6 +257,41 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	[Test, NotInParallel]
+	public async Task Chain()
+	{
+		var objNum = await CreateObjectWithAttribute("chain_obj", "DOUBLE", "mul(%0,2)");
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&INC #{objNum}=add(%0,1)"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&ADDS #{objNum}=add(%0,%1)"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&WRAP #{objNum}=%1%0%1"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&SHOUT #{objNum}=ucstr(%0)!"));
+
+		async Task Check(string fn, string exp) =>
+			await Assert.That(((await Parser.FunctionParse(MModule.single(fn)))?.Message!).ToString()).IsEqualTo(exp);
+
+		// Threads %0 through the pipeline: (5*2)+1 = 11.
+		await Check($"chain(#{objNum}/DOUBLE #{objNum}/INC, 5)", "11");
+		// A single-attribute chain is just that one step.
+		await Check($"chain(#{objNum}/DOUBLE, 5)", "10");
+		// The side-argument (%1) reaches every step: 0+10=10, then 10+10=20.
+		await Check($"chain(#{objNum}/ADDS #{objNum}/ADDS, 0, 10)", "20");
+		// String pipeline with a shared side-arg: WRAP -> *hello*, SHOUT -> *HELLO*!.
+		await Check($"chain(#{objNum}/WRAP #{objNum}/SHOUT, hello, *)", "*HELLO*!");
+	}
+
+	[Test, NotInParallel]
+	public async Task ChainWithIterationBreak()
+	{
+		var objNum = await CreateObjectWithAttribute("chainbrk_obj", "S1", "add(%0,1)");
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&S2 #{objNum}=ibreak()[add(%0,10)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&S3 #{objNum}=mul(%0,100)"));
+
+		// S1: 0 -> 1. S2: ibreak() short-circuits the chain and yields add(1,10)=11. S3 is skipped,
+		// so the result is 11 (not the 1100 you'd get if S3 ran).
+		var result = (await Parser.FunctionParse(MModule.single($"chain(#{objNum}/S1 #{objNum}/S2 #{objNum}/S3, 0)")))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo("11");
+	}
+
 	[Test]
 	[Arguments("ldelete(a b c d,2)", "a c d")]
 	[Arguments("ldelete(a|b|c|d,2,|)", "a|c|d")]

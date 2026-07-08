@@ -1,20 +1,18 @@
 # EVENTS
 # EVENT
-SharpMUSH Events are hardcoded events that may or may not be caused by players. The Event system lets administrators designate an object as an event handler (using the "event_handler" config option). The event_handler object will then have attributes triggered, with arguments, on specified events.
+SharpMUSH Events are hardcoded events that may or may not be caused by players. An object designated as the event handler (via the "event_handler" config option) has attributes triggered on it, with arguments, on specified events.
 
-To use the SharpMUSH Event System:
+Unlike PennMUSH, **SharpMUSH pre-populates the event handler**: a new database is seeded with an **Event Handler object (#9)**, and the "event_handler" config option already points at it. You do not create one or set the config — you simply add attributes named after the events you care about:
 
 ```sharp
-> @create Event Handler
-> @config/set event_handler=[num(Event Handler)]
-> &<event name> Event Handler=<action list>
+> &<event name> #9=<action list>
 ```
 
-You will very likely want to set the event_handler option in your mush.cnf file to ensure it survives over dumps and is actively receiving events even during startup.
+If you would rather use a different object, point the config at it with `@config/set event_handler=<dbref>` and set the "event_handler" option in your mush.cnf so it survives dumps and is receiving events even during startup. On a fresh instance this is optional.
 
-The enactor of an event is either:
-1. The executor that caused it, or
-2. #-1 for system events without an executor.
+**How handler code runs:**
+- Event attributes run with the handler object's **own permissions** (it executes as itself, like the HTTP handler and any normal attribute). The seeded Event Handler **#9 is a WIZARD object**, so out of the box it can `@set`, `@power`, `@lock`, and see-all as an admin handler needs. If you point event_handler at your own object, flag it wizard (`@set <obj>=wizard`) to grant it those powers.
+- The enactor (%#) is the executor that caused the event. For a **system event with no executor** (an automatic dump, a signal, an idle-boot), %# is **#1 (God)**, not #-1. If the causer has been destroyed since, %# is #1 as well. Because %# is a real dbref either way, use an event's own arguments (not %#) to distinguish system- from player-caused triggers.
 
 
 **See Also:**
@@ -24,10 +22,10 @@ The enactor of an event is either:
 # EVENT EXAMPLES
 Suppose you want random dbsave messages:
 ```sharp
-> &DUMP\`COMPLETE Event Handler=@config/set dump_complete=SAVE: [v(randword(lattr(me/dumpmsg\`*)))]
-> &DUMPMSG\`NOTHING Event=The Database has been saved, nothing to see here.
-> &DUMPMSG\`GRETZKY Event=The Database saves, but Gretzky scores!
-> &DUMPMSG\`GEICO Event=The Database saved 15% by switching to Geico!
+> &DUMP`COMPLETE #9=@config/set dump_complete=SAVE: [v(randword(lattr(me/dumpmsg`*)))]
+> &DUMPMSG`NOTHING #9=The Database has been saved, nothing to see here.
+> &DUMPMSG`GRETZKY #9=The Database saves, but Gretzky scores!
+> &DUMPMSG`GEICO #9=The Database saved 15% by switching to Geico!
 > @dump
 SAVE: The Database has been saved, nothing to see here.
 > @dump
@@ -36,8 +34,7 @@ SAVE: The Database saved 15% by switching to Geico!
 
 Or admin want to be notified when a player connect attempt fails:
 ```sharp
-> @set Event=wizard
-> &SOCKET\`LOGINFAIL Event=@wizwall/emit On descriptor '%0' from IP '%1' a failed connect attempt to '%4': '%3'
+> &SOCKET`LOGINFAIL #9=@wizwall/emit On descriptor '%0' from IP '%1' a failed connect attempt to '%4': '%3'
 (Later, a player attempts to log in as #1)
 Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed connect attempt to '#1': 'invalid password'
 ```
@@ -47,13 +44,13 @@ Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed conne
 - [event examples2]
 
 # EVENT EXAMPLES2
-Suppose you want `@pcreated` players to be powered builder, set shared and zonelocked to roys, but players created at the connect screen to not be:
+Suppose you want `@pcreated` players to be powered builder, set shared and zonelocked to roys, but players created at the connect screen to not be. Set the handler on the seeded Event Handler (#9). Distinguish the two cases with the event's *how* argument (%2 — one of pcreate, create, register), **not** %#: for a connect-screen create %# is #1 (God), so `@assert %#` would not skip it.
 ```sharp
-> @set Event=wizard
-> &PLAYER\`CREATE Event=@assert %# ; @pemit %#=Auto-Setting [name(%0)] Builder and shared ; @power %0=builder ; @lock/zone %0=FLAG^ROYALTY ; @set %0=shared
+> &PLAYER`CREATE #9=@assert strmatch(%2,pcreate) ; @pemit %#=Auto-Setting [name(%0)] Builder and shared ; @power %0=builder ; @lock/zone %0=FLAG^ROYALTY ; @set %0=shared
 > @pcreate Grid-BC
 Auto-Setting Grid-BC Builder and Shared
 ```
+Note there is no `@set #9=wizard` step — the seeded #9 is already a wizard object, so it runs with its own elevated permissions and can `@power`/`@lock` the new player as-is. (A custom, non-wizard handler object would need `@set <obj>=wizard` first.)
 
 The Event Handler object, since it's handling so many events, may become cluttered with attributes. We recommend using `@trigger` and `@include` to separate events to multiple objects.
 
@@ -127,7 +124,7 @@ Events in the log tree get triggered whenever the game logs any information to a
 
 ### Example
 ```sharp
-&OBJECT\`FLAG event handler=@cemit Admin=capstr(lcstr(%2)) %1 [lcstr(%4)] on [name(%0)] by %n.
+&OBJECT`FLAG #9=@cemit Admin=capstr(lcstr(%2)) %1 [lcstr(%4)] on [name(%0)] by %n.
 ```
 
 # EVENT SQL
@@ -150,8 +147,8 @@ If these attributes exist, then penn will **NOT** perform what it usually does w
 
 To mimic old behaviour:
 ```sharp
-&SIGNAL\`USR1 Event Handler=@nspemit/list lwho()=GAME: Reboot w/o disconnect from game account, please wait. ; @shutdown/reboot
-&SIGNAL\`USR2 Event Handler=@dump
+&SIGNAL`USR1 #9=@nspemit/list lwho()=GAME: Reboot w/o disconnect from game account, please wait. ; @shutdown/reboot
+&SIGNAL`USR2 #9=@dump
 ```
 
 # EVENT PLAYER

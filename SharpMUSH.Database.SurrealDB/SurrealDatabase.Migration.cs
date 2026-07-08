@@ -276,6 +276,14 @@ public partial class SurrealDatabase
 			await ExecuteAsync(
 				"RELATE object:7->has_flags->object_flag:WIZARD",
 				cancellationToken);
+			// HTTP Handler (#8) and Event Handler (#9) are WIZARD so their handler softcode runs
+			// with its own elevated permissions (each executes as itself).
+			await ExecuteAsync(
+				"RELATE object:8->has_flags->object_flag:WIZARD",
+				cancellationToken);
+			await ExecuteAsync(
+				"RELATE object:9->has_flags->object_flag:WIZARD",
+				cancellationToken);
 
 			await SeedPluginFlags(cancellationToken);
 			await RunPluginSurrealMigrations(cancellationToken);

@@ -386,4 +386,143 @@ public class ControlFlowCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "SwNotify_Default_93158")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
+
+	[Test]
+	public async ValueTask IncludeChain_RunsAllLinksInOrder_SharingRegisters()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainAll");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&STEP1 {obj}=think setq(acc, a)"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&STEP2 {obj}=think setq(acc, %q<acc>b)"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&STEP3 {obj}=@pemit #1=ChainAll_%q<acc>c_71204"));
+
+		// All three links run in order, and q-registers are shared between them (STEP2 sees STEP1's setq).
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@include/chain {obj}/STEP1 {obj}/STEP2 {obj}/STEP3"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "ChainAll_abc_71204")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask IncludeChain_BreakInLink_StopsChain()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainBrk");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S1 {obj}=@pemit #1=ChainBrk_S1_55019;@break 1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S2 {obj}=@pemit #1=ChainBrk_S2_55019"));
+
+		// Default (no /nobreak): the @break in S1 short-circuits the chain, so S2 never runs.
+		await Parser.CommandListParse(MModule.single($"@include/chain {obj}/S1 {obj}/S2"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "ChainBrk_S1_55019")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.DidNotReceive()
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "ChainBrk_S2_55019")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask IncludeChain_PassesSameArgsToEveryLink()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainArg");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&P1 {obj}=@pemit #1=ChainArg_P1_%0_88431"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&P2 {obj}=@pemit #1=ChainArg_P2_%0_88431"));
+
+		// The =HELLO argument reaches every link as %0.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@include/chain {obj}/P1 {obj}/P2=HELLO"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "ChainArg_P1_HELLO_88431")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "ChainArg_P2_HELLO_88431")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask IncludeChainNobreak_ContinuesPastBreak()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainNB");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&N1 {obj}=@pemit #1=ChainNB_N1_31776;@break 1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&N2 {obj}=@pemit #1=ChainNB_N2_31776"));
+
+		// /nobreak confines the @break to N1, so the chain carries on to N2.
+		await Parser.CommandListParse(MModule.single($"@include/chain/nobreak {obj}/N1 {obj}/N2"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "ChainNB_N1_31776")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "ChainNB_N2_31776")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask IncludeChain_SingleLinkSelfRecursion_IsCaught()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainRecSelf");
+
+		// The recursion originates in ONE link of the group: S2 includes ITSELF. That nested single-target
+		// @include runs through RunOne, tracked under S2's own LongName — independent of the chain key — so
+		// it hits the recursion limit and the chain RETURNS instead of looping forever.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S1 {obj}=@pemit #1=ChainRecSelf_S1_88011"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S2 {obj}=@pemit #1=ChainRecSelf_S2_88011;@include {obj}/S2"));
+
+		// If single-link recursion were NOT caught, this call would never return (stack overflow / hang).
+		await Parser.CommandListParse(MModule.single($"@include/chain {obj}/S1 {obj}/S2"));
+
+		// S1 ran once (the chain executed) ...
+		await NotifyService.Received(1).Notify(
+			TestHelpers.MatchingObject(executor),
+			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextEquals(m, "ChainRecSelf_S1_88011")),
+			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// ... and S2 genuinely recursed (its marker fired), yet the call returned — proving it was bounded.
+		await NotifyService.Received().Notify(
+			TestHelpers.MatchingObject(executor),
+			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextEquals(m, "ChainRecSelf_S2_88011")),
+			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask IncludeChain_OneLinkReentersWholeChain_IsCaught()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainRecWhole");
+
+		// The recursion again originates in ONE link, but this time S2 re-runs the WHOLE chain (the same
+		// target list). That is tracked under the chain's target-list key, which is identical on every
+		// re-entry, so the counter climbs and the recursion limit fires — the chain RETURNS.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S1 {obj}=@pemit #1=ChainRecWhole_S1_43307"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S2 {obj}=@include/chain {obj}/S1 {obj}/S2"));
+
+		await Parser.CommandListParse(MModule.single($"@include/chain {obj}/S1 {obj}/S2"));
+
+		// S1 fired (the chain ran, repeatedly) and the call returned — proving whole-chain recursion driven
+		// by a single link is bounded/caught, not infinite.
+		await NotifyService.Received().Notify(
+			TestHelpers.MatchingObject(executor),
+			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextEquals(m, "ChainRecWhole_S1_43307")),
+			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
 }
