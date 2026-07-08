@@ -1082,7 +1082,7 @@ Three things set a chain apart from writing several separate @includes:
 - **The links share q-registers.** A value stored with setq() (readable as `%q<name>`) in one link is visible to the next. This is how a chain passes results from one step to the next.
 - **The chain short-circuits on @break.** Each link runs until one calls @break (or a failing @assert); the remaining links are then skipped. This lets an early step reject bad input and stop the pipeline cleanly.
 
-By default, an @break that fires inside a link also breaks the including action list, exactly as a normal @include does. Add /nobreak to confine it: the chain still stops at that link, but the command that ran @include/chain carries on afterwards. /localize and /clearregs apply to the chain as a whole (q-registers are saved and restored around, or cleared before, the entire chain); within the chain the links still share registers.
+The /nobreak, /localize and /clearregs switches behave as they do for a single @include. /nobreak confines an @break/@assert to the link it fires in, so instead of short-circuiting, the chain simply continues to the next link. /localize and /clearregs save and restore, or clear, the q-registers around the whole chain — within the chain the links still share registers.
 
 ### Example
 A `+set <number>` command that validates its input through a three-step chain:
