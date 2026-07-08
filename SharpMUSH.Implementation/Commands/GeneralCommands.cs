@@ -5843,9 +5843,8 @@ public partial class Commands
 			{
 				var texts = new List<string>(targets.Length);
 
-				foreach (var target in targets)
+				foreach (var parts in targets.Select(target => target.Split('/', 2)))
 				{
-					var parts = target.Split('/', 2);
 					if (parts.Length < 2)
 					{
 						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyObjectAttributePath), executor);
@@ -5885,9 +5884,8 @@ public partial class Commands
 			}
 
 			// Single target, or a /nobreak chain: run each target on its own (its break is contained).
-			foreach (var target in targets)
+			foreach (var parts in targets.Select(target => target.Split('/', 2)))
 			{
-				var parts = target.Split('/', 2);
 				if (parts.Length < 2)
 				{
 					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyObjectAttributePath), executor);

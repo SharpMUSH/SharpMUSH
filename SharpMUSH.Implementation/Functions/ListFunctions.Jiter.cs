@@ -34,9 +34,8 @@ public partial class Functions
 
 		var results = new List<MString>(tokens.Length);
 
-		foreach (var token in tokens)
+		foreach (var objAttr in tokens.Select(HelperFunctions.SplitOptionalObjectAndAttr))
 		{
-			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(token);
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
 				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
