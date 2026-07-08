@@ -1,20 +1,18 @@
 # EVENTS
 # EVENT
-SharpMUSH Events are hardcoded events that may or may not be caused by players. The Event system lets administrators designate an object as an event handler (using the "event_handler" config option). The event_handler object will then have attributes triggered, with arguments, on specified events.
+SharpMUSH Events are hardcoded events that may or may not be caused by players. An object designated as the event handler (via the "event_handler" config option) has attributes triggered on it, with arguments, on specified events.
 
-To use the SharpMUSH Event System:
+Unlike PennMUSH, **SharpMUSH pre-populates the event handler**: a new database is seeded with an **Event Handler object (#9)**, and the "event_handler" config option already points at it. You do not create one or set the config — you simply add attributes named after the events you care about:
 
 ```sharp
-> @create Event Handler
-> @config/set event_handler=[num(Event Handler)]
-> &<event name> Event Handler=<action list>
+> &<event name> #9=<action list>
 ```
 
-You will very likely want to set the event_handler option in your mush.cnf file to ensure it survives over dumps and is actively receiving events even during startup.
+If you would rather use a different object, point the config at it with `@config/set event_handler=<dbref>` and set the "event_handler" option in your mush.cnf so it survives dumps and is receiving events even during startup. On a fresh instance this is optional.
 
-The enactor of an event is either:
-1. The executor that caused it, or
-2. #-1 for system events without an executor.
+**How handler code runs (differs from PennMUSH):**
+- Event attributes are executed with elevated permissions — effectively as **God (#1)** — so a handler can `@set`, `@power`, `@lock`, etc. other objects without the handler needing to be flagged wizard.
+- The enactor (%#) is the executor that caused the event. For a **system event with no executor** (an automatic dump, a signal, an idle-boot), %# is **#1 (God)**, not #-1. If the causer has been destroyed since, %# is #1 as well. Because %# is a real dbref either way, use an event's own arguments (not %#) to distinguish system- from player-caused triggers.
 
 
 **See Also:**
@@ -47,13 +45,13 @@ Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed conne
 - [event examples2]
 
 # EVENT EXAMPLES2
-Suppose you want `@pcreated` players to be powered builder, set shared and zonelocked to roys, but players created at the connect screen to not be:
+Suppose you want `@pcreated` players to be powered builder, set shared and zonelocked to roys, but players created at the connect screen to not be. Set the handler on the seeded Event Handler (#9). Distinguish the two cases with the event's *how* argument (%2 — one of pcreate, create, register), **not** %#: for a connect-screen create %# is #1 (God), so `@assert %#` would not skip it.
 ```sharp
-> @set Event=wizard
-> &PLAYER\`CREATE Event=@assert %# ; @pemit %#=Auto-Setting [name(%0)] Builder and shared ; @power %0=builder ; @lock/zone %0=FLAG^ROYALTY ; @set %0=shared
+> &PLAYER\`CREATE #9=@assert strmatch(%2,pcreate) ; @pemit %#=Auto-Setting [name(%0)] Builder and shared ; @power %0=builder ; @lock/zone %0=FLAG^ROYALTY ; @set %0=shared
 > @pcreate Grid-BC
 Auto-Setting Grid-BC Builder and Shared
 ```
+Note there is no `@set #9=wizard` step — event handlers already run with God's permissions, so #9 can `@power` and `@lock` the new player as-is.
 
 The Event Handler object, since it's handling so many events, may become cluttered with attributes. We recommend using `@trigger` and `@include` to separate events to multiple objects.
 
