@@ -277,8 +277,6 @@ public class ListFunctionUnitTests
 		await Check($"chain(#{objNum}/ADDS #{objNum}/ADDS, 0, 10)", "20");
 		// String pipeline with a shared side-arg: WRAP -> *hello*, SHOUT -> *HELLO*!.
 		await Check($"chain(#{objNum}/WRAP #{objNum}/SHOUT, hello, *)", "*HELLO*!");
-		// arrow() is an alias for chain().
-		await Check($"arrow(#{objNum}/DOUBLE #{objNum}/INC, 5)", "11");
 	}
 
 	[Test, NotInParallel]

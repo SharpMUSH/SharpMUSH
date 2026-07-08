@@ -530,10 +530,6 @@ public partial class Functions
 		return new CallState(accumulator);
 	}
 
-	[SharpFunction(Name = "arrow", MinArgs = 2, MaxArgs = 32, Flags = FunctionFlags.Regular, ParameterNames = ["attributes", "base", "arguments..."])]
-	public static ValueTask<CallState> Arrow(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> Chain(parser, _2);
-
 	[SharpFunction(Name = "grab", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> Grab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

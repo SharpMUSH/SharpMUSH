@@ -984,7 +984,6 @@ You say, "--X--"
 - [ljust()]
 - [rjust()]
 # CHAIN()
-# ARROW()
 `chain(<attribute list>, <base>[, <arg0>[, ... , <argN>]])`
 
   chain() threads a value through a sequence of user-defined attributes -- the functional "pipeline", or thread-first "arrow" (as in Clojure's `->`), pattern. `<attribute list>` is a space-separated list of `[<object>/]<attribute>` names.
@@ -993,7 +992,7 @@ You say, "--X--"
 
   A step may call ibreak() to short-circuit the pipeline: the remaining attributes are skipped, and the value produced by that step is returned. chain() counts as an iteration level, so itext(0) and inum(0) inside a step give the running value and the step number.
 
-  Each attribute is evaluated as by ufun() -- with the privileges of the object it is set on -- and you must be able to read it. Object names in the list may not contain spaces (use "me" or a dbref), since spaces separate the attributes. arrow() is an alias for chain().
+  Each attribute is evaluated as by ufun() -- with the privileges of the object it is set on -- and you must be able to read it. Object names in the list may not contain spaces (use "me" or a dbref), since spaces separate the attributes.
 
   chain() is close kin to fold(): fold() walks a list of *data*, passing each element in turn as %0; chain() walks a list of *attributes*, passing one threaded result as %0 while carrying the same optional arguments to each step.
 
