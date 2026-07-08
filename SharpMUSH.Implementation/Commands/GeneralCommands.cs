@@ -5871,10 +5871,15 @@ public partial class Commands
 				}
 
 				var combined = string.Join(" ; ", texts);
-				// Track recursion under a stable synthetic key for the whole combined chain, rather than
-				// pinning it to the first link's attribute name (which would misattribute depth to an
-				// arbitrary link). The @/backtick form cannot collide with a real attribute LongName.
-				const string chainRecursionKey = "@INCLUDE`CHAIN";
+				// Key recursion tracking by the chain's own target-list identity (mirroring how single-target
+				// @include keys on the attribute LongName): the SAME chain nested within itself shares a
+				// bucket, so genuine whole-chain recursion is still caught, while DIFFERENT chains get
+				// DIFFERENT buckets, so ordinary non-recursive nesting is not falsely limited. (A constant key
+				// would collapse every chain into one bucket; the first link's name would collide unrelated
+				// chains that share that link.) The "@INCLUDE`CHAIN`" prefix cannot collide with a real
+				// attribute LongName. Recursion originating in a SINGLE link is caught independently of this
+				// key: a nested @include of that link runs through RunOne under the link's own LongName.
+				var chainRecursionKey = "@INCLUDE`CHAIN`" + string.Join("`", targets).ToUpperInvariant();
 				lastResult = await ExecuteAttributeWithTracking(parser, chainRecursionKey, async () =>
 					await parser.With(
 						state => state with { EnvironmentRegisters = envArgs, Caller = state.Executor },
