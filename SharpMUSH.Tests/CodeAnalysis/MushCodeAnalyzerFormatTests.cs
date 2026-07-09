@@ -46,4 +46,11 @@ public class MushCodeAnalyzerFormatTests
 		var result = Analyzer().Format("add(1, 2)");
 		await Assert.That(result).IsEqualTo("add(1, 2)");
 	}
+
+	[Test]
+	public async Task Format_PreservesCrlfLineEndings()
+	{
+		var result = Analyzer().Format("a,b\r\nc,d");
+		await Assert.That(result).IsEqualTo("a, b\r\nc, d");
+	}
 }

@@ -82,7 +82,9 @@ public partial class MushCodeAnalyzer
 				}
 			}
 
-			if (character == 0 || (character > 0 && char.IsWhiteSpace(text[character - 1])))
+			// Offer commands at the start of a line/after whitespace, or while typing an @command.
+			if (character == 0 || (character > 0 && char.IsWhiteSpace(text[character - 1])) ||
+			    prefix.StartsWith('@'))
 			{
 				foreach (var (name, definition) in parser.CommandLibrary)
 				{
@@ -143,7 +145,8 @@ public partial class MushCodeAnalyzer
 			var lines = code.Split('\n');
 			for (var i = 0; i < lines.Length; i++)
 			{
-				var line = lines[i];
+				// Drop a trailing CR so symbol ranges aren't off-by-one on CRLF documents.
+				var line = lines[i].TrimEnd('\r');
 
 				var attributeMatch = AttributeDefinitionRegex().Match(line);
 				if (attributeMatch.Success)

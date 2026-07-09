@@ -16,13 +16,16 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 {
 	public string Format(string code)
 	{
+		// Preserve the document's newline style so formatting a CRLF file doesn't silently
+		// rewrite every line ending to LF (a huge, confusing diff in Windows editors).
+		var newline = code.Contains("\r\n") ? "\r\n" : "\n";
 		var lines = code.Split('\n');
 		for (var i = 0; i < lines.Length; i++)
 		{
 			lines[i] = FormatLine(lines[i]);
 		}
 
-		return string.Join('\n', lines);
+		return string.Join(newline, lines);
 	}
 
 	private static string FormatLine(string line)

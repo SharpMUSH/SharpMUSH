@@ -106,6 +106,25 @@ public class MushCodeAnalyzerIntelligenceTests
 		await Assert.That(labels).DoesNotContain("%#");
 	}
 
+	[Test]
+	public async Task Complete_WhileTypingAtCommand_SuggestsMatchingCommands()
+	{
+		// A command prefix like "@fo" should offer commands even though the char before the
+		// cursor isn't whitespace.
+		var labels = AnalyzerWithLibraries().Complete("@fo", 0, 3).Select(c => c.Label).ToList();
+
+		await Assert.That(labels).Contains("@foo");
+	}
+
+	[Test]
+	public async Task DocumentSymbols_TrimsCarriageReturn_ForCrlfInput()
+	{
+		var symbols = EmptyAnalyzer().DocumentSymbols("&foo bar\r");
+
+		var symbol = symbols.First(s => s.Name == "foo");
+		await Assert.That(symbol.Range.End.Character).IsEqualTo("&foo bar".Length);
+	}
+
 	// ── Signature help ───────────────────────────────────────────────────────────
 
 	[Test]
