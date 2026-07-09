@@ -2,6 +2,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+using SharpMUSH.CodeAnalysis;
 using SharpMUSH.LanguageServer.Services;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text.RegularExpressions;
@@ -44,7 +45,7 @@ public partial class CodeActionHandler : CodeActionHandlerBase
 
 		try
 		{
-			var diagnostics = _parser.GetDiagnostics(document.Text, ParseType.Function);
+			var diagnostics = _parser.GetDiagnostics(document.Text, MushParseMode.ForFileName(uri));
 
 			foreach (var diagnostic in diagnostics)
 			{
@@ -201,7 +202,7 @@ public partial class CodeActionHandler : CodeActionHandlerBase
 	{
 		return new CodeActionRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu"),
+			DocumentSelector = MushDocument.Selector,
 			CodeActionKinds = new Container<CodeActionKind>(
 				CodeActionKind.QuickFix,
 				CodeActionKind.Refactor)

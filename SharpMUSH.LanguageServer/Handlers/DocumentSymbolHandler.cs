@@ -73,7 +73,7 @@ public class DocumentSymbolHandler : DocumentSymbolHandlerBase
 	{
 		return new DocumentSymbolRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu")
+			DocumentSelector = MushDocument.Selector
 		};
 	}
 }

@@ -71,7 +71,7 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 	{
 		return new SignatureHelpRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu"),
+			DocumentSelector = MushDocument.Selector,
 			TriggerCharacters = new Container<string>("(", ","),
 			RetriggerCharacters = new Container<string>(",")
 		};

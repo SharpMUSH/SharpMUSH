@@ -228,6 +228,29 @@ public class McpEndpointTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
+	public async Task Mcp_Validate_AcceptsCommandListParseType()
+	{
+		var password = "Correct-Horse-8!";
+		var character = await CreateCharacterWithPasswordAsync(password);
+
+		await using var client = await ConnectAsync(character, password);
+
+		var result = await client.CallToolAsync(
+			"validate",
+			new Dictionary<string, object?>
+			{
+				["code"] = "@pemit %#=hello",
+				["parseType"] = "commandlist"
+			});
+
+		var json = JsonSerializer.Serialize(result);
+		// The commandlist parse type plumbs through and the tool executes successfully
+		// (diagnostics, if any, are not tool errors).
+		await Assert.That(json).Contains("structuredContent");
+		await Assert.That(json).DoesNotContain("\"isError\":true");
+	}
+
+	[Test]
 	public async Task Mcp_DocumentSymbols_OutlinesAttributeDefinition()
 	{
 		var password = "Correct-Horse-6!";

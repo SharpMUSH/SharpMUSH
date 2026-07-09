@@ -125,7 +125,7 @@ public class RenameHandler : RenameHandlerBase
 	{
 		return new RenameRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu"),
+			DocumentSelector = MushDocument.Selector,
 			PrepareProvider = false
 		};
 	}

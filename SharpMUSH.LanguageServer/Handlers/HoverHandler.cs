@@ -57,7 +57,7 @@ public class HoverHandler : HoverHandlerBase
 	{
 		return new HoverRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu")
+			DocumentSelector = MushDocument.Selector
 		};
 	}
 }

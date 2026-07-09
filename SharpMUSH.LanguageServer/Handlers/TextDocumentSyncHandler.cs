@@ -5,6 +5,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
+using SharpMUSH.CodeAnalysis;
 using SharpMUSH.LanguageServer.Services;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -86,7 +87,7 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 	{
 		return new TextDocumentSyncRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu"),
+			DocumentSelector = MushDocument.Selector,
 			Change = TextDocumentSyncKind.Full,
 			Save = new SaveOptions { IncludeText = false }
 		};
@@ -96,7 +97,7 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 	{
 		try
 		{
-			var diagnostics = _parser.GetDiagnostics(text, ParseType.Function);
+			var diagnostics = _parser.GetDiagnostics(text, MushParseMode.ForFileName(uri));
 
 			var lspDiagnostics = diagnostics.Select(d => new OmniSharp.Extensions.LanguageServer.Protocol.Models.Diagnostic
 			{

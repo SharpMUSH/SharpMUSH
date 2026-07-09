@@ -27,7 +27,8 @@ public class MushTools(IMushCodeAnalyzer analyzer, McpDocumentStore documents)
 	public IReadOnlyList<McpDiagnostic> Validate(
 		[Description("The MUSH softcode to validate. Omit if 'documentId' is given.")]
 		string? code = null,
-		[Description("How to parse the code: 'function' (default) or 'command'.")]
+		[Description("How to parse the code: 'function' (default), 'commandlist' (a list of " +
+		             "commands, e.g. an attribute's $-command actions), or 'command' (a single command).")]
 		string parseType = "function",
 		[Description("Id from open_document to validate instead of inline 'code'.")]
 		string? documentId = null)
@@ -132,12 +133,7 @@ public class MushTools(IMushCodeAnalyzer analyzer, McpDocumentStore documents)
 		return code ?? throw new ArgumentException("Provide either 'code' or a 'documentId'.");
 	}
 
-	private static ParseType ParseParseType(string parseType)
-		=> parseType.Trim().ToLowerInvariant() switch
-		{
-			"command" => ParseType.Command,
-			_ => ParseType.Function
-		};
+	private static ParseType ParseParseType(string parseType) => MushParseMode.FromName(parseType);
 }
 
 /// <summary>A diagnostic in the flat, JSON-friendly shape returned to MCP clients.</summary>

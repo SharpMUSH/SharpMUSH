@@ -1,6 +1,7 @@
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+using SharpMUSH.CodeAnalysis;
 using SharpMUSH.LanguageServer.Services;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -40,7 +41,7 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
 		try
 		{
-			var tokensData = _parser.GetSemanticTokens(document.Text, ParseType.Function);
+			var tokensData = _parser.GetSemanticTokens(document.Text, MushParseMode.ForFileName(uri));
 
 			for (int i = 0; i < tokensData.Data.Length; i += 5)
 			{
@@ -71,7 +72,7 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
 		return new SemanticTokensRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu"),
+			DocumentSelector = MushDocument.Selector,
 			Legend = new SemanticTokensLegend
 			{
 				TokenTypes = new Container<SemanticTokenType>(sampleData.TokenTypes.Select(t =>

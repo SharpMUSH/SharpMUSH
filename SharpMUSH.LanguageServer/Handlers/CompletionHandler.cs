@@ -66,7 +66,7 @@ public class CompletionHandler : CompletionHandlerBase
 	{
 		return new CompletionRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu"),
+			DocumentSelector = MushDocument.Selector,
 			TriggerCharacters = new[] { "%", "@", "#" },
 			ResolveProvider = false
 		};

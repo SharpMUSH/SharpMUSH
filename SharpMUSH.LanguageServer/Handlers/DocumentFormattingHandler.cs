@@ -76,7 +76,7 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 	{
 		return new DocumentFormattingRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu")
+			DocumentSelector = MushDocument.Selector
 		};
 	}
 }

@@ -119,7 +119,7 @@ public class DefinitionHandler : DefinitionHandlerBase
 	{
 		return new DefinitionRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu")
+			DocumentSelector = MushDocument.Selector
 		};
 	}
 }

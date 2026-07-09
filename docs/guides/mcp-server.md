@@ -92,7 +92,18 @@ warnings, or hints.
 | Parameter | Type | Description |
 |---|---|---|
 | `code` | string | The MUSH softcode to validate. |
-| `parseType` | string | `"function"` (default) or `"command"`. |
+| `parseType` | string | `"function"` (default), `"commandlist"` (a list of commands, e.g. an attribute's `$`-command actions), or `"command"` (a single command). |
+
+**Function vs command-list.** The parse mode is chosen differently per surface:
+
+- **MCP** — the caller passes `parseType` (above).
+- **Language Server** — the mode is chosen by **file extension**: `.mush` / `.mu` are
+  parsed as a **command list** (a batch of building commands / attribute actions);
+  `.mushfn` / `.fun` are parsed as a **function** (a single expression). Save an editor
+  buffer with the matching extension to control how it's analyzed. Anything else falls
+  back to function.
+
+Both channels resolve through the same `MushParseMode` rule in `SharpMUSH.CodeAnalysis`.
 
 **Example call**
 

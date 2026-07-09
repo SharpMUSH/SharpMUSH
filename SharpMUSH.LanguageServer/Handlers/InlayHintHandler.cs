@@ -196,7 +196,7 @@ public partial class InlayHintHandler : InlayHintsHandlerBase
 	{
 		return new InlayHintRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu"),
+			DocumentSelector = MushDocument.Selector,
 			ResolveProvider = false
 		};
 	}
