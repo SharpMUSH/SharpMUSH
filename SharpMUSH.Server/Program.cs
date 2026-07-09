@@ -1,16 +1,20 @@
 using Core.Arango;
 using Core.Arango.Serilog;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Messaging.NATS.Strategy;
+using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
+using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Strategy.ArangoDB;
 
@@ -127,6 +131,19 @@ public class Program
 		app.MapControllers();
 		app.MapRazorPages();
 		app.MapHub<GameHub>("/hubs/game");
+
+		// In-server MCP (Model Context Protocol) endpoint. Only mapped when Mcp:Enabled is
+		// true; otherwise requests to the path fall through to the SPA fallback / 404. The
+		// endpoint requires an authenticated game character via the MushBasic scheme
+		// (Authorization: Basic base64(character:password)).
+		var mcpOptions = app.Services.GetRequiredService<IOptions<McpOptions>>().Value;
+		if (mcpOptions.Enabled)
+		{
+			var mcpPolicy = new AuthorizationPolicyBuilder(MushBasicAuthenticationHandler.SchemeName)
+				.RequireAuthenticatedUser()
+				.Build();
+			app.MapMcp(mcpOptions.Path).RequireAuthorization(mcpPolicy);
+		}
 
 		// Phase 9 — plugin web-contribution seam: after the host maps its own controllers/hubs, let each
 		// plugin implementing IEndpointContributor map its endpoints (hubs/routes) into the pipeline. The

@@ -1,3 +1,4 @@
+using SharpMUSH.CodeAnalysis;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using MModule = MarkupString.MarkupStringModule;
@@ -12,10 +13,13 @@ namespace SharpMUSH.LanguageServer.Services;
 public class LSPMUSHCodeParser
 {
 	private readonly IMUSHCodeParser _parser;
+	private readonly IMushCodeAnalyzer _analyzer;
 
 	public LSPMUSHCodeParser(IMUSHCodeParser parser)
 	{
 		_parser = parser;
+		// Diagnostics share a single source of truth with the in-server MCP tools.
+		_analyzer = new MushCodeAnalyzer(parser);
 	}
 
 	/// <summary>
@@ -23,29 +27,7 @@ public class LSPMUSHCodeParser
 	/// This operation is read-only and does not alter parser state.
 	/// </summary>
 	public IReadOnlyList<Diagnostic> GetDiagnostics(string text, ParseType parseType = ParseType.Function)
-	{
-		try
-		{
-			return _parser.GetDiagnostics(MModule.single(text), parseType);
-		}
-		catch (Exception ex)
-		{
-			return new List<Diagnostic>
-			{
-				new()
-				{
-					Range = new Library.Models.Range
-					{
-						Start = new Position(0, 0),
-						End = new Position(0, text.Length)
-					},
-					Severity = DiagnosticSeverity.Error,
-					Source = "SharpMUSH.LSP",
-					Message = $"Parser error: {ex.Message}"
-				}
-			};
-		}
-	}
+		=> _analyzer.Validate(text, parseType);
 
 	/// <summary>
 	/// Performs semantic analysis and returns tokens for syntax highlighting.

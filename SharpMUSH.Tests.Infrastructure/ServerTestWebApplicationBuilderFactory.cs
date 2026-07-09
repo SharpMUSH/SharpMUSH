@@ -31,6 +31,12 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	/// </summary>
 	protected override void ConfigureStartupConfiguration(IConfigurationBuilder configurationBuilder)
 	{
+		// Map the in-server MCP endpoint in integration tests regardless of which appsettings
+		// the test host resolves, so the Explicit MCP tests always have an endpoint to hit.
+		configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+		{
+			["Mcp:Enabled"] = "true"
+		});
 	}
 
 	/// <summary>

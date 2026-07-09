@@ -13,8 +13,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Neo4j.Driver;
+using SharpMUSH.CodeAnalysis;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
+using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
@@ -356,6 +358,9 @@ public class Startup(
 		services.AddSingleton(typeof(IStreamPipelineBehavior<,>), typeof(StreamQueryCachingBehavior<,>));
 		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
+		// Shared MUSH code intelligence — the single source of truth behind both the
+		// Language Server (for editors) and the in-server MCP tools (for agents/tooling).
+		services.AddSingleton<IMushCodeAnalyzer, MushCodeAnalyzer>();
 		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddKeyedSingleton(nameof(colorFile), colorFile);
 		services.AddOptions<SharpMUSHOptions>().ValidateOnStart();
@@ -513,6 +518,22 @@ public class Startup(
 					};
 				});
 		}
+
+		// MCP endpoint authentication: character + password over HTTP Basic, verified via the
+		// same flow the in-game `connect` command uses. Registered as an additional scheme
+		// (no default change) so the MCP endpoint can require it explicitly regardless of the
+		// default web-portal scheme, in every environment/JWT configuration above.
+		services.AddAuthentication()
+			.AddScheme<AuthenticationSchemeOptions, MushBasicAuthenticationHandler>(
+				MushBasicAuthenticationHandler.SchemeName, _ => { });
+
+		// In-server MCP (Model Context Protocol): exposes the shared MUSH code intelligence as
+		// tools over Streamable HTTP. Services are always registered; the endpoint is only
+		// mapped when Mcp:Enabled is true (see Program.MapMcp), so a disabled MCP returns 404.
+		services.Configure<McpOptions>(configuration.GetSection(McpOptions.Section));
+		services.AddMcpServer()
+			.WithHttpTransport(mcpTransport => mcpTransport.Stateless = true)
+			.WithTools<MushTools>();
 
 		// JWT infrastructure (role derivation + refresh tokens) is always registered
 		// so that the services are available even before a signing key is configured.
