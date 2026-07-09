@@ -24,11 +24,9 @@ public class ReplayPersistLatencyBenchmark
 	private static double Percentile(List<double> sortedMs, double p)
 		=> sortedMs[Math.Clamp((int)(p / 100.0 * sortedMs.Count), 0, sortedMs.Count - 1)];
 
-	// Explicit: this is a latency benchmark whose assertions compare inline-vs-decoupled timing
-	// ratios. Those ratios are only meaningful when the test has the CPU/NATS to itself; run inside
-	// the parallel suite they flake under contention. Matches the NatsPerformanceValidation timing
-	// tests, which are also [Explicit] (run on demand via the test filter, not in the gating suite).
-	[Test, Explicit]
+	// The whole class is [Explicit] (see class doc): this benchmark asserts an environment-dependent
+	// timing ratio, so it runs on demand via the test filter, not as part of the gating suite.
+	[Test]
 	public async Task Decoupling_persist_removes_the_nats_rtt_from_output_delivery()
 	{
 		var strategy = new NatsTestContainerStrategy();

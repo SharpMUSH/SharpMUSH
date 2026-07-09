@@ -56,7 +56,9 @@ public sealed class ConnectionPump(
 						await transport.SendAsync(f, ct);
 					// Spend the token, as the rebind path does — it is single-use, so a retry can't re-fetch
 					// this buffer. The fresh registration above already issued this connection a new token.
-					await resumeTokens.InvalidateAsync(deadToken, ct);
+					// Use CancellationToken.None: this single-use invalidation must still run even if the
+					// connection token cancels mid-replay, or a retry could re-fetch the same buffer.
+					await resumeTokens.InvalidateAsync(deadToken, CancellationToken.None);
 				}
 			}
 			else if (!SeqEnvelope.IsHello(firstFrame))
@@ -133,7 +135,8 @@ public sealed class ConnectionPump(
 
 		// Rotate the resume token: the one just used is now spent (single-use / forward-secure), and the
 		// client needs a fresh one so a *subsequent* drop can resume too. Same incarnation → same session id.
-		await resumeTokens.InvalidateAsync(token, ct);
+		// CancellationToken.None: spending the used token must not be skipped if the connection token cancels.
+		await resumeTokens.InvalidateAsync(token, CancellationToken.None);
 		var newToken = await resumeTokens.MintAsync(oldHandle, oldSession, ct);
 		await transport.SendAsync(SeqEnvelope.ResumeToken(newToken), ct);
 
@@ -176,7 +179,12 @@ public sealed class ConnectionPump(
 
 		await connectionService.RegisterAsync(
 			handle, transport.RemoteIp, transport.Hostname, transport.Kind,
-			output, output, () => Encoding.UTF8, () => _ = sink.Current?.CloseAsync());
+			// Close the current transport on forced disconnect, observing the fault instead of dropping it
+			// into TaskScheduler.UnobservedTaskException — same pattern as the grace-timer path.
+			output, output, () => Encoding.UTF8,
+			() => TimerGraceScheduler.Fire(
+				() => sink.Current?.CloseAsync() ?? Task.CompletedTask,
+				ex => logger.LogError(ex, "Error closing transport on forced disconnect for handle {Handle}", handle)));
 
 		var token = await resumeTokens.MintAsync(handle, session, ct);
 		await transport.SendAsync(SeqEnvelope.ResumeToken(token), ct);
