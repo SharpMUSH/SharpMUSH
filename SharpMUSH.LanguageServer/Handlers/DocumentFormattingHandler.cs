@@ -43,14 +43,20 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 
 			for (int i = 0; i < originalLines.Length && i < formattedLines.Length; i++)
 			{
-				if (formattedLines[i] != originalLines[i])
+				// A trailing CR is part of the line terminator in LSP positions, not the line
+				// content — exclude it from both the compared text and the edit so CRLF documents
+				// aren't off-by-one and no literal '\r' is injected into the replacement.
+				var original = originalLines[i].TrimEnd('\r');
+				var formatted = formattedLines[i].TrimEnd('\r');
+
+				if (formatted != original)
 				{
 					edits.Add(new TextEdit
 					{
 						Range = new OmniSharp.Extensions.LanguageServer.Protocol.Models.Range(
 							new Position(i, 0),
-							new Position(i, originalLines[i].Length)),
-						NewText = formattedLines[i]
+							new Position(i, original.Length)),
+						NewText = formatted
 					});
 				}
 			}

@@ -96,6 +96,15 @@ public class MushBasicAuthenticationHandler(
 			return AuthenticateResult.Fail("Invalid character or password.");
 		}
 
+		if (string.IsNullOrEmpty(player.PasswordHash))
+		{
+			// A passwordless character can't authenticate over MCP. Spend the same verification
+			// time as every other failure so its response latency doesn't reveal that it has no
+			// password set (PasswordIsValid would otherwise short-circuit on the empty hash).
+			_ = passwordService.PasswordIsValid("timing:parity", password, DummyHash.Value);
+			return AuthenticateResult.Fail("Invalid character or password.");
+		}
+
 		var salt = $"#{player.Object.Key}:{player.Object.CreationTime}";
 		if (!passwordService.PasswordIsValid(salt, password, player.PasswordHash))
 		{

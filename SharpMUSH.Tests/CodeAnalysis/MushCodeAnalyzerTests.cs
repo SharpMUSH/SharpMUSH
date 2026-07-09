@@ -69,4 +69,19 @@ public class MushCodeAnalyzerTests
 		await Assert.That(result[0].Range.End.Line).IsEqualTo(2);
 		await Assert.That(result[0].Range.End.Character).IsEqualTo("longer line 2".Length);
 	}
+
+	[Test]
+	public async Task Validate_WhenParserThrowsOnCrTerminatedCode_EndCharacterExcludesCarriageReturn()
+	{
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.GetDiagnostics(Arg.Any<MString>(), Arg.Any<ParseType>())
+			.Returns(_ => throw new InvalidOperationException("boom"));
+
+		var analyzer = new MushCodeAnalyzer(parser);
+
+		// Last line carries a trailing CR; the end character must count "bb", not "bb\r".
+		var result = analyzer.Validate("aa\r\nbb\r");
+
+		await Assert.That(result[0].Range.End.Character).IsEqualTo("bb".Length);
+	}
 }
