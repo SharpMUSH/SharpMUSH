@@ -207,8 +207,9 @@ public class McpEndpointTests(ServerWebAppFactory factory)
 		var validJson = JsonSerializer.Serialize(valid);
 
 		// Broken softcode surfaces at least one diagnostic; valid softcode is clean.
-		await Assert.That(brokenJson).Contains("Severity");
-		await Assert.That(validJson).DoesNotContain("Severity");
+		// (Structured content is serialized camelCase, e.g. "severity".)
+		await Assert.That(brokenJson).Contains("severity");
+		await Assert.That(validJson).DoesNotContain("severity");
 	}
 
 	[Test]
@@ -257,7 +258,7 @@ public class McpEndpointTests(ServerWebAppFactory factory)
 		var validated = await client.CallToolAsync(
 			"validate",
 			new Dictionary<string, object?> { ["documentId"] = documentId });
-		await Assert.That(JsonSerializer.Serialize(validated)).Contains("Severity");
+		await Assert.That(JsonSerializer.Serialize(validated)).Contains("severity");
 
 		var closed = await client.CallToolAsync(
 			"close_document",
