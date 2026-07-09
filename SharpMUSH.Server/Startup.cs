@@ -531,6 +531,7 @@ public class Startup(
 		// tools over Streamable HTTP. Services are always registered; the endpoint is only
 		// mapped when Mcp:Enabled is true (see Program.MapMcp), so a disabled MCP returns 404.
 		services.Configure<McpOptions>(configuration.GetSection(McpOptions.Section));
+		services.AddSingleton<McpDocumentStore>();
 		services.AddMcpServer()
 			.WithHttpTransport(mcpTransport => mcpTransport.Stateless = true)
 			.WithTools<MushTools>();

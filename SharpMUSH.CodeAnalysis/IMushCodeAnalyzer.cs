@@ -28,4 +28,30 @@ public interface IMushCodeAnalyzer
 	/// first argument. Line count is preserved. Never throws.
 	/// </summary>
 	string Format(string code);
+
+	/// <summary>
+	/// Returns hover information (function/command signature docs, or a built-in pattern
+	/// explanation) for the word at the 0-based <paramref name="line"/>/<paramref name="character"/>,
+	/// or null if there is nothing to show. Never throws.
+	/// </summary>
+	HoverInfo? Hover(string code, int line, int character);
+
+	/// <summary>
+	/// Returns completion suggestions (functions, commands, and common substitutions) for the
+	/// word prefix at the 0-based <paramref name="line"/>/<paramref name="character"/>. Never throws.
+	/// </summary>
+	IReadOnlyList<CompletionSuggestion> Complete(string code, int line, int character);
+
+	/// <summary>
+	/// Returns signature help for the function call surrounding the 0-based
+	/// <paramref name="line"/>/<paramref name="character"/>, or null if the position is not
+	/// inside a known function call. Never throws.
+	/// </summary>
+	SignatureInfo? SignatureHelp(string code, int line, int character);
+
+	/// <summary>
+	/// Returns an outline of the softcode: attribute definitions, <c>@set</c> attributes,
+	/// function calls, and commands. Never throws.
+	/// </summary>
+	IReadOnlyList<CodeSymbol> DocumentSymbols(string code);
 }

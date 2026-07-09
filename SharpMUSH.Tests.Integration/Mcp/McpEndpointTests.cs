@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 using SharpMUSH.Tests.Infrastructure;
 
 namespace SharpMUSH.Tests.Integration.Mcp;
@@ -169,15 +170,22 @@ public class McpEndpointTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	public async Task Mcp_ListTools_IncludesValidate()
+	public async Task Mcp_ListTools_IncludesAllTools()
 	{
 		var password = "Correct-Horse-3!";
 		var character = await CreateCharacterWithPasswordAsync(password);
 
 		await using var client = await ConnectAsync(character, password);
-		var tools = await client.ListToolsAsync();
+		var names = (await client.ListToolsAsync()).Select(t => t.Name).ToList();
 
-		await Assert.That(tools.Select(t => t.Name)).Contains("validate");
+		foreach (var expected in new[]
+		{
+			"validate", "format", "hover", "complete", "signature_help",
+			"document_symbols", "open_document", "close_document"
+		})
+		{
+			await Assert.That(names).Contains(expected);
+		}
 	}
 
 	[Test]
@@ -216,5 +224,44 @@ public class McpEndpointTests(ServerWebAppFactory factory)
 			new Dictionary<string, object?> { ["code"] = "  add(1,2,3)  " });
 
 		await Assert.That(JsonSerializer.Serialize(result)).Contains("add(1, 2, 3)");
+	}
+
+	[Test]
+	public async Task Mcp_DocumentSymbols_OutlinesAttributeDefinition()
+	{
+		var password = "Correct-Horse-6!";
+		var character = await CreateCharacterWithPasswordAsync(password);
+
+		await using var client = await ConnectAsync(character, password);
+
+		var result = await client.CallToolAsync(
+			"document_symbols",
+			new Dictionary<string, object?> { ["code"] = "&greeting think hello" });
+
+		await Assert.That(JsonSerializer.Serialize(result)).Contains("greeting");
+	}
+
+	[Test]
+	public async Task Mcp_SessionHandles_ValidateByDocumentIdThenClose()
+	{
+		var password = "Correct-Horse-7!";
+		var character = await CreateCharacterWithPasswordAsync(password);
+
+		await using var client = await ConnectAsync(character, password);
+
+		var opened = await client.CallToolAsync(
+			"open_document",
+			new Dictionary<string, object?> { ["code"] = "add(" });
+		var documentId = opened.Content.OfType<TextContentBlock>().First().Text;
+
+		var validated = await client.CallToolAsync(
+			"validate",
+			new Dictionary<string, object?> { ["documentId"] = documentId });
+		await Assert.That(JsonSerializer.Serialize(validated)).Contains("Severity");
+
+		var closed = await client.CallToolAsync(
+			"close_document",
+			new Dictionary<string, object?> { ["documentId"] = documentId });
+		await Assert.That(JsonSerializer.Serialize(closed)).Contains("true");
 	}
 }

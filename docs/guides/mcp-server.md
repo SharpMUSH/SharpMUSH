@@ -143,10 +143,68 @@ returns `"add(1, 2, 3)"`.
 The same formatting backs the Language Server's `textDocument/formatting`, so editors
 and agents format identically.
 
-> More tools mapping the rest of the shared analysis engine — `hover`, `complete`,
-> `signature_help`, `document_symbols`, and optional document-session handles —
-> follow the same pattern and are being added incrementally. See
-> `docs/superpowers/specs/2026-07-08-mcp-lsp-server-design.md`.
+### `hover`
+
+Return hover documentation for the word at a position: a function/command signature,
+or an explanation of a built-in substitution (`%#`, `%0`, `%qa`, …). Returns `null`
+when there is nothing to show.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `line` | int | 0-based line. |
+| `character` | int | 0-based character. |
+| `code` | string? | The softcode (omit if `documentId` is given). |
+| `documentId` | string? | An open document's id (see session handles). |
+
+```json
+{ "name": "hover", "arguments": { "code": "add(1,2)", "line": 0, "character": 1 } }
+```
+
+→ `{ "Markdown": "### Function: `add`…", "StartLine": 0, "StartCharacter": 0, "EndLine": 0, "EndCharacter": 3 }`
+
+### `complete`
+
+Return completion suggestions (functions, commands, and common substitutions) for the
+word prefix at a position. Same `line` / `character` / `code` / `documentId` parameters
+as `hover`. Each item has `Label`, `Kind` (`Function` / `Keyword` / `Variable`),
+`Detail`, `Documentation`, `InsertText`, and `IsSnippet`.
+
+### `signature_help`
+
+Return parameter hints for the function call surrounding a position — `Label`,
+`Documentation`, the `Parameters` list, and the `ActiveParameter` index — or `null`
+when the position is not inside a known function call. Same parameters as `hover`.
+
+### `document_symbols`
+
+Return an outline of the softcode: attribute definitions (`&attr …`), `@set`
+attributes, function calls, and commands. Each symbol has `Name`, `Kind`
+(`Property` / `Function` / `Method`), `Detail`, and 0-based ranges.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `code` | string? | The softcode (omit if `documentId` is given). |
+| `documentId` | string? | An open document's id. |
+
+### Session handles: `open_document` / `close_document`
+
+To run many queries over the same softcode without resending it, store it once and pass
+the returned id as `documentId` to any tool above:
+
+```json
+{ "name": "open_document", "arguments": { "code": "&cmd $foo: think bar" } }
+```
+
+→ returns a `documentId` string. Then e.g.
+`{ "name": "hover", "arguments": { "documentId": "…", "line": 0, "character": 2 } }`.
+Release it with `{ "name": "close_document", "arguments": { "documentId": "…" } }`.
+
+Every query tool accepts **either** `code` **or** `documentId`; supplying neither is an
+error.
+
+> All tools map the shared analysis engine (`SharpMUSH.CodeAnalysis`) that also backs the
+> Language Server, so results match across editors and agents. See
+> `docs/superpowers/specs/2026-07-08-mcp-lsp-server-design.md` for the design.
 
 ## Docker / remote access
 
