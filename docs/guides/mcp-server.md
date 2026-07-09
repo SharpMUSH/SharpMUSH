@@ -102,6 +102,7 @@ warnings, or hints.
 - **Language Server** — the mode is chosen by **file extension**:
   - `.mush` / `.mu` → **one command per line** (a real-world `.mush` upload / quote file).
   - `.mushfn` / `.fun` → **function** (a single expression).
+  - `.mushcmd` → **command list** (a single `;`-separated command list).
   - anything else → function.
 
   Save an editor buffer with the matching extension to control how it's analyzed.

@@ -8,7 +8,7 @@ namespace SharpMUSH.CodeAnalysis;
 /// <item><see cref="ForFileName"/> — the Language Server's channel: a file's extension decides
 /// the mode. A real-world <c>.mush</c>/<c>.mu</c> file is one command per line
 /// (<see cref="MushAnalysisMode.CommandsPerLine"/>); a <c>.mushfn</c>/<c>.fun</c> file is a
-/// function/expression.</item>
+/// function/expression; a <c>.mushcmd</c> file is a single command list.</item>
 /// <item><see cref="FromName"/> — the MCP tools' channel: the caller names the mode explicitly.</item>
 /// </list>
 /// Both fall back to <see cref="MushAnalysisMode.Function"/> when nothing else applies.
@@ -25,6 +25,7 @@ public static class MushParseMode
 		{
 			"mush" or "mu" => MushAnalysisMode.CommandsPerLine,
 			"mushfn" or "fun" => MushAnalysisMode.Function,
+			"mushcmd" => MushAnalysisMode.CommandList,
 			_ => fallback
 		};
 	}

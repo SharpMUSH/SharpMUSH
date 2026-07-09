@@ -13,6 +13,7 @@ public class MushParseModeTests
 	[Arguments("greet.mu", MushAnalysisMode.CommandsPerLine)]
 	[Arguments("file:///home/x/fmt.mushfn", MushAnalysisMode.Function)]
 	[Arguments("fmt.fun", MushAnalysisMode.Function)]
+	[Arguments("file:///home/x/build.mushcmd", MushAnalysisMode.CommandList)]
 	[Arguments("file:///x/GREET.MUSH", MushAnalysisMode.CommandsPerLine)]
 	[Arguments("notes.txt", MushAnalysisMode.Function)]
 	[Arguments("noextension", MushAnalysisMode.Function)]
