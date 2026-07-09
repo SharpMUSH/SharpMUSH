@@ -30,6 +30,15 @@ public class MushTools(IMushCodeAnalyzer analyzer)
 			.Select(McpDiagnostic.From)
 			.ToList();
 
+	[McpServerTool(Name = "format")]
+	[Description("Format SharpMUSH softcode with a consistent style: trims whitespace, " +
+	             "inserts a space after commas, and a space between an @command and its first " +
+	             "argument. Returns the formatted code. Line count is preserved.")]
+	public string Format(
+		[Description("The MUSH softcode to format.")]
+		string code)
+		=> analyzer.Format(code);
+
 	private static ParseType ParseParseType(string parseType)
 		=> parseType.Trim().ToLowerInvariant() switch
 		{

@@ -122,9 +122,30 @@ warnings, or hints.
 
 Calling `validate` with `add(1,2)` returns `[]` — no diagnostics.
 
+### `format`
+
+Format SharpMUSH softcode with a consistent style: trims leading/trailing whitespace
+per line, inserts a space after commas, and a space between an `@command` and its
+first argument. Line count is preserved.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `code` | string | The MUSH softcode to format. |
+
+**Example**
+
+```json
+{ "name": "format", "arguments": { "code": "  add(1,2,3)  " } }
+```
+
+returns `"add(1, 2, 3)"`.
+
+The same formatting backs the Language Server's `textDocument/formatting`, so editors
+and agents format identically.
+
 > More tools mapping the rest of the shared analysis engine — `hover`, `complete`,
-> `signature_help`, `document_symbols`, `format`, and optional document-session
-> handles — follow the same pattern and are being added incrementally. See
+> `signature_help`, `document_symbols`, and optional document-session handles —
+> follow the same pattern and are being added incrementally. See
 > `docs/superpowers/specs/2026-07-08-mcp-lsp-server-design.md`.
 
 ## Docker / remote access

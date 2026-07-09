@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using MModule = MarkupString.MarkupStringModule;
@@ -11,8 +12,39 @@ namespace SharpMUSH.CodeAnalysis;
 /// server's container the parser carries the real function/command libraries, so the
 /// analysis reflects the running world.
 /// </summary>
-public class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyzer
+public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyzer
 {
+	public string Format(string code)
+	{
+		var lines = code.Split('\n');
+		for (var i = 0; i < lines.Length; i++)
+		{
+			lines[i] = FormatLine(lines[i]);
+		}
+
+		return string.Join('\n', lines);
+	}
+
+	private static string FormatLine(string line)
+	{
+		var formatted = NormalizeSpacing(line.TrimEnd());
+		var trimmed = formatted.TrimStart();
+		return string.IsNullOrEmpty(trimmed) ? string.Empty : trimmed;
+	}
+
+	private static string NormalizeSpacing(string line)
+	{
+		var result = CommaWithoutSpaceRegex().Replace(line, ", ");
+		result = CommandWithoutSpaceRegex().Replace(result, "$1 $2");
+		return result;
+	}
+
+	[GeneratedRegex(@",(?!\s)")]
+	private static partial Regex CommaWithoutSpaceRegex();
+
+	[GeneratedRegex(@"^(@[a-zA-Z]+)([^\s/])")]
+	private static partial Regex CommandWithoutSpaceRegex();
+
 	public IReadOnlyList<Diagnostic> Validate(string code, ParseType parseType = ParseType.Function)
 	{
 		try

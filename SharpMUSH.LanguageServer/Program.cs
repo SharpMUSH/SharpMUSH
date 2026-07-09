@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Server;
 using Serilog;
+using SharpMUSH.CodeAnalysis;
 using SharpMUSH.Implementation;
 using SharpMUSH.LanguageServer.Handlers;
 using SharpMUSH.LanguageServer.Services;
@@ -58,6 +59,11 @@ try
 					var parser = sp.GetRequiredService<IMUSHCodeParser>();
 					return new LSPMUSHCodeParser(parser);
 				});
+
+				// Shared code intelligence — the single source of truth also used by the
+				// in-server MCP tools. Handlers delegate to this instead of duplicating logic.
+				services.AddSingleton<IMushCodeAnalyzer>(sp =>
+					new MushCodeAnalyzer(sp.GetRequiredService<IMUSHCodeParser>()));
 			})
 			.WithHandler<TextDocumentSyncHandler>()
 			.WithHandler<SemanticTokensHandler>()

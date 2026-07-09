@@ -21,4 +21,11 @@ public interface IMushCodeAnalyzer
 	/// <param name="code">The MUSH softcode to analyse.</param>
 	/// <param name="parseType">Whether to parse the text as a function or command.</param>
 	IReadOnlyList<Diagnostic> Validate(string code, ParseType parseType = ParseType.Function);
+
+	/// <summary>
+	/// Formats MUSH softcode with a consistent style: trims trailing/leading whitespace per
+	/// line, ensures a space after a comma, and a space between an <c>@command</c> and its
+	/// first argument. Line count is preserved. Never throws.
+	/// </summary>
+	string Format(string code);
 }

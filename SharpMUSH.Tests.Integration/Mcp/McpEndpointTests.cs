@@ -202,4 +202,19 @@ public class McpEndpointTests(ServerWebAppFactory factory)
 		await Assert.That(brokenJson).Contains("Severity");
 		await Assert.That(validJson).DoesNotContain("Severity");
 	}
+
+	[Test]
+	public async Task Mcp_Format_NormalizesSoftcode()
+	{
+		var password = "Correct-Horse-5!";
+		var character = await CreateCharacterWithPasswordAsync(password);
+
+		await using var client = await ConnectAsync(character, password);
+
+		var result = await client.CallToolAsync(
+			"format",
+			new Dictionary<string, object?> { ["code"] = "  add(1,2,3)  " });
+
+		await Assert.That(JsonSerializer.Serialize(result)).Contains("add(1, 2, 3)");
+	}
 }
