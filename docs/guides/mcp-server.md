@@ -38,7 +38,7 @@ It is enabled by default in the **Development** environment
 
 Every request must carry HTTP Basic credentials of a **game character**:
 
-```
+```text
 Authorization: Basic base64(character:password)
 ```
 
@@ -176,7 +176,7 @@ when there is nothing to show.
 { "name": "hover", "arguments": { "code": "add(1,2)", "line": 0, "character": 1 } }
 ```
 
-→ `{ "Markdown": "### Function: `add`…", "StartLine": 0, "StartCharacter": 0, "EndLine": 0, "EndCharacter": 3 }`
+→ ``{ "Markdown": "### Function: `add`…", "StartLine": 0, "StartCharacter": 0, "EndLine": 0, "EndCharacter": 3 }``
 
 ### `complete`
 
@@ -231,7 +231,7 @@ unsafe). Point your MCP client's `url` at the published `https://host:port/mcp`.
 
 ## How it fits together
 
-```
+```text
  MCP client ──HTTP (Basic auth)──► SharpMUSH.Server  ──in-process──►  IMushCodeAnalyzer
  (Claude Code, …)                    app.MapMcp("/mcp")               (SharpMUSH.CodeAnalysis)
                                      MushBasic auth scheme                    │

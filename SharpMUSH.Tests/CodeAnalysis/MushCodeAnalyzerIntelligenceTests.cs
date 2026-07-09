@@ -96,6 +96,16 @@ public class MushCodeAnalyzerIntelligenceTests
 		await Assert.That(labels).Contains("%qa");
 	}
 
+	[Test]
+	public async Task Complete_WithSubstitutionPrefix_KeepsFilteringSubstitutions()
+	{
+		// Typing "%q" should still narrow to %q… substitutions — the '%' must be part of the prefix.
+		var labels = EmptyAnalyzer().Complete("%q", 0, 2).Select(c => c.Label).ToList();
+
+		await Assert.That(labels).Contains("%qa");
+		await Assert.That(labels).DoesNotContain("%#");
+	}
+
 	// ── Signature help ───────────────────────────────────────────────────────────
 
 	[Test]

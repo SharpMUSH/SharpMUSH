@@ -202,7 +202,7 @@ public partial class MushCodeAnalyzer
 		=> char.IsLetterOrDigit(c) || c is '_' or '@' or '%' or '#';
 
 	private static bool IsCompletionWordChar(char c)
-		=> char.IsLetterOrDigit(c) || c is '_' or '@';
+		=> char.IsLetterOrDigit(c) || c is '_' or '@' or '%' or '#';
 
 	private static bool IsSignatureWordChar(char c)
 		=> char.IsLetterOrDigit(c) || c == '_';

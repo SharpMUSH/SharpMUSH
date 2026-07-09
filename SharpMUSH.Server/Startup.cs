@@ -575,6 +575,20 @@ public class Startup(
 				limiterOpts.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
 				limiterOpts.QueueLimit = 5;
 			});
+
+			// "mcp" policy: partitioned per client IP so one source can't brute-force the
+			// character+password auth on /mcp, while a legitimate agent (single IP) still gets
+			// generous tool-call throughput. Partitioning (unlike the global "public-api" limiter)
+			// keeps one caller's bursts from throttling everyone else.
+			opts.AddPolicy("mcp", httpContext =>
+				RateLimitPartition.GetFixedWindowLimiter(
+					partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+					_ => new FixedWindowRateLimiterOptions
+					{
+						PermitLimit = 300,
+						Window = TimeSpan.FromMinutes(1),
+						QueueLimit = 0
+					}));
 		});
 
 		services.AddProblemDetails();

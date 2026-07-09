@@ -51,4 +51,22 @@ public class MushCodeAnalyzerTests
 		await Assert.That(result[0].Severity).IsEqualTo(DiagnosticSeverity.Error);
 		await Assert.That(result[0].Message).Contains("boom");
 	}
+
+	[Test]
+	public async Task Validate_WhenParserThrowsOnMultilineCode_EndPositionStaysWithinTheDocument()
+	{
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.GetDiagnostics(Arg.Any<MString>(), Arg.Any<ParseType>())
+			.Returns(_ => throw new InvalidOperationException("boom"));
+
+		var analyzer = new MushCodeAnalyzer(parser);
+
+		var result = analyzer.Validate("line0\nline1\nlonger line 2");
+
+		// The fallback range must be a valid position — the end lands on the last line,
+		// not character code.Length of line 0.
+		await Assert.That(result.Count).IsEqualTo(1);
+		await Assert.That(result[0].Range.End.Line).IsEqualTo(2);
+		await Assert.That(result[0].Range.End.Character).IsEqualTo("longer line 2".Length);
+	}
 }

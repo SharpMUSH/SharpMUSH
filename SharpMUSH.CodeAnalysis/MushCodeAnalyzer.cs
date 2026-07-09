@@ -58,6 +58,11 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 		}
 		catch (Exception ex)
 		{
+			// Anchor the fallback range to a valid position: the end lands on the last line,
+			// so a multi-line buffer doesn't produce a character offset past line 0.
+			var lines = code.Split('\n');
+			var lastLine = lines.Length - 1;
+
 			return
 			[
 				new Diagnostic
@@ -65,7 +70,7 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 					Range = new Range
 					{
 						Start = new Position(0, 0),
-						End = new Position(0, code.Length)
+						End = new Position(lastLine, lines[lastLine].Length)
 					},
 					Severity = DiagnosticSeverity.Error,
 					Source = "SharpMUSH.CodeAnalysis",

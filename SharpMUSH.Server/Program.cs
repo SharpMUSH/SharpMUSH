@@ -142,7 +142,12 @@ public class Program
 			var mcpPolicy = new AuthorizationPolicyBuilder(MushBasicAuthenticationHandler.SchemeName)
 				.RequireAuthenticatedUser()
 				.Build();
-			app.MapMcp(mcpOptions.Path).RequireAuthorization(mcpPolicy);
+			// Rate-limit the endpoint: it does character+password Basic auth on every request, so
+			// the per-IP "mcp" limiter blunts brute-force credential guessing without throttling a
+			// legitimate agent's tool-call throughput.
+			app.MapMcp(mcpOptions.Path)
+				.RequireRateLimiting("mcp")
+				.RequireAuthorization(mcpPolicy);
 		}
 
 		// Phase 9 — plugin web-contribution seam: after the host maps its own controllers/hubs, let each

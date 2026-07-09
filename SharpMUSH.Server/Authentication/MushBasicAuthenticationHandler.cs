@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using Mediator;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Library.Queries.Database;
@@ -34,6 +35,13 @@ public class MushBasicAuthenticationHandler(
 	: AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
 	public const string SchemeName = "MushBasic";
+
+	/// <summary>
+	/// A real, never-matching PBKDF2 hash used only to spend equivalent verification time on the
+	/// unknown-character path (see the null-player branch below). Computed once, process-wide.
+	/// </summary>
+	private static readonly Lazy<string> DummyHash =
+		new(() => new PasswordHasher<string>().HashPassword("timing:parity", "timing:parity"));
 
 	protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
 	{
@@ -77,6 +85,12 @@ public class MushBasicAuthenticationHandler(
 		var player = await mediator.CreateStream(new GetPlayerQuery(character)).FirstOrDefaultAsync();
 		if (player is null)
 		{
+			// Timing parity: a found character runs a full PBKDF2 verification, so an unknown
+			// character must too — otherwise the response latency alone reveals whether the
+			// character exists, defeating the opaque error message below. Verify against a real
+			// (never-matching) hash so the work is equivalent.
+			_ = passwordService.PasswordIsValid("timing:parity", password, DummyHash.Value);
+
 			// Same opaque message whether the character is unknown or the password is wrong,
 			// so the endpoint doesn't confirm which characters exist.
 			return AuthenticateResult.Fail("Invalid character or password.");

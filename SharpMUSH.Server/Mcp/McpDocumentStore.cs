@@ -16,12 +16,18 @@ public sealed class McpDocumentStore
 
 	public string Open(string text)
 	{
+		ArgumentNullException.ThrowIfNull(text);
+
 		var id = Guid.NewGuid().ToString("N");
 		_documents[id] = text;
 		_insertionOrder.Enqueue(id);
 
-		// Evict oldest ids while over capacity so a client that never closes cannot grow the store forever.
-		while (_documents.Count > Capacity && _insertionOrder.TryDequeue(out var oldest))
+		// Bound the insertion-order queue itself (not just the document map). Otherwise a client
+		// that repeatedly opens and closes documents would leave the closed ids sitting in the
+		// queue forever — the map stays small so the old "_documents.Count > Capacity" guard never
+		// fired, and the queue grew without bound. Capping the queue evicts oldest ids (removing
+		// any still-live document they point at) so both structures stay bounded under churn.
+		while (_insertionOrder.Count > Capacity && _insertionOrder.TryDequeue(out var oldest))
 		{
 			_documents.TryRemove(oldest, out _);
 		}
