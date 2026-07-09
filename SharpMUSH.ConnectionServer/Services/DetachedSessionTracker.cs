@@ -9,10 +9,43 @@ public interface IGraceScheduler
 }
 
 /// <summary>Production scheduler backed by a one-shot <see cref="Timer"/>.</summary>
-public sealed class TimerGraceScheduler : IGraceScheduler
+public sealed class TimerGraceScheduler(ILogger<TimerGraceScheduler>? logger = null) : IGraceScheduler
 {
 	public IDisposable Schedule(TimeSpan delay, Func<Task> action)
-		=> new Timer(_ => _ = action(), null, delay, Timeout.InfiniteTimeSpan);
+		=> new Timer(
+			_ => Fire(action, ex => logger?.LogError(ex, "Grace-expiry action faulted")),
+			null, delay, Timeout.InfiniteTimeSpan);
+
+	/// <summary>
+	/// Fires <paramref name="action"/> and observes its faults — synchronous throws and faulted Tasks
+	/// alike — routing any exception to <paramref name="onFault"/>. Firing via a bare <c>_ = action()</c>
+	/// would drop an async fault, leaving it to surface later as an unobserved
+	/// <see cref="TaskScheduler.UnobservedTaskException"/> (hard to trace, policy-dependent crash).
+	/// </summary>
+	internal static void Fire(Func<Task> action, Action<Exception>? onFault)
+	{
+		Task task;
+		try
+		{
+			task = action();
+		}
+		catch (Exception ex)
+		{
+			onFault?.Invoke(ex);
+			return;
+		}
+
+		task.ContinueWith(
+			t =>
+			{
+				// Accessing t.Exception observes the fault; unwrap the AggregateException to the real cause.
+				var ex = t.Exception!.InnerException ?? t.Exception!;
+				onFault?.Invoke(ex);
+			},
+			CancellationToken.None,
+			TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+			TaskScheduler.Default);
+	}
 }
 
 /// <summary>

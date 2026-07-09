@@ -12,7 +12,11 @@ namespace SharpMUSH.Tests.ConnectionServer;
 /// JetStream, comparing the current INLINE path (await the JetStream publish before delivering to the
 /// user) with a CHANNEL-DECOUPLED path (deliver immediately; a background drain persists). Prints the
 /// numbers and asserts the decoupled path both wins big on delivery latency and still persists everything.
+///
+/// Marked <see cref="ExplicitAttribute"/>: it asserts an environment-dependent performance ratio against a
+/// real NATS container, so it is a manual perf check rather than a CI gate.
 /// </summary>
+[Explicit]
 public class ReplayPersistLatencyBenchmark
 {
 	private const int Frames = 300;
@@ -20,16 +24,14 @@ public class ReplayPersistLatencyBenchmark
 	private static double Percentile(List<double> sortedMs, double p)
 		=> sortedMs[Math.Clamp((int)(p / 100.0 * sortedMs.Count), 0, sortedMs.Count - 1)];
 
-	// Explicit: this is a latency benchmark whose assertions compare inline-vs-decoupled timing
-	// ratios. Those ratios are only meaningful when the test has the CPU/NATS to itself; run inside
-	// the parallel suite they flake under contention. Matches the NatsPerformanceValidation timing
-	// tests, which are also [Explicit] (run on demand via the test filter, not in the gating suite).
-	[Test, Explicit]
+	// The whole class is [Explicit] (see class doc): this benchmark asserts an environment-dependent
+	// timing ratio, so it runs on demand via the test filter, not as part of the gating suite.
+	[Test]
 	public async Task Decoupling_persist_removes_the_nats_rtt_from_output_delivery()
 	{
 		var strategy = new NatsTestContainerStrategy();
-		var hInline = Math.Abs(BitConverter.ToInt64(Guid.NewGuid().ToByteArray()));
-		var hDecoupled = Math.Abs(BitConverter.ToInt64(Guid.NewGuid().ToByteArray()));
+		var sInline = Guid.NewGuid().ToString("N");
+		var sDecoupled = Guid.NewGuid().ToString("N");
 		try
 		{
 			var url = await strategy.GetUrlAsync();
@@ -39,7 +41,7 @@ public class ReplayPersistLatencyBenchmark
 			var line = Encoding.UTF8.GetBytes("You see a dusty room. Exits lead north and east. A brass lantern rests here.");
 
 			// Warm up (JIT + JetStream connection + first-publish setup) so we measure steady state.
-			for (var i = 0; i < 20; i++) await store.AppendAsync(hInline, line);
+			for (var i = 0; i < 20; i++) await store.AppendAsync(sInline, line);
 
 			// ---- INLINE (current): delivery is gated by the JetStream publish ack. ----
 			var inline = new List<double>(Frames);
@@ -47,7 +49,7 @@ public class ReplayPersistLatencyBenchmark
 			for (var i = 0; i < Frames; i++)
 			{
 				var sw = Stopwatch.StartNew();
-				var (_, wrapped) = await store.AppendAsync(hInline, line); // await NATS RTT ...
+				var (_, wrapped) = await store.AppendAsync(sInline, line); // await NATS RTT ...
 				DeliverToUser(wrapped);                                    // ... then the user sees it
 				inline.Add(sw.Elapsed.TotalMilliseconds);
 			}
@@ -66,7 +68,7 @@ public class ReplayPersistLatencyBenchmark
 			{
 				await foreach (var raw in channel.Reader.ReadAllAsync())
 				{
-					await store.AppendAsync(hDecoupled, raw); // off the delivery path
+					await store.AppendAsync(sDecoupled, raw); // off the delivery path
 					Interlocked.Increment(ref persisted);
 				}
 			});

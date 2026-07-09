@@ -6,11 +6,12 @@ using NATS.Client.JetStream.Models;
 namespace SharpMUSH.ConnectionServer.Services;
 
 /// <summary>
-/// NATS JetStream-backed <see cref="ITerminalReplayStore"/>. Each handle's output is published to
-/// <c>terminal.replay.&lt;handle&gt;</c> in a short-<see cref="StreamConfig.MaxAge"/> stream, so buffered
+/// NATS JetStream-backed <see cref="ITerminalReplayStore"/>. Each session's output is published to
+/// <c>terminal.replay.&lt;session&gt;</c> in a short-<see cref="StreamConfig.MaxAge"/> stream, so buffered
 /// output survives a ConnectionServer restart / instance change and can be replayed on reconnect.
-/// The per-handle sequence counter is in-memory (a handle is owned by one connection for its life);
-/// durability of the buffer itself is what enables replay after a restart into a new handle.
+/// The subject is keyed by a per-incarnation session id (not the reusable handle), so a recycled handle's
+/// new occupant can never read a prior session's frames, and a restart that loses the in-memory seq
+/// counter cannot collide two sessions onto one subject.
 /// </summary>
 public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncDisposable
 {
@@ -21,7 +22,7 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 	private readonly NatsConnection _nats;
 	private readonly NatsJSContext _js;
 	private readonly ILogger<JetStreamTerminalReplayStore> _logger;
-	private readonly ConcurrentDictionary<long, long> _seq = new();
+	private readonly ConcurrentDictionary<string, long> _seq = new();
 
 	private JetStreamTerminalReplayStore(NatsConnection nats, NatsJSContext js, ILogger<JetStreamTerminalReplayStore> logger)
 	{
@@ -44,27 +45,27 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 		return new JetStreamTerminalReplayStore(nats, js, logger);
 	}
 
-	private static string Subject(long handle) => $"{SubjectPrefix}.{handle}";
+	private static string Subject(string session) => $"{SubjectPrefix}.{session}";
 
-	public async ValueTask<(long Seq, byte[] Wrapped)> AppendAsync(long handle, byte[] rawUtf8, CancellationToken ct = default)
+	public async ValueTask<(long Seq, byte[] Wrapped)> AppendAsync(string session, byte[] rawUtf8, CancellationToken ct = default)
 	{
-		var seq = _seq.AddOrUpdate(handle, 1, (_, v) => v + 1);
+		var seq = _seq.AddOrUpdate(session, 1, (_, v) => v + 1);
 		var wrapped = SeqEnvelope.Wrap(seq, rawUtf8);
-		await _js.PublishAsync(Subject(handle), wrapped, cancellationToken: ct);
+		await _js.PublishAsync(Subject(session), wrapped, cancellationToken: ct);
 		return (seq, wrapped);
 	}
 
-	public async ValueTask<IReadOnlyList<byte[]>> AfterAsync(long handle, long lastSeq, CancellationToken ct = default)
+	public async ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default)
 	{
 		var result = new List<byte[]>();
 		INatsJSConsumer consumer;
 		try
 		{
-			// Ephemeral, no-ack consumer over just this handle's subject; auto-cleaned after inactivity.
+			// Ephemeral, no-ack consumer over just this session's subject; auto-cleaned after inactivity.
 			consumer = await _js.CreateOrUpdateConsumerAsync(StreamName, new ConsumerConfig
 			{
-				Name = $"replay-read-{handle}-{Guid.NewGuid():N}",
-				FilterSubject = Subject(handle),
+				Name = $"replay-read-{Guid.NewGuid():N}",
+				FilterSubject = Subject(session),
 				DeliverPolicy = ConsumerConfigDeliverPolicy.All,
 				AckPolicy = ConsumerConfigAckPolicy.None,
 				InactiveThreshold = TimeSpan.FromSeconds(10),
@@ -72,7 +73,7 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 		}
 		catch (NatsJSApiException ex)
 		{
-			_logger.LogWarning(ex, "Replay consumer creation failed for handle {Handle}", handle);
+			_logger.LogWarning(ex, "Replay consumer creation failed for session {Session}", session);
 			return result;
 		}
 
@@ -87,8 +88,16 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 		return result;
 	}
 
-	// MaxAge bounds the stream; explicit purge is unnecessary for the minimal safety net.
-	public ValueTask DropAsync(long handle, CancellationToken ct = default) => ValueTask.CompletedTask;
+	/// <summary>
+	/// Releases the ended session's in-memory seq bookkeeping so it does not accumulate for the process
+	/// lifetime. The durable buffer is left to age out via the stream's MaxAge (so a late resume-to-dead
+	/// still works); session ids are unique per incarnation, so nothing depends on an explicit purge.
+	/// </summary>
+	public ValueTask DropAsync(string session, CancellationToken ct = default)
+	{
+		_seq.TryRemove(session, out _);
+		return ValueTask.CompletedTask;
+	}
 
 	public async ValueTask DisposeAsync()
 	{

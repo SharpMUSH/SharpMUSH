@@ -19,24 +19,24 @@ public sealed class ResumeTokenService : IResumeTokenStore
 	// Test seam: inject a clock so TTL expiry is deterministic.
 	public ResumeTokenService(Func<DateTimeOffset> now) => _now = now;
 
-	public ValueTask<string> MintAsync(long handle, CancellationToken ct = default)
+	public ValueTask<string> MintAsync(long handle, string session, CancellationToken ct = default)
 	{
 		var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
-		_tokens[token] = new Entry(handle, _now() + Ttl);
+		_tokens[token] = new Entry(handle, session, _now() + Ttl);
 		return ValueTask.FromResult(token);
 	}
 
-	public ValueTask<(bool Found, long Handle)> TryResolveAsync(string token, CancellationToken ct = default)
+	public ValueTask<(bool Found, long Handle, string Session)> TryResolveAsync(string token, CancellationToken ct = default)
 	{
 		if (!_tokens.TryGetValue(token, out var entry))
-			return ValueTask.FromResult((false, 0L));
+			return ValueTask.FromResult((false, 0L, string.Empty));
 		if (_now() > entry.Expires)
 		{
 			_tokens.TryRemove(token, out _);
-			return ValueTask.FromResult((false, 0L));
+			return ValueTask.FromResult((false, 0L, string.Empty));
 		}
 
-		return ValueTask.FromResult((true, entry.Handle));
+		return ValueTask.FromResult((true, entry.Handle, entry.Session));
 	}
 
 	public ValueTask InvalidateAsync(string token, CancellationToken ct = default)
@@ -45,5 +45,5 @@ public sealed class ResumeTokenService : IResumeTokenStore
 		return ValueTask.CompletedTask;
 	}
 
-	private sealed record Entry(long Handle, DateTimeOffset Expires);
+	private sealed record Entry(long Handle, string Session, DateTimeOffset Expires);
 }

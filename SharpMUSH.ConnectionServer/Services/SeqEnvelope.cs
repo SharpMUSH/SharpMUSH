@@ -53,6 +53,22 @@ public static class SeqEnvelope
 		}
 	}
 
+	/// <summary>
+	/// True only if the frame is the structured <c>{"hello":n}</c> handshake. A substring test would
+	/// misclassify a real first command like <c>say "hello"</c> as the handshake and drop it.
+	/// </summary>
+	public static bool IsHello(string frame)
+	{
+		try
+		{
+			return JsonSerializer.Deserialize<HelloFrame>(frame, Json)?.Hello is not null;
+		}
+		catch (JsonException)
+		{
+			return false;
+		}
+	}
+
 	public static bool TryReadResume(string frame, out string token, out long lastSeq)
 	{
 		token = string.Empty;
@@ -74,6 +90,8 @@ public static class SeqEnvelope
 	private sealed record SeqFrame(long? Seq, string Data);
 
 	private sealed record ResumeFrame(string? Resume, long LastSeq);
+
+	private sealed record HelloFrame(int? Hello);
 
 	private sealed record ResumeTokenFrame(string ResumeToken);
 

@@ -39,19 +39,39 @@ public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable
 		return new NatsKvResumeTokenStore(nats, store, logger);
 	}
 
-	public async ValueTask<string> MintAsync(long handle, CancellationToken ct = default)
+	// Serialized resume-token value format, versioned so the layout can evolve deliberately. A token
+	// stored under a different version — or the pre-versioned legacy layout, or a corrupt entry — fails
+	// to resolve, and the caller falls back to a fresh session (which still replays via the durable
+	// store). That is safe because resume tokens are single-use and short-lived (re-minted on every
+	// connect/reattach), so a format change only costs a brief, self-healing loss of seamless reattach
+	// across the one deploy that introduces it — never a correctness or security problem.
+	private const string TokenFormatVersion = "1";
+
+	public async ValueTask<string> MintAsync(long handle, string session, CancellationToken ct = default)
 	{
 		var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
-		await _store.PutAsync(token, handle.ToString(), cancellationToken: ct);
+		// "<version>:<handle>:<session>" — handle is numeric and the session id is a hex GUID (no ':'),
+		// so ':' is an unambiguous separator.
+		await _store.PutAsync(token, $"{TokenFormatVersion}:{handle}:{session}", cancellationToken: ct);
 		return token;
 	}
 
-	public async ValueTask<(bool Found, long Handle)> TryResolveAsync(string token, CancellationToken ct = default)
+	public async ValueTask<(bool Found, long Handle, string Session)> TryResolveAsync(string token, CancellationToken ct = default)
 	{
 		var result = await _store.TryGetEntryAsync<string>(token, cancellationToken: ct);
 		if (!result.Success || result.Value.Value is null)
-			return (false, 0L);
-		return long.TryParse(result.Value.Value, out var handle) ? (true, handle) : (false, 0L);
+			return (false, 0L, string.Empty);
+
+		// Expect exactly "<version>:<handle>:<session>". Require the current version, a parseable handle, and
+		// a non-empty session: the session is part of the security boundary (it scopes replay to one
+		// incarnation), so anything else is rejected rather than resolved to a guessed or empty session.
+		var parts = result.Value.Value.Split(':', 3);
+		if (parts.Length != 3
+		    || parts[0] != TokenFormatVersion
+		    || !long.TryParse(parts[1], out var handle)
+		    || parts[2].Length == 0)
+			return (false, 0L, string.Empty);
+		return (true, handle, parts[2]);
 	}
 
 	public async ValueTask InvalidateAsync(string token, CancellationToken ct = default)

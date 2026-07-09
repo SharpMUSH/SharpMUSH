@@ -25,6 +25,7 @@ public sealed class ConnectionPump(
 	public async Task RunAsync(IDuplexTransport transport, long candidateHandle, CancellationToken ct)
 	{
 		long handle;
+		string session;
 
 		var firstFrame = await transport.ReceiveTextAsync(ct);
 		if (firstFrame is null)
@@ -37,22 +38,30 @@ public sealed class ConnectionPump(
 			&& await TryRebindAsync(transport, token, lastSeq, ct) is { } rebound)
 		{
 			descriptorGenerator.ReleaseWebSocketDescriptor(candidateHandle);
-			handle = rebound;
+			(handle, session) = rebound;
 		}
 		else
 		{
 			handle = candidateHandle;
-			await RegisterFreshAsync(transport, handle, ct);
+			session = await RegisterFreshAsync(transport, handle, ct);
 
 			if (SeqEnvelope.TryReadResume(firstFrame, out var deadToken, out var deadLastSeq))
 			{
-				// resume-to-dead: still replay the old handle's durable buffer, then continue fresh.
-				var (found, oldHandle) = await resumeTokens.TryResolveAsync(deadToken, ct);
+				// resume-to-dead: still replay the old session's durable buffer, then continue fresh. Keyed
+				// by the token's session id, so it never picks up a later occupant of the same (reused) handle.
+				var (found, _, oldSession) = await resumeTokens.TryResolveAsync(deadToken, ct);
 				if (found)
-					foreach (var f in await replayStore.AfterAsync(oldHandle, deadLastSeq, ct))
+				{
+					foreach (var f in await replayStore.AfterAsync(oldSession, deadLastSeq, ct))
 						await transport.SendAsync(f, ct);
+					// Spend the token, as the rebind path does — it is single-use, so a retry can't re-fetch
+					// this buffer. The fresh registration above already issued this connection a new token.
+					// Use CancellationToken.None: this single-use invalidation must still run even if the
+					// connection token cancels mid-replay, or a retry could re-fetch the same buffer.
+					await resumeTokens.InvalidateAsync(deadToken, CancellationToken.None);
+				}
 			}
-			else if (!IsHello(firstFrame))
+			else if (!SeqEnvelope.IsHello(firstFrame))
 			{
 				// Not hello and not resume — a real command arrived first; don't drop it.
 				await PublishInputAsync(handle, firstFrame, ct);
@@ -81,22 +90,33 @@ public sealed class ConnectionPump(
 		}
 		finally
 		{
-			// Detach (hold the session) instead of disconnecting; the grace timer does the real
-			// disconnect if the client does not come back.
-			sinkRegistry.Get(handle)?.Detach();
-			detachedTracker.Detach(handle, async () =>
+			// Only tear down if THIS pump's transport is still the sink's active one. If a newer pump
+			// rebound this handle while we were exiting (connection-steal), it has already Attached its own
+			// transport and cancelled the grace timer — so our exit must not detach its transport or
+			// schedule a disconnect for the live session it now owns. Ownership is "I am sink.Current".
+			var sink = sinkRegistry.Get(handle);
+			if (sink is not null && ReferenceEquals(sink.Current, transport))
 			{
-				await connectionService.DisconnectAsync(handle);
-				descriptorGenerator.ReleaseWebSocketDescriptor(handle);
-				sinkRegistry.Remove(handle);
-			}, grace);
+				// Detach (hold the session) instead of disconnecting; the grace timer does the real
+				// disconnect if the client does not come back.
+				sink.Detach();
+				detachedTracker.Detach(handle, async () =>
+				{
+					await connectionService.DisconnectAsync(handle);
+					descriptorGenerator.ReleaseWebSocketDescriptor(handle);
+					sinkRegistry.Remove(handle);
+					// The session is over for good — release its replay bookkeeping (the durable buffer itself
+					// ages out via the store's retention, so a late resume-to-dead still works).
+					await replayStore.DropAsync(session, CancellationToken.None);
+				}, grace);
+			}
 		}
 	}
 
-	/// <summary>Rebind to a live handle; returns the handle, or null to fall back to the fresh path.</summary>
-	private async Task<long?> TryRebindAsync(IDuplexTransport transport, string token, long lastSeq, CancellationToken ct)
+	/// <summary>Rebind to a live handle; returns the (handle, session), or null to fall back to the fresh path.</summary>
+	private async Task<(long Handle, string Session)?> TryRebindAsync(IDuplexTransport transport, string token, long lastSeq, CancellationToken ct)
 	{
-		var (found, oldHandle) = await resumeTokens.TryResolveAsync(token, ct);
+		var (found, oldHandle, oldSession) = await resumeTokens.TryResolveAsync(token, ct);
 		if (!found) return null;
 
 		var sink = sinkRegistry.Get(oldHandle);
@@ -110,38 +130,65 @@ public sealed class ConnectionPump(
 			await previous.CloseAsync();               // connection-steal: last write wins
 
 		await transport.SendAsync(SeqEnvelope.Reattached(), ct);
-		foreach (var f in await replayStore.AfterAsync(oldHandle, lastSeq, ct))
+		foreach (var f in await replayStore.AfterAsync(oldSession, lastSeq, ct))
 			await transport.SendAsync(f, ct);
 
 		// Rotate the resume token: the one just used is now spent (single-use / forward-secure), and the
-		// client needs a fresh one so a *subsequent* drop can resume too.
-		await resumeTokens.InvalidateAsync(token, ct);
-		var newToken = await resumeTokens.MintAsync(oldHandle, ct);
+		// client needs a fresh one so a *subsequent* drop can resume too. Same incarnation → same session id.
+		// CancellationToken.None: spending the used token must not be skipped if the connection token cancels.
+		await resumeTokens.InvalidateAsync(token, CancellationToken.None);
+		var newToken = await resumeTokens.MintAsync(oldHandle, oldSession, ct);
 		await transport.SendAsync(SeqEnvelope.ResumeToken(newToken), ct);
 
-		logger.LogInformation("Reattached to session {Handle}", oldHandle);
-		return oldHandle;
+		logger.LogInformation("Reattached handle {Handle} to session {Session}", oldHandle, oldSession);
+		return (oldHandle, oldSession);
 	}
 
-	private async Task RegisterFreshAsync(IDuplexTransport transport, long handle, CancellationToken ct)
+	/// <summary>Registers a fresh session and returns its per-incarnation session id.</summary>
+	private async Task<string> RegisterFreshAsync(IDuplexTransport transport, long handle, CancellationToken ct)
 	{
+		// A fresh incarnation gets a unique session id. Replay is keyed by it (never by the reusable
+		// handle), so a recycled handle's new occupant can never read this session's buffer, and vice
+		// versa — closing the cross-session replay leak at its root rather than relying on purge timing.
+		var session = Guid.NewGuid().ToString("N");
+
 		var sink = sinkRegistry.GetOrCreate(handle);
 		sink.Attach(transport);
 
+		// The output path outlives this socket: after a drop the session is DETACHED and engine output
+		// must keep buffering to the replay store (and flow to a reattached transport) during the grace
+		// window. So it must NOT capture the per-connection token — that is RequestAborted, which cancels
+		// on drop and would abort buffering exactly when replay matters most.
 		Func<byte[], ValueTask> output = async data =>
 		{
-			var (_, wrapped) = await replayStore.AppendAsync(handle, data, ct);
-			var current = sink.Current;
-			if (current is not null)
-				await current.SendAsync(wrapped, ct);
+			try
+			{
+				var (_, wrapped) = await replayStore.AppendAsync(session, data, CancellationToken.None);
+				var current = sink.Current;
+				if (current is not null)
+					await current.SendAsync(wrapped, CancellationToken.None);
+			}
+			catch (Exception ex)
+			{
+				// A transient replay-store / transport failure must not propagate back into the engine's
+				// output path and tear down higher-level workflows; swallow-and-log, as the other output
+				// handlers do (e.g. OutputMessageConsumers).
+				logger.LogError(ex, "Error writing output on handle {Handle}", handle);
+			}
 		};
 
 		await connectionService.RegisterAsync(
 			handle, transport.RemoteIp, transport.Hostname, transport.Kind,
-			output, output, () => Encoding.UTF8, () => _ = sink.Current?.CloseAsync());
+			// Close the current transport on forced disconnect, observing the fault instead of dropping it
+			// into TaskScheduler.UnobservedTaskException — same pattern as the grace-timer path.
+			output, output, () => Encoding.UTF8,
+			() => TimerGraceScheduler.Fire(
+				() => sink.Current?.CloseAsync() ?? Task.CompletedTask,
+				ex => logger.LogError(ex, "Error closing transport on forced disconnect for handle {Handle}", handle)));
 
-		var token = await resumeTokens.MintAsync(handle, ct);
+		var token = await resumeTokens.MintAsync(handle, session, ct);
 		await transport.SendAsync(SeqEnvelope.ResumeToken(token), ct);
+		return session;
 	}
 
 	private async Task PublishInputAsync(long handle, string message, CancellationToken ct)
@@ -151,6 +198,4 @@ public sealed class ConnectionPump(
 		else
 			await publishEndpoint.Publish(new WebSocketInputMessage(handle, message), ct);
 	}
-
-	private static bool IsHello(string frame) => frame.Contains("\"hello\"");
 }
