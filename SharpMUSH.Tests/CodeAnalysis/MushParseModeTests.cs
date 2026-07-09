@@ -1,35 +1,37 @@
 using SharpMUSH.CodeAnalysis;
-using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.CodeAnalysis;
 
 /// <summary>
 /// Unit tests for <see cref="MushParseMode"/> — the extension-based (LSP) and name-based (MCP)
-/// resolution of function vs command-list parsing.
+/// resolution of the analysis mode (function / command-list / command / commands-per-line).
 /// </summary>
 public class MushParseModeTests
 {
 	[Test]
-	[Arguments("file:///home/x/greet.mush", ParseType.CommandList)]
-	[Arguments("greet.mu", ParseType.CommandList)]
-	[Arguments("file:///home/x/fmt.mushfn", ParseType.Function)]
-	[Arguments("fmt.fun", ParseType.Function)]
-	[Arguments("file:///x/GREET.MUSH", ParseType.CommandList)]
-	[Arguments("notes.txt", ParseType.Function)]
-	[Arguments("noextension", ParseType.Function)]
-	public async Task ForFileName_MapsExtensionToParseType(string fileName, ParseType expected)
+	[Arguments("file:///home/x/greet.mush", MushAnalysisMode.CommandsPerLine)]
+	[Arguments("greet.mu", MushAnalysisMode.CommandsPerLine)]
+	[Arguments("file:///home/x/fmt.mushfn", MushAnalysisMode.Function)]
+	[Arguments("fmt.fun", MushAnalysisMode.Function)]
+	[Arguments("file:///x/GREET.MUSH", MushAnalysisMode.CommandsPerLine)]
+	[Arguments("notes.txt", MushAnalysisMode.Function)]
+	[Arguments("noextension", MushAnalysisMode.Function)]
+	public async Task ForFileName_MapsExtensionToMode(string fileName, MushAnalysisMode expected)
 	{
 		await Assert.That(MushParseMode.ForFileName(fileName)).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Arguments("function", ParseType.Function)]
-	[Arguments("command", ParseType.Command)]
-	[Arguments("commandlist", ParseType.CommandList)]
-	[Arguments("command-list", ParseType.CommandList)]
-	[Arguments("COMMANDLIST", ParseType.CommandList)]
-	[Arguments("nonsense", ParseType.Function)]
-	public async Task FromName_MapsNameToParseType(string name, ParseType expected)
+	[Arguments("function", MushAnalysisMode.Function)]
+	[Arguments("command", MushAnalysisMode.Command)]
+	[Arguments("commandlist", MushAnalysisMode.CommandList)]
+	[Arguments("command-list", MushAnalysisMode.CommandList)]
+	[Arguments("commandsperline", MushAnalysisMode.CommandsPerLine)]
+	[Arguments("commands-per-line", MushAnalysisMode.CommandsPerLine)]
+	[Arguments("mushfile", MushAnalysisMode.CommandsPerLine)]
+	[Arguments("COMMANDLIST", MushAnalysisMode.CommandList)]
+	[Arguments("nonsense", MushAnalysisMode.Function)]
+	public async Task FromName_MapsNameToMode(string name, MushAnalysisMode expected)
 	{
 		await Assert.That(MushParseMode.FromName(name)).IsEqualTo(expected);
 	}
@@ -37,7 +39,7 @@ public class MushParseModeTests
 	[Test]
 	public async Task FromName_NullOrEmpty_FallsBackToFunction()
 	{
-		await Assert.That(MushParseMode.FromName(null)).IsEqualTo(ParseType.Function);
-		await Assert.That(MushParseMode.FromName("")).IsEqualTo(ParseType.Function);
+		await Assert.That(MushParseMode.FromName(null)).IsEqualTo(MushAnalysisMode.Function);
+		await Assert.That(MushParseMode.FromName("")).IsEqualTo(MushAnalysisMode.Function);
 	}
 }

@@ -45,7 +45,12 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 	[GeneratedRegex(@"^(@[a-zA-Z]+)([^\s/])")]
 	private static partial Regex CommandWithoutSpaceRegex();
 
-	public IReadOnlyList<Diagnostic> Validate(string code, ParseType parseType = ParseType.Function)
+	public IReadOnlyList<Diagnostic> Validate(string code, MushAnalysisMode mode = MushAnalysisMode.Function)
+		=> mode == MushAnalysisMode.CommandsPerLine
+			? ValidatePerLine(code)
+			: ValidateWhole(code, mode.ToParseType());
+
+	private IReadOnlyList<Diagnostic> ValidateWhole(string code, ParseType parseType)
 	{
 		try
 		{
@@ -69,4 +74,40 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 			];
 		}
 	}
+
+	/// <summary>
+	/// Real-world <c>.mush</c> files are one command per line. Each non-blank line is parsed as a
+	/// single <see cref="ParseType.Command"/> and its diagnostics are shifted to the line's
+	/// position in the file.
+	/// </summary>
+	private IReadOnlyList<Diagnostic> ValidatePerLine(string code)
+	{
+		var lines = code.Split('\n');
+		var result = new List<Diagnostic>();
+
+		for (var i = 0; i < lines.Length; i++)
+		{
+			var line = lines[i].TrimEnd('\r');
+			if (string.IsNullOrWhiteSpace(line)) continue;
+
+			foreach (var diagnostic in ValidateWhole(line, ParseType.Command))
+			{
+				result.Add(ShiftLines(diagnostic, i));
+			}
+		}
+
+		return result;
+	}
+
+	private static Diagnostic ShiftLines(Diagnostic diagnostic, int lineOffset)
+		=> lineOffset == 0
+			? diagnostic
+			: diagnostic with
+			{
+				Range = new Range
+				{
+					Start = new Position(diagnostic.Range.Start.Line + lineOffset, diagnostic.Range.Start.Character),
+					End = new Position(diagnostic.Range.End.Line + lineOffset, diagnostic.Range.End.Character)
+				}
+			};
 }

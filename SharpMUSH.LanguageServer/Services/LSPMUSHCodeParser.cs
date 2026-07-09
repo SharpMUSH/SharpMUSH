@@ -26,8 +26,8 @@ public class LSPMUSHCodeParser
 	/// Analyzes MUSH code and returns diagnostics (errors, warnings, etc.)
 	/// This operation is read-only and does not alter parser state.
 	/// </summary>
-	public IReadOnlyList<Diagnostic> GetDiagnostics(string text, ParseType parseType = ParseType.Function)
-		=> _analyzer.Validate(text, parseType);
+	public IReadOnlyList<Diagnostic> GetDiagnostics(string text, MushAnalysisMode mode = MushAnalysisMode.Function)
+		=> _analyzer.Validate(text, mode);
 
 	/// <summary>
 	/// Performs semantic analysis and returns tokens for syntax highlighting.
@@ -55,9 +55,9 @@ public class LSPMUSHCodeParser
 	/// Validates syntax without performing semantic analysis.
 	/// Returns true if the syntax is valid, false otherwise.
 	/// </summary>
-	public bool ValidateSyntax(string text, ParseType parseType = ParseType.Function)
+	public bool ValidateSyntax(string text, MushAnalysisMode mode = MushAnalysisMode.Function)
 	{
-		var diagnostics = GetDiagnostics(text, parseType);
+		var diagnostics = GetDiagnostics(text, mode);
 		return diagnostics.All(d => d.Severity != DiagnosticSeverity.Error);
 	}
 }

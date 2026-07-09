@@ -92,18 +92,22 @@ warnings, or hints.
 | Parameter | Type | Description |
 |---|---|---|
 | `code` | string | The MUSH softcode to validate. |
-| `parseType` | string | `"function"` (default), `"commandlist"` (a list of commands, e.g. an attribute's `$`-command actions), or `"command"` (a single command). |
+| `parseType` | string | `"function"` (default), `"commandsperline"` (each line is its own command — a real-world `.mush` upload file), `"commandlist"` (one `;`-separated command list), or `"command"` (a single command). |
 
-**Function vs command-list.** The parse mode is chosen differently per surface:
+**Parse mode.** Chosen differently per surface:
 
-- **MCP** — the caller passes `parseType` (above).
-- **Language Server** — the mode is chosen by **file extension**: `.mush` / `.mu` are
-  parsed as a **command list** (a batch of building commands / attribute actions);
-  `.mushfn` / `.fun` are parsed as a **function** (a single expression). Save an editor
-  buffer with the matching extension to control how it's analyzed. Anything else falls
-  back to function.
+- **MCP** — the caller passes `parseType` (above). In `commandsperline` mode each non-blank
+  line is validated independently as a single command and diagnostics are reported on the
+  line they occur.
+- **Language Server** — the mode is chosen by **file extension**:
+  - `.mush` / `.mu` → **one command per line** (a real-world `.mush` upload / quote file).
+  - `.mushfn` / `.fun` → **function** (a single expression).
+  - anything else → function.
 
-Both channels resolve through the same `MushParseMode` rule in `SharpMUSH.CodeAnalysis`.
+  Save an editor buffer with the matching extension to control how it's analyzed.
+
+Both channels resolve through the same `MushParseMode` / `MushAnalysisMode` rule in
+`SharpMUSH.CodeAnalysis`.
 
 **Example call**
 

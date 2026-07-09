@@ -41,7 +41,7 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 
 		try
 		{
-			var tokensData = _parser.GetSemanticTokens(document.Text, MushParseMode.ForFileName(uri));
+			var tokensData = _parser.GetSemanticTokens(document.Text, MushParseMode.ForFileName(uri).ToParseType());
 
 			for (int i = 0; i < tokensData.Data.Length; i += 5)
 			{

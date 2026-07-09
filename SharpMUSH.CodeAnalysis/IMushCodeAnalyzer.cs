@@ -1,5 +1,4 @@
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.CodeAnalysis;
 
@@ -19,8 +18,12 @@ public interface IMushCodeAnalyzer
 	/// error diagnostic so callers can always render a result.
 	/// </summary>
 	/// <param name="code">The MUSH softcode to analyse.</param>
-	/// <param name="parseType">Whether to parse the text as a function or command.</param>
-	IReadOnlyList<Diagnostic> Validate(string code, ParseType parseType = ParseType.Function);
+	/// <param name="mode">
+	/// How to parse the code. <see cref="MushAnalysisMode.CommandsPerLine"/> parses each line as
+	/// its own command (real-world <c>.mush</c> files); the others parse the whole buffer as one
+	/// unit.
+	/// </param>
+	IReadOnlyList<Diagnostic> Validate(string code, MushAnalysisMode mode = MushAnalysisMode.Function);
 
 	/// <summary>
 	/// Formats MUSH softcode with a consistent style: trims trailing/leading whitespace per

@@ -251,6 +251,29 @@ public class McpEndpointTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
+	public async Task Mcp_Validate_AcceptsCommandsPerLineForMushFile()
+	{
+		var password = "Correct-Horse-9!";
+		var character = await CreateCharacterWithPasswordAsync(password);
+
+		await using var client = await ConnectAsync(character, password);
+
+		// A real-world .mush upload file: one command per line.
+		var mushFile = "@create Widget\n&FMT Widget=capstr(%0)\n@set Widget/FMT=no_command";
+		var result = await client.CallToolAsync(
+			"validate",
+			new Dictionary<string, object?>
+			{
+				["code"] = mushFile,
+				["parseType"] = "commandsperline"
+			});
+
+		var json = JsonSerializer.Serialize(result);
+		await Assert.That(json).Contains("structuredContent");
+		await Assert.That(json).DoesNotContain("\"isError\":true");
+	}
+
+	[Test]
 	public async Task Mcp_DocumentSymbols_OutlinesAttributeDefinition()
 	{
 		var password = "Correct-Horse-6!";
