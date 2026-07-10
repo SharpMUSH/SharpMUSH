@@ -43,8 +43,99 @@ The God/admin character named in `.env` is created on first boot.
 | 8080 | ASP.NET server (HTTP) | no — internal, behind Caddy |
 | 4222 / 8222 | NATS client / monitoring | no — internal only |
 
-If you don't use Caddy (e.g. you front the app with Cloudflare), delete the `caddy`
-service and publish `8080` on `sharpmush-server` instead.
+If you want to front the app with **Cloudflare** instead of Caddy, don't edit this file —
+use `docker-compose.cloudflare.yml` and follow the section below.
+
+## Fronting with Cloudflare (`docker-compose.cloudflare.yml`)
+
+This variant replaces Caddy with a **Cloudflare Tunnel**. A small `cloudflared` container
+dials *outbound* to Cloudflare and Cloudflare routes public traffic back down that
+connection, which means:
+
+- you open **no inbound web ports** (no 80/443 on the host firewall),
+- you manage **no TLS certificate** (Cloudflare terminates HTTPS at its edge),
+- your server's **origin IP stays hidden** behind Cloudflare.
+
+### The one thing to understand first: there are TWO independent front doors
+
+SharpMUSH is reached two different ways, and Cloudflare only handles one of them:
+
+| Traffic | Protocol | Path | Goes through Cloudflare? |
+|---------|----------|------|--------------------------|
+| Web portal, REST, SignalR, WebSocket terminal | HTTP/HTTPS + WS | Cloudflare Tunnel → `sharpmush-server:8080` | **Yes** |
+| Telnet (MU\* clients) | raw TCP | Client → host IP `:4201` directly | **No** |
+
+Cloudflare's normal proxy (the orange cloud) only carries HTTP/HTTPS and WebSockets.
+**Raw telnet is plain TCP and cannot go through it** on free/standard plans — that would
+require the paid Spectrum product. So the Zero Trust / Tunnel steps below apply **only to
+the web side**. Telnet is configured entirely separately, with a plain DNS record, and is
+served straight off the host. Keep the two in separate mental buckets.
+
+### Part A — the web side (Cloudflare Zero Trust Tunnel)
+
+This is the part the Zero Trust dashboard is for. It does **not** touch telnet.
+
+1. **Create the tunnel.** In the Cloudflare dashboard go to
+   **Zero Trust → Networks → Tunnels → Create a tunnel**, choose the **Cloudflared**
+   connector type, and give it a name (e.g. `sharpmush`).
+2. **Copy the token.** After creating it, Cloudflare shows an install command containing a
+   long token (the value after `--token`). Copy just that token into your `.env`:
+   ```
+   CLOUDFLARE_TUNNEL_TOKEN=eyJh...   # the token string, nothing else
+   ```
+   You do **not** need to run the install command Cloudflare shows — the `cloudflared`
+   service in the compose file runs the tunnel for you using this token.
+3. **Map your public hostname(s).** Still on the tunnel's config page, open the
+   **Public Hostname** tab and add a route:
+   - **Subdomain/domain:** `mush.example.com` (your portal address)
+   - **Service type:** `HTTP`
+   - **URL:** `sharpmush-server:8080`
+
+   Cloudflare automatically creates the proxied (orange-cloud) DNS record for that
+   hostname for you — you don't add it by hand. `HTTP` here is correct: the hop from the
+   tunnel to the container is on the private docker network; the public side is still HTTPS.
+
+   > Optional: if you route browser WebSocket-terminal traffic through the domain rather
+   > than a direct port, add a second Public Hostname, e.g. `ws.mush.example.com` →
+   > `HTTP` → `connectionserver:4202`. WebSockets work through the tunnel without extra config.
+
+### Part B — the telnet side (plain DNS, no Zero Trust involved)
+
+Telnet does not use the tunnel at all. You expose it directly and give players a hostname
+that resolves straight to your server:
+
+1. In the normal Cloudflare **DNS** app (not Zero Trust), add an `A` (and/or `AAAA`)
+   record, e.g. `telnet.mush.example.com` → your host's public IP.
+2. Set that record to **DNS only (grey cloud)**, *not* proxied. A proxied record would try
+   to send telnet through Cloudflare's HTTP proxy, which does not work.
+3. Make sure the host firewall allows inbound **TCP 4201** (the compose file already
+   publishes it). Players then connect their MU\* client to `telnet.mush.example.com 4201`.
+
+> Trade-off to be aware of: because this record is DNS-only, that hostname reveals your
+> server's real IP. The web portal stays hidden behind Cloudflare; only the telnet
+> hostname is exposed. If hiding the telnet IP matters to you, that requires Cloudflare
+> Spectrum (paid) or a different TCP proxy.
+
+### Part C — bring it up
+
+```bash
+cd deploy
+cp .env.example .env      # fill in CLOUDFLARE_TUNNEL_TOKEN plus the usual JWT/admin/restic values
+docker compose -f docker-compose.cloudflare.yml run --rm backup restic init   # once
+docker compose -f docker-compose.cloudflare.yml up -d --build
+```
+
+Check the tunnel is healthy with `docker compose -f docker-compose.cloudflare.yml logs -f cloudflared`
+(you want to see it register a connection to Cloudflare), then load `https://mush.example.com`.
+
+### Ports with Cloudflare
+
+| Port | Service | Open on host firewall? |
+|------|---------|------------------------|
+| 4201 | Telnet | **yes** (Part B) |
+| 80 / 443 | — | **no** — the tunnel is outbound-only |
+| 8080 | ASP.NET server (HTTP) | no — internal, reached via the tunnel |
+| 4222 / 8222 | NATS client / monitoring | no — internal only |
 
 ## Backups (restic)
 
