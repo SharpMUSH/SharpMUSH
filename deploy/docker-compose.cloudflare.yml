@@ -97,7 +97,7 @@ services:
   # Cloudflare Tunnel: dials out to Cloudflare, routes the public hostname(s) you
   # configured in the Zero Trust dashboard to the services on this network.
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2026.7.1   # pinned (not :latest) for reproducible deploys
     container_name: sharpmush-cloudflared
     command: ["tunnel", "--no-autoupdate", "run"]
     environment:

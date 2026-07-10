@@ -65,6 +65,10 @@ services:
       - NATS_URL=nats://nats:4222
       # --- Web: serve HTTP only; Caddy terminates TLS in front (or expose 8080 directly if you don't use Caddy) ---
       - ASPNETCORE_URLS=http://+:8080
+      # Trust Caddy's X-Forwarded-Proto/-For. Without this the app (which always calls
+      # UseHttpsRedirection) sees the plain-HTTP backend hop and redirect-loops, and
+      # rate-limiting / canonical-URL logic sees the proxy IP instead of the real client.
+      - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
       # --- Auth: a JWT signing key is REQUIRED for portal auth in production ---
       # The :? syntax makes compose ABORT with an error if the value is missing from .env,
       # instead of silently substituting an empty string and booting without auth configured.
@@ -118,7 +122,8 @@ services:
     image: caddy:2-alpine
     container_name: sharpmush-caddy
     environment:
-      - SHARPMUSH_DOMAIN=${SHARPMUSH_DOMAIN}
+      # Required: Caddy can't render a valid site block without it. Fail fast if unset.
+      - SHARPMUSH_DOMAIN=${SHARPMUSH_DOMAIN:?set SHARPMUSH_DOMAIN in deploy/.env}
     ports:
       - "80:80"
       - "443:443"

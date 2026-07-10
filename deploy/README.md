@@ -179,15 +179,21 @@ wiki assets — i.e. the entire game) to your bucket every night at 03:30, keepi
 daily and 4 weekly snapshots. The volume is mounted **read-only**, so a backup run can
 never corrupt live data.
 
+> The commands below (and under **Updating**) omit `-f` by exporting `COMPOSE_FILE`, so
+> they work for either stack. Set it once per shell to whichever stack you deployed:
+> ```bash
+> export COMPOSE_FILE=docker-compose.prod.yml        # or docker-compose.cloudflare.yml
+> ```
+
 ```bash
 # List snapshots:
-docker compose -f docker-compose.prod.yml run --rm backup restic snapshots
+docker compose run --rm backup restic snapshots
 
 # Run a backup right now:
-docker compose -f docker-compose.prod.yml run --rm backup backup   # (entrypoint verb)
+docker compose run --rm backup backup   # (entrypoint verb)
 
 # Restore the latest snapshot into a scratch dir to inspect it:
-docker compose -f docker-compose.prod.yml run --rm -v restore:/restore backup \
+docker compose run --rm -v restore:/restore backup \
   restic restore latest --target /restore
 ```
 
@@ -202,9 +208,11 @@ on boot.
 
 ## Updating
 
+With `COMPOSE_FILE` exported as above (or add `-f <your-compose-file>`):
+
 ```bash
 git pull
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose up -d --build
 ```
 
 The `app-data` volume persists across rebuilds, so the world is untouched.
