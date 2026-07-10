@@ -1,0 +1,17 @@
+# Automatic HTTPS for the SharpMUSH web portal.
+# Caddy fetches and renews a Let's Encrypt certificate for {$SHARPMUSH_DOMAIN} on its own.
+# Point your domain's DNS A/AAAA record at this host first, then `docker compose up -d`.
+
+{$SHARPMUSH_DOMAIN} {
+	encode zstd gzip
+
+	# SignalR (/hubs/game) and the raw WebSocket terminal (/ws) need WebSocket upgrades;
+	# reverse_proxy passes these through transparently.
+	reverse_proxy sharpmush-server:8080
+
+	# The Blazor WASM portal talks to the connection server's websocket gateway.
+	# Uncomment if you route browser websocket traffic through the domain instead of a direct port:
+	# handle_path /cs/* {
+	# 	reverse_proxy connectionserver:4202
+	# }
+}
