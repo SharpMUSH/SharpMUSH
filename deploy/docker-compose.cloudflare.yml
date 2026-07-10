@@ -25,7 +25,7 @@
 
 services:
   nats:
-    image: nats:2-alpine
+    image: nats:2.10-alpine
     container_name: sharpmush-nats
     command: ["-js", "-sd", "/data", "-m", "8222"]
     volumes:
@@ -37,6 +37,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    mem_limit: 256m
+    cpus: 0.5
     restart: unless-stopped
 
   connectionserver:
@@ -54,6 +56,8 @@ services:
       - "4201:4201"   # telnet — DIRECT to host (Cloudflare can't proxy raw TCP); use a DNS-only record
     networks:
       - sharpmush-net
+    mem_limit: 512m
+    cpus: 1.0
     restart: unless-stopped
 
   sharpmush-server:
@@ -72,9 +76,10 @@ services:
       # Trust the tunnel's forwarded client IP/proto so rate-limiting, bot detection and canonical-URL
       # middleware see the real visitor, not the cloudflared container. (ASP.NET ForwardedHeaders.)
       - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
-      - Jwt__SigningKey=${JWT_SIGNING_KEY}
-      - SHARPMUSH_BOOTSTRAP_USERNAME=${BOOTSTRAP_USERNAME}
-      - SHARPMUSH_BOOTSTRAP_PASSWORD=${BOOTSTRAP_PASSWORD}
+      # :? makes compose abort if the value is missing from .env rather than booting misconfigured.
+      - Jwt__SigningKey=${JWT_SIGNING_KEY:?set JWT_SIGNING_KEY in deploy/.env}
+      - SHARPMUSH_BOOTSTRAP_USERNAME=${BOOTSTRAP_USERNAME:?set BOOTSTRAP_USERNAME in deploy/.env}
+      - SHARPMUSH_BOOTSTRAP_PASSWORD=${BOOTSTRAP_PASSWORD:?set BOOTSTRAP_PASSWORD in deploy/.env}
     volumes:
       - app-data:/app/data
     # NOTE: no `ports:` — the server is only reachable via the tunnel and the internal network.
@@ -85,6 +90,8 @@ services:
         condition: service_started
     networks:
       - sharpmush-net
+    mem_limit: 768m
+    cpus: 1.5
     restart: unless-stopped
 
   # Cloudflare Tunnel: dials out to Cloudflare, routes the public hostname(s) you
@@ -94,23 +101,26 @@ services:
     container_name: sharpmush-cloudflared
     command: ["tunnel", "--no-autoupdate", "run"]
     environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in deploy/.env}
     depends_on:
       - sharpmush-server
+      - connectionserver
     networks:
       - sharpmush-net
+    mem_limit: 128m
+    cpus: 0.5
     restart: unless-stopped
 
   # Nightly encrypted backup of the game-data volume — identical to the prod stack.
   backup:
-    image: mazzolino/restic:latest
+    image: mazzolino/restic:1.8      # pinned (not :latest) so backups are reproducible
     container_name: sharpmush-backup
     hostname: sharpmush
     environment:
       - RUN_ON_STARTUP=false
       - BACKUP_CRON=0 30 3 * * *
-      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY}
-      - RESTIC_PASSWORD=${RESTIC_PASSWORD}
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY:?set RESTIC_REPOSITORY in deploy/.env}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD:?set RESTIC_PASSWORD in deploy/.env}
       - RESTIC_BACKUP_SOURCES=/data
       - RESTIC_BACKUP_ARGS=--tag sharpmush --host sharpmush
       - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --prune
@@ -120,6 +130,8 @@ services:
       - app-data:/data:ro
     networks:
       - sharpmush-net
+    mem_limit: 256m
+    cpus: 0.5
     restart: unless-stopped
 
 volumes:

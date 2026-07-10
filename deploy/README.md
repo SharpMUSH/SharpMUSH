@@ -9,11 +9,16 @@ Everything runs under Docker Compose. **Kubernetes is not needed** at this scale
 
 ## What's here
 
+Two entry points, pick one based on how you terminate TLS:
+
 | File | Purpose |
 |------|---------|
-| `docker-compose.prod.yml` | The stack: nats, connectionserver, sharpmush-server, backup, (optional) caddy |
-| `Caddyfile` | Automatic-HTTPS reverse proxy for the web portal (optional) |
+| `docker-compose.prod.yml` | The stack: nats, connectionserver, sharpmush-server, backup, and **Caddy** for TLS. Use this if the box faces the internet directly. |
+| `docker-compose.cloudflare.yml` | Same stack but fronted by a **Cloudflare Tunnel** instead of Caddy (no open web ports, hidden origin IP). See the Cloudflare section below. |
+| `Caddyfile` | Automatic-HTTPS reverse proxy config used by `docker-compose.prod.yml` |
 | `.env.example` | Template for secrets/config — copy to `.env` and fill in |
+| `.gitignore` | Keeps your real `.env` out of git |
+| `README.md` | This file |
 
 ## First-time setup
 
@@ -34,14 +39,33 @@ docker compose -f docker-compose.prod.yml up -d --build
 The web portal comes up on `https://<your-domain>` (via Caddy) and telnet on port `4201`.
 The God/admin character named in `.env` is created on first boot.
 
+### Pointing the in-browser terminal at the right place
+
+The portal's web terminal connects to a **WebSocket** endpoint, `/ws`, which is served by the
+**connection server** (`:4202`), *not* the main server. The `Caddyfile` already routes
+`https://<your-domain>/ws` to the connection server for you, so in the portal set the terminal's
+**Server URI** to:
+
+```
+wss://<your-domain>/ws
+```
+
+(Same origin, so no mixed-content or CORS issues.) The default `ws://localhost:4202/ws` is for
+local development only — over HTTPS a browser will refuse a plaintext `ws://` connection.
+
 ## Ports
 
 | Port | Service | Exposed to internet? |
 |------|---------|----------------------|
-| 80 / 443 | Caddy (web portal, SignalR, WebSocket) | yes |
+| 80 / 443 | Caddy (web portal, SignalR, and `/ws` → connection server) | yes |
 | 4201 | Telnet | yes |
 | 8080 | ASP.NET server (HTTP) | no — internal, behind Caddy |
+| 4202 | Connection server HTTP / `/ws` WebSocket | no — internal, reached via Caddy's `/ws` route |
 | 4222 / 8222 | NATS client / monitoring | no — internal only |
+
+If you **don't** use Caddy (e.g. you terminate TLS at a load balancer), remember the browser
+terminal's `/ws` endpoint lives on the connection server (`:4202`), not the main server — you must
+publish `4202` or add an equivalent `/ws` proxy route, in addition to publishing `8080`.
 
 If you want to front the app with **Cloudflare** instead of Caddy, don't edit this file —
 use `docker-compose.cloudflare.yml` and follow the section below.
@@ -94,10 +118,21 @@ This is the part the Zero Trust dashboard is for. It does **not** touch telnet.
    Cloudflare automatically creates the proxied (orange-cloud) DNS record for that
    hostname for you — you don't add it by hand. `HTTP` here is correct: the hop from the
    tunnel to the container is on the private docker network; the public side is still HTTPS.
+4. **Add the WebSocket route — required for the in-browser terminal.** The terminal's `/ws`
+   endpoint is served by the **connection server** (`:4202`), not the main server, so it needs
+   its own Public Hostname entry. Add a route and make sure it sits **above** the catch-all from
+   step 3 (Cloudflare matches top-to-bottom):
+   - **Subdomain/domain:** `mush.example.com`
+   - **Path:** `ws`  *(matches `/ws`)*
+   - **Service type:** `HTTP`
+   - **URL:** `connectionserver:4202`
 
-   > Optional: if you route browser WebSocket-terminal traffic through the domain rather
-   > than a direct port, add a second Public Hostname, e.g. `ws.mush.example.com` →
-   > `HTTP` → `connectionserver:4202`. WebSockets work through the tunnel without extra config.
+   Then set the portal's terminal **Server URI** to `wss://mush.example.com/ws` (same origin —
+   no mixed-content). WebSockets traverse the tunnel with no extra config.
+
+   > Alternative: instead of a path route, use a dedicated hostname — add
+   > `ws.mush.example.com` → `HTTP` → `connectionserver:4202` and point the Server URI at
+   > `wss://ws.mush.example.com/ws`. Either works; the path route keeps everything same-origin.
 
 ### Part B — the telnet side (plain DNS, no Zero Trust involved)
 

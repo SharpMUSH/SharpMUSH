@@ -5,13 +5,18 @@
 {$SHARPMUSH_DOMAIN} {
 	encode zstd gzip
 
-	# SignalR (/hubs/game) and the raw WebSocket terminal (/ws) need WebSocket upgrades;
-	# reverse_proxy passes these through transparently.
-	reverse_proxy sharpmush-server:8080
+	# The in-browser terminal's WebSocket endpoint (/ws) is served by the CONNECTION SERVER
+	# on :4202, NOT the main server. Route it explicitly, or the catch-all below would send
+	# it to :8080 (which has no /ws handler) and the web terminal would fail to connect.
+	# Set the portal's Server URI to wss://{$SHARPMUSH_DOMAIN}/ws so it stays same-origin.
+	@ws path /ws /ws/*
+	handle @ws {
+		reverse_proxy connectionserver:4202
+	}
 
-	# The Blazor WASM portal talks to the connection server's websocket gateway.
-	# Uncomment if you route browser websocket traffic through the domain instead of a direct port:
-	# handle_path /cs/* {
-	# 	reverse_proxy connectionserver:4202
-	# }
+	# Everything else — Blazor portal, REST API, and the SignalR hub (/hubs/game) — goes to
+	# the main server. reverse_proxy passes WebSocket upgrades (SignalR) through transparently.
+	handle {
+		reverse_proxy sharpmush-server:8080
+	}
 }

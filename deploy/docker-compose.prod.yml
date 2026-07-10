@@ -12,7 +12,7 @@
 
 services:
   nats:
-    image: nats:2-alpine
+    image: nats:2.10-alpine
     container_name: sharpmush-nats
     # -js: enable JetStream   -sd /data: persist JetStream state   -m 8222: monitoring/health port
     command: ["-js", "-sd", "/data", "-m", "8222"]
@@ -25,6 +25,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    mem_limit: 256m
+    cpus: 0.5
     restart: unless-stopped
 
   connectionserver:
@@ -42,6 +44,8 @@ services:
       - "4201:4201"   # raw telnet — exposed directly (plaintext protocol)
     networks:
       - sharpmush-net
+    mem_limit: 512m
+    cpus: 1.0
     restart: unless-stopped
 
   sharpmush-server:
@@ -62,10 +66,12 @@ services:
       # --- Web: serve HTTP only; Caddy terminates TLS in front (or expose 8080 directly if you don't use Caddy) ---
       - ASPNETCORE_URLS=http://+:8080
       # --- Auth: a JWT signing key is REQUIRED for portal auth in production ---
-      - Jwt__SigningKey=${JWT_SIGNING_KEY}
+      # The :? syntax makes compose ABORT with an error if the value is missing from .env,
+      # instead of silently substituting an empty string and booting without auth configured.
+      - Jwt__SigningKey=${JWT_SIGNING_KEY:?set JWT_SIGNING_KEY in deploy/.env}
       # --- Initial God/admin account, created on first boot ---
-      - SHARPMUSH_BOOTSTRAP_USERNAME=${BOOTSTRAP_USERNAME}
-      - SHARPMUSH_BOOTSTRAP_PASSWORD=${BOOTSTRAP_PASSWORD}
+      - SHARPMUSH_BOOTSTRAP_USERNAME=${BOOTSTRAP_USERNAME:?set BOOTSTRAP_USERNAME in deploy/.env}
+      - SHARPMUSH_BOOTSTRAP_PASSWORD=${BOOTSTRAP_PASSWORD:?set BOOTSTRAP_PASSWORD in deploy/.env}
     volumes:
       - app-data:/app/data
     depends_on:
@@ -75,19 +81,21 @@ services:
         condition: service_started
     networks:
       - sharpmush-net
+    mem_limit: 768m
+    cpus: 1.5
     restart: unless-stopped
 
   # --- Nightly encrypted backup of the single game-data volume to your bucket ---
   backup:
-    image: mazzolino/restic:latest
+    image: mazzolino/restic:1.8      # pinned (not :latest) so backups are reproducible
     container_name: sharpmush-backup
     hostname: sharpmush
     environment:
       - RUN_ON_STARTUP=false
       # 6-field cron (sec min hour dom mon dow): every day at 03:30.
       - BACKUP_CRON=0 30 3 * * *
-      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY}
-      - RESTIC_PASSWORD=${RESTIC_PASSWORD}
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY:?set RESTIC_REPOSITORY in deploy/.env}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD:?set RESTIC_PASSWORD in deploy/.env}
       - RESTIC_BACKUP_SOURCES=/data
       - RESTIC_BACKUP_ARGS=--tag sharpmush --host sharpmush
       # Retention: keep a week of dailies + a month of weeklies, prune the rest.
@@ -100,6 +108,8 @@ services:
       - app-data:/data:ro          # read-only: the backup can never corrupt live data
     networks:
       - sharpmush-net
+    mem_limit: 256m
+    cpus: 0.5
     restart: unless-stopped
 
   # --- OPTIONAL: automatic HTTPS for the web portal. Delete this service if you ---
@@ -118,8 +128,11 @@ services:
       - caddy-config:/config
     depends_on:
       - sharpmush-server
+      - connectionserver
     networks:
       - sharpmush-net
+    mem_limit: 128m
+    cpus: 0.5
     restart: unless-stopped
 
 volumes:
