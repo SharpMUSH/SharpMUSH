@@ -60,6 +60,7 @@
          ReferenceOutputAssembly=false keeps it out of the host's compile graph; the CopyScenePlugin target
          below drops it into the output's plugins/scene/ where PluginBootstrapService discovers it. -->
     <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\SharpMUSH.CodeAnalysis\SharpMUSH.CodeAnalysis.csproj" />
   </ItemGroup>
 
   <!-- Drop the built Scene plugin (DLL + deps.json + manifest) into plugins/scene/ beside the server binary
@@ -121,6 +122,7 @@
       <Link>BundledPackages\scene.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene.package.yaml</LogicalName>
     </EmbeddedResource>
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.0.0-preview.1" />
     <PackageReference Include="SurrealDb.Embedded.InMemory" Version="0.9.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
   </ItemGroup>

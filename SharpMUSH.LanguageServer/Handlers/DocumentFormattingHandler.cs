@@ -1,22 +1,26 @@
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+using SharpMUSH.CodeAnalysis;
 using SharpMUSH.LanguageServer.Services;
-using System.Text.RegularExpressions;
 
 namespace SharpMUSH.LanguageServer.Handlers;
 
 /// <summary>
 /// Handles document formatting requests for MUSH code.
-/// Provides basic auto-formatting with consistent style.
+/// Delegates the actual formatting to the shared <see cref="IMushCodeAnalyzer"/> so the
+/// LSP and the in-server MCP tools format identically, and emits one text edit per line
+/// the analyzer changed.
 /// </summary>
-public partial class DocumentFormattingHandler : DocumentFormattingHandlerBase
+public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 {
 	private readonly DocumentManager _documentManager;
+	private readonly IMushCodeAnalyzer _analyzer;
 
-	public DocumentFormattingHandler(DocumentManager documentManager)
+	public DocumentFormattingHandler(DocumentManager documentManager, IMushCodeAnalyzer analyzer)
 	{
 		_documentManager = documentManager;
+		_analyzer = analyzer;
 	}
 
 	public override Task<TextEditContainer?> Handle(
@@ -33,21 +37,25 @@ public partial class DocumentFormattingHandler : DocumentFormattingHandlerBase
 
 		try
 		{
-			var lines = document.Text.Split('\n');
+			var originalLines = document.Text.Split('\n');
+			var formattedLines = _analyzer.Format(document.Text).Split('\n');
 			var edits = new List<TextEdit>();
 
-			for (int i = 0; i < lines.Length; i++)
+			for (int i = 0; i < originalLines.Length && i < formattedLines.Length; i++)
 			{
-				var line = lines[i];
-				var formatted = FormatLine(line, request.Options);
+				// A trailing CR is part of the line terminator in LSP positions, not the line
+				// content — exclude it from both the compared text and the edit so CRLF documents
+				// aren't off-by-one and no literal '\r' is injected into the replacement.
+				var original = originalLines[i].TrimEnd('\r');
+				var formatted = formattedLines[i].TrimEnd('\r');
 
-				if (formatted != line)
+				if (formatted != original)
 				{
 					edits.Add(new TextEdit
 					{
 						Range = new OmniSharp.Extensions.LanguageServer.Protocol.Models.Range(
 							new Position(i, 0),
-							new Position(i, line.Length)),
+							new Position(i, original.Length)),
 						NewText = formatted
 					});
 				}
@@ -68,61 +76,13 @@ public partial class DocumentFormattingHandler : DocumentFormattingHandlerBase
 		return Task.FromResult<TextEditContainer?>(null);
 	}
 
-	private static string FormatLine(string line, FormattingOptions options)
-	{
-		var formatted = line.TrimEnd();
-
-		formatted = NormalizeSpacing(formatted);
-
-		formatted = ApplyIndentation(formatted, options);
-
-		return formatted;
-	}
-
-	private static string NormalizeSpacing(string line)
-	{
-		var result = CommaWithoutSpaceRegex().Replace(line, ", ");
-
-		result = CommandWithoutSpaceRegex().Replace(result, "$1 $2");
-
-		return result;
-	}
-
-	private static string ApplyIndentation(string line, FormattingOptions options)
-	{
-		var trimmed = line.TrimStart();
-		if (string.IsNullOrEmpty(trimmed))
-		{
-			return string.Empty;
-		}
-
-		var indent = 0;
-
-		if (trimmed.StartsWith(")") || trimmed.StartsWith("}") || trimmed.StartsWith("]"))
-		{
-			indent = Math.Max(0, indent - 1);
-		}
-
-		var indentString = options.InsertSpaces
-			? new string(' ', indent * (int)options.TabSize)
-			: new string('\t', indent);
-
-		return indentString + trimmed;
-	}
-
 	protected override DocumentFormattingRegistrationOptions CreateRegistrationOptions(
 		DocumentFormattingCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new DocumentFormattingRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu")
+			DocumentSelector = MushDocument.Selector
 		};
 	}
-
-	[GeneratedRegex(@",(?!\s)")]
-	private static partial Regex CommaWithoutSpaceRegex();
-
-	[GeneratedRegex(@"^(@[a-zA-Z]+)([^\s/])")]
-	private static partial Regex CommandWithoutSpaceRegex();
 }

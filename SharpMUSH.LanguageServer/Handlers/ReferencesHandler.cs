@@ -132,7 +132,7 @@ public class ReferencesHandler : ReferencesHandlerBase
 	{
 		return new ReferenceRegistrationOptions
 		{
-			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu")
+			DocumentSelector = MushDocument.Selector
 		};
 	}
 }
