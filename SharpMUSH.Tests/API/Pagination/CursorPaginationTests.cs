@@ -122,4 +122,75 @@ public class CursorPaginationTests
         await Assert.That(page.HasNextPage).IsFalse();
         await Assert.That(page.HasPreviousPage).IsFalse();
     }
+
+    [Test]
+    public async Task Paginate_Backward_ReturnsPageImmediatelyBeforeCursor()
+    {
+        // Forward to page 3: [21..30], whose PreviousCursor points at 21.
+        var page3 = CursorPaginationHelper.Paginate(Range(1, 100), x => x, pageSize: 10,
+            after: CursorPaginationHelper.EncodeCursor(20));
+        await Assert.That(page3.Items[0]).IsEqualTo(21);
+
+        var page2 = CursorPaginationHelper.Paginate(Range(1, 100), x => x, pageSize: 10,
+            before: page3.PreviousCursor);
+
+        await Assert.That(page2.Items.Count).IsEqualTo(10);
+        await Assert.That(page2.Items[0]).IsEqualTo(11);
+        await Assert.That(page2.Items[9]).IsEqualTo(20);
+    }
+
+    [Test]
+    public async Task Paginate_Backward_ReportsPreviousAndNextPages()
+    {
+        var page2 = CursorPaginationHelper.Paginate(Range(1, 100), x => x, pageSize: 10,
+            before: CursorPaginationHelper.EncodeCursor(21));
+
+        // [11..20]: page 1 exists behind it, page 3 exists ahead of it.
+        await Assert.That(page2.HasPreviousPage).IsTrue();
+        await Assert.That(page2.HasNextPage).IsTrue();
+
+        var page1 = CursorPaginationHelper.Paginate(Range(1, 100), x => x, pageSize: 10,
+            before: page2.PreviousCursor);
+        await Assert.That(page1.Items[0]).IsEqualTo(1);
+        await Assert.That(page1.Items[9]).IsEqualTo(10);
+
+        var page3 = CursorPaginationHelper.Paginate(Range(1, 100), x => x, pageSize: 10,
+            after: page2.NextCursor);
+        await Assert.That(page3.Items[0]).IsEqualTo(21);
+    }
+
+    [Test]
+    public async Task Paginate_BackwardToFirstPage_NoPreviousCursor()
+    {
+        var page = CursorPaginationHelper.Paginate(Range(1, 100), x => x, pageSize: 10,
+            before: CursorPaginationHelper.EncodeCursor(11));
+
+        await Assert.That(page.Items[0]).IsEqualTo(1);
+        await Assert.That(page.Items[9]).IsEqualTo(10);
+        await Assert.That(page.HasPreviousPage).IsFalse();
+        await Assert.That(page.PreviousCursor).IsNull();
+    }
+
+    [Test]
+    public async Task Paginate_BackwardFewerThanPageSize_ReturnsAllEarlierItems()
+    {
+        var page = CursorPaginationHelper.Paginate(Range(1, 100), x => x, pageSize: 10,
+            before: CursorPaginationHelper.EncodeCursor(5));
+
+        await Assert.That(page.Items.Count).IsEqualTo(4);
+        await Assert.That(page.Items[0]).IsEqualTo(1);
+        await Assert.That(page.Items[3]).IsEqualTo(4);
+        await Assert.That(page.HasPreviousPage).IsFalse();
+    }
+
+    [Test]
+    public async Task Paginate_BackwardBeforeFirstItem_ReturnsEmptyPage()
+    {
+        var page = CursorPaginationHelper.Paginate(Range(1, 100), x => x, pageSize: 10,
+            before: CursorPaginationHelper.EncodeCursor(1));
+
+        await Assert.That(page.Items.Count).IsEqualTo(0);
+        await Assert.That(page.HasPreviousPage).IsFalse();
+        await Assert.That(page.HasNextPage).IsFalse();
+    }
 }

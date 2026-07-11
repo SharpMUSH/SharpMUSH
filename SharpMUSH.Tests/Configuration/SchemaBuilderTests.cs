@@ -47,4 +47,44 @@ public class SchemaBuilderTests
 		await Assert.That(schema.Properties["Cosmetic.AnnounceConnects"].Component).IsEqualTo("switch");
 		await Assert.That(schema.Properties["Cosmetic.MoneySingular"].Component).IsEqualTo("text");
 	}
+
+	[Test]
+	public async Task CategoryGroups_OrderedByFirstPropertyOrder_ThenEncounterOrder()
+	{
+		var schema = BuildSchema();
+
+		var netGroups = string.Join("|", schema.Categories.First(c => c.Name == "Net").Groups.Select(g => g.Name));
+
+		// First-property Orders in NetOptions: General=1, Database=1, Advanced=1,
+		// Connection Settings=4, Network Protocol=4, Connection Limits=4.
+		// Primary sort is that Order; ties keep property declaration order.
+		await Assert.That(netGroups)
+			.IsEqualTo("General|Database|Advanced|Connection Settings|Network Protocol|Connection Limits");
+	}
+
+	[Test]
+	public async Task CategoryGroups_AllTiedOrders_KeepDeclarationOrder()
+	{
+		var schema = BuildSchema();
+
+		var costGroups = string.Join("|", schema.Categories.First(c => c.Name == "Cost").Groups.Select(g => g.Name));
+
+		await Assert.That(costGroups).IsEqualTo("Building Costs|Command Costs");
+	}
+
+	[Test]
+	[Arguments("player_flags", "Player Flags")]
+	[Arguments("_port", "Port")]
+	[Arguments("port_", "Port")]
+	[Arguments("port__name", "Port Name")]
+	public async Task FormatPropertyDisplayName_HandlesUnderscoreEdgeCases(string input, string expected)
+	{
+		var method = typeof(SchemaBuilder).GetMethod(
+			"FormatPropertyDisplayName",
+			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+
+		var result = (string?)method.Invoke(null, [input]);
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
 }

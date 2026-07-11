@@ -71,11 +71,15 @@ public static class PortalPermission
 			[PlayersModerate] = [PlayersView],
 		};
 
-	/// <summary>Flat list of every scope string.</summary>
+	/// <summary>Flat list of every scope string, in editor display order.</summary>
 	public static readonly IReadOnlyList<string> AllScopes = All.Select(d => d.Scope).ToList();
 
-	/// <summary>True when <paramref name="scope"/> is a known permission scope.</summary>
-	public static bool IsKnown(string scope) => AllScopes.Contains(scope);
+	private static readonly IReadOnlySet<string> AllScopesSet =
+		AllScopes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>True when <paramref name="scope"/> is a known permission scope. Case-insensitive,
+	/// matching <see cref="Expand"/> and <see cref="Implications"/>.</summary>
+	public static bool IsKnown(string scope) => AllScopesSet.Contains(scope);
 
 	/// <summary>
 	/// Expands a granted scope set to include every scope implied by a coarser one (e.g.

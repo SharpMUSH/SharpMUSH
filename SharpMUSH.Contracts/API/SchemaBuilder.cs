@@ -23,7 +23,7 @@ public static partial class SchemaBuilder
 	private static List<CategoryMetadata> BuildCategoriesFromProperties(Dictionary<string, PropertyMetadata> properties)
 	{
 		var categories = new Dictionary<string, CategoryMetadata>();
-		var groups = new Dictionary<string, HashSet<GroupMetadata>>();
+		var groups = new Dictionary<string, Dictionary<string, GroupMetadata>>();
 
 		foreach (var prop in properties.Values)
 		{
@@ -38,17 +38,17 @@ public static partial class SchemaBuilder
 					Order = GetCategoryOrder(prop.Category),
 					Groups = new List<GroupMetadata>()
 				};
-				groups[prop.Category] = new HashSet<GroupMetadata>(new GroupMetadataComparer());
+				groups[prop.Category] = new Dictionary<string, GroupMetadata>();
 			}
 
-			if (!string.IsNullOrEmpty(prop.Group))
+			if (!string.IsNullOrEmpty(prop.Group) && !groups[prop.Category].ContainsKey(prop.Group))
 			{
-				groups[prop.Category].Add(new GroupMetadata
+				groups[prop.Category][prop.Group] = new GroupMetadata
 				{
 					Name = prop.Group,
 					DisplayName = prop.Group,
-					Order = 0 // Will be sorted by first property order
-				});
+					Order = prop.Order // first property's order; ties keep encounter order (stable sort below)
+				};
 			}
 		}
 
@@ -56,7 +56,7 @@ public static partial class SchemaBuilder
 		{
 			if (groups.TryGetValue(category.Name, out var categoryGroups))
 			{
-				category.Groups = categoryGroups.OrderBy(g => g.Order).ToList();
+				category.Groups = categoryGroups.Values.OrderBy(g => g.Order).ToList();
 			}
 		}
 
@@ -118,7 +118,7 @@ public static partial class SchemaBuilder
 
 		if (name.Contains('_'))
 		{
-			return string.Join(" ", name.Split('_')
+			return string.Join(" ", name.Split('_', StringSplitOptions.RemoveEmptyEntries)
 				.Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
 		}
 
@@ -235,20 +235,6 @@ public static partial class SchemaBuilder
 			"Message" => 7,
 			_ => 99
 		};
-	}
-
-	private class GroupMetadataComparer : IEqualityComparer<GroupMetadata>
-	{
-		public bool Equals(GroupMetadata? x, GroupMetadata? y)
-		{
-			if (x == null || y == null) return false;
-			return x.Name == y.Name;
-		}
-
-		public int GetHashCode(GroupMetadata obj)
-		{
-			return obj.Name.GetHashCode();
-		}
 	}
 
 	[GeneratedRegex("([A-Z])")]
