@@ -65,6 +65,11 @@ services:
       - NATS_URL=nats://nats:4222
       # --- Web: serve HTTP only; Caddy terminates TLS in front (or expose 8080 directly if you don't use Caddy) ---
       - ASPNETCORE_URLS=http://+:8080
+      # Neutralize the dev-cert path baked into the image's ENV. We serve HTTP only (TLS is at the
+      # proxy), but Kestrel eagerly loads the "Default" certificate whenever that config exists, and
+      # the dev .pfx isn't in a prod image — so it would crash on boot. Empty path = no cert loaded.
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=
       # Trust Caddy's X-Forwarded-Proto/-For. Without this the app (which always calls
       # UseHttpsRedirection) sees the plain-HTTP backend hop and redirect-loops, and
       # rate-limiting / canonical-URL logic sees the proxy IP instead of the real client.

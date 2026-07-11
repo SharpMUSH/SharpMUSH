@@ -73,6 +73,11 @@ services:
       - NATS_URL=nats://nats:4222
       # HTTP only — Cloudflare terminates TLS at the edge and the tunnel reaches this over the private network.
       - ASPNETCORE_URLS=http://+:8080
+      # Neutralize the dev-cert path baked into the image's ENV. Kestrel eagerly loads the "Default"
+      # certificate whenever that config exists, and the dev .pfx isn't in a prod image, so it would
+      # crash on boot even though we only serve HTTP. Empty path = no cert loaded.
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=
       # Trust the tunnel's forwarded client IP/proto so rate-limiting, bot detection and canonical-URL
       # middleware see the real visitor, not the cloudflared container. (ASP.NET ForwardedHeaders.)
       - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true

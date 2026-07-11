@@ -119,6 +119,10 @@ public class Program
 		// ── URL canonicalisation: must run before static files so redirects fire first
 		app.UseMiddleware<CanonicalUrlMiddleware>();
 
+		// Serve the bundled Blazor WASM portal's framework files (_framework/*, blazor.boot.json,
+		// compressed variants) with the correct content types, then its static assets. Paired with
+		// MapFallbackToFile("index.html") below so the SPA is served from this server.
+		app.UseBlazorFrameworkFiles();
 		app.UseStaticFiles();
 
 		app.UseMiddleware<BotDetectionMiddleware>();
