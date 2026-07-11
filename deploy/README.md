@@ -123,7 +123,10 @@ This is the part the Zero Trust dashboard is for. It does **not** touch telnet.
    its own Public Hostname entry. Add a route and make sure it sits **above** the catch-all from
    step 3 (Cloudflare matches top-to-bottom):
    - **Subdomain/domain:** `mush.example.com`
-   - **Path:** `ws`  *(matches `/ws`)*
+   - **Path:** `^/ws`  *(anchored at the start — the field is an **unanchored regex**, so a bare
+     `ws` matches any URL merely *containing* "ws" and will eventually swallow an unrelated
+     request; e.g. a fingerprinted Blazor asset like `System.IO.Pipelines.oabpy8xlws.wasm` once
+     routed here and 404'd, bricking the portal)*
    - **Service type:** `HTTP`
    - **URL:** `connectionserver:4202`
 
