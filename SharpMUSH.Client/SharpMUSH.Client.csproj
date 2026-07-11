@@ -7,10 +7,14 @@
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<!-- NU1510: transitive dependency pinning; NU1702: BlazorMonaco targets net9 but is WASM/JS, fully compatible -->
 		<NoWarn>NU1510;NU1702</NoWarn>
-		<!-- Disable trimming due to FSharp.Core incompatibility -->
-		<PublishTrimmed>false</PublishTrimmed>
+		<!-- Trimming is enabled; FSharp.Core (transitive via TelnetNegotiationCore) is rooted below so the trimmer doesn't fail on it. -->
+		<PublishTrimmed>true</PublishTrimmed>
 		<BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<TrimmerRootAssembly Include="FSharp.Core" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="AutoBogus" Version="2.13.1" />
