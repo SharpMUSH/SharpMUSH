@@ -2,11 +2,13 @@
 FROM mcr.microsoft.com/dotnet/nightly/sdk:10.0 AS build
 WORKDIR /src
 COPY . .
-RUN dotnet restore && dotnet publish SharpMUSH.Server/SharpMUSH.Server.csproj -c Release -o /app
+# Restore once for the whole solution, then publish with --no-restore so neither publish re-restores.
+RUN dotnet restore
+RUN dotnet publish SharpMUSH.Server/SharpMUSH.Server.csproj -c Release -o /app --no-restore
 # Publish the Blazor WASM portal and bundle its static assets into the server's web root, so a
 # single image serves the API + SignalR + the portal at one origin (see UseBlazorFrameworkFiles in
 # Program.cs). Without this the server has no wwwroot/index.html and "/" returns 404.
-RUN dotnet publish SharpMUSH.Client/SharpMUSH.Client.csproj -c Release -o /client
+RUN dotnet publish SharpMUSH.Client/SharpMUSH.Client.csproj -c Release -o /client --no-restore
 RUN mkdir -p /app/wwwroot && cp -a /client/wwwroot/. /app/wwwroot/
 # Copy the dev certificate if it exists (optional for build, can be mounted at runtime)
 RUN if [ -f SharpMUSH.Server/sharpmush-dev.pfx ]; then \

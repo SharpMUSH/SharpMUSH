@@ -63,7 +63,10 @@ services:
       - Wiki__AssetRoot=/app/data/wiki-assets
       # --- Messaging ---
       - NATS_URL=nats://nats:4222
-      # --- Web: serve HTTP only; Caddy terminates TLS in front (or expose 8080 directly if you don't use Caddy) ---
+      # --- Web: serve HTTP only. A TLS-terminating proxy (Caddy, below) is REQUIRED: the app always
+      #     calls UseHttpsRedirection(), so exposing 8080 directly WITHOUT a proxy that sets
+      #     X-Forwarded-Proto=https would bounce clients to an unbound HTTPS URL. Caddy sets that header
+      #     and ASPNETCORE_FORWARDEDHEADERS_ENABLED (below) makes the app trust it. ---
       - ASPNETCORE_URLS=http://+:8080
       # Neutralize the dev-cert path baked into the image's ENV. We serve HTTP only (TLS is at the
       # proxy), but Kestrel eagerly loads the "Default" certificate whenever that config exists, and
