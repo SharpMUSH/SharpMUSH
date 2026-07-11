@@ -1,0 +1,151 @@
+# SharpMUSH — hobby-scale production stack (single host).
+#
+# Layout (see deploy/README.md):
+#   nats              — message bus (JetStream), the ONLY required backing service
+#   connectionserver  — telnet :4201 + websocket gateway
+#   sharpmush-server  — ASP.NET Core: REST + SignalR + Blazor portal, SurrealDB embedded (RocksDB on disk)
+#   backup            — restic sidecar: nightly encrypted snapshot of the game data to your bucket
+#   caddy             — OPTIONAL reverse proxy giving the web portal automatic HTTPS (Let's Encrypt)
+#
+# All game state lives in ONE named volume (app-data) so a single restic target covers everything.
+# Copy .env.example -> .env and fill it in before `docker compose -f deploy/docker-compose.prod.yml up -d`.
+
+services:
+  nats:
+    image: nats:2.10-alpine
+    container_name: sharpmush-nats
+    # -js: enable JetStream   -sd /data: persist JetStream state   -m 8222: monitoring/health port
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    volumes:
+      - nats-data:/data
+    networks:
+      - sharpmush-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q http://localhost:8222/healthz -O /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+  connectionserver:
+    build:
+      context: ../
+      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
+    image: sharpmush/sharpmush-connectionserver:latest
+    container_name: sharpmush-connectionserver
+    environment:
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      nats:
+        condition: service_healthy
+    ports:
+      - "4201:4201"   # raw telnet — exposed directly (plaintext protocol)
+    networks:
+      - sharpmush-net
+    mem_limit: 512m
+    cpus: 1.0
+    restart: unless-stopped
+
+  sharpmush-server:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    image: sharpmush/sharpmush-server:latest
+    container_name: sharpmush-server
+    environment:
+      # --- Object database: SurrealDB embedded, file-backed RocksDB (no separate DB server) ---
+      - SHARPMUSH_DATABASE_PROVIDER=surrealdb
+      # Relative path resolves under the /app WORKDIR -> /app/data/surreal, which is the mounted volume.
+      - SHARPMUSH_SURREALDB_ENDPOINT=rocksdb://data/surreal
+      # Wiki asset uploads (filesystem) land in the same persisted volume.
+      - Wiki__AssetRoot=/app/data/wiki-assets
+      # --- Messaging ---
+      - NATS_URL=nats://nats:4222
+      # --- Web: serve HTTP only; Caddy terminates TLS in front (or expose 8080 directly if you don't use Caddy) ---
+      - ASPNETCORE_URLS=http://+:8080
+      # Trust Caddy's X-Forwarded-Proto/-For. Without this the app (which always calls
+      # UseHttpsRedirection) sees the plain-HTTP backend hop and redirect-loops, and
+      # rate-limiting / canonical-URL logic sees the proxy IP instead of the real client.
+      - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+      # --- Auth: a JWT signing key is REQUIRED for portal auth in production ---
+      # The :? syntax makes compose ABORT with an error if the value is missing from .env,
+      # instead of silently substituting an empty string and booting without auth configured.
+      - Jwt__SigningKey=${JWT_SIGNING_KEY:?set JWT_SIGNING_KEY in deploy/.env}
+      # --- Initial God/admin account, created on first boot ---
+      - SHARPMUSH_BOOTSTRAP_USERNAME=${BOOTSTRAP_USERNAME:?set BOOTSTRAP_USERNAME in deploy/.env}
+      - SHARPMUSH_BOOTSTRAP_PASSWORD=${BOOTSTRAP_PASSWORD:?set BOOTSTRAP_PASSWORD in deploy/.env}
+    volumes:
+      - app-data:/app/data
+    depends_on:
+      nats:
+        condition: service_healthy
+      connectionserver:
+        condition: service_started
+    networks:
+      - sharpmush-net
+    mem_limit: 768m
+    cpus: 1.5
+    restart: unless-stopped
+
+  # --- Nightly encrypted backup of the single game-data volume to your bucket ---
+  backup:
+    image: mazzolino/restic:1.8      # pinned (not :latest) so backups are reproducible
+    container_name: sharpmush-backup
+    hostname: sharpmush
+    environment:
+      - RUN_ON_STARTUP=false
+      # 6-field cron (sec min hour dom mon dow): every day at 03:30.
+      - BACKUP_CRON=0 30 3 * * *
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY:?set RESTIC_REPOSITORY in deploy/.env}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD:?set RESTIC_PASSWORD in deploy/.env}
+      - RESTIC_BACKUP_SOURCES=/data
+      - RESTIC_BACKUP_ARGS=--tag sharpmush --host sharpmush
+      # Retention: keep a week of dailies + a month of weeklies, prune the rest.
+      - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --prune
+      # Credentials for the storage backend. These are for Backblaze B2; swap for
+      # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY if you use S3 or Cloudflare R2.
+      - B2_ACCOUNT_ID=${B2_ACCOUNT_ID}
+      - B2_ACCOUNT_KEY=${B2_ACCOUNT_KEY}
+    volumes:
+      - app-data:/data:ro          # read-only: the backup can never corrupt live data
+    networks:
+      - sharpmush-net
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+  # --- OPTIONAL: automatic HTTPS for the web portal. Delete this service if you ---
+  # --- terminate TLS elsewhere (Cloudflare, a load balancer) or only use telnet. ---
+  caddy:
+    image: caddy:2-alpine
+    container_name: sharpmush-caddy
+    environment:
+      # Required: Caddy can't render a valid site block without it. Fail fast if unset.
+      - SHARPMUSH_DOMAIN=${SHARPMUSH_DOMAIN:?set SHARPMUSH_DOMAIN in deploy/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - sharpmush-server
+      - connectionserver
+    networks:
+      - sharpmush-net
+    mem_limit: 128m
+    cpus: 0.5
+    restart: unless-stopped
+
+volumes:
+  app-data:      # SurrealDB RocksDB + wiki assets — the game. This is what gets backed up.
+  nats-data:     # JetStream state (transient I/O, not the source of truth) — not backed up.
+  caddy-data:    # Let's Encrypt certificates
+  caddy-config:
+
+networks:
+  sharpmush-net:
+    driver: bridge

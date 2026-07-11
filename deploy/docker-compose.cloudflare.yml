@@ -1,0 +1,143 @@
+# SharpMUSH — hobby-scale stack fronted by CLOUDFLARE (single host).
+#
+# Difference vs docker-compose.prod.yml: TLS + web ingress are handled by Cloudflare,
+# not Caddy. A `cloudflared` tunnel dials OUT to Cloudflare, so:
+#   - no inbound 80/443 to open, no Let's Encrypt cert to manage
+#   - the origin server's IP stays hidden behind Cloudflare
+#   - the ASP.NET server is never published to the host — cloudflared reaches it
+#     over the private docker network.
+#
+# IMPORTANT — telnet is NOT proxied by Cloudflare:
+#   Cloudflare's proxy only carries HTTP/HTTPS + WebSockets. Raw telnet (:4201) is
+#   plain TCP and cannot go through the orange cloud on free/standard plans (that
+#   needs paid Spectrum). So telnet is published DIRECTLY on this host, and you
+#   point a DNS-ONLY (grey-cloud) record — e.g. telnet.mush.example.com — at the
+#   origin IP. The web portal/SignalR/WebSocket go through the tunnel; telnet does not.
+#
+# Setup:
+#   1. In the Cloudflare Zero Trust dashboard, create a Tunnel, copy its token into
+#      CLOUDFLARE_TUNNEL_TOKEN in .env.
+#   2. Add a Public Hostname on that tunnel:  mush.example.com  ->  http://sharpmush-server:8080
+#      (add a second one for the websocket gateway if you route it via the domain:
+#       ws.mush.example.com -> http://connectionserver:4202)
+#   3. Add a DNS-only A/AAAA record for telnet -> this host's IP.
+#   4. docker compose -f deploy/docker-compose.cloudflare.yml up -d --build
+
+services:
+  nats:
+    image: nats:2.10-alpine
+    container_name: sharpmush-nats
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    volumes:
+      - nats-data:/data
+    networks:
+      - sharpmush-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q http://localhost:8222/healthz -O /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+  connectionserver:
+    build:
+      context: ../
+      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
+    image: sharpmush/sharpmush-connectionserver:latest
+    container_name: sharpmush-connectionserver
+    environment:
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      nats:
+        condition: service_healthy
+    ports:
+      - "4201:4201"   # telnet — DIRECT to host (Cloudflare can't proxy raw TCP); use a DNS-only record
+    networks:
+      - sharpmush-net
+    mem_limit: 512m
+    cpus: 1.0
+    restart: unless-stopped
+
+  sharpmush-server:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    image: sharpmush/sharpmush-server:latest
+    container_name: sharpmush-server
+    environment:
+      - SHARPMUSH_DATABASE_PROVIDER=surrealdb
+      - SHARPMUSH_SURREALDB_ENDPOINT=rocksdb://data/surreal
+      - Wiki__AssetRoot=/app/data/wiki-assets
+      - NATS_URL=nats://nats:4222
+      # HTTP only — Cloudflare terminates TLS at the edge and the tunnel reaches this over the private network.
+      - ASPNETCORE_URLS=http://+:8080
+      # Trust the tunnel's forwarded client IP/proto so rate-limiting, bot detection and canonical-URL
+      # middleware see the real visitor, not the cloudflared container. (ASP.NET ForwardedHeaders.)
+      - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+      # :? makes compose abort if the value is missing from .env rather than booting misconfigured.
+      - Jwt__SigningKey=${JWT_SIGNING_KEY:?set JWT_SIGNING_KEY in deploy/.env}
+      - SHARPMUSH_BOOTSTRAP_USERNAME=${BOOTSTRAP_USERNAME:?set BOOTSTRAP_USERNAME in deploy/.env}
+      - SHARPMUSH_BOOTSTRAP_PASSWORD=${BOOTSTRAP_PASSWORD:?set BOOTSTRAP_PASSWORD in deploy/.env}
+    volumes:
+      - app-data:/app/data
+    # NOTE: no `ports:` — the server is only reachable via the tunnel and the internal network.
+    depends_on:
+      nats:
+        condition: service_healthy
+      connectionserver:
+        condition: service_started
+    networks:
+      - sharpmush-net
+    mem_limit: 768m
+    cpus: 1.5
+    restart: unless-stopped
+
+  # Cloudflare Tunnel: dials out to Cloudflare, routes the public hostname(s) you
+  # configured in the Zero Trust dashboard to the services on this network.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.7.1   # pinned (not :latest) for reproducible deploys
+    container_name: sharpmush-cloudflared
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in deploy/.env}
+    depends_on:
+      - sharpmush-server
+      - connectionserver
+    networks:
+      - sharpmush-net
+    mem_limit: 128m
+    cpus: 0.5
+    restart: unless-stopped
+
+  # Nightly encrypted backup of the game-data volume — identical to the prod stack.
+  backup:
+    image: mazzolino/restic:1.8      # pinned (not :latest) so backups are reproducible
+    container_name: sharpmush-backup
+    hostname: sharpmush
+    environment:
+      - RUN_ON_STARTUP=false
+      - BACKUP_CRON=0 30 3 * * *
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY:?set RESTIC_REPOSITORY in deploy/.env}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD:?set RESTIC_PASSWORD in deploy/.env}
+      - RESTIC_BACKUP_SOURCES=/data
+      - RESTIC_BACKUP_ARGS=--tag sharpmush --host sharpmush
+      - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --prune
+      - B2_ACCOUNT_ID=${B2_ACCOUNT_ID}
+      - B2_ACCOUNT_KEY=${B2_ACCOUNT_KEY}
+    volumes:
+      - app-data:/data:ro
+    networks:
+      - sharpmush-net
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+volumes:
+  app-data:
+  nats-data:
+
+networks:
+  sharpmush-net:
+    driver: bridge
