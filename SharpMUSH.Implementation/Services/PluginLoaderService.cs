@@ -56,6 +56,10 @@ public static class PluginLoaderService
 		// Portal UI seam — must unify so the catalog's pattern-match sees the host's type, and so the
 		// RegisteredApplication values a plugin returns cast cleanly across the isolation boundary.
 		typeof(IApplicationSource),
+		// RegisteredApplication (and the rest of the browser-safe portal surface) lives in
+		// SharpMUSH.Contracts, a separate assembly from IApplicationSource. Listing it shares that
+		// assembly too, so contract values a plugin returns keep their type identity in the host.
+		typeof(SharpMUSH.Library.Models.Portal.Applications.RegisteredApplication),
 		typeof(PluginFlag)
 	];
 

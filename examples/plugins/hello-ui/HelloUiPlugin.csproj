@@ -33,9 +33,14 @@
 	<ItemGroup>
 		<!-- Contract surface only (Private=false + ExcludeAssets=runtime) so the host's copy loads at
 		     runtime, while the loader's sharedTypes unifies type identity across the isolation boundary.
-		     IApplicationSource, IServiceRegistrar, RegisteredApplication, PluginBase, etc. all live in
-		     SharpMUSH.Library (host-shared). -->
+		     IApplicationSource, IServiceRegistrar, PluginBase, etc. live in SharpMUSH.Library;
+		     RegisteredApplication and the rest of the browser-safe portal surface live in
+		     SharpMUSH.Contracts. Both are host-shared. -->
 		<ProjectReference Include="..\..\..\SharpMUSH.Library\SharpMUSH.Library.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<ProjectReference Include="..\..\..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj">
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>

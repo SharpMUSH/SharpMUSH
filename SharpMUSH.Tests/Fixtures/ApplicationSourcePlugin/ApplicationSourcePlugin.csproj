@@ -15,9 +15,13 @@
 
 	<ItemGroup>
 		<!-- Contract surface only (Private=false + ExcludeAssets=runtime) so the host's copy loads, while the
-		     loader's sharedTypes unifies type identity across the isolation boundary. RegisteredApplication and
-		     IApplicationSource both live in SharpMUSH.Library (host-shared). -->
+		     loader's sharedTypes unifies type identity across the isolation boundary. IApplicationSource lives
+		     in SharpMUSH.Library; RegisteredApplication lives in SharpMUSH.Contracts. Both are host-shared. -->
 		<ProjectReference Include="..\..\..\SharpMUSH.Library\SharpMUSH.Library.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<ProjectReference Include="..\..\..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj">
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
