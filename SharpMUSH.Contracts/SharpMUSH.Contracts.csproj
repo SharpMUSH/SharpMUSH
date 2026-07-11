@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- ============================================================================================
+	     Browser-safe portal contract surface.
+
+	     This slim assembly holds ONLY the types the Blazor WASM client (SharpMUSH.Client) consumes:
+	     portal models/messages, widget + application descriptors, portal authorization roles/permissions,
+	     the config/schema + package API DTOs, the client-facing service interfaces, the database-conversion
+	     progress/result DTOs, and the Markdig wiki-rendering pipeline. It deliberately references NONE of
+	     the server DB/infra packages (SqlClient, MySqlConnector, Npgsql, Neo4j.Driver, Core.Arango,
+	     SurrealDb.Net, NATS.Net, Quartz, Serilog, TelnetNegotiationCore, ...) so the browser bundle no
+	     longer drags the full server closure (nor its transitive FSharp.Core / Windows desktop assemblies).
+
+	     Namespaces are intentionally preserved (SharpMUSH.Library.*) so the whole solution keeps compiling
+	     unchanged: SharpMUSH.Library references this project and re-consumes these types, and every existing
+	     `using SharpMUSH.Library.Models.Portal;` (etc.) resolves against this assembly instead.
+	     ============================================================================================ -->
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<NoWarn>NU1510</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Markdig" Version="1.3.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -43,6 +43,7 @@
 		<ProjectReference Include="..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj" OutputItemType="Analyzer" />
 		<ProjectReference Include="..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
+		<ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" />
 		<ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
 	</ItemGroup>
 

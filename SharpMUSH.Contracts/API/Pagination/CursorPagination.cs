@@ -47,7 +47,7 @@ public static class CursorPaginationHelper
     /// <param name="keySelector">Extracts the sort key used to build/decode cursors.</param>
     /// <param name="pageSize">Maximum items per page. Clamped to 1–200.</param>
     /// <param name="after">Opaque cursor returned by a prior <c>NextCursor</c>. When provided, items up to and including the boundary are skipped.</param>
-    /// <param name="before">Opaque cursor returned by a prior <c>PreviousCursor</c>. When provided, only items before the boundary are included.</param>
+    /// <param name="before">Opaque cursor returned by a prior <c>PreviousCursor</c>. When provided, the page is the last <paramref name="pageSize"/> items before the boundary, in their original order.</param>
     public static CursorPage<T> Paginate<T, TKey>(
         IEnumerable<T> source,
         Func<T, TKey> keySelector,
@@ -71,7 +71,22 @@ public static class CursorPaginationHelper
         {
             var beforeKey = DecodeCursor<TKey>(before);
             if (beforeKey is not null)
-                items = items.TakeWhile(i => keySelector(i).CompareTo(beforeKey) < 0).ToList();
+            {
+                // Backward navigation: the page is the last pageSize items strictly before the
+                // boundary, kept in original order. Anything at or past the boundary is by
+                // definition a next page, and anything left over in front is a previous page.
+                var beforeItems = items.TakeWhile(i => keySelector(i).CompareTo(beforeKey) < 0).ToList();
+                var backPage = beforeItems.Skip(Math.Max(0, beforeItems.Count - pageSize)).ToList();
+
+                return new CursorPage<T>
+                {
+                    Items = backPage,
+                    NextCursor = backPage.Count > 0 ? EncodeCursor(keySelector(backPage[^1])) : null,
+                    PreviousCursor = beforeItems.Count > pageSize
+                        ? EncodeCursor(keySelector(backPage[0]))
+                        : null,
+                };
+            }
         }
 
         // Request one extra item to detect whether a next page exists

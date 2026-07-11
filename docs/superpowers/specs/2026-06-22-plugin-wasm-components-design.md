@@ -65,3 +65,9 @@ Extend `RegisteredApplication` (Library, general portal type — not a plugin co
 - In-browser hot-*unload* (impossible — handled by forced refresh).
 - Making compiled components the default (declarative stays default; compiled is gated/off-by-default).
 - Client AOT/trimming (explicitly given up to allow runtime assembly loading).
+  - **Refined 2026-07-11 (SharpMUSH.Contracts extraction PR):** IL trimming is re-enabled, with the
+    shared plugin-component surface rooted via `TrimmerRootAssembly` in `SharpMUSH.Client.csproj`
+    (component-model assemblies, MudBlazor, JSInterop, Contracts, MarkupString) so runtime-loaded
+    components keep their full compile-time surface. The BCL remains trimmed; a compiled plugin
+    component that reflects into otherwise-unused BCL members is the accepted residual risk. AOT
+    remains a non-goal.

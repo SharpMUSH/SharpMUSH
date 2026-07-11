@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

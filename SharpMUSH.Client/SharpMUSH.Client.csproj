@@ -7,13 +7,27 @@
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<!-- NU1510: transitive dependency pinning; NU1702: BlazorMonaco targets net9 but is WASM/JS, fully compatible -->
 		<NoWarn>NU1510;NU1702</NoWarn>
-		<!-- Trimming is enabled; FSharp.Core (transitive via TelnetNegotiationCore) is rooted below so the trimmer doesn't fail on it. -->
+		<!-- IL trimming is safe now that the client no longer references the server-side
+		     SharpMUSH.Library: the browser bundle no longer pulls FSharp.Core / TelnetNegotiationCore
+		     (they reached it only transitively through Library). -->
 		<PublishTrimmed>true</PublishTrimmed>
 		<BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<TrimmerRootAssembly Include="FSharp.Core" />
+		<!-- Compiled plugin Blazor components (gated, off-by-default; see
+		     docs/superpowers/specs/2026-06-22-plugin-wasm-components-design.md) are Assembly.Load()ed at
+		     runtime, so the trimmer cannot see what they use. Root the shared UI surface a plugin
+		     component compiles against — the component-model assemblies, MudBlazor, and the app's own
+		     contract/markup assemblies — so trimming never strips members those components rely on.
+		     The BCL stays trimmed: a plugin needing an exotic BCL member is the accepted residual risk. -->
+		<TrimmerRootAssembly Include="Microsoft.AspNetCore.Components" />
+		<TrimmerRootAssembly Include="Microsoft.AspNetCore.Components.Web" />
+		<TrimmerRootAssembly Include="Microsoft.AspNetCore.Components.Forms" />
+		<TrimmerRootAssembly Include="Microsoft.JSInterop" />
+		<TrimmerRootAssembly Include="MudBlazor" />
+		<TrimmerRootAssembly Include="SharpMUSH.Contracts" />
+		<TrimmerRootAssembly Include="SharpMUSH.MarkupString" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -41,7 +55,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
-		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
+		<ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" />
 		<ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
 	</ItemGroup>
 

@@ -122,12 +122,16 @@
   </ItemGroup>
 
   <ItemGroup>
-	  <!-- These four are NOT published NuGet packages. PrivateAssets="all" keeps them out of the generated
+	  <!-- These five are NOT published NuGet packages. PrivateAssets="all" keeps them out of the generated
 	       .nuspec <dependencies> (the only reliable NuGet lever, since the dependency list is projected from
 	       the restore assets file), so an external consumer's restore never looks for them on nuget.org.
 	       Their compile-time DLLs are bundled into lib/ by IncludeReferencedProjectsInPackage instead.
 	       Because PrivateAssets="all" also stops them flowing transitively to SharpMUSH.Library's consumers,
 	       the few in-tree projects that relied on that transitivity now reference them directly. -->
+	  <!-- Browser-safe portal contract surface (the Blazor WASM client references it INSTEAD of this
+	       project). In-tree consumers of the portal model/interface/API/wiki-pipeline types it holds
+	       (Server, Implementation, tests, ...) reference it directly like the other four. -->
+	  <ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" PrivateAssets="all" />
 	  <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" PrivateAssets="all" />
 	  <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" PrivateAssets="all" />
 	  <ProjectReference Include="..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" PrivateAssets="all" />
