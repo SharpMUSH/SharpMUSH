@@ -19,4 +19,8 @@
     <ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="SharpMUSH.Tests" />
+  </ItemGroup>
+
 </Project>

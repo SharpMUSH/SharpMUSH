@@ -11,6 +11,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net;
 using SurrealDb.Net.Models.Response;
+using RecordId = SurrealDb.Net.Models.RecordId;
+using StringRecordId = SurrealDb.Net.Models.StringRecordId;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -127,7 +129,19 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS received_mail_out ON received_mail FIELDS out",
 				"DEFINE INDEX IF NOT EXISTS mail_sender_in ON mail_sender FIELDS in",
 				"DEFINE INDEX IF NOT EXISTS mail_sender_out ON mail_sender FIELDS out",
-				"DEFINE INDEX IF NOT EXISTS object_data_key_type ON object_data FIELDS objectKey, dataType UNIQUE"
+				"DEFINE INDEX IF NOT EXISTS object_data_key_type ON object_data FIELDS objectKey, dataType UNIQUE",
+				// RELATE has no built-in uniqueness — every re-run appends a new edge record — so enforce
+				// (in, out) uniqueness at the schema level for the pair-unique relations. This makes the
+				// whole duplicate-edge bug class (re-run seeds, racing setters) impossible at the source:
+				// a duplicate RELATE errors instead of silently doubling room contents / flag letters.
+				// NOTE: on a database that already accumulated duplicates these DEFINEs fail (logged,
+				// non-fatal) — start from a clean database when deploying this schema.
+				"DEFINE INDEX IF NOT EXISTS is_object_in_out ON is_object FIELDS in, out UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS at_location_in_out ON at_location FIELDS in, out UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS has_home_in_out ON has_home FIELDS in, out UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS has_owner_in_out ON has_owner FIELDS in, out UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS has_flags_in_out ON has_flags FIELDS in, out UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS has_powers_in_out ON has_powers FIELDS in, out UNIQUE"
 			};
 
 			foreach (var q in indexQueries)
@@ -137,17 +151,12 @@ public partial class SurrealDatabase
 
 			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-			_nextObjectKey = 9;
-
 			await ExecuteAsync(
 				"UPSERT object:0 SET name = 'Room Zero', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 0",
 				new Dictionary<string, object?> { ["now"] = now },
 				cancellationToken);
 			await ExecuteAsync(
 				"UPSERT room:0 SET key = 0, aliases = []",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE room:0->is_object->object:0",
 				cancellationToken);
 
 			await ExecuteAsync(
@@ -157,9 +166,6 @@ public partial class SurrealDatabase
 			await ExecuteAsync(
 				"UPSERT player:1 SET key = 1, passwordHash = '', passwordSalt = '', aliases = [], quota = 999999",
 				cancellationToken);
-			await ExecuteAsync(
-				"RELATE player:1->is_object->object:1",
-				cancellationToken);
 
 			await ExecuteAsync(
 				"UPSERT object:2 SET name = 'Master Room', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 2",
@@ -168,9 +174,6 @@ public partial class SurrealDatabase
 			await ExecuteAsync(
 				"UPSERT room:2 SET key = 2, aliases = []",
 				cancellationToken);
-			await ExecuteAsync(
-				"RELATE room:2->is_object->object:2",
-				cancellationToken);
 
 			// A room has no location/home edges — it is a pure attribute holder.
 			await ExecuteAsync(
@@ -178,34 +181,24 @@ public partial class SurrealDatabase
 				new Dictionary<string, object?> { ["now"] = now },
 				cancellationToken);
 			await ExecuteAsync("UPSERT room:3 SET key = 3, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE room:3->is_object->object:3", cancellationToken);
 
 			await ExecuteAsync(
 				"UPSERT object:4 SET name = 'Ancestor Player', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 4",
 				new Dictionary<string, object?> { ["now"] = now },
 				cancellationToken);
 			await ExecuteAsync("UPSERT thing:4 SET key = 4, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE thing:4->is_object->object:4", cancellationToken);
-			await ExecuteAsync("RELATE thing:4->at_location->room:2", cancellationToken);
-			await ExecuteAsync("RELATE thing:4->has_home->room:2", cancellationToken);
 
 			await ExecuteAsync(
 				"UPSERT object:5 SET name = 'Ancestor Exit', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 5",
 				new Dictionary<string, object?> { ["now"] = now },
 				cancellationToken);
 			await ExecuteAsync("UPSERT thing:5 SET key = 5, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE thing:5->is_object->object:5", cancellationToken);
-			await ExecuteAsync("RELATE thing:5->at_location->room:2", cancellationToken);
-			await ExecuteAsync("RELATE thing:5->has_home->room:2", cancellationToken);
 
 			await ExecuteAsync(
 				"UPSERT object:6 SET name = 'Ancestor Thing', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 6",
 				new Dictionary<string, object?> { ["now"] = now },
 				cancellationToken);
 			await ExecuteAsync("UPSERT thing:6 SET key = 6, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE thing:6->is_object->object:6", cancellationToken);
-			await ExecuteAsync("RELATE thing:6->at_location->room:2", cancellationToken);
-			await ExecuteAsync("RELATE thing:6->has_home->room:2", cancellationToken);
 
 			await ExecuteAsync(
 				"UPSERT object:7 SET name = 'Package Manager', type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 7",
@@ -214,53 +207,69 @@ public partial class SurrealDatabase
 			await ExecuteAsync(
 				"UPSERT player:7 SET key = 7, passwordHash = '', passwordSalt = '', aliases = [], quota = 999999",
 				cancellationToken);
-			await ExecuteAsync("RELATE player:7->is_object->object:7", cancellationToken);
-			await ExecuteAsync("RELATE player:7->at_location->room:0", cancellationToken);
-			await ExecuteAsync("RELATE player:7->has_home->room:0", cancellationToken);
 
 			await ExecuteAsync(
 				"UPSERT object:8 SET name = 'HTTP Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 8",
 				new Dictionary<string, object?> { ["now"] = now },
 				cancellationToken);
 			await ExecuteAsync("UPSERT thing:8 SET key = 8, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE thing:8->is_object->object:8", cancellationToken);
-			await ExecuteAsync("RELATE thing:8->at_location->room:2", cancellationToken);
-			await ExecuteAsync("RELATE thing:8->has_home->room:2", cancellationToken);
 
 			await ExecuteAsync(
 				"UPSERT object:9 SET name = 'Event Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 9",
 				new Dictionary<string, object?> { ["now"] = now },
 				cancellationToken);
 			await ExecuteAsync("UPSERT thing:9 SET key = 9, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE thing:9->is_object->object:9", cancellationToken);
-			await ExecuteAsync("RELATE thing:9->at_location->room:2", cancellationToken);
-			await ExecuteAsync("RELATE thing:9->has_home->room:2", cancellationToken);
 
-			await ExecuteAsync(
-				"RELATE player:1->at_location->room:0",
-				cancellationToken);
+			// Seed graph edges. Unlike the UPSERTs above (fixed record ids), a bare RELATE appends a NEW
+			// edge record every time it runs — and Migrate() runs on every server boot (_migrated only
+			// gates within one process) — so on a persistent store each restart used to duplicate every
+			// edge below: room contents grew one row per boot and God's flag string one 'W' per boot.
+			// EnsureSeedEdgeAsync creates each edge only when absent and collapses old duplicates.
+			var singleCardinalitySeedEdges = new (string From, string Edge, string To)[]
+			{
+				("room:0", "is_object", "object:0"),
+				("player:1", "is_object", "object:1"),
+				("room:2", "is_object", "object:2"),
+				("room:3", "is_object", "object:3"),
+				("thing:4", "is_object", "object:4"),
+				("thing:5", "is_object", "object:5"),
+				("thing:6", "is_object", "object:6"),
+				("player:7", "is_object", "object:7"),
+				("thing:8", "is_object", "object:8"),
+				("thing:9", "is_object", "object:9"),
 
-			await ExecuteAsync(
-				"RELATE player:1->has_home->room:0",
-				cancellationToken);
+				("player:1", "at_location", "room:0"),
+				("player:7", "at_location", "room:0"),
+				("thing:4", "at_location", "room:2"),
+				("thing:5", "at_location", "room:2"),
+				("thing:6", "at_location", "room:2"),
+				("thing:8", "at_location", "room:2"),
+				("thing:9", "at_location", "room:2"),
 
-			await ExecuteAsync(
-				"RELATE object:0->has_owner->player:1",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE object:1->has_owner->player:1",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE object:2->has_owner->player:1",
-				cancellationToken);
-			// God owns the ancestors (#3-#6) and the handler things (#8, #9); PM (#7) owns itself
-			await ExecuteAsync("RELATE object:3->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:4->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:5->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:6->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:8->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:9->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:7->has_owner->player:7", cancellationToken);
+				("player:1", "has_home", "room:0"),
+				("player:7", "has_home", "room:0"),
+				("thing:4", "has_home", "room:2"),
+				("thing:5", "has_home", "room:2"),
+				("thing:6", "has_home", "room:2"),
+				("thing:8", "has_home", "room:2"),
+				("thing:9", "has_home", "room:2"),
+
+				("object:0", "has_owner", "player:1"),
+				("object:1", "has_owner", "player:1"),
+				("object:2", "has_owner", "player:1"),
+				// God owns the ancestors (#3-#6) and the handler things (#8, #9); PM (#7) owns itself
+				("object:3", "has_owner", "player:1"),
+				("object:4", "has_owner", "player:1"),
+				("object:5", "has_owner", "player:1"),
+				("object:6", "has_owner", "player:1"),
+				("object:8", "has_owner", "player:1"),
+				("object:9", "has_owner", "player:1"),
+				("object:7", "has_owner", "player:7"),
+			};
+			foreach (var (from, edge, to) in singleCardinalitySeedEdges)
+			{
+				await EnsureSeedEdgeAsync(from, edge, to, exclusivePerSubject: true, cancellationToken);
+			}
 
 			await CreateInitialFlags(cancellationToken);
 
@@ -270,23 +279,25 @@ public partial class SurrealDatabase
 
 			await CreateInitialAttributeEntries(cancellationToken);
 
-			await ExecuteAsync(
-				"RELATE object:1->has_flags->object_flag:WIZARD",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE object:7->has_flags->object_flag:WIZARD",
-				cancellationToken);
 			// HTTP Handler (#8) and Event Handler (#9) are WIZARD so their handler softcode runs
 			// with its own elevated permissions (each executes as itself).
-			await ExecuteAsync(
-				"RELATE object:8->has_flags->object_flag:WIZARD",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE object:9->has_flags->object_flag:WIZARD",
-				cancellationToken);
+			foreach (var wizard in (string[])["object:1", "object:7", "object:8", "object:9"])
+			{
+				await EnsureSeedEdgeAsync(wizard, "has_flags", "object_flag:WIZARD",
+					exclusivePerSubject: false, cancellationToken);
+			}
 
 			await SeedPluginFlags(cancellationToken);
 			await RunPluginSurrealMigrations(cancellationToken);
+
+			// Recompute the dbref allocator from what the database actually holds. Migrate() runs on
+			// every boot; pinning the static counter to the seed maximum would hand out keys that
+			// already exist on a persistent store (the first @create after a restart would collide
+			// with object #10).
+			var maxKeyResponse = await ExecuteAsync(
+				"SELECT VALUE key FROM object ORDER BY key DESC LIMIT 1", cancellationToken);
+			var maxKeys = maxKeyResponse.GetValue<List<int>>(0);
+			_nextObjectKey = Math.Max(9, maxKeys is { Count: > 0 } ? maxKeys[0] : 9);
 
 			// Seed the default FORMAT`* attributes on the Ancestor Player (#4) so a plain player inherits
 			// the PennMUSH-style say/pose/semipose/emit render templates. Idempotent.
@@ -306,6 +317,66 @@ public partial class SurrealDatabase
 			MigrateLock.Release();
 		}
 	}
+
+	/// <summary>
+	/// Idempotently ensures one seed edge. A bare RELATE appends a new edge record on every
+	/// execution, so re-running the seed against a persistent database duplicated every seed edge
+	/// once per server boot. With <paramref name="exclusivePerSubject"/> (is_object / at_location /
+	/// has_home / has_owner — relations the runtime keeps to exactly one edge per subject via
+	/// delete-then-RELATE) the edge is created only when the subject has NO edge at all, and
+	/// accumulated duplicates are collapsed keeping an edge that points away from the seed target
+	/// when one exists — so a legitimately moved object is never yanked back to its seed position.
+	/// Without it (has_flags), uniqueness is per (subject, target) pair instead.
+	/// </summary>
+	private async Task EnsureSeedEdgeAsync(
+		string from, string edgeTable, string seedTo, bool exclusivePerSubject, CancellationToken ct)
+	{
+		// Single-condition WHERE only: combining `in = <record> AND out = <record>` on an edge table
+		// indexed on BOTH fields makes the embedded engine's planner answer from one index and
+		// silently drop the other condition (observed: the in-condition ignored on at_location).
+		// Target filtering therefore happens client-side.
+		var response = await ExecuteAsync(
+			$"SELECT id, out AS target FROM {edgeTable} WHERE in = {from}", ct);
+		var edges = response.GetValue<List<SeedEdgeRecord>>(0) ?? [];
+
+		var seedParts = seedTo.Split(':');
+		if (!exclusivePerSubject)
+		{
+			edges = edges.Where(e => TargetEquals(e.target, seedParts[0], seedParts[1])).ToList();
+		}
+
+		if (edges.Count == 0)
+		{
+			await ExecuteAsync($"RELATE {from}->{edgeTable}->{seedTo}", ct);
+			return;
+		}
+
+		var keep = exclusivePerSubject
+			? edges.FirstOrDefault(e => !TargetEquals(e.target, seedParts[0], seedParts[1])) ?? edges[0]
+			: edges[0];
+		foreach (var extra in edges.Where(e => !ReferenceEquals(e, keep)))
+		{
+			var extraId = EdgeIdToString(extra.id, edgeTable);
+			if (extraId is null) continue;
+			await ExecuteAsync(
+				"DELETE $id",
+				new Dictionary<string, object?> { ["id"] = new StringRecordId(extraId) },
+				ct);
+		}
+	}
+
+	private static bool TargetEquals(RecordId? target, string table, string key) =>
+		target is not null
+		&& target.Table == table
+		&& ((target.TryDeserializeId<long>(out var l) && l.ToString() == key)
+			|| (target.TryDeserializeId<int>(out var i) && i.ToString() == key)
+			|| (target.TryDeserializeId<string>(out var s) && s == key));
+
+	private static string? EdgeIdToString(RecordId? id, string edgeTable) =>
+		id is null ? null
+		: id.TryDeserializeId<string>(out var s) ? $"{edgeTable}:{s}"
+		: id.TryDeserializeId<long>(out var l) ? $"{edgeTable}:{l}"
+		: null;
 
 	private async Task CreateInitialFlags(CancellationToken ct)
 	{

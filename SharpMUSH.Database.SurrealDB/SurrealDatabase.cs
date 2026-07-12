@@ -12,6 +12,8 @@ using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net;
 using SurrealDb.Net.Models.Response;
+using RecordId = SurrealDb.Net.Models.RecordId;
+using StringRecordId = SurrealDb.Net.Models.StringRecordId;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -30,6 +32,30 @@ public partial class SurrealDatabase(
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
 	private static volatile bool _migrated;
 	private static int _nextObjectKey;
+
+	/// <summary>
+	/// Test hook: clears the in-process migration gate so a test can run <see cref="Migrate"/> again,
+	/// simulating a server restart against a persistent database.
+	/// </summary>
+	internal static void ResetMigrationGateForTests() => _migrated = false;
+
+	/// <summary>Test hook: the current dbref allocator value (the last key handed out or seeded).</summary>
+	internal static int PeekNextObjectKeyForTests => _nextObjectKey;
+
+	/// <summary>
+	/// Test hooks: the migration gate and dbref allocator are process-wide statics shared by every
+	/// <see cref="SurrealDatabase"/> instance, so a test that migrates its own private database must
+	/// restore both afterward or it corrupts the allocator for the suite's shared database (keys get
+	/// re-handed-out and collide with existing objects).
+	/// </summary>
+	internal static (bool Migrated, int NextObjectKey) SnapshotMigrationStateForTests()
+		=> (_migrated, _nextObjectKey);
+
+	internal static void RestoreMigrationStateForTests(bool migrated, int nextObjectKey)
+	{
+		_migrated = migrated;
+		_nextObjectKey = nextObjectKey;
+	}
 
 	// Phase 2a plugin contributions threaded through from the pre-build PluginCatalog. Empty for staging
 	// databases (created from a live DB) and any host that does not load plugins.
@@ -907,6 +933,12 @@ public partial class SurrealDatabase(
 	internal record CountRecord
 	{
 		public long cnt { get; set; }
+	}
+
+	internal record SeedEdgeRecord
+	{
+		public RecordId? id { get; set; }
+		public RecordId? target { get; set; }
 	}
 
 	internal record ValueRecord
