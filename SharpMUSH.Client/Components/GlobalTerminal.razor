@@ -9,6 +9,7 @@
 @inject OttAuthService OttAuth
 @inject AccountAuthService AccountAuth
 @inject IWebAssemblyHostEnvironment HostEnv
+@inject NavigationManager Navigation
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:0.84375rem;">
@@ -186,7 +187,13 @@
 </div>
 
 @code {
-    [Parameter] public string DefaultServerUri { get; set; } = "ws://localhost:4202/ws";
+    /// <summary>
+    /// WebSocket endpoint the terminal connects to. When unset, it is derived from the portal's
+    /// own origin: <c>wss://&lt;host&gt;/ws</c> on a deployed site (the edge routes <c>/ws</c> to
+    /// the connection server — see deploy/README.md), or <c>ws://localhost:4202/ws</c> when the
+    /// portal itself runs on localhost, where the connection server listens on its own port.
+    /// </summary>
+    [Parameter] public string? DefaultServerUri { get; set; }
 
     /// <summary>
     /// Optional terminal service to drive this instance. When null, the injected command terminal
@@ -272,9 +279,20 @@
         }
     }
 
+    private string ComputeDefaultServerUri()
+    {
+        var baseUri = new Uri(Navigation.BaseUri);
+        if (baseUri.IsLoopback)
+            return "ws://localhost:4202/ws";
+        var scheme = baseUri.Scheme == Uri.UriSchemeHttps ? "wss" : "ws";
+        return $"{scheme}://{baseUri.Authority}/ws";
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        _serverUri = DefaultServerUri;
+        _serverUri = string.IsNullOrWhiteSpace(DefaultServerUri)
+            ? ComputeDefaultServerUri()
+            : DefaultServerUri;
         _connected = Terminal.IsConnected;
 
         _displayLines.AddRange(Terminal.Lines);
