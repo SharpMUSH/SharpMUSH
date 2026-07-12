@@ -40,12 +40,7 @@
 
         @if (!_connected)
         {
-            <MudTextField @bind-Value="_serverUri"
-                          Placeholder="ws://localhost:4202/ws"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Style="flex:1;font-size:0.75rem;"
-                          OnKeyDown="OnUriKeyDown" />
+            <div style="flex:1"></div>
             <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
                            title="Login settings"
                            OnClick="ToggleLoginPanel" />
@@ -303,11 +298,9 @@
         // Restore player name from the shared terminal service (survives component re-mounts)
         _playerName = Terminal.ConnectedPlayerName;
 
-        var (savedPlayer, savedPassword, savedUri) = await Credentials.LoadAsync();
+        var (savedPlayer, savedPassword) = await Credentials.LoadAsync();
         _loginPlayer = savedPlayer;
         _loginPassword = savedPassword;
-        if (!string.IsNullOrWhiteSpace(savedUri))
-            _serverUri = savedUri;
 
         // Restore account session (sessionStorage is tab-scoped)
         await AccountAuth.InitAsync();
@@ -557,7 +550,7 @@
     private async Task SaveCredentialsAsync()
     {
         // Password is deliberately not saved — it's sent once via HTTPS to get an OTT
-        await Credentials.SaveAsync(_loginPlayer, null, _serverUri);
+        await Credentials.SaveAsync(_loginPlayer, null);
         _showLoginPanel = false;
         AddLocalLine("[System] Player name saved. Password is not stored.", TerminalLineSource.System);
         StateHasChanged();
@@ -575,11 +568,6 @@
     private async Task OnInputKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") await SendAsync();
-    }
-
-    private async Task OnUriKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter") await ConnectAsync();
     }
 
     private void OnLineReceived(TerminalLine line)
