@@ -86,11 +86,15 @@ public class SurrealMigrationIdempotencyTests
 		var (_, client) = await CreateMigratedAsync("uniqueness");
 
 		// Exact duplicates (what every pre-fix boot appended) are rejected by the indexes...
-		await client.RawQuery("RELATE player:1->at_location->room:0");
-		await client.RawQuery("RELATE object:1->has_flags->object_flag:WIZARD");
+		var duplicateLocation = await client.RawQuery("RELATE player:1->at_location->room:0");
+		var duplicateFlag = await client.RawQuery("RELATE object:1->has_flags->object_flag:WIZARD");
 		// ...and so is a SECOND location for the same object (UNIQUE on `in`): an object cannot be
 		// in two rooms at once, whichever room the extra edge points at.
-		await client.RawQuery("RELATE player:1->at_location->room:2");
+		var secondLocation = await client.RawQuery("RELATE player:1->at_location->room:2");
+
+		await Assert.That(duplicateLocation.HasErrors).IsTrue();
+		await Assert.That(duplicateFlag.HasErrors).IsTrue();
+		await Assert.That(secondLocation.HasErrors).IsTrue();
 
 		await Assert.That(await CountAsync(client,
 			"SELECT count() AS cnt FROM at_location WHERE in = player:1 GROUP ALL")).IsEqualTo(1L);

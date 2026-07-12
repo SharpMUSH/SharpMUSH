@@ -136,8 +136,10 @@ public partial class SurrealDatabase
 				// (one location / home / owner / zone / parent / object node per subject — the runtime
 				// maintains them via delete-then-RELATE) are UNIQUE on `in`, and the multi-valued
 				// flag/power relations are UNIQUE per (in, out) pair. A duplicate RELATE errors instead
-				// of silently doubling room contents or flag letters. NOTE: a database that already
-				// holds duplicates fails these DEFINEs (logged, non-fatal) — deploy on a clean database.
+				// of silently doubling room contents or flag letters. NOTE: databases created before
+				// migration records existed are NOT upgradable in place — IF NOT EXISTS keeps their old
+				// non-unique indexes, existing duplicates would fail these DEFINEs, and the seed would
+				// re-run over live data. Deploy this schema on a clean database.
 				"DEFINE INDEX IF NOT EXISTS has_flags_in_out ON has_flags FIELDS in, out UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS has_powers_in_out ON has_powers FIELDS in, out UNIQUE"
 			};
@@ -167,14 +169,7 @@ public partial class SurrealDatabase
 
 			await RunPluginSurrealMigrations(cancellationToken);
 
-			// Recompute the dbref allocator from what the database actually holds. Migrate() runs on
-			// every boot; pinning the static counter to the seed maximum would hand out keys that
-			// already exist on a persistent store (the first @create after a restart would collide
-			// with object #10).
-			var maxKeyResponse = await ExecuteAsync(
-				"SELECT VALUE key FROM object ORDER BY key DESC LIMIT 1", cancellationToken);
-			var maxKeys = maxKeyResponse.GetValue<List<int>>(0);
-			_nextObjectKey = Math.Max(9, maxKeys is { Count: > 0 } ? maxKeys[0] : 9);
+			await RecomputeNextObjectKeyAsync(cancellationToken);
 
 			if (applyInitial)
 			{
@@ -182,7 +177,9 @@ public partial class SurrealDatabase
 				// inherits the PennMUSH-style say/pose/semipose/emit render templates.
 				await AncestorSeed.SeedAncestorPlayerFormatsAsync(this, cancellationToken);
 
-				// Recorded last so a failed seed re-applies on the next boot rather than being skipped.
+				// Recorded after the seed statements run, so an exception during the seed re-applies
+				// it next boot. (SurrealQL-level errors are logged by ExecuteAsync, not thrown — only
+				// .NET failures abort before the record is written.)
 				await ExecuteAsync(
 					$"CREATE migration:⟨{InitialSeedMigrationId}⟩ SET appliedAt = $now",
 					new Dictionary<string, object?> { ["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
@@ -207,6 +204,20 @@ public partial class SurrealDatabase
 	/// recorded in the database's <c>migration</c> table is never applied again.
 	/// </summary>
 	private const string InitialSeedMigrationId = "0001_initial_seed";
+
+	/// <summary>
+	/// Recomputes the dbref allocator from what the database actually holds. Runs on every
+	/// Migrate() (a restart must not re-hand-out keys that already exist — the next @create's
+	/// UPSERT would silently overwrite that object) and after staging promotion, where the live
+	/// instance's client is swapped to a database whose keys this instance never allocated.
+	/// </summary>
+	internal async Task RecomputeNextObjectKeyAsync(CancellationToken ct = default)
+	{
+		var maxKeyResponse = await ExecuteAsync(
+			"SELECT VALUE key FROM object ORDER BY key DESC LIMIT 1", ct);
+		var maxKeys = maxKeyResponse.GetValue<List<int>>(0);
+		_nextObjectKey = Math.Max(9, maxKeys is { Count: > 0 } ? maxKeys[0] : 9);
+	}
 
 	private async Task<bool> MigrationAppliedAsync(string migrationId, CancellationToken ct)
 	{
