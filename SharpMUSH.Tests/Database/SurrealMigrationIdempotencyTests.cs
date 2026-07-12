@@ -8,32 +8,15 @@ using SurrealDb.Net;
 namespace SharpMUSH.Tests.Database;
 
 /// <summary>
-/// Re-running <see cref="SurrealDatabase.Migrate"/> against a database that already holds data —
-/// which is exactly what every server restart does against a persistent RocksDB store — must not
-/// duplicate seed edges (production showed one extra copy of every room-contents row and one extra
-/// flag letter per boot) and must not reset the dbref allocator below keys that already exist.
+/// A server restart against a persistent store re-runs <see cref="SurrealDatabase.Migrate"/> on a
+/// database that already holds data. Restarts are simulated here by constructing a fresh
+/// <see cref="SurrealDatabase"/> over the same client: applied migrations are recorded in the
+/// database itself, so the second instance must re-apply nothing — no duplicated seed edges
+/// (production showed one extra copy of every room-contents row and flag letter per boot) and no
+/// dbref allocator reset below keys that already exist.
 /// </summary>
-/// <remarks>
-/// NotInParallel: these tests flip the provider's static migration gate and dbref allocator, which
-/// other SurrealDB-backed tests in the same process share.
-/// </remarks>
-[NotInParallel]
 public class SurrealMigrationIdempotencyTests
 {
-	// The migration gate and dbref allocator are process-wide statics shared with the suite's
-	// shared factory database. Snapshot and restore them around each test here, or the allocator
-	// is left pointing at THIS test's tiny private database and the shared database starts
-	// re-handing-out keys that already exist (which broke ~27 object-creating tests).
-	private (bool Migrated, int NextObjectKey) _stateSnapshot;
-
-	[Before(Test)]
-	public void SnapshotSharedStaticState()
-		=> _stateSnapshot = SurrealDatabase.SnapshotMigrationStateForTests();
-
-	[After(Test)]
-	public void RestoreSharedStaticState()
-		=> SurrealDatabase.RestoreMigrationStateForTests(_stateSnapshot.Migrated, _stateSnapshot.NextObjectKey);
-
 	private sealed class NoopPasswordService : IPasswordService
 	{
 		public string HashPassword(string user, string pw) => pw;
@@ -54,18 +37,14 @@ public class SurrealMigrationIdempotencyTests
 		var client = services.BuildServiceProvider().GetRequiredService<ISurrealDbClient>();
 		await client.Connect();
 
-		var database = new SurrealDatabase(
-			NullLogger<SurrealDatabase>.Instance, client, new NoopPasswordService());
-		SurrealDatabase.ResetMigrationGateForTests();
+		var database = NewDatabase(client);
 		await database.Migrate();
 		return (database, client);
 	}
 
-	private static async Task RemigrateAsync(SurrealDatabase database)
-	{
-		SurrealDatabase.ResetMigrationGateForTests();
-		await database.Migrate();
-	}
+	/// <summary>A fresh instance over the same client — what a server restart effectively is.</summary>
+	private static SurrealDatabase NewDatabase(ISurrealDbClient client) =>
+		new(NullLogger<SurrealDatabase>.Instance, client, new NoopPasswordService());
 
 	private sealed record CountRow
 	{
@@ -80,11 +59,11 @@ public class SurrealMigrationIdempotencyTests
 	}
 
 	[Test]
-	public async Task Migrate_RunTwice_DoesNotDuplicateSeedEdges()
+	public async Task Migrate_AfterRestart_DoesNotReapplyTheSeed()
 	{
-		var (database, client) = await CreateMigratedAsync("twice");
+		var (_, client) = await CreateMigratedAsync("restart");
 
-		await RemigrateAsync(database);
+		await NewDatabase(client).Migrate();
 
 		await Assert.That(await CountAsync(client,
 			"SELECT count() AS cnt FROM at_location WHERE in = player:1 GROUP ALL")).IsEqualTo(1L);
@@ -102,42 +81,34 @@ public class SurrealMigrationIdempotencyTests
 	}
 
 	[Test]
-	public async Task UniqueEdgeIndexes_RejectDuplicateRelates()
+	public async Task UniqueEdgeIndexes_RejectDuplicateAndSecondLocationRelates()
 	{
-		var (database, client) = await CreateMigratedAsync("collapse");
+		var (_, client) = await CreateMigratedAsync("uniqueness");
 
-		// The (in, out) UNIQUE indexes make the duplicate-edge bug class impossible at the source:
-		// these RELATEs (what every pre-fix boot effectively did) must be rejected, not appended.
-		for (var boot = 0; boot < 3; boot++)
-		{
-			await client.RawQuery("RELATE player:1->at_location->room:0");
-			await client.RawQuery("RELATE object:1->has_flags->object_flag:WIZARD");
-		}
+		// Exact duplicates (what every pre-fix boot appended) are rejected by the indexes...
+		await client.RawQuery("RELATE player:1->at_location->room:0");
+		await client.RawQuery("RELATE object:1->has_flags->object_flag:WIZARD");
+		// ...and so is a SECOND location for the same object (UNIQUE on `in`): an object cannot be
+		// in two rooms at once, whichever room the extra edge points at.
+		await client.RawQuery("RELATE player:1->at_location->room:2");
 
 		await Assert.That(await CountAsync(client,
 			"SELECT count() AS cnt FROM at_location WHERE in = player:1 GROUP ALL")).IsEqualTo(1L);
 		await Assert.That(await CountAsync(client,
 			"SELECT count() AS cnt FROM has_flags WHERE in = object:1 AND out.name = 'WIZARD' GROUP ALL")).IsEqualTo(1L);
-
-		// And a re-migration on top stays clean too.
-		await RemigrateAsync(database);
-
-		await Assert.That(await CountAsync(client,
-			"SELECT count() AS cnt FROM at_location WHERE in = player:1 GROUP ALL")).IsEqualTo(1L);
 	}
 
 	[Test]
-	public async Task Migrate_DoesNotMoveARelocatedObjectBack()
+	public async Task Migrate_AfterRestart_DoesNotMoveARelocatedObjectBack()
 	{
-		var (database, client) = await CreateMigratedAsync("relocated");
+		var (_, client) = await CreateMigratedAsync("relocated");
 
-		// God walks to the Master Room (same delete-then-RELATE the runtime performs)...
+		// God walks to the Master Room (the same delete-then-RELATE the runtime performs)...
 		await client.RawQuery("DELETE at_location WHERE in = player:1");
 		await client.RawQuery("RELATE player:1->at_location->room:2");
-		// ...and a pre-fix boot re-added the seed edge on top of it.
-		await client.RawQuery("RELATE player:1->at_location->room:0");
 
-		await RemigrateAsync(database);
+		// ...and a restart re-applies nothing: the seed migration is already recorded.
+		await NewDatabase(client).Migrate();
 
 		await Assert.That(await CountAsync(client,
 			"SELECT count() AS cnt FROM at_location WHERE in = player:1 GROUP ALL")).IsEqualTo(1L);
@@ -146,17 +117,20 @@ public class SurrealMigrationIdempotencyTests
 	}
 
 	[Test]
-	public async Task Migrate_RestoresKeyCounterAboveExistingKeys()
+	public async Task Migrate_AfterRestart_AllocatesKeysAboveExistingObjects()
 	{
-		var (database, client) = await CreateMigratedAsync("keycounter");
+		var (_, client) = await CreateMigratedAsync("keycounter");
 
 		// A world that grew past the seed: highest allocated dbref is #42.
 		await client.RawQuery(
 			"UPSERT object:42 SET name = 'Latest Creation', type = 'THING', creationTime = 0, modifiedTime = 0, locks = '{}', warnings = 0, key = 42");
 
-		// The restart used to reset the allocator to 9, so the next @create collided with #10.
-		await RemigrateAsync(database);
+		// A restart used to reset the allocator to 9, so the next @create overwrote object #10.
+		var restarted = NewDatabase(client);
+		await restarted.Migrate();
+		var created = await restarted.CreatePlayerAsync(
+			"Newcomer", "password", new DBRef(0), new DBRef(0), quota: 1);
 
-		await Assert.That(SurrealDatabase.PeekNextObjectKeyForTests).IsEqualTo(42);
+		await Assert.That(created.Number).IsEqualTo(43);
 	}
 }
