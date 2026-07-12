@@ -42,11 +42,12 @@ services:
     restart: unless-stopped
 
   connectionserver:
-    build:
-      context: ../
-      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
-    image: sharpmush/sharpmush-connectionserver:latest
+    # CI-published image (docker-dev.yml pushes :dev on every main merge, gated on the full test
+    # suite). The box never builds — watchtower below pulls and recreates when the tag moves.
+    image: sharpmush/sharpmush-connectionserver:dev
     container_name: sharpmush-connectionserver
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     environment:
       - NATS_URL=nats://nats:4222
     depends_on:
@@ -61,11 +62,11 @@ services:
     restart: unless-stopped
 
   sharpmush-server:
-    build:
-      context: ../
-      dockerfile: Dockerfile
-    image: sharpmush/sharpmush-server:latest
+    # CI-published image; includes the Blazor WASM client (baked into /app/wwwroot at build time).
+    image: sharpmush/sharpmush-server:dev
     container_name: sharpmush-server
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     environment:
       - SHARPMUSH_DATABASE_PROVIDER=surrealdb
       - SHARPMUSH_SURREALDB_ENDPOINT=rocksdb://data/surreal
@@ -114,6 +115,25 @@ services:
       - sharpmush-net
     mem_limit: 128m
     cpus: 0.5
+    restart: unless-stopped
+
+  # Auto-deploy: polls Docker Hub and recreates the two labeled services when their :dev tag
+  # moves (pushed by docker-dev.yml after the full test suite passes on main). Label-scoped so
+  # nats/cloudflared/backup are never touched; CLEANUP prunes superseded images so unattended
+  # updates cannot fill the disk. No inbound access needed — fits the tunnel-only posture.
+  watchtower:
+    image: containrrr/watchtower:1.7.1   # pinned (not :latest) for reproducible deploys
+    container_name: sharpmush-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=300
+    networks:
+      - sharpmush-net
+    mem_limit: 128m
+    cpus: 0.25
     restart: unless-stopped
 
   # Nightly encrypted backup of the game-data volume — identical to the prod stack.

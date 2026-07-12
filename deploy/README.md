@@ -208,11 +208,21 @@ on boot.
 
 ## Updating
 
-With `COMPOSE_FILE` exported as above (or add `-f <your-compose-file>`):
+**The Cloudflare stack updates itself.** Every merge to `main` runs the full test suite and then
+publishes `sharpmush/sharpmush-server:dev` and `sharpmush/sharpmush-connectionserver:dev` to
+Docker Hub (`.github/workflows/docker-dev.yml`); the `watchtower` service polls Docker Hub every
+5 minutes and recreates the two labeled services when the tag moves, pruning superseded images.
+Nothing on the box ever builds, and no inbound access is required. There is no separate client
+image — the Blazor WASM portal is baked into the server image at build time.
+
+To update the *other* services (nats, cloudflared, backup — deliberately outside watchtower's
+label scope) or to force an immediate app update instead of waiting for the poll:
 
 ```bash
 git pull
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
-The `app-data` volume persists across rebuilds, so the world is untouched.
+The `app-data` volume persists across updates, so the world is untouched. Database migrations
+are recorded in the database and re-applied only when new, so unattended restarts are safe.
