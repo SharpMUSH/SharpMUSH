@@ -30,10 +30,8 @@ public partial class SurrealDatabase(
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
 
 	// Per-instance: each SurrealDatabase owns one database (live, staging, or a test's private
-	// mem store), so the migration fast-path gate and the dbref allocator belong to the instance.
-	// Whether a migration has run is recorded IN the database (see MigrationAppliedAsync) — a new
-	// instance over an already-migrated store skips re-applying without any shared process state.
-	private volatile bool _migrated;
+	// mem store), so the dbref allocator belongs to the instance. Whether a migration has run is
+	// recorded IN the database (see MigrationAppliedAsync) — there is no in-process migration state.
 	private int _nextObjectKey;
 
 	// Phase 2a plugin contributions threaded through from the pre-build PluginCatalog. Empty for staging

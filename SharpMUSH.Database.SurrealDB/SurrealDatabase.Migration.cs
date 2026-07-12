@@ -49,7 +49,6 @@ public partial class SurrealDatabase
 		logger.LogWarning("WIPING DATABASE - This is destructive and irreversible!");
 
 		await db.RawQuery("REMOVE DATABASE IF EXISTS sharpmush;");
-		_migrated = false;
 
 		await Migrate(cancellationToken);
 
@@ -58,16 +57,15 @@ public partial class SurrealDatabase
 
 	public async ValueTask Migrate(CancellationToken cancellationToken = default)
 	{
-		if (_migrated) return;
 		await MigrateLock.WaitAsync(cancellationToken);
 		try
 		{
-			if (_migrated) return;
 			logger.LogInformation("Migrating SurrealDB Database");
 
 			// Migrations are recorded in the database: a migration id that is already present is never
-			// run again, so a restart against a persistent store re-applies nothing. The _migrated
-			// field only short-circuits repeated Migrate() calls within this instance.
+			// run again, so a restart against a persistent store re-applies nothing. Everything outside
+			// the gated block is idempotent (IF NOT EXISTS / UPSERT), so re-running Migrate() is always
+			// safe — no in-process migration state exists, and callers are rare (boot, staging, wipe).
 			var applyInitial = !await MigrationAppliedAsync(InitialSeedMigrationId, cancellationToken);
 
 			var indexQueries = new[]
@@ -191,7 +189,6 @@ public partial class SurrealDatabase
 					cancellationToken);
 			}
 
-			_migrated = true;
 			logger.LogInformation("SurrealDB Migration Completed");
 		}
 		catch (Exception ex)
