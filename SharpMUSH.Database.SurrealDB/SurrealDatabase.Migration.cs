@@ -49,7 +49,6 @@ public partial class SurrealDatabase
 		logger.LogWarning("WIPING DATABASE - This is destructive and irreversible!");
 
 		await db.RawQuery("REMOVE DATABASE IF EXISTS sharpmush;");
-		_migrated = false;
 
 		await Migrate(cancellationToken);
 
@@ -58,12 +57,16 @@ public partial class SurrealDatabase
 
 	public async ValueTask Migrate(CancellationToken cancellationToken = default)
 	{
-		if (_migrated) return;
 		await MigrateLock.WaitAsync(cancellationToken);
 		try
 		{
-			if (_migrated) return;
 			logger.LogInformation("Migrating SurrealDB Database");
+
+			// Migrations are recorded in the database: a migration id that is already present is never
+			// run again, so a restart against a persistent store re-applies nothing. Everything outside
+			// the gated block is idempotent (IF NOT EXISTS / UPSERT), so re-running Migrate() is always
+			// safe — no in-process migration state exists, and callers are rare (boot, staging, wipe).
+			var applyInitial = !await MigrationAppliedAsync(InitialSeedMigrationId, cancellationToken);
 
 			var indexQueries = new[]
 			{
@@ -110,16 +113,16 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS has_attribute_owner_out ON has_attribute_owner FIELDS out",
 				"DEFINE INDEX IF NOT EXISTS has_flags_in ON has_flags FIELDS in",
 				"DEFINE INDEX IF NOT EXISTS has_powers_in ON has_powers FIELDS in",
-				"DEFINE INDEX IF NOT EXISTS has_owner_in ON has_owner FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS has_owner_in ON has_owner FIELDS in UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS has_owner_out ON has_owner FIELDS out",
-				"DEFINE INDEX IF NOT EXISTS has_home_in ON has_home FIELDS in",
-				"DEFINE INDEX IF NOT EXISTS has_zone_in ON has_zone FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS has_home_in ON has_home FIELDS in UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS has_zone_in ON has_zone FIELDS in UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS has_zone_out ON has_zone FIELDS out",
-				"DEFINE INDEX IF NOT EXISTS has_parent_in ON has_parent FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS has_parent_in ON has_parent FIELDS in UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS has_parent_out ON has_parent FIELDS out",
-				"DEFINE INDEX IF NOT EXISTS at_location_in ON at_location FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS at_location_in ON at_location FIELDS in UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS at_location_out ON at_location FIELDS out",
-				"DEFINE INDEX IF NOT EXISTS is_object_in ON is_object FIELDS in",
+				"DEFINE INDEX IF NOT EXISTS is_object_in ON is_object FIELDS in UNIQUE",
 				"DEFINE INDEX IF NOT EXISTS member_of_channel_in ON member_of_channel FIELDS in",
 				"DEFINE INDEX IF NOT EXISTS member_of_channel_out ON member_of_channel FIELDS out",
 				"DEFINE INDEX IF NOT EXISTS owner_of_channel_in ON owner_of_channel FIELDS in",
@@ -127,7 +130,18 @@ public partial class SurrealDatabase
 				"DEFINE INDEX IF NOT EXISTS received_mail_out ON received_mail FIELDS out",
 				"DEFINE INDEX IF NOT EXISTS mail_sender_in ON mail_sender FIELDS in",
 				"DEFINE INDEX IF NOT EXISTS mail_sender_out ON mail_sender FIELDS out",
-				"DEFINE INDEX IF NOT EXISTS object_data_key_type ON object_data FIELDS objectKey, dataType UNIQUE"
+				"DEFINE INDEX IF NOT EXISTS object_data_key_type ON object_data FIELDS objectKey, dataType UNIQUE",
+				// RELATE has no built-in uniqueness (every execution appends a new edge record), so edge
+				// cardinality is enforced at the schema level: the single-cardinality relations above
+				// (one location / home / owner / zone / parent / object node per subject — the runtime
+				// maintains them via delete-then-RELATE) are UNIQUE on `in`, and the multi-valued
+				// flag/power relations are UNIQUE per (in, out) pair. A duplicate RELATE errors instead
+				// of silently doubling room contents or flag letters. NOTE: databases created before
+				// migration records existed are NOT upgradable in place — IF NOT EXISTS keeps their old
+				// non-unique indexes, existing duplicates would fail these DEFINEs, and the seed would
+				// re-run over live data. Deploy this schema on a clean database.
+				"DEFINE INDEX IF NOT EXISTS has_flags_in_out ON has_flags FIELDS in, out UNIQUE",
+				"DEFINE INDEX IF NOT EXISTS has_powers_in_out ON has_powers FIELDS in, out UNIQUE"
 			};
 
 			foreach (var q in indexQueries)
@@ -135,133 +149,9 @@ public partial class SurrealDatabase
 				await ExecuteAsync(q, cancellationToken);
 			}
 
-			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-			_nextObjectKey = 9;
-
-			await ExecuteAsync(
-				"UPSERT object:0 SET name = 'Room Zero', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 0",
-				new Dictionary<string, object?> { ["now"] = now },
-				cancellationToken);
-			await ExecuteAsync(
-				"UPSERT room:0 SET key = 0, aliases = []",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE room:0->is_object->object:0",
-				cancellationToken);
-
-			await ExecuteAsync(
-				"UPSERT object:1 SET name = 'God', type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 1",
-				new Dictionary<string, object?> { ["now"] = now },
-				cancellationToken);
-			await ExecuteAsync(
-				"UPSERT player:1 SET key = 1, passwordHash = '', passwordSalt = '', aliases = [], quota = 999999",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE player:1->is_object->object:1",
-				cancellationToken);
-
-			await ExecuteAsync(
-				"UPSERT object:2 SET name = 'Master Room', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 2",
-				new Dictionary<string, object?> { ["now"] = now },
-				cancellationToken);
-			await ExecuteAsync(
-				"UPSERT room:2 SET key = 2, aliases = []",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE room:2->is_object->object:2",
-				cancellationToken);
-
-			// A room has no location/home edges — it is a pure attribute holder.
-			await ExecuteAsync(
-				"UPSERT object:3 SET name = 'Ancestor Room', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 3",
-				new Dictionary<string, object?> { ["now"] = now },
-				cancellationToken);
-			await ExecuteAsync("UPSERT room:3 SET key = 3, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE room:3->is_object->object:3", cancellationToken);
-
-			await ExecuteAsync(
-				"UPSERT object:4 SET name = 'Ancestor Player', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 4",
-				new Dictionary<string, object?> { ["now"] = now },
-				cancellationToken);
-			await ExecuteAsync("UPSERT thing:4 SET key = 4, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE thing:4->is_object->object:4", cancellationToken);
-			await ExecuteAsync("RELATE thing:4->at_location->room:2", cancellationToken);
-			await ExecuteAsync("RELATE thing:4->has_home->room:2", cancellationToken);
-
-			await ExecuteAsync(
-				"UPSERT object:5 SET name = 'Ancestor Exit', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 5",
-				new Dictionary<string, object?> { ["now"] = now },
-				cancellationToken);
-			await ExecuteAsync("UPSERT thing:5 SET key = 5, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE thing:5->is_object->object:5", cancellationToken);
-			await ExecuteAsync("RELATE thing:5->at_location->room:2", cancellationToken);
-			await ExecuteAsync("RELATE thing:5->has_home->room:2", cancellationToken);
-
-			await ExecuteAsync(
-				"UPSERT object:6 SET name = 'Ancestor Thing', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 6",
-				new Dictionary<string, object?> { ["now"] = now },
-				cancellationToken);
-			await ExecuteAsync("UPSERT thing:6 SET key = 6, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE thing:6->is_object->object:6", cancellationToken);
-			await ExecuteAsync("RELATE thing:6->at_location->room:2", cancellationToken);
-			await ExecuteAsync("RELATE thing:6->has_home->room:2", cancellationToken);
-
-			await ExecuteAsync(
-				"UPSERT object:7 SET name = 'Package Manager', type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 7",
-				new Dictionary<string, object?> { ["now"] = now },
-				cancellationToken);
-			await ExecuteAsync(
-				"UPSERT player:7 SET key = 7, passwordHash = '', passwordSalt = '', aliases = [], quota = 999999",
-				cancellationToken);
-			await ExecuteAsync("RELATE player:7->is_object->object:7", cancellationToken);
-			await ExecuteAsync("RELATE player:7->at_location->room:0", cancellationToken);
-			await ExecuteAsync("RELATE player:7->has_home->room:0", cancellationToken);
-
-			await ExecuteAsync(
-				"UPSERT object:8 SET name = 'HTTP Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 8",
-				new Dictionary<string, object?> { ["now"] = now },
-				cancellationToken);
-			await ExecuteAsync("UPSERT thing:8 SET key = 8, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE thing:8->is_object->object:8", cancellationToken);
-			await ExecuteAsync("RELATE thing:8->at_location->room:2", cancellationToken);
-			await ExecuteAsync("RELATE thing:8->has_home->room:2", cancellationToken);
-
-			await ExecuteAsync(
-				"UPSERT object:9 SET name = 'Event Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 9",
-				new Dictionary<string, object?> { ["now"] = now },
-				cancellationToken);
-			await ExecuteAsync("UPSERT thing:9 SET key = 9, aliases = []", cancellationToken);
-			await ExecuteAsync("RELATE thing:9->is_object->object:9", cancellationToken);
-			await ExecuteAsync("RELATE thing:9->at_location->room:2", cancellationToken);
-			await ExecuteAsync("RELATE thing:9->has_home->room:2", cancellationToken);
-
-			await ExecuteAsync(
-				"RELATE player:1->at_location->room:0",
-				cancellationToken);
-
-			await ExecuteAsync(
-				"RELATE player:1->has_home->room:0",
-				cancellationToken);
-
-			await ExecuteAsync(
-				"RELATE object:0->has_owner->player:1",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE object:1->has_owner->player:1",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE object:2->has_owner->player:1",
-				cancellationToken);
-			// God owns the ancestors (#3-#6) and the handler things (#8, #9); PM (#7) owns itself
-			await ExecuteAsync("RELATE object:3->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:4->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:5->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:6->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:8->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:9->has_owner->player:1", cancellationToken);
-			await ExecuteAsync("RELATE object:7->has_owner->player:7", cancellationToken);
-
+			// Built-in flag / power / attribute-entry definitions and plugin-contributed flags are
+			// idempotent UPSERTs keyed on name — always run, so additions in newer versions reach
+			// existing databases without needing a new migration id.
 			await CreateInitialFlags(cancellationToken);
 
 			await CreateInitialAttributeFlags(cancellationToken);
@@ -270,29 +160,31 @@ public partial class SurrealDatabase
 
 			await CreateInitialAttributeEntries(cancellationToken);
 
-			await ExecuteAsync(
-				"RELATE object:1->has_flags->object_flag:WIZARD",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE object:7->has_flags->object_flag:WIZARD",
-				cancellationToken);
-			// HTTP Handler (#8) and Event Handler (#9) are WIZARD so their handler softcode runs
-			// with its own elevated permissions (each executes as itself).
-			await ExecuteAsync(
-				"RELATE object:8->has_flags->object_flag:WIZARD",
-				cancellationToken);
-			await ExecuteAsync(
-				"RELATE object:9->has_flags->object_flag:WIZARD",
-				cancellationToken);
-
 			await SeedPluginFlags(cancellationToken);
+
+			if (applyInitial)
+			{
+				await ApplyInitialSeedAsync(cancellationToken);
+			}
+
 			await RunPluginSurrealMigrations(cancellationToken);
 
-			// Seed the default FORMAT`* attributes on the Ancestor Player (#4) so a plain player inherits
-			// the PennMUSH-style say/pose/semipose/emit render templates. Idempotent.
-			// _migrated is set first so SetAttributeAsync's internal Migrate() guard short-circuits.
-			_migrated = true;
-			await AncestorSeed.SeedAncestorPlayerFormatsAsync(this, cancellationToken);
+			await RecomputeNextObjectKeyAsync(cancellationToken);
+
+			if (applyInitial)
+			{
+				// Seed the default FORMAT`* attributes on the Ancestor Player (#4) so a plain player
+				// inherits the PennMUSH-style say/pose/semipose/emit render templates.
+				await AncestorSeed.SeedAncestorPlayerFormatsAsync(this, cancellationToken);
+
+				// Recorded after the seed statements run, so an exception during the seed re-applies
+				// it next boot. (SurrealQL-level errors are logged by ExecuteAsync, not thrown — only
+				// .NET failures abort before the record is written.)
+				await ExecuteAsync(
+					$"CREATE migration:⟨{InitialSeedMigrationId}⟩ SET appliedAt = $now",
+					new Dictionary<string, object?> { ["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+					cancellationToken);
+			}
 
 			logger.LogInformation("SurrealDB Migration Completed");
 		}
@@ -304,6 +196,167 @@ public partial class SurrealDatabase
 		finally
 		{
 			MigrateLock.Release();
+		}
+	}
+
+	/// <summary>
+	/// The one-time schema/data migrations this provider knows, by id. A migration id already
+	/// recorded in the database's <c>migration</c> table is never applied again.
+	/// </summary>
+	private const string InitialSeedMigrationId = "0001_initial_seed";
+
+	/// <summary>
+	/// Recomputes the dbref allocator from what the database actually holds. Runs on every
+	/// Migrate() (a restart must not re-hand-out keys that already exist — the next @create's
+	/// UPSERT would silently overwrite that object) and after staging promotion, where the live
+	/// instance's client is swapped to a database whose keys this instance never allocated.
+	/// </summary>
+	internal async Task RecomputeNextObjectKeyAsync(CancellationToken ct = default)
+	{
+		var maxKeyResponse = await ExecuteAsync(
+			"SELECT VALUE key FROM object ORDER BY key DESC LIMIT 1", ct);
+		var maxKeys = maxKeyResponse.GetValue<List<int>>(0);
+		_nextObjectKey = Math.Max(9, maxKeys is { Count: > 0 } ? maxKeys[0] : 9);
+	}
+
+	private async Task<bool> MigrationAppliedAsync(string migrationId, CancellationToken ct)
+	{
+		var response = await ExecuteAsync(
+			$"SELECT VALUE appliedAt FROM migration:⟨{migrationId}⟩", ct);
+		var rows = response.GetValue<List<long>>(0);
+		return rows is { Count: > 0 };
+	}
+
+	/// <summary>
+	/// The 0001_initial_seed migration: the #0-#9 object seed and its graph edges. Runs at most
+	/// once per database (see <see cref="MigrationAppliedAsync"/>).
+	/// </summary>
+	private async Task ApplyInitialSeedAsync(CancellationToken cancellationToken)
+	{
+		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+		await ExecuteAsync(
+			"UPSERT object:0 SET name = 'Room Zero', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 0",
+			new Dictionary<string, object?> { ["now"] = now },
+			cancellationToken);
+		await ExecuteAsync(
+			"UPSERT room:0 SET key = 0, aliases = []",
+			cancellationToken);
+
+		await ExecuteAsync(
+			"UPSERT object:1 SET name = 'God', type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 1",
+			new Dictionary<string, object?> { ["now"] = now },
+			cancellationToken);
+		await ExecuteAsync(
+			"UPSERT player:1 SET key = 1, passwordHash = '', passwordSalt = '', aliases = [], quota = 999999",
+			cancellationToken);
+
+		await ExecuteAsync(
+			"UPSERT object:2 SET name = 'Master Room', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 2",
+			new Dictionary<string, object?> { ["now"] = now },
+			cancellationToken);
+		await ExecuteAsync(
+			"UPSERT room:2 SET key = 2, aliases = []",
+			cancellationToken);
+
+		// A room has no location/home edges — it is a pure attribute holder.
+		await ExecuteAsync(
+			"UPSERT object:3 SET name = 'Ancestor Room', type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 3",
+			new Dictionary<string, object?> { ["now"] = now },
+			cancellationToken);
+		await ExecuteAsync("UPSERT room:3 SET key = 3, aliases = []", cancellationToken);
+
+		await ExecuteAsync(
+			"UPSERT object:4 SET name = 'Ancestor Player', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 4",
+			new Dictionary<string, object?> { ["now"] = now },
+			cancellationToken);
+		await ExecuteAsync("UPSERT thing:4 SET key = 4, aliases = []", cancellationToken);
+
+		await ExecuteAsync(
+			"UPSERT object:5 SET name = 'Ancestor Exit', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 5",
+			new Dictionary<string, object?> { ["now"] = now },
+			cancellationToken);
+		await ExecuteAsync("UPSERT thing:5 SET key = 5, aliases = []", cancellationToken);
+
+		await ExecuteAsync(
+			"UPSERT object:6 SET name = 'Ancestor Thing', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 6",
+			new Dictionary<string, object?> { ["now"] = now },
+			cancellationToken);
+		await ExecuteAsync("UPSERT thing:6 SET key = 6, aliases = []", cancellationToken);
+
+		await ExecuteAsync(
+			"UPSERT object:7 SET name = 'Package Manager', type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 7",
+			new Dictionary<string, object?> { ["now"] = now },
+			cancellationToken);
+		await ExecuteAsync(
+			"UPSERT player:7 SET key = 7, passwordHash = '', passwordSalt = '', aliases = [], quota = 999999",
+			cancellationToken);
+
+		await ExecuteAsync(
+			"UPSERT object:8 SET name = 'HTTP Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 8",
+			new Dictionary<string, object?> { ["now"] = now },
+			cancellationToken);
+		await ExecuteAsync("UPSERT thing:8 SET key = 8, aliases = []", cancellationToken);
+
+		await ExecuteAsync(
+			"UPSERT object:9 SET name = 'Event Handler', type = 'THING', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0, key = 9",
+			new Dictionary<string, object?> { ["now"] = now },
+			cancellationToken);
+		await ExecuteAsync("UPSERT thing:9 SET key = 9, aliases = []", cancellationToken);
+
+		// Seed graph edges. Bare RELATE is safe here: this method runs at most once per database
+		// (gated by the recorded migration id), and the UNIQUE edge indexes are the backstop.
+		var seedEdges = new (string From, string Edge, string To)[]
+		{
+			("room:0", "is_object", "object:0"),
+			("player:1", "is_object", "object:1"),
+			("room:2", "is_object", "object:2"),
+			("room:3", "is_object", "object:3"),
+			("thing:4", "is_object", "object:4"),
+			("thing:5", "is_object", "object:5"),
+			("thing:6", "is_object", "object:6"),
+			("player:7", "is_object", "object:7"),
+			("thing:8", "is_object", "object:8"),
+			("thing:9", "is_object", "object:9"),
+
+			("player:1", "at_location", "room:0"),
+			("player:7", "at_location", "room:0"),
+			("thing:4", "at_location", "room:2"),
+			("thing:5", "at_location", "room:2"),
+			("thing:6", "at_location", "room:2"),
+			("thing:8", "at_location", "room:2"),
+			("thing:9", "at_location", "room:2"),
+
+			("player:1", "has_home", "room:0"),
+			("player:7", "has_home", "room:0"),
+			("thing:4", "has_home", "room:2"),
+			("thing:5", "has_home", "room:2"),
+			("thing:6", "has_home", "room:2"),
+			("thing:8", "has_home", "room:2"),
+			("thing:9", "has_home", "room:2"),
+
+			("object:0", "has_owner", "player:1"),
+			("object:1", "has_owner", "player:1"),
+			("object:2", "has_owner", "player:1"),
+			// God owns the ancestors (#3-#6) and the handler things (#8, #9); PM (#7) owns itself
+			("object:3", "has_owner", "player:1"),
+			("object:4", "has_owner", "player:1"),
+			("object:5", "has_owner", "player:1"),
+			("object:6", "has_owner", "player:1"),
+			("object:8", "has_owner", "player:1"),
+			("object:9", "has_owner", "player:1"),
+			("object:7", "has_owner", "player:7"),
+		};
+		foreach (var (from, edge, to) in seedEdges)
+		{
+			await ExecuteAsync($"RELATE {from}->{edge}->{to}", cancellationToken);
+		}
+
+		// HTTP Handler (#8) and Event Handler (#9) are WIZARD so their handler softcode runs
+		// with its own elevated permissions (each executes as itself).
+		foreach (var wizard in (string[])["object:1", "object:7", "object:8", "object:9"])
+		{
+			await ExecuteAsync($"RELATE {wizard}->has_flags->object_flag:WIZARD", cancellationToken);
 		}
 	}
 

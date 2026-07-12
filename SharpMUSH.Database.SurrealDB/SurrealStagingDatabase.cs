@@ -49,6 +49,10 @@ public sealed class SurrealStagingDatabase : SurrealDatabase, IStagingDatabase
 
 		SwapClientOnLive();
 
+		// The live instance now fronts the promoted database, whose keys it never allocated —
+		// rebuild its dbref allocator or the next @create could overwrite an imported object.
+		await _liveDatabase.RecomputeNextObjectKeyAsync(ct);
+
 		IsPromoted = true;
 		_logger.LogInformation("SurrealDB staging database promoted to live: {StagingDb}", _stagingDbName);
 	}

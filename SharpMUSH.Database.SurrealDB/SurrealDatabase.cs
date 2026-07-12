@@ -28,8 +28,11 @@ public partial class SurrealDatabase(
 ) : ISharpDatabase
 {
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
-	private static volatile bool _migrated;
-	private static int _nextObjectKey;
+
+	// Per-instance: each SurrealDatabase owns one database (live, staging, or a test's private
+	// mem store), so the dbref allocator belongs to the instance. Whether a migration has run is
+	// recorded IN the database (see MigrationAppliedAsync) — there is no in-process migration state.
+	private int _nextObjectKey;
 
 	// Phase 2a plugin contributions threaded through from the pre-build PluginCatalog. Empty for staging
 	// databases (created from a live DB) and any host that does not load plugins.
