@@ -178,10 +178,6 @@ public partial class SurrealDatabase
 			var maxKeys = maxKeyResponse.GetValue<List<int>>(0);
 			_nextObjectKey = Math.Max(9, maxKeys is { Count: > 0 } ? maxKeys[0] : 9);
 
-			// _migrated is set before the ancestor seed so SetAttributeAsync's internal Migrate()
-			// guard short-circuits.
-			_migrated = true;
-
 			if (applyInitial)
 			{
 				// Seed the default FORMAT`* attributes on the Ancestor Player (#4) so a plain player
@@ -195,6 +191,7 @@ public partial class SurrealDatabase
 					cancellationToken);
 			}
 
+			_migrated = true;
 			logger.LogInformation("SurrealDB Migration Completed");
 		}
 		catch (Exception ex)
