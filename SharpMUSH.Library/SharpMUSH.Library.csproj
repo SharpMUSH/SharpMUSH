@@ -63,7 +63,7 @@
 	</Target>
 
   <ItemGroup>
-    <PackageReference Include="DotNext" Version="6.3.0" />
+    <PackageReference Include="DotNext" Version="6.4.1" />
     <PackageReference Include="Markdig" Version="1.3.2" />
     <PackageReference Include="DotNext.Threading" Version="6.4.0" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.2" />
