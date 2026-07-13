@@ -66,7 +66,7 @@ public class ConnectionService(
 
 		if (stateStore != null)
 		{
-			await stateStore.SetPlayerBindingAsync(handle, player);
+			await stateStore.SetPlayerBindingAsync(handle, player.ToString());
 		}
 
 		foreach (var handler in _handlers)
@@ -208,7 +208,7 @@ public class ConnectionService(
 			await stateStore.SetConnectionAsync(handle, new ConnectionStateData
 			{
 				Handle = handle,
-				PlayerRef = null,
+				PlayerObjid = null,
 				State = "Connected",
 				IpAddress = ipaddr,
 				Hostname = host,
@@ -260,7 +260,7 @@ public class ConnectionService(
 
 			_sessionState.TryAdd(handle, new IConnectionService.ConnectionData(
 				handle,
-				data.PlayerRef,
+				data.PlayerObjid is null ? null : DBRef.Parse(data.PlayerObjid),
 				state,
 				createOutputFunction(handle),
 				createPromptOutputFunction(handle),

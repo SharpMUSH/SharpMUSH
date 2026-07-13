@@ -1,8 +1,9 @@
+// NOTE: relocated from SharpMUSH.Library so the ConnectionServer does not depend on the full
+// Library. The original SharpMUSH.Library.* namespace is preserved so consumers are unchanged.
 using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.Json;
 
@@ -147,7 +148,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 		}
 	}
 
-	public async Task SetPlayerBindingAsync(long handle, DBRef? playerRef, CancellationToken ct = default)
+	public async Task SetPlayerBindingAsync(long handle, string? playerObjid, CancellationToken ct = default)
 	{
 		try
 		{
@@ -158,11 +159,11 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 				return;
 			}
 
-			data.PlayerRef = playerRef;
-			data.State = playerRef.HasValue ? "LoggedIn" : "Connected";
+			data.PlayerObjid = playerObjid;
+			data.State = playerObjid is not null ? "LoggedIn" : "Connected";
 			data.LastSeen = DateTimeOffset.UtcNow;
 			await SetConnectionAsync(handle, data, ct);
-			_logger.LogTrace("Updated player binding for handle {Handle} to {PlayerRef}", handle, playerRef);
+			_logger.LogTrace("Updated player binding for handle {Handle} to {PlayerObjid}", handle, playerObjid);
 		}
 		catch (Exception ex)
 		{

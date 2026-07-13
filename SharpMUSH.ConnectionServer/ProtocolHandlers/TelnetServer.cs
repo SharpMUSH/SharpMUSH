@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Connections;
 using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Models;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messaging.Messages;
@@ -33,7 +32,7 @@ public class TelnetServer : ConnectionHandler
 	/// Clients that support Pueblo respond with "PUEBLOCLIENT ...".
 	/// </summary>
 	private static readonly byte[] PuebloHelloBytes =
-		Encoding.UTF8.GetBytes(ErrorMessages.Notifications.PuebloHello);
+		Encoding.UTF8.GetBytes(ProtocolConstants.PuebloHello);
 
 	public TelnetServer(
 		ILogger<TelnetServer> logger,

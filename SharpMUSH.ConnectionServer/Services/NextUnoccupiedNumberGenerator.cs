@@ -1,6 +1,7 @@
-using DotNext.Collections.Generic;
-
-namespace SharpMUSH.Library.Services;
+// Relocated from SharpMUSH.Library: the connection server is its only consumer, and this keeps
+// the process decoupled from the full Library. DotNext's LastOrNone() was replaced with the
+// equivalent SortedSet check to avoid carrying the package.
+namespace SharpMUSH.ConnectionServer.Services;
 
 public class NextUnoccupiedNumberGenerator(long initial)
 {
@@ -12,7 +13,7 @@ public class NextUnoccupiedNumberGenerator(long initial)
 		if (number == _next - 1)
 		{
 			var latest = _next - 1;
-			while (_unoccupiedNumbers.LastOrNone() == latest)
+			while (_unoccupiedNumbers.Count > 0 && _unoccupiedNumbers.Max == latest)
 			{
 				_unoccupiedNumbers.Remove(latest);
 				_next = latest;

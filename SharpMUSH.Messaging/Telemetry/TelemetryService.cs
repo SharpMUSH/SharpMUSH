@@ -1,3 +1,5 @@
+// NOTE: relocated from SharpMUSH.Library so the ConnectionServer does not depend on the full
+// Library. The original SharpMUSH.Library.* namespace is preserved so consumers are unchanged.
 using SharpMUSH.Library.Services.Interfaces;
 using System.Diagnostics.Metrics;
 

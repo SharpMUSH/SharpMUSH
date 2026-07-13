@@ -1,4 +1,5 @@
-using SharpMUSH.Library.Models;
+// NOTE: relocated from SharpMUSH.Library so the ConnectionServer does not depend on the full
+// Library. The original SharpMUSH.Library.* namespace is preserved so consumers are unchanged.
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -35,7 +36,7 @@ public interface IConnectionStateStore
 	/// <summary>
 	/// Update player binding for a connection
 	/// </summary>
-	Task SetPlayerBindingAsync(long handle, DBRef? playerRef, CancellationToken ct = default);
+	Task SetPlayerBindingAsync(long handle, string? playerObjid, CancellationToken ct = default);
 
 	/// <summary>
 	/// Update connection metadata
@@ -49,7 +50,9 @@ public interface IConnectionStateStore
 public class ConnectionStateData
 {
 	public required long Handle { get; init; }
-	public DBRef? PlayerRef { get; set; }
+	/// <summary>Bound player as an objid string (e.g. "#5:1234"); the store is a serialization
+	/// boundary, so it carries the primitive representation rather than the engine's DBRef.</summary>
+	public string? PlayerObjid { get; set; }
 	public required string State { get; set; }
 	public required string IpAddress { get; init; }
 	public required string Hostname { get; init; }

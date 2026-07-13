@@ -4,7 +4,15 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: >-
+          Force-publish images regardless of detected changes (recovery for a failed
+          publish run — change detection compares commits, not what is on Docker Hub).
+        type: choice
+        options: [all, server, connectionserver]
+        default: all
 
 permissions:
   contents: read
@@ -20,17 +28,78 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # Watchtower on the production box recreates a container whenever its image digest moves,
+      # which drops the ConnectionServer's live telnet/WebSocket sessions. Only publish an image
+      # when something it is actually built from changed. Each filter lists the image's source
+      # closure: the ProjectReference graph of its entry project(s), its Dockerfile, global.json,
+      # and this workflow. When project references change, update the lists to match.
+      # (push events only: the filter diffs against the previous commit, which a manual
+      # workflow_dispatch does not have — dispatch uses the force input below instead.)
+      - name: Detect changed image inputs
+        if: github.event_name == 'push'
+        uses: dorny/paths-filter@v4
+        id: changes
+        with:
+          filters: |
+            connectionserver:
+              - '.github/workflows/docker-dev.yml'
+              - '.dockerignore'
+              - 'SharpMUSH.sln'
+              - 'SharpMUSH.ConnectionServer/**'
+              - 'SharpMUSH.Messaging/**'
+              - 'SharpMUSH.MarkupString/**'
+              - 'global.json'
+            server:
+              - '.github/workflows/docker-dev.yml'
+              - '.dockerignore'
+              - 'SharpMUSH.sln'
+              - 'Dockerfile'
+              - 'SharpMUSH.Server/**'
+              - 'SharpMUSH.Client/**'
+              - 'SharpMUSH.Implementation/**'
+              - 'SharpMUSH.Implementation.Generated/**'
+              - 'SharpMUSH.Library/**'
+              - 'SharpMUSH.Messaging/**'
+              - 'SharpMUSH.MarkupString/**'
+              - 'SharpMUSH.Configuration/**'
+              - 'SharpMUSH.Configuration.Generated/**'
+              - 'SharpMUSH.Contracts/**'
+              - 'SharpMUSH.Parser.Generated/**'
+              - 'SharpMUSH.CodeAnalysis/**'
+              - 'SharpMUSH.Database/**'
+              - 'SharpMUSH.Database.ArangoDB/**'
+              - 'SharpMUSH.Database.Memgraph/**'
+              - 'SharpMUSH.Database.SurrealDB/**'
+              - 'SharpMUSH.Documentation/**'
+              - 'SharpMUSH.Plugins.Scene/**'
+              - 'global.json'
 
       - name: Set up Docker Buildx
+        if: >-
+          steps.changes.outputs.server == 'true' ||
+          steps.changes.outputs.connectionserver == 'true' ||
+          github.event_name == 'workflow_dispatch'
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to DockerHub
+        if: >-
+          steps.changes.outputs.server == 'true' ||
+          steps.changes.outputs.connectionserver == 'true' ||
+          github.event_name == 'workflow_dispatch'
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push SharpMUSH Server (dev)
+        id: push_server
+        if: >-
+          steps.changes.outputs.server == 'true' ||
+          (github.event_name == 'workflow_dispatch' &&
+           (inputs.publish == 'all' || inputs.publish == 'server'))
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -47,6 +116,11 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push ConnectionServer (dev)
+        id: push_conn
+        if: >-
+          steps.changes.outputs.connectionserver == 'true' ||
+          (github.event_name == 'workflow_dispatch' &&
+           (inputs.publish == 'all' || inputs.publish == 'connectionserver'))
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -64,11 +138,19 @@ jobs:
 
       - name: Summary
         run: |
-          echo "## 🐳 Dev Docker Images Published" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Successfully built and pushed dev images to DockerHub:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-server:dev\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-connectionserver:dev\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## 🐳 Dev Docker Images"
+            echo ""
+            if [ "${{ steps.push_server.outcome }}" = "success" ]; then
+              echo "- \`sharpmush/sharpmush-server:dev\` — **pushed**"
+            else
+              echo "- \`sharpmush/sharpmush-server:dev\` — not published (inputs unchanged, or not selected on a manual run); watchtower will not restart it"
+            fi
+            if [ "${{ steps.push_conn.outcome }}" = "success" ]; then
+              echo "- \`sharpmush/sharpmush-connectionserver:dev\` — **pushed**"
+            else
+              echo "- \`sharpmush/sharpmush-connectionserver:dev\` — not published (inputs unchanged, or not selected on a manual run); live connections stay up"
+            fi
+            echo ""
+            echo "**Commit:** ${{ github.sha }}"
+          } >> "$GITHUB_STEP_SUMMARY"
