@@ -4,7 +4,15 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: >-
+          Force-publish images regardless of detected changes (recovery for a failed
+          publish run — change detection compares commits, not what is on Docker Hub).
+        type: choice
+        options: [all, server, connectionserver]
+        default: all
 
 permissions:
   contents: read
@@ -20,51 +28,76 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-      # Each image is stamped with a content hash of its source closure (the project directories
-      # its binaries are actually built from, walked via ProjectReference). When the closure is
-      # unchanged, the push is skipped and the image digest on Docker Hub stays put — so the
-      # watchtower on the production box does NOT recreate that container. This is what keeps
-      # live telnet/WebSocket connections on the ConnectionServer alive across merges that only
-      # touch the game server or portal.
-      - name: Compute source stamps and compare with Docker Hub
-        id: stamps
+      # Watchtower on the production box recreates a container whenever its image digest moves,
+      # which drops the ConnectionServer's live telnet/WebSocket sessions. Only publish an image
+      # when something it is actually built from changed. Each filter lists the image's source
+      # closure: the ProjectReference graph of its entry project(s), its Dockerfile, and
+      # global.json. When project references change, update the lists to match.
+      - name: Detect changed image inputs
+        uses: dorny/paths-filter@v4
+        id: changes
+        with:
+          filters: |
+            connectionserver:
+              - 'SharpMUSH.ConnectionServer/**'
+              - 'SharpMUSH.Library/**'
+              - 'SharpMUSH.Messaging/**'
+              - 'SharpMUSH.MarkupString/**'
+              - 'SharpMUSH.Configuration/**'
+              - 'SharpMUSH.Configuration.Generated/**'
+              - 'SharpMUSH.Contracts/**'
+              - 'SharpMUSH.Parser.Generated/**'
+              - 'global.json'
+            server:
+              - 'Dockerfile'
+              - 'SharpMUSH.Server/**'
+              - 'SharpMUSH.Client/**'
+              - 'SharpMUSH.Implementation/**'
+              - 'SharpMUSH.Implementation.Generated/**'
+              - 'SharpMUSH.Library/**'
+              - 'SharpMUSH.Messaging/**'
+              - 'SharpMUSH.MarkupString/**'
+              - 'SharpMUSH.Configuration/**'
+              - 'SharpMUSH.Configuration.Generated/**'
+              - 'SharpMUSH.Contracts/**'
+              - 'SharpMUSH.Parser.Generated/**'
+              - 'SharpMUSH.CodeAnalysis/**'
+              - 'SharpMUSH.Database/**'
+              - 'SharpMUSH.Database.ArangoDB/**'
+              - 'SharpMUSH.Database.Memgraph/**'
+              - 'SharpMUSH.Database.SurrealDB/**'
+              - 'SharpMUSH.Documentation/**'
+              - 'SharpMUSH.Plugins.Scene/**'
+              - 'global.json'
+
+      - name: Decide what to publish
+        id: publish
+        env:
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.publish || '' }}
+          SERVER_CHANGED: ${{ steps.changes.outputs.server }}
+          CONN_CHANGED: ${{ steps.changes.outputs.connectionserver }}
         run: |
-          set -euo pipefail
-          conn_dirs=$(python3 .github/scripts/project-closure.py SharpMUSH.ConnectionServer/SharpMUSH.ConnectionServer.csproj)
-          server_dirs=$(python3 .github/scripts/project-closure.py SharpMUSH.Server/SharpMUSH.Server.csproj SharpMUSH.Client/SharpMUSH.Client.csproj)
-
-          conn_stamp=$(git ls-files -s -- $conn_dirs SharpMUSH.ConnectionServer/Dockerfile global.json | sha256sum | cut -d' ' -f1)
-          server_stamp=$(git ls-files -s -- $server_dirs Dockerfile global.json | sha256sum | cut -d' ' -f1)
-
-          remote_conn=$(skopeo inspect "docker://docker.io/sharpmush/sharpmush-connectionserver:dev" \
-            --format '{{ index .Labels "org.sharpmush.source-stamp" }}' 2>/dev/null || echo unknown)
-          remote_server=$(skopeo inspect "docker://docker.io/sharpmush/sharpmush-server:dev" \
-            --format '{{ index .Labels "org.sharpmush.source-stamp" }}' 2>/dev/null || echo unknown)
-
-          echo "server: local=$server_stamp remote=$remote_server"
-          echo "connectionserver: local=$conn_stamp remote=$remote_conn"
-
           {
-            echo "server_stamp=$server_stamp"
-            echo "conn_stamp=$conn_stamp"
-            echo "push_server=$([ "$server_stamp" != "$remote_server" ] && echo true || echo false)"
-            echo "push_conn=$([ "$conn_stamp" != "$remote_conn" ] && echo true || echo false)"
+            echo "server=$([ "$FORCE" = "all" ] || [ "$FORCE" = "server" ] || [ "$SERVER_CHANGED" = "true" ] && echo true || echo false)"
+            echo "connectionserver=$([ "$FORCE" = "all" ] || [ "$FORCE" = "connectionserver" ] || [ "$CONN_CHANGED" = "true" ] && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        if: steps.stamps.outputs.push_server == 'true' || steps.stamps.outputs.push_conn == 'true'
+        if: steps.publish.outputs.server == 'true' || steps.publish.outputs.connectionserver == 'true'
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to DockerHub
-        if: steps.stamps.outputs.push_server == 'true' || steps.stamps.outputs.push_conn == 'true'
+        if: steps.publish.outputs.server == 'true' || steps.publish.outputs.connectionserver == 'true'
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push SharpMUSH Server (dev)
-        if: steps.stamps.outputs.push_server == 'true'
+        if: steps.publish.outputs.server == 'true'
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -77,12 +110,11 @@ jobs:
             org.opencontainers.image.version=dev
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-            org.sharpmush.source-stamp=${{ steps.stamps.outputs.server_stamp }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Build and push ConnectionServer (dev)
-        if: steps.stamps.outputs.push_conn == 'true'
+        if: steps.publish.outputs.connectionserver == 'true'
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -95,7 +127,6 @@ jobs:
             org.opencontainers.image.version=dev
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-            org.sharpmush.source-stamp=${{ steps.stamps.outputs.conn_stamp }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -103,15 +134,15 @@ jobs:
         run: |
           echo "## 🐳 Dev Docker Images" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.stamps.outputs.push_server }}" = "true" ]; then
-            echo "- \`sharpmush/sharpmush-server:dev\` — **pushed** (source closure changed)" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.publish.outputs.server }}" = "true" ]; then
+            echo "- \`sharpmush/sharpmush-server:dev\` — **pushed**" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- \`sharpmush/sharpmush-server:dev\` — skipped (unchanged; watchtower will not restart it)" >> $GITHUB_STEP_SUMMARY
+            echo "- \`sharpmush/sharpmush-server:dev\` — skipped (inputs unchanged; watchtower will not restart it)" >> $GITHUB_STEP_SUMMARY
           fi
-          if [ "${{ steps.stamps.outputs.push_conn }}" = "true" ]; then
-            echo "- \`sharpmush/sharpmush-connectionserver:dev\` — **pushed** (source closure changed)" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.publish.outputs.connectionserver }}" = "true" ]; then
+            echo "- \`sharpmush/sharpmush-connectionserver:dev\` — **pushed**" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- \`sharpmush/sharpmush-connectionserver:dev\` — skipped (unchanged; live connections stay up)" >> $GITHUB_STEP_SUMMARY
+            echo "- \`sharpmush/sharpmush-connectionserver:dev\` — skipped (inputs unchanged; live connections stay up)" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
