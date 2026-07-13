@@ -46,6 +46,7 @@ jobs:
           filters: |
             connectionserver:
               - '.github/workflows/docker-dev.yml'
+              - '.dockerignore'
               - 'SharpMUSH.sln'
               - 'SharpMUSH.ConnectionServer/**'
               - 'SharpMUSH.Messaging/**'
@@ -53,6 +54,7 @@ jobs:
               - 'global.json'
             server:
               - '.github/workflows/docker-dev.yml'
+              - '.dockerignore'
               - 'SharpMUSH.sln'
               - 'Dockerfile'
               - 'SharpMUSH.Server/**'
