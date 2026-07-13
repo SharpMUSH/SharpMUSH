@@ -9,6 +9,7 @@
 @inject OttAuthService OttAuth
 @inject AccountAuthService AccountAuth
 @inject IWebAssemblyHostEnvironment HostEnv
+@inject NavigationManager Navigation
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:0.84375rem;">
@@ -39,12 +40,7 @@
 
         @if (!_connected)
         {
-            <MudTextField @bind-Value="_serverUri"
-                          Placeholder="ws://localhost:4202/ws"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Style="flex:1;font-size:0.75rem;"
-                          OnKeyDown="OnUriKeyDown" />
+            <div style="flex:1"></div>
             <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small"
                            title="Login settings"
                            OnClick="ToggleLoginPanel" />
@@ -186,7 +182,13 @@
 </div>
 
 @code {
-    [Parameter] public string DefaultServerUri { get; set; } = "ws://localhost:4202/ws";
+    /// <summary>
+    /// WebSocket endpoint the terminal connects to. When unset, it is derived from the portal's
+    /// own origin: <c>wss://&lt;host&gt;/ws</c> on a deployed site (the edge routes <c>/ws</c> to
+    /// the connection server — see deploy/README.md), or <c>ws://localhost:4202/ws</c> when the
+    /// portal itself runs on localhost, where the connection server listens on its own port.
+    /// </summary>
+    [Parameter] public string? DefaultServerUri { get; set; }
 
     /// <summary>
     /// Optional terminal service to drive this instance. When null, the injected command terminal
@@ -272,9 +274,20 @@
         }
     }
 
+    private string ComputeDefaultServerUri()
+    {
+        var baseUri = new Uri(Navigation.BaseUri);
+        if (baseUri.IsLoopback)
+            return "ws://localhost:4202/ws";
+        var scheme = baseUri.Scheme == Uri.UriSchemeHttps ? "wss" : "ws";
+        return $"{scheme}://{baseUri.Authority}/ws";
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        _serverUri = DefaultServerUri;
+        _serverUri = string.IsNullOrWhiteSpace(DefaultServerUri)
+            ? ComputeDefaultServerUri()
+            : DefaultServerUri;
         _connected = Terminal.IsConnected;
 
         _displayLines.AddRange(Terminal.Lines);
@@ -285,11 +298,9 @@
         // Restore player name from the shared terminal service (survives component re-mounts)
         _playerName = Terminal.ConnectedPlayerName;
 
-        var (savedPlayer, savedPassword, savedUri) = await Credentials.LoadAsync();
+        var (savedPlayer, savedPassword) = await Credentials.LoadAsync();
         _loginPlayer = savedPlayer;
         _loginPassword = savedPassword;
-        if (!string.IsNullOrWhiteSpace(savedUri))
-            _serverUri = savedUri;
 
         // Restore account session (sessionStorage is tab-scoped)
         await AccountAuth.InitAsync();
@@ -539,7 +550,7 @@
     private async Task SaveCredentialsAsync()
     {
         // Password is deliberately not saved — it's sent once via HTTPS to get an OTT
-        await Credentials.SaveAsync(_loginPlayer, null, _serverUri);
+        await Credentials.SaveAsync(_loginPlayer, null);
         _showLoginPanel = false;
         AddLocalLine("[System] Player name saved. Password is not stored.", TerminalLineSource.System);
         StateHasChanged();
@@ -557,11 +568,6 @@
     private async Task OnInputKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") await SendAsync();
-    }
-
-    private async Task OnUriKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter") await ConnectAsync();
     }
 
     private void OnLineReceived(TerminalLine line)
