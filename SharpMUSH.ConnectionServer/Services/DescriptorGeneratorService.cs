@@ -31,14 +31,14 @@ public interface IDescriptorGeneratorService
 /// </summary>
 public class DescriptorGeneratorService : IDescriptorGeneratorService
 {
-	private readonly Library.Services.NextUnoccupiedNumberGenerator _telnetGenerator;
-	private readonly Library.Services.NextUnoccupiedNumberGenerator _webSocketGenerator;
+	private readonly NextUnoccupiedNumberGenerator _telnetGenerator;
+	private readonly NextUnoccupiedNumberGenerator _webSocketGenerator;
 	private readonly object _lock = new();
 
 	public DescriptorGeneratorService(Configuration.ConnectionServerOptions options)
 	{
-		_telnetGenerator = new Library.Services.NextUnoccupiedNumberGenerator(options.TelnetDescriptorStart + 1);
-		_webSocketGenerator = new Library.Services.NextUnoccupiedNumberGenerator(options.WebSocketDescriptorStart + 1);
+		_telnetGenerator = new NextUnoccupiedNumberGenerator(options.TelnetDescriptorStart + 1);
+		_webSocketGenerator = new NextUnoccupiedNumberGenerator(options.WebSocketDescriptorStart + 1);
 	}
 
 	public long GetNextTelnetDescriptor()

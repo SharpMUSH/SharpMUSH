@@ -1,7 +1,7 @@
+using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using System.Text;
 using System.Text.Json;
 using SharpMUSH.ConnectionServer.Models;
-using SharpMUSH.Library.Definitions;
 using MModule = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.ConnectionServer.Services;
@@ -43,7 +43,7 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// MXP open line prefix: ESC[0z — signals an MXP client that the line may contain standard
 	/// open-mode MXP tags. Without it, MXP clients default to locked mode and ignore tags.
 	/// </summary>
-	private const string MxpOpenLinePrefix = ErrorMessages.Notifications.MxpLineOpen;
+	private const string MxpOpenLinePrefix = ProtocolConstants.MxpLineOpen;
 
 	public RenderedOutput Render(string markup, ConnectionServerService.ConnectionData connection)
 	{

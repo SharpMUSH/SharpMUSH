@@ -55,7 +55,7 @@ public class ConnectionServerService(
 					await stateStore.SetConnectionAsync(handle, new ConnectionStateData
 					{
 						Handle = handle,
-						PlayerRef = null,
+						PlayerObjid = null,
 						State = "Connected",
 						IpAddress = ipAddress,
 						Hostname = hostname,

@@ -469,15 +469,6 @@ public static class ErrorMessages
 
 		public const string GameRebootNoDisconnect = "GAME: Reboot w/o disconnect from game account, please wait.";
 
-		// --- Pueblo protocol (PennMUSH hdrs/conf.h) ---
-		public const string PuebloHello = "This world is Pueblo 1.10 Enhanced.\r\n";
-
-		/// <summary>Open line — only "safe" tags (B, I, U, COLOR, FONT). For user-generated content.</summary>
-		public const string MxpLineOpen = "\x1b[0z";
-		/// <summary>Secure line — allows SEND, A, IMG, SOUND. For server-generated content.</summary>
-		public const string MxpLineSecure = "\x1b[1z";
-		/// <summary>Locked line — no tag interpretation at all.</summary>
-		public const string MxpLineLocked = "\x1b[2z";
 
 		// --- OUTPUTPREFIX / OUTPUTSUFFIX (PennMUSH hdrs/conf.h) ---
 		public const string OutputPrefixSet = "OUTPUTPREFIX set.";

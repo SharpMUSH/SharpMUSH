@@ -48,13 +48,8 @@ jobs:
               - '.github/workflows/docker-dev.yml'
               - 'SharpMUSH.sln'
               - 'SharpMUSH.ConnectionServer/**'
-              - 'SharpMUSH.Library/**'
               - 'SharpMUSH.Messaging/**'
               - 'SharpMUSH.MarkupString/**'
-              - 'SharpMUSH.Configuration/**'
-              - 'SharpMUSH.Configuration.Generated/**'
-              - 'SharpMUSH.Contracts/**'
-              - 'SharpMUSH.Parser.Generated/**'
               - 'global.json'
             server:
               - '.github/workflows/docker-dev.yml'

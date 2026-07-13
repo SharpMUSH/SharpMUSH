@@ -1,3 +1,4 @@
+using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using System.Text;
 using System.Text.Json;
 using MarkupString;
@@ -52,7 +53,7 @@ public class MarkupOutputRendererTests
 
 		await Assert.That(result.ApplyOutputTransform).IsTrue();
 		await Assert.That(text).Contains(
-			$"{ErrorMessages.Notifications.MxpLineOpen}&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;");
+			$"{ProtocolConstants.MxpLineOpen}&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;");
 	}
 
 	[Test]

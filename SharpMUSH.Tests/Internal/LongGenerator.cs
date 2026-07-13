@@ -1,4 +1,4 @@
-using SharpMUSH.Library.Services;
+using SharpMUSH.ConnectionServer.Services;
 
 namespace SharpMUSH.Tests.Internal;
 

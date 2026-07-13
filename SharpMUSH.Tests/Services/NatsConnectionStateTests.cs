@@ -31,7 +31,7 @@ public class NatsConnectionStateTests
 		var connectionData = new ConnectionStateData
 		{
 			Handle = handle,
-			PlayerRef = new DBRef(100),
+			PlayerObjid = new DBRef(100).ToString(),
 			State = "LoggedIn",
 			IpAddress = "192.168.1.1",
 			Hostname = "test.local",
@@ -49,7 +49,7 @@ public class NatsConnectionStateTests
 
 		await Assert.That(retrieved).IsNotNull();
 		await Assert.That(retrieved!.Handle).IsEqualTo(handle);
-		await Assert.That(retrieved.PlayerRef).IsEqualTo(new DBRef(100));
+		await Assert.That(retrieved.PlayerObjid).IsEqualTo(new DBRef(100).ToString());
 		await Assert.That(retrieved.State).IsEqualTo("LoggedIn");
 		await Assert.That(retrieved.IpAddress).IsEqualTo("192.168.1.1");
 		await Assert.That(retrieved.Hostname).IsEqualTo("test.local");
@@ -65,7 +65,7 @@ public class NatsConnectionStateTests
 		var connectionData = new ConnectionStateData
 		{
 			Handle = handle,
-			PlayerRef = null,
+			PlayerObjid = null,
 			State = "Connected",
 			IpAddress = "10.0.0.1",
 			Hostname = "client.test",
@@ -93,21 +93,21 @@ public class NatsConnectionStateTests
 
 		var data1 = new ConnectionStateData
 		{
-			Handle = handle1, PlayerRef = null, State = "Connected",
+			Handle = handle1, PlayerObjid = null, State = "Connected",
 			IpAddress = "192.168.1.10", Hostname = "host1", ConnectionType = "telnet",
 			ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
 			Metadata = new Dictionary<string, string>()
 		};
 		var data2 = new ConnectionStateData
 		{
-			Handle = handle2, PlayerRef = new DBRef(200), State = "LoggedIn",
+			Handle = handle2, PlayerObjid = new DBRef(200).ToString(), State = "LoggedIn",
 			IpAddress = "192.168.1.11", Hostname = "host2", ConnectionType = "telnet",
 			ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
 			Metadata = new Dictionary<string, string>()
 		};
 		var data3 = new ConnectionStateData
 		{
-			Handle = handle3, PlayerRef = null, State = "Connected",
+			Handle = handle3, PlayerObjid = null, State = "Connected",
 			IpAddress = "192.168.1.12", Hostname = "host3", ConnectionType = "telnet",
 			ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
 			Metadata = new Dictionary<string, string>()
@@ -134,14 +134,14 @@ public class NatsConnectionStateTests
 
 		var data1 = new ConnectionStateData
 		{
-			Handle = handle1, PlayerRef = new DBRef(300), State = "LoggedIn",
+			Handle = handle1, PlayerObjid = new DBRef(300).ToString(), State = "LoggedIn",
 			IpAddress = "172.16.0.1", Hostname = "user1.test", ConnectionType = "telnet",
 			ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
 			Metadata = new Dictionary<string, string> { { "User", "Alice" } }
 		};
 		var data2 = new ConnectionStateData
 		{
-			Handle = handle2, PlayerRef = new DBRef(301), State = "LoggedIn",
+			Handle = handle2, PlayerObjid = new DBRef(301).ToString(), State = "LoggedIn",
 			IpAddress = "172.16.0.2", Hostname = "user2.test", ConnectionType = "telnet",
 			ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
 			Metadata = new Dictionary<string, string> { { "User", "Bob" } }
@@ -159,11 +159,11 @@ public class NatsConnectionStateTests
 		var conn2 = connectionsList.FirstOrDefault(c => c.Handle == handle2);
 
 		await Assert.That(conn1.Data).IsNotNull();
-		await Assert.That(conn1.Data.PlayerRef).IsEqualTo(new DBRef(300));
+		await Assert.That(conn1.Data.PlayerObjid).IsEqualTo(new DBRef(300).ToString());
 		await Assert.That(conn1.Data.Metadata["User"]).IsEqualTo("Alice");
 
 		await Assert.That(conn2.Data).IsNotNull();
-		await Assert.That(conn2.Data.PlayerRef).IsEqualTo(new DBRef(301));
+		await Assert.That(conn2.Data.PlayerObjid).IsEqualTo(new DBRef(301).ToString());
 		await Assert.That(conn2.Data.Metadata["User"]).IsEqualTo("Bob");
 	}
 
@@ -174,7 +174,7 @@ public class NatsConnectionStateTests
 		var handle = 56789L;
 		var initialData = new ConnectionStateData
 		{
-			Handle = handle, PlayerRef = null, State = "Connected",
+			Handle = handle, PlayerObjid = null, State = "Connected",
 			IpAddress = "10.1.1.1", Hostname = "guest.test", ConnectionType = "telnet",
 			ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
 			Metadata = new Dictionary<string, string>()
@@ -182,12 +182,12 @@ public class NatsConnectionStateTests
 
 		await store.SetConnectionAsync(handle, initialData);
 
-		var playerRef = new DBRef(400);
-		await store.SetPlayerBindingAsync(handle, playerRef);
+		var playerObjid = new DBRef(400).ToString();
+		await store.SetPlayerBindingAsync(handle, playerObjid);
 		var updated = await store.GetConnectionAsync(handle);
 
 		await Assert.That(updated).IsNotNull();
-		await Assert.That(updated!.PlayerRef).IsEqualTo(playerRef);
+		await Assert.That(updated!.PlayerObjid).IsEqualTo(playerObjid);
 		await Assert.That(updated.State).IsEqualTo("LoggedIn");
 	}
 
@@ -198,7 +198,7 @@ public class NatsConnectionStateTests
 		var handle = 67890L;
 		var initialData = new ConnectionStateData
 		{
-			Handle = handle, PlayerRef = null, State = "Connected",
+			Handle = handle, PlayerObjid = null, State = "Connected",
 			IpAddress = "10.2.2.2", Hostname = "client.test", ConnectionType = "telnet",
 			ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
 			Metadata = new Dictionary<string, string> { { "Initial", "Value" } }
@@ -223,7 +223,7 @@ public class NatsConnectionStateTests
 		var handle = 78901L;
 		var connectionData = new ConnectionStateData
 		{
-			Handle = handle, PlayerRef = null, State = "Connected",
+			Handle = handle, PlayerObjid = null, State = "Connected",
 			IpAddress = "192.168.100.1", Hostname = "shared.test", ConnectionType = "telnet",
 			ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
 			Metadata = new Dictionary<string, string> { { "Process", "1" } }
@@ -231,7 +231,7 @@ public class NatsConnectionStateTests
 
 		await storeProcess1.SetConnectionAsync(handle, connectionData);
 		var retrieved = await storeProcess2.GetConnectionAsync(handle);
-		await storeProcess2.SetPlayerBindingAsync(handle, new DBRef(500));
+		await storeProcess2.SetPlayerBindingAsync(handle, new DBRef(500).ToString());
 		var updated = await storeProcess1.GetConnectionAsync(handle);
 
 		await Assert.That(retrieved).IsNotNull();
@@ -239,7 +239,7 @@ public class NatsConnectionStateTests
 		await Assert.That(retrieved.IpAddress).IsEqualTo("192.168.100.1");
 
 		await Assert.That(updated).IsNotNull();
-		await Assert.That(updated!.PlayerRef).IsEqualTo(new DBRef(500));
+		await Assert.That(updated!.PlayerObjid).IsEqualTo(new DBRef(500).ToString());
 		await Assert.That(updated.State).IsEqualTo("LoggedIn");
 	}
 
@@ -250,7 +250,7 @@ public class NatsConnectionStateTests
 		var handle = 89012L;
 		var connectionData = new ConnectionStateData
 		{
-			Handle = handle, PlayerRef = new DBRef(600), State = "LoggedIn",
+			Handle = handle, PlayerObjid = new DBRef(600).ToString(), State = "LoggedIn",
 			IpAddress = "10.10.10.10", Hostname = "persistent.test", ConnectionType = "telnet",
 			ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
 			Metadata = new Dictionary<string, string> { { "Session", "PersistentSession" } }
@@ -264,7 +264,7 @@ public class NatsConnectionStateTests
 
 		await Assert.That(retrieved).IsNotNull();
 		await Assert.That(retrieved!.Handle).IsEqualTo(handle);
-		await Assert.That(retrieved.PlayerRef).IsEqualTo(new DBRef(600));
+		await Assert.That(retrieved.PlayerObjid).IsEqualTo(new DBRef(600).ToString());
 		await Assert.That(retrieved.State).IsEqualTo("LoggedIn");
 		await Assert.That(retrieved.Metadata["Session"]).IsEqualTo("PersistentSession");
 	}
@@ -286,7 +286,7 @@ public class NatsConnectionStateTests
 		var handle = 11111L;
 		var connectionData = new ConnectionStateData
 		{
-			Handle = handle, PlayerRef = null, State = "Connected",
+			Handle = handle, PlayerObjid = null, State = "Connected",
 			IpAddress = "192.168.50.1", Hostname = "concurrent.test", ConnectionType = "telnet",
 			ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
 			Metadata = new Dictionary<string, string>()
