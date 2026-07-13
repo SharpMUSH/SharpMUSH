@@ -596,6 +596,115 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
+	/// Looking at the room you are in shows its @describe run through @descformat.
+	/// Rooms always use @describe/@descformat, never the @idescribe path (help @idescribe:
+	/// "It's only used for players and things; rooms and exits always use @describe").
+	/// </summary>
+	[Test]
+	public async ValueTask Look_Room_ShowsDescriptionThroughDescFormat()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("ldf");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookRoomDF{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig RoomDF_{token}"));
+		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@tel me={roomDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@desc here=roomdesc_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("&DESCFORMAT here=[ucstr(%0)]"));
+
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("look"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"ROOMDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// Looking at a room with no @describe shows the default description, still run
+	/// through @descformat.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_Room_NoDescription_ShowsDefaultThroughDescFormat()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("lnd");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookRoomND{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig RoomND_{token}"));
+		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@tel me={roomDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("&DESCFORMAT here=[ucstr(%0)]"));
+
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("look"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "YOU SEE NOTHING SPECIAL.")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// Looking while inside a thing with no @idescribe falls back to @describe and
+	/// @descformat (help @idescformat: "When no @idescribe is set, the @descformat (and
+	/// @describe) attributes are used, even when someone looks inside").
+	/// </summary>
+	[Test]
+	public async ValueTask Look_InsideThing_NoIdesc_FallsBackToDescribeAndDescFormat()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("lit");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookThing{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		var objResult = await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@create ThingIT_{token}"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@desc {objDbRef}=thingdesc_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"&DESCFORMAT {objDbRef}=[ucstr(%0)]"));
+		// @create puts the thing in inventory; drop it so entering it isn't a containment loop.
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"drop {objDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@tel me={objDbRef}"));
+
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("look"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"THINGDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// Looking while inside a thing WITH an @idescribe uses it, run through @idescformat.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_InsideThing_WithIdesc_UsesIdescThroughIdescFormat()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("lii");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookIdesc{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		var objResult = await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@create ThingII_{token}"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@desc {objDbRef}=outsidedesc_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"&IDESCRIBE {objDbRef}=insidedesc_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"&IDESCFORMAT {objDbRef}=[ucstr(%0)]"));
+		// @create puts the thing in inventory; drop it so entering it isn't a containment loop.
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"drop {objDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@tel me={objDbRef}"));
+
+		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("look"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"INSIDEDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
 	/// Tests error case: @desc with invalid target shows error notification.
 	/// </summary>
 	[Test]
