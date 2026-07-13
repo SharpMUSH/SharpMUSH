@@ -58,7 +58,21 @@
     <!-- Mermaid (wiki diagram rendering) + the wiki post-render pass (mermaid run + anchor scroll) -->
     <script src="js/mermaid.min.js"></script>
     <script src="js/wiki-render.js"></script>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <!-- Manual start so the runtime knows the culture BEFORE boot: with sharded ICU (we ship no
+         full globalization data), Blazor hard-errors if the culture changes during startup.
+         Program.cs applies the same locale afterwards, which is then a no-op rather than a
+         "change". Offered locales (en, fr — see LanguagePicker) both live in the EFIGS shard. -->
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js" autostart="false"></script>
+    <script>
+        const locale = (() => {
+            try {
+                const stored = localStorage.getItem('locale');
+                if (stored === 'en' || stored === 'fr') return stored;
+            } catch { /* storage unavailable — fall through */ }
+            return 'en';
+        })();
+        Blazor.start({ applicationCulture: locale });
+    </script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 
 </body>
