@@ -615,22 +615,35 @@ public partial class Commands
 
 		var baseName = viewingObject.Name;
 		var baseDesc = MModule.empty();
-		var useIdesc = viewingFromInside && !lookOutside;
 
-		var descAttrName = useIdesc ? "IDESCRIBE" : "DESCRIBE";
-		var descResult = await AttributeService!.GetAttributeAsync(executor, realViewing, descAttrName,
-			IAttributeService.AttributeMode.Read, false);
+		// @idescribe is only used for players and things; rooms and exits always use @describe
+		// (help @idescribe). And when no @idescribe is set, the viewer sees the @describe run
+		// through @descformat even when looking from inside (help @idescformat) — so which
+		// format attribute applies follows which description attribute was actually used.
+		var tryIdesc = viewingFromInside && !lookOutside
+			&& (realViewing.IsPlayer || realViewing.IsThing);
+		var usedIdesc = false;
 
-		if (descResult.IsAttribute)
+		if (tryIdesc)
 		{
-			var descAttr = descResult.AsAttribute.Last();
-			baseDesc = MModule.getLength(descAttr.Value) > 0
-				? descAttr.Value
-				: (useIdesc ? MModule.empty() : MModule.single("You see nothing special."));
+			var idescResult = await AttributeService!.GetAttributeAsync(executor, realViewing, "IDESCRIBE",
+				IAttributeService.AttributeMode.Read, false);
+			if (idescResult.IsAttribute)
+			{
+				// A blank @idescribe is meaningful (help @idescribe suggests it to trigger
+				// @aidescribe without text), so an empty value stays empty here.
+				usedIdesc = true;
+				baseDesc = idescResult.AsAttribute.Last().Value;
+			}
 		}
-		else if (!useIdesc)
+
+		if (!usedIdesc)
 		{
-			baseDesc = MModule.single("You see nothing special.");
+			var descResult = await AttributeService!.GetAttributeAsync(executor, realViewing, "DESCRIBE",
+				IAttributeService.AttributeMode.Read, false);
+			baseDesc = descResult.IsAttribute && MModule.getLength(descResult.AsAttribute.Last().Value) > 0
+				? descResult.AsAttribute.Last().Value
+				: MModule.single("You see nothing special.");
 		}
 
 		var flags = await viewingObject.Flags.Value.ToArrayAsync();
@@ -647,18 +660,18 @@ public partial class Commands
 			};
 
 			formattedName = await AttributeHelpers.EvaluateFormatAttribute(
-				AttributeService, parser, executor, realViewing, "NAMEFORMAT",
+				AttributeService!, parser, executor, realViewing, "NAMEFORMAT",
 				nameFormatArgs, defaultFormattedName, checkParents: false);
 		}
 
-		var formatAttrName = useIdesc ? "IDESCFORMAT" : "DESCFORMAT";
+		var formatAttrName = usedIdesc ? "IDESCFORMAT" : "DESCFORMAT";
 		var descFormatArgs = new Dictionary<string, CallState>
 		{
 			["0"] = new CallState(baseDesc)
 		};
 
 		var formattedDesc = await AttributeHelpers.EvaluateFormatAttribute(
-			AttributeService, parser, executor, realViewing, formatAttrName,
+			AttributeService!, parser, executor, realViewing, formatAttrName,
 			descFormatArgs, baseDesc, checkParents: false);
 
 		await NotifyService!.Notify(executor, formattedName, executor);
@@ -744,7 +757,7 @@ public partial class Commands
 				};
 
 				var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
-					AttributeService, parser, executor, realViewing, "CONFORMAT",
+					AttributeService!, parser, executor, realViewing, "CONFORMAT",
 					conFormatArgs, defaultContents, checkParents: false);
 
 				await NotifyService.Notify(executor, formattedContents, executor);
@@ -801,7 +814,7 @@ public partial class Commands
 				}
 
 				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
-					AttributeService, parser, executor, realViewing, "EXITFORMAT",
+					AttributeService!, parser, executor, realViewing, "EXITFORMAT",
 					exitFormatArgs, defaultExits, checkParents: false);
 
 				if (formattedExits == defaultExits && isTransparent)
