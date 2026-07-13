@@ -46,6 +46,7 @@ jobs:
           filters: |
             connectionserver:
               - '.github/workflows/docker-dev.yml'
+              - 'SharpMUSH.sln'
               - 'SharpMUSH.ConnectionServer/**'
               - 'SharpMUSH.Library/**'
               - 'SharpMUSH.Messaging/**'
@@ -57,6 +58,7 @@ jobs:
               - 'global.json'
             server:
               - '.github/workflows/docker-dev.yml'
+              - 'SharpMUSH.sln'
               - 'Dockerfile'
               - 'SharpMUSH.Server/**'
               - 'SharpMUSH.Client/**'
@@ -145,12 +147,12 @@ jobs:
             if [ "${{ steps.push_server.outcome }}" = "success" ]; then
               echo "- \`sharpmush/sharpmush-server:dev\` — **pushed**"
             else
-              echo "- \`sharpmush/sharpmush-server:dev\` — skipped (inputs unchanged; watchtower will not restart it)"
+              echo "- \`sharpmush/sharpmush-server:dev\` — not published (inputs unchanged, or not selected on a manual run); watchtower will not restart it"
             fi
             if [ "${{ steps.push_conn.outcome }}" = "success" ]; then
               echo "- \`sharpmush/sharpmush-connectionserver:dev\` — **pushed**"
             else
-              echo "- \`sharpmush/sharpmush-connectionserver:dev\` — skipped (inputs unchanged; live connections stay up)"
+              echo "- \`sharpmush/sharpmush-connectionserver:dev\` — not published (inputs unchanged, or not selected on a manual run); live connections stay up"
             fi
             echo ""
             echo "**Commit:** ${{ github.sha }}"
