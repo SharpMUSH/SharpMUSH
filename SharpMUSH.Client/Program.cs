@@ -61,6 +61,7 @@ builder.Services.AddSingleton<HelpService>(sp =>
 builder.Services.AddScoped<CredentialService>();
 builder.Services.AddSingleton<OttAuthService>();
 builder.Services.AddSingleton<AccountAuthService>();
+builder.Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());
 builder.Services.AddSingleton<DatabaseConversionService>();
 builder.Services.AddSingleton<IThemeService, ThemeService>();
 
@@ -118,10 +119,7 @@ if (builder.HostEnvironment.IsDevelopment())
 }
 else
 {
-	builder.Services.AddOidcAuthentication(options =>
-	{
-		builder.Configuration.Bind("Local", options.ProviderOptions);
-	});
+	builder.Services.AddScoped<AuthenticationStateProvider, AccountAuthStateProvider>();
 }
 
 builder.Services.AddCascadingAuthenticationState();

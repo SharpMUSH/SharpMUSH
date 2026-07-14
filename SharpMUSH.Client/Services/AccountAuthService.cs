@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.JSInterop;
 
 namespace SharpMUSH.Client.Services;
@@ -12,17 +13,26 @@ namespace SharpMUSH.Client.Services;
 public class AccountAuthService(
 	IHttpClientFactory httpClientFactory,
 	IJSRuntime js,
-	ILogger<AccountAuthService> logger)
+	ILogger<AccountAuthService> logger) : IAccountAuthState
 {
 	private const string SessionTokenKey = "sharpmush.account.sessionToken";
 	private const string UsernameKey = "sharpmush.account.username";
 	private const string MustChangePasswordKey = "sharpmush.account.mustChangePassword";
+	private const string RoleKey = "sharpmush.account.role";
+	private const string PermissionsKey = "sharpmush.account.permissions";
 
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 
 	private record AccountLoginRequest(string UsernameOrEmail, string Password);
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
-	private record AccountLoginResponse(string AccountId, string Username, IReadOnlyList<CharacterSummary> Characters, string AccountSessionToken, bool MustChangePassword);
+	private record AccountLoginResponse(
+		string AccountId,
+		string Username,
+		IReadOnlyList<CharacterSummary> Characters,
+		string AccountSessionToken,
+		bool MustChangePassword,
+		string? Role,
+		IReadOnlyList<string>? Permissions);
 	private record MushTokenWithAccountRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
 	private record MushTokenResponse(string Token, int ExpiresIn);
 	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,
@@ -40,6 +50,11 @@ public class AccountAuthService(
 	public IReadOnlyList<CharacterSummary> Characters { get; private set; } = [];
 	public bool MustChangePassword { get; private set; }
 	public bool IsLoggedIn => AccountSessionToken is not null;
+	public string? Role { get; private set; }
+	public IReadOnlyList<string> Permissions { get; private set; } = [];
+
+	/// <summary>Raised whenever login/logout changes the session; AccountAuthStateProvider subscribes.</summary>
+	public event Action? AuthStateChanged;
 
 	public async Task InitAsync()
 	{
@@ -47,6 +62,11 @@ public class AccountAuthService(
 		Username = await js.InvokeAsync<string?>("localStorage.getItem", UsernameKey);
 		var mustChangePassword = await js.InvokeAsync<string?>("sessionStorage.getItem", MustChangePasswordKey);
 		MustChangePassword = string.Equals(mustChangePassword, bool.TrueString, StringComparison.OrdinalIgnoreCase);
+		Role = await js.InvokeAsync<string?>("sessionStorage.getItem", RoleKey);
+		var permissionsJson = await js.InvokeAsync<string?>("sessionStorage.getItem", PermissionsKey);
+		Permissions = permissionsJson is null
+			? []
+			: JsonSerializer.Deserialize<IReadOnlyList<string>>(permissionsJson) ?? [];
 	}
 
 	public async Task<(bool Success, string? Error, IReadOnlyList<CharacterSummary> Characters)> LoginAsync(
@@ -64,7 +84,7 @@ public class AccountAuthService(
 			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
 			if (result is null) return (false, "Unexpected server response.", []);
 
-			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword);
+			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
 			Characters = result.Characters;
 			return (true, null, result.Characters);
 		}
@@ -90,7 +110,7 @@ public class AccountAuthService(
 			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
 			if (result is null) return (false, "Unexpected server response.", []);
 
-			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword);
+			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
 			Characters = result.Characters;
 			return (true, null, result.Characters);
 		}
@@ -153,7 +173,7 @@ public class AccountAuthService(
 			if (result is null) return null;
 
 			if (result.AccountSessionToken is not null && result.AccountUsername is not null)
-				await PersistSessionAsync(result.AccountSessionToken, result.AccountUsername, result.AccountMustChangePassword);
+				await PersistSessionAsync(result.AccountSessionToken, result.AccountUsername, result.AccountMustChangePassword, role: null, permissions: null);
 
 			return result;
 		}
@@ -311,17 +331,31 @@ public class AccountAuthService(
 		Username = null;
 		Characters = [];
 		MustChangePassword = false;
+		Role = null;
+		Permissions = [];
 		await js.InvokeVoidAsync("sessionStorage.removeItem", SessionTokenKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", MustChangePasswordKey);
+		await js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);
+		await js.InvokeVoidAsync("sessionStorage.removeItem", PermissionsKey);
+		AuthStateChanged?.Invoke();
 	}
 
-	private async Task PersistSessionAsync(string token, string username, bool mustChangePassword)
+	private async Task PersistSessionAsync(
+		string token, string username, bool mustChangePassword, string? role, IReadOnlyList<string>? permissions)
 	{
 		AccountSessionToken = token;
 		Username = username;
+		Role = role;
+		Permissions = permissions ?? [];
 		await js.InvokeVoidAsync("sessionStorage.setItem", SessionTokenKey, token);
 		await js.InvokeVoidAsync("localStorage.setItem", UsernameKey, username);
 		await SetMustChangePasswordAsync(mustChangePassword);
+		if (role is null)
+			await js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);
+		else
+			await js.InvokeVoidAsync("sessionStorage.setItem", RoleKey, role);
+		await js.InvokeVoidAsync("sessionStorage.setItem", PermissionsKey, JsonSerializer.Serialize(Permissions));
+		AuthStateChanged?.Invoke();
 	}
 
 	private async Task SetMustChangePasswordAsync(bool value)
