@@ -206,21 +206,7 @@ public partial class Commands
 		}
 		var foundPlayer = playerNode.AsPlayer;
 
-		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
-		await EventService!.TriggerEventAsync(parser, "PLAYER`CONNECT", playerDbRef,
-			$"#{foundPlayer.Object.Key}", connectionCount.ToString(), handle.ToString());
-
-		// Refresh everyone in the room the player just appeared in.
-		var makeConnectRoomContainer = await foundPlayer.Location.WithCancellation(CancellationToken.None);
-		await EventService.TriggerEventAsync(
-			parser,
-			SharpEvents.RoomContents,
-			playerDbRef,
-			makeConnectRoomContainer.Object().DBRef.ToString(),
-			"connect");
-
-		await SyncPlayerOutputPreferences(handle, foundPlayer.Object);
-		await ShowPostLoginMessages(parser, handle, new Library.DiscriminatedUnions.AnySharpObject(foundPlayer));
+		await CompletePlayerLoginAsync(parser, handle, foundPlayer, playerDbRef);
 
 		Logger?.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via MAKE",
 			accountId, charName, foundPlayer.Object.Key);
@@ -274,21 +260,7 @@ public partial class Commands
 		var playerDbRef = new DBRef(character.Object.Key, character.Object.CreationTime);
 		await ConnectionService.Bind(handle, playerDbRef);
 
-		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
-		await EventService!.TriggerEventAsync(parser, "PLAYER`CONNECT", playerDbRef,
-			$"#{character.Object.Key}", connectionCount.ToString(), handle.ToString());
-
-		// Refresh everyone in the room the player just appeared in.
-		var playConnectRoomContainer = await character.Location.WithCancellation(CancellationToken.None);
-		await EventService.TriggerEventAsync(
-			parser,
-			SharpEvents.RoomContents,
-			playerDbRef,
-			playConnectRoomContainer.Object().DBRef.ToString(),
-			"connect");
-
-		await SyncPlayerOutputPreferences(handle, character.Object);
-		await ShowPostLoginMessages(parser, handle, new Library.DiscriminatedUnions.AnySharpObject(character));
+		await CompletePlayerLoginAsync(parser, handle, character, playerDbRef);
 
 		Logger?.LogInformation("Account {AccountId}: playing as {Name} (#{Key}) via PLAY",
 			accountId, character.Object.Name, character.Object.Key);
@@ -319,17 +291,9 @@ public partial class Commands
 
 	/// <summary>
 	/// PennMUSH semantics: an account qualifies for login while <c>Net.Logins</c> is disabled
-	/// if ANY linked character is staff (character #1, or WIZARD-flagged).
+	/// if ANY linked character is staff (character #1, or WIZARD-flagged). <c>IsWizard()</c>
+	/// already covers character #1 (God), so a single async predicate suffices.
 	/// </summary>
-	private static async ValueTask<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters)
-	{
-		foreach (var character in characters)
-		{
-			if (character.Object.Key == 1)
-				return true;
-			if (await new AnySharpObject(character).IsWizard())
-				return true;
-		}
-		return false;
-	}
+	private static async ValueTask<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters) =>
+		await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await new AnySharpObject(character).IsWizard());
 }

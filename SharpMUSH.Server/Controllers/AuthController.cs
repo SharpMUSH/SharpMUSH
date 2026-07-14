@@ -175,11 +175,9 @@ public class AuthController(
 	/// <summary>Request body for account login.</summary>
 	public record AccountLoginRequest(string UsernameOrEmail, string Password);
 
-	/// <summary>Character summary included in account login/register responses.</summary>
-	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
-
 	/// <summary>Response body for account login and registration.</summary>
-	public record AccountLoginResponse(string AccountId, string Username, IReadOnlyList<CharacterSummary> Characters,
+	public record AccountLoginResponse(string AccountId, string Username,
+		IReadOnlyList<CharacterSummaryMapper.CharacterSummary> Characters,
 		string AccountSessionToken, bool MustChangePassword, string Role, IReadOnlyList<string> Permissions);
 
 	/// <summary>
@@ -205,7 +203,7 @@ public class AuthController(
 		if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
 			return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
 
-		var charSummaries = await BuildCharacterSummariesAsync(characters);
+		var charSummaries = await CharacterSummaryMapper.BuildSummariesAsync(characters);
 
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
 		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
@@ -438,29 +436,9 @@ public class AuthController(
 	/// PennMUSH semantics: an account qualifies for login while <c>Net.Logins</c> is disabled
 	/// if ANY linked character is staff (character #1, or WIZARD-flagged / higher).
 	/// </summary>
-	private async Task<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters)
-	{
-		foreach (var character in characters)
-		{
-			var flags = await character.Object.Flags.Value.ToListAsync();
-			if (roleDerivation.DeriveRole(character.Object.Key, flags) >= PortalRole.Wizard)
-				return true;
-		}
-		return false;
-	}
-
-	private static async Task<IReadOnlyList<CharacterSummary>> BuildCharacterSummariesAsync(IReadOnlyList<SharpPlayer> characters)
-	{
-		var summaries = new List<CharacterSummary>();
-		foreach (var c in characters)
-		{
-			var flagString = string.Join(" ", await c.Object.Flags.Value
-				.Select(f => f.Name)
-				.ToListAsync());
-			summaries.Add(new CharacterSummary(c.Object.Key, c.Object.CreationTime, c.Object.Name, flagString));
-		}
-		return summaries;
-	}
+	private async Task<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters) =>
+		await characters.ToAsyncEnumerable().AnyAsync(async (character, ct) =>
+			roleDerivation.DeriveRole(character.Object.Key, await character.Object.Flags.Value.ToListAsync(ct)) >= PortalRole.Wizard);
 
 	/// <summary>
 	/// Strip newlines and control characters from user-supplied strings before logging

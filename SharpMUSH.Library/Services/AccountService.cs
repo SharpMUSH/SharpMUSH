@@ -45,11 +45,9 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 			return account;
 
 		var characters = await database.GetCharactersForAccountAsync(account.Id!, ct);
-		foreach (var character in characters)
-			if (await CharacterPasswordMatchesAsync(character, password))
-				return account;
-
-		return null;
+		return await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await CharacterPasswordMatchesAsync(character, password))
+			? account
+			: null;
 	}
 
 	private async ValueTask<bool> CharacterPasswordMatchesAsync(SharpPlayer character, string password)

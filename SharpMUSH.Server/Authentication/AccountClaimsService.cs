@@ -39,9 +39,9 @@ public class AccountClaimsService(
 			if (characters.Count == 0)
 				return activeRole;
 
-			var perCharacter = new List<(int, IEnumerable<SharpObjectFlag>)>(characters.Count);
-			foreach (var c in characters)
-				perCharacter.Add((c.Object.Key, await c.Object.Flags.Value.ToListAsync(ct)));
+			var perCharacter = await characters.ToAsyncEnumerable()
+				.Select(async (c, innerCt) => (c.Object.Key, (IEnumerable<SharpObjectFlag>)await c.Object.Flags.Value.ToListAsync(innerCt)))
+				.ToListAsync(ct);
 
 			var accountRole = roleDerivation.DeriveAccountRole(perCharacter);
 			return accountRole > activeRole ? accountRole : activeRole;

@@ -67,14 +67,12 @@ public class AdminAccountsController(
 				a.Username.Contains(search, StringComparison.OrdinalIgnoreCase)
 				|| (a.Email?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
 
-		var rows = new List<AdminAccountRow>();
-		foreach (var account in accounts)
-		{
-			var characters = await accountService.GetCharactersAsync(account.Id!);
-			rows.Add(new AdminAccountRow(KeyOf(account), account.Username, account.Email,
+		var rows = await accounts.ToAsyncEnumerable()
+			.Select(async (account, ct) => new AdminAccountRow(KeyOf(account), account.Username, account.Email,
 				account.IsDisabled, account.MustChangePassword,
-				characters.Select(c => new AdminCharacterSummary(c.Object.Key, c.Object.Name)).ToList()));
-		}
+				(await accountService.GetCharactersAsync(account.Id!, ct))
+				.Select(c => new AdminCharacterSummary(c.Object.Key, c.Object.Name)).ToList()))
+			.ToListAsync();
 		return Ok(rows);
 	}
 

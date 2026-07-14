@@ -52,8 +52,6 @@ public class AccountController(
 		return (accountId, null);
 	}
 
-	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
-
 	/// <summary>List all characters linked to the authenticated account.</summary>
 	[HttpGet("characters")]
 	public async Task<IActionResult> GetCharacters()
@@ -62,7 +60,7 @@ public class AccountController(
 		if (failure is not null) return failure;
 
 		var characters = await accountService.GetCharactersAsync(accountId!);
-		var summaries = await BuildSummariesAsync(characters);
+		var summaries = await CharacterSummaryMapper.BuildSummariesAsync(characters);
 		return Ok(summaries);
 	}
 
@@ -233,16 +231,5 @@ public class AccountController(
 		// logged-out browser cannot silently mint new access tokens.
 		Response.Cookies.Delete(AuthController.RefreshCookieName, new CookieOptions { Path = "/api/auth" });
 		return NoContent();
-	}
-
-	private static async Task<IReadOnlyList<CharacterSummary>> BuildSummariesAsync(IReadOnlyList<SharpPlayer> characters)
-	{
-		var result = new List<CharacterSummary>();
-		foreach (var c in characters)
-		{
-			var flags = string.Join(" ", await c.Object.Flags.Value.Select(f => f.Name).ToListAsync());
-			result.Add(new CharacterSummary(c.Object.Key, c.Object.CreationTime, c.Object.Name, flags));
-		}
-		return result;
 	}
 }
