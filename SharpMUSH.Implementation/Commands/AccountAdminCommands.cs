@@ -28,7 +28,7 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.Arguments;
 		var arg0 = args.TryGetValue("0", out var a0) ? a0.Message?.ToPlainText()?.Trim() : null;
-		var arg1 = args.TryGetValue("1", out var a1) ? a1.Message?.ToPlainText()?.Trim() : null;
+		var arg1 = args.TryGetValue("1", out var a1) ? a1.Message?.ToPlainText() : null;
 
 		if (switches.Contains("SETUPCOMPLETE"))
 		{
