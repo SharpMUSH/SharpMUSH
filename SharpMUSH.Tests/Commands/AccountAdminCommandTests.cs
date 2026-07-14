@@ -17,7 +17,10 @@ public class AccountAdminCommandTests
 	public async ValueTask AccountNewPassword_SetsPasswordAndFlag()
 	{
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
-		await accountService.CreateAccountAsync("cmd-reset-user", null, "old-password-1");
+		var accountSessionStore = WebAppFactoryArg.Services.GetRequiredService<IAccountSessionStore>();
+		var createResult = await accountService.CreateAccountAsync("cmd-reset-user", null, "old-password-1");
+		var accountId = createResult.AsT0.Id!;
+		var sessionToken = await accountSessionStore.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15));
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/newpassword cmd-reset-user=temp-password-9"));
 		await Task.Delay(200);
@@ -25,6 +28,9 @@ public class AccountAdminCommandTests
 		var authenticated = await accountService.AuthenticateAsync("cmd-reset-user", "temp-password-9");
 		await Assert.That(authenticated).IsNotNull();
 		await Assert.That(authenticated!.MustChangePassword).IsTrue();
+
+		// The old session must be revoked as part of the password reset.
+		await Assert.That(await accountSessionStore.ValidateAsync(sessionToken)).IsNull();
 	}
 
 	[Test, NotInParallel(nameof(AccountAdminCommandTests))]

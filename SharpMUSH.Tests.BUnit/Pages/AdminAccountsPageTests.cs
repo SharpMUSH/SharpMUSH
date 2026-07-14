@@ -122,7 +122,7 @@ public class AdminAccountsPageTests : BunitContext
     public async Task RendersAccountRows_ForAuthorizedUser()
     {
         Auth.SetAuthorized("headwiz");
-        Auth.SetPolicies("players.moderate");
+        Auth.SetRoles("Wizard");
 
         var cut = Render<SharpMUSH.Client.Pages.Admin.AdminAccounts>();
 
@@ -140,7 +140,7 @@ public class AdminAccountsPageTests : BunitContext
     public async Task RenderesWithoutCrashing_WhenListReturns401()
     {
         Auth.SetAuthorized("headwiz");
-        Auth.SetPolicies("players.moderate");
+        Auth.SetRoles("Wizard");
 
         var handler = new AdminAccountsApiHandler
         {

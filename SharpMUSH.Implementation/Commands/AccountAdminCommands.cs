@@ -72,8 +72,12 @@ public partial class Commands
 			}
 
 			var result = await AccountService.SetPasswordAsync(account.Id!, arg1, mustChangePassword: true);
+			if (result.IsT0)
+			{
+				await AccountSessionStore!.RevokeAllForAccountAsync(account.Id!);
+			}
 			await NotifyService!.Notify(executor, result.Match(
-				_ => $"Password for account '{account.Username}' set. They must change it at next login.",
+				_ => $"Password for account '{account.Username}' set; active sessions revoked. They must change it at next login.",
 				err => err.Value));
 			return CallState.Empty;
 		}
