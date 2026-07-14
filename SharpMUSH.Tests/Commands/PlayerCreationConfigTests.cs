@@ -120,4 +120,46 @@ public class PlayerCreationConfigTests
 			options.CurrentValue.Returns(original);
 		}
 	}
+
+	[Test, NotInParallel("ConfigMutation")]
+	public async ValueTask MakeCharacter_WhenPlayerCreationDisabled_ShowsConfiguredRegisterFile()
+	{
+		var options = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var original = options.CurrentValue;
+		var registerFilePath = Path.Combine(Path.GetTempPath(), $"register-{Guid.NewGuid()}.txt");
+		const string registerFileContents = "Custom registration message from register_create_file.";
+		await File.WriteAllTextAsync(registerFilePath, registerFileContents);
+
+		var handle = 2004L;
+		// Get the connection into AccountMode the same way a successful `register` does
+		// internally (CreateAccountAsync + BindAccount) — see the comment in
+		// MakeCharacter_WhenPlayerCreationDisabled_Refuses for why `register` itself can't
+		// drive this through CommandParse in this harness.
+		await ConnectionService.Register(handle, "localhost", "localhost", "test",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		var accountResult = await AccountService.CreateAccountAsync("make-blocked-user2", null, "somepassword");
+		await ConnectionService.BindAccount(handle, accountResult.AsT0.Id!);
+
+		var restricted = original with
+		{
+			Net = original.Net with { PlayerCreation = false },
+			Message = original.Message with { RegisterCreateFile = registerFilePath }
+		};
+		options.CurrentValue.Returns(restricted);
+		try
+		{
+			await Parser.CommandParse(handle, ConnectionService, MModule.single("make NewCharacter2 somepassword"));
+
+			await NotifyService.Received(1).Notify(
+				Arg.Is<long>(h => h == handle),
+				Arg.Is<OneOf<MString, string>>(s =>
+					TestHelpers.MessagePlainTextEquals(s, registerFileContents)),
+				null, INotifyService.NotificationType.Announce);
+		}
+		finally
+		{
+			options.CurrentValue.Returns(original);
+			File.Delete(registerFilePath);
+		}
+	}
 }

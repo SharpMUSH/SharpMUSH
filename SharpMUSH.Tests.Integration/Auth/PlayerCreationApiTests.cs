@@ -66,7 +66,7 @@ public class PlayerCreationApiTests(ServerWebAppFactory factory)
 		try
 		{
 			var http = CreateClient();
-			var response = await http.PostAsJsonAsync("api/auth/account-register",
+			using var response = await http.PostAsJsonAsync("api/auth/account-register",
 				new AccountRegisterRequest(UniqueName("blocked"), null, "password-123"));
 			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 		}
@@ -87,12 +87,12 @@ public class PlayerCreationApiTests(ServerWebAppFactory factory)
 		options.CurrentValue.Returns(restricted);
 		try
 		{
-			var request = new HttpRequestMessage(HttpMethod.Post, "api/account/characters")
+			using var request = new HttpRequestMessage(HttpMethod.Post, "api/account/characters")
 			{
 				Content = JsonContent.Create(new CreateCharacterRequest(UniqueName("blockedchar"), Password)),
 			};
 			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
-			var response = await http.SendAsync(request);
+			using var response = await http.SendAsync(request);
 			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 		}
 		finally

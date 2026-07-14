@@ -25,10 +25,15 @@ file sealed class SetupApiHandler(bool needsSetup, HttpStatusCode completeStatus
 
         if (request.Method == HttpMethod.Post && path == "api/setup/complete")
         {
-            var response = new HttpResponseMessage(completeStatus);
-            if (completeBody is not null)
-                response.Content = new StringContent(completeBody);
-            return Task.FromResult(response);
+            // The HttpResponseMessage constructed here is returned to the caller (the
+            // HttpClient pipeline / AccountAuthService), which owns and disposes it — it must
+            // not be disposed here. Building it in one expression (rather than a local `var
+            // response` mutated afterwards) keeps CodeQL's disposal analysis from flagging a
+            // local it was never meant to dispose.
+            return Task.FromResult(new HttpResponseMessage(completeStatus)
+            {
+                Content = completeBody is not null ? new StringContent(completeBody) : null
+            });
         }
 
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
@@ -41,7 +46,15 @@ file sealed class SetupApiHandler(bool needsSetup, HttpStatusCode completeStatus
 /// <summary>Helper to register a real AccountAuthService backed by <see cref="SetupApiHandler"/>.</summary>
 file static class SetupTestServices
 {
-    public static void AddSetupTestServices(
+    /// <summary>
+    /// Wires up the substitute <see cref="IHttpClientFactory"/> and returns the <see cref="HttpClient"/>
+    /// it hands out, so the caller can take ownership of disposing it (registering the instance
+    /// itself as a DI singleton does not get it disposed: the container only auto-disposes
+    /// services it resolves through a factory call site, and nothing here resolves a plain
+    /// <see cref="HttpClient"/> from <c>ctx.Services</c> — everything goes through the factory
+    /// substitute instead).
+    /// </summary>
+    public static HttpClient AddSetupTestServices(
         this BunitContext ctx, bool needsSetup, HttpStatusCode completeStatus = HttpStatusCode.OK, string? completeBody = null)
     {
         var apiClient = new HttpClient(new SetupApiHandler(needsSetup, completeStatus, completeBody))
@@ -60,6 +73,7 @@ file static class SetupTestServices
                 NullLogger<AccountAuthService>.Instance));
 
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        return apiClient;
     }
 }
 
@@ -67,12 +81,14 @@ file static class SetupTestServices
 /// bUnit tests for the first-run setup wizard: password-confirmation validation and
 /// 409-conflict error mapping ("someone else completed setup" / username taken).
 /// </summary>
-public class SetupPageTests : BunitContext
+public class SetupPageTests : BunitContext, IAsyncDisposable
 {
+    private readonly List<HttpClient> ownedHttpClients = [];
+
     [TUnit.Core.Test]
     public async Task Setup_ValidatesPasswordConfirmation()
     {
-        this.AddSetupTestServices(needsSetup: true);
+        ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true));
 
         var cut = Render<SharpMUSH.Client.Pages.Setup>();
         cut.Find("#setup-username").Input("headwiz");
@@ -86,10 +102,10 @@ public class SetupPageTests : BunitContext
     [TUnit.Core.Test]
     public async Task Setup_Conflict_ShowsClaimedMessage()
     {
-        this.AddSetupTestServices(
+        ownedHttpClients.Add(this.AddSetupTestServices(
             needsSetup: true,
             completeStatus: HttpStatusCode.Conflict,
-            completeBody: "Setup has already been completed.");
+            completeBody: "Setup has already been completed."));
 
         var cut = Render<SharpMUSH.Client.Pages.Setup>();
         cut.Find("#setup-username").Input("headwiz");
@@ -109,10 +125,10 @@ public class SetupPageTests : BunitContext
     [TUnit.Core.Test]
     public async Task Setup_Conflict_UsernameTaken_ShowsFriendlyMessage()
     {
-        this.AddSetupTestServices(
+        ownedHttpClients.Add(this.AddSetupTestServices(
             needsSetup: true,
             completeStatus: HttpStatusCode.Conflict,
-            completeBody: "Username is already taken.");
+            completeBody: "Username is already taken."));
 
         var cut = Render<SharpMUSH.Client.Pages.Setup>();
         cut.Find("#setup-username").Input("headwiz");
@@ -127,5 +143,21 @@ public class SetupPageTests : BunitContext
         });
 
         await Assert.That(cut.Find(".setup-error").TextContent).Contains("already taken");
+    }
+
+    /// <summary>
+    /// Disposes the HttpClient(s) created for the substitute IHttpClientFactory. TUnit's
+    /// disposer prefers <see cref="IAsyncDisposable"/> over <see cref="IDisposable"/> when a
+    /// type implements both (as <see cref="BunitContext"/> does), so overriding only
+    /// <c>Dispose</c> would never run. <see cref="BunitContext"/>'s own Dispose members aren't
+    /// virtual, so this re-declares <see cref="IAsyncDisposable"/> to take over the interface's
+    /// dispatch slot for this type; <c>base.DisposeAsync()</c> still runs to dispose bUnit's own
+    /// service provider.
+    /// </summary>
+    public new async ValueTask DisposeAsync()
+    {
+        foreach (var client in ownedHttpClients)
+            client.Dispose();
+        await base.DisposeAsync();
     }
 }

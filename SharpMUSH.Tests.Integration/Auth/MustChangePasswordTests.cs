@@ -56,12 +56,12 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 	private static async Task<CreatedCharacterResponse> CreateCharacterAsync(
 		HttpClient http, string sessionToken, string name, string password)
 	{
-		var request = new HttpRequestMessage(HttpMethod.Post, "api/account/characters")
+		using var request = new HttpRequestMessage(HttpMethod.Post, "api/account/characters")
 		{
 			Content = JsonContent.Create(new CreateCharacterRequest(name, password)),
 		};
 		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
-		var response = await http.SendAsync(request);
+		using var response = await http.SendAsync(request);
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		return (await response.Content.ReadFromJsonAsync<CreatedCharacterResponse>())!;
 	}
@@ -74,24 +74,25 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 		await accountService.ForcePasswordChangeAsync(account.AccountId);
 
 		// Blocked endpoint
-		var listRequest = new HttpRequestMessage(HttpMethod.Get, "api/account/characters");
+		using var listRequest = new HttpRequestMessage(HttpMethod.Get, "api/account/characters");
 		listRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
-		var listResponse = await http.SendAsync(listRequest);
+		using var listResponse = await http.SendAsync(listRequest);
 		await Assert.That(listResponse.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 
 		// Allowed endpoint
-		var changeRequest = new HttpRequestMessage(HttpMethod.Put, "api/account/password")
+		using var changeRequest = new HttpRequestMessage(HttpMethod.Put, "api/account/password")
 		{
 			Content = JsonContent.Create(new ChangePasswordRequest(Password, "brand-new-pass-1"))
 		};
 		changeRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
-		var changeResponse = await http.SendAsync(changeRequest);
+		using var changeResponse = await http.SendAsync(changeRequest);
 		await Assert.That(changeResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
 
 		// Unblocked afterwards
-		var listAgain = new HttpRequestMessage(HttpMethod.Get, "api/account/characters");
+		using var listAgain = new HttpRequestMessage(HttpMethod.Get, "api/account/characters");
 		listAgain.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
-		await Assert.That((await http.SendAsync(listAgain)).StatusCode).IsEqualTo(HttpStatusCode.OK);
+		using var listAgainResponse = await http.SendAsync(listAgain);
+		await Assert.That(listAgainResponse.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
 
 	[Test]
@@ -103,7 +104,7 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 		var accountService = factory.Services.GetRequiredService<IAccountService>();
 		await accountService.ForcePasswordChangeAsync(account.AccountId);
 
-		var response = await http.PostAsJsonAsync("api/auth/mush-token",
+		using var response = await http.PostAsJsonAsync("api/auth/mush-token",
 			new MushTokenWithAccountRequest(account.AccountSessionToken, character.DbrefNumber, character.CreationTime));
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
@@ -117,7 +118,7 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 		var accountService = factory.Services.GetRequiredService<IAccountService>();
 		await accountService.ForcePasswordChangeAsync(account.AccountId);
 
-		var response = await http.PostAsJsonAsync("api/auth/jwt-switch-character",
+		using var response = await http.PostAsJsonAsync("api/auth/jwt-switch-character",
 			new { AccountSessionToken = account.AccountSessionToken, CharacterKey = character.DbrefNumber, CharacterCreationTime = character.CreationTime });
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
@@ -137,12 +138,12 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 		var database = factory.Services.GetRequiredService<ISharpDatabase>();
 		await database.UpdateAccountDisabledAsync(account.AccountId, true);
 
-		var changeRequest = new HttpRequestMessage(HttpMethod.Put, "api/account/password")
+		using var changeRequest = new HttpRequestMessage(HttpMethod.Put, "api/account/password")
 		{
 			Content = JsonContent.Create(new ChangePasswordRequest(Password, "brand-new-pass-2"))
 		};
 		changeRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
-		var changeResponse = await http.SendAsync(changeRequest);
+		using var changeResponse = await http.SendAsync(changeRequest);
 		await Assert.That(changeResponse.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 	}
 
@@ -153,9 +154,9 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 		var accountService = factory.Services.GetRequiredService<IAccountService>();
 		await accountService.ForcePasswordChangeAsync(account.AccountId);
 
-		var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "api/account/logout");
+		using var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "api/account/logout");
 		logoutRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
-		var logoutResponse = await http.SendAsync(logoutRequest);
+		using var logoutResponse = await http.SendAsync(logoutRequest);
 		await Assert.That(logoutResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
 	}
 }

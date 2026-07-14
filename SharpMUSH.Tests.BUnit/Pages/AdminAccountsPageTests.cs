@@ -28,10 +28,14 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
         {
             if (ListStatusCode != HttpStatusCode.OK)
             {
-                var response = new HttpResponseMessage(ListStatusCode);
-                if (ListErrorContent != null)
-                    response.Content = new StringContent(ListErrorContent);
-                return Task.FromResult(response);
+                // Returned to the caller (the HttpClient pipeline / AdminAccountsService), which
+                // owns and disposes it — must not be disposed here. Built in one expression
+                // (rather than a local `var response` mutated afterwards) so CodeQL's disposal
+                // analysis doesn't flag a local it was never meant to dispose.
+                return Task.FromResult(new HttpResponseMessage(ListStatusCode)
+                {
+                    Content = ListErrorContent != null ? new StringContent(ListErrorContent) : null
+                });
             }
 
             var rows = new object[]
@@ -79,7 +83,17 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 /// <summary>Helper to register a real AdminAccountsService backed by <see cref="AdminAccountsApiHandler"/>.</summary>
 file static class AdminAccountsTestServices
 {
-    public static void AddAdminAccountsTestServices(this BunitContext ctx, AdminAccountsApiHandler? handler = null)
+    /// <summary>
+    /// Wires up the substitute <see cref="IHttpClientFactory"/> and returns the <see cref="HttpClient"/>
+    /// it hands out, so the caller can take ownership of disposing it (registering the instance
+    /// itself as a DI singleton does not get it disposed: the container only auto-disposes
+    /// services it resolves through a factory call site, and nothing here resolves a plain
+    /// <see cref="HttpClient"/> from <c>ctx.Services</c> — everything goes through the factory
+    /// substitute instead). Some tests call this twice (default handler in the constructor, then
+    /// a per-test handler) so each call must return its own client rather than the container
+    /// silently owning only the last one.
+    /// </summary>
+    public static HttpClient AddAdminAccountsTestServices(this BunitContext ctx, AdminAccountsApiHandler? handler = null)
     {
         handler ??= new AdminAccountsApiHandler();
         var apiClient = new HttpClient(handler)
@@ -102,20 +116,22 @@ file static class AdminAccountsTestServices
                 sp.GetRequiredService<AccountAuthService>()));
 
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        return apiClient;
     }
 }
 
 /// <summary>
 /// bUnit tests for the /admin/accounts portal page: row rendering for authorized wizard-role users.
 /// </summary>
-public class AdminAccountsPageTests : BunitContext
+public class AdminAccountsPageTests : BunitContext, IAsyncDisposable
 {
+    private readonly List<HttpClient> ownedHttpClients = [];
     private BunitAuthorizationContext Auth { get; }
 
     public AdminAccountsPageTests()
     {
         Auth = this.AddAuthorization();
-        this.AddAdminAccountsTestServices();
+        ownedHttpClients.Add(this.AddAdminAccountsTestServices());
     }
 
     [TUnit.Core.Test]
@@ -147,7 +163,7 @@ public class AdminAccountsPageTests : BunitContext
             ListStatusCode = HttpStatusCode.Unauthorized,
             ListErrorContent = "Session expired"
         };
-        this.AddAdminAccountsTestServices(handler);
+        ownedHttpClients.Add(this.AddAdminAccountsTestServices(handler));
 
         // This should not throw; the page should render with error handling
         var cut = Render<SharpMUSH.Client.Pages.Admin.AdminAccounts>();
@@ -158,5 +174,21 @@ public class AdminAccountsPageTests : BunitContext
         // Verify no accounts are shown (empty rows, since API returned 401)
         await Assert.That(cut.Markup).DoesNotContain("headwiz-target");
         await Assert.That(cut.Markup).DoesNotContain("banned-account");
+    }
+
+    /// <summary>
+    /// Disposes the HttpClient(s) created for the substitute IHttpClientFactory. TUnit's
+    /// disposer prefers <see cref="IAsyncDisposable"/> over <see cref="IDisposable"/> when a
+    /// type implements both (as <see cref="BunitContext"/> does), so overriding only
+    /// <c>Dispose</c> would never run. <see cref="BunitContext"/>'s own Dispose members aren't
+    /// virtual, so this re-declares <see cref="IAsyncDisposable"/> to take over the interface's
+    /// dispatch slot for this type; <c>base.DisposeAsync()</c> still runs to dispose bUnit's own
+    /// service provider.
+    /// </summary>
+    public new async ValueTask DisposeAsync()
+    {
+        foreach (var client in ownedHttpClients)
+            client.Dispose();
+        await base.DisposeAsync();
     }
 }

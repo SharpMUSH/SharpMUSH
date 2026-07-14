@@ -53,12 +53,12 @@ public class LoginMatrixTests(ServerWebAppFactory factory)
 	private static async Task<CreatedCharacterResponse> CreateCharacterAsync(
 		HttpClient http, string sessionToken, string name, string password)
 	{
-		var request = new HttpRequestMessage(HttpMethod.Post, "api/account/characters")
+		using var request = new HttpRequestMessage(HttpMethod.Post, "api/account/characters")
 		{
 			Content = JsonContent.Create(new CreateCharacterRequest(name, password)),
 		};
 		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
-		var response = await http.SendAsync(request);
+		using var response = await http.SendAsync(request);
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		return (await response.Content.ReadFromJsonAsync<CreatedCharacterResponse>())!;
 	}
@@ -70,7 +70,7 @@ public class LoginMatrixTests(ServerWebAppFactory factory)
 		var charName = UniqueName("MatrixChar");
 		await CreateCharacterAsync(http, account.AccountSessionToken, charName, CharPassword);
 
-		var response = await http.PostAsJsonAsync("api/auth/account-login",
+		using var response = await http.PostAsJsonAsync("api/auth/account-login",
 			new AccountLoginRequest(account.Username, CharPassword));
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
@@ -83,7 +83,7 @@ public class LoginMatrixTests(ServerWebAppFactory factory)
 		var charName = UniqueName("MatrixChar");
 		await CreateCharacterAsync(http, account.AccountSessionToken, charName, CharPassword);
 
-		var response = await http.PostAsJsonAsync("api/auth/account-login",
+		using var response = await http.PostAsJsonAsync("api/auth/account-login",
 			new AccountLoginRequest(charName, CharPassword));
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
@@ -98,7 +98,7 @@ public class LoginMatrixTests(ServerWebAppFactory factory)
 		var charName = UniqueName("MatrixChar");
 		await CreateCharacterAsync(http, account.AccountSessionToken, charName, CharPassword);
 
-		var response = await http.PostAsJsonAsync("api/auth/account-login",
+		using var response = await http.PostAsJsonAsync("api/auth/account-login",
 			new AccountLoginRequest(charName, AccountPassword)); // account pw is NOT valid via char-name identifier
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
@@ -109,11 +109,11 @@ public class LoginMatrixTests(ServerWebAppFactory factory)
 	{
 		// The bootstrap admin account has an empty hash; empty-string password must not open it.
 		var http = CreateClient();
-		var response = await http.PostAsJsonAsync("api/auth/account-login",
+		using var response = await http.PostAsJsonAsync("api/auth/account-login",
 			new AccountLoginRequest("admin", ""));
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest); // empty pw rejected by validation
 
-		var response2 = await http.PostAsJsonAsync("api/auth/account-login",
+		using var response2 = await http.PostAsJsonAsync("api/auth/account-login",
 			new AccountLoginRequest("admin", "anything"));
 		await Assert.That(response2.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 	}

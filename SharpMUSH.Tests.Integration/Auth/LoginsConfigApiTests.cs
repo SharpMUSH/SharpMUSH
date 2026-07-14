@@ -67,12 +67,12 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 	private static async Task<CreatedCharacterResponse> CreateCharacterAsync(
 		HttpClient http, string sessionToken, string name, string password)
 	{
-		var request = new HttpRequestMessage(HttpMethod.Post, "api/account/characters")
+		using var request = new HttpRequestMessage(HttpMethod.Post, "api/account/characters")
 		{
 			Content = JsonContent.Create(new CreateCharacterRequest(name, password)),
 		};
 		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
-		var response = await http.SendAsync(request);
+		using var response = await http.SendAsync(request);
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		return (await response.Content.ReadFromJsonAsync<CreatedCharacterResponse>())!;
 	}
@@ -94,7 +94,7 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 		var (options, original) = DisableLogins(factory);
 		try
 		{
-			var response = await http.PostAsJsonAsync("api/auth/account-login",
+			using var response = await http.PostAsJsonAsync("api/auth/account-login",
 				new AccountLoginRequest(account.Username, Password));
 			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 		}
@@ -113,7 +113,7 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 		var (options, original) = DisableLogins(factory);
 		try
 		{
-			var response = await http.PostAsJsonAsync("api/auth/jwt-login",
+			using var response = await http.PostAsJsonAsync("api/auth/jwt-login",
 				new JwtLoginRequest(account.Username, Password, character.DbrefNumber, character.CreationTime));
 			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 		}
@@ -132,7 +132,7 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 		var (options, original) = DisableLogins(factory);
 		try
 		{
-			var response = await http.PostAsJsonAsync("api/auth/mush-token",
+			using var response = await http.PostAsJsonAsync("api/auth/mush-token",
 				new MushTokenRequest(null, null, account.AccountSessionToken, character.DbrefNumber, character.CreationTime));
 			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 		}
@@ -152,7 +152,7 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 		var (options, original) = DisableLogins(factory);
 		try
 		{
-			var response = await http.PostAsJsonAsync("api/auth/mush-token",
+			using var response = await http.PostAsJsonAsync("api/auth/mush-token",
 				new MushTokenRequest(charName, Password, null, null, null));
 			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 		}
@@ -177,7 +177,7 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 		var (options, original) = DisableLogins(factory);
 		try
 		{
-			var response = await http.PostAsJsonAsync("api/auth/account-login",
+			using var response = await http.PostAsJsonAsync("api/auth/account-login",
 				new AccountLoginRequest(account.Username, Password));
 			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		}
