@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
@@ -27,6 +28,7 @@ public class AuthController(
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
 	IRoleDerivationService roleDerivation,
+	IHostEnvironment environment,
 	ILogger<AuthController> logger) : ControllerBase
 {
 	/// <summary>
@@ -222,6 +224,11 @@ public class AuthController(
 	[Authorize]
 	public async Task<IActionResult> GetDebugOtt()
 	{
+		// Development-only. In production this endpoint must not exist even for
+		// authenticated users — a valid player JWT must never mint a God OTT.
+		if (!environment.IsDevelopment())
+			return NotFound();
+
 		var obj = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		if (!obj.IsT0)
 		{
