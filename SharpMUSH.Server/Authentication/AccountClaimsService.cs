@@ -50,7 +50,7 @@ public class AccountClaimsService(
 		{
 			logger.LogWarning(ex,
 				"Could not derive account-level role for account {AccountId}; using the active character's role.",
-				accountId);
+				Helpers.LogSanitizer.Sanitize(accountId));
 			return activeRole;
 		}
 	}
