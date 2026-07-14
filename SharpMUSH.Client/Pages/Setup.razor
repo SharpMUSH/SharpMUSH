@@ -1,4 +1,6 @@
 @page "/setup"
+@layout OnboardingLayout
+@using SharpMUSH.Client.Layout
 @using SharpMUSH.Client.Services
 @inject AccountAuthService AccountAuth
 @inject NavigationManager Nav
@@ -6,42 +8,62 @@
 <PageTitle>First-Run Setup — SharpMUSH</PageTitle>
 
 <div class="setup-page">
-    <div class="setup-card">
-        <div class="setup-kicker">First-Run Setup</div>
-        <h1 class="setup-title">Welcome to SharpMUSH</h1>
-        <p class="setup-lead">
-            This game hasn't been claimed yet. Choose a username and password for the
-            pre-generated administrator account (linked to player #1, God). The first
-            person to complete this form becomes the administrator.
-        </p>
-
-        @if (_error is not null)
-        {
-            <div class="setup-error" role="alert">@_error</div>
-        }
-
-        <div class="setup-field">
-            <label class="setup-label" for="setup-username">Username</label>
-            <input id="setup-username" class="setup-input" type="text"
-                   @bind="_username" @bind:event="oninput" disabled="@_busy" autocomplete="username" />
-        </div>
-
-        <div class="setup-field">
-            <label class="setup-label" for="setup-password">Password</label>
-            <input id="setup-password" class="setup-input" type="password"
-                   @bind="_password" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
-        </div>
-
-        <div class="setup-field">
-            <label class="setup-label" for="setup-confirm">Confirm Password</label>
-            <input id="setup-confirm" class="setup-input" type="password"
-                   @bind="_confirm" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
-        </div>
-
-        <button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
-            @(_busy ? "Setting up…" : "Create Admin Account")
-        </button>
+    <div class="setup-brand">
+        <img src="assets/Logo.svg" alt="SharpMUSH" class="setup-logo" />
+        <h1 class="setup-brand-title">Welcome to SharpMUSH</h1>
     </div>
+
+    @if (_success)
+    {
+        <div class="setup-card">
+            <div class="setup-kicker">First-Run Setup</div>
+            <h2 class="setup-title">Setup complete. You are the administrator.</h2>
+            <p class="setup-lead">
+                The administrator account <strong>@_completedUsername</strong> is now linked to the
+                pre-generated player #1, God. Sign in to start managing your game.
+            </p>
+            <a class="setup-submit setup-signin" href="/login">Sign in</a>
+        </div>
+    }
+    else
+    {
+        <div class="setup-card">
+            <div class="setup-kicker">First-Run Setup</div>
+            <h2 class="setup-title">Claim the administrator account</h2>
+            <p class="setup-lead">
+                This game hasn't been claimed yet. Choose a username and password for the
+                pre-generated administrator account (linked to player #1, God). The first
+                person to complete this form becomes the administrator.
+            </p>
+
+            @if (_error is not null)
+            {
+                <div class="setup-error" role="alert">@_error</div>
+            }
+
+            <div class="setup-field">
+                <label class="setup-label" for="setup-username">Username</label>
+                <input id="setup-username" class="setup-input" type="text"
+                       @bind="_username" @bind:event="oninput" disabled="@_busy" autocomplete="username" />
+            </div>
+
+            <div class="setup-field">
+                <label class="setup-label" for="setup-password">Password</label>
+                <input id="setup-password" class="setup-input" type="password"
+                       @bind="_password" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
+            </div>
+
+            <div class="setup-field">
+                <label class="setup-label" for="setup-confirm">Confirm Password</label>
+                <input id="setup-confirm" class="setup-input" type="password"
+                       @bind="_confirm" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
+            </div>
+
+            <button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
+                @(_busy ? "Setting up…" : "Create Admin Account")
+            </button>
+        </div>
+    }
 </div>
 
 @code {
@@ -50,6 +72,8 @@
     private string _confirm = string.Empty;
     private string? _error;
     private bool _busy;
+    private bool _success;
+    private string _completedUsername = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -85,6 +109,8 @@
             return;
         }
 
-        Nav.NavigateTo("/login", replace: true);
+        _completedUsername = _username;
+        _success = true;
+        StateHasChanged();
     }
 }

@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
@@ -84,6 +86,42 @@ file static class SetupTestServices
 public class SetupPageTests : BunitContext, IAsyncDisposable
 {
     private readonly List<HttpClient> ownedHttpClients = [];
+
+    [TUnit.Core.Test]
+    public async Task Setup_UsesOnboardingLayout()
+    {
+        var layoutAttribute = typeof(SharpMUSH.Client.Pages.Setup)
+            .GetCustomAttributes(typeof(LayoutAttribute), inherit: true)
+            .Cast<LayoutAttribute>()
+            .SingleOrDefault();
+
+        await Assert.That(layoutAttribute).IsNotNull();
+        await Assert.That(layoutAttribute!.LayoutType).IsEqualTo(typeof(OnboardingLayout));
+    }
+
+    [TUnit.Core.Test]
+    public async Task Setup_Success_ShowsAdministratorStateInsteadOfRedirect()
+    {
+        ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true));
+
+        var cut = Render<SharpMUSH.Client.Pages.Setup>();
+        cut.Find("#setup-username").Input("headwiz");
+        cut.Find("#setup-password").Input("password-one");
+        cut.Find("#setup-confirm").Input("password-one");
+        cut.Find("button.setup-submit").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            if (!cut.Markup.Contains("You are the administrator"))
+                throw new InvalidOperationException("success view not rendered yet");
+        });
+
+        await Assert.That(cut.Markup).Contains("You are the administrator");
+        await Assert.That(cut.Markup).Contains("headwiz");
+
+        var signInLink = cut.Find("a[href='/login']");
+        await Assert.That(signInLink).IsNotNull();
+    }
 
     [TUnit.Core.Test]
     public async Task Setup_ValidatesPasswordConfirmation()

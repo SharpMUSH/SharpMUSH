@@ -1,0 +1,21 @@
+.onboarding-shell {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100svh;
+    background: linear-gradient(135deg, #101113 0%, #16181b 100%);
+    overflow: hidden;
+}
+
+.onboarding-glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 40%, rgba(var(--glow), 0.08) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.onboarding-body {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    min-height: 100svh;
+}
