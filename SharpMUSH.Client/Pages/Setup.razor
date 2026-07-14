@@ -18,11 +18,25 @@
         <div class="setup-card">
             <div class="setup-kicker">First-Run Setup</div>
             <h2 class="setup-title">Setup complete. You are the administrator.</h2>
-            <p class="setup-lead">
-                The administrator account <strong>@_completedUsername</strong> is now linked to the
-                pre-generated player #1, God. You are signed in as <strong>@_completedUsername</strong>.
-            </p>
-            <button class="setup-submit setup-signin" type="button" @onclick="EnterPortal">Enter the portal</button>
+            @if (_autoLoggedIn)
+            {
+                <p class="setup-lead">
+                    The administrator account <strong>@_completedUsername</strong> is now linked to the
+                    pre-generated player #1, God. You are signed in as <strong>@_completedUsername</strong>.
+                </p>
+                <button class="setup-submit setup-signin" type="button" @onclick="EnterPortal">Enter the portal</button>
+            }
+            else
+            {
+                <!-- Claim succeeded but post-claim auto-login enrichment degraded server-side
+                     (see SetupController.Complete's try/catch) — no session was minted, so send
+                     the claimer to a normal sign-in instead of pretending they're logged in. -->
+                <p class="setup-lead">
+                    The administrator account <strong>@_completedUsername</strong> is now linked to the
+                    pre-generated player #1, God. Sign in to start managing your game.
+                </p>
+                <a class="setup-submit setup-signin" href="/login">Sign in</a>
+            }
         </div>
     }
     else
@@ -73,6 +87,7 @@
     private string? _error;
     private bool _busy;
     private bool _success;
+    private bool _autoLoggedIn;
     private string _completedUsername = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -92,7 +107,7 @@
         _busy = true;
         StateHasChanged();
 
-        var (success, error) = await AccountAuth.CompleteSetupAsync(_username, _password);
+        var (success, error, autoLoggedIn) = await AccountAuth.CompleteSetupAsync(_username, _password);
         _busy = false;
 
         if (!success)
@@ -111,6 +126,7 @@
 
         _completedUsername = _username;
         _success = true;
+        _autoLoggedIn = autoLoggedIn;
         StateHasChanged();
     }
 

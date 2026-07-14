@@ -375,6 +375,12 @@
 
         // First-run wizard: while the game is unclaimed, every route funnels to /setup.
         // Cache only the negative — once claimed, stop asking the server on each navigation.
+        //
+        // !_isDebugAuth is intentional, not a bug: in dev mode a debug-auth'd user who explicitly
+        // logs out on an unclaimed game drops out of debug auth and lands here, which now routes
+        // them to /setup. That's the correct destination — on an unclaimed game there's no
+        // "anonymous portal" to fall back to, since onboarding is the only meaningful place to
+        // send anyone. Do not special-case _isDebugAuth further to try to keep them off /setup.
         if (_needsSetup != false && !_isDebugAuth)
         {
             _needsSetup = await AccountAuth.NeedsSetupAsync();

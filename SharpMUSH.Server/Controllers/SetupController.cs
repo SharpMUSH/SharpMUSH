@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Services;
@@ -19,7 +21,8 @@ public class SetupController(
 	SetupService setupService,
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
-	AccountClaimsService accountClaims) : ControllerBase
+	AccountClaimsService accountClaims,
+	ILogger<SetupController> logger) : ControllerBase
 {
 	public record SetupStatusResponse(bool NeedsSetup);
 	public record SetupCompleteRequest(string Username, string Password);
@@ -43,15 +46,38 @@ public class SetupController(
 			return Conflict(result.AsT1.Value);
 
 		var account = result.AsT0;
-		var characters = await accountService.GetCharactersAsync(account.Id!);
-		var charSummaries = await CharacterSummaryMapper.BuildSummariesAsync(characters);
 
-		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
-		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
+		// The claim itself already succeeded (CompleteAsync flipped SetupCompleted) — everything
+		// below is best-effort auto-login enrichment. If any of it throws, the claimer must not
+		// be handed a bare 500: that would strand them mid-wizard with no way to re-run it (setup
+		// is already marked complete) and no way to tell whether their account was created. Degrade
+		// instead: report success with an empty session so the client falls back to a normal
+		// sign-in prompt.
+		try
+		{
+			var characters = await accountService.GetCharactersAsync(account.Id!);
+			var charSummaries = await CharacterSummaryMapper.BuildSummariesAsync(characters);
 
-		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
+			var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
+			var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
 
-		return Ok(new AuthController.AccountLoginResponse(account.Id!, account.Username, charSummaries,
-			sessionToken, MustChangePassword: false, role.ToString(), permissions.ToList()));
+			// Net.Logins intentionally is NOT checked here (unlike AccountLogin): this is the
+			// first-run bootstrap flow, and the claimer IS the staff account being created.
+			// Net.Logins gates AccountLogin to protect an already-running game; it has no
+			// meaningful role to play while the game is still unclaimed.
+			var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
+
+			return Ok(new AuthController.AccountLoginResponse(account.Id!, account.Username, charSummaries,
+				sessionToken, MustChangePassword: false, role.ToString(), permissions.ToList()));
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex,
+				"Setup claim succeeded for account {AccountId} but post-claim auto-login enrichment failed; " +
+				"returning a degraded response so the claimer can sign in manually.", account.Id);
+
+			return Ok(new AuthController.AccountLoginResponse(account.Id!, account.Username, [],
+				string.Empty, MustChangePassword: false, PortalRole.Guest.ToString(), []));
+		}
 	}
 }

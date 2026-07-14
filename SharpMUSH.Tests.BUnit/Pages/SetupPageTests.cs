@@ -22,7 +22,9 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// after first-run setup) — the fake echoes back the posted username so the success view's
 /// "signed in as" copy can be asserted against what the test typed into the form.
 /// </summary>
-file sealed class SetupApiHandler(bool needsSetup, HttpStatusCode completeStatus, string? completeBody) : HttpMessageHandler
+file sealed class SetupApiHandler(
+    bool needsSetup, HttpStatusCode completeStatus, string? completeBody, string completeSessionToken = "test-session-token")
+    : HttpMessageHandler
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -44,10 +46,10 @@ file sealed class SetupApiHandler(bool needsSetup, HttpStatusCode completeStatus
                     accountId = "test-account-id",
                     username,
                     characters = Array.Empty<object>(),
-                    accountSessionToken = "test-session-token",
+                    accountSessionToken = completeSessionToken,
                     mustChangePassword = false,
-                    role = "God",
-                    permissions = new[] { "*" },
+                    role = completeSessionToken.Length == 0 ? "Guest" : "God",
+                    permissions = completeSessionToken.Length == 0 ? Array.Empty<string>() : new[] { "*" },
                 });
             }
 
@@ -81,9 +83,10 @@ file static class SetupTestServices
     /// substitute instead).
     /// </summary>
     public static HttpClient AddSetupTestServices(
-        this BunitContext ctx, bool needsSetup, HttpStatusCode completeStatus = HttpStatusCode.OK, string? completeBody = null)
+        this BunitContext ctx, bool needsSetup, HttpStatusCode completeStatus = HttpStatusCode.OK,
+        string? completeBody = null, string completeSessionToken = "test-session-token")
     {
-        var apiClient = new HttpClient(new SetupApiHandler(needsSetup, completeStatus, completeBody))
+        var apiClient = new HttpClient(new SetupApiHandler(needsSetup, completeStatus, completeBody, completeSessionToken))
         {
             BaseAddress = new Uri("https://localhost:8081/")
         };
@@ -157,6 +160,39 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
         var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
         enterPortalButton.Click();
         await Assert.That(nav.Uri).IsEqualTo(nav.BaseUri);
+    }
+
+    [TUnit.Core.Test]
+    public async Task Setup_Success_EmptySessionToken_ShowsSignInVariantAndDoesNotPersistSession()
+    {
+        // Claim succeeded (200) but the server degraded post-claim enrichment (see
+        // SetupController.Complete's try/catch) and returned an empty AccountSessionToken.
+        // The client must show the success view, but with the pre-auto-login "Sign in" link
+        // variant instead of "Enter the portal" — and must not persist a session.
+        ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true, completeSessionToken: ""));
+
+        var cut = Render<SharpMUSH.Client.Pages.Setup>();
+        cut.Find("#setup-username").Input("headwiz");
+        cut.Find("#setup-password").Input("password-one");
+        cut.Find("#setup-confirm").Input("password-one");
+        cut.Find("button.setup-submit").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            if (!cut.Markup.Contains("You are the administrator"))
+                throw new InvalidOperationException("success view not rendered yet");
+        });
+
+        await Assert.That(cut.Markup).Contains("You are the administrator");
+        await Assert.That(cut.Markup).Contains("Sign in to start managing your game");
+        await Assert.That(cut.Markup).DoesNotContain("You are signed in as");
+
+        var signInLink = cut.Find("a.setup-signin");
+        await Assert.That(signInLink.GetAttribute("href")).IsEqualTo("/login");
+        await Assert.That(signInLink.TextContent).Contains("Sign in");
+
+        var accountAuth = Services.GetRequiredService<AccountAuthService>();
+        await Assert.That(accountAuth.IsLoggedIn).IsFalse();
     }
 
     [TUnit.Core.Test]

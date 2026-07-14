@@ -164,7 +164,7 @@ public class AccountAuthService(
 		}
 	}
 
-	public async Task<(bool Success, string? Error)> CompleteSetupAsync(string username, string password)
+	public async Task<(bool Success, string? Error, bool AutoLoggedIn)> CompleteSetupAsync(string username, string password)
 	{
 		try
 		{
@@ -172,21 +172,27 @@ public class AccountAuthService(
 			var response = await http.PostAsJsonAsync("api/setup/complete",
 				new SetupCompleteRequest(username, password));
 			if (!response.IsSuccessStatusCode)
-				return (false, await response.Content.ReadAsStringAsync());
+				return (false, await response.Content.ReadAsStringAsync(), false);
 
 			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
-			if (result is null) return (false, "Unexpected server response.");
+			if (result is null) return (false, "Unexpected server response.", false);
 
-			// api/setup/complete mints a session exactly like account-login, so the claimer
-			// is immediately authenticated as the new administrator — persist it the same way.
+			// The claim itself succeeded whenever we get here. api/setup/complete normally mints
+			// a session exactly like account-login (auto-login as the new administrator) — but if
+			// post-claim enrichment failed server-side, it degrades to an empty token instead of a
+			// 500 so the claim isn't lost. Don't persist an empty/missing session: that would leave
+			// IsLoggedIn true with a token that can't authenticate anything.
+			if (string.IsNullOrEmpty(result.AccountSessionToken))
+				return (true, null, false);
+
 			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
 			Characters = result.Characters;
-			return (true, null);
+			return (true, null, true);
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Setup completion failed");
-			return (false, ex.Message);
+			return (false, ex.Message, false);
 		}
 	}
 
