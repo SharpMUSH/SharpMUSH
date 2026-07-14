@@ -68,64 +68,14 @@
 
             <div class="phosphor-topbar-divider"></div>
 
-            @if (AccountAuth.IsLoggedIn || _isDebugAuth)
-            {
-                <MudMenu Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                    <ActivatorContent>
-                        <button class="phosphor-user-btn" @onclick="@context.ToggleAsync">
-                            <span class="phosphor-user-avatar">@UserInitial</span>
-                            <span class="phosphor-user-name">@(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")</span>
-                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Style="font-size:0.9375rem;color:var(--text-faint);" />
-                        </button>
-                    </ActivatorContent>
-                    <ChildContent>
-                        @if (_isDebugAuth)
-                        {
-                            <MudMenuItem Disabled="true">
-                                <MudText Typo="Typo.caption" Style="color:#888;">Dev Mode (DebugAdmin)</MudText>
-                            </MudMenuItem>
-                        }
-                        else
-                        {
-                            <MudMenuItem Disabled="true">
-                                <MudText Typo="Typo.caption" Style="color:#888;">
-                                    Account: @AccountAuth.Username
-                                </MudText>
-                            </MudMenuItem>
-                            @if (AccountAuth.Characters.Count > 0)
-                            {
-                                <MudDivider />
-                                <MudMenuItem Disabled="true">
-                                    <MudText Typo="Typo.caption" Style="color:#888;">Play as:</MudText>
-                                </MudMenuItem>
-                                @foreach (var c in AccountAuth.Characters)
-                                {
-                                    var character = c;
-                                    <MudMenuItem OnClick="() => SwitchCharacterAsync(character)">
-                                        @character.Name (#@character.DbrefNumber)
-                                    </MudMenuItem>
-                                }
-                            }
-                        }
-                        <MudDivider />
-                        <MudMenuItem Href="/account">
-                            <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small" Class="mr-2" />
-                            Account Settings
-                        </MudMenuItem>
-                        @if (!_isDebugAuth)
-                        {
-                            <MudMenuItem OnClick="AccountLogoutAsync">
-                                <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Class="mr-2" />
-                                Disconnect
-                            </MudMenuItem>
-                        }
-                    </ChildContent>
-                </MudMenu>
-            }
-            else
-            {
-                <LoginDisplay />
-            }
+            <AccountChrome IsLoggedIn="AccountAuth.IsLoggedIn"
+                           IsDebugAuth="_isDebugAuth"
+                           DisplayName="@(_terminalPlayerName ?? AccountAuth.Username ?? "DebugAdmin")"
+                           UserInitial="@UserInitial"
+                           AccountUsername="@AccountAuth.Username"
+                           Characters="AccountAuth.Characters"
+                           OnSwitchCharacter="SwitchCharacterAsync"
+                           OnLogout="AccountLogoutAsync" />
         </header>
 
         <main class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
@@ -295,11 +245,13 @@
         // _isDebugAuth is computed once in OnInitializedAsync and otherwise never flips back to
         // false on its own (the debug identity's IsAuthenticated never changes), so without this
         // the topbar keeps showing the "DebugAdmin" chip (ADMIN with a different icon) after an
-        // explicit logout. Navigate to /login so logout always lands on a clean unauthenticated
-        // screen instead of "/", which could re-trigger debug re-auth via EnsureAccountRoutingAsync.
+        // explicit logout. Navigate to "/" (the anonymous home, which has no [Authorize]) rather
+        // than /login: logging out should return a visitor to anonymous browsing, not force them
+        // onto a sign-in screen. EnsureAccountRoutingAsync won't re-trigger debug re-auth here
+        // because ExplicitlyLoggedOut is now latched (set by AccountAuth.LogoutAsync above).
         _isDebugAuth = false;
         StateHasChanged();
-        NavigationManager.NavigateTo("/login", forceLoad: false);
+        NavigationManager.NavigateTo("/", forceLoad: false);
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
