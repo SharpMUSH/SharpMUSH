@@ -35,6 +35,8 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
 	private record AccountLoginRequest(string UsernameOrEmail, string Password);
 	private record AdminAccountRow(string Id, string Username, string? Email, bool IsDisabled, bool MustChangePassword);
+	private record CreateCharacterRequest(string Name, string Password);
+	private record CreatedCharacterResponse(int DbrefNumber, long CreationTime);
 
 	private const string Password = "Integration-Test-Pw-1!";
 
@@ -81,6 +83,35 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		return (http, body!.AccountSessionToken);
 	}
 
+	/// <summary>Looks up an account's admin-route key (God session required) by username.</summary>
+	private static async Task<string> GetAdminKeyAsync(HttpClient godHttp, string godSessionToken, string username)
+	{
+		var request = new HttpRequestMessage(HttpMethod.Get, $"api/admin/accounts?search={username}");
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", godSessionToken);
+		var response = await godHttp.SendAsync(request);
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var rows = await response.Content.ReadFromJsonAsync<List<AdminAccountRow>>();
+		return rows!.Single(r => r.Username == username).Id;
+	}
+
+	private static HttpRequestMessage AsGod(HttpRequestMessage request, string godSessionToken)
+	{
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", godSessionToken);
+		return request;
+	}
+
+	private async Task<CreatedCharacterResponse> CreateCharacterAsync(HttpClient http, string sessionToken, string name)
+	{
+		var request = new HttpRequestMessage(HttpMethod.Post, "api/account/characters")
+		{
+			Content = JsonContent.Create(new CreateCharacterRequest(name, Password)),
+		};
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		var response = await http.SendAsync(request);
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		return (await response.Content.ReadFromJsonAsync<CreatedCharacterResponse>())!;
+	}
+
 	[Test, NotInParallel("AdminAccounts")]
 	public async Task List_RequiresWizardRole()
 	{
@@ -123,5 +154,105 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 			new AccountLoginRequest(account.Username, Password));
 		var body = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
 		await Assert.That(body!.Role).IsEqualTo("Guest"); // no characters yet → Guest
+	}
+
+	/// <summary>
+	/// Shares <c>GodAccount_CanListAndResetPassword</c>'s <c>NotInParallel("SetupFlow", Order = 0)</c>
+	/// group for the same reason documented on the class: it logs in as the God-linked bootstrap
+	/// admin, which mutates the shared #1-linked account's password/SetupCompleted state.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 0)]
+	public async Task Disable_Enable_RoundTrip_BlocksThenRestoresLogin()
+	{
+		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
+		var (_, target) = await RegisterAccountAsync();
+		var key = await GetAdminKeyAsync(godHttp, godSessionToken, target.Username);
+
+		var disableResponse = await godHttp.SendAsync(
+			AsGod(new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{key}/disable"), godSessionToken));
+		await Assert.That(disableResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+
+		var blockedLogin = await CreateClient().PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(target.Username, Password));
+		await Assert.That(blockedLogin.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+
+		var enableResponse = await godHttp.SendAsync(
+			AsGod(new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{key}/enable"), godSessionToken));
+		await Assert.That(enableResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+
+		var restoredLogin = await CreateClient().PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(target.Username, Password));
+		await Assert.That(restoredLogin.StatusCode).IsEqualTo(HttpStatusCode.OK);
+	}
+
+	[Test, NotInParallel("SetupFlow", Order = 0)]
+	public async Task Disable_RevokesTargetsExistingSession()
+	{
+		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
+		var (targetHttp, target) = await RegisterAccountAsync();
+
+		var targetLogin = await targetHttp.PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(target.Username, Password));
+		await Assert.That(targetLogin.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var targetSessionToken = (await targetLogin.Content.ReadFromJsonAsync<AccountLoginResponse>())!.AccountSessionToken;
+
+		var key = await GetAdminKeyAsync(godHttp, godSessionToken, target.Username);
+		var disableResponse = await godHttp.SendAsync(
+			AsGod(new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{key}/disable"), godSessionToken));
+		await Assert.That(disableResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+
+		var charsRequest = new HttpRequestMessage(HttpMethod.Get, "api/account/characters");
+		charsRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", targetSessionToken);
+		var charsResponse = await targetHttp.SendAsync(charsRequest);
+		await Assert.That(charsResponse.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+	}
+
+	[Test, NotInParallel("SetupFlow", Order = 0)]
+	public async Task ResetPassword_RevokesTargetsExistingSession()
+	{
+		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
+		var (targetHttp, target) = await RegisterAccountAsync();
+
+		var targetLogin = await targetHttp.PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(target.Username, Password));
+		await Assert.That(targetLogin.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var targetSessionToken = (await targetLogin.Content.ReadFromJsonAsync<AccountLoginResponse>())!.AccountSessionToken;
+
+		var key = await GetAdminKeyAsync(godHttp, godSessionToken, target.Username);
+		var resetRequest = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{key}/reset-password")
+		{
+			Content = JsonContent.Create(new { NewPassword = "admin-reset-pass-2" })
+		};
+		var resetResponse = await godHttp.SendAsync(AsGod(resetRequest, godSessionToken));
+		await Assert.That(resetResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+
+		// Revoked, not merely flagged: the old session token itself must now be rejected (401),
+		// not accepted-but-forbidden pending a password change (403).
+		var charsRequest = new HttpRequestMessage(HttpMethod.Get, "api/account/characters");
+		charsRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", targetSessionToken);
+		var charsResponse = await targetHttp.SendAsync(charsRequest);
+		await Assert.That(charsResponse.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+	}
+
+	[Test, NotInParallel("SetupFlow", Order = 0)]
+	public async Task UnlinkCharacter_RemovesItFromTargetsCharacterList()
+	{
+		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
+		var (targetHttp, target) = await RegisterAccountAsync();
+		var character = await CreateCharacterAsync(targetHttp, target.AccountSessionToken, UniqueName("Unlink"));
+
+		var key = await GetAdminKeyAsync(godHttp, godSessionToken, target.Username);
+		var unlinkResponse = await godHttp.SendAsync(AsGod(
+			new HttpRequestMessage(HttpMethod.Delete, $"api/admin/accounts/{key}/characters/{character.DbrefNumber}"),
+			godSessionToken));
+		await Assert.That(unlinkResponse.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+
+		// Re-authenticate (fresh session) rather than reusing the registration token, so the
+		// character list reflects the account's current state end-to-end through account-login.
+		var freshLogin = await targetHttp.PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(target.Username, Password));
+		await Assert.That(freshLogin.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var body = await freshLogin.Content.ReadFromJsonAsync<AccountLoginResponse>();
+		await Assert.That(body!.Characters.Any(c => c.DbrefNumber == character.DbrefNumber)).IsFalse();
 	}
 }

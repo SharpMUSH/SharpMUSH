@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
@@ -25,6 +26,11 @@ public class AccountClaimsService(
 	/// if the account has no characters at all.
 	/// Characters are resolved by stable key/dbref, so character renames never affect the result.
 	/// </summary>
+	// account.Id is a non-secret GUID identifier placed in the standard JWT 'sub' claim
+	// per RFC 7519 §4.1.2. Username in 'unique_name' is a display name, not a password or
+	// secret. The token is signed (HMAC-SHA256) and transmitted only over TLS.
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
+		Justification = "JWT sub/unique_name claims are standard bearer-token identifiers, not secret data.")]
 	public async Task<PortalRole> ComputeAccountRoleAsync(string accountId, PortalRole activeRole, CancellationToken ct = default)
 	{
 		try
