@@ -13,7 +13,13 @@ namespace SharpMUSH.Tests.Integration.Auth;
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class BootstrapTests(ServerWebAppFactory factory)
 {
-	[Test, NotInParallel("SetupFlow", Order = 0)] // only reads God-linked account state that AdminAccounts/SetupFlow tests mutate
+	// Order = 0 is the earliest slot in the "SetupFlow" constraint group and must stay unique:
+	// this test asserts the bootstrap admin's password hash is still empty, so it has to observe
+	// state before SetupFlowTests (Order = 1..5) or AdminAccountsApiTests (Order = 6) claim it.
+	// TUnit's ConstraintKeyScheduler orders same-key tests by Order, with ties broken by
+	// discovery order (unspecified across classes) — see AdminAccountsApiTests' class doc for the
+	// prior Order = 0 collision this caused.
+	[Test, NotInParallel("SetupFlow", Order = 0)]
 	public async Task Bootstrap_PreGeneratesUnclaimedAdminLinkedToGod()
 	{
 		var accountService = factory.Services.GetRequiredService<IAccountService>();

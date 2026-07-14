@@ -23,7 +23,13 @@ public class PlayerCreationConfigTests
 	{
 		var options = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 		var original = options.CurrentValue;
-		var restricted = original with { Net = original.Net with { PlayerCreation = false } };
+		// Point register_create_file at a nonexistent path so the hardcoded fallback message
+		// (rather than any register.txt that happens to resolve on disk) is what gets exercised.
+		var restricted = original with
+		{
+			Net = original.Net with { PlayerCreation = false },
+			Message = original.Message with { RegisterCreateFile = $"{Guid.NewGuid()}.nonexistent.txt" }
+		};
 		options.CurrentValue.Returns(restricted);
 		try
 		{
@@ -39,6 +45,39 @@ public class PlayerCreationConfigTests
 		finally
 		{
 			options.CurrentValue.Returns(original);
+		}
+	}
+
+	[Test, NotInParallel("ConfigMutation")]
+	public async ValueTask Register_WhenPlayerCreationDisabled_ShowsConfiguredRegisterFile()
+	{
+		var options = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var original = options.CurrentValue;
+		var registerFilePath = Path.Combine(Path.GetTempPath(), $"register-{Guid.NewGuid()}.txt");
+		const string registerFileContents = "Custom registration message from register_create_file.";
+		await File.WriteAllTextAsync(registerFilePath, registerFileContents);
+
+		var restricted = original with
+		{
+			Net = original.Net with { PlayerCreation = false },
+			Message = original.Message with { RegisterCreateFile = registerFilePath }
+		};
+		options.CurrentValue.Returns(restricted);
+		try
+		{
+			var handle = 2003L;
+			await Parser.CommandParse(handle, ConnectionService, MModule.single("register nocreate-user2 somepassword"));
+
+			await NotifyService.Received(1).Notify(
+				Arg.Is<long>(h => h == handle),
+				Arg.Is<OneOf<MString, string>>(s =>
+					TestHelpers.MessagePlainTextEquals(s, registerFileContents)),
+				null, INotifyService.NotificationType.Announce);
+		}
+		finally
+		{
+			options.CurrentValue.Returns(original);
+			File.Delete(registerFilePath);
 		}
 	}
 
@@ -60,7 +99,11 @@ public class PlayerCreationConfigTests
 		var accountResult = await AccountService.CreateAccountAsync("make-blocked-user", null, "somepassword");
 		await ConnectionService.BindAccount(handle, accountResult.AsT0.Id!);
 
-		var restricted = original with { Net = original.Net with { PlayerCreation = false } };
+		var restricted = original with
+		{
+			Net = original.Net with { PlayerCreation = false },
+			Message = original.Message with { RegisterCreateFile = $"{Guid.NewGuid()}.nonexistent.txt" }
+		};
 		options.CurrentValue.Returns(restricted);
 		try
 		{

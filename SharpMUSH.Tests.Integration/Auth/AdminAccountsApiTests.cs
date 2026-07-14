@@ -21,9 +21,18 @@ namespace SharpMUSH.Tests.Integration.Auth;
 /// "AdminAccounts" group — two different NotInParallel group names are independent constraint
 /// domains in TUnit and would still be free to interleave with each other, which would race the
 /// SetupCompleted flag (SetupFlowTests flips it false/true repeatedly) and, worse, would race
-/// which suite is first to touch the bootstrap admin's empty password hash. Running at
-/// Order = 0 (before SetupFlowTests' Order = 1..5) guarantees the admin account still has its
-/// pristine empty password hash when this test's "claim if unclaimed" logic runs.
+/// which suite is first to touch the bootstrap admin's empty password hash.
+///
+/// Order = 6 places these tests strictly after SetupFlowTests' Order = 1..5 (and after
+/// <c>BootstrapTests</c>' Order = 0, which asserts the admin's password hash is still empty pre
+/// claim — the one assertion in this suite of classes that genuinely needs to see the pristine
+/// state). SetupFlowTests' last ordered test (Order = 5) always leaves the game claimed
+/// (<c>SetServerSetupCompletedAsync(true)</c>) with SetupFlowTests' own credentials on the admin
+/// account, so <c>LoginAsGodAccountAsync</c> below unconditionally resets the password to a known
+/// value before logging in. TUnit's <c>ConstraintKeyScheduler</c> sorts tests sharing a
+/// constraint key by <c>Order</c> (ties broken by discovery order, which is what made Order = 0
+/// here collide non-deterministically with <c>BootstrapTests</c>' Order = 0 previously), so
+/// distinct Order values across the whole "SetupFlow" group are required for determinism.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class AdminAccountsApiTests(ServerWebAppFactory factory)
@@ -72,8 +81,10 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		var db = factory.Services.GetRequiredService<ISharpDatabase>();
 		var accountService = factory.Services.GetRequiredService<IAccountService>();
 		var admin = await accountService.GetAccountForCharacterAsync(new DBRef(1));
-		if (string.IsNullOrEmpty(admin!.PasswordHash))
-			await accountService.SetPasswordAsync(admin.Id!, "god-admin-pass-1", mustChangePassword: false);
+		// Always (re)set the password: these tests run at Order = 6, after SetupFlowTests has
+		// claimed the admin account with its own credentials (headwiz/racer-*), so a
+		// "set only if unclaimed" check would leave us logging in with the wrong password.
+		await accountService.SetPasswordAsync(admin!.Id!, "god-admin-pass-1", mustChangePassword: false);
 		await db.SetServerSetupCompletedAsync(true);
 
 		var login = await http.PostAsJsonAsync("api/auth/account-login",
@@ -121,7 +132,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That((await http.SendAsync(request)).StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
 
-	[Test, NotInParallel("SetupFlow", Order = 0)]
+	[Test, NotInParallel("SetupFlow", Order = 6)]
 	public async Task GodAccount_CanListAndResetPassword()
 	{
 		var (http, sessionToken) = await LoginAsGodAccountAsync();
@@ -157,11 +168,11 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// Shares <c>GodAccount_CanListAndResetPassword</c>'s <c>NotInParallel("SetupFlow", Order = 0)</c>
+	/// Shares <c>GodAccount_CanListAndResetPassword</c>'s <c>NotInParallel("SetupFlow", Order = 6)</c>
 	/// group for the same reason documented on the class: it logs in as the God-linked bootstrap
 	/// admin, which mutates the shared #1-linked account's password/SetupCompleted state.
 	/// </summary>
-	[Test, NotInParallel("SetupFlow", Order = 0)]
+	[Test, NotInParallel("SetupFlow", Order = 6)]
 	public async Task Disable_Enable_RoundTrip_BlocksThenRestoresLogin()
 	{
 		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
@@ -185,7 +196,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(restoredLogin.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
 
-	[Test, NotInParallel("SetupFlow", Order = 0)]
+	[Test, NotInParallel("SetupFlow", Order = 6)]
 	public async Task Disable_RevokesTargetsExistingSession()
 	{
 		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
@@ -207,7 +218,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(charsResponse.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 	}
 
-	[Test, NotInParallel("SetupFlow", Order = 0)]
+	[Test, NotInParallel("SetupFlow", Order = 6)]
 	public async Task ResetPassword_RevokesTargetsExistingSession()
 	{
 		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
@@ -234,7 +245,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(charsResponse.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 	}
 
-	[Test, NotInParallel("SetupFlow", Order = 0)]
+	[Test, NotInParallel("SetupFlow", Order = 6)]
 	public async Task UnlinkCharacter_RemovesItFromTargetsCharacterList()
 	{
 		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
