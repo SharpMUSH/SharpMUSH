@@ -231,6 +231,7 @@ public class Startup(
 		services.AddSingleton<IAccountSessionStore, InMemoryAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();
 		services.AddHostedService<BootstrapService>();
+		services.AddSingleton<SetupService>();
 		services.AddHostedService<RoleSeedService>();
 		services.AddSingleton<ISqlService, SqlService>();
 		services.AddSingleton<IPackageManifestService, PackageManifestService>();

@@ -1,42 +1,38 @@
 using Microsoft.AspNetCore.Mvc;
-using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Services.Interfaces;
+using Microsoft.AspNetCore.RateLimiting;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
-/// First-run setup endpoints. Only functional when no accounts exist.
+/// First-run setup endpoints, gated on the game-wide ServerState.SetupCompleted flag.
+/// While setup is incomplete, the first visitor to complete the wizard claims the
+/// pre-generated admin account (renames it and sets its password).
 /// </summary>
 [ApiController]
 [Route("api/setup")]
-public class SetupController(IAccountService accountService) : ControllerBase
+public class SetupController(SetupService setupService) : ControllerBase
 {
 	public record SetupStatusResponse(bool NeedsSetup);
 	public record SetupCompleteRequest(string Username, string Password);
 
 	[HttpGet("status")]
+	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> GetStatus()
-	{
-		var hasAccounts = await accountService.HasAnyAccountAsync();
-		return Ok(new SetupStatusResponse(!hasAccounts));
-	}
+		=> Ok(new SetupStatusResponse(await setupService.NeedsSetupAsync()));
 
 	[HttpPost("complete")]
+	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> Complete([FromBody] SetupCompleteRequest request)
 	{
 		if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("Username and Password are required.");
+		if (request.Password.Length < 8)
+			return BadRequest("Password must be at least 8 characters.");
 
-		if (await accountService.HasAnyAccountAsync())
-			return Conflict("Setup has already been completed.");
-
-		var result = await accountService.CreateAccountAsync(request.Username, null, request.Password);
-		if (result.IsT1)
-			return Conflict(result.AsT1.Value);
-
-		var account = result.AsT0;
-		await accountService.LinkCharacterAsync(account.Id!, new DBRef(1));
-
-		return Ok(new { Message = "Setup complete. You can now log in.", AccountId = account.Id });
+		var result = await setupService.CompleteAsync(request.Username.Trim(), request.Password);
+		return result.Match<IActionResult>(
+			_ => Ok(new { Message = "Setup complete. You can now log in." }),
+			err => Conflict(err.Value));
 	}
 }
