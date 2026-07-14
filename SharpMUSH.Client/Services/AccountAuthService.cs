@@ -67,6 +67,8 @@ public class AccountAuthService(
 		Permissions = permissionsJson is null
 			? []
 			: JsonSerializer.Deserialize<IReadOnlyList<string>>(permissionsJson) ?? [];
+		// CascadingAuthenticationState snapshots before MainLayout's InitAsync runs; re-notify so a reloaded tab's restored session reaches [Authorize] gates.
+		AuthStateChanged?.Invoke();
 	}
 
 	public async Task<(bool Success, string? Error, IReadOnlyList<CharacterSummary> Characters)> LoginAsync(
