@@ -300,18 +300,15 @@ MERGE (o)-[:HAS_FLAG]->(f)
 			// First-run setup inference (only when the state node is missing): a game with a
 			// claimed account (non-empty passwordHash) must not re-open the first-run wizard.
 			// This lives inside the _migrated guard above, so it runs at most once per process —
-			// matching the rest of the seed data it runs alongside.
-			var stateExists = (await ExecuteWithRetryAsync(
-				"MATCH (s:ServerState {id: 'state'}) RETURN s LIMIT 1", new { }, cancellationToken)).Result.Count > 0;
-			if (!stateExists)
-			{
-				var claimed = (await ExecuteWithRetryAsync(
-					"MATCH (a:Account) WHERE a.passwordHash IS NOT NULL AND a.passwordHash <> '' RETURN a LIMIT 1",
-					new { }, cancellationToken)).Result.Count > 0;
-				await ExecuteWithRetryAsync(
-					"CREATE (:ServerState {id: 'state', setupCompleted: $claimed})",
-					new { claimed }, cancellationToken);
-			}
+			// matching the rest of the seed data it runs alongside. MERGE + ON CREATE SET keeps
+			// this idempotent: a retry after a transient post-commit error re-runs the MERGE
+			// instead of duplicating the node, and the inference only ever applies on the create.
+			var claimed = (await ExecuteWithRetryAsync(
+				"MATCH (a:Account) WHERE a.passwordHash IS NOT NULL AND a.passwordHash <> '' RETURN a LIMIT 1",
+				new { }, cancellationToken)).Result.Count > 0;
+			await ExecuteWithRetryAsync(
+				"MERGE (s:ServerState {id: 'state'}) ON CREATE SET s.setupCompleted = $claimed",
+				new { claimed }, cancellationToken);
 
 			logger.LogInformation("Memgraph Migration Completed");
 			_migrated = true;

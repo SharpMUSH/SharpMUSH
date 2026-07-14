@@ -29,7 +29,7 @@ public class AccountAuthStateProvider : AuthenticationStateProvider
 		var claims = new List<Claim>
 		{
 			new(ClaimTypes.Name, _accountAuth.Username ?? "account"),
-			new(ClaimTypes.Role, _accountAuth.Role ?? nameof(PortalRole.Player)),
+			new(ClaimTypes.Role, _accountAuth.Role ?? nameof(PortalRole.Guest)),
 		};
 		claims.AddRange(_accountAuth.Permissions.Select(p => new Claim(PortalPermission.ClaimType, p)));
 

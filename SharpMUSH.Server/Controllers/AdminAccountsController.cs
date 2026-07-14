@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
@@ -16,6 +17,7 @@ namespace SharpMUSH.Server.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/admin/accounts")]
+[EnableRateLimiting("public-api")]
 public class AdminAccountsController(
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,

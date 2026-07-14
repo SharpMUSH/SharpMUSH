@@ -43,6 +43,17 @@ public class AccountAuthStateProviderTests
 	}
 
 	[Test]
+	public async Task LoggedIn_MissingRole_FallsBackToGuest_NotPlayer()
+	{
+		var provider = new AccountAuthStateProvider(CreateAuthService(loggedIn: true, username: "newacct", role: null));
+		var state = await provider.GetAuthenticationStateAsync();
+
+		await Assert.That(state.User.Identity!.IsAuthenticated).IsTrue();
+		await Assert.That(state.User.IsInRole(nameof(PortalRole.Guest))).IsTrue();
+		await Assert.That(state.User.IsInRole(nameof(PortalRole.Player))).IsFalse();
+	}
+
+	[Test]
 	public async Task AuthStateChanged_TriggersProviderNotification()
 	{
 		var fake = CreateAuthService(loggedIn: false);

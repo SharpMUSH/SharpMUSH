@@ -48,18 +48,20 @@ public class AccountAdminCommandTests
 		await Assert.That(await accountService.AuthenticateAsync("cmd-disable-user", "some-password-1")).IsNotNull();
 	}
 
-	[Test, NotInParallel("ServerStateTests")]
-	public async ValueTask AccountSetupComplete_FlipsServerState()
+	[Test, NotInParallel(nameof(AccountAdminCommandTests))]
+	public async ValueTask AccountNewPassword_TooShort_RefusesAndLeavesPasswordUnchanged()
 	{
-		var db = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-		await db.SetServerSetupCompletedAsync(false);
+		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		await accountService.CreateAccountAsync("cmd-shortpw-user", null, "old-password-1");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/setupcomplete"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/newpassword cmd-shortpw-user=short"));
 		await Task.Delay(200);
 
-		await Assert.That((await db.GetServerStateAsync()).SetupCompleted).IsTrue();
+		// The refusal must not change the password.
+		var authenticated = await accountService.AuthenticateAsync("cmd-shortpw-user", "old-password-1");
+		await Assert.That(authenticated).IsNotNull();
+		await Assert.That(authenticated!.MustChangePassword).IsFalse();
 
-		// Restore so later setup-flow tests see an unclaimed game.
-		await db.SetServerSetupCompletedAsync(false);
+		await Assert.That(await accountService.AuthenticateAsync("cmd-shortpw-user", "short")).IsNull();
 	}
 }

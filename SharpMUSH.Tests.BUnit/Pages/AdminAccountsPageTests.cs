@@ -137,7 +137,7 @@ public class AdminAccountsPageTests : BunitContext
     }
 
     [TUnit.Core.Test]
-    public async Task RenderesWithoutCrashing_WhenListReturns401()
+    public async Task RendersWithoutCrashing_WhenListReturns401()
     {
         Auth.SetAuthorized("headwiz");
         Auth.SetRoles("Wizard");

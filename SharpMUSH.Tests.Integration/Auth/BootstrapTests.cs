@@ -13,7 +13,7 @@ namespace SharpMUSH.Tests.Integration.Auth;
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class BootstrapTests(ServerWebAppFactory factory)
 {
-	[Test]
+	[Test, NotInParallel("SetupFlow", Order = 0)] // only reads God-linked account state that AdminAccounts/SetupFlow tests mutate
 	public async Task Bootstrap_PreGeneratesUnclaimedAdminLinkedToGod()
 	{
 		var accountService = factory.Services.GetRequiredService<IAccountService>();

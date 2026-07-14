@@ -14,7 +14,7 @@ public class SetPlayerPasswordCommandHandler(ISharpDatabase database) : ICommand
 		// fresh game (@password / @newpassword) — it also completes first-run setup so the
 		// web wizard closes. (The transparent legacy-rehash path only runs after a valid
 		// non-empty password check, so it cannot fire on an unclaimed game.)
-		if (command.Player.Object.Key == 1)
+		if (command.Player.Object.Key == 1 && !string.IsNullOrEmpty(command.Password))
 		{
 			var state = await database.GetServerStateAsync(cancellationToken);
 			if (!state.SetupCompleted)

@@ -32,7 +32,7 @@ public partial class Commands
 
 		if (!Configuration!.CurrentValue.Net.PlayerCreation)
 		{
-			await NotifyService!.Notify(handle, "Player creation is disabled on this server.");
+			await NotifyPlayerCreationDisabledAsync(handle);
 			return new None();
 		}
 
@@ -168,7 +168,7 @@ public partial class Commands
 
 		if (!Configuration!.CurrentValue.Net.PlayerCreation)
 		{
-			await NotifyService!.Notify(handle, "Player creation is disabled on this server.");
+			await NotifyPlayerCreationDisabledAsync(handle);
 			return new None();
 		}
 
@@ -294,6 +294,27 @@ public partial class Commands
 			accountId, character.Object.Name, character.Object.Key);
 
 		return new CallState(playerDbRef);
+	}
+
+	/// <summary>
+	/// PennMUSH-style refusal for a disabled <c>Net.PlayerCreation</c>: prefer the configured
+	/// <c>register_create_file</c> contents (same resolution as <see cref="Handlers.ConnectionStateEventHandler"/>'s
+	/// <c>connect_file</c> handling) and fall back to the hardcoded message when it's unset/missing/empty.
+	/// </summary>
+	private static async ValueTask NotifyPlayerCreationDisabledAsync(long handle)
+	{
+		var registerFile = Configuration!.CurrentValue.Message.RegisterCreateFile;
+		if (!string.IsNullOrEmpty(registerFile) && File.Exists(registerFile))
+		{
+			var registerText = await File.ReadAllTextAsync(registerFile);
+			if (!string.IsNullOrWhiteSpace(registerText))
+			{
+				await NotifyService!.Notify(handle, registerText);
+				return;
+			}
+		}
+
+		await NotifyService!.Notify(handle, "Player creation is disabled on this server.");
 	}
 
 	/// <summary>

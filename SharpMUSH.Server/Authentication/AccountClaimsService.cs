@@ -46,7 +46,7 @@ public class AccountClaimsService(
 			var accountRole = roleDerivation.DeriveAccountRole(perCharacter);
 			return accountRole > activeRole ? accountRole : activeRole;
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			logger.LogWarning(ex,
 				"Could not derive account-level role for account {AccountId}; using the active character's role.",

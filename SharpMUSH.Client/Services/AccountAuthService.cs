@@ -59,6 +59,20 @@ public class AccountAuthService(
 	public async Task InitAsync()
 	{
 		AccountSessionToken = await js.InvokeAsync<string?>("sessionStorage.getItem", SessionTokenKey);
+		if (AccountSessionToken is null)
+		{
+			// No session in this tab (sessionStorage is tab-scoped): don't restore Username/Role/
+			// Permissions from localStorage/sessionStorage — a returning user in a new tab would
+			// otherwise get a phantom identity with no live session. Nothing in the portal
+			// pre-fills the login form from Username, so there's no UX reason to keep it around.
+			Username = null;
+			MustChangePassword = false;
+			Role = null;
+			Permissions = [];
+			AuthStateChanged?.Invoke();
+			return;
+		}
+
 		Username = await js.InvokeAsync<string?>("localStorage.getItem", UsernameKey);
 		var mustChangePassword = await js.InvokeAsync<string?>("sessionStorage.getItem", MustChangePasswordKey);
 		MustChangePassword = string.Equals(mustChangePassword, bool.TrueString, StringComparison.OrdinalIgnoreCase);

@@ -1,6 +1,5 @@
 using OneOf.Types;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -16,10 +15,9 @@ public partial class Commands
 	/// <c>@account &lt;name&gt;</c> — show account details;
 	/// <c>@account/list [pattern]</c>;
 	/// <c>@account/newpassword &lt;name&gt;=&lt;password&gt;</c> — set + force change on next login;
-	/// <c>@account/disable &lt;name&gt;</c> / <c>@account/enable &lt;name&gt;</c>;
-	/// <c>@account/setupcomplete</c> — mark first-run setup done (closes the web wizard).</para>
+	/// <c>@account/disable &lt;name&gt;</c> / <c>@account/enable &lt;name&gt;</c>.</para>
 	/// </summary>
-	[SharpCommand(Name = "@ACCOUNT", Switches = ["LIST", "NEWPASSWORD", "DISABLE", "ENABLE", "SETUPCOMPLETE"],
+	[SharpCommand(Name = "@ACCOUNT", Switches = ["LIST", "NEWPASSWORD", "DISABLE", "ENABLE"],
 		Behavior = CommandBehavior.Default | CommandBehavior.EqSplit | CommandBehavior.RSNoParse,
 		CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 2, ParameterNames = ["name", "password"])]
 	public static async ValueTask<Option<CallState>> AccountAdmin(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -29,13 +27,6 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var arg0 = args.TryGetValue("0", out var a0) ? a0.Message?.ToPlainText()?.Trim() : null;
 		var arg1 = args.TryGetValue("1", out var a1) ? a1.Message?.ToPlainText() : null;
-
-		if (switches.Contains("SETUPCOMPLETE"))
-		{
-			await Mediator!.Send(new SetServerSetupCompletedCommand(true));
-			await NotifyService!.Notify(executor, "First-run setup marked complete. The web setup wizard is closed.");
-			return CallState.Empty;
-		}
 
 		if (switches.Contains("LIST"))
 		{
@@ -68,6 +59,12 @@ public partial class Commands
 			if (string.IsNullOrWhiteSpace(arg1))
 			{
 				await NotifyService!.Notify(executor, "Usage: @account/newpassword <name>=<password>");
+				return CallState.Empty;
+			}
+
+			if (arg1.Length < 8)
+			{
+				await NotifyService!.Notify(executor, "Password must be at least 8 characters.");
 				return CallState.Empty;
 			}
 

@@ -6,85 +6,85 @@
 <PageTitle>First-Run Setup — SharpMUSH</PageTitle>
 
 <div class="setup-page">
-	<div class="setup-card">
-		<div class="setup-kicker">First-Run Setup</div>
-		<h1 class="setup-title">Welcome to SharpMUSH</h1>
-		<p class="setup-lead">
-			This game hasn't been claimed yet. Choose a username and password for the
-			pre-generated administrator account (linked to player #1, God). The first
-			person to complete this form becomes the administrator.
-		</p>
+    <div class="setup-card">
+        <div class="setup-kicker">First-Run Setup</div>
+        <h1 class="setup-title">Welcome to SharpMUSH</h1>
+        <p class="setup-lead">
+            This game hasn't been claimed yet. Choose a username and password for the
+            pre-generated administrator account (linked to player #1, God). The first
+            person to complete this form becomes the administrator.
+        </p>
 
-		@if (_error is not null)
-		{
-			<div class="setup-error" role="alert">@_error</div>
-		}
+        @if (_error is not null)
+        {
+            <div class="setup-error" role="alert">@_error</div>
+        }
 
-		<div class="setup-field">
-			<label class="setup-label" for="setup-username">Username</label>
-			<input id="setup-username" class="setup-input" type="text"
-				   @bind="_username" @bind:event="oninput" disabled="@_busy" autocomplete="username" />
-		</div>
+        <div class="setup-field">
+            <label class="setup-label" for="setup-username">Username</label>
+            <input id="setup-username" class="setup-input" type="text"
+                   @bind="_username" @bind:event="oninput" disabled="@_busy" autocomplete="username" />
+        </div>
 
-		<div class="setup-field">
-			<label class="setup-label" for="setup-password">Password</label>
-			<input id="setup-password" class="setup-input" type="password"
-				   @bind="_password" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
-		</div>
+        <div class="setup-field">
+            <label class="setup-label" for="setup-password">Password</label>
+            <input id="setup-password" class="setup-input" type="password"
+                   @bind="_password" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
+        </div>
 
-		<div class="setup-field">
-			<label class="setup-label" for="setup-confirm">Confirm Password</label>
-			<input id="setup-confirm" class="setup-input" type="password"
-				   @bind="_confirm" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
-		</div>
+        <div class="setup-field">
+            <label class="setup-label" for="setup-confirm">Confirm Password</label>
+            <input id="setup-confirm" class="setup-input" type="password"
+                   @bind="_confirm" @bind:event="oninput" disabled="@_busy" autocomplete="new-password" />
+        </div>
 
-		<button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
-			@(_busy ? "Setting up…" : "Create Admin Account")
-		</button>
-	</div>
+        <button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
+            @(_busy ? "Setting up…" : "Create Admin Account")
+        </button>
+    </div>
 </div>
 
 @code {
-	private string _username = string.Empty;
-	private string _password = string.Empty;
-	private string _confirm = string.Empty;
-	private string? _error;
-	private bool _busy;
+    private string _username = string.Empty;
+    private string _password = string.Empty;
+    private string _confirm = string.Empty;
+    private string? _error;
+    private bool _busy;
 
-	protected override async Task OnInitializedAsync()
-	{
-		if (!await AccountAuth.NeedsSetupAsync())
-			Nav.NavigateTo("/", replace: true);
-	}
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await AccountAuth.NeedsSetupAsync())
+            Nav.NavigateTo("/", replace: true);
+    }
 
-	private async Task SubmitAsync()
-	{
-		_error = null;
-		if (string.IsNullOrWhiteSpace(_username)) { _error = "Username is required."; return; }
-		if (string.IsNullOrWhiteSpace(_password)) { _error = "Password is required."; return; }
-		if (_password != _confirm) { _error = "Passwords do not match."; return; }
-		if (_password.Length < 8) { _error = "Password must be at least 8 characters."; return; }
+    private async Task SubmitAsync()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_username)) { _error = "Username is required."; return; }
+        if (string.IsNullOrWhiteSpace(_password)) { _error = "Password is required."; return; }
+        if (_password != _confirm) { _error = "Passwords do not match."; return; }
+        if (_password.Length < 8) { _error = "Password must be at least 8 characters."; return; }
 
-		_busy = true;
-		StateHasChanged();
+        _busy = true;
+        StateHasChanged();
 
-		var (success, error) = await AccountAuth.CompleteSetupAsync(_username, _password);
-		_busy = false;
+        var (success, error) = await AccountAuth.CompleteSetupAsync(_username, _password);
+        _busy = false;
 
-		if (!success)
-		{
-			_error = error switch
-			{
-				not null when error.Contains("already been completed", StringComparison.OrdinalIgnoreCase)
-					=> "Setup was just completed by someone else. If that wasn't you, contact the server operator immediately.",
-				not null when error.Contains("already taken", StringComparison.OrdinalIgnoreCase)
-					=> "That username is already taken — choose another.",
-				_ => error ?? "Setup failed.",
-			};
-			StateHasChanged();
-			return;
-		}
+        if (!success)
+        {
+            _error = error switch
+            {
+                not null when error.Contains("already been completed", StringComparison.OrdinalIgnoreCase)
+                    => "Setup was just completed by someone else. If that wasn't you, contact the server operator immediately.",
+                not null when error.Contains("already taken", StringComparison.OrdinalIgnoreCase)
+                    => "That username is already taken — choose another.",
+                _ => error ?? "Setup failed.",
+            };
+            StateHasChanged();
+            return;
+        }
 
-		Nav.NavigateTo("/login", replace: true);
-	}
+        Nav.NavigateTo("/login", replace: true);
+    }
 }

@@ -42,14 +42,12 @@ public class AccountController(
 		if (accountId is null)
 			return (null, Unauthorized("Invalid or expired account session."));
 
-		if (!allowMustChangePassword)
-		{
-			var account = await accountService.GetByIdAsync(accountId);
-			if (account is null || account.IsDisabled)
-				return (null, Unauthorized("Account not found or disabled."));
-			if (account.MustChangePassword)
-				return (null, StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action."));
-		}
+		var account = await accountService.GetByIdAsync(accountId);
+		if (account is null || account.IsDisabled)
+			return (null, Unauthorized("Account not found or disabled."));
+
+		if (!allowMustChangePassword && account.MustChangePassword)
+			return (null, StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action."));
 
 		return (accountId, null);
 	}

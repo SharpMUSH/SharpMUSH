@@ -28,16 +28,46 @@ public class SetupAutoCompleteTests
 		var originalPasswordHash = god.PasswordHash;
 		var originalPasswordSalt = god.PasswordSalt;
 
-		await Mediator.Send(new SetPlayerPasswordCommand(god, "hashed-anything"));
+		try
+		{
+			await Mediator.Send(new SetPlayerPasswordCommand(god, "hashed-anything"));
 
-		await Assert.That((await Db.GetServerStateAsync()).SetupCompleted).IsTrue();
+			await Assert.That((await Db.GetServerStateAsync()).SetupCompleted).IsTrue();
+		}
+		finally
+		{
+			// Restore God's original (unhashed/no-op) password. Passing a non-null salt makes the
+			// handler treat the password as already-hashed, so this writes the original hash back
+			// verbatim instead of re-hashing it. Runs even if an assertion above threw, so a failed
+			// assertion can't leave God's password (or SetupCompleted) mutated for later tests.
+			await Db.SetPlayerPasswordAsync(god, originalPasswordHash, originalPasswordSalt ?? "");
 
-		// Restore God's original (unhashed/no-op) password. Passing a non-null salt makes the
-		// handler treat the password as already-hashed, so this writes the original hash back
-		// verbatim instead of re-hashing it.
-		await Db.SetPlayerPasswordAsync(god, originalPasswordHash, originalPasswordSalt ?? "");
+			await Db.SetServerSetupCompletedAsync(false); // restore for setup-flow tests
+		}
+	}
 
-		await Db.SetServerSetupCompletedAsync(false); // restore for setup-flow tests
+	[Test, NotInParallel("ServerStateTests")] // shares the ServerState doc with ServerStateTests
+	public async Task SettingGodsEmptyPassword_DoesNotCompleteSetup()
+	{
+		await Db.SetServerSetupCompletedAsync(false);
+
+		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var god = one.AsPlayer;
+		var originalPasswordHash = god.PasswordHash;
+		var originalPasswordSalt = god.PasswordSalt;
+
+		try
+		{
+			// Re-unclaiming God (setting an empty password hash) must not flip SetupCompleted.
+			await Mediator.Send(new SetPlayerPasswordCommand(god, string.Empty));
+
+			await Assert.That((await Db.GetServerStateAsync()).SetupCompleted).IsFalse();
+		}
+		finally
+		{
+			await Db.SetPlayerPasswordAsync(god, originalPasswordHash, originalPasswordSalt ?? "");
+			await Db.SetServerSetupCompletedAsync(false); // restore for setup-flow tests
+		}
 	}
 
 	[Test, NotInParallel("ServerStateTests")]

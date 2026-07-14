@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
@@ -119,6 +120,30 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 		var response = await http.PostAsJsonAsync("api/auth/jwt-switch-character",
 			new { AccountSessionToken = account.AccountSessionToken, CharacterKey = character.DbrefNumber, CharacterCreationTime = character.CreationTime });
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+	}
+
+	/// <summary>
+	/// A live session token minted before the account was disabled must not survive the
+	/// disable — GetAccountIdFromBearerAsync(allowMustChangePassword: true) must always load
+	/// and check the account, not skip straight past the disabled/deleted check.
+	/// Disables via the raw database call (not AccountService.DisableAccountAsync, which also
+	/// revokes sessions) so the pre-disable token is still valid in the session store and this
+	/// exercises the account-load path specifically, not session revocation.
+	/// </summary>
+	[Test]
+	public async Task DisabledAccount_PreDisableToken_CannotChangePassword()
+	{
+		var (http, account) = await RegisterAccountAsync();
+		var database = factory.Services.GetRequiredService<ISharpDatabase>();
+		await database.UpdateAccountDisabledAsync(account.AccountId, true);
+
+		var changeRequest = new HttpRequestMessage(HttpMethod.Put, "api/account/password")
+		{
+			Content = JsonContent.Create(new ChangePasswordRequest(Password, "brand-new-pass-2"))
+		};
+		changeRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
+		var changeResponse = await http.SendAsync(changeRequest);
+		await Assert.That(changeResponse.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 	}
 
 	[Test]
