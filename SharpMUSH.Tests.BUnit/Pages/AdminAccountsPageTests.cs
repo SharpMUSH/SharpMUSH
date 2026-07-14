@@ -17,12 +17,23 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// </summary>
 file sealed class AdminAccountsApiHandler : HttpMessageHandler
 {
+    public HttpStatusCode ListStatusCode { get; set; } = HttpStatusCode.OK;
+    public string? ListErrorContent { get; set; }
+
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var path = request.RequestUri!.AbsolutePath.TrimStart('/');
 
         if (request.Method == HttpMethod.Get && path == "api/admin/accounts")
         {
+            if (ListStatusCode != HttpStatusCode.OK)
+            {
+                var response = new HttpResponseMessage(ListStatusCode);
+                if (ListErrorContent != null)
+                    response.Content = new StringContent(ListErrorContent);
+                return Task.FromResult(response);
+            }
+
             var rows = new object[]
             {
                 new
@@ -68,9 +79,10 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 /// <summary>Helper to register a real AdminAccountsService backed by <see cref="AdminAccountsApiHandler"/>.</summary>
 file static class AdminAccountsTestServices
 {
-    public static void AddAdminAccountsTestServices(this BunitContext ctx)
+    public static void AddAdminAccountsTestServices(this BunitContext ctx, AdminAccountsApiHandler? handler = null)
     {
-        var apiClient = new HttpClient(new AdminAccountsApiHandler())
+        handler ??= new AdminAccountsApiHandler();
+        var apiClient = new HttpClient(handler)
         {
             BaseAddress = new Uri("https://localhost:8081/")
         };
@@ -122,5 +134,29 @@ public class AdminAccountsPageTests : BunitContext
 
         await Assert.That(cut.Markup).Contains("headwiz-target");
         await Assert.That(cut.Markup).Contains("DISABLED");
+    }
+
+    [TUnit.Core.Test]
+    public async Task RenderesWithoutCrashing_WhenListReturns401()
+    {
+        Auth.SetAuthorized("headwiz");
+        Auth.SetPolicies("players.moderate");
+
+        var handler = new AdminAccountsApiHandler
+        {
+            ListStatusCode = HttpStatusCode.Unauthorized,
+            ListErrorContent = "Session expired"
+        };
+        this.AddAdminAccountsTestServices(handler);
+
+        // This should not throw; the page should render with error handling
+        var cut = Render<SharpMUSH.Client.Pages.Admin.AdminAccounts>();
+
+        // Wait for initial load to complete
+        await Task.Delay(500);
+
+        // Verify no accounts are shown (empty rows, since API returned 401)
+        await Assert.That(cut.Markup).DoesNotContain("headwiz-target");
+        await Assert.That(cut.Markup).DoesNotContain("banned-account");
     }
 }

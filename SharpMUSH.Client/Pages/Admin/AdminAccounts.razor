@@ -74,7 +74,10 @@ else
     private async Task LoadAsync()
     {
         _loading = true;
-        _rows = await AccountsService.ListAsync(_search);
+        var (rows, error) = await AccountsService.ListAsync(_search);
+        if (error != null)
+            Snackbar.Add(error, Severity.Error);
+        _rows = rows;
         _loading = false;
         StateHasChanged();
     }

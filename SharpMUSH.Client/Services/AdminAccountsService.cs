@@ -18,11 +18,22 @@ public class AdminAccountsService(IHttpClientFactory httpClientFactory, AccountA
 		return http;
 	}
 
-	public async Task<IReadOnlyList<AdminAccountRow>> ListAsync(string? search = null)
+	public async Task<(IReadOnlyList<AdminAccountRow> Rows, string? Error)> ListAsync(string? search = null)
 	{
-		var http = CreateClient();
-		var url = string.IsNullOrWhiteSpace(search) ? "api/admin/accounts" : $"api/admin/accounts?search={Uri.EscapeDataString(search)}";
-		return await http.GetFromJsonAsync<IReadOnlyList<AdminAccountRow>>(url) ?? [];
+		try
+		{
+			var http = CreateClient();
+			var url = string.IsNullOrWhiteSpace(search) ? "api/admin/accounts" : $"api/admin/accounts?search={Uri.EscapeDataString(search)}";
+			var response = await http.GetAsync(url);
+			if (!response.IsSuccessStatusCode)
+				return ([], await response.Content.ReadAsStringAsync());
+			var rows = await response.Content.ReadFromJsonAsync<IReadOnlyList<AdminAccountRow>>();
+			return (rows ?? [], null);
+		}
+		catch (Exception ex)
+		{
+			return ([], ex.Message);
+		}
 	}
 
 	public async Task<(bool Success, string? Error)> ResetPasswordAsync(string key, string newPassword)
