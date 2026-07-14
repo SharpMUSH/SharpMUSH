@@ -45,6 +45,17 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	/// </summary>
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
+		// Concurrent integration tests hammer the auth-gated endpoints far past the
+		// production "public-api" rate limit (30 req/min), which flakes full runs with 429s.
+		// Raise the limits so the real pipeline's rate limiter never throttles test traffic.
+		// NOTE: UseSetting (not ConfigureStartupConfiguration) is required here — for
+		// minimal-hosting apps (WebApplication.CreateBuilder) the factory's startup
+		// configuration hook is never applied; UseSetting flows into host configuration,
+		// which WebApplicationFactory forwards to Program.Main as command-line arguments.
+		builder.UseSetting("RateLimiting:PublicApi:PermitLimit", "100000");
+		builder.UseSetting("RateLimiting:PublicApi:WindowSeconds", "60");
+		builder.UseSetting("RateLimiting:PublicApi:QueueLimit", "100000");
+
 		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
 			.MinimumLevel.Verbose()
