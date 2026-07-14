@@ -42,6 +42,10 @@ public static class DatabaseConstants
 	// (e.g. "global", "home", "wiki-index", "profile"). Not visible to softcode; travels with backups.
 	public const string Layouts = "sys_layouts";
 
+	// Game-wide server state — a single document with fixed _key "state"
+	// (SetupCompleted flag for the first-run wizard).
+	public const string ServerState = "sys_server_state";
+
 	// Portal RBAC — custom roles (keyed by slug) and account→role assignments.
 	// Not visible to softcode; travels with backups.
 	public const string Roles = "sys_roles";

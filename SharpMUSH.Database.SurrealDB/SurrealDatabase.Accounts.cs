@@ -166,6 +166,12 @@ FROM account_owns_character WHERE out.key = $dbref
 		return results?.Count > 0 ? MapRecordToAccount(results[0]) : null;
 	}
 
+	public ValueTask<SharpServerState> GetServerStateAsync(CancellationToken cancellationToken = default)
+		=> throw new NotImplementedException("Task 2");
+
+	public ValueTask SetServerSetupCompletedAsync(bool value, CancellationToken cancellationToken = default)
+		=> throw new NotImplementedException("Task 2");
+
 	private static SharpAccount MapRecordToAccount(AccountDbRecord rec) => new()
 	{
 		Id = NormalizeAccountId(rec.Id),
