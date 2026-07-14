@@ -360,26 +360,31 @@
     private static string Capitalize(string s)
         => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s[1..];
 
+    private bool? _needsSetup;
+
     private async Task EnsureAccountRoutingAsync()
     {
         var currentPath = new Uri(NavigationManager.Uri).AbsolutePath;
+
+        // First-run wizard: while the game is unclaimed, every route funnels to /setup.
+        // Cache only the negative — once claimed, stop asking the server on each navigation.
+        if (_needsSetup != false && !_isDebugAuth)
+        {
+            _needsSetup = await AccountAuth.NeedsSetupAsync();
+            if (_needsSetup == true)
+            {
+                if (!string.Equals(currentPath, "/setup", StringComparison.OrdinalIgnoreCase))
+                    NavigationManager.NavigateTo("/setup");
+                return;
+            }
+        }
 
         if (AccountAuth.IsLoggedIn && AccountAuth.MustChangePassword)
         {
             if (!string.Equals(currentPath, "/account", StringComparison.OrdinalIgnoreCase))
                 NavigationManager.NavigateTo("/account");
-            return;
         }
-
-        if (AccountAuth.IsLoggedIn || _isDebugAuth || !IsHomePath(currentPath))
-            return;
-
-        if (await AccountAuth.NeedsSetupAsync())
-            NavigationManager.NavigateTo("/setup");
     }
-
-    private static bool IsHomePath(string currentPath)
-        => string.IsNullOrEmpty(currentPath) || currentPath == "/";
 
     // One hamburger, two behaviors by viewport: on a phone it opens the off-canvas
     // drawer; on desktop it toggles the icon rail (unchanged). matchMedia keeps the

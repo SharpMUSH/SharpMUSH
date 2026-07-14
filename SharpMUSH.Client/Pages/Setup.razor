@@ -10,8 +10,9 @@
 		<div class="setup-kicker">First-Run Setup</div>
 		<h1 class="setup-title">Welcome to SharpMUSH</h1>
 		<p class="setup-lead">
-			No accounts exist yet. Create your administrator account to get started.
-			This account will be linked to player #1 (God).
+			This game hasn't been claimed yet. Choose a username and password for the
+			pre-generated administrator account (linked to player #1, God). The first
+			person to complete this form becomes the administrator.
 		</p>
 
 		@if (_error is not null)
@@ -70,8 +71,20 @@
 		var (success, error) = await AccountAuth.CompleteSetupAsync(_username, _password);
 		_busy = false;
 
-		if (!success) { _error = error; StateHasChanged(); return; }
+		if (!success)
+		{
+			_error = error switch
+			{
+				not null when error.Contains("already been completed", StringComparison.OrdinalIgnoreCase)
+					=> "Setup was just completed by someone else. If that wasn't you, contact the server operator immediately.",
+				not null when error.Contains("already taken", StringComparison.OrdinalIgnoreCase)
+					=> "That username is already taken — choose another.",
+				_ => error ?? "Setup failed.",
+			};
+			StateHasChanged();
+			return;
+		}
 
-		Nav.NavigateTo("/", replace: true);
+		Nav.NavigateTo("/login", replace: true);
 	}
 }
