@@ -92,7 +92,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (!await AccountAuth.NeedsSetupAsync())
+        // Only navigate away on a definitive "setup already done." A null result means the
+        // status check couldn't reach/parse the server — stay on the page rather than bounce
+        // the user away from the only place they can complete first-run setup; the submit
+        // button's own error handling will surface any real server problem.
+        if (await AccountAuth.NeedsSetupAsync() == false)
             Nav.NavigateTo("/", replace: true);
     }
 

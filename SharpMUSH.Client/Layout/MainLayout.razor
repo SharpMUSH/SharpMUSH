@@ -383,7 +383,13 @@
         // send anyone. Do not special-case _isDebugAuth further to try to keep them off /setup.
         if (_needsSetup != false && !_isDebugAuth)
         {
-            _needsSetup = await AccountAuth.NeedsSetupAsync();
+            // null means the status check failed (transient error, cold server, stale proxy,
+            // etc.) — leave _needsSetup as-is so the next navigation retries instead of
+            // latching a false negative that would hide the wizard for the rest of the session.
+            var result = await AccountAuth.NeedsSetupAsync();
+            if (result is not null)
+                _needsSetup = result;
+
             if (_needsSetup == true)
             {
                 if (!string.Equals(currentPath, "/setup", StringComparison.OrdinalIgnoreCase))

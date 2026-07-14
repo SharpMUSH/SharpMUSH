@@ -149,18 +149,37 @@ public class AccountAuthService(
 		}
 	}
 
-	public async Task<bool> NeedsSetupAsync()
+	/// <summary>
+	/// Checks whether the game still needs first-run setup.
+	/// Returns <c>null</c> (rather than a false negative) on any failure to reach or parse
+	/// the server response — a transient error must never be mistaken for "setup already
+	/// done," since that would permanently hide the first-run wizard for the session.
+	/// </summary>
+	public async Task<bool?> NeedsSetupAsync()
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var result = await http.GetFromJsonAsync<SetupStatusResponse>("api/setup/status");
-			return result?.NeedsSetup ?? false;
+			var response = await http.GetAsync("api/setup/status");
+			if (!response.IsSuccessStatusCode)
+			{
+				logger.LogError("Setup status check returned {Status}", response.StatusCode);
+				return null;
+			}
+
+			var result = await response.Content.ReadFromJsonAsync<SetupStatusResponse>();
+			if (result is null)
+			{
+				logger.LogError("Setup status check returned an unparseable response");
+				return null;
+			}
+
+			return result.NeedsSetup;
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Failed to check setup status");
-			return false;
+			return null;
 		}
 	}
 
