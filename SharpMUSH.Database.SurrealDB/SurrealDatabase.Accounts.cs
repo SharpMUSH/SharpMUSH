@@ -166,6 +166,26 @@ FROM account_owns_character WHERE out.key = $dbref
 		return results?.Count > 0 ? MapRecordToAccount(results[0]) : null;
 	}
 
+	public async ValueTask UpdateAccountDisabledAsync(string accountId, bool value, CancellationToken cancellationToken = default)
+	{
+		var key = NormalizeSurrealId(accountId, "account");
+		await ExecuteAsync("UPDATE $accountId SET isDisabled = $value, updatedAt = $now",
+			new Dictionary<string, object?>
+			{
+				["accountId"] = new StringRecordId(key),
+				["value"] = value,
+				["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+			}, cancellationToken);
+	}
+
+	public async ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken cancellationToken = default)
+	{
+		var response = await ExecuteAsync($"SELECT {AccountFieldSelection} FROM account ORDER BY username",
+			new Dictionary<string, object?>(), cancellationToken);
+		var rows = response.GetValue<List<AccountDbRecord>>(0) ?? [];
+		return rows.Select(MapRecordToAccount).ToList();
+	}
+
 	private static SharpAccount MapRecordToAccount(AccountDbRecord rec) => new()
 	{
 		Id = NormalizeAccountId(rec.Id),

@@ -24,4 +24,7 @@ public interface IAccountSessionStore
 
 	/// <summary>Explicitly invalidates a token (logout).</summary>
 	Task RevokeAsync(string token, CancellationToken ct = default);
+
+	/// <summary>Invalidates every session token bound to the account (disable/ban).</summary>
+	Task RevokeAllForAccountAsync(string accountId, CancellationToken ct = default);
 }

@@ -801,6 +801,12 @@ public interface ISharpDatabase
 	/// <summary>Returns the account that owns <paramref name="characterRef"/>, or null if the character has no account.</summary>
 	ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken cancellationToken = default);
 
+	/// <summary>Sets or clears the account's disabled (banned) flag.</summary>
+	ValueTask UpdateAccountDisabledAsync(string accountId, bool value, CancellationToken cancellationToken = default);
+
+	/// <summary>Returns all accounts. Admin tooling only — account counts are small.</summary>
+	ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken cancellationToken = default);
+
 	#endregion
 
 	#region Server State Methods

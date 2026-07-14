@@ -182,4 +182,19 @@ public class InMemoryAccountSessionStoreTests
 
 		await Task.WhenAll(tasks);
 	}
+
+	[Test]
+	public async Task RevokeAllForAccount_RemovesOnlyThatAccountsTokens()
+	{
+		var store = new InMemoryAccountSessionStore();
+		var t1 = await store.CreateTokenAsync("acct-A", TimeSpan.FromMinutes(15));
+		var t2 = await store.CreateTokenAsync("acct-A", TimeSpan.FromMinutes(15));
+		var t3 = await store.CreateTokenAsync("acct-B", TimeSpan.FromMinutes(15));
+
+		await store.RevokeAllForAccountAsync("acct-A");
+
+		await Assert.That(await store.ValidateAsync(t1)).IsNull();
+		await Assert.That(await store.ValidateAsync(t2)).IsNull();
+		await Assert.That(await store.ValidateAsync(t3)).IsEqualTo("acct-B");
+	}
 }

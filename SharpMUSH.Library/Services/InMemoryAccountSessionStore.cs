@@ -40,4 +40,11 @@ public sealed class InMemoryAccountSessionStore : IAccountSessionStore
 		_tokens.TryRemove(token, out _);
 		return Task.CompletedTask;
 	}
+
+	public Task RevokeAllForAccountAsync(string accountId, CancellationToken ct = default)
+	{
+		foreach (var pair in _tokens.Where(p => p.Value.AccountId == accountId))
+			_tokens.TryRemove(pair.Key, out _);
+		return Task.CompletedTask;
+	}
 }

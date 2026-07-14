@@ -13,11 +13,12 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 public class AccountServiceTests
 {
-	private static (AccountService Service, ISharpDatabase Db, IPasswordService Passwords) Build()
+	private static (AccountService Service, ISharpDatabase Db, IPasswordService Passwords, IAccountSessionStore Sessions) Build()
 	{
 		var db = Substitute.For<ISharpDatabase>();
 		var pw = Substitute.For<IPasswordService>();
-		return (new AccountService(db, pw), db, pw);
+		var sessions = Substitute.For<IAccountSessionStore>();
+		return (new AccountService(db, pw, sessions), db, pw, sessions);
 	}
 
 	private static SharpAccount MakeAccount(string id = "accounts/1", string username = "TestUser",
@@ -35,7 +36,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask CreateAccount_NewDisplayName_CreatesAndReturnsAccount()
 	{
-		var (svc, db, pw) = Build();
+		var (svc, db, pw, _) = Build();
 
 		db.GetAccountByUsernameAsync("Alice", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
@@ -57,7 +58,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask CreateAccount_DuplicateDisplayName_ReturnsError()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.GetAccountByUsernameAsync("Alice", Arg.Any<CancellationToken>())
 			.Returns(MakeAccount(username: "Alice"));
@@ -71,7 +72,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask CreateAccount_DuplicateEmail_ReturnsError()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.GetAccountByUsernameAsync("NewUser", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
@@ -87,7 +88,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask CreateAccount_NullEmail_SkipsEmailCheck()
 	{
-		var (svc, db, pw) = Build();
+		var (svc, db, pw, _) = Build();
 
 		db.GetAccountByUsernameAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
@@ -106,7 +107,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask AuthenticateAsync_ValidDisplayNameAndPassword_ReturnsAccount()
 	{
-		var (svc, db, pw) = Build();
+		var (svc, db, pw, _) = Build();
 
 		var account = MakeAccount();
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
@@ -121,7 +122,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask AuthenticateAsync_ValidEmail_LooksUpByEmail()
 	{
-		var (svc, db, pw) = Build();
+		var (svc, db, pw, _) = Build();
 
 		var account = MakeAccount(email: "user@test.com");
 		db.GetAccountByEmailAsync("user@test.com", Arg.Any<CancellationToken>()).Returns(account);
@@ -137,7 +138,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask AuthenticateAsync_WrongPassword_ReturnsNull()
 	{
-		var (svc, db, pw) = Build();
+		var (svc, db, pw, _) = Build();
 
 		var account = MakeAccount();
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(account);
@@ -151,7 +152,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask AuthenticateAsync_AccountNotFound_ReturnsNull()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.GetAccountByUsernameAsync("Ghost", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
@@ -164,7 +165,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask AuthenticateAsync_DisabledAccount_ReturnsNull()
 	{
-		var (svc, db, pw) = Build();
+		var (svc, db, pw, _) = Build();
 
 		var disabled = MakeAccount(isDisabled: true);
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(disabled);
@@ -178,7 +179,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask ChangePassword_CorrectOldPassword_UpdatesHash()
 	{
-		var (svc, db, pw) = Build();
+		var (svc, db, pw, _) = Build();
 
 		var account = MakeAccount();
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(account);
@@ -194,7 +195,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask ChangePassword_WrongOldPassword_ReturnsError()
 	{
-		var (svc, db, pw) = Build();
+		var (svc, db, pw, _) = Build();
 
 		var account = MakeAccount();
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(account);
@@ -209,7 +210,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask ChangePassword_AccountNotFound_ReturnsError()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.GetAccountByIdAsync("accounts/ghost", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
@@ -223,7 +224,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask ChangeEmail_ValidPassword_NewEmailSet()
 	{
-		var (svc, db, pw) = Build();
+		var (svc, db, pw, _) = Build();
 
 		var account = MakeAccount();
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(account);
@@ -240,7 +241,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask ChangeEmail_DuplicateEmail_ReturnsError()
 	{
-		var (svc, db, pw) = Build();
+		var (svc, db, pw, _) = Build();
 
 		var account = MakeAccount();
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(account);
@@ -257,7 +258,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask ChangeEmail_NullEmail_ClearsEmail()
 	{
-		var (svc, db, pw) = Build();
+		var (svc, db, pw, _) = Build();
 
 		var account = MakeAccount(email: "old@test.com");
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(account);
@@ -273,7 +274,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask ChangeDisplayName_Unique_UpdatesName()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.GetAccountByUsernameAsync("NewName", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
@@ -287,7 +288,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask ChangeDisplayName_AlreadyTaken_ReturnsError()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.GetAccountByUsernameAsync("Taken", Arg.Any<CancellationToken>())
 			.Returns(MakeAccount(id: "accounts/99", username: "Taken"));
@@ -301,7 +302,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask DisplayNameExists_WhenPresent_ReturnsTrue()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.GetAccountByUsernameAsync("Alice", Arg.Any<CancellationToken>())
 			.Returns(MakeAccount(username: "Alice"));
@@ -314,7 +315,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask DisplayNameExists_WhenAbsent_ReturnsFalse()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.GetAccountByUsernameAsync("Ghost", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
@@ -327,7 +328,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask EmailExists_WhenPresent_ReturnsTrue()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.GetAccountByEmailAsync("a@b.com", Arg.Any<CancellationToken>())
 			.Returns(MakeAccount(email: "a@b.com"));
@@ -340,7 +341,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask EmailExists_WhenAbsent_ReturnsFalse()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.GetAccountByEmailAsync("nope@b.com", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
@@ -353,7 +354,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask DeleteAccountAsync_ForwardsToDatabase()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.DeleteAccountAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(ValueTask.CompletedTask);
 
@@ -365,7 +366,7 @@ public class AccountServiceTests
 	[Test]
 	public async ValueTask DisableAccountAsync_AccountNotFound_ReturnsError()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, _) = Build();
 
 		db.GetAccountByIdAsync("accounts/ghost", Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);
@@ -377,15 +378,102 @@ public class AccountServiceTests
 	}
 
 	[Test]
-	public async ValueTask DisableAccountAsync_NotYetImplemented_ReturnsError()
+	public async ValueTask DisableAccountAsync_AccountFound_DisablesAndRevokesSessions()
 	{
-		var (svc, db, _) = Build();
+		var (svc, db, _, sessions) = Build();
 
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(MakeAccount());
 
 		var result = await svc.DisableAccountAsync("accounts/1");
 
+		await Assert.That(result.IsT0).IsTrue();
+		await db.Received(1).UpdateAccountDisabledAsync("accounts/1", true, Arg.Any<CancellationToken>());
+		await sessions.Received(1).RevokeAllForAccountAsync("accounts/1", Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async ValueTask EnableAccountAsync_AccountNotFound_ReturnsError()
+	{
+		var (svc, db, _, _) = Build();
+
+		db.GetAccountByIdAsync("accounts/ghost", Arg.Any<CancellationToken>())
+			.Returns((SharpAccount?)null);
+
+		var result = await svc.EnableAccountAsync("accounts/ghost");
+
 		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("not yet implemented");
+		await Assert.That(result.AsT1.Value).Contains("not found");
+	}
+
+	[Test]
+	public async ValueTask EnableAccountAsync_AccountFound_ClearsDisabledFlag()
+	{
+		var (svc, db, _, _) = Build();
+
+		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>())
+			.Returns(MakeAccount(isDisabled: true));
+
+		var result = await svc.EnableAccountAsync("accounts/1");
+
+		await Assert.That(result.IsT0).IsTrue();
+		await db.Received(1).UpdateAccountDisabledAsync("accounts/1", false, Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async ValueTask SetPasswordAsync_AccountNotFound_ReturnsError()
+	{
+		var (svc, db, _, _) = Build();
+
+		db.GetAccountByIdAsync("accounts/ghost", Arg.Any<CancellationToken>())
+			.Returns((SharpAccount?)null);
+
+		var result = await svc.SetPasswordAsync("accounts/ghost", "newpass", false);
+
+		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.AsT1.Value).Contains("not found");
+	}
+
+	[Test]
+	public async ValueTask SetPasswordAsync_AccountFound_SetsHashAndMustChangeFlag()
+	{
+		var (svc, db, pw, _) = Build();
+
+		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(MakeAccount());
+		pw.HashPassword(Arg.Any<string>(), "newpass").Returns("new-hash");
+
+		var result = await svc.SetPasswordAsync("accounts/1", "newpass", true);
+
+		await Assert.That(result.IsT0).IsTrue();
+		await db.Received(1).UpdateAccountPasswordAsync("accounts/1", "new-hash", Arg.Any<CancellationToken>());
+		await db.Received(1).UpdateAccountMustChangePasswordAsync("accounts/1", true, Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async ValueTask CreateUnclaimedAccountAsync_CreatesAccountWithEmptyHash()
+	{
+		var (svc, db, _, _) = Build();
+
+		var created = MakeAccount(username: "unclaimed-admin");
+		db.CreateAccountAsync("unclaimed-admin", null, string.Empty, Arg.Any<CancellationToken>())
+			.Returns(created);
+
+		var result = await svc.CreateUnclaimedAccountAsync("unclaimed-admin");
+
+		await Assert.That(result.Username).IsEqualTo("unclaimed-admin");
+		await db.Received(1).CreateAccountAsync("unclaimed-admin", null, string.Empty, Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async ValueTask GetAllAccountsAsync_ForwardsToDatabase()
+	{
+		var (svc, db, _, _) = Build();
+
+		var accounts = new List<SharpAccount> { MakeAccount() };
+		db.GetAllAccountsAsync(Arg.Any<CancellationToken>()).Returns(accounts);
+
+		var result = await svc.GetAllAccountsAsync();
+
+		await Assert.That(result.Count).IsEqualTo(1);
+		await db.Received(1).GetAllAccountsAsync(Arg.Any<CancellationToken>());
 	}
 }

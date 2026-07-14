@@ -197,6 +197,23 @@ public partial class ArangoDatabase
 		return result.FirstOrDefault() is { ValueKind: not JsonValueKind.Undefined } elem ? AccountFromJson(elem) : null;
 	}
 
+	public async ValueTask UpdateAccountDisabledAsync(string accountId, bool value, CancellationToken cancellationToken = default)
+	{
+		var key = ExtractKey(accountId);
+		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Accounts,
+			new { _key = key, IsDisabled = value, UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+			mergeObjects: true, cancellationToken: cancellationToken);
+	}
+
+	public async ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken cancellationToken = default)
+	{
+		var result = await arangoDb.Query.ExecuteAsync<JsonElement>(handle,
+			"FOR a IN @@c SORT a.Username RETURN a",
+			bindVars: new Dictionary<string, object> { { "@c", DatabaseConstants.Accounts } },
+			cancellationToken: cancellationToken);
+		return result.Where(e => e.ValueKind == JsonValueKind.Object).Select(AccountFromJson).ToList();
+	}
+
 	private static SharpAccount AccountFromJson(JsonElement elem)
 	{
 		var id = elem.TryGetProperty("_id", out var idProp) ? idProp.GetString() : null;

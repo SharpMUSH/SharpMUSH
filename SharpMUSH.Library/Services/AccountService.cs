@@ -5,7 +5,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class AccountService(ISharpDatabase database, IPasswordService passwordService) : IAccountService
+public class AccountService(ISharpDatabase database, IPasswordService passwordService, IAccountSessionStore accountSessionStore) : IAccountService
 {
 	// Account IDs are used as the "user" salt key for hashing
 	private static string AccountKey(SharpAccount account) => $"account:{account.Id}:{account.CreatedAt}";
@@ -125,10 +125,37 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 		if (account is null)
 			return new Error<string>("Account not found.");
 
-		// TODO: add UpdateAccountDisabledAsync to ISharpDatabase and all providers
-		return new Error<string>("DisableAccount is not yet implemented.");
+		await database.UpdateAccountDisabledAsync(accountId, true, ct);
+		await accountSessionStore.RevokeAllForAccountAsync(accountId, ct);
+		return new Success();
 	}
 
 	public ValueTask DeleteAccountAsync(string accountId, CancellationToken ct = default)
 		=> database.DeleteAccountAsync(accountId, ct);
+
+	public async ValueTask<OneOf<Success, Error<string>>> SetPasswordAsync(string accountId, string newPassword, bool mustChangePassword, CancellationToken ct = default)
+	{
+		var account = await database.GetAccountByIdAsync(accountId, ct);
+		if (account is null)
+			return new Error<string>("Account not found.");
+
+		var newHash = passwordService.HashPassword(AccountKey(account), newPassword);
+		await database.UpdateAccountPasswordAsync(accountId, newHash, ct);
+		await database.UpdateAccountMustChangePasswordAsync(accountId, mustChangePassword, ct);
+		return new Success();
+	}
+
+	public ValueTask<SharpAccount> CreateUnclaimedAccountAsync(string username, CancellationToken ct = default)
+		=> database.CreateAccountAsync(username, null, string.Empty, ct);
+
+	public async ValueTask<OneOf<Success, Error<string>>> EnableAccountAsync(string accountId, CancellationToken ct = default)
+	{
+		if (await database.GetAccountByIdAsync(accountId, ct) is null)
+			return new Error<string>("Account not found.");
+		await database.UpdateAccountDisabledAsync(accountId, false, ct);
+		return new Success();
+	}
+
+	public ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken ct = default)
+		=> database.GetAllAccountsAsync(ct);
 }

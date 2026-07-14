@@ -56,4 +56,17 @@ public interface IAccountService
 
 	ValueTask<OneOf<Success, Error<string>>> DisableAccountAsync(string accountId, CancellationToken ct = default);
 	ValueTask DeleteAccountAsync(string accountId, CancellationToken ct = default);
+
+	/// <summary>Admin/setup password set: no old-password proof. Optionally flags MustChangePassword.</summary>
+	ValueTask<OneOf<Success, Error<string>>> SetPasswordAsync(string accountId, string newPassword, bool mustChangePassword, CancellationToken ct = default);
+
+	/// <summary>
+	/// Creates an account with an EMPTY password hash (unclaimed — cannot be logged into
+	/// until a password is set). Used by BootstrapService for the pre-generated admin.
+	/// </summary>
+	ValueTask<SharpAccount> CreateUnclaimedAccountAsync(string username, CancellationToken ct = default);
+
+	ValueTask<OneOf<Success, Error<string>>> EnableAccountAsync(string accountId, CancellationToken ct = default);
+
+	ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken ct = default);
 }

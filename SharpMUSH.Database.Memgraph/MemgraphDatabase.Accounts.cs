@@ -149,6 +149,21 @@ RETURN a
 		return result.Result.Count > 0 ? MapNodeToAccount(result.Result[0]["a"].As<INode>()) : null;
 	}
 
+	public async ValueTask UpdateAccountDisabledAsync(string accountId, bool value, CancellationToken cancellationToken = default)
+	{
+		var key = accountId.Contains('/') ? accountId.Split('/')[1] : accountId;
+		await ExecuteWithRetryAsync(
+			"MATCH (a:Account {id: $id}) SET a.isDisabled = $value, a.updatedAt = $now",
+			new { id = key, value, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }, cancellationToken);
+	}
+
+	public async ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken cancellationToken = default)
+	{
+		var result = await ExecuteWithRetryAsync(
+			"MATCH (a:Account) RETURN a ORDER BY a.username", new { }, cancellationToken);
+		return result.Result.Select(r => MapNodeToAccount(r["a"].As<INode>())).ToList();
+	}
+
 	private static SharpAccount MapNodeToAccount(INode node)
 	{
 		var email = node.Properties.TryGetValue("email", out var emailVal) && emailVal is not null && emailVal is not DBNull
