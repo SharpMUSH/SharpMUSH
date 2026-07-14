@@ -84,8 +84,6 @@ services:
       - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
       # :? makes compose abort if the value is missing from .env rather than booting misconfigured.
       - Jwt__SigningKey=${JWT_SIGNING_KEY:?set JWT_SIGNING_KEY in deploy/.env}
-      - SHARPMUSH_BOOTSTRAP_USERNAME=${BOOTSTRAP_USERNAME:?set BOOTSTRAP_USERNAME in deploy/.env}
-      - SHARPMUSH_BOOTSTRAP_PASSWORD=${BOOTSTRAP_PASSWORD:?set BOOTSTRAP_PASSWORD in deploy/.env}
     volumes:
       - app-data:/app/data
     # NOTE: no `ports:` — the server is only reachable via the tunnel and the internal network.
