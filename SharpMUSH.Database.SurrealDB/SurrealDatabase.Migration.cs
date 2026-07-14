@@ -186,6 +186,8 @@ public partial class SurrealDatabase
 					cancellationToken);
 			}
 
+			await EnsureServerStateAsync(cancellationToken);
+
 			logger.LogInformation("SurrealDB Migration Completed");
 		}
 		catch (Exception ex)
@@ -225,6 +227,26 @@ public partial class SurrealDatabase
 			$"SELECT VALUE appliedAt FROM migration:⟨{migrationId}⟩", ct);
 		var rows = response.GetValue<List<long>>(0);
 		return rows is { Count: > 0 };
+	}
+
+	// First-run setup inference: create the server_state doc if missing; a game that already has
+	// a claimed account (non-empty passwordHash) must not re-open the wizard. Runs every Migrate()
+	// call, but only ever acts when the state doc doesn't exist yet — an existing record (whatever
+	// its value) is never overwritten, so this never downgrades a completed setup.
+	private async Task EnsureServerStateAsync(CancellationToken cancellationToken)
+	{
+		var existing = await ExecuteAsync("SELECT * FROM server_state:state",
+			new Dictionary<string, object?>(), cancellationToken);
+		if (existing.GetValue<List<ServerStateDbRecord>>(0) is { Count: > 0 })
+			return;
+
+		var claimed = await ExecuteAsync(
+			"SELECT * FROM account WHERE passwordHash != NONE AND passwordHash != '' LIMIT 1",
+			new Dictionary<string, object?>(), cancellationToken);
+		var setupCompleted = claimed.GetValue<List<AccountDbRecord>>(0) is { Count: > 0 };
+
+		await ExecuteAsync("CREATE server_state:state CONTENT { setupCompleted: $value }",
+			new Dictionary<string, object?> { ["value"] = setupCompleted }, cancellationToken);
 	}
 
 	/// <summary>

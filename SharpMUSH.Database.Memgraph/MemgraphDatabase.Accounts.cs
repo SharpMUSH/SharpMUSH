@@ -149,12 +149,6 @@ RETURN a
 		return result.Result.Count > 0 ? MapNodeToAccount(result.Result[0]["a"].As<INode>()) : null;
 	}
 
-	public ValueTask<SharpServerState> GetServerStateAsync(CancellationToken cancellationToken = default)
-		=> throw new NotImplementedException("Task 2");
-
-	public ValueTask SetServerSetupCompletedAsync(bool value, CancellationToken cancellationToken = default)
-		=> throw new NotImplementedException("Task 2");
-
 	private static SharpAccount MapNodeToAccount(INode node)
 	{
 		var email = node.Properties.TryGetValue("email", out var emailVal) && emailVal is not null && emailVal is not DBNull
