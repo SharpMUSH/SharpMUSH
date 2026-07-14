@@ -1,0 +1,108 @@
+@page "/admin/accounts"
+@attribute [Authorize(Policy = "players.moderate")]
+@inject AdminAccountsService AccountsService
+@inject ISnackbar Snackbar
+
+<PageTitle>Accounts — Admin — SharpMUSH</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">Accounts</MudText>
+
+<MudTextField T="string" @bind-Value="_search" Placeholder="Search username or email…"
+              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+              Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnSearchDebouncedAsync" Class="mb-4" />
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    <MudTable Items="_rows" Dense="true" Hover="true">
+        <HeaderContent>
+            <MudTh>Username</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Characters</MudTh>
+            <MudTh />
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Username</MudTd>
+            <MudTd>@(context.Email ?? "—")</MudTd>
+            <MudTd>
+                @if (context.IsDisabled)
+                {
+                    <MudChip T="string" Color="Color.Error" Size="Size.Small">DISABLED</MudChip>
+                }
+                else if (context.MustChangePassword)
+                {
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">must change pw</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small">active</MudChip>
+                }
+            </MudTd>
+            <MudTd>
+                @foreach (var character in context.Characters)
+                {
+                    <MudChip T="string" Size="Size.Small"
+                             OnClose="@(() => UnlinkAsync(context, character))">
+                        @character.Name (#@character.DbrefNumber)
+                    </MudChip>
+                }
+            </MudTd>
+            <MudTd>
+                <MudButton Size="Size.Small" OnClick="@(() => OpenResetAsync(context))">Reset password</MudButton>
+                <MudButton Size="Size.Small" Color="@(context.IsDisabled ? Color.Success : Color.Error)"
+                           OnClick="@(() => ToggleDisabledAsync(context))">
+                    @(context.IsDisabled ? "Enable" : "Disable")
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private IReadOnlyList<AdminAccountsService.AdminAccountRow> _rows = [];
+    private string _search = string.Empty;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task OnSearchDebouncedAsync(string _) => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _rows = await AccountsService.ListAsync(_search);
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private async Task ToggleDisabledAsync(AdminAccountsService.AdminAccountRow row)
+    {
+        var (success, error) = await AccountsService.SetDisabledAsync(row.Id, !row.IsDisabled);
+        Snackbar.Add(success
+            ? $"Account '{row.Username}' {(row.IsDisabled ? "enabled" : "disabled")}."
+            : error ?? "Operation failed.", success ? Severity.Success : Severity.Error);
+        await LoadAsync();
+    }
+
+    private async Task UnlinkAsync(AdminAccountsService.AdminAccountRow row, AdminAccountsService.AdminCharacterSummary character)
+    {
+        var (success, error) = await AccountsService.UnlinkCharacterAsync(row.Id, character.DbrefNumber);
+        Snackbar.Add(success ? $"Unlinked {character.Name} from '{row.Username}'." : error ?? "Unlink failed.",
+            success ? Severity.Success : Severity.Error);
+        await LoadAsync();
+    }
+
+    private async Task OpenResetAsync(AdminAccountsService.AdminAccountRow row)
+    {
+        var temp = $"temp-{Guid.NewGuid().ToString("N")[..10]}";
+        var (success, error) = await AccountsService.ResetPasswordAsync(row.Id, temp);
+        Snackbar.Add(success
+            ? $"Password for '{row.Username}' reset to: {temp} — share it securely; they must change it at next login."
+            : error ?? "Reset failed.", success ? Severity.Warning : Severity.Error, o => o.RequireInteraction = true);
+        await LoadAsync();
+    }
+}

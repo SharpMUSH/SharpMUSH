@@ -42,6 +42,7 @@ builder.Services.AddSingleton<RestrictionsService>();
 builder.Services.AddSingleton<PackagesAdminService>();
 builder.Services.AddSingleton<BannedNamesService>();
 builder.Services.AddSingleton<SitelockService>();
+builder.Services.AddSingleton<AdminAccountsService>();
 builder.Services.AddSingleton<IWebSocketClientService, WebSocketClientService>();
 builder.Services.AddSingleton<ITerminalService, TerminalService>();
 // Second, independent connection for the /play page (player interactions), separate from the
