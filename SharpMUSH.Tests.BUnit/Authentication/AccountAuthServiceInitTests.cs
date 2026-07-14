@@ -103,4 +103,37 @@ public class AccountAuthServiceInitTests : BunitContext
 		await Assert.That(success).IsTrue();
 		await Assert.That(service.ExplicitlyLoggedOut).IsFalse();
 	}
+
+	/// <summary>
+	/// The logout latch must be enforced at this chokepoint, not only at call sites:
+	/// <c>SharpMUSH.Client.Authentication.DebugAuthStateProvider</c> (and MainLayout before it) call
+	/// <see cref="AccountAuthService.GetDebugOttAsync"/> on every auth-state query — including
+	/// every F5 / CascadingAuthenticationState evaluation. Without this early return, that routine
+	/// re-auth would reach the server, get a fresh debug OTT, and persist it via
+	/// <c>PersistSessionAsync</c> — which clears <see cref="AccountAuthService.ExplicitlyLoggedOut"/>
+	/// and re-populates the session, silently undoing an explicit logout on the very next reload.
+	/// This test never sets up an HTTP handler at all: if the guard regresses, the call falls
+	/// through to <c>httpClientFactory.CreateClient("api")</c> against an un-configured
+	/// <see cref="Substitute"/>, which throws and the test fails loudly rather than silently
+	/// passing for the wrong reason.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task GetDebugOttAsync_ExplicitlyLoggedOut_ReturnsNullWithoutCallingServer()
+	{
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(bool.TrueString);
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult(null);
+
+		var service = new AccountAuthService(
+			Substitute.For<IHttpClientFactory>(),
+			JSInterop.JSRuntime,
+			NullLogger<AccountAuthService>.Instance);
+
+		await service.InitAsync();
+		await Assert.That(service.ExplicitlyLoggedOut).IsTrue();
+
+		var result = await service.GetDebugOttAsync();
+
+		await Assert.That(result).IsNull();
+		await Assert.That(service.ExplicitlyLoggedOut).IsTrue();
+	}
 }

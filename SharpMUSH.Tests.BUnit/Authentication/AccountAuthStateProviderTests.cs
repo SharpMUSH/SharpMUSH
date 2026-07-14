@@ -14,8 +14,11 @@ public class AccountAuthStateProviderTests
 		public string? Username { get; } = username;
 		public string? Role { get; } = role;
 		public IReadOnlyList<string> Permissions { get; } = permissions;
+		public bool ExplicitlyLoggedOut { get; set; }
 		public event Action? AuthStateChanged;
 		public void Fire() => AuthStateChanged?.Invoke();
+		public Task<AccountAuthService.DebugOttResponse?> GetDebugOttAsync() =>
+			Task.FromResult<AccountAuthService.DebugOttResponse?>(null);
 	}
 
 	private static FakeAccountAuthState CreateAuthService(

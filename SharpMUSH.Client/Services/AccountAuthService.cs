@@ -221,6 +221,12 @@ public class AccountAuthService(
 	/// </summary>
 	public async Task<DebugOttResponse?> GetDebugOttAsync()
 	{
+		// Chokepoint for the explicit-logout latch: DebugAuthStateProvider.GetAuthenticationStateAsync
+		// is called on every auth-state query (every F5 / CascadingAuthenticationState evaluation), so
+		// without this guard HERE, that routine re-auth would call through to PersistSessionAsync below
+		// and silently clear ExplicitlyLoggedOut, undoing an explicit logout on the very next reload.
+		if (ExplicitlyLoggedOut) return null;
+
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");

@@ -23,8 +23,10 @@ namespace SharpMUSH.Client.Authentication;
 /// Falls back to static placeholder claims when the server is not yet reachable or
 /// the bootstrap account does not yet exist (e.g. very first startup race).
 /// </summary>
-public class DebugAuthStateProvider(AccountAuthService accountAuth) : AuthenticationStateProvider
+public class DebugAuthStateProvider : AuthenticationStateProvider
 {
+	private readonly IAccountAuthState _accountAuth;
+
 	/// Cached on first successful server round-trip.
 	private AccountAuthService.DebugOttResponse? _cached;
 
@@ -38,10 +40,36 @@ public class DebugAuthStateProvider(AccountAuthService accountAuth) : Authentica
 		.. PortalPermission.AllScopes.Select(scope => new Claim(PortalPermission.ClaimType, scope))
 	];
 
+	public DebugAuthStateProvider(IAccountAuthState accountAuth)
+	{
+		_accountAuth = accountAuth;
+		// So every AuthorizeView (nav items, the sidebar's bottom-left account indicator, the
+		// topbar's AccountChrome) flips live the instant AccountAuthService raises AuthStateChanged
+		// (login/register/setup/logout) instead of waiting for the next unrelated re-render.
+		_accountAuth.AuthStateChanged += HandleAccountAuthStateChanged;
+	}
+
+	private void HandleAccountAuthStateChanged()
+	{
+		// Drop any cached debug identity on the logged-out transition so a later re-login in this
+		// tab re-fetches from the server rather than resurrecting the pre-logout OTT response.
+		if (_accountAuth.ExplicitlyLoggedOut)
+			_cached = null;
+
+		NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+	}
+
 	public override async Task<AuthenticationState> GetAuthenticationStateAsync()
 	{
+		// Explicit-logout latch: enforced again here (belt-and-braces alongside the chokepoint in
+		// AccountAuthService.GetDebugOttAsync) because this method is the one actually called on
+		// every auth-state query. Once latched, no cached OTT reuse and no static-sentinel fallback
+		// claims — an anonymous principal is the only correct answer until the next real login.
+		if (_accountAuth.ExplicitlyLoggedOut)
+			return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+
 		if (_cached is null)
-			_cached = await accountAuth.GetDebugOttAsync();
+			_cached = await _accountAuth.GetDebugOttAsync();
 
 		List<Claim> claims;
 
