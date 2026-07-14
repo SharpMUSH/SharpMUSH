@@ -27,17 +27,29 @@ public class SetupService(ISharpDatabase database, IAccountService accountServic
 				return new Error<string>("Setup has already been completed.");
 
 			var account = await accountService.GetAccountForCharacterAsync(new DBRef(1), ct);
+			var needsRename = account is null || !string.Equals(account.Username, username, StringComparison.Ordinal);
+
+			if (needsRename)
+			{
+				// Pre-check before any mutation: covers both the create (edge branch, which has no
+				// duplicate-username guard of its own) and rename paths, so a collision returns
+				// 409 without consuming the claim or leaving the #1 account partially mutated.
+				var existing = await accountService.GetByUsernameAsync(username, ct);
+				if (existing is not null && existing.Id != account?.Id)
+					return new Error<string>($"Username '{username}' is already taken.");
+			}
+
 			if (account is null)
 			{
 				// Edge case: bootstrap never ran or the link was removed — create and link.
 				account = await accountService.CreateUnclaimedAccountAsync(username, ct);
 				await accountService.LinkCharacterAsync(account.Id!, new DBRef(1), ct);
 			}
-			else if (!string.Equals(account.Username, username, StringComparison.Ordinal))
+			else if (needsRename)
 			{
 				var rename = await accountService.ChangeUsernameAsync(account.Id!, username, ct);
 				if (rename.IsT1)
-					return rename.AsT1; // username taken — claim NOT consumed
+					return rename.AsT1; // username taken (race) — claim NOT consumed
 			}
 
 			var setPassword = await accountService.SetPasswordAsync(account.Id!, password, mustChangePassword: false, ct);

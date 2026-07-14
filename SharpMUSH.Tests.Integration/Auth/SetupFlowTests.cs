@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
@@ -114,6 +116,11 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 		await db.SetServerSetupCompletedAsync(false);
 		var (_, existing) = await RegisterAccountAsync(); // takes a username
 
+		var accountService = factory.Services.GetRequiredService<IAccountService>();
+		var linkedBefore = await accountService.GetAccountForCharacterAsync(new DBRef(1));
+		await Assert.That(linkedBefore).IsNotNull();
+		var usernameBefore = linkedBefore!.Username;
+
 		var http = CreateClient();
 		var response = await http.PostAsJsonAsync("api/setup/complete",
 			new SetupCompleteRequest(existing.Username, "whatever-pass-3"));
@@ -121,6 +128,12 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 
 		var status = await http.GetFromJsonAsync<SetupStatusResponse>("api/setup/status");
 		await Assert.That(status!.NeedsSetup).IsTrue(); // claim not consumed
+
+		// Finding 1's invariant: a rejected collision must not have mutated the #1-linked
+		// account's username before the claim failed.
+		var linkedAfter = await accountService.GetAccountForCharacterAsync(new DBRef(1));
+		await Assert.That(linkedAfter).IsNotNull();
+		await Assert.That(linkedAfter!.Username).IsEqualTo(usernameBefore);
 
 		await db.SetServerSetupCompletedAsync(true); // leave the shared game claimed for other suites
 	}
