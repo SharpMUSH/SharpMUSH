@@ -72,18 +72,6 @@ public class Startup(
 
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
-		services.Configure<BootstrapOptions>(configuration.GetSection(BootstrapOptions.Section));
-		services.PostConfigure<BootstrapOptions>(options =>
-		{
-			var adminUsername = Environment.GetEnvironmentVariable("SHARPMUSH_BOOTSTRAP_USERNAME");
-			if (!string.IsNullOrWhiteSpace(adminUsername))
-				options.AdminUsername = adminUsername;
-
-			var adminPassword = Environment.GetEnvironmentVariable("SHARPMUSH_BOOTSTRAP_PASSWORD");
-			if (!string.IsNullOrWhiteSpace(adminPassword))
-				options.AdminPassword = adminPassword;
-		});
-
 		services.AddCors(options =>
 		{
 			// C-4: Read allowed origins from Cors:AllowedOrigins config array.

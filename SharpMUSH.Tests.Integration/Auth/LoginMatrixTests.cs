@@ -105,7 +105,6 @@ public class LoginMatrixTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	[Skip("Enabled by Task 6")]
 	public async Task Login_EmptyHashAccount_NeverMatches()
 	{
 		// The bootstrap admin account has an empty hash; empty-string password must not open it.
