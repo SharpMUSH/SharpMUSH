@@ -107,6 +107,10 @@ public class AuthController(
 				return StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action.");
 
 			var characters = await accountService.GetCharactersAsync(accountId);
+
+			if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
+				return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
+
 			var character = characters.FirstOrDefault(c => c.Object.Key == request.CharacterKey.Value);
 			if (character is null)
 			{
@@ -152,6 +156,13 @@ public class AuthController(
 			logger.LogInformation("Rehashed legacy password for player #{Key} via OTT login", player.Object.Key);
 		}
 
+		if (!options.CurrentValue.Net.Logins)
+		{
+			var flags = await player.Object.Flags.Value.ToListAsync();
+			if (roleDerivation.DeriveRole(player.Object.Key, flags) < PortalRole.Wizard)
+				return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
+		}
+
 		const int ttlSeconds = 60;
 		var playerRef = new DBRef(player.Object.Key, player.Object.CreationTime);
 		var token = await ottStore.CreateTokenAsync(playerRef, TimeSpan.FromSeconds(ttlSeconds));
@@ -188,6 +199,10 @@ public class AuthController(
 		}
 
 		var characters = await accountService.GetCharactersAsync(account.Id!);
+
+		if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
+			return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
+
 		var charSummaries = await BuildCharacterSummariesAsync(characters);
 
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
@@ -294,6 +309,10 @@ public class AuthController(
 		}
 
 		var characters = await accountService.GetCharactersAsync(account.Id!);
+
+		if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
+			return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
+
 		var character = characters.FirstOrDefault(c =>
 			c.Object.Key == request.CharacterKey
 			&& c.Object.CreationTime == request.CharacterCreationTime);
@@ -403,6 +422,21 @@ public class AuthController(
 
 		SetRefreshCookie(result.RefreshToken);
 		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
+	}
+
+	/// <summary>
+	/// PennMUSH semantics: an account qualifies for login while <c>Net.Logins</c> is disabled
+	/// if ANY linked character is staff (character #1, or WIZARD-flagged / higher).
+	/// </summary>
+	private async Task<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters)
+	{
+		foreach (var character in characters)
+		{
+			var flags = await character.Object.Flags.Value.ToListAsync();
+			if (roleDerivation.DeriveRole(character.Object.Key, flags) >= PortalRole.Wizard)
+				return true;
+		}
+		return false;
 	}
 
 	private static async Task<IReadOnlyList<CharacterSummary>> BuildCharacterSummariesAsync(IReadOnlyList<SharpPlayer> characters)

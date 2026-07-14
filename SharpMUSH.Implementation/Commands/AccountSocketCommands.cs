@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -114,6 +115,16 @@ public partial class Commands
 		{
 			await NotifyService!.Notify(handle, "Invalid account name or password.");
 			return new None();
+		}
+
+		if (!Configuration!.CurrentValue.Net.Logins)
+		{
+			var linked = await AccountService.GetCharactersAsync(account.Id!);
+			if (!await AnyStaffCharacterAsync(linked))
+			{
+				await NotifyService!.Notify(handle, "Logins are disabled.");
+				return new None();
+			}
 		}
 
 		await ConnectionService.BindAccount(handle, account.Id!);
@@ -283,5 +294,21 @@ public partial class Commands
 			accountId, character.Object.Name, character.Object.Key);
 
 		return new CallState(playerDbRef);
+	}
+
+	/// <summary>
+	/// PennMUSH semantics: an account qualifies for login while <c>Net.Logins</c> is disabled
+	/// if ANY linked character is staff (character #1, or WIZARD-flagged).
+	/// </summary>
+	private static async ValueTask<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters)
+	{
+		foreach (var character in characters)
+		{
+			if (character.Object.Key == 1)
+				return true;
+			if (await new AnySharpObject(character).IsWizard())
+				return true;
+		}
+		return false;
 	}
 }

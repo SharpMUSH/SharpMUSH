@@ -208,6 +208,14 @@ public partial class Commands
 			Logger?.LogInformation("Rehashed legacy password for player #{Key}", foundDB.Object.Key);
 		}
 
+		if (!Configuration!.CurrentValue.Net.Logins
+			&& foundDB.Object.Key != 1
+			&& !await new AnySharpObject(foundDB).IsWizard())
+		{
+			await NotifyService!.Notify(handle, "Logins are disabled.");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
 		await ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
 
@@ -263,6 +271,14 @@ public partial class Commands
 		}
 		var foundPlayer = playerNode.AsPlayer;
 
+		if (!Configuration!.CurrentValue.Net.Logins
+			&& foundPlayer.Object.Key != 1
+			&& !await new AnySharpObject(foundPlayer).IsWizard())
+		{
+			await NotifyService!.Notify(handle, "Logins are disabled.");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		await ConnectionService!.Bind(handle, playerDbRef.Value);
 
 		var connectionCount = await ConnectionService.Get(playerDbRef.Value).CountAsync();
@@ -290,6 +306,12 @@ public partial class Commands
 
 	private static async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress)
 	{
+		if (!Configuration!.CurrentValue.Net.Logins)
+		{
+			await NotifyService!.Notify(handle, "Logins are disabled.");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		if (!Configuration!.CurrentValue.Net.Guests)
 		{
 			await NotifyService!.Notify(handle, "Guest logins are not enabled.");
