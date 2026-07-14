@@ -19,7 +19,8 @@ namespace SharpMUSH.Tests.Integration.Auth;
 public class SetupFlowTests(ServerWebAppFactory factory)
 {
 	private record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
-	private record AccountLoginResponse(string AccountId, string Username, List<CharacterSummary> Characters, string AccountSessionToken, bool MustChangePassword);
+	private record AccountLoginResponse(string AccountId, string Username, List<CharacterSummary> Characters,
+		string AccountSessionToken, bool MustChangePassword, string? Role, List<string>? Permissions);
 
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
 	private record AccountLoginRequest(string UsernameOrEmail, string Password);
@@ -75,6 +76,19 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 		var response = await http.PostAsJsonAsync("api/setup/complete",
 			new SetupCompleteRequest("headwiz", "claimed-password-1"));
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+
+		// Auto-login after first-run setup: the complete response mints a working account
+		// session for the claimer, carrying the God role (the admin account is #1-linked).
+		var account = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
+		await Assert.That(account).IsNotNull();
+		await Assert.That(account!.AccountSessionToken).IsNotNullOrEmpty();
+		await Assert.That(account.Role).IsEqualTo("God");
+
+		var authedHttp = CreateClient();
+		authedHttp.DefaultRequestHeaders.Authorization =
+			new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
+		var characters = await authedHttp.GetAsync("api/account/characters");
+		await Assert.That(characters.StatusCode).IsEqualTo(HttpStatusCode.OK);
 
 		var status = await http.GetFromJsonAsync<SetupStatusResponse>("api/setup/status");
 		await Assert.That(status!.NeedsSetup).IsFalse();

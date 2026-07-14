@@ -1,9 +1,30 @@
+using System.Net;
+using System.Net.Http.Json;
 using Bunit;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Authentication;
+
+/// <summary>Fakes a successful api/auth/account-login round-trip for the logout-latch test below.</summary>
+file sealed class FakeSuccessLoginHandler : HttpMessageHandler
+{
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+		Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+		{
+			Content = JsonContent.Create(new
+			{
+				accountId = "acct-1",
+				username = "headwiz",
+				characters = Array.Empty<object>(),
+				accountSessionToken = "session-token-1",
+				mustChangePassword = false,
+				role = "God",
+				permissions = new[] { "*" },
+			})
+		});
+}
 
 /// <summary>
 /// Regression coverage for <see cref="AccountAuthService.InitAsync"/>'s null-session-token path.
@@ -35,5 +56,51 @@ public class AccountAuthServiceInitTests : BunitContext
 		await Assert.That(service.Username).IsNull();
 		await Assert.That(service.Role).IsNull();
 		await Assert.That(service.Permissions).IsEmpty();
+	}
+
+	/// <summary>
+	/// Sticky-logout latch: once sessionStorage records an explicit logout, InitAsync must
+	/// surface it as <see cref="AccountAuthService.ExplicitlyLoggedOut"/> so callers (MainLayout's
+	/// dev-mode debug re-auth guard) can refuse to silently re-authenticate the user.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task InitAsync_LoggedOutFlagSet_ExposesExplicitlyLoggedOutTrue()
+	{
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(bool.TrueString);
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult(null);
+
+		var service = new AccountAuthService(
+			Substitute.For<IHttpClientFactory>(),
+			JSInterop.JSRuntime,
+			NullLogger<AccountAuthService>.Instance);
+
+		await service.InitAsync();
+
+		await Assert.That(service.ExplicitlyLoggedOut).IsTrue();
+	}
+
+	/// <summary>
+	/// The latch must not be permanent: any successful login (or register/setup, which persist
+	/// a session the same way) clears it, so the very next reload behaves normally again.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task LoginAsync_Success_ClearsExplicitlyLoggedOutFlag()
+	{
+		JSInterop.Mode = JSRuntimeMode.Loose;
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(bool.TrueString);
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult(null);
+
+		using var http = new HttpClient(new FakeSuccessLoginHandler()) { BaseAddress = new Uri("https://localhost:8081/") };
+		var httpClientFactory = Substitute.For<IHttpClientFactory>();
+		httpClientFactory.CreateClient("api").Returns(http);
+
+		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance);
+		await service.InitAsync();
+		await Assert.That(service.ExplicitlyLoggedOut).IsTrue();
+
+		var (success, _, _) = await service.LoginAsync("headwiz", "password-one");
+
+		await Assert.That(success).IsTrue();
+		await Assert.That(service.ExplicitlyLoggedOut).IsFalse();
 	}
 }

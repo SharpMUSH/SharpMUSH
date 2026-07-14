@@ -1,4 +1,6 @@
 @page "/login"
+@layout OnboardingLayout
+@using SharpMUSH.Client.Layout
 @using SharpMUSH.Client.Services
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
@@ -7,7 +9,10 @@
 
 <PageTitle>Sign In — SharpMUSH</PageTitle>
 
-<div style="min-height:100vh;min-height:100svh;display:flex;align-items:stretch;background:var(--bg);">
+@* OnboardingLayout's shell already supplies the full-viewport gradient background and glow;
+   this just needs to fill and stretch its two-panel grid inside that shell, not re-establish
+   its own viewport height/background (which would double-wrap and hide the shell's glow). *@
+<div style="min-height:100%;display:flex;align-items:stretch;">
     <MudGrid Spacing="0" Style="width:100%;margin:0;">
 
         <MudItem xs="12" sm="7" Class="login-hero" Style="display:flex;align-items:center;justify-content:center;padding:var(--cpad);background:linear-gradient(135deg,#101113 0%,#16181b 100%);position:relative;overflow:hidden;">

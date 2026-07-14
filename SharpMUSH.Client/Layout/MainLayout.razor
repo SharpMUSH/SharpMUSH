@@ -227,8 +227,12 @@
         // DebugAuthStateProvider sets AuthenticationType = "Server authentication".
         // In debug mode, always refresh the session so server restarts (which clear the
         // in-memory AccountSessionStore) don't leave the client with a stale token.
+        // Guarded by ExplicitlyLoggedOut: without this, a dev who logs out would be silently
+        // re-authenticated as the debug admin on the very next reload/navigation, since the
+        // debug identity is always "authenticated" in Development. The latch sticks until the
+        // next real login (via /login, or a fresh tab — sessionStorage is tab-scoped).
         var isDebugMode = authState.User.Identity?.AuthenticationType == "Server authentication";
-        if (isDebugMode || (authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn))
+        if (!AccountAuth.ExplicitlyLoggedOut && (isDebugMode || (authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn)))
         {
             var debugOtt = await AccountAuth.GetDebugOttAsync();
             if (debugOtt is not null && !Terminal.IsConnected)
@@ -245,7 +249,10 @@
         if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
             await AccountAuth.GetCharactersAsync();
 
-        _isDebugAuth = authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
+        // Same latch here: otherwise the topbar would keep showing the "Dev Mode" menu (and
+        // hide the Disconnect item) even after an explicit logout, since the debug identity's
+        // IsAuthenticated never flips to false on its own.
+        _isDebugAuth = !AccountAuth.ExplicitlyLoggedOut && authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         await EnsureAccountRoutingAsync();
 
         LayoutService.OnLayoutChanged += HandleLayoutChanged;

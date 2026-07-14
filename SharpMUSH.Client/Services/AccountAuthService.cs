@@ -20,6 +20,7 @@ public class AccountAuthService(
 	private const string MustChangePasswordKey = "sharpmush.account.mustChangePassword";
 	private const string RoleKey = "sharpmush.account.role";
 	private const string PermissionsKey = "sharpmush.account.permissions";
+	private const string LoggedOutKey = "sharpmush.account.loggedOut";
 
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 
@@ -53,11 +54,22 @@ public class AccountAuthService(
 	public string? Role { get; private set; }
 	public IReadOnlyList<string> Permissions { get; private set; } = [];
 
+	/// <summary>
+	/// True once the user has explicitly logged out in this tab (sessionStorage-latched).
+	/// Guards against dev-mode debug re-auth (and any other silent re-login) undoing an
+	/// explicit logout on the next component init/reload — cleared by any successful
+	/// login/register/setup completion.
+	/// </summary>
+	public bool ExplicitlyLoggedOut { get; private set; }
+
 	/// <summary>Raised whenever login/logout changes the session; AccountAuthStateProvider subscribes.</summary>
 	public event Action? AuthStateChanged;
 
 	public async Task InitAsync()
 	{
+		var loggedOutFlag = await js.InvokeAsync<string?>("sessionStorage.getItem", LoggedOutKey);
+		ExplicitlyLoggedOut = string.Equals(loggedOutFlag, bool.TrueString, StringComparison.OrdinalIgnoreCase);
+
 		AccountSessionToken = await js.InvokeAsync<string?>("sessionStorage.getItem", SessionTokenKey);
 		if (AccountSessionToken is null)
 		{
@@ -161,6 +173,14 @@ public class AccountAuthService(
 				new SetupCompleteRequest(username, password));
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync());
+
+			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
+			if (result is null) return (false, "Unexpected server response.");
+
+			// api/setup/complete mints a session exactly like account-login, so the claimer
+			// is immediately authenticated as the new administrator — persist it the same way.
+			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
+			Characters = result.Characters;
 			return (true, null);
 		}
 		catch (Exception ex)
@@ -353,6 +373,11 @@ public class AccountAuthService(
 		await js.InvokeVoidAsync("sessionStorage.removeItem", MustChangePasswordKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", PermissionsKey);
+
+		// Explicit-logout latch: sticks until the next successful login/register/setup in this
+		// tab, so dev-mode debug re-auth (or any other silent re-persist) can't undo the logout.
+		ExplicitlyLoggedOut = true;
+		await js.InvokeVoidAsync("sessionStorage.setItem", LoggedOutKey, bool.TrueString);
 		AuthStateChanged?.Invoke();
 	}
 
@@ -371,6 +396,10 @@ public class AccountAuthService(
 		else
 			await js.InvokeVoidAsync("sessionStorage.setItem", RoleKey, role);
 		await js.InvokeVoidAsync("sessionStorage.setItem", PermissionsKey, JsonSerializer.Serialize(Permissions));
+
+		// Any successful login/register/setup clears a prior explicit logout.
+		ExplicitlyLoggedOut = false;
+		await js.InvokeVoidAsync("sessionStorage.removeItem", LoggedOutKey);
 		AuthStateChanged?.Invoke();
 	}
 

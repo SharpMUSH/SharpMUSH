@@ -18,7 +18,7 @@ public class SetupService(ISharpDatabase database, IAccountService accountServic
 	public async ValueTask<bool> NeedsSetupAsync(CancellationToken ct = default)
 		=> !(await database.GetServerStateAsync(ct)).SetupCompleted;
 
-	public async ValueTask<OneOf<Success, Error<string>>> CompleteAsync(string username, string password, CancellationToken ct = default)
+	public async ValueTask<OneOf<SharpAccount, Error<string>>> CompleteAsync(string username, string password, CancellationToken ct = default)
 	{
 		await _claimLock.WaitAsync(ct);
 		try
@@ -57,7 +57,11 @@ public class SetupService(ISharpDatabase database, IAccountService accountServic
 				return setPassword.AsT1;
 
 			await database.SetServerSetupCompletedAsync(true, ct);
-			return new Success();
+
+			// Reload: ChangeUsernameAsync/SetPasswordAsync mutate the DB by accountId, not the
+			// in-memory `account` reference, so its Username can be stale after a rename.
+			var claimed = await accountService.GetByIdAsync(account.Id!, ct);
+			return claimed ?? account;
 		}
 		finally
 		{

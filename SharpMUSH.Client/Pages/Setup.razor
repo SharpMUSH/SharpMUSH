@@ -20,9 +20,9 @@
             <h2 class="setup-title">Setup complete. You are the administrator.</h2>
             <p class="setup-lead">
                 The administrator account <strong>@_completedUsername</strong> is now linked to the
-                pre-generated player #1, God. Sign in to start managing your game.
+                pre-generated player #1, God. You are signed in as <strong>@_completedUsername</strong>.
             </p>
-            <a class="setup-submit setup-signin" href="/login">Sign in</a>
+            <button class="setup-submit setup-signin" type="button" @onclick="EnterPortal">Enter the portal</button>
         </div>
     }
     else
@@ -113,4 +113,6 @@
         _success = true;
         StateHasChanged();
     }
+
+    private void EnterPortal() => Nav.NavigateTo("/");
 }

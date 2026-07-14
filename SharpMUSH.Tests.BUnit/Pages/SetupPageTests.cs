@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -15,30 +17,52 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// POST api/setup/complete. The complete response is configurable per test so tests can
 /// exercise the happy path, validation-only path (never reaches the handler), and the
 /// 409-conflict path (already completed / username taken).
+///
+/// On the happy path, api/setup/complete now mints a session exactly like account-login (auto-login
+/// after first-run setup) — the fake echoes back the posted username so the success view's
+/// "signed in as" copy can be asserted against what the test typed into the form.
 /// </summary>
 file sealed class SetupApiHandler(bool needsSetup, HttpStatusCode completeStatus, string? completeBody) : HttpMessageHandler
 {
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var path = request.RequestUri!.AbsolutePath.TrimStart('/');
 
         if (request.Method == HttpMethod.Get && path == "api/setup/status")
-            return Task.FromResult(Json(new { needsSetup }));
+            return Json(new { needsSetup });
 
         if (request.Method == HttpMethod.Post && path == "api/setup/complete")
         {
+            if (completeStatus == HttpStatusCode.OK)
+            {
+                var requestJson = await request.Content!.ReadAsStringAsync(cancellationToken);
+                using var requestBody = JsonDocument.Parse(requestJson);
+                var username = requestBody.RootElement.GetProperty("username").GetString() ?? "headwiz";
+
+                return Json(new
+                {
+                    accountId = "test-account-id",
+                    username,
+                    characters = Array.Empty<object>(),
+                    accountSessionToken = "test-session-token",
+                    mustChangePassword = false,
+                    role = "God",
+                    permissions = new[] { "*" },
+                });
+            }
+
             // The HttpResponseMessage constructed here is returned to the caller (the
             // HttpClient pipeline / AccountAuthService), which owns and disposes it — it must
             // not be disposed here. Building it in one expression (rather than a local `var
             // response` mutated afterwards) keeps CodeQL's disposal analysis from flagging a
             // local it was never meant to dispose.
-            return Task.FromResult(new HttpResponseMessage(completeStatus)
+            return new HttpResponseMessage(completeStatus)
             {
                 Content = completeBody is not null ? new StringContent(completeBody) : null
-            });
+            };
         }
 
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        return new HttpResponseMessage(HttpStatusCode.NotFound);
     }
 
     private static HttpResponseMessage Json<T>(T value) =>
@@ -119,8 +143,20 @@ public class SetupPageTests : BunitContext, IAsyncDisposable
         await Assert.That(cut.Markup).Contains("You are the administrator");
         await Assert.That(cut.Markup).Contains("headwiz");
 
-        var signInLink = cut.Find("a[href='/login']");
-        await Assert.That(signInLink).IsNotNull();
+        // Auto-login after first-run setup: the claimer is signed in immediately (no separate
+        // "Sign in" step), so the success copy reflects that and offers a portal button instead.
+        await Assert.That(cut.Markup).Contains("You are signed in as");
+        var enterPortalButton = cut.Find("button.setup-signin");
+        await Assert.That(enterPortalButton.TextContent).Contains("Enter the portal");
+
+        var accountAuth = Services.GetRequiredService<AccountAuthService>();
+        await Assert.That(accountAuth.IsLoggedIn).IsTrue();
+        await Assert.That(accountAuth.Username).IsEqualTo("headwiz");
+        await Assert.That(accountAuth.Role).IsEqualTo("God");
+
+        var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+        enterPortalButton.Click();
+        await Assert.That(nav.Uri).IsEqualTo(nav.BaseUri);
     }
 
     [TUnit.Core.Test]

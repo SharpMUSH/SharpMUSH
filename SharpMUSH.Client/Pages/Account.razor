@@ -203,11 +203,13 @@
         await AccountAuth.InitAsync();
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
 
-        // In debug mode, ensure the account session for #1 is established
-        if (authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn)
+        // In debug mode, ensure the account session for #1 is established — unless the user
+        // explicitly logged out in this tab (mirrors MainLayout's guard; without it, visiting
+        // /account after logout would silently re-authenticate as the debug admin).
+        if (!AccountAuth.ExplicitlyLoggedOut && authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn)
             await AccountAuth.GetDebugOttAsync();
 
-        _isDebugAuth = authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
+        _isDebugAuth = !AccountAuth.ExplicitlyLoggedOut && authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
             await RefreshCharactersAsync();
     }
