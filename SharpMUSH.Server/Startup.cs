@@ -230,6 +230,9 @@ public class Startup(
 		services.AddSingleton<IOttStore, InMemoryOttStore>();
 		services.AddSingleton<IAccountSessionStore, InMemoryAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();
+		// Unconditional (not gated on JWT config) — AuthController's account-login/register and
+		// AdminAccountsController's Wizard gate need it even when JWT auth isn't configured.
+		services.AddSingleton<AccountClaimsService>();
 		services.AddHostedService<BootstrapService>();
 		services.AddSingleton<SetupService>();
 		services.AddHostedService<RoleSeedService>();

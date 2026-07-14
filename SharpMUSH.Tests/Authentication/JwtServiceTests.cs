@@ -102,7 +102,10 @@ public class JwtServiceTests
 		accountSvc.GetCharactersAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[]));
 
-		return (new JwtService(options, store, roleSvc, accountSvc, roleRegistry, permissionResolver, mediator, logger),
+		var accountClaims = new AccountClaimsService(accountSvc, roleSvc, roleRegistry, permissionResolver,
+			NullLogger<AccountClaimsService>.Instance);
+
+		return (new JwtService(options, store, roleSvc, accountSvc, accountClaims, mediator, logger),
 			store, roleSvc, accountSvc, mediator);
 	}
 

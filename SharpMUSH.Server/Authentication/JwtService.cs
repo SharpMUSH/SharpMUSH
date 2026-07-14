@@ -22,8 +22,7 @@ public class JwtService(
 	IRefreshTokenStore refreshTokenStore,
 	IRoleDerivationService roleDerivation,
 	IAccountService accountService,
-	IRoleRegistryService roleRegistry,
-	IPermissionResolver permissionResolver,
+	AccountClaimsService accountClaims,
 	IMediator mediator,
 	ILogger<JwtService> logger) : IJwtService
 {
@@ -43,9 +42,9 @@ public class JwtService(
 		// the account owns (one Wizard character makes the whole account Wizard-privileged), not
 		// just the active one. Characters are resolved by stable dbref/key — never by (renamable)
 		// name. The character_* claims below are display context only and refresh with the token.
-		var effectiveRole = await ComputeAccountRoleAsync(account, role, ct);
+		var effectiveRole = await accountClaims.ComputeAccountRoleAsync(account.Id!, role, ct);
 
-		var scopes = await ComputeGrantedScopesAsync(account, effectiveRole);
+		var scopes = await accountClaims.ComputeGrantedScopesAsync(account.Id!, effectiveRole);
 		var accessToken = BuildAccessToken(account, character, effectiveRole, scopes, out var expiresIn);
 
 		var charRef = new DBRef(character.Object.Key, character.Object.CreationTime);
@@ -97,62 +96,6 @@ public class JwtService(
 		var role = roleDerivation.DeriveRole(character.Object.Key, flags);
 
 		return await IssueTokensAsync(account, character, role, ct);
-	}
-
-	// account.Id is a non-secret GUID identifier placed in the standard JWT 'sub' claim
-	// per RFC 7519 §4.1.2. Username in 'unique_name' is a display name, not a password or
-	// secret. The token is signed (HMAC-SHA256) and transmitted only over TLS.
-	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
-		Justification = "JWT sub/unique_name claims are standard bearer-token identifiers, not secret data.")]
-	/// <summary>
-	/// The account-level flag-derived role: the highest <see cref="PortalRole"/> across every
-	/// character the account owns (so a Wizard on any character lifts the whole account). Falls
-	/// back to the active <paramref name="activeRole"/> if the character list can't be loaded.
-	/// Characters are resolved by stable key/dbref, so character renames never affect the result.
-	/// </summary>
-	private async Task<PortalRole> ComputeAccountRoleAsync(SharpAccount account, PortalRole activeRole, CancellationToken ct)
-	{
-		try
-		{
-			var characters = await accountService.GetCharactersAsync(account.Id!, ct);
-			if (characters.Count == 0)
-				return activeRole;
-
-			var perCharacter = new List<(int, IEnumerable<SharpObjectFlag>)>(characters.Count);
-			foreach (var c in characters)
-				perCharacter.Add((c.Object.Key, await c.Object.Flags.Value.ToListAsync(ct)));
-
-			var accountRole = roleDerivation.DeriveAccountRole(perCharacter);
-			return accountRole > activeRole ? accountRole : activeRole;
-		}
-		catch (Exception ex)
-		{
-			logger.LogWarning(ex,
-				"Could not derive account-level role for account {AccountId}; using the active character's role.",
-				account.Id);
-			return activeRole;
-		}
-	}
-
-	/// <summary>
-	/// Computes the granted permission scopes for an account: the account's effective roles are
-	/// the (current, possibly admin-edited) built-in role for its flag-derived <paramref name="role"/>
-	/// unioned with its explicitly-assigned roles, resolved by priority/three-state.
-	/// </summary>
-	private async Task<IReadOnlySet<string>> ComputeGrantedScopesAsync(SharpAccount account, PortalRole role)
-	{
-		var allRoles = await roleRegistry.GetRolesAsync();
-		var bySlug = allRoles.ToDictionary(r => r.Slug, StringComparer.OrdinalIgnoreCase);
-
-		var effective = new Dictionary<string, SharpRole>(StringComparer.OrdinalIgnoreCase);
-		if (bySlug.TryGetValue(BuiltInRoles.SlugFor(role), out var derived))
-			effective[derived.Slug] = derived;
-		foreach (var assigned in await roleRegistry.GetRolesForAccountAsync(account.Id!))
-			effective[assigned.Slug] = assigned;
-
-		// Expand umbrella scopes (e.g. wiki.admin ⇒ wiki.read/create/edit/delete) so the finer
-		// gates authorize for holders of the coarser scope without per-gate "or admin" checks.
-		return PortalPermission.Expand(permissionResolver.Resolve(effective.Values));
 	}
 
 	private string BuildAccessToken(SharpAccount account, SharpPlayer character, PortalRole role,

@@ -29,6 +29,7 @@ public class AuthController(
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
 	IRoleDerivationService roleDerivation,
+	AccountClaimsService accountClaims,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IHostEnvironment environment,
 	ILogger<AuthController> logger) : ControllerBase
@@ -178,7 +179,8 @@ public class AuthController(
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags);
 
 	/// <summary>Response body for account login and registration.</summary>
-	public record AccountLoginResponse(string AccountId, string Username, IReadOnlyList<CharacterSummary> Characters, string AccountSessionToken, bool MustChangePassword);
+	public record AccountLoginResponse(string AccountId, string Username, IReadOnlyList<CharacterSummary> Characters,
+		string AccountSessionToken, bool MustChangePassword, string Role, IReadOnlyList<string> Permissions);
 
 	/// <summary>
 	/// Authenticate to an account (by username or email) and get the character list.
@@ -205,9 +207,13 @@ public class AuthController(
 
 		var charSummaries = await BuildCharacterSummariesAsync(characters);
 
+		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
+		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
+
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
 		logger.LogInformation("Account login success for {Username} ({Id})", Sanitize(account.Username), Sanitize(account.Id));
-		return Ok(new AccountLoginResponse(account.Id!, account.Username, charSummaries, sessionToken, account.MustChangePassword));
+		return Ok(new AccountLoginResponse(account.Id!, account.Username, charSummaries, sessionToken,
+			account.MustChangePassword, role.ToString(), permissions.ToList()));
 	}
 
 	/// <summary>Request body for account registration.</summary>
@@ -231,10 +237,14 @@ public class AuthController(
 			return Conflict(result.AsT1.Value);
 
 		var account = result.AsT0;
+		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
+		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
+
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
 
 		logger.LogInformation("Account registered: {Username} ({Id})", Sanitize(account.Username), Sanitize(account.Id));
-		return Ok(new AccountLoginResponse(account.Id!, account.Username, [], sessionToken, account.MustChangePassword));
+		return Ok(new AccountLoginResponse(account.Id!, account.Username, [], sessionToken,
+			account.MustChangePassword, role.ToString(), permissions.ToList()));
 	}
 
 	/// <summary>Response body for the debug OTT endpoint.</summary>
