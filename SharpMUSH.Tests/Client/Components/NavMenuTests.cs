@@ -47,7 +47,7 @@ public class NavMenuTests : MudBlazorTestContext
 	{
 		var cut = RenderExpanded();
 
-		// The always-visible (ungated, non-character-scoped) destinations and the profile card.
+		// The always-visible (ungated, non-character-scoped) destinations.
 		// (The Home nav link is distinct from the logo, which also links to "/".)
 		await Assert.That(cut.FindAll("a.phosphor-nav-link[href='/']").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("a[href='/scenes']").Count).IsEqualTo(1);
@@ -55,6 +55,20 @@ public class NavMenuTests : MudBlazorTestContext
 		await Assert.That(cut.FindAll("a[href='/characters']").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("a[href='/softcode']").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("a[href='/help']").Count).IsEqualTo(1);
+
+		// The profile card (and its /account link) is auth-gated: anonymous visitors
+		// browse without an account, so no profile card renders for them.
+		await Assert.That(cut.FindAll("a[href='/account']").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task ProfileCard_Shown_WhenAuthenticated()
+	{
+		var auth = this.AddAuthorization();
+		auth.SetAuthorized("admin");
+
+		var cut = Render<NavMenu>(parameters => parameters.Add(p => p.IsCollapsed, false));
+
 		await Assert.That(cut.FindAll("a[href='/account']").Count).IsEqualTo(1);
 	}
 
