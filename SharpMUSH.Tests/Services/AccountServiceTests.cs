@@ -18,6 +18,14 @@ public class AccountServiceTests
 		var db = Substitute.For<ISharpDatabase>();
 		var pw = Substitute.For<IPasswordService>();
 		var sessions = Substitute.For<IAccountSessionStore>();
+
+		// Default no-match/empty results for the login-matrix lookups the login flow now always
+		// touches on a password mismatch; individual tests override these where they matter.
+		db.GetPlayerByNameOrAliasAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(Enumerable.Empty<SharpPlayer>().ToAsyncEnumerable());
+		db.GetCharactersForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(new List<SharpPlayer>());
+
 		return (new AccountService(db, pw, sessions), db, pw, sessions);
 	}
 

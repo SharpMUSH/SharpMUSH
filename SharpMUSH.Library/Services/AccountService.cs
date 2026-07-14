@@ -12,17 +12,59 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 
 	public async ValueTask<SharpAccount?> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default)
 	{
-		SharpAccount? account = usernameOrEmail.Contains('@')
+		var account = usernameOrEmail.Contains('@')
 			? await database.GetAccountByEmailAsync(usernameOrEmail, ct)
 			: await database.GetAccountByUsernameAsync(usernameOrEmail, ct);
+
+		// Character-like login: a character name resolves to its owning account,
+		// authenticated by that character's password only.
+		SharpPlayer? namedCharacter = null;
+		if (account is null)
+		{
+			namedCharacter = await database.GetPlayerByNameOrAliasAsync(usernameOrEmail, ct)
+				.FirstOrDefaultAsync(ct);
+			if (namedCharacter is not null)
+				account = await database.GetAccountForCharacterAsync(
+					new DBRef(namedCharacter.Object.Key, namedCharacter.Object.CreationTime), ct);
+		}
 
 		if (account is null || account.IsDisabled)
 			return null;
 
-		if (!passwordService.PasswordIsValid(AccountKey(account), password, account.PasswordHash))
-			return null;
+		// A character-name identifier authenticates only via that specific character's own
+		// password: the owning account's password (or any *other* linked character's password)
+		// must not be accepted through this identifier.
+		if (namedCharacter is not null)
+			return await CharacterPasswordMatchesAsync(namedCharacter, password) ? account : null;
 
-		return account;
+		// Empty stored hashes never match at the account level: God's PennMUSH-default empty
+		// character password stays a telnet-connect special case, and the pre-generated
+		// (unclaimed) admin account stays unlobbable until first-run setup claims it.
+		if (!string.IsNullOrEmpty(account.PasswordHash)
+			&& passwordService.PasswordIsValid(AccountKey(account), password, account.PasswordHash))
+			return account;
+
+		var characters = await database.GetCharactersForAccountAsync(account.Id!, ct);
+		foreach (var character in characters)
+			if (await CharacterPasswordMatchesAsync(character, password))
+				return account;
+
+		return null;
+	}
+
+	private async ValueTask<bool> CharacterPasswordMatchesAsync(SharpPlayer character, string password)
+	{
+		if (string.IsNullOrEmpty(character.PasswordHash))
+			return false;
+
+		var key = $"#{character.Object.Key}:{character.Object.CreationTime}";
+		if (!passwordService.PasswordIsValid(key, password, character.PasswordHash))
+			return false;
+
+		if (passwordService.NeedsRehash(character.PasswordHash))
+			await passwordService.RehashPasswordAsync(character, password);
+
+		return true;
 	}
 
 	public ValueTask<bool> HasAnyAccountAsync(CancellationToken ct = default)
