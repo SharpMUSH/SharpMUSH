@@ -24,6 +24,15 @@ public interface IAccountAuthState
 	event Action? AuthStateChanged;
 
 	/// <summary>
+	/// Single-flight, idempotent hydration from storage. Must be safe to call from any auth-state
+	/// query (concurrently or repeatedly) before consulting <see cref="IsLoggedIn"/>,
+	/// <see cref="ExplicitlyLoggedOut"/>, or any other state populated from storage — callers can't
+	/// assume some other component already called it first (e.g. on a page refresh,
+	/// CascadingAuthenticationState can query auth state before MainLayout runs its own init).
+	/// </summary>
+	Task InitAsync();
+
+	/// <summary>
 	/// Development-only: get a debug OTT for player #1 without credentials. Exposed on the
 	/// narrow interface (rather than requiring the concrete <see cref="AccountAuthService"/>)
 	/// so <c>SharpMUSH.Client.Authentication.DebugAuthStateProvider</c> can be constructed

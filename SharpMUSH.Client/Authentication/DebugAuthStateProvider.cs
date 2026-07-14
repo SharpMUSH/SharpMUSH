@@ -61,6 +61,13 @@ public class DebugAuthStateProvider : AuthenticationStateProvider
 
 	public override async Task<AuthenticationState> GetAuthenticationStateAsync()
 	{
+		// Hydrate first: this method is called on every auth-state query, including the very first
+		// one from CascadingAuthenticationState (App.razor root) — which can fire before MainLayout
+		// ever calls InitAsync, e.g. on a page refresh where component init order isn't guaranteed.
+		// Without this, ExplicitlyLoggedOut below would still read the un-hydrated default `false`
+		// and a real logout wouldn't survive the reload.
+		await _accountAuth.InitAsync();
+
 		// Explicit-logout latch: enforced again here (belt-and-braces alongside the chokepoint in
 		// AccountAuthService.GetDebugOttAsync) because this method is the one actually called on
 		// every auth-state query. Once latched, no cached OTT reuse and no static-sentinel fallback

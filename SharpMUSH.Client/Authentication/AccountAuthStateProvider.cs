@@ -21,10 +21,17 @@ public class AccountAuthStateProvider : AuthenticationStateProvider
 		_accountAuth.AuthStateChanged += () => NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
 	}
 
-	public override Task<AuthenticationState> GetAuthenticationStateAsync()
+	public override async Task<AuthenticationState> GetAuthenticationStateAsync()
 	{
+		// Hydrate first: CascadingAuthenticationState (App.razor root) can query auth state before
+		// any component has called AccountAuthService.InitAsync (e.g. on a page refresh, there is no
+		// guaranteed ordering against MainLayout's own init call). Without this, a real persisted
+		// session would be invisible here and this provider would report anonymous until something
+		// else happened to hydrate the underlying service.
+		await _accountAuth.InitAsync();
+
 		if (!_accountAuth.IsLoggedIn)
-			return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
+			return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
 
 		var claims = new List<Claim>
 		{
@@ -34,6 +41,6 @@ public class AccountAuthStateProvider : AuthenticationStateProvider
 		claims.AddRange(_accountAuth.Permissions.Select(p => new Claim(PortalPermission.ClaimType, p)));
 
 		var identity = new ClaimsIdentity(claims, "AccountSession");
-		return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
+		return new AuthenticationState(new ClaimsPrincipal(identity));
 	}
 }

@@ -65,8 +65,33 @@ public class AccountAuthService(
 	/// <summary>Raised whenever login/logout changes the session; AccountAuthStateProvider subscribes.</summary>
 	public event Action? AuthStateChanged;
 
-	public async Task InitAsync()
+	private Task? _initTask;
+
+	/// <summary>
+	/// Single-flight, idempotent hydration: the first caller kicks off <see cref="InitCoreAsync"/>
+	/// and every caller (that one and any later one, concurrent or sequential) awaits the very
+	/// same task instead of re-reading storage. This matters because hydration is no longer only
+	/// triggered by MainLayout — CascadingAuthenticationState (App.razor root) and any auth-state
+	/// query can now trigger it too, and on a page refresh those can race MainLayout's own call.
+	/// The <c>??=</c> is race-safe here specifically because Blazor WASM is single-threaded: there
+	/// is no window between reading <see cref="_initTask"/> and assigning it where another
+	/// call could interleave and start a second <see cref="InitCoreAsync"/>.
+	/// </summary>
+	public Task InitAsync() => _initTask ??= InitCoreAsync();
+
+	private async Task InitCoreAsync()
 	{
+		// Force a genuine suspension before touching any state. RaiseAuthStateChanged below can
+		// synchronously re-enter InitAsync() (DebugAuthStateProvider subscribes to AuthStateChanged
+		// and calls back into the account-auth state from its handler). If every await from here on
+		// happened to complete synchronously (as a test fake IJSRuntime does), the whole method body —
+		// including that re-entrant notification — would run to completion before the
+		// `_initTask ??= InitCoreAsync()` assignment in InitAsync() ever lands, so the re-entrant call
+		// would see a still-null _initTask and kick off a second, infinitely-recursing InitCoreAsync().
+		// Yielding here guarantees InitCoreAsync()'s Task is cached in _initTask before any of the
+		// body (or its re-entrant fallout) executes.
+		await Task.Yield();
+
 		var loggedOutFlag = await js.InvokeAsync<string?>("sessionStorage.getItem", LoggedOutKey);
 		ExplicitlyLoggedOut = string.Equals(loggedOutFlag, bool.TrueString, StringComparison.OrdinalIgnoreCase);
 
@@ -221,6 +246,13 @@ public class AccountAuthService(
 	/// </summary>
 	public async Task<DebugOttResponse?> GetDebugOttAsync()
 	{
+		// Hydrate first: CascadingAuthenticationState (App.razor root) can call through to this
+		// method (via DebugAuthStateProvider) before any component has called InitAsync — on a
+		// page refresh there is no guaranteed ordering. Without this, ExplicitlyLoggedOut would
+		// still be the un-hydrated default `false` below, and a real logout wouldn't survive
+		// the next reload.
+		await InitAsync();
+
 		// Chokepoint for the explicit-logout latch: DebugAuthStateProvider.GetAuthenticationStateAsync
 		// is called on every auth-state query (every F5 / CascadingAuthenticationState evaluation), so
 		// without this guard HERE, that routine re-auth would call through to PersistSessionAsync below
@@ -256,6 +288,9 @@ public class AccountAuthService(
 	/// </summary>
 	public async Task<string?> GetOttForCharacterAsync(CharacterSummary character)
 	{
+		// AccountSessionToken is only populated by InitAsync/PersistSessionAsync; hydrate first so
+		// a pre-init caller doesn't misread a real stored session as "not logged in".
+		await InitAsync();
 		if (AccountSessionToken is null) return null;
 
 		try
@@ -282,6 +317,7 @@ public class AccountAuthService(
 
 	public async Task<IReadOnlyList<CharacterSummary>> GetCharactersAsync()
 	{
+		await InitAsync();
 		if (AccountSessionToken is null) return [];
 
 		try
@@ -303,6 +339,7 @@ public class AccountAuthService(
 	public async Task<(bool Success, string? Error, CharacterSummary? Character)> CreateCharacterAsync(
 		string name, string password)
 	{
+		await InitAsync();
 		if (AccountSessionToken is null) return (false, "Not logged in to account.", null);
 
 		try
@@ -332,6 +369,7 @@ public class AccountAuthService(
 
 	public async Task<(bool Success, string? Error)> UnlinkCharacterAsync(int dbrefNumber)
 	{
+		await InitAsync();
 		if (AccountSessionToken is null) return (false, "Not logged in to account.");
 
 		try
@@ -355,6 +393,7 @@ public class AccountAuthService(
 
 	public async Task<(bool Success, string? Error)> ChangePasswordAsync(string oldPassword, string newPassword)
 	{
+		await InitAsync();
 		if (AccountSessionToken is null) return (false, "Not logged in.");
 		var (success, error) = await PutAsync("api/account/password", new ChangePasswordRequest(oldPassword, newPassword));
 		if (success)
@@ -364,12 +403,14 @@ public class AccountAuthService(
 
 	public async Task<(bool Success, string? Error)> ChangeEmailAsync(string? newEmail, string currentPassword)
 	{
+		await InitAsync();
 		if (AccountSessionToken is null) return (false, "Not logged in.");
 		return await PutAsync("api/account/email", new ChangeEmailRequest(newEmail, currentPassword));
 	}
 
 	public async Task<(bool Success, string? Error)> ChangeUsernameAsync(string newUsername)
 	{
+		await InitAsync();
 		if (AccountSessionToken is null) return (false, "Not logged in.");
 		var (success, error) = await PutAsync("api/account/username", new ChangeUsernameRequest(newUsername));
 		if (success)
@@ -382,6 +423,10 @@ public class AccountAuthService(
 
 	public async Task LogoutAsync()
 	{
+		// Hydrate first: a not-yet-inited service could otherwise treat a real stored session as
+		// already logged out, skip the server-side logout call, but still latch ExplicitlyLoggedOut
+		// and wipe storage under the caller's feet.
+		await InitAsync();
 		if (AccountSessionToken is not null)
 		{
 			try

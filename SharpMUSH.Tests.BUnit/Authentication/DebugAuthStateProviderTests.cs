@@ -31,6 +31,9 @@ public class DebugAuthStateProviderTests
 		public event Action? AuthStateChanged;
 		public void Fire() => AuthStateChanged?.Invoke();
 
+		/// <summary>No-op: this fake is always constructed already "hydrated" via its properties.</summary>
+		public Task InitAsync() => Task.CompletedTask;
+
 		/// <summary>How many times the provider actually called through for a debug OTT.</summary>
 		public int DebugOttCallCount { get; private set; }
 

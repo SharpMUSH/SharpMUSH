@@ -17,6 +17,10 @@ public class AccountAuthStateProviderTests
 		public bool ExplicitlyLoggedOut { get; set; }
 		public event Action? AuthStateChanged;
 		public void Fire() => AuthStateChanged?.Invoke();
+
+		/// <summary>No-op: this fake is always constructed already "hydrated" via its constructor args.</summary>
+		public Task InitAsync() => Task.CompletedTask;
+
 		public Task<AccountAuthService.DebugOttResponse?> GetDebugOttAsync() =>
 			Task.FromResult<AccountAuthService.DebugOttResponse?>(null);
 	}
