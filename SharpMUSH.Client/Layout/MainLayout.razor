@@ -292,7 +292,14 @@
         await AccountAuth.LogoutAsync();
         await Terminal.DisconnectAsync();
         _terminalPlayerName = null;
+        // _isDebugAuth is computed once in OnInitializedAsync and otherwise never flips back to
+        // false on its own (the debug identity's IsAuthenticated never changes), so without this
+        // the topbar keeps showing the "DebugAdmin" chip (ADMIN with a different icon) after an
+        // explicit logout. Navigate to /login so logout always lands on a clean unauthenticated
+        // screen instead of "/", which could re-trigger debug re-auth via EnsureAccountRoutingAsync.
+        _isDebugAuth = false;
         StateHasChanged();
+        NavigationManager.NavigateTo("/login", forceLoad: false);
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)

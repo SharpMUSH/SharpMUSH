@@ -81,7 +81,7 @@ public class AccountAuthService(
 			MustChangePassword = false;
 			Role = null;
 			Permissions = [];
-			AuthStateChanged?.Invoke();
+			RaiseAuthStateChanged();
 			return;
 		}
 
@@ -94,7 +94,7 @@ public class AccountAuthService(
 			? []
 			: JsonSerializer.Deserialize<IReadOnlyList<string>>(permissionsJson) ?? [];
 		// CascadingAuthenticationState snapshots before MainLayout's InitAsync runs; re-notify so a reloaded tab's restored session reaches [Authorize] gates.
-		AuthStateChanged?.Invoke();
+		RaiseAuthStateChanged();
 	}
 
 	public async Task<(bool Success, string? Error, IReadOnlyList<CharacterSummary> Characters)> LoginAsync(
@@ -403,7 +403,13 @@ public class AccountAuthService(
 		// tab, so dev-mode debug re-auth (or any other silent re-persist) can't undo the logout.
 		ExplicitlyLoggedOut = true;
 		await js.InvokeVoidAsync("sessionStorage.setItem", LoggedOutKey, bool.TrueString);
-		AuthStateChanged?.Invoke();
+
+		// Every storage mutation above (session/role/permission removal and the loggedOut latch
+		// write) is complete before the event fires. This ordering is load-bearing: the event
+		// synchronously drives subscriber re-renders (AccountAuthStateProvider -> MainLayout ->
+		// Account.razor etc.), and a subscriber's render exception must never be able to unwind
+		// back through this method and skip the persistence above.
+		RaiseAuthStateChanged();
 	}
 
 	private async Task PersistSessionAsync(
@@ -425,7 +431,25 @@ public class AccountAuthService(
 		// Any successful login/register/setup clears a prior explicit logout.
 		ExplicitlyLoggedOut = false;
 		await js.InvokeVoidAsync("sessionStorage.removeItem", LoggedOutKey);
-		AuthStateChanged?.Invoke();
+		RaiseAuthStateChanged();
+	}
+
+	/// <summary>
+	/// Raises <see cref="AuthStateChanged"/> defensively: a subscriber's render exception (e.g. a
+	/// component crashing mid-re-render) must never propagate back into the caller — that would
+	/// abort whatever the caller does next (e.g. <see cref="LogoutAsync"/>'s callers resetting UI
+	/// state and navigating away). Logged and swallowed instead.
+	/// </summary>
+	private void RaiseAuthStateChanged()
+	{
+		try
+		{
+			AuthStateChanged?.Invoke();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "AuthStateChanged subscriber threw");
+		}
 	}
 
 	private async Task SetMustChangePasswordAsync(bool value)
