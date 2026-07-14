@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Server.Controllers;
 
 namespace SharpMUSH.Tests.Controllers;
@@ -12,6 +13,8 @@ public class AuthControllerDebugOttTests
 		var env = Substitute.For<IHostEnvironment>();
 		env.EnvironmentName.Returns(environmentName);
 
+		var options = Substitute.For<SharpMUSH.Library.Services.Interfaces.IOptionsWrapper<SharpMUSHOptions>>();
+
 		return new AuthController(
 			Substitute.For<Mediator.IMediator>(),
 			Substitute.For<SharpMUSH.Library.Services.Interfaces.IPasswordService>(),
@@ -19,6 +22,7 @@ public class AuthControllerDebugOttTests
 			Substitute.For<SharpMUSH.Library.Services.Interfaces.IAccountService>(),
 			Substitute.For<SharpMUSH.Library.Services.Interfaces.IAccountSessionStore>(),
 			Substitute.For<SharpMUSH.Library.Authorization.IRoleDerivationService>(),
+			options,
 			env,
 			Substitute.For<Microsoft.Extensions.Logging.ILogger<AuthController>>());
 	}

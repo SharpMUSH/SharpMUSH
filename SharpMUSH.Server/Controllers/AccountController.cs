@@ -77,6 +77,9 @@ public class AccountController(
 		var (accountId, failure) = await GetAccountIdFromBearerAsync();
 		if (failure is not null) return failure;
 
+		if (!options.CurrentValue.Net.PlayerCreation)
+			return StatusCode(StatusCodes.Status403Forbidden, "Player creation is disabled on this server.");
+
 		if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("Name and Password are required.");
 

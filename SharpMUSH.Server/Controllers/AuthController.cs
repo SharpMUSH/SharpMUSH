@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -28,6 +29,7 @@ public class AuthController(
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
 	IRoleDerivationService roleDerivation,
+	IOptionsWrapper<SharpMUSHOptions> options,
 	IHostEnvironment environment,
 	ILogger<AuthController> logger) : ControllerBase
 {
@@ -203,6 +205,9 @@ public class AuthController(
 	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> AccountRegister([FromBody] AccountRegisterRequest request)
 	{
+		if (!options.CurrentValue.Net.PlayerCreation)
+			return StatusCode(StatusCodes.Status403Forbidden, "Player creation is disabled on this server.");
+
 		if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("Username and Password are required.");
 

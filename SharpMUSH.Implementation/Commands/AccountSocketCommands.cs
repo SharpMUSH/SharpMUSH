@@ -29,6 +29,12 @@ public partial class Commands
 			return new None();
 		}
 
+		if (!Configuration!.CurrentValue.Net.PlayerCreation)
+		{
+			await NotifyService!.Notify(handle, "Player creation is disabled on this server.");
+			return new None();
+		}
+
 		var rawArgs = parser.CurrentState.Arguments;
 		string username, password;
 		string? email = null;
@@ -146,6 +152,12 @@ public partial class Commands
 		{
 			await NotifyService!.Notify(handle,
 				"You must be logged in to an account first. Use: login <display-name-or-email> <password>");
+			return new None();
+		}
+
+		if (!Configuration!.CurrentValue.Net.PlayerCreation)
+		{
+			await NotifyService!.Notify(handle, "Player creation is disabled on this server.");
 			return new None();
 		}
 
