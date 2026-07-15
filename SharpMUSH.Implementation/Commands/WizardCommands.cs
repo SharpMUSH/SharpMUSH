@@ -2,6 +2,7 @@ using Humanizer;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -2183,9 +2184,11 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			// Note: Actual modification of configuration is not yet implemented
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockBanNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			var banPattern = args["0"].Message!.ToPlainText();
+			string[] banFlags = ["!connect", "!create", "!guest"];
+			await AddSitelockRuleAsync(banPattern, banFlags);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, banPattern, string.Join(" ", banFlags));
+			return CallState.Empty;
 		}
 
 		// @sitelock/register <pattern> - shorthand for !create register
@@ -2197,9 +2200,11 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			// Note: Actual modification of configuration is not yet implemented
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRegisterNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			var registerPattern = args["0"].Message!.ToPlainText();
+			string[] registerFlags = ["!create", "register"];
+			await AddSitelockRuleAsync(registerPattern, registerFlags);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, registerPattern, string.Join(" ", registerFlags));
+			return CallState.Empty;
 		}
 
 		if (switches.Contains("REMOVE"))
@@ -2210,20 +2215,96 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			// Note: Actual modification of configuration is not yet implemented
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRemoveNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			var removePattern = args["0"].Message!.ToPlainText();
+			var removed = await RemoveSitelockRuleAsync(removePattern);
+			if (!removed)
+			{
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleNotFound), executor);
+				return new CallState(ErrorMessages.Returns.NoMatch);
+			}
+
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleRemovedFormat), executor, removePattern);
+			return CallState.Empty;
 		}
 
 		if (args.Count == 2)
 		{
-			// Note: Actual modification of configuration is not yet implemented
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			var rulePattern = args["0"].Message!.ToPlainText();
+			var ruleFlags = args["1"].Message!.ToPlainText()
+				.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			await AddSitelockRuleAsync(rulePattern, ruleFlags);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, rulePattern, string.Join(" ", ruleFlags));
+			return CallState.Empty;
 		}
 
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockInvalidSyntax), executor);
 		return new CallState(ErrorMessages.Returns.InvalidArguments);
+	}
+
+	/// <summary>
+	/// The freshest known <see cref="SharpMUSHOptions"/>: whatever is actually persisted in the
+	/// database, falling back to <see cref="Configuration"/>'s in-memory snapshot only if nothing has
+	/// been persisted yet. Read-modify-write mutations (<see cref="AddSitelockRuleAsync"/>,
+	/// <see cref="RemoveSitelockRuleAsync"/>) must base their merge on this rather than on
+	/// <c>Configuration!.CurrentValue</c> alone: <c>IOptionsWrapper&lt;SharpMUSHOptions&gt;</c>
+	/// re-reads lazily off the reload change-token, and a rule persisted moments earlier by a
+	/// *different* mutation (e.g. via the web admin UI, or a prior command in the same turn) could
+	/// otherwise be silently dropped by an overwrite based on a stale in-memory copy.
+	/// </summary>
+	private static async ValueTask<SharpMUSHOptions> CurrentPersistedOptionsAsync()
+		=> await Database!.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
+			?? Configuration!.CurrentValue;
+
+	/// <summary>
+	/// Adds or replaces the sitelock rule for <paramref name="pattern"/> with <paramref name="flags"/>,
+	/// persists it via <see cref="ISharpDatabase.SetExpandedServerData{T}"/>, signals a reload via
+	/// <see cref="ConfigurationReloadService.SignalChange"/>, and immediately enforces it via
+	/// <see cref="IBanEnforcer.EnforceHostRuleAsync"/> so live connections matching the new rule are
+	/// dropped right away. Mirrors <c>SitelockController.AddSitelockRule</c> (SharpMUSH.Server).
+	/// </summary>
+	private static async ValueTask AddSitelockRuleAsync(string pattern, string[] flags)
+	{
+		var currentOptions = await CurrentPersistedOptionsAsync();
+		var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules)
+		{
+			[pattern] = flags
+		};
+
+		var updatedOptions = currentOptions with
+		{
+			SitelockRules = new SitelockRulesOptions(newRules)
+		};
+
+		await Database!.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
+		ConfigReloadService!.SignalChange();
+		await BanEnforcer!.EnforceHostRuleAsync(pattern);
+	}
+
+	/// <summary>
+	/// Removes the sitelock rule for <paramref name="pattern"/>, persists via
+	/// <see cref="ISharpDatabase.SetExpandedServerData{T}"/>, and signals a reload via
+	/// <see cref="ConfigurationReloadService.SignalChange"/>. Mirrors
+	/// <c>SitelockController.DeleteSitelockRule</c> (SharpMUSH.Server). Returns <see langword="false"/>
+	/// without persisting anything when no rule for <paramref name="pattern"/> exists.
+	/// </summary>
+	private static async ValueTask<bool> RemoveSitelockRuleAsync(string pattern)
+	{
+		var currentOptions = await CurrentPersistedOptionsAsync();
+		var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules);
+
+		if (!newRules.Remove(pattern))
+		{
+			return false;
+		}
+
+		var updatedOptions = currentOptions with
+		{
+			SitelockRules = new SitelockRulesOptions(newRules)
+		};
+
+		await Database!.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
+		ConfigReloadService!.SignalChange();
+		return true;
 	}
 
 	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,

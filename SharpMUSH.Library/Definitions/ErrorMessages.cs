@@ -1439,13 +1439,14 @@ public static class ErrorMessages
 		public const string SitelockNameRequiresName = "@SITELOCK/NAME requires a player name.";
 		public const string SitelockNameNotImplemented = "@SITELOCK/NAME modification is not yet implemented. Use the admin UI to modify banned names.";
 		public const string SitelockBanRequiresPattern = "@SITELOCK/BAN requires a host pattern.";
-		public const string SitelockBanNotImplemented = "@SITELOCK/BAN modification is not yet implemented. Use the admin UI to add sitelock rules.";
 		public const string SitelockRegisterRequiresPattern = "@SITELOCK/REGISTER requires a host pattern.";
-		public const string SitelockRegisterNotImplemented = "@SITELOCK/REGISTER modification is not yet implemented. Use the admin UI to add sitelock rules.";
 		public const string SitelockRemoveRequiresPattern = "@SITELOCK/REMOVE requires a host pattern.";
-		public const string SitelockRemoveNotImplemented = "@SITELOCK/REMOVE modification is not yet implemented. Use the admin UI to remove sitelock rules.";
-		public const string SitelockRuleNotImplemented = "@SITELOCK rule modification is not yet implemented. Use the admin UI to modify sitelock rules.";
 		public const string SitelockInvalidSyntax = "Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SitelockRuleAddedFormat = "Sitelock rule for '{0}' added: {1}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SitelockRuleRemovedFormat = "Sitelock rule for '{0}' removed.";
+		public const string SitelockRuleNotFound = "No sitelock rule was found for that pattern.";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ZonesClearedForOwnerFormat = "Zones cleared for {0} object(s) owned by {1}.";
