@@ -1,0 +1,63 @@
+.startup-gate-shell {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100svh;
+    background: linear-gradient(135deg, #101113 0%, #16181b 100%);
+    overflow: hidden;
+}
+
+.startup-gate-glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 40%, rgba(var(--glow), 0.08) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.startup-gate-body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    min-height: 100vh;
+    min-height: 100svh;
+    padding: var(--cpad);
+    text-align: center;
+}
+
+.startup-gate-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 0.5rem;
+}
+
+.startup-gate-logo {
+    height: 48px;
+    opacity: 0.95;
+}
+
+.startup-gate-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.15;
+}
+
+.startup-gate-spinner {
+    margin-top: 0.5rem;
+}
+
+.startup-gate-message {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.startup-gate-submessage {
+    color: var(--text-faint);
+}

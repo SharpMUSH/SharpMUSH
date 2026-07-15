@@ -95,6 +95,27 @@ public class DebugAuthStateProviderTests
 	}
 
 	/// <summary>
+	/// Regression coverage for the "Game is starting up" gate: when the server is unreachable (or
+	/// the bootstrap account doesn't exist yet) <see cref="AccountAuthService.GetDebugOttAsync"/>
+	/// returns null, and the provider must answer with a genuinely anonymous principal — no
+	/// claims at all — rather than the old static "DebugAdmin" / "debug-bootstrap-pending"
+	/// sentinel identity. <c>ServerStartupGate</c> is what keeps this provider from being queried
+	/// this early in the first place; this test locks down the provider's own fallback in case it
+	/// still happens (e.g. a very late bootstrap race).
+	/// </summary>
+	[Test]
+	public async Task ServerUnreachable_NullDebugOtt_ReturnsAnonymous_NotDebugAdmin()
+	{
+		var fake = new FakeAccountAuthState { ExplicitlyLoggedOut = false, NextDebugOtt = null };
+		var provider = new DebugAuthStateProvider(fake);
+
+		var state = await provider.GetAuthenticationStateAsync();
+
+		await Assert.That(state.User.Identity?.IsAuthenticated ?? false).IsFalse();
+		await Assert.That(state.User.Claims).IsEmpty();
+	}
+
+	/// <summary>
 	/// The logged-out transition must drop any cached debug identity so a later re-login in the
 	/// same tab re-fetches from the server instead of resurrecting the pre-logout OTT response.
 	/// </summary>

@@ -20,8 +20,11 @@ namespace SharpMUSH.Client.Authentication;
 /// The result is cached in memory for the lifetime of this instance so that repeated
 /// <see cref="GetAuthenticationStateAsync"/> calls do not hammer the endpoint.
 ///
-/// Falls back to static placeholder claims when the server is not yet reachable or
-/// the bootstrap account does not yet exist (e.g. very first startup race).
+/// Returns an anonymous principal — no fabricated claims — when the server is not yet
+/// reachable or the bootstrap account does not yet exist. <c>ServerStartupGate</c> (see
+/// App.razor) keeps this provider from ever being queried before the server is actually up,
+/// so this path should only be hit by a very late/unlucky bootstrap race, and it must not
+/// paper over that with a fake "DebugAdmin" identity.
 /// </summary>
 public class DebugAuthStateProvider : AuthenticationStateProvider
 {
@@ -78,38 +81,29 @@ public class DebugAuthStateProvider : AuthenticationStateProvider
 		if (_cached is null)
 			_cached = await _accountAuth.GetDebugOttAsync();
 
-		List<Claim> claims;
+		if (_cached?.AccountId is null)
+		{
+			// Server not yet reachable or the bootstrap account does not exist yet — anonymous,
+			// not a fabricated identity. ServerStartupGate should have prevented this provider
+			// from ever being queried this early; if it still happens, no fake claims either way.
+			return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+		}
 
-		if (_cached?.AccountId is not null)
-		{
-			claims =
-			[
-				new(ClaimTypes.NameIdentifier, _cached.AccountId),
-				new(ClaimTypes.Name, _cached.AccountUsername ?? "admin"),
-				new(ClaimTypes.Role, "Admin"),
-				// The bootstrap account owns player #1 (God) — the top of the role
-				// hierarchy. Role checks are EXACT string matches, so [Authorize(Roles="God")]
-				// and [Authorize(Roles="Wizard")] each need their own claim. Grant every
-				// PortalRole in dev. Mirrors the server-side DebugAuthenticationHandler.
-				.. DebugRoleClaims,
-				// Match the custom claims emitted by JwtService / DebugAuthenticationHandler
-				// so component logic that inspects character_key or character_name works.
-				new("character_key", "1"),
-				new("character_name", _cached.PlayerName),
-			];
-		}
-		else
-		{
-			// Server not yet ready or bootstrap has not run — use static sentinel values.
-			// Components that rely on a real account ID must handle "not found" gracefully.
-			claims =
-			[
-				new(ClaimTypes.Name, "DebugAdmin"),
-				new(ClaimTypes.NameIdentifier, "debug-bootstrap-pending"),
-				new(ClaimTypes.Role, "Admin"),
-				.. DebugRoleClaims,
-			];
-		}
+		List<Claim> claims =
+		[
+			new(ClaimTypes.NameIdentifier, _cached.AccountId),
+			new(ClaimTypes.Name, _cached.AccountUsername ?? "admin"),
+			new(ClaimTypes.Role, "Admin"),
+			// The bootstrap account owns player #1 (God) — the top of the role
+			// hierarchy. Role checks are EXACT string matches, so [Authorize(Roles="God")]
+			// and [Authorize(Roles="Wizard")] each need their own claim. Grant every
+			// PortalRole in dev. Mirrors the server-side DebugAuthenticationHandler.
+			.. DebugRoleClaims,
+			// Match the custom claims emitted by JwtService / DebugAuthenticationHandler
+			// so component logic that inspects character_key or character_name works.
+			new("character_key", "1"),
+			new("character_name", _cached.PlayerName),
+		];
 
 		var identity = new ClaimsIdentity(claims, "DebugAuth");
 		return new AuthenticationState(new ClaimsPrincipal(identity));

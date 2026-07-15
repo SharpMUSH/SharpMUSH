@@ -177,6 +177,13 @@ public class Program
 		app.MapGet("/health", () => "healthy");
 		app.MapGet("/ready", () => "ready");
 
+		// Polled by the client's ServerStartupGate before it lets the app render: hosted services
+		// (incl. BootstrapService/migrations) all complete before Kestrel accepts traffic, so mere
+		// reachability of this endpoint is sufficient readiness. Dependency-free and unauthenticated
+		// on purpose — it must answer even before the DB/bootstrap has finished, and it is polled
+		// every few seconds so it carries no rate limit.
+		app.MapGet("/api/health", () => Results.Ok(new { status = "ready" }));
+
 		// Inbound HTTP to the MUSH: /http/<path> runs the http_handler's <METHOD> attribute as
 		// commands, PennMUSH-style (see help sharphttp). Prefixed (rather than a catch-all) so it
 		// cannot shadow the portal's routes.
