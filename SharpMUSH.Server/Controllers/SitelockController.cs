@@ -21,6 +21,21 @@ public class SitelockController(
 	ILogger<SitelockController> logger)
 	: ControllerBase
 {
+	/// <summary>
+	/// The freshest known <see cref="SharpMUSHOptions"/>: whatever is actually persisted in the
+	/// database, falling back to <see cref="options"/>'s in-memory snapshot only if nothing has
+	/// been persisted yet. Read-modify-write mutations (<see cref="AddSitelockRule"/>,
+	/// <see cref="DeleteSitelockRule"/>) must base their merge on this rather than on
+	/// <c>options.CurrentValue</c> alone: <c>IOptionsWrapper&lt;SharpMUSHOptions&gt;</c> re-reads
+	/// lazily off the reload change-token, and a rule persisted moments earlier by a *different*
+	/// mutation (e.g. via the in-game <c>@sitelock</c> command, or a prior request) could otherwise
+	/// be silently dropped by an overwrite based on a stale in-memory copy. Mirrors
+	/// <c>WizardCommands.CurrentPersistedOptionsAsync</c> (SharpMUSH.Implementation).
+	/// </summary>
+	private async ValueTask<SharpMUSHOptions> CurrentPersistedOptionsAsync()
+		=> await database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
+			?? options.CurrentValue;
+
 	[HttpGet]
 	public ActionResult<Dictionary<string, string[]>> GetSitelockRules()
 	{
@@ -51,7 +66,7 @@ public class SitelockController(
 				return BadRequest("At least one access rule is required");
 			}
 
-			var currentOptions = options.CurrentValue;
+			var currentOptions = await CurrentPersistedOptionsAsync();
 			var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules)
 			{
 				[hostPattern] = accessRules
@@ -81,7 +96,7 @@ public class SitelockController(
 	{
 		try
 		{
-			var currentOptions = options.CurrentValue;
+			var currentOptions = await CurrentPersistedOptionsAsync();
 			var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules);
 
 			if (!newRules.Remove(hostPattern))
