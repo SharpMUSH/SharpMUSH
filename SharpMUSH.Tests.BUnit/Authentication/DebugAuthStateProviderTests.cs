@@ -63,8 +63,16 @@ public class DebugAuthStateProviderTests
 		await Assert.That(fake.DebugOttCallCount).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// The provider itself no longer caches the debug OTT (that moved to
+	/// <see cref="AccountAuthService.GetDebugOttAsync"/>'s own single-flight cache — see
+	/// AccountAuthServiceInitTests/AccountAuthServiceDebugOttTests for that coverage); it simply
+	/// delegates to <see cref="IAccountAuthState.GetDebugOttAsync"/> on every auth-state query. This
+	/// fake doesn't cache, so each query here calls through — proving the provider doesn't hide a
+	/// stale reference of its own.
+	/// </summary>
 	[Test]
-	public async Task NotLoggedOut_StillFetchesAndCachesDebugOtt()
+	public async Task NotLoggedOut_DelegatesToAccountAuthServiceEachQuery()
 	{
 		var fake = new FakeAccountAuthState { ExplicitlyLoggedOut = false };
 		var provider = new DebugAuthStateProvider(fake);
@@ -75,9 +83,8 @@ public class DebugAuthStateProviderTests
 		await Assert.That(state.User.IsInRole("Admin")).IsTrue();
 		await Assert.That(fake.DebugOttCallCount).IsEqualTo(1);
 
-		// Cached for the lifetime of the instance — a second call must not re-fetch.
 		await provider.GetAuthenticationStateAsync();
-		await Assert.That(fake.DebugOttCallCount).IsEqualTo(1);
+		await Assert.That(fake.DebugOttCallCount).IsEqualTo(2);
 	}
 
 	[Test]
@@ -116,8 +123,12 @@ public class DebugAuthStateProviderTests
 	}
 
 	/// <summary>
-	/// The logged-out transition must drop any cached debug identity so a later re-login in the
-	/// same tab re-fetches from the server instead of resurrecting the pre-logout OTT response.
+	/// While latched, the provider's early return must skip the debug-OTT call entirely (not just
+	/// rely on a cache), and once unlatched a fresh login must reach the service again rather than
+	/// replaying a stale identity. (The actual stale-cache-clearing on logout now lives in
+	/// <see cref="AccountAuthService.LogoutAsync"/>, which clears its own single-flight task; this
+	/// fake has no cache of its own; both behaviors, provider early-return and service refetch,
+	/// combine to give this end-to-end guarantee.)
 	/// </summary>
 	[Test]
 	public async Task LoggedOutTransition_ClearsCache_SoNextLoginRefetches()
@@ -136,12 +147,16 @@ public class DebugAuthStateProviderTests
 		await Assert.That(loggedOutState.User.Identity?.IsAuthenticated ?? false).IsFalse();
 		await Assert.That(fake.DebugOttCallCount).IsEqualTo(1); // still not re-fetched while latched
 
-		// Simulate a fresh login clearing the latch.
+		// Simulate a fresh login clearing the latch. Fire() itself kicks off one delegated query
+		// via NotifyAuthenticationStateChanged(GetAuthenticationStateAsync()) (call #2 below), and
+		// since the provider no longer caches anything, the explicit query right after is a
+		// genuinely separate delegated call too (call #3) — neither resurrects a stale identity,
+		// which is the property this test exists to lock down.
 		fake.ExplicitlyLoggedOut = false;
 		fake.Fire();
 
 		var reLoggedInState = await provider.GetAuthenticationStateAsync();
 		await Assert.That(reLoggedInState.User.Identity!.IsAuthenticated).IsTrue();
-		await Assert.That(fake.DebugOttCallCount).IsEqualTo(2); // re-fetched, not resurrected from cache
+		await Assert.That(fake.DebugOttCallCount).IsEqualTo(3);
 	}
 }

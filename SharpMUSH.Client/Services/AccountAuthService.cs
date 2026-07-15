@@ -66,6 +66,7 @@ public class AccountAuthService(
 	public event Action? AuthStateChanged;
 
 	private Task? _initTask;
+	private Task<DebugOttResponse?>? _debugOttTask;
 
 	/// <summary>
 	/// Single-flight, idempotent hydration: the first caller kicks off <see cref="InitCoreAsync"/>
@@ -243,9 +244,34 @@ public class AccountAuthService(
 	/// <summary>
 	/// Development-only: get a debug OTT for player #1 without credentials.
 	/// The server endpoint is only active when DebugAuth is enabled (development mode).
+	///
+	/// Single-flight, idempotent, and cached for the app lifetime once it succeeds: at boot,
+	/// MainLayout, GlobalTerminal, Account.razor, and DebugAuthStateProvider can all call this
+	/// concurrently, and every caller (that one and any later one) shares the very same in-flight
+	/// or completed task instead of each minting its own OTT. This matters because the returned
+	/// token is SINGLE-USE — minting four separate tokens for one boot meant three of them were
+	/// dead on arrival and only whichever the terminal happened to redeem actually worked. Sharing
+	/// one response across callers is correct today because only terminal-connect paths redeem the
+	/// token, and they guard on <c>Terminal.IsConnected</c> first; any future caller that wants to
+	/// redeem this token must add an equivalent guard before doing so, since a second redemption
+	/// attempt will fail server-side.
 	/// </summary>
-	public async Task<DebugOttResponse?> GetDebugOttAsync()
+	public Task<DebugOttResponse?> GetDebugOttAsync() => _debugOttTask ??= GetDebugOttCoreAsync();
+
+	private async Task<DebugOttResponse?> GetDebugOttCoreAsync()
 	{
+		// Force a genuine suspension before touching any state, for exactly the reentrancy reason
+		// documented on InitCoreAsync above: PersistSessionAsync below can synchronously fire
+		// AuthStateChanged, which DebugAuthStateProvider handles by calling straight back into
+		// GetDebugOttAsync(). If every await in this method happened to complete synchronously (as
+		// a test fake IJSRuntime/HttpMessageHandler can), the whole method body — including that
+		// re-entrant call — would run before the `_debugOttTask ??= GetDebugOttCoreAsync()`
+		// assignment in GetDebugOttAsync() ever lands, so the re-entrant call would see a still-null
+		// _debugOttTask and kick off a second, duplicate debug-OTT fetch — the very bug this method
+		// exists to prevent. Yielding here guarantees this method's Task is cached in _debugOttTask
+		// before any of the body (or its re-entrant fallout) executes.
+		await Task.Yield();
+
 		// Hydrate first: CascadingAuthenticationState (App.razor root) can call through to this
 		// method (via DebugAuthStateProvider) before any component has called InitAsync — on a
 		// page refresh there is no guaranteed ordering. Without this, ExplicitlyLoggedOut would
@@ -257,7 +283,14 @@ public class AccountAuthService(
 		// is called on every auth-state query (every F5 / CascadingAuthenticationState evaluation), so
 		// without this guard HERE, that routine re-auth would call through to PersistSessionAsync below
 		// and silently clear ExplicitlyLoggedOut, undoing an explicit logout on the very next reload.
-		if (ExplicitlyLoggedOut) return null;
+		if (ExplicitlyLoggedOut)
+		{
+			// Don't leave a cached null latched forever: once a later login clears
+			// ExplicitlyLoggedOut, the next call must re-evaluate (and re-fetch) rather than keep
+			// replaying this same completed null task.
+			_debugOttTask = null;
+			return null;
+		}
 
 		try
 		{
@@ -266,19 +299,27 @@ public class AccountAuthService(
 			if (!response.IsSuccessStatusCode)
 			{
 				logger.LogWarning("Debug OTT request failed: {Status}", response.StatusCode);
+				_debugOttTask = null;
 				return null;
 			}
 			var result = await response.Content.ReadFromJsonAsync<DebugOttResponse>();
-			if (result is null) return null;
+			if (result is null)
+			{
+				_debugOttTask = null;
+				return null;
+			}
 
 			if (result.AccountSessionToken is not null && result.AccountUsername is not null)
 				await PersistSessionAsync(result.AccountSessionToken, result.AccountUsername, result.AccountMustChangePassword, role: null, permissions: null);
 
+			// Only a successful response is cached for the app lifetime; _debugOttTask stays set.
 			return result;
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Debug OTT request threw an exception");
+			// Server unreachable this time doesn't mean it always will be — clear so a later call retries.
+			_debugOttTask = null;
 			return null;
 		}
 	}
@@ -445,6 +486,9 @@ public class AccountAuthService(
 		MustChangePassword = false;
 		Role = null;
 		Permissions = [];
+		// A fresh intentional login later must mint (and redeem) its own token, not resurrect the
+		// previous boot's cached debug-OTT response.
+		_debugOttTask = null;
 		await js.InvokeVoidAsync("sessionStorage.removeItem", SessionTokenKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", MustChangePasswordKey);
 		await js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);
