@@ -27,6 +27,9 @@ public class AuthControllerDebugOttTests
 				Substitute.For<SharpMUSH.Library.Authorization.IRoleDerivationService>(),
 				Substitute.For<SharpMUSH.Library.Services.Interfaces.IRoleRegistryService>(),
 				Substitute.For<SharpMUSH.Library.Authorization.IPermissionResolver>(),
+				new ZiggyCreatures.Caching.Fusion.FusionCache(
+					new Microsoft.Extensions.Options.OptionsWrapper<ZiggyCreatures.Caching.Fusion.FusionCacheOptions>(
+						new ZiggyCreatures.Caching.Fusion.FusionCacheOptions())),
 				Substitute.For<Microsoft.Extensions.Logging.ILogger<SharpMUSH.Server.Authentication.AccountClaimsService>>()),
 			options,
 			env,

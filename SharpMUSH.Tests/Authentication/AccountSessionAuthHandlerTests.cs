@@ -12,6 +12,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests.Authentication;
 
@@ -88,6 +89,7 @@ public class AccountSessionAuthHandlerTests
 		permissionResolver.Resolve(Arg.Any<IEnumerable<SharpRole>>()).Returns(new HashSet<string>(scopes));
 
 		return new AccountClaimsService(accountServiceForClaims, roleDerivation, roleRegistry, permissionResolver,
+			new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions())),
 			NullLogger<AccountClaimsService>.Instance);
 	}
 

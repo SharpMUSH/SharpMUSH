@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Server.Authentication;
 
@@ -12,11 +13,18 @@ namespace SharpMUSH.Server.Authentication;
 /// account-login/register endpoints, <c>AdminAccountsController</c>'s Wizard gate) can compute
 /// the same claims without depending on JWT being configured.
 /// </summary>
+/// <remarks>
+/// Role/scope resolution is wrapped in FusionCache (30s TTL) so per-request server-side
+/// resolution (see <see cref="AccountSessionAuthenticationHandler"/>) is near-free. Both the
+/// role and scope cache entries for an account are tagged <c>acct:{accountId}</c>, so a single
+/// <see cref="InvalidateAsync"/> call clears both.
+/// </remarks>
 public class AccountClaimsService(
 	IAccountService accountService,
 	IRoleDerivationService roleDerivation,
 	IRoleRegistryService roleRegistry,
 	IPermissionResolver permissionResolver,
+	IFusionCache cache,
 	ILogger<AccountClaimsService> logger)
 {
 	/// <summary>
@@ -32,6 +40,13 @@ public class AccountClaimsService(
 	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
 		Justification = "JWT sub/unique_name claims are standard bearer-token identifiers, not secret data.")]
 	public async Task<PortalRole> ComputeAccountRoleAsync(string accountId, PortalRole activeRole, CancellationToken ct = default)
+		=> await cache.GetOrSetAsync($"account-role:{accountId}:{activeRole}",
+			async token => await ComputeAccountRoleCoreAsync(accountId, activeRole, token),
+			options => options.Duration = TimeSpan.FromSeconds(30),
+			tags: [$"acct:{accountId}"],
+			token: ct);
+
+	private async Task<PortalRole> ComputeAccountRoleCoreAsync(string accountId, PortalRole activeRole, CancellationToken ct)
 	{
 		try
 		{
@@ -70,6 +85,13 @@ public class AccountClaimsService(
 	/// unioned with its explicitly-assigned roles, resolved by priority/three-state.
 	/// </summary>
 	public async Task<IReadOnlySet<string>> ComputeGrantedScopesAsync(string accountId, PortalRole role)
+		=> await cache.GetOrSetAsync($"account-scopes:{accountId}:{role}",
+			async _ => await ComputeGrantedScopesCoreAsync(accountId, role),
+			options => options.Duration = TimeSpan.FromSeconds(30),
+			tags: [$"acct:{accountId}"],
+			token: default);
+
+	private async Task<IReadOnlySet<string>> ComputeGrantedScopesCoreAsync(string accountId, PortalRole role)
 	{
 		var allRoles = await roleRegistry.GetRolesAsync();
 		var bySlug = allRoles.ToDictionary(r => r.Slug, StringComparer.OrdinalIgnoreCase);
@@ -83,5 +105,15 @@ public class AccountClaimsService(
 		// Expand umbrella scopes (e.g. wiki.admin ⇒ wiki.read/create/edit/delete) so the finer
 		// gates authorize for holders of the coarser scope without per-gate "or admin" checks.
 		return PortalPermission.Expand(permissionResolver.Resolve(effective.Values));
+	}
+
+	/// <summary>
+	/// Clears both the cached role and granted-scope entries for <paramref name="accountId"/>
+	/// (both are tagged <c>acct:{accountId}</c>). Called by ban/disable enforcement paths so a
+	/// freshly-revoked account doesn't keep its stale claims for the remainder of the 30s TTL.
+	/// </summary>
+	public async ValueTask InvalidateAsync(string accountId)
+	{
+		await cache.RemoveByTagAsync($"acct:{accountId}");
 	}
 }

@@ -12,6 +12,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests.Authentication;
 
@@ -103,6 +104,7 @@ public class JwtServiceTests
 			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[]));
 
 		var accountClaims = new AccountClaimsService(accountSvc, roleSvc, roleRegistry, permissionResolver,
+			new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions())),
 			NullLogger<AccountClaimsService>.Instance);
 
 		return (new JwtService(options, store, roleSvc, accountSvc, accountClaims, mediator, logger),
