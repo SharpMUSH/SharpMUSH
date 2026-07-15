@@ -2,8 +2,6 @@ using System.Collections.Concurrent;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using SharpMUSH.Library.Authorization;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
@@ -16,9 +14,10 @@ namespace SharpMUSH.Tests.Services;
 
 /// <summary>
 /// Unit tests for <see cref="BanEnforcementService"/>. Every dependency is an NSubstitute double
-/// (or, for <see cref="AccountClaimsService"/>/<see cref="HubConnectionRegistry"/>, a real instance
-/// wired to substituted collaborators — neither type is interface-shaped, so their real behavior
-/// is exercised directly rather than mocked).
+/// except <see cref="HubConnectionRegistry"/>, a real instance wired to substituted
+/// collaborators — it isn't interface-shaped, so its real behavior is exercised directly rather
+/// than mocked. Cache invalidation is verified against a real <see cref="FusionCache"/> instance
+/// (tag-based removal isn't meaningfully observable through a bare substitute).
 /// </summary>
 public class BanEnforcementServiceTests
 {
@@ -46,52 +45,32 @@ public class BanEnforcementServiceTests
 			metadata);
 	}
 
-	private static (AccountClaimsService ClaimsService, IAccountService AccountSvc) BuildRealClaimsService()
-	{
-		var accountSvc = Substitute.For<IAccountService>();
-		var roleDerivation = Substitute.For<IRoleDerivationService>();
-		var roleRegistry = Substitute.For<IRoleRegistryService>();
-		var permissionResolver = Substitute.For<IPermissionResolver>();
-
-		accountSvc.GetCharactersAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[]));
-		roleRegistry.GetRolesAsync().Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
-		roleRegistry.GetRolesForAccountAsync(Arg.Any<string>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
-		permissionResolver.Resolve(Arg.Any<IEnumerable<SharpRole>>()).Returns(new HashSet<string>());
-
-		var cache = new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
-		var claims = new AccountClaimsService(accountSvc, roleDerivation, roleRegistry, permissionResolver, cache,
-			NullLogger<AccountClaimsService>.Instance);
-		return (claims, accountSvc);
-	}
-
 	private static (
 		BanEnforcementService Service,
 		IAccountSessionStore Sessions,
-		AccountClaimsService Claims,
-		IAccountService AccountSvc,
+		IFusionCache Cache,
 		IConnectionService Connections,
 		IMessageBus Bus,
 		HubConnectionRegistry Registry)
 		Build(IEnumerable<IConnectionService.ConnectionData>? liveConnections = null)
 	{
 		var sessions = Substitute.For<IAccountSessionStore>();
-		var (claims, accountSvc) = BuildRealClaimsService();
+		var cache = Substitute.For<IFusionCache>();
 		var connections = Substitute.For<IConnectionService>();
 		connections.GetAll().Returns((liveConnections ?? []).ToAsyncEnumerable());
 		var bus = Substitute.For<IMessageBus>();
 		var registry = new HubConnectionRegistry();
 
-		var svc = new BanEnforcementService(sessions, claims, connections, bus, registry,
+		var svc = new BanEnforcementService(sessions, cache, connections, bus, registry,
 			NullLogger<BanEnforcementService>.Instance);
 
-		return (svc, sessions, claims, accountSvc, connections, bus, registry);
+		return (svc, sessions, cache, connections, bus, registry);
 	}
 
 	[Test]
 	public async Task EnforceAccountBanAsync_RevokesAllSessionsForAccount()
 	{
-		var (svc, sessions, _, _, _, _, _) = Build();
+		var (svc, sessions, _, _, _, _) = Build();
 
 		await svc.EnforceAccountBanAsync("accounts/1");
 
@@ -101,17 +80,15 @@ public class BanEnforcementServiceTests
 	[Test]
 	public async Task EnforceAccountBanAsync_InvalidatesCachedClaims()
 	{
-		var (svc, _, claims, accountSvc, _, _, _) = Build();
-
-		// Prime the cache: one call to GetCharactersAsync.
-		await claims.ComputeAccountRoleAsync("accounts/1", PortalRole.Player);
-		await accountSvc.Received(1).GetCharactersAsync("accounts/1", Arg.Any<CancellationToken>());
+		var (svc, _, cache, _, _, _) = Build();
 
 		await svc.EnforceAccountBanAsync("accounts/1");
 
-		// Cache was invalidated, so this call misses and hits the underlying service again.
-		await claims.ComputeAccountRoleAsync("accounts/1", PortalRole.Player);
-		await accountSvc.Received(2).GetCharactersAsync("accounts/1", Arg.Any<CancellationToken>());
+		// BanEnforcementService no longer depends on AccountClaimsService directly; it invalidates
+		// the same cache tag AccountClaimsService's cached role/scope entries are tagged with, via
+		// IFusionCache.RemoveByTagAsync — the shared AccountCacheTag() is the single source of truth
+		// for that tag, so both classes always agree on it.
+		await cache.Received(1).RemoveByTagAsync(AccountClaimsService.AccountCacheTag("accounts/1"));
 	}
 
 	[Test]
@@ -120,7 +97,7 @@ public class BanEnforcementServiceTests
 		var matching1 = MakeConnection(101, "accounts/1", "1.1.1.1");
 		var matching2 = MakeConnection(102, "accounts/1", "2.2.2.2");
 		var other = MakeConnection(103, "accounts/2", "3.3.3.3");
-		var (svc, _, _, _, _, bus, _) = Build([matching1, matching2, other]);
+		var (svc, _, _, _, bus, _) = Build([matching1, matching2, other]);
 
 		await svc.EnforceAccountBanAsync("accounts/1");
 
@@ -135,7 +112,7 @@ public class BanEnforcementServiceTests
 	[Test]
 	public async Task EnforceAccountBanAsync_AbortsSignalRConnectionsForAccountOnly()
 	{
-		var (svc, _, _, _, _, _, registry) = Build();
+		var (svc, _, _, _, _, registry) = Build();
 		var abortedA = false;
 		var abortedB = false;
 		registry.Add("conn-a", "accounts/1", "9.9.9.9", () => abortedA = true);
@@ -152,7 +129,7 @@ public class BanEnforcementServiceTests
 	{
 		var matching1 = MakeConnection(101, "accounts/1", "1.1.1.1");
 		var matching2 = MakeConnection(102, "accounts/1", "2.2.2.2");
-		var (svc, sessions, _, _, _, bus, registry) = Build([matching1, matching2]);
+		var (svc, sessions, _, _, bus, registry) = Build([matching1, matching2]);
 		var aborted = false;
 		registry.Add("conn-a", "accounts/1", "9.9.9.9", () => aborted = true);
 
@@ -176,7 +153,7 @@ public class BanEnforcementServiceTests
 	public async Task EnforceAccountBanAsync_RevokeSessionsThrows_PublishAndAbortStillRun()
 	{
 		var matching = MakeConnection(111, "accounts/1", "1.1.1.1");
-		var (svc, sessions, _, _, _, bus, registry) = Build([matching]);
+		var (svc, sessions, _, _, bus, registry) = Build([matching]);
 		var aborted = false;
 		registry.Add("conn-a", "accounts/1", "9.9.9.9", () => aborted = true);
 
@@ -195,7 +172,7 @@ public class BanEnforcementServiceTests
 	{
 		var matching = MakeConnection(201, "accounts/1", "10.0.0.5");
 		var other = MakeConnection(202, "accounts/2", "10.0.0.6");
-		var (svc, sessions, _, _, _, bus, registry) = Build([matching, other]);
+		var (svc, sessions, _, _, bus, registry) = Build([matching, other]);
 		var abortedMatching = false;
 		var abortedOther = false;
 		registry.Add("conn-match", "accounts/1", "10.0.0.5", () => abortedMatching = true);
@@ -217,7 +194,7 @@ public class BanEnforcementServiceTests
 	{
 		var matching = MakeConnection(301, "accounts/1", "10.0.0.42");
 		var nonMatching = MakeConnection(302, "accounts/2", "10.0.1.42");
-		var (svc, sessions, _, _, _, bus, _) = Build([matching, nonMatching]);
+		var (svc, sessions, _, _, bus, _) = Build([matching, nonMatching]);
 
 		await svc.EnforceHostRuleAsync("10.0.0.*");
 
@@ -233,7 +210,7 @@ public class BanEnforcementServiceTests
 	public async Task EnforceHostRuleAsync_NeverMatchesUnknownOriginBucket()
 	{
 		var unknownConn = MakeConnection(401, "accounts/1", "UNKNOWN");
-		var (svc, sessions, _, _, _, bus, registry) = Build([unknownConn]);
+		var (svc, sessions, _, _, bus, registry) = Build([unknownConn]);
 		var abortedUnknown = false;
 		registry.Add("conn-unknown", "accounts/1", "unknown", () => abortedUnknown = true);
 
@@ -251,7 +228,7 @@ public class BanEnforcementServiceTests
 		// A session legitimately carries origin IP "unknown" when the client's remote address
 		// couldn't be resolved (see AuthController.ClientIp()); an admin literally typing "unknown"
 		// as a host-rule pattern must not be able to sweep every such session/connection.
-		var (svc, sessions, _, _, _, bus, registry) = Build();
+		var (svc, sessions, _, _, bus, registry) = Build();
 		var abortedUnknown = false;
 		registry.Add("conn-unknown", "accounts/1", "unknown", () => abortedUnknown = true);
 
@@ -269,7 +246,7 @@ public class BanEnforcementServiceTests
 		// the "UNKNOWN" sentinel (unresolved). The service must not fall back to treating "UNKNOWN"
 		// as a concrete matched IP for the session-revoke/registry-abort fan-outs.
 		var connection = MakeConnection(501, "accounts/1", "UNKNOWN", host: "evil.example.com");
-		var (svc, sessions, _, _, _, bus, registry) = Build([connection]);
+		var (svc, sessions, _, _, bus, registry) = Build([connection]);
 		var abortedUnknown = false;
 		registry.Add("conn-unknown", "accounts/1", "unknown", () => abortedUnknown = true);
 

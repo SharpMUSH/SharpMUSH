@@ -28,6 +28,14 @@ public class AccountClaimsService(
 	ILogger<AccountClaimsService> logger)
 {
 	/// <summary>
+	/// The single source of truth for the cache tag shared by every cached role/scope entry for
+	/// <paramref name="accountId"/>. Also used directly by <see cref="SharpMUSH.Server.Services.BanEnforcementService"/>
+	/// (via <see cref="ZiggyCreatures.Caching.Fusion.IFusionCache.RemoveByTagAsync"/>) so cache
+	/// invalidation doesn't require depending on this whole service.
+	/// </summary>
+	public static string AccountCacheTag(string accountId) => $"acct:{accountId}";
+
+	/// <summary>
 	/// The account-level flag-derived role: the highest <see cref="PortalRole"/> across every
 	/// character the account owns (so a Wizard on any character lifts the whole account). Falls
 	/// back to the active <paramref name="activeRole"/> if the character list can't be loaded, or
@@ -43,7 +51,7 @@ public class AccountClaimsService(
 		=> await cache.GetOrSetAsync($"account-role:{accountId}:{activeRole}",
 			async token => await ComputeAccountRoleCoreAsync(accountId, activeRole, token),
 			options => options.Duration = TimeSpan.FromSeconds(30),
-			tags: [$"acct:{accountId}"],
+			tags: [AccountCacheTag(accountId)],
 			token: ct);
 
 	private async Task<PortalRole> ComputeAccountRoleCoreAsync(string accountId, PortalRole activeRole, CancellationToken ct)
@@ -88,7 +96,7 @@ public class AccountClaimsService(
 		=> await cache.GetOrSetAsync($"account-scopes:{accountId}:{role}",
 			async _ => await ComputeGrantedScopesCoreAsync(accountId, role),
 			options => options.Duration = TimeSpan.FromSeconds(30),
-			tags: [$"acct:{accountId}"],
+			tags: [AccountCacheTag(accountId)],
 			token: default);
 
 	private async Task<IReadOnlySet<string>> ComputeGrantedScopesCoreAsync(string accountId, PortalRole role)
@@ -114,6 +122,6 @@ public class AccountClaimsService(
 	/// </summary>
 	public async ValueTask InvalidateAsync(string accountId)
 	{
-		await cache.RemoveByTagAsync($"acct:{accountId}");
+		await cache.RemoveByTagAsync(AccountCacheTag(accountId));
 	}
 }
