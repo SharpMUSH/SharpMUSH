@@ -1,13 +1,14 @@
-::deep .login-page {
+.login-page {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100%;
+    min-height: 100vh;
+    min-height: 100svh;
     padding: var(--cpad);
 }
 
-::deep .login-brand {
+.login-brand {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -16,12 +17,12 @@
     text-align: center;
 }
 
-::deep .login-logo {
+.login-logo {
     height: 44px;
     opacity: 0.95;
 }
 
-::deep .login-brand-title {
+.login-brand-title {
     margin: 0;
     font-family: var(--font-display);
     font-size: 1.375rem;
@@ -40,7 +41,7 @@
 }
 
 @media (max-width: 760px) {
-    ::deep .login-page {
+    .login-page {
         padding: 1rem;
         min-height: 100vh;
         min-height: 100svh;
@@ -51,10 +52,10 @@
 }
 
 @media (max-height: 700px) {
-    ::deep .login-brand {
+    .login-brand {
         margin-bottom: 0.75rem;
     }
-    ::deep .login-logo {
+    .login-logo {
         height: 34px;
     }
 }
