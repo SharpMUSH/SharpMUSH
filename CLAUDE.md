@@ -99,7 +99,7 @@ The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all 
 - `IWikiService` (via `InMemoryWikiService`) — wiki CRUD
 - `ISceneService` (via `InMemorySceneService`) — real-time scene participation
 - `IGameHubConnectionFactory` / `IConnectionStateService` — SignalR lifecycle management
-- `AccountAuthService` / `OttAuthService` — JWT stored in WASM memory; auth bridging
+- `AccountAuthService` / `OttAuthService` — account-session token stored in WASM memory; auth bridging
 - `ITerminalService` / `IWebSocketClientService` — raw WebSocket terminal
 
 **Authentication modes:**
@@ -107,7 +107,7 @@ The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all 
 - Production: `AccountAuthStateProvider` backed by the account session
 
 **SignalR real-time flow:**
-- Client connects to `/hubs/game` with JWT bearer token
+- Client connects to `/hubs/game` authenticated via the `AccountSession` token
 - `GameHub` adds client to `char:{dbref}` group on connect
 - Client calls `SendCommand` → NATS → engine → NATS → `ReceiveOutput` back to client
 - Room events broadcast to `room:{dbref}` group
@@ -138,7 +138,7 @@ public static ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAtt
 
 ### Authentication Architecture
 
-A custom `SharpAccount` model (not ASP.NET Identity) manages web accounts (email/password). Game characters retain MUSH passwords in the object DB, linked by `AccountId`. JWT (15 min) lives in WASM memory only; an httpOnly refresh cookie enables silent renewal. The `JwtService` signs tokens; `IAccountSessionStore` / `IOttStore` / `IRefreshTokenStore` manage server-side state.
+A custom `SharpAccount` model (not ASP.NET Identity) manages web accounts (email/password). Game characters retain MUSH passwords in the object DB, linked by `AccountId`. A single DB-backed account-session token authenticates both REST and SignalR via the `AccountSession` scheme (JWT + refresh cookie retired — see `docs/design/architectural-decisions.md` §1.2); roles/permissions resolve server-side (FusionCache) rather than being baked into a token. Bans revoke sessions and drop live connections immediately (`BanEnforcementService`). Sitelock (glob/CIDR) gates auth surfaces using trusted forwarded-headers client IPs; anonymous browsing stays open. `IAccountSessionStore` / `IOttStore` manage server-side state.
 
 ## Code Style
 
