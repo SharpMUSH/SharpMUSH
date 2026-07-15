@@ -229,6 +229,9 @@ public class Startup(
 		// AdminAccountsController's Wizard gate need it even when JWT auth isn't configured.
 		services.AddSingleton<AccountClaimsService>();
 		services.AddSingleton<BanEnforcementService>();
+		// Library-layer call sites (AccountService, SitelockController) depend on IBanEnforcer, not
+		// the concrete Server-layer BanEnforcementService, so Library stays off Server.
+		services.AddSingleton<IBanEnforcer>(sp => sp.GetRequiredService<BanEnforcementService>());
 		services.AddHostedService<BootstrapService>();
 		services.AddSingleton<SetupService>();
 		services.AddHostedService<RoleSeedService>();

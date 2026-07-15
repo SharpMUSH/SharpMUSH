@@ -14,6 +14,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
 using System.Diagnostics;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
@@ -1472,6 +1473,14 @@ public partial class Commands
 				await NotifyService!.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.YouHaveBeenDisconnected));
 			}
 			await ConnectionService!.Disconnect(handle);
+
+			// Tell ConnectionServer to close the actual socket connection (mirrors the QUIT path in
+			// SocketCommands.cs) — ConnectionService.Disconnect alone only updates server-side state
+			// and does not close the socket.
+			if (MessageBus != null)
+			{
+				await MessageBus.Publish(new DisconnectConnectionMessage(handle, "BOOT"));
+			}
 		}
 
 		return CallState.Empty;

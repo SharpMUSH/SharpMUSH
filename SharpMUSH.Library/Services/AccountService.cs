@@ -5,7 +5,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class AccountService(ISharpDatabase database, IPasswordService passwordService, IAccountSessionStore accountSessionStore) : IAccountService
+public class AccountService(
+	ISharpDatabase database,
+	IPasswordService passwordService,
+	IAccountSessionStore accountSessionStore,
+	IBanEnforcer? banEnforcer = null) : IAccountService
 {
 	// Account IDs are used as the "user" salt key for hashing
 	private static string AccountKey(SharpAccount account) => $"account:{account.Id}:{account.CreatedAt}";
@@ -166,7 +170,14 @@ public class AccountService(ISharpDatabase database, IPasswordService passwordSe
 			return new Error<string>("Account not found.");
 
 		await database.UpdateAccountDisabledAsync(accountId, true, ct);
+		// The session revoke below is the floor: it must always run, even when no IBanEnforcer is
+		// wired (e.g. SharpMUSH.Library-only tests/hosts without a Server). EnforceAccountBanAsync
+		// additionally invalidates cached claims and disconnects live game/SignalR connections.
 		await accountSessionStore.RevokeAllForAccountAsync(accountId, ct);
+		if (banEnforcer is not null)
+		{
+			await banEnforcer.EnforceAccountBanAsync(accountId, ct);
+		}
 		return new Success();
 	}
 

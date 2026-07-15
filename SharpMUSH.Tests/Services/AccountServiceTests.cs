@@ -15,6 +15,18 @@ public class AccountServiceTests
 {
 	private static (AccountService Service, ISharpDatabase Db, IPasswordService Passwords, IAccountSessionStore Sessions) Build()
 	{
+		var (service, db, pw, sessions, _) = BuildWithBanEnforcer(banEnforcer: null);
+		return (service, db, pw, sessions);
+	}
+
+	/// <summary>
+	/// Builds an <see cref="AccountService"/> with an explicit (possibly null) <see cref="IBanEnforcer"/>.
+	/// Passing <c>null</c> exercises the optional-dependency path (e.g. a Library-only host without
+	/// a Server); passing a substitute lets tests assert the wiring in <c>DisableAccountAsync</c>.
+	/// </summary>
+	private static (AccountService Service, ISharpDatabase Db, IPasswordService Passwords, IAccountSessionStore Sessions, IBanEnforcer? BanEnforcer)
+		BuildWithBanEnforcer(IBanEnforcer? banEnforcer)
+	{
 		var db = Substitute.For<ISharpDatabase>();
 		var pw = Substitute.For<IPasswordService>();
 		var sessions = Substitute.For<IAccountSessionStore>();
@@ -26,7 +38,7 @@ public class AccountServiceTests
 		db.GetCharactersForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(new List<SharpPlayer>());
 
-		return (new AccountService(db, pw, sessions), db, pw, sessions);
+		return (new AccountService(db, pw, sessions, banEnforcer), db, pw, sessions, banEnforcer);
 	}
 
 	private static SharpAccount MakeAccount(string id = "accounts/1", string username = "TestUser",
@@ -397,6 +409,50 @@ public class AccountServiceTests
 		await Assert.That(result.IsT0).IsTrue();
 		await db.Received(1).UpdateAccountDisabledAsync("accounts/1", true, Arg.Any<CancellationToken>());
 		await sessions.Received(1).RevokeAllForAccountAsync("accounts/1", Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async ValueTask DisableAccountAsync_NoBanEnforcerWired_StillDisablesAndRevokesSessions()
+	{
+		// Library-only hosts (no SharpMUSH.Server) never wire IBanEnforcer; DisableAccountAsync must
+		// still work, using RevokeAllForAccountAsync alone as the floor.
+		var (svc, db, _, sessions, _) = BuildWithBanEnforcer(banEnforcer: null);
+		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(MakeAccount());
+
+		var result = await svc.DisableAccountAsync("accounts/1");
+
+		await Assert.That(result.IsT0).IsTrue();
+		await db.Received(1).UpdateAccountDisabledAsync("accounts/1", true, Arg.Any<CancellationToken>());
+		await sessions.Received(1).RevokeAllForAccountAsync("accounts/1", Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async ValueTask DisableAccountAsync_BanEnforcerWired_InvokesEnforceAccountBanAsync()
+	{
+		var banEnforcer = Substitute.For<IBanEnforcer>();
+		var (svc, db, _, sessions, _) = BuildWithBanEnforcer(banEnforcer);
+		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(MakeAccount());
+
+		var result = await svc.DisableAccountAsync("accounts/1");
+
+		await Assert.That(result.IsT0).IsTrue();
+		// The session revoke floor still runs...
+		await sessions.Received(1).RevokeAllForAccountAsync("accounts/1", Arg.Any<CancellationToken>());
+		// ...and the wired enforcer is additionally invoked with the same account id.
+		await banEnforcer.Received(1).EnforceAccountBanAsync("accounts/1", Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async ValueTask DisableAccountAsync_AccountNotFound_DoesNotInvokeBanEnforcer()
+	{
+		var banEnforcer = Substitute.For<IBanEnforcer>();
+		var (svc, db, _, _, _) = BuildWithBanEnforcer(banEnforcer);
+		db.GetAccountByIdAsync("accounts/ghost", Arg.Any<CancellationToken>()).Returns((SharpAccount?)null);
+
+		var result = await svc.DisableAccountAsync("accounts/ghost");
+
+		await Assert.That(result.IsT1).IsTrue();
+		await banEnforcer.DidNotReceive().EnforceAccountBanAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]

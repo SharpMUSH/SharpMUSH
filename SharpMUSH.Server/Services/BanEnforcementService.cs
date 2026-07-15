@@ -28,7 +28,7 @@ public sealed class BanEnforcementService(
 	IConnectionService connectionService,
 	IMessageBus messageBus,
 	HubConnectionRegistry registry,
-	ILogger<BanEnforcementService> logger)
+	ILogger<BanEnforcementService> logger) : IBanEnforcer
 {
 	/// <summary>The sentinel IP/host value connections use when no real origin is known.</summary>
 	private const string UnknownOrigin = "unknown";

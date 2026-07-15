@@ -17,6 +17,7 @@ public class SitelockController(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ISharpDatabase database,
 	ConfigurationReloadService configReloadService,
+	IBanEnforcer banEnforcer,
 	ILogger<SitelockController> logger)
 	: ControllerBase
 {
@@ -63,6 +64,7 @@ public class SitelockController(
 
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
+			await banEnforcer.EnforceHostRuleAsync(hostPattern);
 
 			logger.LogInformation("Added/updated sitelock rule for {HostPattern}", LogSanitizer.Sanitize(hostPattern));
 			return Ok();
