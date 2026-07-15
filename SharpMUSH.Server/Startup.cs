@@ -47,13 +47,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.NATS;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
@@ -424,109 +418,21 @@ public class Startup(
 // where the command queue processes one entry at a time.
 			x.UseDefaultThreadPool(tp => tp.MaxConcurrency = 1);
 		});
-		// Authentication setup — three cases:
-		// 1) Dev + no JWT key: DebugAuth only (original behaviour)
-		// 2) Dev + JWT key: DebugAuth default, JWT bearer as additional scheme
-		// 3) Prod + JWT key: JWT bearer only
-		var jwtSection = configuration.GetSection(JwtOptions.Section);
-		var jwtKey = jwtSection["SigningKey"];
-
-		if (!string.IsNullOrWhiteSpace(jwtKey))
-		{
-			services.Configure<JwtOptions>(jwtSection);
-			services.AddSingleton<IJwtService, JwtService>();
-
-			// In dev: DebugAuth remains the default scheme so existing dev tooling still works.
-			// JWT bearer is registered as an additional scheme for portal endpoints.
-			// In prod: JWT bearer is the sole default scheme.
-			var authBuilder = environment.IsDevelopment()
-				? services.AddAuthentication(DebugAuthenticationHandler.SchemeName)
-					.AddScheme<AuthenticationSchemeOptions, DebugAuthenticationHandler>(
-						DebugAuthenticationHandler.SchemeName, _ => { })
-				: services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
-
-			authBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opts =>
-			{
-				opts.TokenValidationParameters = new TokenValidationParameters
-				{
-					ValidateIssuerSigningKey = true,
-					IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-					ValidateIssuer = !string.IsNullOrWhiteSpace(jwtSection["Issuer"]),
-					ValidIssuer = jwtSection["Issuer"],
-					ValidateAudience = !string.IsNullOrWhiteSpace(jwtSection["Audience"]),
-					ValidAudience = jwtSection["Audience"],
-					ValidateLifetime = true,
-					ClockSkew = TimeSpan.FromSeconds(30),
-					// W-3: Explicitly map sub→NameIdentifier and role→ClaimTypes.Role instead of
-					// relying on JwtSecurityTokenHandler.DefaultInboundClaimTypeMap silently doing it.
-					NameClaimType = JwtRegisteredClaimNames.Sub,
-					RoleClaimType = ClaimTypes.Role,
-				};
-
-				// W-5: Warn when issuer/audience validation is disabled (common misconfiguration).
-				var validateIssuer   = !string.IsNullOrWhiteSpace(jwtSection["Issuer"]);
-				var validateAudience = !string.IsNullOrWhiteSpace(jwtSection["Audience"]);
-				if (!validateIssuer || !validateAudience)
-				{
-					using var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
-					var startupLogger = loggerFactory.CreateLogger<Startup>();
-					startupLogger.LogWarning(
-						"W-5: JWT {Missing} validation is DISABLED — set Jwt:{Missing} in config for production.",
-						!validateIssuer && !validateAudience ? "Issuer+Audience"
-						: !validateIssuer ? "Issuer" : "Audience",
-						!validateIssuer && !validateAudience ? "Issuer and Jwt:Audience"
-						: !validateIssuer ? "Issuer" : "Audience");
-				}
-			});
-		}
-		else if (environment.IsDevelopment())
-		{
-			// No JWT key in config: generate an ephemeral key so IJwtService is always
-			// available in dev (OTT issuance, debug-ott endpoint, jwt-login etc. all work
-			// without any extra config).  Tokens are only valid for the lifetime of this
-			// process — fine for local dev.
-			var ephemeralKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
-			services.Configure<JwtOptions>(opts =>
-			{
-				opts.SigningKey = ephemeralKey;
-			});
-			services.AddSingleton<IJwtService, JwtService>();
-
-			services.AddAuthentication(DebugAuthenticationHandler.SchemeName)
+		// Single web credential: the account-session token. AccountSession is the default
+		// scheme in production; DebugAuth remains the dev default (auto-admin). MushBasic
+		// stays as the opt-in MCP scheme.
+		var authBuilder = environment.IsDevelopment()
+			? services.AddAuthentication(DebugAuthenticationHandler.SchemeName)
 				.AddScheme<AuthenticationSchemeOptions, DebugAuthenticationHandler>(
 					DebugAuthenticationHandler.SchemeName, _ => { })
-				.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opts =>
-				{
-					opts.TokenValidationParameters = new TokenValidationParameters
-					{
-						ValidateIssuerSigningKey = true,
-						IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ephemeralKey)),
-						ValidateIssuer = false,
-						ValidateAudience = false,
-						ValidateLifetime = true,
-						ClockSkew = TimeSpan.FromSeconds(30),
-						NameClaimType = JwtRegisteredClaimNames.Sub,
-						RoleClaimType = ClaimTypes.Role,
-					};
-				});
-		}
+			: services.AddAuthentication(AccountSessionAuthenticationHandler.SchemeName);
 
-		// MCP endpoint authentication: character + password over HTTP Basic, verified via the
-		// same flow the in-game `connect` command uses. Registered as an additional scheme
-		// (no default change) so the MCP endpoint can require it explicitly regardless of the
-		// default web-portal scheme, in every environment/JWT configuration above.
+		authBuilder.AddScheme<AuthenticationSchemeOptions, AccountSessionAuthenticationHandler>(
+			AccountSessionAuthenticationHandler.SchemeName, _ => { });
+
 		services.AddAuthentication()
 			.AddScheme<AuthenticationSchemeOptions, MushBasicAuthenticationHandler>(
 				MushBasicAuthenticationHandler.SchemeName, _ => { });
-
-		// Account-session bearer authentication (Task 7 slice of Task 8's full credential
-		// consolidation): registered as an ADDITIONAL scheme only, so endpoints can opt in via
-		// [Authorize(AuthenticationSchemes = AccountSessionAuthenticationHandler.SchemeName)]
-		// (e.g. AuthController.SwitchCharacter) without changing the default scheme above.
-		// Task 8 owns wiring this up as (part of) the default portal scheme.
-		services.AddAuthentication()
-			.AddScheme<AuthenticationSchemeOptions, AccountSessionAuthenticationHandler>(
-				AccountSessionAuthenticationHandler.SchemeName, _ => { });
 
 		// In-server MCP (Model Context Protocol): exposes the shared MUSH code intelligence as
 		// tools over Streamable HTTP. Services are always registered; the endpoint is only
@@ -537,17 +443,7 @@ public class Startup(
 			.WithHttpTransport(mcpTransport => mcpTransport.Stateless = true)
 			.WithTools<MushTools>();
 
-		// JWT infrastructure (role derivation + refresh tokens) is always registered
-		// so that the services are available even before a signing key is configured.
 		services.AddSingleton<IRoleDerivationService, RoleDerivationService>();
-		services.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
-
-		// IJwtService is registered in every code path above:
-		//   - prod with key  → JwtService backed by appsettings Jwt:SigningKey
-		//   - dev with key   → same
-		//   - dev no key     → JwtService backed by ephemeral process-lifetime key
-		// AuthController exposes it via lazy RequestServices.GetService<IJwtService>() so
-		// it still returns 501 gracefully in any hypothetical future prod-no-key scenario.
 
 		services.AddSignalR();
 

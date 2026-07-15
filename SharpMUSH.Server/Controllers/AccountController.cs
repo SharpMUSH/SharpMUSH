@@ -227,9 +227,6 @@ public class AccountController(
 			var token = header["Bearer ".Length..].Trim();
 			await accountSessionStore.RevokeAsync(token);
 		}
-		// Also drop the httpOnly refresh cookie set by the JWT login endpoints so a
-		// logged-out browser cannot silently mint new access tokens.
-		Response.Cookies.Delete(AuthController.RefreshCookieName, new CookieOptions { Path = "/api/auth" });
 		return NoContent();
 	}
 }

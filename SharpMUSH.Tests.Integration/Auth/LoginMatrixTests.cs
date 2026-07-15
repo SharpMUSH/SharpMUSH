@@ -63,7 +63,11 @@ public class LoginMatrixTests(ServerWebAppFactory factory)
 		return (await response.Content.ReadFromJsonAsync<CreatedCharacterResponse>())!;
 	}
 
-	[Test]
+	// Plain non-staff account-login expecting success races the shared Net.Logins substitute
+	// mutated by LoginsConfigApiTests/SwitchCharacterTests/PlayerCreationApiTests/
+	// AdminAccountsApiTests — see the comment on AdminAccountsApiTests'
+	// UnlinkCharacter_RemovesItFromTargetsCharacterList for the full explanation.
+	[Test, NotInParallel("ConfigMutation")]
 	public async Task Login_WithLinkedCharacterPassword_Succeeds()
 	{
 		var (http, account) = await RegisterAccountAsync(); // registers with AccountPassword
@@ -76,7 +80,8 @@ public class LoginMatrixTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
 
-	[Test]
+	// Same Net.Logins race as Login_WithLinkedCharacterPassword_Succeeds above.
+	[Test, NotInParallel("ConfigMutation")]
 	public async Task Login_WithCharacterNameAndPassword_ResolvesOwningAccount()
 	{
 		var (http, account) = await RegisterAccountAsync();

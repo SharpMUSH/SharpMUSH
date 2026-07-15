@@ -95,8 +95,9 @@ public class DebugAuthStateProvider : AuthenticationStateProvider
 			// and [Authorize(Roles="Wizard")] each need their own claim. Grant every
 			// PortalRole in dev. Mirrors the server-side DebugAuthenticationHandler.
 			.. DebugRoleClaims,
-			// Match the custom claims emitted by JwtService / DebugAuthenticationHandler
-			// so component logic that inspects character_key or character_name works.
+			// Match the custom claims emitted by AccountSessionAuthenticationHandler /
+			// DebugAuthenticationHandler so component logic that inspects character_key or
+			// character_name works.
 			new("character_key", "1"),
 			new("character_name", debugOtt.PlayerName),
 		];

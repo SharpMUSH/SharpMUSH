@@ -78,7 +78,10 @@ public class SwitchCharacterTests(ServerWebAppFactory factory)
 		return request;
 	}
 
-	[Test]
+	// switch-character is gated by Net.Logins too, so a plain non-staff account expecting
+	// success here races the shared substitute mutated by SwitchCharacter_WhenLoginsDisabled_
+	// NonStaff403 below and the other Net.Logins-toggling tests across this test assembly.
+	[Test, NotInParallel("ConfigMutation")]
 	public async Task SwitchCharacter_LinkedCharacter_Returns200WithNonEmptyOtt()
 	{
 		var (http, account) = await RegisterAccountAsync();
@@ -95,7 +98,10 @@ public class SwitchCharacterTests(ServerWebAppFactory factory)
 		await Assert.That(body!.Ott).IsNotEmpty();
 	}
 
-	[Test]
+	// The Net.Logins gate runs before the "character not linked" check, so a concurrent
+	// Net.Logins-disabling test would flip the expected 401 to 403 here — same race as
+	// SwitchCharacter_LinkedCharacter_Returns200WithNonEmptyOtt above.
+	[Test, NotInParallel("ConfigMutation")]
 	public async Task SwitchCharacter_CharacterNotLinked_Returns401()
 	{
 		var (http, account) = await RegisterAccountAsync();

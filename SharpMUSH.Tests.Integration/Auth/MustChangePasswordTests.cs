@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.Integration.Auth;
 /// HTTP-level integration tests verifying that a <c>MustChangePassword</c>-flagged account
 /// session is only accepted by <c>PUT api/account/password</c> and <c>POST api/account/logout</c> —
 /// every other <c>api/account/*</c> endpoint, plus the account-session paths of
-/// <c>api/auth/mush-token</c> and <c>api/auth/jwt-switch-character</c>, must return 403.
+/// <c>api/auth/mush-token</c> and <c>api/auth/switch-character</c>, must return 403.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class MustChangePasswordTests(ServerWebAppFactory factory)
@@ -110,7 +110,7 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	public async Task FlaggedAccount_CannotSwitchCharacterViaJwt()
+	public async Task FlaggedAccount_CannotSwitchCharacter()
 	{
 		var (http, account) = await RegisterAccountAsync();
 		var charName = UniqueName("JswChar");
@@ -118,8 +118,12 @@ public class MustChangePasswordTests(ServerWebAppFactory factory)
 		var accountService = factory.Services.GetRequiredService<IAccountService>();
 		await accountService.ForcePasswordChangeAsync(account.AccountId);
 
-		using var response = await http.PostAsJsonAsync("api/auth/jwt-switch-character",
-			new { AccountSessionToken = account.AccountSessionToken, CharacterKey = character.DbrefNumber, CharacterCreationTime = character.CreationTime });
+		using var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/switch-character")
+		{
+			Content = JsonContent.Create(new { CharacterKey = character.DbrefNumber, CharacterCreationTime = character.CreationTime }),
+		};
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
+		using var response = await http.SendAsync(request);
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
 

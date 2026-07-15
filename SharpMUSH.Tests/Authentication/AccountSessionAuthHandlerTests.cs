@@ -73,7 +73,7 @@ public class AccountSessionAuthHandlerTests
 	/// Builds a real <see cref="AccountClaimsService"/> over substituted lower-level dependencies,
 	/// pre-wired so <c>ComputeAccountRoleAsync</c> returns <paramref name="role"/> and
 	/// <c>ComputeGrantedScopesAsync</c> returns <paramref name="scopes"/> regardless of the
-	/// account's actual character/role data (mirrors <c>JwtServiceTests.Build</c>).
+	/// account's actual character/role data.
 	/// </summary>
 	private static AccountClaimsService MakeAccountClaims(IAccountService accountServiceForClaims,
 		PortalRole role, params string[] scopes)

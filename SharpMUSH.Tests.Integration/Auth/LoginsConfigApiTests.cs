@@ -16,9 +16,10 @@ namespace SharpMUSH.Tests.Integration.Auth;
 
 /// <summary>
 /// HTTP-level integration tests verifying that <c>Net.Logins = false</c> refuses
-/// non-staff web logins (<c>POST api/auth/account-login</c>, <c>api/auth/jwt-login</c>,
-/// <c>api/auth/mush-token</c> both paths) with 403, matching the telnet-side enforcement
-/// in <c>LoginsConfigTests</c>.
+/// non-staff web logins (<c>POST api/auth/account-login</c>, <c>api/auth/mush-token</c>
+/// both paths) with 403, matching the telnet-side enforcement in <c>LoginsConfigTests</c>.
+/// The equivalent gate on <c>api/auth/switch-character</c> is covered by
+/// <c>SwitchCharacterTests.SwitchCharacter_WhenLoginsDisabled_NonStaff403</c>.
 ///
 /// The tests re-stub the shared <see cref="IOptionsWrapper{SharpMUSHOptions}"/> substitute's
 /// <c>CurrentValue</c> around the call under test and restore it in a finally block —
@@ -33,7 +34,6 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
 	private record CreateCharacterRequest(string Name, string Password);
 	private record AccountLoginRequest(string UsernameOrEmail, string Password);
-	private record JwtLoginRequest(string UsernameOrEmail, string Password, int CharacterKey, long CharacterCreationTime);
 	private record MushTokenRequest(string? PlayerName, string? Password, string? AccountSessionToken, int? CharacterKey, long? CharacterCreationTime);
 
 	private const string Password = "Integration-Test-Pw-1!";
@@ -96,25 +96,6 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 		{
 			using var response = await http.PostAsJsonAsync("api/auth/account-login",
 				new AccountLoginRequest(account.Username, Password));
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
-	}
-
-	[Test, NotInParallel("ConfigMutation")]
-	public async Task JwtLogin_WhenLoginsDisabled_NonStaff403()
-	{
-		var (http, account) = await RegisterAccountAsync();
-		var character = await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Pleb"), Password);
-
-		var (options, original) = DisableLogins(factory);
-		try
-		{
-			using var response = await http.PostAsJsonAsync("api/auth/jwt-login",
-				new JwtLoginRequest(account.Username, Password, character.DbrefNumber, character.CreationTime));
 			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 		}
 		finally

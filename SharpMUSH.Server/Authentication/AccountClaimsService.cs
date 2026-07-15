@@ -9,9 +9,9 @@ namespace SharpMUSH.Server.Authentication;
 
 /// <summary>
 /// Derives the account-level <see cref="PortalRole"/> and granted permission scopes for an
-/// account. Extracted from <see cref="JwtService"/> so non-JWT callers (<c>AuthController</c>'s
-/// account-login/register endpoints, <c>AdminAccountsController</c>'s Wizard gate) can compute
-/// the same claims without depending on JWT being configured.
+/// account. Shared by every claims-issuing caller (<c>AuthController</c>'s account-login/register
+/// endpoints, <see cref="AccountSessionAuthenticationHandler"/>, <c>AdminAccountsController</c>'s
+/// Wizard gate) so they all compute the same claims from a single source.
 /// </summary>
 /// <remarks>
 /// Role/scope resolution is wrapped in FusionCache (30s TTL) so per-request server-side

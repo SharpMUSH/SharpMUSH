@@ -35,44 +35,6 @@ public class AuthController(
 	IHostEnvironment environment,
 	ILogger<AuthController> logger) : ControllerBase
 {
-	/// <summary>
-	/// IJwtService is optional — only registered when Jwt:SigningKey is present in config.
-	/// Resolved lazily via RequestServices so the MVC controller factory lambda
-	/// (compiled at startup) never tries to inject it from the DI container.
-	/// </summary>
-	private IJwtService? JwtService => HttpContext.RequestServices.GetService<IJwtService>();
-
-	/// <summary>
-	/// Name of the httpOnly cookie that carries the refresh token. The cookie is scoped to
-	/// /api/auth so it is only sent on auth endpoints (refresh), never on regular API calls.
-	/// </summary>
-	public const string RefreshCookieName = "sharpmush_refresh";
-
-	/// <summary>
-	/// Stores the refresh token in an httpOnly cookie so the WASM client never has to hold
-	/// it in JavaScript-accessible memory (per the architectural decision: JWT in WASM
-	/// memory only, refresh via httpOnly cookie). The token is also returned in the JSON
-	/// body for non-browser clients.
-	/// </summary>
-	private void SetRefreshCookie(string refreshToken)
-	{
-		var lifetimeDays = HttpContext.RequestServices
-			.GetService<Microsoft.Extensions.Options.IOptions<JwtOptions>>()?.Value.RefreshTokenLifetimeDays ?? 7;
-
-		Response.Cookies.Append(RefreshCookieName, refreshToken, new CookieOptions
-		{
-			HttpOnly = true,
-			Secure = true,
-			SameSite = SameSiteMode.Strict,
-			Path = "/api/auth",
-			MaxAge = TimeSpan.FromDays(lifetimeDays),
-		});
-	}
-
-	/// <summary>Removes the refresh cookie (logout / invalid refresh).</summary>
-	private void ClearRefreshCookie() =>
-		Response.Cookies.Delete(RefreshCookieName, new CookieOptions { Path = "/api/auth" });
-
 	/// <summary>The remote IP the current request originated from, for session origin tracking.</summary>
 	private string ClientIp() => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
@@ -303,7 +265,7 @@ public class AuthController(
 	public async Task<IActionResult> GetDebugOtt()
 	{
 		// Development-only. In production this endpoint must not exist even for
-		// authenticated users — a valid player JWT must never mint a God OTT.
+		// authenticated users — a valid player session must never mint a God OTT.
 		if (!environment.IsDevelopment())
 			return NotFound();
 
@@ -330,150 +292,6 @@ public class AuthController(
 
 		return Ok(new DebugOttResponse(token, ttl, player.Object.Name,
 			account?.Id, account?.Username, accountSessionToken, account?.MustChangePassword ?? false));
-	}
-
-	/// <summary>Request body for JWT login.</summary>
-	public record JwtLoginRequest(string UsernameOrEmail, string Password, int CharacterKey, long CharacterCreationTime);
-
-	/// <summary>Response body for JWT login / switch / refresh.</summary>
-	public record JwtTokenResponse(string AccessToken, string RefreshToken, int ExpiresIn, string Role);
-
-	/// <summary>
-	/// Authenticate with account credentials and a specific character, returning a JWT token pair.
-	/// Requires JWT auth to be configured (Jwt:SigningKey in appsettings).
-	/// </summary>
-	[HttpPost("jwt-login")]
-	[AllowAnonymous]
-	[EnableRateLimiting("public-api")]
-	// account.Id is a non-secret GUID identifier used for service lookups, not a password or secret value.
-	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
-		Justification = "account.Id is a non-secret GUID identifier used for service lookups, not a password or secret value.")]
-	public async Task<IActionResult> JwtLogin([FromBody] JwtLoginRequest request)
-	{
-		if (JwtService is null)
-			return StatusCode(501, "JWT authentication is not configured on this server.");
-
-		var account = await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password);
-		if (account is null)
-		{
-			logger.LogInformation("JWT login failed for {Identifier}", Sanitize(request.UsernameOrEmail));
-			return Unauthorized("Invalid account credentials.");
-		}
-
-		var characters = await accountService.GetCharactersAsync(account.Id!);
-
-		if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
-			return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
-
-		var character = characters.FirstOrDefault(c =>
-			c.Object.Key == request.CharacterKey
-			&& c.Object.CreationTime == request.CharacterCreationTime);
-
-		if (character is null)
-		{
-			logger.LogInformation("JWT login: character #{Key} not linked to account {AccountId}",
-				request.CharacterKey, Sanitize(account.Id));
-			return Unauthorized("Character is not linked to this account.");
-		}
-
-		var flags = await character.Object.Flags.Value.ToListAsync();
-		var role = roleDerivation.DeriveRole(character.Object.Key, flags);
-		var result = await JwtService.IssueTokensAsync(account, character, role);
-
-		logger.LogInformation("JWT issued for {Username} ({AccountId}), character #{Key}, role {Role}",
-			Sanitize(account.Username), Sanitize(account.Id), character.Object.Key, role);
-		SetRefreshCookie(result.RefreshToken);
-		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
-	}
-
-	/// <summary>Request body for switching the active character (JWT).</summary>
-	public record JwtSwitchCharacterRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
-
-	/// <summary>
-	/// Switch to a different character under the same account and return a new JWT pair.
-	/// Accepts the account-session token issued by <see cref="AccountLogin"/> (not a JWT).
-	/// </summary>
-	[HttpPost("jwt-switch-character")]
-	[AllowAnonymous]
-	[EnableRateLimiting("public-api")]
-	// accountId is a non-secret GUID identifier derived from the session token for service lookups, not a password or secret value.
-	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
-		Justification = "accountId is a non-secret GUID identifier derived from the session token for service lookups, not a password or secret value.")]
-	public async Task<IActionResult> JwtSwitchCharacter([FromBody] JwtSwitchCharacterRequest request)
-	{
-		if (JwtService is null)
-			return StatusCode(501, "JWT authentication is not configured on this server.");
-
-		var accountId = await accountSessionStore.ValidateAsync(request.AccountSessionToken);
-		if (accountId is null)
-		{
-			logger.LogInformation("JWT switch-character: invalid or expired session token");
-			return Unauthorized("Invalid or expired account session.");
-		}
-
-		var account = await accountService.GetByIdAsync(accountId);
-		if (account is null || account.IsDisabled)
-			return Unauthorized("Account not found or disabled.");
-		if (account.MustChangePassword)
-			return StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action.");
-
-		var characters = await accountService.GetCharactersAsync(accountId);
-		var character = characters.FirstOrDefault(c =>
-			c.Object.Key == request.CharacterKey
-			&& c.Object.CreationTime == request.CharacterCreationTime);
-
-		if (character is null)
-		{
-			logger.LogInformation("JWT switch-character: character #{Key} not linked to account {AccountId}",
-				request.CharacterKey, Sanitize(account.Id));
-			return Unauthorized("Character is not linked to this account.");
-		}
-
-		var flags = await character.Object.Flags.Value.ToListAsync();
-		var role = roleDerivation.DeriveRole(character.Object.Key, flags);
-		var result = await JwtService.IssueTokensAsync(account, character, role);
-
-		logger.LogInformation("JWT switch-character: issued for {AccountId}, character #{Key}, role {Role}",
-			Sanitize(account.Id), character.Object.Key, role);
-		SetRefreshCookie(result.RefreshToken);
-		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
-	}
-
-	/// <summary>Request body for JWT refresh. RefreshToken may be omitted when the
-	/// httpOnly refresh cookie set at login is present.</summary>
-	public record JwtRefreshRequest(string? RefreshToken);
-
-	/// <summary>
-	/// Exchange a refresh token for a new JWT access/refresh token pair (single-use).
-	/// The token is taken from the request body when supplied, otherwise from the
-	/// httpOnly refresh cookie set by the login/switch endpoints — browser clients
-	/// can refresh silently without ever holding the refresh token in script.
-	/// </summary>
-	[HttpPost("jwt-refresh")]
-	[AllowAnonymous]
-	[EnableRateLimiting("public-api")]
-	public async Task<IActionResult> JwtRefresh([FromBody] JwtRefreshRequest? request = null)
-	{
-		if (JwtService is null)
-			return StatusCode(501, "JWT authentication is not configured on this server.");
-
-		var refreshToken = !string.IsNullOrWhiteSpace(request?.RefreshToken)
-			? request.RefreshToken
-			: Request.Cookies[RefreshCookieName];
-
-		if (string.IsNullOrWhiteSpace(refreshToken))
-			return BadRequest("RefreshToken is required (body or refresh cookie).");
-
-		var result = await JwtService.RefreshAsync(refreshToken);
-		if (result is null)
-		{
-			logger.LogInformation("JWT refresh rejected: invalid or expired refresh token");
-			ClearRefreshCookie();
-			return Unauthorized("Invalid or expired refresh token.");
-		}
-
-		SetRefreshCookie(result.RefreshToken);
-		return Ok(new JwtTokenResponse(result.AccessToken, result.RefreshToken, result.ExpiresIn, result.Role.ToString()));
 	}
 
 	/// <summary>
