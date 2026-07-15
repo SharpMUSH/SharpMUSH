@@ -256,6 +256,8 @@ public class Startup(
 		// Unconditional (not gated on JWT config) — AuthController's account-login/register and
 		// AdminAccountsController's Wizard gate need it even when JWT auth isn't configured.
 		services.AddSingleton<AccountClaimsService>();
+		// Task 15: gates AuthController/SetupController/GameHub on sitelock rules (!connect/!create/!guest).
+		services.AddSingleton<SitelockGuard>();
 		services.AddSingleton<BanEnforcementService>();
 		// Library-layer call sites (AccountService, SitelockController) depend on IBanEnforcer, not
 		// the concrete Server-layer BanEnforcementService, so Library stays off Server.

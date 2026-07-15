@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,7 @@ public class SetupController(
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
 	AccountClaimsService accountClaims,
+	SitelockGuard sitelockGuard,
 	ILogger<SetupController> logger) : ControllerBase
 {
 	public record SetupStatusResponse(bool NeedsSetup);
@@ -36,6 +38,10 @@ public class SetupController(
 	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> Complete([FromBody] SetupCompleteRequest request)
 	{
+		var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+		if (sitelockGuard.IsBlocked(clientIp, host: "", SitelockGuard.Create))
+			return StatusCode(StatusCodes.Status403Forbidden, "Access from your location is restricted.");
+
 		if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("Username and Password are required.");
 		if (request.Password.Length < 8)
@@ -65,8 +71,7 @@ public class SetupController(
 			// first-run bootstrap flow, and the claimer IS the staff account being created.
 			// Net.Logins gates AccountLogin to protect an already-running game; it has no
 			// meaningful role to play while the game is still unclaimed.
-			var originIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-			var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), originIp);
+			var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), clientIp);
 
 			return Ok(new AuthController.AccountLoginResponse(account.Id!, account.Username, charSummaries,
 				sessionToken, MustChangePassword: false, role.ToString(), permissions.ToList()));

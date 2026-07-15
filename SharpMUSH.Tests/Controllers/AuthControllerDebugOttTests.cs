@@ -33,6 +33,7 @@ public class AuthControllerDebugOttTests
 				Substitute.For<Microsoft.Extensions.Logging.ILogger<SharpMUSH.Server.Authentication.AccountClaimsService>>()),
 			options,
 			env,
+			new SharpMUSH.Server.Authentication.SitelockGuard(options),
 			Substitute.For<Microsoft.Extensions.Logging.ILogger<AuthController>>());
 	}
 

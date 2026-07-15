@@ -107,3 +107,74 @@ public class SitelockMatcherTests
 		await Assert.That(result).IsFalse();
 	}
 }
+
+/// <summary>
+/// Pure unit tests for <see cref="SitelockMatcher.IsBlocked"/> (Task 15): the flag-membership +
+/// host/ip-match combinator that <c>SitelockGuard</c> (Server) and <c>SocketCommands</c>
+/// (Implementation, telnet) both delegate to.
+/// </summary>
+public class SitelockMatcherIsBlockedTests
+{
+	[Test]
+	public async Task IsBlocked_MatchingRuleWithFlag_ReturnsTrue()
+	{
+		var rules = new Dictionary<string, string[]> { ["203.0.113.5"] = ["!connect"] };
+
+		var result = SitelockMatcher.IsBlocked(rules, "203.0.113.5", "h", SitelockMatcher.ConnectFlag);
+
+		await Assert.That(result).IsTrue();
+	}
+
+	[Test]
+	public async Task IsBlocked_MatchingRuleWithoutFlag_ReturnsFalse()
+	{
+		// The rule matches the IP but only carries !create, not !connect.
+		var rules = new Dictionary<string, string[]> { ["203.0.113.5"] = ["!create"] };
+
+		var result = SitelockMatcher.IsBlocked(rules, "203.0.113.5", "h", SitelockMatcher.ConnectFlag);
+
+		await Assert.That(result).IsFalse();
+	}
+
+	[Test]
+	public async Task IsBlocked_NonMatchingRule_ReturnsFalse()
+	{
+		var rules = new Dictionary<string, string[]> { ["203.0.113.5"] = ["!connect"] };
+
+		var result = SitelockMatcher.IsBlocked(rules, "198.51.100.1", "h", SitelockMatcher.ConnectFlag);
+
+		await Assert.That(result).IsFalse();
+	}
+
+	[Test]
+	public async Task IsBlocked_EmptyRules_ReturnsFalse()
+	{
+		var result = SitelockMatcher.IsBlocked(new Dictionary<string, string[]>(), "1.2.3.4", "h", SitelockMatcher.ConnectFlag);
+
+		await Assert.That(result).IsFalse();
+	}
+
+	[Test]
+	public async Task IsBlocked_GuestFlagIndependentOfConnectFlag_OnlyBlocksItsOwnSurface()
+	{
+		// A rule that only carries !guest must not block !connect for the same IP, and vice versa.
+		var rules = new Dictionary<string, string[]> { ["203.0.113.5"] = ["!guest"] };
+
+		await Assert.That(SitelockMatcher.IsBlocked(rules, "203.0.113.5", "h", SitelockMatcher.GuestFlag)).IsTrue();
+		await Assert.That(SitelockMatcher.IsBlocked(rules, "203.0.113.5", "h", SitelockMatcher.ConnectFlag)).IsFalse();
+	}
+
+	[Test]
+	public async Task IsBlocked_MultipleRules_AnyMatchingFlaggedRuleBlocks()
+	{
+		var rules = new Dictionary<string, string[]>
+		{
+			["10.0.0.0/8"] = ["!create"],
+			["203.0.113.5"] = ["!connect", "!guest"],
+		};
+
+		await Assert.That(SitelockMatcher.IsBlocked(rules, "203.0.113.5", "h", SitelockMatcher.ConnectFlag)).IsTrue();
+		await Assert.That(SitelockMatcher.IsBlocked(rules, "203.0.113.5", "h", SitelockMatcher.GuestFlag)).IsTrue();
+		await Assert.That(SitelockMatcher.IsBlocked(rules, "10.0.0.5", "h", SitelockMatcher.ConnectFlag)).IsFalse();
+	}
+}

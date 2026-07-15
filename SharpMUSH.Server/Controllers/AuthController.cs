@@ -32,10 +32,22 @@ public class AuthController(
 	AccountClaimsService accountClaims,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IHostEnvironment environment,
+	SitelockGuard sitelockGuard,
 	ILogger<AuthController> logger) : ControllerBase
 {
 	/// <summary>The remote IP the current request originated from, for session origin tracking.</summary>
 	private string ClientIp() => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+	/// <summary>The 403 body returned by every sitelock-blocked auth surface below.</summary>
+	private const string SitelockedMessage = "Access from your location is restricted.";
+
+	/// <summary>
+	/// True if the requesting IP is sitelocked out of <paramref name="surfaceFlag"/> — callers return
+	/// 403 (<see cref="SitelockedMessage"/>) when this is true. Web REST callers have no resolved
+	/// client hostname (unlike telnet), so only the IP is matched — CIDR/bare-IP rules still apply;
+	/// host-glob rules simply never match here.
+	/// </summary>
+	private bool IsSitelocked(string surfaceFlag) => sitelockGuard.IsBlocked(ClientIp(), host: "", surfaceFlag);
 
 	/// <summary>Request body for OTT issuance via MUSH character credentials.</summary>
 	public record MushTokenRequest(string? PlayerName, string? Password, string? AccountSessionToken, int? CharacterKey, long? CharacterCreationTime);
@@ -57,6 +69,9 @@ public class AuthController(
 		Justification = "accountId is a non-secret GUID identifier derived from the session token for service lookups, not a password or key.")]
 	public async Task<IActionResult> GetMushToken([FromBody] MushTokenRequest request)
 	{
+		if (IsSitelocked(SitelockGuard.Connect))
+			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+
 		if (!string.IsNullOrWhiteSpace(request.AccountSessionToken) && request.CharacterKey.HasValue)
 		{
 			var accountId = await accountSessionStore.ValidateAsync(request.AccountSessionToken);
@@ -193,6 +208,9 @@ public class AuthController(
 	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> AccountLogin([FromBody] AccountLoginRequest request)
 	{
+		if (IsSitelocked(SitelockGuard.Connect))
+			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+
 		if (string.IsNullOrWhiteSpace(request.UsernameOrEmail) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("UsernameOrEmail and Password are required.");
 
@@ -229,6 +247,9 @@ public class AuthController(
 	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> AccountRegister([FromBody] AccountRegisterRequest request)
 	{
+		if (IsSitelocked(SitelockGuard.Create))
+			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+
 		if (!options.CurrentValue.Net.PlayerCreation)
 			return StatusCode(StatusCodes.Status403Forbidden, "Player creation is disabled on this server.");
 

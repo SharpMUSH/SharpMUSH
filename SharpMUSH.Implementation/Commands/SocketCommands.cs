@@ -11,6 +11,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using System.Text.RegularExpressions;
@@ -120,10 +121,20 @@ public partial class Commands
 		var handle = parser.CurrentState.Handle!.Value;
 		var connectionData = ConnectionService.Get(handle);
 		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
+		var hostName = connectionData?.HostName ?? ipAddress;
+
+		// Task 15: sitelock gate for the whole connect surface (character login, OTT/token login,
+		// AND guest login below all count as a "game connection"). Checked before any username/
+		// credential parsing so a blocked site never learns whether a name it tried is valid.
+		if (SitelockMatcher.IsBlocked(Configuration!.CurrentValue.SitelockRules.Rules, ipAddress, hostName, SitelockMatcher.ConnectFlag))
+		{
+			await NotifyService!.Notify(handle, "Access from your location is restricted.");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
 		if (username.Equals("guest", StringComparison.OrdinalIgnoreCase))
 		{
-			return await HandleGuestLogin(parser, handle, ipAddress);
+			return await HandleGuestLogin(parser, handle, ipAddress, hostName);
 		}
 
 		if (username.Equals("token", StringComparison.OrdinalIgnoreCase))
@@ -262,8 +273,16 @@ public partial class Commands
 		return new CallState(playerDbRef.Value);
 	}
 
-	private static async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress)
+	private static async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress, string hostName)
 	{
+		// Task 15: guest-specific sitelock gate, on top of (not instead of) the !connect gate
+		// already applied in Connect() above — a site can allow normal logins but disallow guests.
+		if (SitelockMatcher.IsBlocked(Configuration!.CurrentValue.SitelockRules.Rules, ipAddress, hostName, SitelockMatcher.GuestFlag))
+		{
+			await NotifyService!.Notify(handle, "Access from your location is restricted.");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		if (!Configuration!.CurrentValue.Net.Logins)
 		{
 			await NotifyService!.Notify(handle, "Logins are disabled.");
