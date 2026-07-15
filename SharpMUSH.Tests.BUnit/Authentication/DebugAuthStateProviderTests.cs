@@ -24,6 +24,7 @@ public class DebugAuthStateProviderTests
 	private sealed class FakeAccountAuthState : IAccountAuthState
 	{
 		public bool IsLoggedIn { get; set; }
+		public string? AccountSessionToken { get; set; }
 		public string? Username { get; set; }
 		public string? Role { get; set; }
 		public IReadOnlyList<string> Permissions { get; set; } = [];

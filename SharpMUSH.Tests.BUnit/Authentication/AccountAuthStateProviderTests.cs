@@ -11,6 +11,7 @@ public class AccountAuthStateProviderTests
 		bool isLoggedIn, string? username, string? role, IReadOnlyList<string> permissions) : IAccountAuthState
 	{
 		public bool IsLoggedIn { get; } = isLoggedIn;
+		public string? AccountSessionToken { get; set; }
 		public string? Username { get; } = username;
 		public string? Role { get; } = role;
 		public IReadOnlyList<string> Permissions { get; } = permissions;

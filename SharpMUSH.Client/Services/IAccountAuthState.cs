@@ -8,6 +8,14 @@ namespace SharpMUSH.Client.Services;
 public interface IAccountAuthState
 {
 	bool IsLoggedIn { get; }
+
+	/// <summary>
+	/// The current account-session token, or <c>null</c> when not logged in. Read live (never cached
+	/// downstream) by consumers such as <c>GameHubConnectionFactory</c> so a session established or
+	/// cleared after they were constructed is still reflected on the next read.
+	/// </summary>
+	string? AccountSessionToken { get; }
+
 	string? Username { get; }
 	string? Role { get; }
 	IReadOnlyList<string> Permissions { get; }

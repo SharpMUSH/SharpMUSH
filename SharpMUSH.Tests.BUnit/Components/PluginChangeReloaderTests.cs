@@ -19,7 +19,7 @@ file sealed class FakeConnectionStateService : IConnectionStateService
 	public event Action<RoomEventMessage>? OnRoomEventReceived;
 	public event Action? OnPluginsChanged;
 
-	public Task ConnectAsync(string accessToken) => Task.CompletedTask;
+	public Task ConnectAsync() => Task.CompletedTask;
 	public Task DisconnectAsync() => Task.CompletedTask;
 	public Task SendCommandAsync(string command) => Task.CompletedTask;
 

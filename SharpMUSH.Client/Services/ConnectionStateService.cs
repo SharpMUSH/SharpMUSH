@@ -48,7 +48,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	public LibraryState ConnectionState => MapState(_innerState);
 
 	/// <inheritdoc/>
-	public async Task ConnectAsync(string accessToken)
+	public async Task ConnectAsync()
 	{
 		if (_hub is not null)
 		{
@@ -57,7 +57,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		}
 
 		SetState(SignalRState.Connecting);
-		_hub = _factory.Create(accessToken);
+		_hub = _factory.Create();
 
 		_subscriptions.Add(_hub.On("ReceiveOutput", (GameOutputMessage msg) =>
 		{
@@ -107,7 +107,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 
 			// Phase 9: open the separate scene realtime connection (/hubs/scene). Best-effort — a scene-hub
 			// failure must not break the primary game connection; scene pages simply receive no live events.
-			await ConnectSceneHubAsync(accessToken);
+			await ConnectSceneHubAsync();
 		}
 		catch (InvalidOperationException ex)
 		{
@@ -183,11 +183,11 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	/// <see cref="OnSceneEventReceived"/>. No-ops when the factory provides no scene hub URL (e.g. the
 	/// test factory). Best-effort: any failure is swallowed so the primary game connection is unaffected.
 	/// </summary>
-	private async Task ConnectSceneHubAsync(string accessToken)
+	private async Task ConnectSceneHubAsync()
 	{
 		if (_sceneHub is not null) return;
 
-		var sceneHub = _factory.CreateScene(accessToken);
+		var sceneHub = _factory.CreateScene();
 		if (sceneHub is null) return; // No scene hub configured — scene realtime simply stays inert.
 
 		sceneHub.On("ReceiveSceneMessage", (SceneEventMessage msg) =>

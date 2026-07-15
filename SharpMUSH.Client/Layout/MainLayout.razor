@@ -225,7 +225,7 @@
 
     private async Task SwitchCharacterAsync(AccountAuthService.CharacterSummary character)
     {
-        var token = await AccountAuth.GetOttForCharacterAsync(character);
+        var token = await AccountAuth.SwitchCharacterAsync(character);
         if (token is null) return;
         await Terminal.DisconnectAsync();
         await Task.Delay(200);

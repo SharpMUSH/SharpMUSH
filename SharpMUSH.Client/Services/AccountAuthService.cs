@@ -36,6 +36,8 @@ public class AccountAuthService(
 		IReadOnlyList<string>? Permissions);
 	private record MushTokenWithAccountRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
 	private record MushTokenResponse(string Token, int ExpiresIn);
+	private record SwitchCharacterRequest(int CharacterKey, long CharacterCreationTime);
+	private record SwitchCharacterResponse(string Ott, int ExpiresIn);
 	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,
 		string? AccountId, string? AccountUsername, string? AccountSessionToken, bool AccountMustChangePassword);
 	private record CreateCharacterRequest(string Name, string Password);
@@ -352,6 +354,43 @@ public class AccountAuthService(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "OTT via account session threw an exception");
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// Switch the active character under the current account session and return an OTT for it.
+	/// Calls <c>POST api/auth/switch-character</c>, the session-based replacement for the retired
+	/// <c>jwt-switch-character</c> flow (Task 7/8): the same account session stays active — this
+	/// mints no new token family, just a fresh single-use OTT for the target character.
+	/// </summary>
+	public async Task<string?> SwitchCharacterAsync(CharacterSummary character)
+	{
+		// AccountSessionToken is only populated by InitAsync/PersistSessionAsync; hydrate first so
+		// a pre-init caller doesn't misread a real stored session as "not logged in".
+		await InitAsync();
+		if (AccountSessionToken is null) return null;
+
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			http.DefaultRequestHeaders.Authorization =
+				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
+			var response = await http.PostAsJsonAsync("api/auth/switch-character",
+				new SwitchCharacterRequest(character.DbrefNumber, character.CreationTime));
+
+			if (!response.IsSuccessStatusCode)
+			{
+				logger.LogWarning("Switch character failed: {Status}", response.StatusCode);
+				return null;
+			}
+
+			var result = await response.Content.ReadFromJsonAsync<SwitchCharacterResponse>();
+			return result?.Ott;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Switch character threw an exception");
 			return null;
 		}
 	}

@@ -94,9 +94,10 @@ builder.Services.AddSingleton<IWidgetRegistry>(registry);
 builder.Services.AddSingleton<ILayoutService, LayoutService>();
 builder.Services.AddSingleton<ICharacterStateService, CharacterStateService>();
 builder.Services.AddSingleton<INotificationService, NotificationService>();
-builder.Services.AddSingleton<IGameHubConnectionFactory>(_ =>
+builder.Services.AddSingleton<IGameHubConnectionFactory>(sp =>
 	new GameHubConnectionFactory(
 		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/game",
+		sp.GetRequiredService<IAccountAuthState>(),
 		// Phase 9: scene realtime is a separate connection to the plugin-owned SceneHub at /hubs/scene.
 		$"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/hubs/scene"));
 builder.Services.AddSingleton<ConnectionStateService>();
