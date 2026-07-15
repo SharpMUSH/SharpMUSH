@@ -20,7 +20,7 @@ public class AccountAdminCommandTests
 		var accountSessionStore = WebAppFactoryArg.Services.GetRequiredService<IAccountSessionStore>();
 		var createResult = await accountService.CreateAccountAsync("cmd-reset-user", null, "old-password-1");
 		var accountId = createResult.AsT0.Id!;
-		var sessionToken = await accountSessionStore.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15));
+		var sessionToken = await accountSessionStore.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/newpassword cmd-reset-user=temp-password-9"));
 		await Task.Delay(200);

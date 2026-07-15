@@ -72,6 +72,9 @@ public class AuthController(
 	private void ClearRefreshCookie() =>
 		Response.Cookies.Delete(RefreshCookieName, new CookieOptions { Path = "/api/auth" });
 
+	/// <summary>The remote IP the current request originated from, for session origin tracking.</summary>
+	private string ClientIp() => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
 	/// <summary>Request body for OTT issuance via MUSH character credentials.</summary>
 	public record MushTokenRequest(string? PlayerName, string? Password, string? AccountSessionToken, int? CharacterKey, long? CharacterCreationTime);
 
@@ -208,7 +211,7 @@ public class AuthController(
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
 		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
 
-		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
+		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp());
 		logger.LogInformation("Account login success for {Username} ({Id})", Sanitize(account.Username), Sanitize(account.Id));
 		return Ok(new AccountLoginResponse(account.Id!, account.Username, charSummaries, sessionToken,
 			account.MustChangePassword, role.ToString(), permissions.ToList()));
@@ -238,7 +241,7 @@ public class AuthController(
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
 		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
 
-		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
+		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp());
 
 		logger.LogInformation("Account registered: {Username} ({Id})", Sanitize(account.Username), Sanitize(account.Id));
 		return Ok(new AccountLoginResponse(account.Id!, account.Username, [], sessionToken,
@@ -279,7 +282,7 @@ public class AuthController(
 		var account = await accountService.GetAccountForCharacterAsync(playerRef);
 		string? accountSessionToken = null;
 		if (account is not null)
-			accountSessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
+			accountSessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp());
 
 		logger.LogInformation("Debug OTT issued for {Name} (#{Key}), account: {AccountId}",
 			Sanitize(player.Object.Name), player.Object.Key, Sanitize(account?.Id ?? "none"));

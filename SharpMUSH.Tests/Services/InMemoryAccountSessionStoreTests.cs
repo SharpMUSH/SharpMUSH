@@ -14,7 +14,7 @@ public class InMemoryAccountSessionStoreTests
 	public async ValueTask CreateToken_Returns32CharHexGuid()
 	{
 		var store = CreateStore();
-		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15));
+		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		await Assert.That(token).IsNotNull();
 		await Assert.That(token.Length).IsEqualTo(32); // Guid "N" format
@@ -25,8 +25,8 @@ public class InMemoryAccountSessionStoreTests
 	public async ValueTask CreateToken_TwoTokens_AreUnique()
 	{
 		var store = CreateStore();
-		var t1 = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15));
-		var t2 = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15));
+		var t1 = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15), "0.0.0.0");
+		var t2 = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		await Assert.That(t1).IsNotEqualTo(t2);
 	}
@@ -35,8 +35,8 @@ public class InMemoryAccountSessionStoreTests
 	public async ValueTask CreateToken_DifferentAccountIds_BothStoredIndependently()
 	{
 		var store = CreateStore();
-		var t1 = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15));
-		var t2 = await store.CreateTokenAsync("acct-2", TimeSpan.FromMinutes(15));
+		var t1 = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15), "0.0.0.0");
+		var t2 = await store.CreateTokenAsync("acct-2", TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		var id1 = await store.ValidateAsync(t1);
 		var id2 = await store.ValidateAsync(t2);
@@ -49,7 +49,7 @@ public class InMemoryAccountSessionStoreTests
 	public async ValueTask ValidateAsync_ValidToken_ReturnsAccountId()
 	{
 		var store = CreateStore();
-		var token = await store.CreateTokenAsync("acct-42", TimeSpan.FromMinutes(15));
+		var token = await store.CreateTokenAsync("acct-42", TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		var accountId = await store.ValidateAsync(token);
 
@@ -80,7 +80,7 @@ public class InMemoryAccountSessionStoreTests
 	public async ValueTask ValidateAsync_ExpiredToken_ReturnsNull()
 	{
 		var store = CreateStore();
-		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMilliseconds(1));
+		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMilliseconds(1), "0.0.0.0");
 
 		await Task.Delay(50);
 
@@ -92,7 +92,7 @@ public class InMemoryAccountSessionStoreTests
 	public async ValueTask ValidateAsync_ExpiredToken_IsRemovedFromStore()
 	{
 		var store = CreateStore();
-		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMilliseconds(1));
+		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMilliseconds(1), "0.0.0.0");
 
 		await Task.Delay(50);
 		_ = await store.ValidateAsync(token); // triggers removal
@@ -107,7 +107,7 @@ public class InMemoryAccountSessionStoreTests
 	{
 		var store = CreateStore();
 		// TTL of 200 ms; we'll validate at ~100 ms and expect the expiry is extended
-		var token = await store.CreateTokenAsync("acct-slide", TimeSpan.FromMilliseconds(200));
+		var token = await store.CreateTokenAsync("acct-slide", TimeSpan.FromMilliseconds(200), "0.0.0.0");
 
 		await Task.Delay(100);
 		var first = await store.ValidateAsync(token); // slides expiry to now+200 ms
@@ -124,7 +124,7 @@ public class InMemoryAccountSessionStoreTests
 	public async ValueTask ValidateAsync_CanBeCalledMultipleTimes_ReturnsAccountIdEachTime()
 	{
 		var store = CreateStore();
-		var token = await store.CreateTokenAsync("acct-multi", TimeSpan.FromMinutes(15));
+		var token = await store.CreateTokenAsync("acct-multi", TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		for (var i = 0; i < 5; i++)
 		{
@@ -137,7 +137,7 @@ public class InMemoryAccountSessionStoreTests
 	public async ValueTask RevokeAsync_ValidToken_SubsequentValidateReturnsNull()
 	{
 		var store = CreateStore();
-		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15));
+		var token = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		await store.RevokeAsync(token);
 		var result = await store.ValidateAsync(token);
@@ -157,8 +157,8 @@ public class InMemoryAccountSessionStoreTests
 	public async ValueTask RevokeAsync_OneOf_TwoTokens_OtherRemainsValid()
 	{
 		var store = CreateStore();
-		var t1 = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15));
-		var t2 = await store.CreateTokenAsync("acct-2", TimeSpan.FromMinutes(15));
+		var t1 = await store.CreateTokenAsync("acct-1", TimeSpan.FromMinutes(15), "0.0.0.0");
+		var t2 = await store.CreateTokenAsync("acct-2", TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		await store.RevokeAsync(t1);
 
@@ -175,7 +175,7 @@ public class InMemoryAccountSessionStoreTests
 		var store = CreateStore();
 		var tasks = Enumerable.Range(0, 50).Select(async i =>
 		{
-			var token = await store.CreateTokenAsync($"acct-{i}", TimeSpan.FromSeconds(30));
+			var token = await store.CreateTokenAsync($"acct-{i}", TimeSpan.FromSeconds(30), "0.0.0.0");
 			var result = await store.ValidateAsync(token);
 			await Assert.That(result).IsEqualTo($"acct-{i}");
 		});
@@ -187,14 +187,29 @@ public class InMemoryAccountSessionStoreTests
 	public async Task RevokeAllForAccount_RemovesOnlyThatAccountsTokens()
 	{
 		var store = new InMemoryAccountSessionStore();
-		var t1 = await store.CreateTokenAsync("acct-A", TimeSpan.FromMinutes(15));
-		var t2 = await store.CreateTokenAsync("acct-A", TimeSpan.FromMinutes(15));
-		var t3 = await store.CreateTokenAsync("acct-B", TimeSpan.FromMinutes(15));
+		var t1 = await store.CreateTokenAsync("acct-A", TimeSpan.FromMinutes(15), "0.0.0.0");
+		var t2 = await store.CreateTokenAsync("acct-A", TimeSpan.FromMinutes(15), "0.0.0.0");
+		var t3 = await store.CreateTokenAsync("acct-B", TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		await store.RevokeAllForAccountAsync("acct-A");
 
 		await Assert.That(await store.ValidateAsync(t1)).IsNull();
 		await Assert.That(await store.ValidateAsync(t2)).IsNull();
 		await Assert.That(await store.ValidateAsync(t3)).IsEqualTo("acct-B");
+	}
+
+	[Test]
+	public async Task RevokeAllForIp_RemovesOnlyThatIpsTokens()
+	{
+		var store = new InMemoryAccountSessionStore();
+		var t1 = await store.CreateTokenAsync("acct-A", TimeSpan.FromMinutes(15), "203.0.113.7");
+		var t2 = await store.CreateTokenAsync("acct-B", TimeSpan.FromMinutes(15), "203.0.113.7");
+		var t3 = await store.CreateTokenAsync("acct-C", TimeSpan.FromMinutes(15), "198.51.100.2");
+
+		await store.RevokeAllForIpAsync("203.0.113.7");
+
+		await Assert.That(await store.ValidateAsync(t1)).IsNull();
+		await Assert.That(await store.ValidateAsync(t2)).IsNull();
+		await Assert.That(await store.ValidateAsync(t3)).IsEqualTo("acct-C");
 	}
 }

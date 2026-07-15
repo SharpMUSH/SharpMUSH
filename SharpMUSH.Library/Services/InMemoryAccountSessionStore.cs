@@ -9,14 +9,14 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public sealed class InMemoryAccountSessionStore : IAccountSessionStore
 {
-	private readonly record struct Entry(string AccountId, DateTimeOffset Expiry, TimeSpan Ttl);
+	private readonly record struct Entry(string AccountId, DateTimeOffset Expiry, TimeSpan Ttl, string OriginIp);
 
 	private readonly ConcurrentDictionary<string, Entry> _tokens = new(StringComparer.Ordinal);
 
-	public Task<string> CreateTokenAsync(string accountId, TimeSpan ttl, CancellationToken ct = default)
+	public Task<string> CreateTokenAsync(string accountId, TimeSpan ttl, string originIp, CancellationToken ct = default)
 	{
 		var token = Guid.NewGuid().ToString("N");
-		_tokens[token] = new Entry(accountId, DateTimeOffset.UtcNow.Add(ttl), ttl);
+		_tokens[token] = new Entry(accountId, DateTimeOffset.UtcNow.Add(ttl), ttl, originIp);
 		return Task.FromResult(token);
 	}
 
@@ -44,6 +44,13 @@ public sealed class InMemoryAccountSessionStore : IAccountSessionStore
 	public Task RevokeAllForAccountAsync(string accountId, CancellationToken ct = default)
 	{
 		foreach (var pair in _tokens.Where(p => p.Value.AccountId == accountId))
+			_tokens.TryRemove(pair.Key, out _);
+		return Task.CompletedTask;
+	}
+
+	public Task RevokeAllForIpAsync(string originIp, CancellationToken ct = default)
+	{
+		foreach (var pair in _tokens.Where(p => p.Value.OriginIp == originIp))
 			_tokens.TryRemove(pair.Key, out _);
 		return Task.CompletedTask;
 	}

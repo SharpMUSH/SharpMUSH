@@ -65,7 +65,8 @@ public class SetupController(
 			// first-run bootstrap flow, and the claimer IS the staff account being created.
 			// Net.Logins gates AccountLogin to protect an already-running game; it has no
 			// meaningful role to play while the game is still unclaimed.
-			var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15));
+			var originIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+			var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), originIp);
 
 			return Ok(new AuthController.AccountLoginResponse(account.Id!, account.Username, charSummaries,
 				sessionToken, MustChangePassword: false, role.ToString(), permissions.ToList()));

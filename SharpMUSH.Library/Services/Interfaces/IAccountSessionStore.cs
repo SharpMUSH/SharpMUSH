@@ -12,9 +12,10 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface IAccountSessionStore
 {
 	/// <summary>
-	/// Create a new session token bound to <paramref name="accountId"/> with the given TTL.
+	/// Create a new session token bound to <paramref name="accountId"/> with the given TTL,
+	/// recording the <paramref name="originIp"/> the session was created from.
 	/// </summary>
-	Task<string> CreateTokenAsync(string accountId, TimeSpan ttl, CancellationToken ct = default);
+	Task<string> CreateTokenAsync(string accountId, TimeSpan ttl, string originIp, CancellationToken ct = default);
 
 	/// <summary>
 	/// Validates a token. If valid and unexpired, returns the bound account ID and slides
@@ -27,4 +28,7 @@ public interface IAccountSessionStore
 
 	/// <summary>Invalidates every session token bound to the account (disable/ban).</summary>
 	Task RevokeAllForAccountAsync(string accountId, CancellationToken ct = default);
+
+	/// <summary>Invalidates every session token created from the given origin IP (ban enforcement).</summary>
+	Task RevokeAllForIpAsync(string originIp, CancellationToken ct = default);
 }
