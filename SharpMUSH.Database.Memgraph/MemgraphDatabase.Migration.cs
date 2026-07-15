@@ -92,7 +92,10 @@ public partial class MemgraphDatabase
 "CREATE INDEX ON :SysManagedAttribute(objid)",
 "CREATE INDEX ON :SysRemote(name)",
 "CREATE INDEX ON :SysPackageRevision(packageId)",
-"CREATE INDEX ON :SysRole(slug)"
+"CREATE INDEX ON :SysRole(slug)",
+"CREATE INDEX ON :Session(token)",
+"CREATE INDEX ON :Session(accountId)",
+"CREATE INDEX ON :Session(originIp)"
 };
 
 			// DDL (CREATE INDEX) must run as auto-commit in Memgraph — explicit/managed
