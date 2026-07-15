@@ -228,7 +228,7 @@ public class Startup(
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
 		services.AddSingleton<IOttStore, InMemoryOttStore>();
-		services.AddSingleton<IAccountSessionStore, InMemoryAccountSessionStore>();
+		services.AddSingleton<IAccountSessionStore, DatabaseAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();
 		// Unconditional (not gated on JWT config) — AuthController's account-login/register and
 		// AdminAccountsController's Wizard gate need it even when JWT auth isn't configured.
