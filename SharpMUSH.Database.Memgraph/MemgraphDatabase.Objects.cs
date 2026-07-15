@@ -184,11 +184,11 @@ RETURN count(rel) AS cnt
 
 	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken cancellationToken = default)
 	{
-		var hashed = salt != null
-		? password
-		: passwordService.HashPassword(player.Object.DBRef.ToString(), password);
+		// Every caller passes an ALREADY-HASHED password (via PasswordService.HashPassword /
+		// @password / @newpassword, or an imported PennMUSH hash when salt != null). Store it
+		// verbatim; hashing here would double-hash and the character could never connect.
 		var playerKey = ExtractKey(player.Id!);
-		await ExecuteWithRetryAsync("MATCH (p:Player {key: $key}) SET p.passwordHash = $hash, p.passwordSalt = $salt", new { key = playerKey, hash = hashed, salt = salt ?? "" }, cancellationToken);
+		await ExecuteWithRetryAsync("MATCH (p:Player {key: $key}) SET p.passwordHash = $hash, p.passwordSalt = $salt", new { key = playerKey, hash = password, salt = salt ?? "" }, cancellationToken);
 	}
 
 	public async ValueTask SetPlayerQuotaAsync(SharpPlayer player, int quota, CancellationToken cancellationToken = default)

@@ -257,14 +257,14 @@ public partial class SurrealDatabase
 
 	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken cancellationToken = default)
 	{
-		var hashed = salt != null
-		? password
-		: passwordService.HashPassword(player.Object.DBRef.ToString(), password);
+		// Every caller passes an ALREADY-HASHED password (via PasswordService.HashPassword /
+		// @password / @newpassword, or an imported PennMUSH hash when salt != null). Store it
+		// verbatim; hashing here would double-hash and the character could never connect.
 		var playerKey = ExtractKey(player.Id!);
 		var parameters = new Dictionary<string, object?>
 		{
 			["key"] = playerKey,
-			["hash"] = hashed,
+			["hash"] = password,
 			["salt"] = salt ?? ""
 		};
 		await ExecuteAsync("UPDATE player:$key SET passwordHash = $hash, passwordSalt = $salt", parameters, cancellationToken);
