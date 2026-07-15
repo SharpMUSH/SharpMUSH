@@ -222,6 +222,7 @@ public class Startup(
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
 		services.AddSingleton<IOttStore, InMemoryOttStore>();
+		services.AddSingleton<HubConnectionRegistry>();
 		services.AddSingleton<IAccountSessionStore, DatabaseAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();
 		// Unconditional (not gated on JWT config) — AuthController's account-login/register and

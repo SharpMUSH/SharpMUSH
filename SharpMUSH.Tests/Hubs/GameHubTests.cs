@@ -48,7 +48,9 @@ public class GameHubTests
 		bus.Publish(Arg.Any<GameCommandMessage>(), Arg.Any<CancellationToken>())
 			.Returns(Task.CompletedTask);
 
-		var hub = new GameHub(bus, NullLogger<GameHub>.Instance)
+		var registry = new HubConnectionRegistry();
+
+		var hub = new GameHub(bus, NullLogger<GameHub>.Instance, registry)
 		{
 			Groups = groups,
 			Clients = clients,
