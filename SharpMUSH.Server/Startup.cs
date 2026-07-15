@@ -519,6 +519,15 @@ public class Startup(
 			.AddScheme<AuthenticationSchemeOptions, MushBasicAuthenticationHandler>(
 				MushBasicAuthenticationHandler.SchemeName, _ => { });
 
+		// Account-session bearer authentication (Task 7 slice of Task 8's full credential
+		// consolidation): registered as an ADDITIONAL scheme only, so endpoints can opt in via
+		// [Authorize(AuthenticationSchemes = AccountSessionAuthenticationHandler.SchemeName)]
+		// (e.g. AuthController.SwitchCharacter) without changing the default scheme above.
+		// Task 8 owns wiring this up as (part of) the default portal scheme.
+		services.AddAuthentication()
+			.AddScheme<AuthenticationSchemeOptions, AccountSessionAuthenticationHandler>(
+				AccountSessionAuthenticationHandler.SchemeName, _ => { });
+
 		// In-server MCP (Model Context Protocol): exposes the shared MUSH code intelligence as
 		// tools over Streamable HTTP. Services are always registered; the endpoint is only
 		// mapped when Mcp:Enabled is true (see Program.MapMcp), so a disabled MCP returns 404.

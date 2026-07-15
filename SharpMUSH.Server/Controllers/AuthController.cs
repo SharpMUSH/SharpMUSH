@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Claims;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -173,6 +174,36 @@ public class AuthController(
 
 		logger.LogInformation("Issued OTT for player {Name} (#{Key})", player.Object.Name, player.Object.Key);
 		return Ok(new MushTokenResponse(token, ttlSeconds));
+	}
+
+	/// <summary>Request body for switching the active character via an authenticated account session.</summary>
+	public record SwitchCharacterRequest(int CharacterKey, long CharacterCreationTime);
+
+	/// <summary>Response body containing the one-time token for the switched-to character.</summary>
+	public record SwitchCharacterResponse(string Ott, int ExpiresIn);
+
+	/// <summary>
+	/// Switch to a different character under the same account and return an OTT for it.
+	/// Authenticates via the AccountSession scheme (the same session stays active — this
+	/// mints no new token family). Replaces <c>jwt-switch-character</c> for session-based auth.
+	/// </summary>
+	[HttpPost("switch-character")]
+	[Authorize(AuthenticationSchemes = AccountSessionAuthenticationHandler.SchemeName)]
+	[EnableRateLimiting("public-api")]
+	public async Task<IActionResult> SwitchCharacter([FromBody] SwitchCharacterRequest request)
+	{
+		var accountId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+		if (accountId is null) return Unauthorized("Invalid or expired account session.");
+
+		var characters = await accountService.GetCharactersAsync(accountId);
+		var character = characters.FirstOrDefault(c =>
+			c.Object.Key == request.CharacterKey && c.Object.CreationTime == request.CharacterCreationTime);
+		if (character is null)
+			return Unauthorized("Character is not linked to this account.");
+
+		const int ttl = 60;
+		var ott = await ottStore.CreateTokenAsync(new DBRef(character.Object.Key, character.Object.CreationTime), TimeSpan.FromSeconds(ttl));
+		return Ok(new SwitchCharacterResponse(ott, ttl));
 	}
 
 	/// <summary>Request body for account login.</summary>
