@@ -157,4 +157,35 @@ public class SocketCommandAbbreviationTests
 		await Assert.That(gotNoSuchCommandNotice).IsTrue();
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNull();
 	}
+
+	/// <summary>
+	/// Post-login regression: once a connection is bound to a player, <c>CommandParse</c> sets
+	/// <c>Executor</c> to the player's DBRef (non-null). Prefix abbreviation of connect-screen
+	/// SOCKET commands is a pre-login-only behavior, so a bare abbreviation like "q" from a
+	/// logged-in player must NOT be prefix-matched to the SOCKET QUIT command and disconnect them.
+	/// It is an ordinary in-game command and the player stays connected. Before the fix in
+	/// <see cref="SharpMUSH.Implementation.Visitors.SharpMUSHParserVisitor"/> the abbreviation
+	/// block was gated only on <c>Handle is not null</c> (true for the whole connection lifetime),
+	/// so a logged-in player typing "q" was silently QUIT'd.
+	/// </summary>
+	[Test, NotInParallel(nameof(SocketCommandAbbreviationTests))]
+	public async ValueTask PostLogin_BareAbbreviation_DoesNotDispatchQuit()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("abbrpost");
+		await CreateTestPlayerAsync(name, "post-login-pass-1");
+		var handle = await RegisterConnectionAsync(6008L);
+
+		// Log the player in: after this the connection is bound and Executor resolves to the
+		// player's DBRef on subsequent commands.
+		var connectResult = await Parser.CommandParse(handle, ConnectionService, MModule.single($"connect {name} post-login-pass-1"));
+		await Assert.That(PlainMessage(connectResult).Contains("#-1")).IsFalse();
+		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
+
+		// A bare "q" from a logged-in player must not hijack to SOCKET QUIT (which would
+		// Disconnect the handle and clear its Ref). "q" uniquely prefixes QUIT among the SOCKET
+		// commands, so an unrestricted abbreviation block would definitely dispatch it.
+		await Parser.CommandParse(handle, ConnectionService, MModule.single("q"));
+
+		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
+	}
 }

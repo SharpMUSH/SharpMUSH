@@ -848,7 +848,7 @@ public class SharpMUSHParserVisitor(
 			// above, and only while the connection has not logged in yet. If the typed token is
 			// a prefix of more than one system SOCKET command name, it's ambiguous and we fall
 			// through to the same "no such command" handling as an unknown command.
-			if (socketCommandPattern.Count == 0 && parser.CurrentState.Handle is not null)
+			if (socketCommandPattern.Count == 0 && parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 			{
 				var socketPrefixMatches = parser.CommandLibrary.Where(x
 					=> x.Value.IsSystem
