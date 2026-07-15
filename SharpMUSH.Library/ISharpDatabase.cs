@@ -821,4 +821,18 @@ public interface ISharpDatabase
 	ValueTask SetServerSetupCompletedAsync(bool value, CancellationToken cancellationToken = default);
 
 	#endregion
+
+	#region Session Methods
+
+	/// <summary>Creates or replaces a session document keyed by its token.</summary>
+	ValueTask UpsertSessionAsync(SharpSession session, CancellationToken cancellationToken = default);
+
+	/// <summary>Returns the session for a token, or null if absent.</summary>
+	ValueTask<SharpSession?> GetSessionAsync(string token, CancellationToken cancellationToken = default);
+
+	ValueTask DeleteSessionAsync(string token, CancellationToken cancellationToken = default);
+	ValueTask DeleteSessionsForAccountAsync(string accountId, CancellationToken cancellationToken = default);
+	ValueTask DeleteSessionsForIpAsync(string originIp, CancellationToken cancellationToken = default);
+
+	#endregion
 }

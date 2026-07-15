@@ -46,6 +46,9 @@ public static class DatabaseConstants
 	// (SetupCompleted flag for the first-run wizard).
 	public const string ServerState = "sys_server_state";
 
+	// Web account sessions — one document per token; deleted on revoke/ban.
+	public const string Sessions = "node_sessions";
+
 	// Portal RBAC — custom roles (keyed by slug) and account→role assignments.
 	// Not visible to softcode; travels with backups.
 	public const string Roles = "sys_roles";

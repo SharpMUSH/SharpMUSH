@@ -25,4 +25,11 @@ public partial class MemgraphDatabase
 			"MERGE (s:ServerState {id: 'state'}) SET s.setupCompleted = $value",
 			new { value }, cancellationToken);
 	}
+
+	// TEMPORARY: implemented in Task 3.
+	public ValueTask UpsertSessionAsync(SharpSession session, CancellationToken cancellationToken = default) => throw new NotImplementedException("Task 3");
+	public ValueTask<SharpSession?> GetSessionAsync(string token, CancellationToken cancellationToken = default) => throw new NotImplementedException("Task 3");
+	public ValueTask DeleteSessionAsync(string token, CancellationToken cancellationToken = default) => throw new NotImplementedException("Task 3");
+	public ValueTask DeleteSessionsForAccountAsync(string accountId, CancellationToken cancellationToken = default) => throw new NotImplementedException("Task 3");
+	public ValueTask DeleteSessionsForIpAsync(string originIp, CancellationToken cancellationToken = default) => throw new NotImplementedException("Task 3");
 }
