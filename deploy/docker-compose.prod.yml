@@ -82,10 +82,6 @@ services:
       # client. Caddy is pinned to a static address on sharpmush-net (below) so this stays valid
       # across container recreates.
       - ForwardedHeaders__KnownProxies__0=172.28.0.10
-      # --- Auth: a JWT signing key is REQUIRED for portal auth in production ---
-      # The :? syntax makes compose ABORT with an error if the value is missing from .env,
-      # instead of silently substituting an empty string and booting without auth configured.
-      - Jwt__SigningKey=${JWT_SIGNING_KEY:?set JWT_SIGNING_KEY in deploy/.env}
     volumes:
       - app-data:/app/data
     depends_on:

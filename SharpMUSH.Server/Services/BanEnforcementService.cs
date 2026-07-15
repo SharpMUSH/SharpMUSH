@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
@@ -29,6 +30,7 @@ public sealed class BanEnforcementService(
 	IConnectionService connectionService,
 	IMessageBus messageBus,
 	HubConnectionRegistry registry,
+	ISharpDatabase database,
 	ILogger<BanEnforcementService> logger) : IBanEnforcer
 {
 	/// <summary>The sentinel IP/host value connections use when no real origin is known.</summary>
@@ -37,13 +39,15 @@ public sealed class BanEnforcementService(
 	/// <summary>
 	/// Revokes every session for <paramref name="accountId"/>, invalidates its cached
 	/// role/permission claims, disconnects every live telnet/websocket handle bound to the
-	/// account, and aborts every live SignalR connection for the account.
+	/// account (whether authenticated via account-mode's <c>Metadata["AccountId"]</c> or actually
+	/// playing one of the account's linked characters via <c>connection.Ref</c>), and aborts every
+	/// live SignalR connection for the account.
 	/// </summary>
 	/// <remarks>
 	/// Every fan-out below is independently guarded (see <see cref="RunGuardedAsync"/> and the
 	/// per-handle try/catch in the connection walk): a ban must land as completely as possible, so
-	/// one failing step (e.g. a single un-droppable connection) must never prevent the others from
-	/// running.
+	/// one failing step (e.g. a single un-droppable connection, or a failure resolving the
+	/// account's linked characters) must never prevent the others from running.
 	/// </remarks>
 	public async ValueTask EnforceAccountBanAsync(string accountId, CancellationToken ct = default)
 	{
@@ -56,10 +60,31 @@ public sealed class BanEnforcementService(
 			return Task.CompletedTask;
 		});
 
+		// Real game connections (telnet `connect <char> <pw>`, the web OTT websocket terminal) are
+		// bound via ConnectionService.Bind(handle, playerDbRef), which sets connection.Ref to the
+		// character's DBRef — NOT Metadata["AccountId"] (that metadata is only ever set by the
+		// telnet account-mode LOGIN/REGISTER commands' ConnectionService.BindAccount). So matching
+		// on Metadata["AccountId"] alone would miss every live character connection for a banned
+		// account. Resolve the account's linked characters up front and match either signal below.
+		// Guarded on its own: a DB failure here must never skip the connection walk below (which
+		// still disconnects any Metadata["AccountId"]-bound handles) or the fan-outs above.
+		var linkedCharacterKeys = new HashSet<int>();
+		await RunGuardedAsync("resolve linked characters", accountId, async () =>
+		{
+			var characters = await database.GetCharactersForAccountAsync(accountId, ct);
+			foreach (var character in characters)
+			{
+				linkedCharacterKeys.Add(character.Object.Key);
+			}
+		});
+
 		await foreach (var connection in connectionService.GetAll().WithCancellation(ct))
 		{
-			if (!connection.Metadata.TryGetValue("AccountId", out var connectionAccountId)
-					|| connectionAccountId != accountId)
+			var accountBound = connection.Metadata.TryGetValue("AccountId", out var connectionAccountId)
+				&& connectionAccountId == accountId;
+			var characterBound = connection.Ref is { } characterRef && linkedCharacterKeys.Contains(characterRef.Number);
+
+			if (!accountBound && !characterBound)
 			{
 				continue;
 			}
@@ -132,8 +157,10 @@ public sealed class BanEnforcementService(
 		}
 
 		// The pattern itself counts as an extra revoke/abort target when it is already a literal
-		// IP (the common case before Task 13 adds CIDR/glob awareness to the session store's
-		// lookup). Never target the literal "unknown" sentinel — a session legitimately carries
+		// IP. The session store's own lookup (RevokeAllForIpAsync) is keyed by exact IP only — it
+		// has no CIDR/glob awareness — so CIDR/glob host rules only revoke sessions/abort
+		// connections for the concrete IPs observed live above (matchedIps), never for the pattern
+		// itself. Never target the literal "unknown" sentinel — a session legitimately carries
 		// that origin IP when the client's remote address could not be resolved (see
 		// AuthController.ClientIp()), and it is not what an admin means when banning a host.
 		var literalTarget = !IsGlobPattern(hostPattern)

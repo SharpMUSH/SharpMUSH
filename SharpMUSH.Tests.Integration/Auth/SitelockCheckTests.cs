@@ -356,4 +356,36 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 			options.CurrentValue.Returns(original);
 		}
 	}
+
+	/// <summary>
+	/// The telnet account-mode REGISTER surface is gated on <c>!create</c> (its sibling LOGIN/PLAY
+	/// on <c>!connect</c>, MAKE on <c>!create</c>). The gate is the first statement in the command,
+	/// so it fires through <c>CommandParse</c> even though these commands' multi-word args cannot be
+	/// split into separate positional slots (a pre-existing NoParse single-arg-grammar limitation,
+	/// unrelated to this gate — see PlayerCreationConfigTests, which likewise reaches REGISTER/MAKE's
+	/// pre-arg checks via CommandParse). We assert the block message fires and no account is created.
+	/// </summary>
+	[Test, NotInParallel("ConfigMutation")]
+	public async Task TelnetRegister_FromCreateSitelockedIp_Refused()
+	{
+		const string blockedIp = "198.51.100.33"; // RFC 5737 TEST-NET-2
+		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [blockedIp] = ["!create"] });
+		try
+		{
+			var handle = await RegisterTelnetHandleAsync(blockedIp);
+			await Parser.CommandParse(handle, ConnectionService, MModule.single("register SitelockedAcct somepassword"));
+
+			await NotifyService.Received(1).Notify(
+				Arg.Is<long>(h => h == handle),
+				Arg.Is<OneOf<MString, string>>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
+				null, INotifyService.NotificationType.Announce);
+
+			// The gate returned before any account mutation: the connection never entered AccountMode.
+			await Assert.That(ConnectionService.Get(handle)?.State).IsNotEqualTo(IConnectionService.ConnectionState.AccountMode);
+		}
+		finally
+		{
+			options.CurrentValue.Returns(original);
+		}
+	}
 }

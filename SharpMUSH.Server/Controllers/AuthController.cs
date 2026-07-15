@@ -168,6 +168,9 @@ public class AuthController(
 	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> SwitchCharacter([FromBody] SwitchCharacterRequest request)
 	{
+		if (IsSitelocked(SitelockGuard.Connect))
+			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+
 		var accountId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 		if (accountId is null) return Unauthorized("Invalid or expired account session.");
 

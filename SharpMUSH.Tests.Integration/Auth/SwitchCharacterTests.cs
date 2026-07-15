@@ -29,6 +29,8 @@ public class SwitchCharacterTests(ServerWebAppFactory factory)
 
 	private const string Password = "Integration-Test-Pw-1!";
 
+	private IOptionsWrapper<SharpMUSHOptions> Options => factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+
 	/// <summary>
 	/// Test client pinned to the https base address. The server uses UseHttpsRedirection;
 	/// following the 307 from http→https makes HttpClient drop the Authorization header,
@@ -42,6 +44,29 @@ public class SwitchCharacterTests(ServerWebAppFactory factory)
 	}
 
 	private static string UniqueName(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
+
+	/// <summary>
+	/// Discovers the client IP this HttpClient resolves to server-side, mirroring
+	/// <c>SitelockCheckTests.GetClientIpAsync</c> — see that class's remarks for why this (rather
+	/// than a guessed loopback literal) is required against the in-process TestServer.
+	/// </summary>
+	private static async Task<string> GetClientIpAsync(HttpClient http)
+	{
+		using var response = await http.GetAsync("api/debug/client-ip");
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var raw = await response.Content.ReadAsStringAsync();
+		return string.IsNullOrEmpty(raw) ? "unknown" : raw;
+	}
+
+	/// <summary>Re-stubs the shared options substitute's SitelockRules; caller restores in a finally block.</summary>
+	private (IOptionsWrapper<SharpMUSHOptions> Options, SharpMUSHOptions Original) StubSitelockRules(
+		Dictionary<string, string[]> rules)
+	{
+		var options = Options;
+		var original = options.CurrentValue;
+		options.CurrentValue.Returns(original with { SitelockRules = new SitelockRulesOptions(rules) });
+		return (options, original);
+	}
 
 	private async Task<(HttpClient Http, AccountLoginResponse Account)> RegisterAccountAsync()
 	{
@@ -96,6 +121,27 @@ public class SwitchCharacterTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var body = await response.Content.ReadFromJsonAsync<SwitchCharacterResponse>();
 		await Assert.That(body!.Ott).IsNotEmpty();
+	}
+
+	[Test, NotInParallel("ConfigMutation")]
+	public async Task SwitchCharacter_FromSitelockedIp_Returns403()
+	{
+		var (http, account) = await RegisterAccountAsync();
+		var character = await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("SwLock"), Password);
+
+		var clientIp = await GetClientIpAsync(http);
+		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [clientIp] = ["!connect"] });
+		try
+		{
+			using var request = SwitchCharacterRequestMessage(account.AccountSessionToken, character.DbrefNumber, character.CreationTime);
+			using var response = await http.SendAsync(request);
+
+			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+		}
+		finally
+		{
+			options.CurrentValue.Returns(original);
+		}
 	}
 
 	// The Net.Logins gate runs before the "character not linked" check, so a concurrent

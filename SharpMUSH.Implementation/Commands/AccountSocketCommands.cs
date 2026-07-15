@@ -8,6 +8,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -23,6 +24,11 @@ public partial class Commands
 	{
 		var handle = parser.CurrentState.Handle!.Value;
 		var state = ConnectionService!.Get(handle)?.State;
+
+		if (await IsSitelockedAsync(handle, SitelockMatcher.CreateFlag))
+		{
+			return new None();
+		}
 
 		if (state is IConnectionService.ConnectionState.LoggedIn)
 		{
@@ -95,6 +101,11 @@ public partial class Commands
 		var handle = parser.CurrentState.Handle!.Value;
 		var state = ConnectionService!.Get(handle)?.State;
 
+		if (await IsSitelockedAsync(handle, SitelockMatcher.ConnectFlag))
+		{
+			return new None();
+		}
+
 		if (state is IConnectionService.ConnectionState.LoggedIn)
 		{
 			await NotifyService!.Notify(handle, "You are already connected as a character.");
@@ -158,6 +169,11 @@ public partial class Commands
 	{
 		var handle = parser.CurrentState.Handle!.Value;
 		var connectionData = ConnectionService!.Get(handle);
+
+		if (await IsSitelockedAsync(handle, SitelockMatcher.CreateFlag))
+		{
+			return new None();
+		}
 
 		if (connectionData?.State != IConnectionService.ConnectionState.AccountMode)
 		{
@@ -225,6 +241,11 @@ public partial class Commands
 		var handle = parser.CurrentState.Handle!.Value;
 		var connectionData = ConnectionService!.Get(handle);
 
+		if (await IsSitelockedAsync(handle, SitelockMatcher.ConnectFlag))
+		{
+			return new None();
+		}
+
 		if (connectionData?.State != IConnectionService.ConnectionState.AccountMode)
 		{
 			await NotifyService!.Notify(handle,
@@ -266,6 +287,30 @@ public partial class Commands
 			accountId, character.Object.Name, character.Object.Key);
 
 		return new CallState(playerDbRef);
+	}
+
+	/// <summary>
+	/// True if the telnet connection at <paramref name="handle"/> is sitelocked out of
+	/// <paramref name="surfaceFlag"/>, notifying it with the standard restriction message when so.
+	/// Mirrors <see cref="SocketCommands.Connect"/>'s inline sitelock gate: the account-mode surfaces
+	/// (REGISTER/LOGIN/MAKE/PLAY) are unauthenticated entry points into account mutation exactly like
+	/// CONNECT, so they must be gated the same way. SharpMUSH.Implementation cannot reference the
+	/// Server-layer <c>SitelockGuard</c>, so this calls <see cref="SitelockMatcher.IsBlocked"/> directly
+	/// off the connection's origin metadata, same as <see cref="SocketCommands.Connect"/> does.
+	/// </summary>
+	private static async ValueTask<bool> IsSitelockedAsync(long handle, string surfaceFlag)
+	{
+		var connectionData = ConnectionService!.Get(handle);
+		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
+		var hostName = connectionData?.HostName ?? ipAddress;
+
+		if (!SitelockMatcher.IsBlocked(Configuration!.CurrentValue.SitelockRules.Rules, ipAddress, hostName, surfaceFlag))
+		{
+			return false;
+		}
+
+		await NotifyService!.Notify(handle, "Access from your location is restricted.");
+		return true;
 	}
 
 	/// <summary>

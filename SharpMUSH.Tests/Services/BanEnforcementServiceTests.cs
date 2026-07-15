@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
@@ -22,7 +24,7 @@ namespace SharpMUSH.Tests.Services;
 public class BanEnforcementServiceTests
 {
 	private static IConnectionService.ConnectionData MakeConnection(
-		long handle, string? accountId, string ip, string? host = null)
+		long handle, string? accountId, string ip, string? host = null, DBRef? characterRef = null)
 	{
 		var metadata = new ConcurrentDictionary<string, string>();
 		if (accountId is not null)
@@ -37,7 +39,7 @@ public class BanEnforcementServiceTests
 
 		return new IConnectionService.ConnectionData(
 			handle,
-			null,
+			characterRef,
 			IConnectionService.ConnectionState.Connected,
 			_ => ValueTask.CompletedTask,
 			_ => ValueTask.CompletedTask,
@@ -51,8 +53,10 @@ public class BanEnforcementServiceTests
 		IFusionCache Cache,
 		IConnectionService Connections,
 		IMessageBus Bus,
-		HubConnectionRegistry Registry)
-		Build(IEnumerable<IConnectionService.ConnectionData>? liveConnections = null)
+		HubConnectionRegistry Registry,
+		ISharpDatabase Database)
+		Build(IEnumerable<IConnectionService.ConnectionData>? liveConnections = null,
+			IReadOnlyList<SharpPlayer>? linkedCharacters = null)
 	{
 		var sessions = Substitute.For<IAccountSessionStore>();
 		var cache = Substitute.For<IFusionCache>();
@@ -60,17 +64,20 @@ public class BanEnforcementServiceTests
 		connections.GetAll().Returns((liveConnections ?? []).ToAsyncEnumerable());
 		var bus = Substitute.For<IMessageBus>();
 		var registry = new HubConnectionRegistry();
+		var database = Substitute.For<ISharpDatabase>();
+		database.GetCharactersForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(ValueTask.FromResult(linkedCharacters ?? (IReadOnlyList<SharpPlayer>)[]));
 
-		var svc = new BanEnforcementService(sessions, cache, connections, bus, registry,
+		var svc = new BanEnforcementService(sessions, cache, connections, bus, registry, database,
 			NullLogger<BanEnforcementService>.Instance);
 
-		return (svc, sessions, cache, connections, bus, registry);
+		return (svc, sessions, cache, connections, bus, registry, database);
 	}
 
 	[Test]
 	public async Task EnforceAccountBanAsync_RevokesAllSessionsForAccount()
 	{
-		var (svc, sessions, _, _, _, _) = Build();
+		var (svc, sessions, _, _, _, _, _) = Build();
 
 		await svc.EnforceAccountBanAsync("accounts/1");
 
@@ -80,7 +87,7 @@ public class BanEnforcementServiceTests
 	[Test]
 	public async Task EnforceAccountBanAsync_InvalidatesCachedClaims()
 	{
-		var (svc, _, cache, _, _, _) = Build();
+		var (svc, _, cache, _, _, _, _) = Build();
 
 		await svc.EnforceAccountBanAsync("accounts/1");
 
@@ -97,7 +104,7 @@ public class BanEnforcementServiceTests
 		var matching1 = MakeConnection(101, "accounts/1", "1.1.1.1");
 		var matching2 = MakeConnection(102, "accounts/1", "2.2.2.2");
 		var other = MakeConnection(103, "accounts/2", "3.3.3.3");
-		var (svc, _, _, _, bus, _) = Build([matching1, matching2, other]);
+		var (svc, _, _, _, bus, _, _) = Build([matching1, matching2, other]);
 
 		await svc.EnforceAccountBanAsync("accounts/1");
 
@@ -110,9 +117,36 @@ public class BanEnforcementServiceTests
 	}
 
 	[Test]
+	public async Task EnforceAccountBanAsync_PublishesDisconnectForCharacterBoundConnection_NoAccountIdMetadataNeeded()
+	{
+		// The real game connection case (telnet `connect <char> <pw>`, the web OTT websocket
+		// terminal): ConnectionService.Bind sets connection.Ref to the character's DBRef and never
+		// touches Metadata["AccountId"] (that metadata is only ever set by the telnet account-mode
+		// LOGIN/REGISTER commands' ConnectionService.BindAccount, which today is unreachable). So a
+		// banned account's live character connection must still be disconnected purely by resolving
+		// the account's linked characters and matching on connection.Ref.
+		var factory = new TestObjectFactory();
+		var character = factory.CreatePlayer(555, "BannedAccountsChar").AsPlayer;
+		var characterBoundConnection = MakeConnection(
+			701, accountId: null, ip: "4.4.4.4", characterRef: new DBRef(character.Object.Key, character.Object.CreationTime));
+		var unrelatedConnection = MakeConnection(702, accountId: null, ip: "5.5.5.5", characterRef: new DBRef(999));
+
+		var (svc, _, _, _, bus, _, _) = Build(
+			[characterBoundConnection, unrelatedConnection],
+			linkedCharacters: [character]);
+
+		await svc.EnforceAccountBanAsync("accounts/1");
+
+		await bus.Received(1).Publish(
+			Arg.Is<DisconnectConnectionMessage>(m => m.Handle == 701), Arg.Any<CancellationToken>());
+		await bus.DidNotReceive().Publish(
+			Arg.Is<DisconnectConnectionMessage>(m => m.Handle == 702), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
 	public async Task EnforceAccountBanAsync_AbortsSignalRConnectionsForAccountOnly()
 	{
-		var (svc, _, _, _, _, registry) = Build();
+		var (svc, _, _, _, _, registry, _) = Build();
 		var abortedA = false;
 		var abortedB = false;
 		registry.Add("conn-a", "accounts/1", "9.9.9.9", () => abortedA = true);
@@ -129,7 +163,7 @@ public class BanEnforcementServiceTests
 	{
 		var matching1 = MakeConnection(101, "accounts/1", "1.1.1.1");
 		var matching2 = MakeConnection(102, "accounts/1", "2.2.2.2");
-		var (svc, sessions, _, _, bus, registry) = Build([matching1, matching2]);
+		var (svc, sessions, _, _, bus, registry, _) = Build([matching1, matching2]);
 		var aborted = false;
 		registry.Add("conn-a", "accounts/1", "9.9.9.9", () => aborted = true);
 
@@ -153,7 +187,7 @@ public class BanEnforcementServiceTests
 	public async Task EnforceAccountBanAsync_RevokeSessionsThrows_PublishAndAbortStillRun()
 	{
 		var matching = MakeConnection(111, "accounts/1", "1.1.1.1");
-		var (svc, sessions, _, _, bus, registry) = Build([matching]);
+		var (svc, sessions, _, _, bus, registry, _) = Build([matching]);
 		var aborted = false;
 		registry.Add("conn-a", "accounts/1", "9.9.9.9", () => aborted = true);
 
@@ -172,7 +206,7 @@ public class BanEnforcementServiceTests
 	{
 		var matching = MakeConnection(201, "accounts/1", "10.0.0.5");
 		var other = MakeConnection(202, "accounts/2", "10.0.0.6");
-		var (svc, sessions, _, _, bus, registry) = Build([matching, other]);
+		var (svc, sessions, _, _, bus, registry, _) = Build([matching, other]);
 		var abortedMatching = false;
 		var abortedOther = false;
 		registry.Add("conn-match", "accounts/1", "10.0.0.5", () => abortedMatching = true);
@@ -194,7 +228,7 @@ public class BanEnforcementServiceTests
 	{
 		var matching = MakeConnection(301, "accounts/1", "10.0.0.42");
 		var nonMatching = MakeConnection(302, "accounts/2", "10.0.1.42");
-		var (svc, sessions, _, _, bus, _) = Build([matching, nonMatching]);
+		var (svc, sessions, _, _, bus, _, _) = Build([matching, nonMatching]);
 
 		await svc.EnforceHostRuleAsync("10.0.0.*");
 
@@ -210,7 +244,7 @@ public class BanEnforcementServiceTests
 	public async Task EnforceHostRuleAsync_NeverMatchesUnknownOriginBucket()
 	{
 		var unknownConn = MakeConnection(401, "accounts/1", "UNKNOWN");
-		var (svc, sessions, _, _, bus, registry) = Build([unknownConn]);
+		var (svc, sessions, _, _, bus, registry, _) = Build([unknownConn]);
 		var abortedUnknown = false;
 		registry.Add("conn-unknown", "accounts/1", "unknown", () => abortedUnknown = true);
 
@@ -228,7 +262,7 @@ public class BanEnforcementServiceTests
 		// A session legitimately carries origin IP "unknown" when the client's remote address
 		// couldn't be resolved (see AuthController.ClientIp()); an admin literally typing "unknown"
 		// as a host-rule pattern must not be able to sweep every such session/connection.
-		var (svc, sessions, _, _, bus, registry) = Build();
+		var (svc, sessions, _, _, bus, registry, _) = Build();
 		var abortedUnknown = false;
 		registry.Add("conn-unknown", "accounts/1", "unknown", () => abortedUnknown = true);
 
@@ -246,7 +280,7 @@ public class BanEnforcementServiceTests
 		// the "UNKNOWN" sentinel (unresolved). The service must not fall back to treating "UNKNOWN"
 		// as a concrete matched IP for the session-revoke/registry-abort fan-outs.
 		var connection = MakeConnection(501, "accounts/1", "UNKNOWN", host: "evil.example.com");
-		var (svc, sessions, _, _, bus, registry) = Build([connection]);
+		var (svc, sessions, _, _, bus, registry, _) = Build([connection]);
 		var abortedUnknown = false;
 		registry.Add("conn-unknown", "accounts/1", "unknown", () => abortedUnknown = true);
 

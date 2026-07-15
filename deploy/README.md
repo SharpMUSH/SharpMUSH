@@ -25,8 +25,7 @@ Two entry points, pick one based on how you terminate TLS:
 ```bash
 cd deploy
 cp .env.example .env
-# Edit .env: set a JWT key, admin password, your domain, and restic/B2 credentials.
-#   openssl rand -base64 48   # for JWT_SIGNING_KEY
+# Edit .env: set your domain and restic/B2 credentials.
 #   openssl rand -base64 32   # for RESTIC_PASSWORD  (SAVE THIS — losing it makes backups unrecoverable)
 
 # Initialise the restic repository once (creates the encrypted repo in your bucket):
@@ -155,7 +154,7 @@ that resolves straight to your server:
 
 ```bash
 cd deploy
-cp .env.example .env      # fill in CLOUDFLARE_TUNNEL_TOKEN plus the usual JWT/admin/restic values
+cp .env.example .env      # fill in CLOUDFLARE_TUNNEL_TOKEN plus the usual domain/restic values
 docker compose -f docker-compose.cloudflare.yml run --rm backup restic init   # once
 docker compose -f docker-compose.cloudflare.yml up -d --build
 ```
