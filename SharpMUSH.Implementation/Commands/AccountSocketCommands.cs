@@ -46,21 +46,22 @@ public partial class Commands
 		string username, password;
 		string? email = null;
 
-		// The command framework places args in "0", "1", "2"
-		var arg0 = rawArgs.TryGetValue("0", out var a0) ? a0.Message?.ToString()?.Trim() : null;
-		var arg1 = rawArgs.TryGetValue("1", out var a1) ? a1.Message?.ToString()?.Trim() : null;
-		var arg2 = rawArgs.TryGetValue("2", out var a2) ? a2.Message?.ToString()?.Trim() : null;
+		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"]/["2"];
+		// Arguments["0"] holds the entire remainder of the line after the command word,
+		// so we split it on whitespace ourselves.
+		var arg0 = rawArgs.TryGetValue("0", out var a0) ? a0.Message?.ToString() : null;
+		var tokens = arg0?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) ?? [];
 
-		if (arg2 is not null)
+		if (tokens.Length == 3)
 		{
-			username = arg0 ?? string.Empty;
-			email = arg1;
-			password = arg2;
+			username = tokens[0];
+			email = tokens[1];
+			password = tokens[2];
 		}
-		else if (arg1 is not null)
+		else if (tokens.Length == 2)
 		{
-			username = arg0 ?? string.Empty;
-			password = arg1;
+			username = tokens[0];
+			password = tokens[1];
 		}
 		else
 		{
@@ -112,8 +113,19 @@ public partial class Commands
 			return new None();
 		}
 
-		var identifier = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToString()?.Trim() : null;
-		var password = parser.CurrentState.Arguments.TryGetValue("1", out var a1) ? a1.Message?.ToString()?.Trim() : null;
+		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"];
+		// Arguments["0"] holds the entire remainder of the line after the command word,
+		// so we split it on whitespace ourselves.
+		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToString() : null;
+		var tokens = arg0?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) ?? [];
+		string? identifier = null;
+		string? password = null;
+
+		if (tokens.Length == 2)
+		{
+			identifier = tokens[0];
+			password = tokens[1];
+		}
 
 		if (string.IsNullOrWhiteSpace(identifier) || string.IsNullOrWhiteSpace(password))
 		{
@@ -194,8 +206,19 @@ public partial class Commands
 			return new None();
 		}
 
-		var charName = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToString()?.Trim() : null;
-		var charPassword = parser.CurrentState.Arguments.TryGetValue("1", out var a1) ? a1.Message?.ToString()?.Trim() : null;
+		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"];
+		// Arguments["0"] holds the entire remainder of the line after the command word,
+		// so we split it on whitespace ourselves.
+		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToString() : null;
+		var tokens = arg0?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) ?? [];
+		string? charName = null;
+		string? charPassword = null;
+
+		if (tokens.Length == 2)
+		{
+			charName = tokens[0];
+			charPassword = tokens[1];
+		}
 
 		if (string.IsNullOrWhiteSpace(charName) || string.IsNullOrWhiteSpace(charPassword))
 		{

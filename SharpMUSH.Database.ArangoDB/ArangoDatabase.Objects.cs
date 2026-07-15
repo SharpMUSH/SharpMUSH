@@ -955,7 +955,7 @@ public partial class ArangoDatabase
 	{
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Players, new
 		{
-			player.Id,
+			_key = ExtractKey(player.Id!),
 			Quota = quota
 		}, mergeObjects: true, cancellationToken: ct);
 	}
