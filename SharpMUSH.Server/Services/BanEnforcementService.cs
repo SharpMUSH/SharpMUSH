@@ -5,7 +5,9 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Helpers;
 using SharpMUSH.Server.Hubs;
+using System.Diagnostics.CodeAnalysis;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Server.Services;
@@ -49,6 +51,10 @@ public sealed class BanEnforcementService(
 	/// one failing step (e.g. a single un-droppable connection, or a failure resolving the
 	/// account's linked characters) must never prevent the others from running.
 	/// </remarks>
+	// accountId is the account's internal GUID identifier, not a secret — it is logged purely as a
+	// service-lookup/audit-trail identifier, not stored or transmitted as sensitive data.
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
+		Justification = "accountId is a non-secret GUID identifier used for service lookups, not a password or secret value.")]
 	public async ValueTask EnforceAccountBanAsync(string accountId, CancellationToken ct = default)
 	{
 		await RunGuardedAsync("revoke sessions", accountId, () => sessionStore.RevokeAllForAccountAsync(accountId, ct));
@@ -91,7 +97,7 @@ public sealed class BanEnforcementService(
 
 			logger.LogInformation(
 				"[BanEnforcement] Disconnecting handle {Handle} for banned account {AccountId}",
-				connection.Handle, accountId);
+				connection.Handle, LogSanitizer.Sanitize(accountId));
 
 			try
 			{
@@ -101,7 +107,7 @@ public sealed class BanEnforcementService(
 			{
 				logger.LogError(ex,
 					"[BanEnforcement] Failed to publish disconnect for handle {Handle} (account {AccountId}); continuing with remaining connections",
-					connection.Handle, accountId);
+					connection.Handle, LogSanitizer.Sanitize(accountId));
 			}
 		}
 	}
@@ -141,7 +147,7 @@ public sealed class BanEnforcementService(
 
 			logger.LogInformation(
 				"[BanEnforcement] Disconnecting handle {Handle} (ip {Ip}) for host rule {Pattern}",
-				connection.Handle, connection.InternetProtocolAddress, hostPattern);
+				connection.Handle, LogSanitizer.Sanitize(connection.InternetProtocolAddress), LogSanitizer.Sanitize(hostPattern));
 
 			try
 			{
@@ -152,7 +158,7 @@ public sealed class BanEnforcementService(
 			{
 				logger.LogError(ex,
 					"[BanEnforcement] Failed to publish disconnect for handle {Handle} (ip {Ip}, pattern {Pattern}); continuing with remaining connections",
-					connection.Handle, connection.InternetProtocolAddress, hostPattern);
+					connection.Handle, LogSanitizer.Sanitize(connection.InternetProtocolAddress), LogSanitizer.Sanitize(hostPattern));
 			}
 		}
 
@@ -183,7 +189,7 @@ public sealed class BanEnforcementService(
 				{
 					logger.LogError(ex,
 						"[BanEnforcement] Failed to revoke sessions for ip {Ip} (pattern {Pattern}); continuing with remaining ips",
-						ip, hostPattern);
+						LogSanitizer.Sanitize(ip), LogSanitizer.Sanitize(hostPattern));
 				}
 			}
 
@@ -220,6 +226,10 @@ public sealed class BanEnforcementService(
 	/// remaining ban-enforcement fan-outs still run. A ban must land as completely as possible even
 	/// when one step fails.
 	/// </summary>
+	// target is either a non-secret account GUID identifier or a host pattern string, passed
+	// through purely for log context, not stored or transmitted as sensitive data.
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information",
+		Justification = "target is a non-secret GUID identifier or host pattern used for log context, not a password or secret value.")]
 	private async ValueTask RunGuardedAsync(string step, string target, Func<Task> action)
 	{
 		try
@@ -230,7 +240,7 @@ public sealed class BanEnforcementService(
 		{
 			logger.LogError(ex,
 				"[BanEnforcement] Step '{Step}' failed for {Target}; continuing with remaining enforcement steps",
-				step, target);
+				step, LogSanitizer.Sanitize(target));
 		}
 	}
 
