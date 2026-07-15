@@ -228,6 +228,7 @@ public class Startup(
 		// Unconditional (not gated on JWT config) — AuthController's account-login/register and
 		// AdminAccountsController's Wizard gate need it even when JWT auth isn't configured.
 		services.AddSingleton<AccountClaimsService>();
+		services.AddSingleton<BanEnforcementService>();
 		services.AddHostedService<BootstrapService>();
 		services.AddSingleton<SetupService>();
 		services.AddHostedService<RoleSeedService>();

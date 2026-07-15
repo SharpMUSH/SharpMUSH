@@ -109,4 +109,34 @@ public class HubConnectionRegistryTests
 
 		await Assert.That(aborted).IsEquivalentTo(new[] { "conn-a1", "conn-b1" });
 	}
+
+	[Test]
+	public async Task AbortConnectionsForAccount_OneDelegateThrows_StillInvokesTheOthers()
+	{
+		// A race (e.g. a connection tearing itself down concurrently) can make Abort() throw for
+		// one entry; that must not stop ban enforcement from aborting the rest of the account's
+		// connections.
+		var registry = new HubConnectionRegistry();
+		var aborted = new List<string>();
+		registry.Add("conn-a1", "account-A", "1.1.1.1", () => throw new InvalidOperationException("already gone"));
+		registry.Add("conn-a2", "account-A", "2.2.2.2", () => aborted.Add("conn-a2"));
+		registry.Add("conn-a3", "account-A", "3.3.3.3", () => aborted.Add("conn-a3"));
+
+		registry.AbortConnectionsForAccount("account-A");
+
+		await Assert.That(aborted).IsEquivalentTo(new[] { "conn-a2", "conn-a3" });
+	}
+
+	[Test]
+	public async Task AbortConnectionsForIp_OneDelegateThrows_StillInvokesTheOthers()
+	{
+		var registry = new HubConnectionRegistry();
+		var aborted = new List<string>();
+		registry.Add("conn-a1", "account-A", "9.9.9.9", () => throw new InvalidOperationException("already gone"));
+		registry.Add("conn-b1", "account-B", "9.9.9.9", () => aborted.Add("conn-b1"));
+
+		registry.AbortConnectionsForIp("9.9.9.9");
+
+		await Assert.That(aborted).IsEquivalentTo(new[] { "conn-b1" });
+	}
 }

@@ -48,17 +48,43 @@ public sealed class HubConnectionRegistry
 			.Select(pair => pair.Key)
 			.ToList();
 
-	/// <summary>Force-aborts every live connection belonging to the given account.</summary>
+	/// <summary>
+	/// Force-aborts every live connection belonging to the given account. Each abort is
+	/// independently guarded: one connection throwing (e.g. it tore itself down concurrently in a
+	/// race) does not stop the rest of the account's connections from being aborted.
+	/// </summary>
 	public void AbortConnectionsForAccount(string accountId)
 	{
 		foreach (var pair in _connections.Where(pair => pair.Value.AccountId == accountId))
-			pair.Value.Abort();
+		{
+			try
+			{
+				pair.Value.Abort();
+			}
+			catch
+			{
+				// Already gone (e.g. a concurrent disconnect raced this abort); continue with
+				// the rest of the account's connections.
+			}
+		}
 	}
 
-	/// <summary>Force-aborts every live connection that originated from the given IP.</summary>
+	/// <summary>
+	/// Force-aborts every live connection that originated from the given IP. Each abort is
+	/// independently guarded; see <see cref="AbortConnectionsForAccount"/>.
+	/// </summary>
 	public void AbortConnectionsForIp(string originIp)
 	{
 		foreach (var pair in _connections.Where(pair => pair.Value.OriginIp == originIp))
-			pair.Value.Abort();
+		{
+			try
+			{
+				pair.Value.Abort();
+			}
+			catch
+			{
+				// Already gone; continue with the rest of the matching connections.
+			}
+		}
 	}
 }
