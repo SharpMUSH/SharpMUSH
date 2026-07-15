@@ -233,7 +233,8 @@
         var serverUri = Terminal.ServerUri ?? "ws://localhost:4202/ws";
         await Terminal.ConnectWithOttAsync(serverUri, token);
         _terminalPlayerName = character.Name;
-        _terminalOpen = true;
+        // Deliberately do NOT open the terminal drawer: switching characters connects in the
+        // background; the toolbar toggle opens the terminal when the player wants it.
         StateHasChanged();
     }
 
