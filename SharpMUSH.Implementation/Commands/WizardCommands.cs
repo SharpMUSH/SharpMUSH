@@ -13,6 +13,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using System.Diagnostics;
@@ -2144,7 +2145,7 @@ public partial class Commands
 			var hostToCheck = args["0"].Message!.ToPlainText();
 
 			KeyValuePair<string, string[]>? matchingRule = sitelockRules.Rules
-				.FirstOrDefault(rule => WildcardMatch(hostToCheck, rule.Key));
+				.FirstOrDefault(rule => SitelockMatcher.Matches(rule.Key, hostToCheck, hostToCheck));
 
 			if (matchingRule.HasValue)
 			{
@@ -2223,19 +2224,6 @@ public partial class Commands
 
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockInvalidSyntax), executor);
 		return new CallState(ErrorMessages.Returns.InvalidArguments);
-	}
-
-	/// <summary>
-	/// Simple wildcard matching for sitelock patterns (* and ? wildcards)
-	/// </summary>
-	private static bool WildcardMatch(string text, string pattern)
-	{
-		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
-			.Replace("\\*", ".*")
-			.Replace("\\?", ".") + "$";
-
-		return System.Text.RegularExpressions.Regex.IsMatch(text, regexPattern,
-			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 	}
 
 	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
