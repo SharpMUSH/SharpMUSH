@@ -195,7 +195,17 @@ public class AuthController(
 		var accountId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 		if (accountId is null) return Unauthorized("Invalid or expired account session.");
 
+		var account = await accountService.GetByIdAsync(accountId);
+		if (account is null || account.IsDisabled)
+			return Unauthorized("Account not found or disabled.");
+		if (account.MustChangePassword)
+			return StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action.");
+
 		var characters = await accountService.GetCharactersAsync(accountId);
+
+		if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
+			return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
+
 		var character = characters.FirstOrDefault(c =>
 			c.Object.Key == request.CharacterKey && c.Object.CreationTime == request.CharacterCreationTime);
 		if (character is null)

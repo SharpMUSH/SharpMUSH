@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
@@ -117,5 +119,54 @@ public class SwitchCharacterTests(ServerWebAppFactory factory)
 		using var response = await http.SendAsync(request);
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+	}
+
+	[Test]
+	public async Task SwitchCharacter_MustChangePasswordFlaggedAccount_Returns403()
+	{
+		var (http, account) = await RegisterAccountAsync();
+		var character = await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("SwMcp"), Password);
+
+		var accountService = factory.Services.GetRequiredService<IAccountService>();
+		await accountService.ForcePasswordChangeAsync(account.AccountId);
+
+		using var request = SwitchCharacterRequestMessage(account.AccountSessionToken, character.DbrefNumber, character.CreationTime);
+		using var response = await http.SendAsync(request);
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+	}
+
+	/// <summary>
+	/// Re-stubs the shared <see cref="IOptionsWrapper{SharpMUSHOptions}"/> substitute's
+	/// <c>CurrentValue</c> to disable Net.Logins. Mirrors <c>LoginsConfigApiTests.DisableLogins</c> —
+	/// callers must restore the original value in a finally block and mark the test
+	/// <c>[NotInParallel("ConfigMutation")]</c> to avoid racing other suites that do the same.
+	/// </summary>
+	private static (IOptionsWrapper<SharpMUSHOptions> Options, SharpMUSHOptions Original) DisableLogins(ServerWebAppFactory factory)
+	{
+		var options = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var original = options.CurrentValue;
+		options.CurrentValue.Returns(original with { Net = original.Net with { Logins = false } });
+		return (options, original);
+	}
+
+	[Test, NotInParallel("ConfigMutation")]
+	public async Task SwitchCharacter_WhenLoginsDisabled_NonStaff403()
+	{
+		var (http, account) = await RegisterAccountAsync();
+		var character = await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("SwPleb"), Password);
+
+		var (options, original) = DisableLogins(factory);
+		try
+		{
+			using var request = SwitchCharacterRequestMessage(account.AccountSessionToken, character.DbrefNumber, character.CreationTime);
+			using var response = await http.SendAsync(request);
+
+			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+		}
+		finally
+		{
+			options.CurrentValue.Returns(original);
+		}
 	}
 }
