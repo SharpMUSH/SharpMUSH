@@ -148,6 +148,49 @@ public class BanEnforcementServiceTests
 	}
 
 	[Test]
+	public async Task EnforceAccountBanAsync_OnePublishThrows_OtherHandleStillPublishedAndAbortAndRevokeStillRun()
+	{
+		var matching1 = MakeConnection(101, "accounts/1", "1.1.1.1");
+		var matching2 = MakeConnection(102, "accounts/1", "2.2.2.2");
+		var (svc, sessions, _, _, _, bus, registry) = Build([matching1, matching2]);
+		var aborted = false;
+		registry.Add("conn-a", "accounts/1", "9.9.9.9", () => aborted = true);
+
+		bus.Publish(Arg.Is<DisconnectConnectionMessage>(m => m.Handle == 101), Arg.Any<CancellationToken>())
+			.Returns(Task.FromException(new InvalidOperationException("simulated publish failure")));
+
+		await svc.EnforceAccountBanAsync("accounts/1");
+
+		// The handle whose publish throws still gets attempted...
+		await bus.Received(1).Publish(
+			Arg.Is<DisconnectConnectionMessage>(m => m.Handle == 101), Arg.Any<CancellationToken>());
+		// ...but the failure does not stop the other matched handle from being published.
+		await bus.Received(1).Publish(
+			Arg.Is<DisconnectConnectionMessage>(m => m.Handle == 102), Arg.Any<CancellationToken>());
+		// Nor does it stop the SignalR abort or the session revoke fan-outs.
+		await Assert.That(aborted).IsTrue();
+		await sessions.Received(1).RevokeAllForAccountAsync("accounts/1", Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task EnforceAccountBanAsync_RevokeSessionsThrows_PublishAndAbortStillRun()
+	{
+		var matching = MakeConnection(111, "accounts/1", "1.1.1.1");
+		var (svc, sessions, _, _, _, bus, registry) = Build([matching]);
+		var aborted = false;
+		registry.Add("conn-a", "accounts/1", "9.9.9.9", () => aborted = true);
+
+		sessions.RevokeAllForAccountAsync("accounts/1", Arg.Any<CancellationToken>())
+			.Returns(Task.FromException(new InvalidOperationException("simulated session-store failure")));
+
+		await svc.EnforceAccountBanAsync("accounts/1");
+
+		await bus.Received(1).Publish(
+			Arg.Is<DisconnectConnectionMessage>(m => m.Handle == 111), Arg.Any<CancellationToken>());
+		await Assert.That(aborted).IsTrue();
+	}
+
+	[Test]
 	public async Task EnforceHostRuleAsync_ExactMatch_RevokesDisconnectsAndAborts()
 	{
 		var matching = MakeConnection(201, "accounts/1", "10.0.0.5");
