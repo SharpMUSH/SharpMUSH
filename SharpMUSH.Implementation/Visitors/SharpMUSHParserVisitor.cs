@@ -843,6 +843,25 @@ public class SharpMUSHParserVisitor(
 				}
 			}
 
+			// PennMUSH-style unambiguous prefix abbreviation for pre-login SOCKET commands
+			// (e.g. "con"/"co"/"conn" -> CONNECT). Only kicks in when there was no exact match
+			// above, and only while the connection has not logged in yet. If the typed token is
+			// a prefix of more than one system SOCKET command name, it's ambiguous and we fall
+			// through to the same "no such command" handling as an unknown command.
+			if (socketCommandPattern.Count == 0 && parser.CurrentState.Handle is not null)
+			{
+				var socketPrefixMatches = parser.CommandLibrary.Where(x
+					=> x.Value.IsSystem
+					   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET)
+					   && x.Key.StartsWith(command, StringComparison.CurrentCultureIgnoreCase)).ToList();
+
+				if (socketPrefixMatches.Count == 1)
+				{
+					return await HandleSocketCommandPattern(parser, src, context, command, socketPrefixMatches,
+						socketPrefixMatches[0].Value.LibraryInformation);
+				}
+			}
+
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 			{
 				await NotifyService.NotifyLocalized(parser.CurrentState.Handle.Value,
