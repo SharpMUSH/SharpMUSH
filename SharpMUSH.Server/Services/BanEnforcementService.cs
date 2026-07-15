@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
@@ -19,9 +19,9 @@ namespace SharpMUSH.Server.Services;
 /// <see cref="HubConnectionRegistry"/>.
 /// </summary>
 /// <remarks>
-/// <see cref="EnforceHostRuleAsync"/> matches against connection metadata IP/host with a
-/// placeholder exact-string-or-glob comparison — Task 13 (<c>SitelockMatcher</c>) replaces this
-/// with proper glob + CIDR matching; see the <c>// TODO Task 13</c> markers below.
+/// <see cref="EnforceHostRuleAsync"/> matches against connection metadata IP/host via the shared
+/// <see cref="SitelockMatcher"/> (glob + CIDR + bare-IP), the same matcher <c>@SITELOCK/CHECK</c>
+/// uses, so the two never drift apart.
 /// </remarks>
 public sealed class BanEnforcementService(
 	IAccountSessionStore sessionStore,
@@ -98,10 +98,7 @@ public sealed class BanEnforcementService(
 
 		await foreach (var connection in connectionService.GetAll().WithCancellation(ct))
 		{
-			// TODO Task 13: use SitelockMatcher (glob + CIDR) instead of this placeholder
-			// exact-string/simple-glob comparison.
-			if (!MatchesHostPattern(connection.InternetProtocolAddress, hostPattern)
-					&& !MatchesHostPattern(connection.HostName, hostPattern))
+			if (!MatchesConnection(connection.InternetProtocolAddress, connection.HostName, hostPattern))
 			{
 				continue;
 			}
@@ -213,23 +210,17 @@ public sealed class BanEnforcementService(
 	private static bool IsGlobPattern(string pattern) => pattern.Contains('*') || pattern.Contains('?');
 
 	/// <summary>
-	/// Placeholder host-rule matcher: exact string match, or a simple <c>*</c>/<c>?</c> glob.
-	/// Never matches the "unknown"/"UNKNOWN" sentinel a connection carries when it has no known
-	/// origin, so an overly broad rule (e.g. <c>"*"</c>) can't sweep up IP-less connections.
+	/// Host-rule matcher for a single connection, delegating to the shared
+	/// <see cref="SitelockMatcher"/> (glob-on-host, CIDR/bare-IP-on-ip, glob-on-ip). Never matches
+	/// the "unknown"/"UNKNOWN" sentinel a connection carries when it has no known origin — each
+	/// field is blanked out before being handed to the matcher when it holds that sentinel — so an
+	/// overly broad rule (e.g. <c>"*"</c>) can't sweep up IP-less connections.
 	/// </summary>
-	private static bool MatchesHostPattern(string? candidate, string pattern)
+	private static bool MatchesConnection(string ip, string host, string pattern)
 	{
-		if (string.IsNullOrEmpty(candidate) || string.Equals(candidate, UnknownOrigin, StringComparison.OrdinalIgnoreCase))
-		{
-			return false;
-		}
+		var ipArg = string.Equals(ip, UnknownOrigin, StringComparison.OrdinalIgnoreCase) ? "" : ip;
+		var hostArg = string.Equals(host, UnknownOrigin, StringComparison.OrdinalIgnoreCase) ? "" : host;
 
-		if (!IsGlobPattern(pattern))
-		{
-			return string.Equals(candidate, pattern, StringComparison.OrdinalIgnoreCase);
-		}
-
-		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-		return Regex.IsMatch(candidate, regexPattern, RegexOptions.IgnoreCase);
+		return SitelockMatcher.Matches(pattern, ipArg, hostArg);
 	}
 }
