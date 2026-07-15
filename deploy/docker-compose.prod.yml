@@ -73,10 +73,15 @@ services:
       # the dev .pfx isn't in a prod image — so it would crash on boot. Empty path = no cert loaded.
       - ASPNETCORE_Kestrel__Certificates__Default__Path=
       - ASPNETCORE_Kestrel__Certificates__Default__Password=
-      # Trust Caddy's X-Forwarded-Proto/-For. Without this the app (which always calls
+      # Trust Caddy's X-Forwarded-Proto/-For (Task 14: SharpMUSH.Server's own UseForwardedHeaders,
+      # configured from this "ForwardedHeaders:KnownProxies" list — NOT the framework's
+      # ASPNETCORE_FORWARDEDHEADERS_ENABLED shortcut, which trusts the header from ANY source and
+      # would let an internet client spoof its own IP). Without this the app (which always calls
       # UseHttpsRedirection) sees the plain-HTTP backend hop and redirect-loops, and
-      # rate-limiting / canonical-URL logic sees the proxy IP instead of the real client.
-      - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+      # rate-limiting / sitelock / session-origin logic sees the proxy IP instead of the real
+      # client. Caddy is pinned to a static address on sharpmush-net (below) so this stays valid
+      # across container recreates.
+      - ForwardedHeaders__KnownProxies__0=172.28.0.10
       # --- Auth: a JWT signing key is REQUIRED for portal auth in production ---
       # The :? syntax makes compose ABORT with an error if the value is missing from .env,
       # instead of silently substituting an empty string and booting without auth configured.
@@ -140,7 +145,10 @@ services:
       - sharpmush-server
       - connectionserver
     networks:
-      - sharpmush-net
+      # Pinned (not the plain list form used elsewhere) so its IP is stable across recreates —
+      # sharpmush-server's ForwardedHeaders:KnownProxies trusts this exact address (Task 14).
+      sharpmush-net:
+        ipv4_address: 172.28.0.10
     mem_limit: 128m
     cpus: 0.5
     restart: unless-stopped
@@ -154,3 +162,9 @@ volumes:
 networks:
   sharpmush-net:
     driver: bridge
+    # Fixed subnet so Caddy's static ipv4_address (above) and sharpmush-server's
+    # ForwardedHeaders:KnownProxies (which must trust Caddy's exact IP, not the header from
+    # anyone) stay valid across `docker compose up` recreates.
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

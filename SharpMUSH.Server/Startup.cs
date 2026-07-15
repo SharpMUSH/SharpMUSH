@@ -4,6 +4,7 @@ using Mediator;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -99,6 +100,33 @@ public class Startup(
 					builder.WithOrigins(Array.Empty<string>());
 				}
 			});
+		});
+
+		// Trusted client-IP resolution behind a reverse proxy (Caddy/Cloudflare in deploy/docker-compose.prod.yml):
+		// the origin IP captured on account sessions (AuthController.ClientIp) and matched by sitelock host rules
+		// must be the real client IP, not the proxy hop. The read happens INSIDE this delegate (not eagerly
+		// here) so config sources appended after ConfigureServices runs — e.g. the test host's UseSetting
+		// overrides — are still visible when options are first resolved (see the AddRateLimiter comment
+		// further down for the same caveat).
+		services.Configure<ForwardedHeadersOptions>(opts =>
+		{
+			opts.KnownIPNetworks.Clear();
+			opts.KnownProxies.Clear();
+			foreach (var proxy in configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [])
+				if (System.Net.IPAddress.TryParse(proxy, out var ip))
+					opts.KnownProxies.Add(ip);
+			foreach (var network in configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [])
+				if (System.Net.IPNetwork.TryParse(network, out var ipNetwork))
+					opts.KnownIPNetworks.Add(ipNetwork);
+
+			// IMPORTANT (verified by ForwardedHeadersTests): ForwardedHeadersMiddleware treats an EMPTY
+			// KnownProxies/KnownIPNetworks pair as "nothing to check against" and trusts EVERY remote —
+			// the opposite of the spoof-safe default this config is supposed to give. So "no proxies
+			// configured" must disable forwarded-header processing entirely rather than lean on an empty
+			// allow-list to mean "trust nobody".
+			opts.ForwardedHeaders = opts.KnownProxies.Count > 0 || opts.KnownIPNetworks.Count > 0
+				? ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+				: ForwardedHeaders.None;
 		});
 
 		// PHASE 2a TWO-PHASE BOOT — build the plugin catalog ONCE, pre-build, before any service the
