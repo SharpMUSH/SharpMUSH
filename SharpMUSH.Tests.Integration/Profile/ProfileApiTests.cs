@@ -92,6 +92,65 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		await Assert.That(rows.ContainsKey("DirGuest")).IsFalse();
 	}
 
+	/// <summary>
+	/// #7 Package Manager is seeded as a real PLAYER (it owns softcode-package objects), so a
+	/// type-based roster picks it up even though nobody plays it. FN`CHARVIS excludes it by the
+	/// {{$package_manager}} config ref rather than a literal #7 — the seed numbering is
+	/// config-driven and has moved before (#3 → #7).
+	/// </summary>
+	[Test]
+	public async Task Characters_HidesThePackageManagerSystemPrincipal()
+	{
+		var http = factory.CreateHttpClient();
+		var response = await http.GetAsync("http/characters");
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		using var doc = JsonDocument.Parse(body);
+		var names = doc.RootElement.EnumerateArray()
+			.Select(row => row.GetProperty("name").GetString())
+			.ToList();
+
+		await Assert.That(names).DoesNotContain("Package Manager");
+	}
+
+	/// <summary>
+	/// GET /http/online is the connection list, not the roster: it is built on lwho(), the same
+	/// registry WHO reads, so it tracks actual connections in both directions. The portal used to
+	/// derive "players online" from the full character roster, which made every seeded player —
+	/// including the Package Manager principal — look connected.
+	/// The shared factory logs God in, so God is the connected fixture here; a freshly created
+	/// player that never binds a connection is the unconnected one.
+	/// </summary>
+	[Test]
+	public async Task Online_ListsConnectedPlayersOnly()
+	{
+		var (godName, _) = await GodIdentity();
+		var mediator = factory.Services.GetRequiredService<IMediator>();
+		var home = new DBRef(0, null);
+		await mediator.Send(new CreatePlayerCommand("OnlineNobody", "testpass", home, home, 1));
+
+		var http = factory.CreateHttpClient();
+		var response = await http.GetAsync("http/online");
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		await Assert.That(response.Content.Headers.ContentType?.MediaType).IsEqualTo("application/json");
+		using var doc = JsonDocument.Parse(body);
+		await Assert.That(doc.RootElement.ValueKind).IsEqualTo(JsonValueKind.Array);
+
+		var names = doc.RootElement.EnumerateArray()
+			.Select(row => row.GetProperty("name").GetString())
+			.ToList();
+
+		// Holds a connection in this session → present. Proves the route reports real presence
+		// rather than just returning an empty array.
+		await Assert.That(names).Contains(godName);
+		// Exist but never bound a connection → absent. This is what the roster-backed widget got wrong.
+		await Assert.That(names).DoesNotContain("OnlineNobody");
+		await Assert.That(names).DoesNotContain("Package Manager");
+	}
+
 	[Test]
 	public async Task ProfileSchema_ReturnsSectionsJson()
 	{

@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace SharpMUSH.Client.Services;
 
@@ -32,9 +33,30 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/characters");
 			return rows is null ? [] : rows.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList();
 		}
-		catch (HttpRequestException ex)
+		catch (Exception ex) when (ex is HttpRequestException or JsonException)
 		{
 			logger.LogWarning(ex, "Failed to load character directory.");
+			return [];
+		}
+	}
+
+	/// <summary>
+	/// Returns the characters currently connected, name-sorted; an empty list on failure.
+	/// Backed by <c>GET /http/online</c> → <c>GET`ONLINE</c> on #8, which reads lwho() — the same
+	/// connection registry WHO reads. Distinct from <see cref="ListAsync"/>, which is the roster of
+	/// every character that exists: a character being listed there implies nothing about presence.
+	/// </summary>
+	public async Task<IReadOnlyList<CharacterSummary>> ListOnlineAsync()
+	{
+		try
+		{
+			var http = httpClientFactory.CreateClient("api");
+			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/online");
+			return rows is null ? [] : rows.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList();
+		}
+		catch (Exception ex) when (ex is HttpRequestException or JsonException)
+		{
+			logger.LogWarning(ex, "Failed to load the online character list.");
 			return [];
 		}
 	}

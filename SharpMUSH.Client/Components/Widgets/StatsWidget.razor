@@ -23,11 +23,12 @@
 
     private int? _recent;
     private int? _characters;
+    private int? _online;
     private int? _activeScenes;
 
     private (string Label, string Value)[] Tiles =>
     [
-        ("Players Online", _characters?.ToString() ?? "—"),
+        ("Players Online", _online?.ToString() ?? "—"),
         ("Active Scenes",  _activeScenes?.ToString() ?? "—"),
         ("Recent Changes", _recent?.ToString() ?? "—"),
         ("Characters",     _characters?.ToString() ?? "—"),
@@ -37,11 +38,13 @@
     {
         var recentTask = WikiService.GetRecentChangesAsync(10);
         var charsTask = CharacterDirectory.ListAsync();
+        var onlineTask = CharacterDirectory.ListOnlineAsync();
         var scenesTask = SceneService.GetActiveScenesAsync();
-        await Task.WhenAll(recentTask.AsTask(), charsTask, scenesTask.AsTask());
+        await Task.WhenAll(recentTask.AsTask(), charsTask, onlineTask, scenesTask.AsTask());
 
         _recent = (await recentTask).Count;
         _characters = (await charsTask).Count;
+        _online = (await onlineTask).Count;
         _activeScenes = (await scenesTask).Count;
     }
 }
