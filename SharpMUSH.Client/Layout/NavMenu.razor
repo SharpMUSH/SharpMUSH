@@ -192,7 +192,7 @@
     {
         get
         {
-            var ch = AccountAuth.Characters.FirstOrDefault();
+            var ch = AccountAuth.ActiveCharacter;
             if (ch is not null && ch.Name.Length > 0)
                 return ch.Name[0].ToString().ToUpper();
             var user = AccountAuth.Username;
@@ -210,20 +210,13 @@
         }
     }
 
-    private string DisplayName
-    {
-        get
-        {
-            var ch = AccountAuth.Characters.FirstOrDefault();
-            return ch?.Name ?? AccountAuth.Username ?? "DebugAdmin";
-        }
-    }
+    private string DisplayName => AccountAuth.ActiveCharacter?.Name ?? AccountAuth.Username ?? "DebugAdmin";
 
     private string UserTag
     {
         get
         {
-            var ch = AccountAuth.Characters.FirstOrDefault();
+            var ch = AccountAuth.ActiveCharacter;
             return ch is not null ? $"#{ch.DbrefNumber}" : "account";
         }
     }
@@ -237,6 +230,7 @@
         PlayTerminal.ConnectionStateChanged += OnPlayConnectionChanged;
         PlayTerminal.LineReceived += OnPlayLine;
         Nav.LocationChanged += OnLocationChanged;
+        AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
     }
 
     protected override async Task OnInitializedAsync()
@@ -291,11 +285,17 @@
     private bool IsOnPlay()
         => new Uri(Nav.Uri).AbsolutePath.TrimEnd('/').Equals("/play", StringComparison.OrdinalIgnoreCase);
 
+    // NavMenu is a sibling of MainLayout, not a child: no parameter flow reaches it, so it must
+    // subscribe. This is the notification path whose absence left the card stale.
+    private void OnActiveCharacterChanged()
+        => InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         PlayTerminal.ConnectionStateChanged -= OnPlayConnectionChanged;
         PlayTerminal.LineReceived -= OnPlayLine;
         Nav.LocationChanged -= OnLocationChanged;
+        AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
     }
 }
